@@ -579,7 +579,7 @@ export default function ParkingPage() {
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
-      style: SATELLITE_STYLE as any,
+      style: SATELLITE_STYLE,
       center: [centerLng, centerLat],
       zoom: 15,
       pitch: 0,

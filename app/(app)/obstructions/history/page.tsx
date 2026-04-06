@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Map, List } from 'lucide-react'
 import { formatZuluDate } from '@/lib/utils'
 
-const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view'))
+const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view-google'))
 
 function matchesSearch(ev: ObstructionRow, query: string): boolean {
   const q = query.toLowerCase()

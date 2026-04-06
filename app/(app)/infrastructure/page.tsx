@@ -1837,7 +1837,7 @@ export default function InfrastructureMapPage() {
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
-      style: SATELLITE_STYLE as any,
+      style: SATELLITE_STYLE,
       center: [centerLng, centerLat],
       zoom: 14,
       pitch: 0,

@@ -10,7 +10,7 @@ import { fetchBaseSpecies } from '@/lib/supabase/base-wildlife-species'
 import { SpeciesPicker } from './species-picker'
 
 const LocationPickerMap = dynamic(
-  () => import('@/components/ui/location-picker-map'),
+  () => import('@/components/ui/location-picker-map-google'),
   { ssr: false },
 )
 import {

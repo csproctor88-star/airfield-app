@@ -11,7 +11,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { Map, List } from 'lucide-react'
 import { formatZuluDate } from '@/lib/utils'
 
-const WaiverMapView = lazy(() => import('@/components/waivers/waiver-map-view'))
+const WaiverMapView = lazy(() => import('@/components/waivers/waiver-map-view-google'))
 
 const FILTERS = ['all', 'draft', 'pending', 'approved', 'active', 'completed', 'expired', 'cancelled'] as const
 const FILTER_LABELS: Record<string, string> = {

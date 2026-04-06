@@ -555,7 +555,7 @@ function RunwayTab({
 
     const m = new mapboxgl.Map({
       container: adjustMapContainer.current,
-      style: SATELLITE_STYLE as any,
+      style: SATELLITE_STYLE,
       center: [midLon, midLat],
       zoom: 15,
       pitch: 0,

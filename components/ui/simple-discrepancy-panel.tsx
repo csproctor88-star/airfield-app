@@ -10,7 +10,7 @@ import { ZoomableImage } from '@/components/ui/zoomable-image'
 import type { SimpleDiscrepancy, InfrastructureFeature } from '@/lib/supabase/types'
 
 const LocationMap = dynamic(
-  () => import('@/components/ui/location-picker-map'),
+  () => import('@/components/ui/location-picker-map-google'),
   { ssr: false },
 )
 

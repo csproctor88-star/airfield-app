@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
+import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import { useInstallation } from '@/lib/installation-context'
 import {
   type LatLon,
@@ -214,7 +214,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
 
   const { runways: installationRunways, installationId } = useInstallation()
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_ELEVATION_API_KEY || ''
+  const hasApiKey = isGoogleMapsConfigured()
 
   const runwayLabels = installationRunways.length > 0
     ? installationRunways.map(rwy => rwy.runway_id ?? 'Unknown')
@@ -238,15 +238,9 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
 
   // Load Google Maps API
   useEffect(() => {
-    if (!apiKey) return
-    setOptions({ key: apiKey, v: 'weekly' })
-    Promise.all([
-      importLibrary('maps'),
-      importLibrary('marker'),
-    ]).then(() => {
-      setApiReady(true)
-    })
-  }, [apiKey])
+    if (!hasApiKey) return
+    initGoogleMaps().then(() => setApiReady(true))
+  }, [hasApiKey])
 
   // Initialize map
   useEffect(() => {
@@ -275,14 +269,10 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
         : { lat: 0, lng: 0 }
 
     const gmap = new google.maps.Map(mapContainer.current, {
+      ...GOOGLE_MAP_OPTIONS,
       center,
       zoom: 13,
-      mapTypeId: 'satellite',
-      tilt: 0,
-      disableDefaultUI: true,
-      zoomControl: true,
       zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
-      gestureHandling: 'greedy',
       mapId: 'glidepath-obstruction',
     })
 
@@ -447,6 +437,13 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     }
     if (!mapRef.current || !mapLoaded || !selectedPoint) return
 
+    // Wrapper div to offset the anchor point — AdvancedMarkerElement anchors at bottom-center,
+    // so we shift the circle down by half its height to center it on the click point
+    const wrapper = document.createElement('div')
+    wrapper.style.position = 'relative'
+    wrapper.style.width = '24px'
+    wrapper.style.height = '24px'
+    wrapper.style.marginTop = '12px'
     const el = document.createElement('div')
     el.style.width = '24px'
     el.style.height = '24px'
@@ -455,13 +452,13 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     el.style.background = surfaceAtPoint === 'No violation' ? '#22C55E' : '#EF4444'
     el.style.boxShadow = '0 0 8px rgba(0,0,0,0.5)'
     el.style.cursor = 'pointer'
-    el.style.transform = 'translate(-50%, -50%)'
+    wrapper.appendChild(el)
 
     try {
       const advMarker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: selectedPoint.lat, lng: selectedPoint.lon },
         map: mapRef.current,
-        content: el,
+        content: wrapper,
       })
       markerRef.current = advMarker as any
     } catch {
@@ -507,7 +504,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     })
   }
 
-  if (!apiKey) {
+  if (!hasApiKey) {
     return (
       <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-mid)', borderRadius: 10, padding: 24, textAlign: 'center' }}>
         <div style={{ fontSize: 'var(--fs-5xl)', marginBottom: 8 }}>🗺️</div>

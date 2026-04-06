@@ -7,7 +7,7 @@ import { AcsiDiscrepancyPicker } from './acsi-discrepancy-picker'
 import { Plus, Trash2, Link2 } from 'lucide-react'
 import type { AcsiDiscrepancyDetail } from '@/lib/supabase/types'
 
-const AcsiLocationMap = dynamic(() => import('@/components/acsi/acsi-location-map'), { ssr: false })
+const AcsiLocationMap = dynamic(() => import('@/components/acsi/acsi-location-map-google'), { ssr: false })
 
 interface AcsiDiscrepancyPanelGroupProps {
   itemId: string

@@ -106,7 +106,7 @@ export default function TaxiwayEditor() {
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
-      style: SATELLITE_STYLE as any,
+      style: SATELLITE_STYLE,
       center,
       zoom,
       attributionControl: false,

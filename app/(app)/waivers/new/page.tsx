@@ -11,7 +11,7 @@ import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import type { WaiverStatus, WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
 const WaiverLocationMap = dynamic(
-  () => import('@/components/ui/location-picker-map'),
+  () => import('@/components/ui/location-picker-map-google'),
   { ssr: false },
 )
 

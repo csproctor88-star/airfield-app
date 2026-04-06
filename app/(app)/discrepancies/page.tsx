@@ -21,7 +21,7 @@ import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
 
-const DiscrepancyMapView = lazy(() => import('@/components/discrepancies/discrepancy-map-view'))
+const DiscrepancyMapView = lazy(() => import('@/components/discrepancies/discrepancy-map-view-google'))
 
 const FILTERS = ['open', 'pending', 'completed', 'cancelled', 'all'] as const
 const FILTER_LABELS: Record<string, string> = {

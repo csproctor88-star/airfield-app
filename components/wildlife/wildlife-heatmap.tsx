@@ -126,7 +126,7 @@ export function WildlifeHeatmap({ baseId }: Props) {
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: SATELLITE_STYLE as any,
+      style: SATELLITE_STYLE,
       center: [centerLng, centerLat],
       zoom: 14,
       ...MAP_PERF_OPTIONS,

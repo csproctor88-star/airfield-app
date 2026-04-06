@@ -7,7 +7,7 @@ import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_O
 import { useInstallation } from '@/lib/installation-context'
 
 const LocationPickerMap = dynamic(
-  () => import('@/components/ui/location-picker-map'),
+  () => import('@/components/ui/location-picker-map-google'),
   { ssr: false },
 )
 
