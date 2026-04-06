@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { fetchHeatmapData } from '@/lib/supabase/wildlife'
 import { isMapboxConfigured } from '@/lib/utils'
+import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { useInstallation } from '@/lib/installation-context'
 
 type Props = {
@@ -125,13 +126,10 @@ export function WildlifeHeatmap({ baseId }: Props) {
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: SATELLITE_STYLE as any,
       center: [centerLng, centerLat],
       zoom: 14,
-      fadeDuration: 0,
-      maxTileCacheSize: 200,
-      renderWorldCopies: false,
-      crossSourceCollisions: false,
+      ...MAP_PERF_OPTIONS,
     })
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')

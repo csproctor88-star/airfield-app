@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
 import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
@@ -436,10 +437,7 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       bearing: 0,
       attributionControl: false,
       projection: 'mercator',
-      fadeDuration: 0,
-      maxTileCacheSize: 200,
-      renderWorldCopies: false,
-      crossSourceCollisions: false,
+      ...MAP_PERF_OPTIONS,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')

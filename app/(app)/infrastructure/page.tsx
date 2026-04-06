@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured, formatZuluDateTime } from '@/lib/utils'
@@ -1836,16 +1837,13 @@ export default function InfrastructureMapPage() {
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: SATELLITE_STYLE as any,
       center: [centerLng, centerLat],
       zoom: 14,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
-      fadeDuration: 0,
-      maxTileCacheSize: 200,
-      renderWorldCopies: false,
-      crossSourceCollisions: false,
+      ...MAP_PERF_OPTIONS,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right')

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
@@ -91,16 +92,13 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
 
     const m = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: SATELLITE_STYLE,
       center: [centerLng, centerLat],
       zoom: 12,
       pitch: 0,
       bearing: 0,
       attributionControl: false,
-      fadeDuration: 0,
-      maxTileCacheSize: 200,
-      renderWorldCopies: false,
-      crossSourceCollisions: false,
+      ...MAP_PERF_OPTIONS,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')

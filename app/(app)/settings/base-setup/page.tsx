@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
@@ -554,15 +555,12 @@ function RunwayTab({
 
     const m = new mapboxgl.Map({
       container: adjustMapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: SATELLITE_STYLE as any,
       center: [midLon, midLat],
       zoom: 15,
       pitch: 0,
       attributionControl: false,
-      fadeDuration: 0,
-      maxTileCacheSize: 200,
-      renderWorldCopies: false,
-      crossSourceCollisions: false,
+      ...MAP_PERF_OPTIONS,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
