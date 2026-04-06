@@ -585,6 +585,10 @@ export default function ParkingPage() {
       bearing: 0,
       attributionControl: false,
       preserveDrawingBuffer: true,
+      fadeDuration: 0,
+      maxTileCacheSize: 200,
+      renderWorldCopies: false,
+      crossSourceCollisions: false,
     })
 
     m.addControl(new mapboxgl.NavigationControl(), 'bottom-right')

@@ -128,6 +128,10 @@ export function WildlifeHeatmap({ baseId }: Props) {
       style: 'mapbox://styles/mapbox/satellite-v9',
       center: [centerLng, centerLat],
       zoom: 14,
+      fadeDuration: 0,
+      maxTileCacheSize: 200,
+      renderWorldCopies: false,
+      crossSourceCollisions: false,
     })
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right')

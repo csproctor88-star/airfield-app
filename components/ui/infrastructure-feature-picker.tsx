@@ -148,6 +148,10 @@ export function InfrastructureFeaturePicker({
       pitch: 0,
       bearing: 0,
       attributionControl: false,
+      fadeDuration: 0,
+      maxTileCacheSize: 200,
+      renderWorldCopies: false,
+      crossSourceCollisions: false,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')

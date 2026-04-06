@@ -436,6 +436,10 @@ export default function AirfieldMap({ onPointSelected, selectedPoint, surfaceAtP
       bearing: 0,
       attributionControl: false,
       projection: 'mercator',
+      fadeDuration: 0,
+      maxTileCacheSize: 200,
+      renderWorldCopies: false,
+      crossSourceCollisions: false,
     })
 
     m.addControl(new mapboxgl.NavigationControl({ showCompass: true }), 'top-right')
