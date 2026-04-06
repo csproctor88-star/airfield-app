@@ -3904,6 +3904,8 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [newColName, setNewColName] = useState('')
   const [newColType, setNewColType] = useState<PprColumnType>('text')
   const [newColRequired, setNewColRequired] = useState(false)
+  const [editingColId, setEditingColId] = useState<string | null>(null)
+  const [editingColName, setEditingColName] = useState('')
   const [loading, setLoading] = useState(true)
 
   const loadColumns = useCallback(async () => {
@@ -3955,6 +3957,19 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
     if (updated) {
       setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
     }
+  }
+
+  const handleRename = async (col: PprColumn) => {
+    if (!editingColName.trim() || editingColName.trim() === col.column_name) {
+      setEditingColId(null)
+      return
+    }
+    const updated = await updatePprColumn(col.id, { column_name: editingColName.trim() })
+    if (updated) {
+      setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
+      toast.success('Column renamed')
+    }
+    setEditingColId(null)
   }
 
   const handleMove = async (index: number, direction: 'up' | 'down') => {
@@ -4009,7 +4024,26 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
               title="Move down"
             >&darr;</button>
           </div>
-          <span style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600 }}>{col.column_name}</span>
+          {editingColId === col.id ? (
+            <input
+              autoFocus
+              value={editingColName}
+              onChange={e => setEditingColName(e.target.value)}
+              onBlur={() => handleRename(col)}
+              onKeyDown={e => { if (e.key === 'Enter') handleRename(col); if (e.key === 'Escape') setEditingColId(null) }}
+              style={{
+                flex: 1, padding: '2px 6px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--color-accent)', background: 'var(--color-bg)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 600,
+              }}
+            />
+          ) : (
+            <span
+              onClick={() => { setEditingColId(col.id); setEditingColName(col.column_name) }}
+              title="Click to rename"
+              style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600, cursor: 'pointer' }}
+            >{col.column_name}</span>
+          )}
           <select
             value={col.column_type || 'text'}
             onChange={e => handleChangeType(col, e.target.value as PprColumnType)}
