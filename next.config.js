@@ -64,18 +64,41 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
-        // Cache Mapbox resources (sprites, glyphs, API token validation)
+        // Cache Mapbox satellite tiles (*.tiles.mapbox.com)
+        urlPattern: /tiles\.mapbox\.com/,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'mapbox-satellite-tiles',
+          expiration: {
+            maxEntries: 4000,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
+        // Cache Mapbox API resources (styles, sprites, glyphs, token validation)
         urlPattern: /api\.mapbox\.com/,
         handler: 'CacheFirst',
         options: {
           cacheName: 'mapbox-api',
           expiration: {
-            maxEntries: 200,
+            maxEntries: 500,
             maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
           },
           cacheableResponse: {
             statuses: [0, 200],
           },
+        },
+      },
+      {
+        // Cache Mapbox events/telemetry — just let them through without blocking
+        urlPattern: /events\.mapbox\.com/,
+        handler: 'NetworkOnly',
+        options: {
+          cacheName: 'mapbox-events',
         },
       },
     ],

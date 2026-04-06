@@ -1,12 +1,12 @@
 /**
  * Pre-cache satellite tiles for a base area.
- * Downloads ESRI tiles at zoom levels 12-17 for the bounding box
- * around the installation, storing them in the service worker cache.
- * After pre-caching, all map interactions are instant.
+ * Supports both ESRI (obstruction/location maps) and Mapbox (infrastructure/parking maps).
+ * Downloads tiles at zoom levels 12-17 for the bounding box around the installation,
+ * storing them in the Cache API so the service worker serves them instantly.
  */
 
-const ESRI_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile'
-const CACHE_NAME = 'esri-satellite-tiles'
+const ESRI_CACHE = 'esri-satellite-tiles'
+const MAPBOX_CACHE = 'mapbox-satellite-tiles'
 
 /** Convert lat/lng to tile coordinates at a given zoom */
 function latLngToTile(lat: number, lng: number, zoom: number): { x: number; y: number } {
@@ -32,9 +32,14 @@ function getTilesForBounds(
   return tiles
 }
 
-/** Build ESRI tile URL */
-function tileUrl(z: number, y: number, x: number): string {
-  return `${ESRI_TILE_URL}/${z}/${y}/${x}`
+function esriTileUrl(z: number, y: number, x: number): string {
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
+}
+
+function mapboxTileUrl(z: number, x: number, y: number, token: string): string {
+  // Alternate between a/b subdomains for parallel downloads
+  const sub = (x + y) % 2 === 0 ? 'a' : 'b'
+  return `https://${sub}.tiles.mapbox.com/v4/mapbox.satellite/${z}/${x}/${y}.png?access_token=${token}`
 }
 
 export type PrecacheProgress = {
@@ -46,52 +51,43 @@ export type PrecacheProgress = {
 }
 
 /**
- * Pre-cache tiles for a base area.
- * @param centerLat Center latitude of the base
- * @param centerLng Center longitude of the base
- * @param radiusNm Radius in nautical miles to cache (default 2nm covers most airfields)
- * @param zoomLevels Zoom levels to cache (default 12-17)
- * @param onProgress Callback for progress updates
+ * Compute tile list for a base area
  */
-export async function precacheTiles(
-  centerLat: number,
-  centerLng: number,
-  radiusNm: number = 2,
-  zoomLevels: number[] = [12, 13, 14, 15, 16, 17],
-  onProgress?: (p: PrecacheProgress) => void,
-): Promise<PrecacheProgress> {
-  // Convert NM to degrees (rough approximation)
+function computeTileList(
+  centerLat: number, centerLng: number, radiusNm: number, zoomLevels: number[],
+): { x: number; y: number; z: number }[] {
   const degLat = radiusNm / 60
   const degLng = radiusNm / (60 * Math.cos((centerLat * Math.PI) / 180))
-
   const minLat = centerLat - degLat
   const maxLat = centerLat + degLat
   const minLng = centerLng - degLng
   const maxLng = centerLng + degLng
 
-  // Collect all tiles across zoom levels
   const allTiles: { x: number; y: number; z: number }[] = []
   for (const z of zoomLevels) {
     allTiles.push(...getTilesForBounds(minLat, minLng, maxLat, maxLng, z))
   }
+  return allTiles
+}
 
-  const progress: PrecacheProgress = {
-    total: allTiles.length,
-    loaded: 0,
-    cached: 0,
-    errors: 0,
-    done: false,
-  }
-
+/**
+ * Generic tile pre-cache function
+ */
+async function precacheGeneric(
+  cacheName: string,
+  tiles: { x: number; y: number; z: number }[],
+  urlBuilder: (z: number, x: number, y: number) => string,
+  onProgress?: (p: PrecacheProgress) => void,
+): Promise<PrecacheProgress> {
+  const progress: PrecacheProgress = { total: tiles.length, loaded: 0, cached: 0, errors: 0, done: false }
   onProgress?.(progress)
 
-  // Open cache
-  const cache = await caches.open(CACHE_NAME)
+  const cache = await caches.open(cacheName)
 
   // Check which tiles are already cached
-  const uncached: typeof allTiles = []
-  for (const tile of allTiles) {
-    const url = tileUrl(tile.z, tile.y, tile.x)
+  const uncached: typeof tiles = []
+  for (const tile of tiles) {
+    const url = urlBuilder(tile.z, tile.x, tile.y)
     const existing = await cache.match(url)
     if (existing) {
       progress.cached++
@@ -100,16 +96,15 @@ export async function precacheTiles(
       uncached.push(tile)
     }
   }
-
   onProgress?.(progress)
 
-  // Fetch uncached tiles in batches to avoid overwhelming the network
+  // Fetch in batches
   const BATCH_SIZE = 6
   for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
     const batch = uncached.slice(i, i + BATCH_SIZE)
     const results = await Promise.allSettled(
       batch.map(async (tile) => {
-        const url = tileUrl(tile.z, tile.y, tile.x)
+        const url = urlBuilder(tile.z, tile.x, tile.y)
         const response = await fetch(url, { mode: 'cors' })
         if (response.ok) {
           await cache.put(url, response)
@@ -121,8 +116,7 @@ export async function precacheTiles(
         onProgress?.(progress)
       }),
     )
-    // Count any unhandled rejections
-    results.forEach((r) => {
+    results.forEach(r => {
       if (r.status === 'rejected') {
         progress.errors++
         progress.loaded++
@@ -136,18 +130,87 @@ export async function precacheTiles(
   return progress
 }
 
-/** Check how many tiles are already cached for a base area */
-export async function getCachedTileCount(): Promise<number> {
-  try {
-    const cache = await caches.open(CACHE_NAME)
-    const keys = await cache.keys()
-    return keys.length
-  } catch {
-    return 0
-  }
+/**
+ * Pre-cache ESRI tiles (used by obstruction eval, location pickers, etc.)
+ */
+export async function precacheEsriTiles(
+  centerLat: number, centerLng: number,
+  radiusNm: number = 2,
+  zoomLevels: number[] = [12, 13, 14, 15, 16, 17],
+  onProgress?: (p: PrecacheProgress) => void,
+): Promise<PrecacheProgress> {
+  const tiles = computeTileList(centerLat, centerLng, radiusNm, zoomLevels)
+  return precacheGeneric(ESRI_CACHE, tiles, (z, x, y) => esriTileUrl(z, y, x), onProgress)
 }
 
-/** Clear the tile cache */
+/**
+ * Pre-cache Mapbox satellite tiles (used by infrastructure, parking, etc.)
+ */
+export async function precacheMapboxTiles(
+  centerLat: number, centerLng: number,
+  radiusNm: number = 2,
+  zoomLevels: number[] = [12, 13, 14, 15, 16, 17],
+  onProgress?: (p: PrecacheProgress) => void,
+): Promise<PrecacheProgress> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+  if (!token) {
+    return { total: 0, loaded: 0, cached: 0, errors: 0, done: true }
+  }
+  const tiles = computeTileList(centerLat, centerLng, radiusNm, zoomLevels)
+  return precacheGeneric(MAPBOX_CACHE, tiles, (z, x, y) => mapboxTileUrl(z, x, y, token), onProgress)
+}
+
+/** Legacy wrapper — caches both ESRI and Mapbox tiles */
+export async function precacheTiles(
+  centerLat: number, centerLng: number,
+  radiusNm: number = 2,
+  zoomLevels: number[] = [12, 13, 14, 15, 16, 17],
+  onProgress?: (p: PrecacheProgress) => void,
+): Promise<PrecacheProgress> {
+  // Run ESRI first, then Mapbox, combining progress
+  const tiles = computeTileList(centerLat, centerLng, radiusNm, zoomLevels)
+  const totalTiles = tiles.length * 2 // ESRI + Mapbox
+  const combined: PrecacheProgress = { total: totalTiles, loaded: 0, cached: 0, errors: 0, done: false }
+
+  await precacheEsriTiles(centerLat, centerLng, radiusNm, zoomLevels, (p) => {
+    combined.loaded = p.loaded
+    combined.cached = p.cached
+    combined.errors = p.errors
+    onProgress?.(combined)
+  })
+
+  const esriDone = { loaded: combined.loaded, cached: combined.cached, errors: combined.errors }
+
+  await precacheMapboxTiles(centerLat, centerLng, radiusNm, zoomLevels, (p) => {
+    combined.loaded = esriDone.loaded + p.loaded
+    combined.cached = esriDone.cached + p.cached
+    combined.errors = esriDone.errors + p.errors
+    onProgress?.(combined)
+  })
+
+  combined.done = true
+  onProgress?.(combined)
+  return combined
+}
+
+/** Check how many tiles are cached across both caches */
+export async function getCachedTileCount(): Promise<number> {
+  let count = 0
+  try {
+    const esri = await caches.open(ESRI_CACHE)
+    count += (await esri.keys()).length
+  } catch { /* ignore */ }
+  try {
+    const mb = await caches.open(MAPBOX_CACHE)
+    count += (await mb.keys()).length
+  } catch { /* ignore */ }
+  return count
+}
+
+/** Clear both tile caches */
 export async function clearTileCache(): Promise<void> {
-  await caches.delete(CACHE_NAME)
+  await Promise.all([
+    caches.delete(ESRI_CACHE),
+    caches.delete(MAPBOX_CACHE),
+  ])
 }
