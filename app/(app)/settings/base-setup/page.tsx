@@ -20,6 +20,25 @@ import {
   type FrequencyType,
 } from '@/lib/supabase/shift-checklist'
 import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
+import {
+  fetchCustomStatusBoards,
+  createCustomStatusBoard,
+  updateCustomStatusBoard,
+  deleteCustomStatusBoard,
+  fetchCustomStatusItems,
+  createCustomStatusItem,
+  updateCustomStatusItem,
+  deleteCustomStatusItem,
+  type CustomStatusBoard,
+  type CustomStatusItem,
+} from '@/lib/supabase/custom-status'
+import {
+  fetchPprColumns,
+  createPprColumn,
+  updatePprColumn,
+  deletePprColumn,
+  type PprColumn,
+} from '@/lib/supabase/ppr'
 import TaxiwayEditor from '@/components/taxiway-editor'
 import {
   fetchLightingSystems,
@@ -37,7 +56,7 @@ import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, Infra
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
 
-type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife'
+type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife' | 'statusboards' | 'pprcolumns'
 
 type WizardStep = {
   key: SetupTab
@@ -60,6 +79,8 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'qrc', number: 10, label: 'QRC Templates', description: 'Configure Quick Reaction Checklists for emergency response. Seed from the default library or customize for your installation.', required: true },
   { key: 'wildlife', number: 11, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
   { key: 'lighting', number: 12, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
+  { key: 'statusboards', number: 13, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
+  { key: 'pprcolumns', number: 14, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
 ]
 
 export default function BaseSetupPage() {
@@ -214,6 +235,8 @@ export default function BaseSetupPage() {
         {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
         {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} />}
         {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
+        {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} />}
+        {step.key === 'pprcolumns' && <PprColumnsTab installationId={installationId} />}
       </div>
 
       {/* Navigation buttons */}
@@ -3618,6 +3641,385 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
             No species found matching &quot;{search}&quot;
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Status Boards Tab ──
+function StatusBoardsTab({ installationId }: { installationId: string | null }) {
+  const [boards, setBoards] = useState<CustomStatusBoard[]>([])
+  const [itemsByBoard, setItemsByBoard] = useState<Record<string, CustomStatusItem[]>>({})
+  const [newBoardName, setNewBoardName] = useState('')
+  const [newItemNames, setNewItemNames] = useState<Record<string, string>>({})
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null)
+  const [editingBoardName, setEditingBoardName] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  const loadBoards = useCallback(async () => {
+    if (!installationId) return
+    setLoading(true)
+    const data = await fetchCustomStatusBoards(installationId)
+    setBoards(data)
+    const itemMap: Record<string, CustomStatusItem[]> = {}
+    for (const board of data) {
+      itemMap[board.id] = await fetchCustomStatusItems(board.id)
+    }
+    setItemsByBoard(itemMap)
+    setLoading(false)
+  }, [installationId])
+
+  useEffect(() => { loadBoards() }, [loadBoards])
+
+  const handleAddBoard = async () => {
+    if (!installationId || !newBoardName.trim()) return
+    const board = await createCustomStatusBoard({
+      base_id: installationId,
+      board_name: newBoardName.trim(),
+      sort_order: boards.length,
+    })
+    if (board) {
+      setBoards(prev => [...prev, board])
+      setItemsByBoard(prev => ({ ...prev, [board.id]: [] }))
+      setNewBoardName('')
+      toast.success(`Board "${board.board_name}" created`)
+    }
+  }
+
+  const handleDeleteBoard = async (board: CustomStatusBoard) => {
+    if (!confirm(`Delete "${board.board_name}" and all its items?`)) return
+    const ok = await deleteCustomStatusBoard(board.id, board.board_name, installationId || undefined)
+    if (ok) {
+      setBoards(prev => prev.filter(b => b.id !== board.id))
+      setItemsByBoard(prev => { const n = { ...prev }; delete n[board.id]; return n })
+      toast.success(`Deleted "${board.board_name}"`)
+    }
+  }
+
+  const handleRenameBoard = async (board: CustomStatusBoard) => {
+    if (!editingBoardName.trim() || editingBoardName.trim() === board.board_name) {
+      setEditingBoardId(null)
+      return
+    }
+    const updated = await updateCustomStatusBoard(board.id, { board_name: editingBoardName.trim() })
+    if (updated) {
+      setBoards(prev => prev.map(b => b.id === updated.id ? updated : b))
+      toast.success('Board renamed')
+    }
+    setEditingBoardId(null)
+  }
+
+  const handleAddItem = async (boardId: string) => {
+    const name = (newItemNames[boardId] || '').trim()
+    if (!installationId || !name) return
+    const items = itemsByBoard[boardId] || []
+    const item = await createCustomStatusItem({
+      board_id: boardId,
+      base_id: installationId,
+      item_name: name,
+      sort_order: items.length,
+    })
+    if (item) {
+      setItemsByBoard(prev => ({ ...prev, [boardId]: [...(prev[boardId] || []), item] }))
+      setNewItemNames(prev => ({ ...prev, [boardId]: '' }))
+      toast.success(`Added "${item.item_name}"`)
+    }
+  }
+
+  const handleDeleteItem = async (boardId: string, item: CustomStatusItem) => {
+    if (!confirm(`Delete "${item.item_name}"?`)) return
+    const ok = await deleteCustomStatusItem(item.id)
+    if (ok) {
+      setItemsByBoard(prev => ({ ...prev, [boardId]: (prev[boardId] || []).filter(i => i.id !== item.id) }))
+      toast.success(`Deleted "${item.item_name}"`)
+    }
+  }
+
+  if (loading) {
+    return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading status boards...</p>
+  }
+
+  const STATUS_DOT: Record<string, string> = {
+    green: 'var(--color-success)',
+    yellow: 'var(--color-warning)',
+    red: 'var(--color-danger)',
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Custom Status Boards</h3>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+        Create custom status panels that appear on the Airfield Status page with green/yellow/red toggles.
+        Examples: Arresting Systems, Comm Status, ARFF Equipment.
+      </p>
+
+      {boards.length === 0 && (
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 12 }}>No status boards configured yet.</p>
+      )}
+
+      {boards.map(board => {
+        const items = itemsByBoard[board.id] || []
+        const isEditing = editingBoardId === board.id
+        return (
+          <div key={board.id} style={{
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: 12,
+            overflow: 'hidden',
+          }}>
+            {/* Board header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 12px',
+              background: 'var(--color-bg-inset)',
+              borderBottom: '1px solid var(--color-border)',
+            }}>
+              {isEditing ? (
+                <input
+                  autoFocus
+                  value={editingBoardName}
+                  onChange={e => setEditingBoardName(e.target.value)}
+                  onBlur={() => handleRenameBoard(board)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleRenameBoard(board); if (e.key === 'Escape') setEditingBoardId(null) }}
+                  style={{
+                    flex: 1, padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-accent)', background: 'var(--color-bg)',
+                    color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  }}
+                />
+              ) : (
+                <span
+                  onClick={() => { setEditingBoardId(board.id); setEditingBoardName(board.board_name) }}
+                  style={{ flex: 1, fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer' }}
+                  title="Click to rename"
+                >
+                  {board.board_name}
+                </span>
+              )}
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
+              <button
+                onClick={() => handleDeleteBoard(board)}
+                style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px', lineHeight: 1 }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Items list */}
+            <div style={{ padding: '8px 12px' }}>
+              {items.map(item => (
+                <div key={item.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 0',
+                  borderBottom: '1px solid var(--color-border)',
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: STATUS_DOT[item.status] ?? 'var(--color-text-3)',
+                    flexShrink: 0,
+                  }} />
+                  <span style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600 }}>
+                    {item.item_name}
+                  </span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                    ({item.status})
+                  </span>
+                  <button
+                    onClick={() => handleDeleteItem(board.id, item)}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+
+              {/* Add item input */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <input
+                  value={newItemNames[board.id] || ''}
+                  onChange={e => setNewItemNames(prev => ({ ...prev, [board.id]: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && handleAddItem(board.id)}
+                  placeholder="Add item (e.g., Cable 1, HF Radio)..."
+                  style={{
+                    flex: 1, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg)',
+                    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                  }}
+                />
+                <button
+                  onClick={() => handleAddItem(board.id)}
+                  disabled={!(newItemNames[board.id] || '').trim()}
+                  style={{
+                    padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: 'none',
+                    background: (newItemNames[board.id] || '').trim() ? 'var(--color-accent)' : 'var(--color-border)',
+                    color: (newItemNames[board.id] || '').trim() ? '#fff' : 'var(--color-text-3)',
+                    cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Add new board */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <input
+          value={newBoardName}
+          onChange={e => setNewBoardName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAddBoard()}
+          placeholder="New board name (e.g., Arresting Systems, Comm Status)..."
+          style={{
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+          }}
+        />
+        <button
+          onClick={handleAddBoard}
+          disabled={!newBoardName.trim()}
+          style={{
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: newBoardName.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+            color: newBoardName.trim() ? '#fff' : 'var(--color-text-3)',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+          }}
+        >
+          Create Board
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── PPR Columns Tab ──
+function PprColumnsTab({ installationId }: { installationId: string | null }) {
+  const [columns, setColumns] = useState<PprColumn[]>([])
+  const [newColName, setNewColName] = useState('')
+  const [newColRequired, setNewColRequired] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  const loadColumns = useCallback(async () => {
+    if (!installationId) return
+    setLoading(true)
+    const data = await fetchPprColumns(installationId)
+    setColumns(data)
+    setLoading(false)
+  }, [installationId])
+
+  useEffect(() => { loadColumns() }, [loadColumns])
+
+  const handleAdd = async () => {
+    if (!installationId || !newColName.trim()) return
+    const col = await createPprColumn({
+      base_id: installationId,
+      column_name: newColName.trim(),
+      sort_order: columns.length,
+      is_required: newColRequired,
+    })
+    if (col) {
+      setColumns(prev => [...prev, col])
+      setNewColName('')
+      setNewColRequired(false)
+      toast.success(`Added "${col.column_name}"`)
+    }
+  }
+
+  const handleDelete = async (col: PprColumn) => {
+    if (!confirm(`Delete column "${col.column_name}"? Existing PPR data for this column will no longer display.`)) return
+    const ok = await deletePprColumn(col.id)
+    if (ok) {
+      setColumns(prev => prev.filter(c => c.id !== col.id))
+      toast.success(`Deleted "${col.column_name}"`)
+    }
+  }
+
+  const handleToggleRequired = async (col: PprColumn) => {
+    const updated = await updatePprColumn(col.id, { is_required: !col.is_required })
+    if (updated) {
+      setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
+    }
+  }
+
+  if (loading) {
+    return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading PPR columns...</p>
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>PPR Columns</h3>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+        Define the data fields for your PPR table. Common examples: Aircraft Type, Tail #, Unit, POC, Purpose, ETA, ETD, Parking.
+        PPR # and Arrival Date are always included automatically.
+      </p>
+
+      {columns.length === 0 && (
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 12 }}>No columns configured yet.</p>
+      )}
+
+      {columns.map((col, i) => (
+        <div key={col.id} style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 0',
+          borderBottom: '1px solid var(--color-border)',
+        }}>
+          <span style={{ width: 24, textAlign: 'center', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{i + 1}</span>
+          <span style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600 }}>{col.column_name}</span>
+          <button
+            onClick={() => handleToggleRequired(col)}
+            style={{
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: `1px solid ${col.is_required ? 'var(--color-accent)' : 'var(--color-border)'}`,
+              background: col.is_required ? 'rgba(56,189,248,0.08)' : 'transparent',
+              color: col.is_required ? 'var(--color-accent)' : 'var(--color-text-3)',
+              cursor: 'pointer',
+            }}
+          >
+            {col.is_required ? 'Required' : 'Optional'}
+          </button>
+          <button
+            onClick={() => handleDelete(col)}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
+          >
+            &times;
+          </button>
+        </div>
+      ))}
+
+      {/* Add column */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+        <input
+          value={newColName}
+          onChange={e => setNewColName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Column name (e.g., Aircraft Type, Tail #)..."
+          style={{
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+          }}
+        />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <input type="checkbox" checked={newColRequired} onChange={e => setNewColRequired(e.target.checked)} />
+          Required
+        </label>
+        <button
+          onClick={handleAdd}
+          disabled={!newColName.trim()}
+          style={{
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: newColName.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+            color: newColName.trim() ? '#fff' : 'var(--color-text-3)',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+          }}
+        >
+          Add
+        </button>
       </div>
     </div>
   )

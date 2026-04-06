@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
+import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
+import { fetchPprEntriesForDate, fetchPprColumns, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
@@ -62,6 +64,17 @@ export default function HomePage() {
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
+  const [customBoards, setCustomBoards] = useState<CustomStatusBoard[]>([])
+  const [customItems, setCustomItems] = useState<CustomStatusItem[]>([])
+  const [customItemNotes, setCustomItemNotes] = useState<Record<string, string>>({})
+  const [customItemDialog, setCustomItemDialog] = useState<{
+    item: CustomStatusItem
+    boardName: string
+    selectedStatus: 'green' | 'yellow' | 'red'
+    notes: string
+  } | null>(null)
+  const [todayPprs, setTodayPprs] = useState<PprEntry[]>([])
+  const [pprColumns, setPprColumns] = useState<PprColumn[]>([])
   const [activeContractors, setActiveContractors] = useState<ContractorRow[]>([])
   const [showAddPersonnel, setShowAddPersonnel] = useState(false)
   const [addingPersonnel, setAddingPersonnel] = useState(false)
@@ -191,6 +204,38 @@ export default function HomePage() {
   }, [installationId])
 
   useEffect(() => { loadNavaids() }, [loadNavaids])
+
+  // --- Load Custom Status Boards ---
+  const loadCustomBoards = useCallback(async () => {
+    if (!installationId) { setCustomBoards([]); setCustomItems([]); return }
+    const boards = await fetchCustomStatusBoards(installationId)
+    setCustomBoards(boards)
+    if (boards.length > 0) {
+      const items = await fetchAllCustomStatusItems(installationId)
+      setCustomItems(items)
+      const notes: Record<string, string> = {}
+      items.forEach(i => { notes[i.id] = i.notes || '' })
+      setCustomItemNotes(notes)
+    } else {
+      setCustomItems([])
+    }
+  }, [installationId])
+
+  useEffect(() => { loadCustomBoards() }, [loadCustomBoards])
+
+  // --- Load today's PPRs ---
+  const loadTodayPprs = useCallback(async () => {
+    if (!installationId) { setTodayPprs([]); setPprColumns([]); return }
+    const today = new Date().toISOString().slice(0, 10)
+    const [entries, cols] = await Promise.all([
+      fetchPprEntriesForDate(installationId, today),
+      fetchPprColumns(installationId),
+    ])
+    setTodayPprs(entries)
+    setPprColumns(cols)
+  }, [installationId])
+
+  useEffect(() => { loadTodayPprs() }, [loadTodayPprs])
 
   useEffect(() => { refreshStatus() }, [refreshStatus])
 
@@ -327,6 +372,23 @@ export default function HomePage() {
     await updateNavaidStatus(navaid.id, navaid.status, notes)
     loadNavaids()
     logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { details: `${navaid.navaid_name.toUpperCase()} REMARKS UPDATED${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
+  }
+
+  // --- Custom Status Board handlers ---
+  async function handleCustomItemToggle(item: CustomStatusItem, boardName: string, newStatus: 'green' | 'yellow' | 'red', dialogNotes?: string) {
+    const notes = newStatus === 'green' ? null : (dialogNotes ?? (customItemNotes[item.id] || null))
+    const updated = await updateCustomStatusItem(item.id, { status: newStatus, notes })
+    if (updated) {
+      loadCustomBoards()
+      logActivity('updated', 'custom_status', item.id, `${boardName} — ${item.item_name}`, { details: `${boardName.toUpperCase()} — ${item.item_name.toUpperCase()} STATUS CHANGED TO ${newStatus === 'green' ? 'OPERATIONAL' : newStatus === 'yellow' ? 'DEGRADED' : 'OUTAGE'}${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
+    }
+  }
+
+  async function handleCustomItemNotesSave(item: CustomStatusItem, boardName: string, overrideNotes?: string) {
+    const notes = overrideNotes ?? (customItemNotes[item.id] || null)
+    await updateCustomStatusItem(item.id, { notes })
+    loadCustomBoards()
+    logActivity('updated', 'custom_status', item.id, `${boardName} — ${item.item_name}`, { details: `${boardName.toUpperCase()} — ${item.item_name.toUpperCase()} REMARKS UPDATED${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
   }
 
   return (
@@ -846,6 +908,103 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Custom Status Item dialog */}
+      {customItemDialog && (
+        <div
+          className="modal-overlay"
+          onClick={() => setCustomItemDialog(null)}
+          style={{ padding: 24 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 380,
+              border: '1px solid var(--color-border-mid)',
+            }}
+          >
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 2 }}>
+              {customItemDialog.item.item_name}
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+              {customItemDialog.boardName}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {(['green', 'yellow', 'red'] as const).map((s) => {
+                const selected = customItemDialog.selectedStatus === s
+                const color = s === 'red' ? 'var(--color-danger)' : s === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
+                const label = s === 'red' ? 'RED' : s === 'yellow' ? 'YELLOW' : 'GREEN'
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setCustomItemDialog({ ...customItemDialog, selectedStatus: s })}
+                    style={{
+                      flex: 1, padding: '12px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', textAlign: 'center',
+                      border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
+                      background: selected ? `${STATUS_HEX[s]}20` : 'var(--color-bg-inset)',
+                      color: selected ? color : 'var(--color-text-3)',
+                    }}
+                  >{label}</button>
+                )
+              })}
+            </div>
+            {customItemDialog.selectedStatus !== 'green' && (
+              <textarea
+                placeholder="Notes (optional)..."
+                value={customItemDialog.notes}
+                onChange={(e) => setCustomItemDialog({ ...customItemDialog, notes: e.target.value })}
+                rows={2}
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none', marginBottom: 14,
+                  fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
+                }}
+              />
+            )}
+            {(() => {
+              const statusChanged = customItemDialog.selectedStatus !== customItemDialog.item.status
+              const notesChanged = customItemDialog.notes !== (customItemDialog.item.notes || '')
+              const hasChanges = statusChanged || notesChanged
+              const selColor = customItemDialog.selectedStatus === 'red' ? 'var(--color-danger)' : customItemDialog.selectedStatus === 'yellow' ? 'var(--color-warning)' : 'var(--color-success)'
+              return (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      const { item, boardName, selectedStatus, notes } = customItemDialog
+                      if (statusChanged) {
+                        handleCustomItemToggle(item, boardName, selectedStatus, notes || undefined)
+                      } else if (notesChanged) {
+                        setCustomItemNotes(prev => ({ ...prev, [item.id]: notes }))
+                        handleCustomItemNotesSave(item, boardName, notes)
+                      }
+                      setCustomItemDialog(null)
+                    }}
+                    disabled={!hasChanges}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: hasChanges ? 'pointer' : 'not-allowed',
+                      border: `1px solid ${hasChanges ? selColor : 'var(--color-border-mid)'}`,
+                      background: 'var(--color-bg-inset)',
+                      color: hasChanges ? selColor : 'var(--color-text-3)',
+                      opacity: hasChanges ? 1 : 0.5,
+                    }}
+                  >Save</button>
+                  <button
+                    onClick={() => setCustomItemDialog(null)}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                      cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                      background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                    }}
+                  >Cancel</button>
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Confirmation dialog for runway changes */}
       {confirmDialog && (
         <div
@@ -1058,7 +1217,7 @@ export default function HomePage() {
       )}
 
       {/* ===== Runway & NAVAID Status ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${3 + customBoards.length}, 1fr)`, gap: 8, marginBottom: 12, alignItems: 'start' }}>
       {(() => {
         // Build runway entries from installation runways
         const rwyEntries = runways.map(r => {
@@ -1504,7 +1663,141 @@ export default function HomePage() {
             )
           })}
       </div>{/* end ARFF column */}
+
+      {/* Custom Status Boards — dynamically rendered per base config */}
+      {customBoards.map(board => {
+        const boardItems = customItems.filter(i => i.board_id === board.id)
+        const BOARD_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
+        return (
+          <div key={board.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{board.board_name}</div>
+            {boardItems.length === 0 ? (
+              <div className="card" style={{ padding: 12 }}>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
+                  No items configured
+                </div>
+              </div>
+            ) : (
+              <div className="card" style={{ padding: '8px 12px 4px' }}>
+                {boardItems.map(item => (
+                  <div key={item.id} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
+                        {item.item_name}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setCustomItemDialog({ item, boardName: board.board_name, selectedStatus: item.status, notes: customItemNotes[item.id] || '' })
+                        }}
+                        style={{
+                          width: 36, height: 28, borderRadius: 'var(--radius-sm)',
+                          border: `2px solid ${STATUS_COLORS[item.status]}`,
+                          background: `${STATUS_HEX[item.status]}20`,
+                          cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
+                          color: STATUS_COLORS[item.status], textTransform: 'uppercase', padding: 0,
+                        }}
+                      >
+                        {BOARD_LABELS[item.status] || 'G'}
+                      </button>
+                    </div>
+                    {(item.status === 'yellow' || item.status === 'red') && (
+                      <textarea
+                        placeholder="Add note..."
+                        value={customItemNotes[item.id] || ''}
+                        onChange={(e) => setCustomItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        onBlur={() => handleCustomItemNotesSave(item, board.board_name)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleCustomItemNotesSave(item, board.board_name) }}
+                        rows={1}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: 'var(--color-bg-inset)',
+                          border: `1px solid ${STATUS_HEX[item.status]}40`,
+                          borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 'var(--fs-lg)',
+                          color: 'var(--color-text-1)', outline: 'none',
+                          resize: 'none', overflow: 'hidden',
+                          fontFamily: 'inherit',
+                          fieldSizing: 'content' as unknown as undefined,
+                          minHeight: 32,
+                        }}
+                        ref={(el) => {
+                          if (el) {
+                            el.style.height = 'auto'
+                            el.style.height = el.scrollHeight + 'px'
+                          }
+                        }}
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement
+                          target.style.height = 'auto'
+                          target.style.height = target.scrollHeight + 'px'
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
       </div>{/* end main status row */}
+
+      {/* ===== Today's PPRs ===== */}
+      {pprColumns.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span className="section-label" style={{ marginBottom: 0 }}>
+              Prior Permission Required ({todayPprs.length})
+            </span>
+            <button
+              onClick={() => router.push('/ppr')}
+              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+            >
+              View All &rarr;
+            </button>
+          </div>
+          {todayPprs.length === 0 ? (
+            <div className="card" style={{ padding: 12, textAlign: 'center' }}>
+              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No PPRs for today</span>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
+                <thead>
+                  <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>PPR #</th>
+                    {pprColumns.map(col => (
+                      <th key={col.id} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{col.column_name}</th>
+                    ))}
+                    {todayPprs.some(e => e.notes) && (
+                      <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' }}>Notes</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayPprs.map(entry => (
+                    <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                        {entry.ppr_number}
+                      </td>
+                      {pprColumns.map(col => (
+                        <td key={col.id} style={{ padding: '6px 8px', color: 'var(--color-text-1)', whiteSpace: 'nowrap' }}>
+                          {(entry.column_values || {})[col.id] || '\u2014'}
+                        </td>
+                      ))}
+                      {todayPprs.some(e => e.notes) && (
+                        <td style={{ padding: '6px 8px', color: 'var(--color-text-2)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {entry.notes || ''}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
       <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>

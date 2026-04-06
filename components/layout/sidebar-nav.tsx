@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   ClipboardCheck,
   ClipboardList,
+  ClipboardPen,
   MapPin,
   FileText,
   Shield,
@@ -61,7 +62,7 @@ import {
 
 // Icon lookup by name string
 const ICON_MAP: Record<string, LucideIcon> = {
-  Home, LayoutDashboard, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList,
+  Home, LayoutDashboard, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, ClipboardPen,
   Bird, HardHat, AlertTriangle, MapPin, Database, Shield, Lightbulb,
   PlaneLanding, Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
   Wrench, FolderOpen, GraduationCap,

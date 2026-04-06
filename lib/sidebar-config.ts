@@ -30,6 +30,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Airfield Checks', href: '/checks', iconName: 'ClipboardCheck' },
   { name: 'All Inspections', href: '/inspections/all', iconName: 'ClipboardList' },
   { name: 'Wildlife / BASH', href: '/wildlife', iconName: 'Bird' },
+  { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen' },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
   { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
@@ -56,7 +57,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/contractors', '/parking'],
+      items: ['/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
     },
     {
       label: 'Airfield Management',
