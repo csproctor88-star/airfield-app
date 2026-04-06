@@ -12,6 +12,7 @@ export interface AdvisoryItem {
   id: string
   type: 'WATCH' | 'WARNING' | 'ADVISORY'
   text: string
+  number?: string | null
   created_at: string
   effective_start?: string | null
   effective_end?: string | null

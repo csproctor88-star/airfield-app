@@ -166,7 +166,8 @@ export default function HomePage() {
             const effLabel = adv.effective_start
               ? `${formatZuluTime(new Date(adv.effective_start))}Z–${formatZuluTime(new Date(adv.effective_end))}Z`
               : `UFN–${formatZuluTime(new Date(adv.effective_end))}Z`
-            if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${adv.type.toUpperCase()}`, { details: `WEATHER ${adv.type.toUpperCase()} EXPIRED — ${adv.text.toUpperCase()} (EFF ${effLabel})` }, installationId)
+            const expNum = adv.number ? ` #${adv.number.toUpperCase()}` : ''
+            if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${adv.type.toUpperCase()}${expNum}`, { details: `WEATHER ${adv.type.toUpperCase()}${expNum} EXPIRED — ${adv.text.toUpperCase()} (EFF ${effLabel})` }, installationId)
             removeAdvisory(adv.id)
           }
         }
@@ -514,7 +515,7 @@ export default function HomePage() {
               setAdvisoryDraftStart(adv.effective_start ? new Date(adv.effective_start).toISOString().slice(0, 16) : '')
               setAdvisoryDraftEnd(adv.effective_end ? new Date(adv.effective_end).toISOString().slice(0, 16) : '')
               setAdvisoryDraftUfn(!adv.effective_end)
-              setAdvisoryDraftNumber('')
+              setAdvisoryDraftNumber(adv.number || '')
               setAdvisoryDialogOpen(true)
             }}
             style={{
@@ -529,7 +530,7 @@ export default function HomePage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: colors.text }}>{adv.type}</div>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: colors.text }}>{adv.type}{adv.number ? ` #${adv.number.toUpperCase()}` : ''}</div>
               {countdownText && (
                 <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: expiringSoon ? colors.text : 'var(--color-text-3)' }}>
                   {countdownText}
@@ -749,7 +750,8 @@ export default function HomePage() {
                       newAdvisoryType: null,
                       newAdvisoryText: null,
                     }, installationId)
-                    if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${(existing?.type ?? 'INFO').toUpperCase()}`, { details: `WEATHER ${(existing?.type ?? 'INFO').toUpperCase()} CANCELLED — ${(existing?.text ?? '').toUpperCase()}` }, installationId)
+                    const cancelNum = existing?.number ? ` #${existing.number.toUpperCase()}` : ''
+                    if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${(existing?.type ?? 'INFO').toUpperCase()}${cancelNum}`, { details: `WEATHER ${(existing?.type ?? 'INFO').toUpperCase()}${cancelNum} CANCELLED — ${(existing?.text ?? '').toUpperCase()}` }, installationId)
                     await removeAdvisory(editingAdvisoryId)
                     setAdvisoryDialogOpen(false)
                   }}
@@ -778,7 +780,7 @@ export default function HomePage() {
                       }, installationId)
                       const wxNum = advisoryDraftNumber.trim() ? ` #${advisoryDraftNumber.trim().toUpperCase()}` : ''
                       if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}${wxNum}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()}${wxNum} UPDATED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
-                      await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
+                      await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd, advisoryDraftNumber.trim() || null)
                     } else {
                       logRunwayStatusChange({
                         newAdvisoryType: advisoryDraftType,
@@ -786,7 +788,7 @@ export default function HomePage() {
                       }, installationId)
                       const wxNumNew = advisoryDraftNumber.trim() ? ` #${advisoryDraftNumber.trim().toUpperCase()}` : ''
                       if (installationId) logActivity('created', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}${wxNumNew}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()}${wxNumNew} ISSUED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
-                      await addAdvisory(advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd)
+                      await addAdvisory(advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd, advisoryDraftNumber.trim() || null)
                     }
                   }
                   setAdvisoryDialogOpen(false)
