@@ -3957,6 +3957,22 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
     }
   }
 
+  const handleMove = async (index: number, direction: 'up' | 'down') => {
+    const swapIdx = direction === 'up' ? index - 1 : index + 1
+    if (swapIdx < 0 || swapIdx >= columns.length) return
+    const a = columns[index]
+    const b = columns[swapIdx]
+    await Promise.all([
+      updatePprColumn(a.id, { sort_order: b.sort_order }),
+      updatePprColumn(b.id, { sort_order: a.sort_order }),
+    ])
+    const updated = [...columns]
+    updated[index] = { ...b, sort_order: a.sort_order }
+    updated[swapIdx] = { ...a, sort_order: b.sort_order }
+    updated.sort((x, y) => x.sort_order - y.sort_order)
+    setColumns(updated)
+  }
+
   if (loading) {
     return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading PPR columns...</p>
   }
@@ -3979,7 +3995,20 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           padding: '8px 0',
           borderBottom: '1px solid var(--color-border)',
         }}>
-          <span style={{ width: 24, textAlign: 'center', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{i + 1}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, width: 20, alignItems: 'center', flexShrink: 0 }}>
+            <button
+              onClick={() => handleMove(i, 'up')}
+              disabled={i === 0}
+              style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--color-border)' : 'var(--color-text-3)', fontSize: 12, padding: 0, lineHeight: 1 }}
+              title="Move up"
+            >&uarr;</button>
+            <button
+              onClick={() => handleMove(i, 'down')}
+              disabled={i === columns.length - 1}
+              style={{ background: 'none', border: 'none', cursor: i === columns.length - 1 ? 'default' : 'pointer', color: i === columns.length - 1 ? 'var(--color-border)' : 'var(--color-text-3)', fontSize: 12, padding: 0, lineHeight: 1 }}
+              title="Move down"
+            >&darr;</button>
+          </div>
           <span style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600 }}>{col.column_name}</span>
           <select
             value={col.column_type || 'text'}
