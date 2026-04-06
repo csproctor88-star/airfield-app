@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.29.0 | **Build:** Clean | **53 routes** | **209 source files** | **125 migrations**
+**Version:** 2.30.0 | **Build:** Clean | **54 routes** | **209 source files** | **126 migrations**
 
 ## Tech Stack
 
@@ -373,8 +373,9 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| ~165 `as any` casts | Medium | Across 40+ files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~56). Regenerate Supabase types to eliminate ~50% |
-| 15 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,097), `parking/page.tsx` (3,777), `base-setup/page.tsx` (2,855), `inspections/page.tsx` (2,511) |
+| ~182 `as any` casts | Medium | Across 43 files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~73). Regenerate Supabase types to eliminate ~50% |
+| 68 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,090), `parking/page.tsx` (3,908), `base-setup/page.tsx` (3,624), `inspections/page.tsx` (2,515) |
+| 3 unused UI components | Low | `airfield-diagram-viewer.tsx`, `confirm-dialog.tsx`, `page-header.tsx` — never imported |
 | Map init duplication | Low | 6 Mapbox components share similar init logic |
 | PDF boilerplate duplication | Low | 16 PDF generators share similar header/footer/photo helper patterns |
 | Check draft real-time sync | Low | Two users could create duplicate checks for the same type |
@@ -390,5 +391,6 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 ## Reference Documents
 
-- [`docs/Glidepath_SRS_v5.0.md`](./docs/Glidepath_SRS_v5.0.md) — Software Requirements Specification
-- [`docs/SESSION_HANDOFF_v2.24.0.md`](./docs/SESSION_HANDOFF_v2.24.0.md) — Latest session handoff
+- [`docs/Glidepath_SRS_v6.0_Leadership.docx`](./docs/Glidepath_SRS_v6.0_Leadership.docx) — Software Requirements Specification (Leadership Edition)
+- [`docs/Glidepath_SRS_v6.0_Developer.docx`](./docs/Glidepath_SRS_v6.0_Developer.docx) — Software Requirements Specification (Developer Edition)
+- [`docs/SESSION_HANDOFF_v2.30.0.md`](./docs/SESSION_HANDOFF_v2.30.0.md) — Latest session handoff

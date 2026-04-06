@@ -12,6 +12,40 @@ All notable changes to Glidepath.
 - Training Management Module (DAF training records)
 - Outage analytics (frequency/duration tracking for lighting systems)
 - Part 139 civilian airport template support
+- CAC/PIV authentication (pending Platform One onboarding)
+- BowMonk Conversion Tool (feature parity with legacy Grotefend app)
+
+---
+
+## [2.30.0] — 2026-04-06
+
+### Navigation & UX
+- **Sign Out button** — added to bottom of sidebar nav and More page for quick access (previously buried in Settings)
+- **Removed Obstruction Database** from sidebar nav item registry — users with saved sidebar configs no longer see the orphaned entry
+
+### Shift Checklist
+- **N/A toggle** — checklist items now cycle: unchecked → completed (green check) → N/A (gray) → unchecked. N/A items count toward progress and allow the shift to file the checklist
+- **Three-state visual** — completed items show green checkmark with strikethrough, N/A items show gray "N/A" badge with italic strikethrough, both display user attribution
+
+### QRC Templates
+- **Editable step types** — QRC template editor in Base Setup now shows a type dropdown per step (Checkbox, Checkbox + Note, Fill-in Field, Time Field, Agency Notification, Conditional Ref, Text, Text Area) instead of read-only labels
+- **Type selector on new steps** — adding a step now includes a type picker (defaults to Checkbox)
+- **Two-row step layout** — label input + action buttons on row 1, type dropdown on row 2 for mobile readability
+
+### Beta Onboarding
+- **Beta Access Request Form** — comprehensive Google Form template with 5 sections (About You, Installation, Current Ops, Commitment, Terms) in `docs/Glidepath_Beta_Access_Form.md`
+- **Monthly Feedback Form** — 7-question recurring survey template
+- **5 email templates** — Accepted, Waitlisted, Day 3 check-in, Day 7 check-in, Monthly feedback
+
+### Compliance & Documentation
+- **DAF Form 679 waiver draft** — pre-written T-3 waiver request for DAFMAN 13-204v2 Para 2.5.2.10.3/10.4 (CAC signature requirement) in `docs/DAF_Form_679_Glidepath_Waiver.md`
+- **DAFMAN 13-204v2 compliance analysis** — full line-by-line review of signature, forms, and documentation requirements against Glidepath capabilities
+
+### Database Migrations (+1)
+- `2026040500` — add `is_na` boolean column to `shift_checklist_responses`
+
+### Cleanup
+- Removed `Obstruction Database` entry from `ALL_NAV_ITEMS` in `lib/sidebar-config.ts`
 
 ---
 
