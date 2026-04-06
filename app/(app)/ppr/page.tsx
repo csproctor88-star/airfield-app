@@ -11,6 +11,7 @@ import {
   createPprEntry,
   updatePprEntry,
   deletePprEntry,
+  PPR_COLUMN_TYPES,
   type PprColumn,
   type PprEntry,
 } from '@/lib/supabase/ppr'
@@ -323,20 +324,50 @@ export default function PprPage() {
             </label>
 
             {/* Dynamic columns */}
-            {columns.map(col => (
-              <label key={col.id} style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>
-                {col.column_name}{col.is_required ? ' *' : ''}
-                <input
-                  value={formValues[col.id] || ''}
-                  onChange={e => setFormValues(prev => ({ ...prev, [col.id]: e.target.value }))}
-                  style={{
-                    display: 'block', width: '100%', padding: '6px 10px', borderRadius: 4, marginTop: 4,
-                    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-                    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
-                  }}
-                />
-              </label>
-            ))}
+            {columns.map(col => {
+              const colType = col.column_type || 'text'
+              const inputStyle: React.CSSProperties = {
+                display: 'block', width: '100%', padding: '6px 10px', borderRadius: 4, marginTop: 4,
+                border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+              }
+              return (
+                <label key={col.id} style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>
+                  {col.column_name}{col.is_required ? ' *' : ''}
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginLeft: 6 }}>
+                    ({PPR_COLUMN_TYPES.find(t => t.value === colType)?.label || 'Text'})
+                  </span>
+                  {colType === 'yes_no_na' ? (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                      {['Yes', 'No', 'N/A'].map(opt => {
+                        const selected = formValues[col.id] === opt
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setFormValues(prev => ({ ...prev, [col.id]: selected ? '' : opt }))}
+                            style={{
+                              flex: 1, padding: '6px 4px', borderRadius: 4, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                              cursor: 'pointer', textAlign: 'center',
+                              border: selected ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                              background: selected ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
+                              color: selected ? 'var(--color-accent)' : 'var(--color-text-3)',
+                            }}
+                          >{opt}</button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <input
+                      type={colType === 'date' ? 'date' : colType === 'time' ? 'time' : colType === 'phone' ? 'tel' : colType === 'number' ? 'number' : colType === 'email' ? 'email' : 'text'}
+                      value={formValues[col.id] || ''}
+                      onChange={e => setFormValues(prev => ({ ...prev, [col.id]: e.target.value }))}
+                      style={inputStyle}
+                    />
+                  )}
+                </label>
+              )
+            })}
 
             {/* Notes */}
             <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>

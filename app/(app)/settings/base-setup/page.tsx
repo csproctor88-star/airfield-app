@@ -37,7 +37,9 @@ import {
   createPprColumn,
   updatePprColumn,
   deletePprColumn,
+  PPR_COLUMN_TYPES,
   type PprColumn,
+  type PprColumnType,
 } from '@/lib/supabase/ppr'
 import TaxiwayEditor from '@/components/taxiway-editor'
 import {
@@ -3900,6 +3902,7 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
 function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [columns, setColumns] = useState<PprColumn[]>([])
   const [newColName, setNewColName] = useState('')
+  const [newColType, setNewColType] = useState<PprColumnType>('text')
   const [newColRequired, setNewColRequired] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -3918,12 +3921,14 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
     const col = await createPprColumn({
       base_id: installationId,
       column_name: newColName.trim(),
+      column_type: newColType,
       sort_order: columns.length,
       is_required: newColRequired,
     })
     if (col) {
       setColumns(prev => [...prev, col])
       setNewColName('')
+      setNewColType('text')
       setNewColRequired(false)
       toast.success(`Added "${col.column_name}"`)
     }
@@ -3940,6 +3945,13 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
 
   const handleToggleRequired = async (col: PprColumn) => {
     const updated = await updatePprColumn(col.id, { is_required: !col.is_required })
+    if (updated) {
+      setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
+    }
+  }
+
+  const handleChangeType = async (col: PprColumn, newType: PprColumnType) => {
+    const updated = await updatePprColumn(col.id, { column_type: newType })
     if (updated) {
       setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
     }
@@ -3969,6 +3981,19 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
         }}>
           <span style={{ width: 24, textAlign: 'center', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{i + 1}</span>
           <span style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600 }}>{col.column_name}</span>
+          <select
+            value={col.column_type || 'text'}
+            onChange={e => handleChangeType(col, e.target.value as PprColumnType)}
+            style={{
+              padding: '2px 6px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+              color: 'var(--color-text-2)', cursor: 'pointer',
+            }}
+          >
+            {PPR_COLUMN_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
           <button
             onClick={() => handleToggleRequired(col)}
             style={{
@@ -3991,19 +4016,32 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       ))}
 
       {/* Add column */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <input
           value={newColName}
           onChange={e => setNewColName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder="Column name (e.g., Aircraft Type, Tail #)..."
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            flex: 1, minWidth: 160, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
+        <select
+          value={newColType}
+          onChange={e => setNewColType(e.target.value as PprColumnType)}
+          style={{
+            padding: '8px 8px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', cursor: 'pointer',
+          }}
+        >
+          {PPR_COLUMN_TYPES.map(t => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
           <input type="checkbox" checked={newColRequired} onChange={e => setNewColRequired(e.target.checked)} />
           Required

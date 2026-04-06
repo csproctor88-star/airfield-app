@@ -8,10 +8,23 @@ function db() {
 
 // ── Types ──
 
+export type PprColumnType = 'text' | 'date' | 'time' | 'yes_no_na' | 'phone' | 'number' | 'email'
+
+export const PPR_COLUMN_TYPES: { value: PprColumnType; label: string }[] = [
+  { value: 'text', label: 'Text' },
+  { value: 'date', label: 'Date' },
+  { value: 'time', label: 'Time' },
+  { value: 'yes_no_na', label: 'Yes / No / N/A' },
+  { value: 'phone', label: 'Phone Number' },
+  { value: 'number', label: 'Number' },
+  { value: 'email', label: 'Email' },
+]
+
 export type PprColumn = {
   id: string
   base_id: string
   column_name: string
+  column_type: PprColumnType
   sort_order: number
   is_required: boolean
   created_at: string
@@ -66,6 +79,7 @@ export async function fetchPprColumns(baseId: string): Promise<PprColumn[]> {
 export async function createPprColumn(input: {
   base_id: string
   column_name: string
+  column_type?: PprColumnType
   sort_order?: number
   is_required?: boolean
 }): Promise<PprColumn | null> {
@@ -84,7 +98,7 @@ export async function createPprColumn(input: {
 
 export async function updatePprColumn(
   id: string,
-  updates: Partial<Pick<PprColumn, 'column_name' | 'sort_order' | 'is_required'>>,
+  updates: Partial<Pick<PprColumn, 'column_name' | 'column_type' | 'sort_order' | 'is_required'>>,
 ): Promise<PprColumn | null> {
   const supabase = db()
   if (!supabase) return null
