@@ -13,6 +13,7 @@ import { BASE_DIRECTORY } from '@/lib/base-directory'
 import { ALL_REGULATIONS } from '@/lib/regulations-data'
 import { idbGetAllKeys, idbGetAll, idbSet, idbDelete, idbClear, STORE_BLOBS, STORE_USER_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
+import { precacheTiles, getCachedTileCount, clearTileCache, type PrecacheProgress } from '@/lib/tile-precache'
 import { saveAirfieldDiagram, getAirfieldDiagram, deleteAirfieldDiagram } from '@/lib/airfield-diagram'
 import type { UserRole } from '@/lib/supabase/types'
 
@@ -1120,6 +1121,7 @@ function RegulationsSectionContent() {
 // ═══════════════════════════════════════════════════════════════
 
 function StorageSectionContent() {
+  const { installationId, runways } = useInstallation()
   const [storageEstimate, setStorageEstimate] = useState<{ usageMB: string; quotaMB: string } | null>(null)
   const [storageSupported, setStorageSupported] = useState(true)
   const [regCount, setRegCount] = useState(0)
@@ -1128,6 +1130,9 @@ function StorageSectionContent() {
   const [userDocSizeMB, setUserDocSizeMB] = useState<string | null>(null)
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
+  const [tileCacheCount, setTileCacheCount] = useState(0)
+  const [precaching, setPrecaching] = useState(false)
+  const [precacheProgress, setPrecacheProgress] = useState<PrecacheProgress | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -1164,9 +1169,46 @@ function StorageSectionContent() {
         const totalBytes = userBlobs.reduce((sum, b) => sum + (b?.byteLength || 0), 0)
         setUserDocSizeMB((totalBytes / (1024 * 1024)).toFixed(1))
       } catch { /* ignore */ }
+
+      // Tile cache
+      try {
+        const count = await getCachedTileCount()
+        setTileCacheCount(count)
+      } catch { /* ignore */ }
     }
     load()
-  }, [clearingAll])
+  }, [clearingAll, precaching])
+
+  const handlePrecacheTiles = async () => {
+    if (!runways || runways.length === 0) {
+      toast.error('No runways configured — cannot determine base location')
+      return
+    }
+    const rwy = runways[0]
+    const lat = ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2
+    const lng = ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2
+    if (lat === 0 && lng === 0) {
+      toast.error('Runway coordinates not set')
+      return
+    }
+    setPrecaching(true)
+    setPrecacheProgress(null)
+    try {
+      const result = await precacheTiles(lat, lng, 2, [12, 13, 14, 15, 16, 17], (p) => {
+        setPrecacheProgress({ ...p })
+      })
+      toast.success(`Cached ${result.cached} map tiles${result.errors > 0 ? ` (${result.errors} errors)` : ''}`)
+    } catch (err) {
+      toast.error('Failed to cache tiles')
+    }
+    setPrecaching(false)
+  }
+
+  const handleClearTileCache = async () => {
+    await clearTileCache()
+    setTileCacheCount(0)
+    toast.success('Map tile cache cleared')
+  }
 
   const handleClearAll = async () => {
     setShowClearAllConfirm(false)
@@ -1215,6 +1257,73 @@ function StorageSectionContent() {
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>
             {userDocCount} cached{userDocSizeMB ? ` (~${userDocSizeMB} MB)` : ''}
           </div>
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
+
+        {/* Map Tile Cache */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div>
+              <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>Map Tile Cache</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                Pre-download satellite tiles for your base area so maps load instantly.
+              </div>
+            </div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 12 }}>
+              {tileCacheCount} tiles
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={handlePrecacheTiles}
+              disabled={precaching}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                background: precaching ? 'var(--color-bg-inset)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                border: precaching ? '1px solid var(--color-border)' : 'none',
+                borderRadius: 'var(--radius-base)', padding: '10px 16px', cursor: precaching ? 'wait' : 'pointer',
+                color: precaching ? 'var(--color-text-3)' : '#fff',
+                fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+              }}
+            >
+              <Download size={14} />
+              {precaching
+                ? precacheProgress
+                  ? `Caching... ${precacheProgress.loaded}/${precacheProgress.total}`
+                  : 'Starting...'
+                : 'Cache Map Tiles'}
+            </button>
+            {tileCacheCount > 0 && !precaching && (
+              <button
+                onClick={handleClearTileCache}
+                style={{
+                  padding: '10px 12px', borderRadius: 'var(--radius-base)',
+                  background: 'transparent', border: '1px solid rgba(239,68,68,0.3)',
+                  color: '#F87171', cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600, fontFamily: 'inherit',
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {precaching && precacheProgress && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{
+                height: 4, borderRadius: 2, background: 'var(--color-border)', overflow: 'hidden',
+              }}>
+                <div style={{
+                  height: '100%', borderRadius: 2,
+                  background: 'var(--color-accent)',
+                  width: `${Math.round((precacheProgress.loaded / precacheProgress.total) * 100)}%`,
+                  transition: 'width 0.2s',
+                }} />
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                {precacheProgress.cached} cached, {precacheProgress.errors > 0 ? `${precacheProgress.errors} errors, ` : ''}{precacheProgress.total - precacheProgress.loaded} remaining
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ borderTop: '1px solid var(--color-border)' }} />

@@ -33,6 +33,51 @@ const withPWA = require('@ducanh2912/next-pwa').default({
           },
         },
       },
+      {
+        // Cache ESRI satellite tiles — CacheFirst so tiles load instantly after first fetch
+        urlPattern: /server\.arcgisonline\.com\/.*\/tile\//,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'esri-satellite-tiles',
+          expiration: {
+            maxEntries: 4000,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
+        // Cache Google satellite tiles (obstruction map)
+        urlPattern: /mt\d\.google\.com\/vt\//,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'google-satellite-tiles',
+          expiration: {
+            maxEntries: 2000,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
+        // Cache Mapbox resources (sprites, glyphs, API token validation)
+        urlPattern: /api\.mapbox\.com/,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'mapbox-api',
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
     ],
   },
 })
