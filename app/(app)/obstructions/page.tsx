@@ -27,9 +27,10 @@ import {
 } from '@/lib/supabase/obstructions'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 
-// Dynamic import for Mapbox (client-only, no SSR)
+// Dynamic import for map (client-only, no SSR)
+// Google Maps version for gov network performance; Mapbox version preserved as airfield-map.tsx
 const AirfieldMap = dynamic(
-  () => import('@/components/obstructions/airfield-map'),
+  () => import('@/components/obstructions/airfield-map-google'),
   { ssr: false },
 )
 
