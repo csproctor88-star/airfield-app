@@ -209,6 +209,8 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
   const [legendOpen, setLegendOpen] = useState(false)
   const [showTaxiways, setShowTaxiways] = useState(false)
   const [apiReady, setApiReady] = useState(false)
+  const onPointSelectedRef = useRef(onPointSelected)
+  onPointSelectedRef.current = onPointSelected
 
   const { runways: installationRunways, installationId } = useInstallation()
 
@@ -286,10 +288,10 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
 
     mapRef.current = gmap
 
-    // Click handler
+    // Click handler — use ref to avoid stale closure
     gmap.addListener('click', (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
-      onPointSelected({ lat: e.latLng.lat(), lon: e.latLng.lng() })
+      onPointSelectedRef.current({ lat: e.latLng.lat(), lon: e.latLng.lng() })
     })
 
     // Build surface polygons
@@ -310,6 +312,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
             strokeOpacity: Math.min(1, layer.opacity * 3),
             strokeWeight: surface.id === 'runway' ? 2 : 1,
             visible: initiallyVisible,
+            clickable: false,
             map: gmap,
           })
           ;(poly as any)._surfaceId = surface.id
@@ -410,6 +413,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
           strokeColor: TAXIWAY_SURFACES.taxiway_ofa.color,
           strokeWeight: 1.5,
           strokeOpacity: 0.6,
+          clickable: false,
           map: mapRef.current,
         })
         taxiwayPolygonsRef.current.push(poly)
@@ -426,6 +430,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
             strokeColor: TAXIWAY_SURFACES.taxiway_safety_area.color,
             strokeWeight: 1,
             strokeOpacity: 0.5,
+            clickable: false,
             map: mapRef.current,
           })
           taxiwayPolygonsRef.current.push(poly)
