@@ -16,6 +16,7 @@ import {
   updateParkingPlan,
   deleteParkingPlan,
   setActivePlan,
+  duplicateParkingPlan,
   fetchParkingSpots,
   createParkingSpot,
   updateParkingSpot,
@@ -338,9 +339,15 @@ export default function ParkingPage() {
   const [showNewPlan, setShowNewPlan] = useState(false)
   const [newPlanName, setNewPlanName] = useState('')
   const [newPlanDesc, setNewPlanDesc] = useState('')
+  const [newPlanIsTemplate, setNewPlanIsTemplate] = useState(false)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
+  const [duplicateName, setDuplicateName] = useState('')
+  const [duplicateDesc, setDuplicateDesc] = useState('')
+  const [duplicateAsTemplate, setDuplicateAsTemplate] = useState(false)
   const [showAircraftPicker, setShowAircraftPicker] = useState(false)
   const [aircraftSearch, setAircraftSearch] = useState('')
   const [bulkAddCount, setBulkAddCount] = useState<number | ''>(1)
+  const [placementHeading, setPlacementHeading] = useState(0)
   const [contextMenuSpot, setContextMenuSpot] = useState<{ spot: ParkingSpot; x: number; y: number } | null>(null)
   const contextMenuTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showObstacleMenu, setShowObstacleMenu] = useState(false)
@@ -675,17 +682,26 @@ export default function ParkingPage() {
         const placedSpots: ParkingSpot[] = []
         const count = (typeof bulkAddCount === 'number' && bulkAddCount > 1) ? bulkAddCount : 1
 
+        // Auto-space: wingspan + required wingtip clearance on each side
+        // Place perpendicular to aircraft heading (wingtip-to-wingtip direction)
+        const spacingFt = ws + clearance * 2
+        // Perpendicular bearing = heading + 90° (spacing along the wing line)
+        const perpBearing = (placementHeading + 90) % 360
+
         for (let i = 0; i < count; i++) {
           const seqNum = existingCount + i + 1
-          const offsetLng = i > 0 ? (i * 0.00015) : 0 // slight offset for bulk placement
+          // First aircraft at click point, subsequent spaced perpendicular to heading
+          const origin = i === 0
+            ? { lat, lon: lng }
+            : offsetPoint({ lat, lon: lng }, perpBearing, spacingFt * i)
           const spot = await createParkingSpot({
             plan_id: selectedPlanId,
             base_id: installationId,
             aircraft_name: acName,
             spot_name: `${acName} #${seqNum}`,
-            longitude: lng + offsetLng,
-            latitude: lat,
-            heading_deg: 0,
+            longitude: origin.lon,
+            latitude: origin.lat,
+            heading_deg: placementHeading,
             clearance_ft: clearance,
             spot_type: 'apron',
             status: 'available',
@@ -1762,6 +1778,7 @@ export default function ParkingPage() {
       base_id: installationId,
       plan_name: newPlanName.trim(),
       description: newPlanDesc.trim() || undefined,
+      is_template: newPlanIsTemplate || undefined,
     })
     if (plan) {
       setPlans(prev => [plan, ...prev])
@@ -1769,7 +1786,37 @@ export default function ParkingPage() {
       setShowNewPlan(false)
       setNewPlanName('')
       setNewPlanDesc('')
-      toast.success('Plan created')
+      setNewPlanIsTemplate(false)
+      toast.success(newPlanIsTemplate ? 'Template created' : 'Plan created')
+    }
+  }
+
+  const handleDuplicatePlan = async () => {
+    if (!selectedPlan || !installationId || !duplicateName.trim()) return
+    const newPlan = await duplicateParkingPlan(
+      selectedPlan.id,
+      installationId,
+      duplicateName.trim(),
+      duplicateDesc.trim() || undefined,
+      duplicateAsTemplate,
+    )
+    if (newPlan) {
+      setPlans(prev => [newPlan, ...prev])
+      setSelectedPlanId(newPlan.id)
+      setShowDuplicateModal(false)
+      setDuplicateName('')
+      setDuplicateDesc('')
+      setDuplicateAsTemplate(false)
+      toast.success(`Duplicated "${selectedPlan.plan_name}" → "${newPlan.plan_name}"`)
+    }
+  }
+
+  const handleToggleTemplate = async () => {
+    if (!selectedPlan || !installationId) return
+    const updated = await updateParkingPlan(selectedPlan.id, { is_template: !selectedPlan.is_template }, installationId)
+    if (updated) {
+      setPlans(prev => prev.map(p => p.id === updated.id ? updated : p))
+      toast.success(updated.is_template ? 'Saved as template' : 'Converted to plan')
     }
   }
 
@@ -2382,11 +2429,11 @@ export default function ParkingPage() {
             {selectedPlan && (
               <span style={{
                 fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                background: selectedPlan.is_active ? '#22C55E22' : 'var(--color-bg)',
-                color: selectedPlan.is_active ? 'var(--color-success)' : 'var(--color-text-secondary)',
-                border: `1px solid ${selectedPlan.is_active ? '#22C55E44' : 'var(--color-border)'}`,
+                background: selectedPlan.is_template ? '#A855F722' : selectedPlan.is_active ? '#22C55E22' : 'var(--color-bg)',
+                color: selectedPlan.is_template ? '#A855F7' : selectedPlan.is_active ? 'var(--color-success)' : 'var(--color-text-secondary)',
+                border: `1px solid ${selectedPlan.is_template ? '#A855F744' : selectedPlan.is_active ? '#22C55E44' : 'var(--color-border)'}`,
               }}>
-                {selectedPlan.is_active ? 'Active' : 'Draft'}
+                {selectedPlan.is_template ? 'Template' : selectedPlan.is_active ? 'Active' : 'Draft'}
               </span>
             )}
           </div>
@@ -2401,11 +2448,24 @@ export default function ParkingPage() {
               }}
             >
               <option value="">No Plan Selected</option>
-              {plans.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.plan_name}{p.is_active ? ' (Active)' : ''}
-                </option>
-              ))}
+              {plans.filter(p => !p.is_template).length > 0 && (
+                <optgroup label="Plans">
+                  {plans.filter(p => !p.is_template).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.plan_name}{p.is_active ? ' (Active)' : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {plans.filter(p => p.is_template).length > 0 && (
+                <optgroup label="Templates">
+                  {plans.filter(p => p.is_template).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.plan_name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             {selectedPlan && (
               <>
@@ -2449,10 +2509,12 @@ export default function ParkingPage() {
             </button>
           </div>
           {selectedPlan && (
-            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-              {!selectedPlan.is_active && (
+            <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+              {!selectedPlan.is_active && !selectedPlan.is_template && (
                 <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#22C55E22', border: '1px solid #22C55E44', color: 'var(--color-success)', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
               )}
+              <button onClick={() => { setDuplicateName(`${selectedPlan.plan_name} (Copy)`); setShowDuplicateModal(true) }} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 10 }}>Duplicate</button>
+              <button onClick={handleToggleTemplate} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#A855F711', border: '1px solid #A855F744', color: '#A855F7', cursor: 'pointer', fontSize: 10 }}>{selectedPlan.is_template ? 'Convert to Plan' : 'Save as Template'}</button>
               <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}>Delete</button>
             </div>
           )}
@@ -3688,25 +3750,45 @@ export default function ParkingPage() {
                 <h3 style={{ margin: 0, fontSize: 'var(--fs-base)', color: 'var(--color-text-primary)' }}>
                   Select Aircraft
                 </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>Qty:</span>
-                  <input
-                    type="number" min={1} max={50} value={bulkAddCount}
-                    onChange={e => {
-                      const raw = e.target.value
-                      if (raw === '') { setBulkAddCount(''); return }
-                      const n = parseInt(raw, 10)
-                      if (!isNaN(n)) setBulkAddCount(Math.min(50, n))
-                    }}
-                    onBlur={() => { if (bulkAddCount === '' || bulkAddCount < 1) setBulkAddCount(1) }}
-                    onFocus={e => e.target.select()}
-                    style={{
-                      width: 48, padding: '3px 4px', borderRadius: 4, textAlign: 'center',
-                      border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-                      color: (bulkAddCount || 0) > 1 ? 'var(--color-cyan)' : 'var(--color-text-primary)',
-                      fontSize: 'var(--fs-sm)', fontWeight: 700,
-                    }}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>Hdg:</span>
+                    <input
+                      type="number" min={0} max={359} value={placementHeading}
+                      onChange={e => {
+                        const n = parseInt(e.target.value, 10)
+                        if (!isNaN(n)) setPlacementHeading(((n % 360) + 360) % 360)
+                      }}
+                      onFocus={e => e.target.select()}
+                      style={{
+                        width: 48, padding: '3px 4px', borderRadius: 4, textAlign: 'center',
+                        border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                        color: placementHeading !== 0 ? 'var(--color-cyan)' : 'var(--color-text-primary)',
+                        fontSize: 'var(--fs-sm)', fontWeight: 700,
+                      }}
+                    />
+                    <span style={{ fontSize: 9, color: 'var(--color-text-secondary)' }}>&deg;</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>Qty:</span>
+                    <input
+                      type="number" min={1} max={50} value={bulkAddCount}
+                      onChange={e => {
+                        const raw = e.target.value
+                        if (raw === '') { setBulkAddCount(''); return }
+                        const n = parseInt(raw, 10)
+                        if (!isNaN(n)) setBulkAddCount(Math.min(50, n))
+                      }}
+                      onBlur={() => { if (bulkAddCount === '' || bulkAddCount < 1) setBulkAddCount(1) }}
+                      onFocus={e => e.target.select()}
+                      style={{
+                        width: 48, padding: '3px 4px', borderRadius: 4, textAlign: 'center',
+                        border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                        color: (bulkAddCount || 0) > 1 ? 'var(--color-cyan)' : 'var(--color-text-primary)',
+                        fontSize: 'var(--fs-sm)', fontWeight: 700,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
@@ -3846,7 +3928,7 @@ export default function ParkingPage() {
                 }}
               />
             </label>
-            <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
               Description
               <textarea
                 value={newPlanDesc}
@@ -3859,9 +3941,25 @@ export default function ParkingPage() {
                 }}
               />
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 16, cursor: 'pointer' }}>
+              <span
+                onClick={() => setNewPlanIsTemplate(!newPlanIsTemplate)}
+                style={{
+                  width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${newPlanIsTemplate ? '#A855F7' : 'var(--color-border)'}`,
+                  background: newPlanIsTemplate ? '#A855F722' : 'var(--color-bg)',
+                  color: '#A855F7', fontSize: 12, fontWeight: 700,
+                }}
+              >
+                {newPlanIsTemplate ? '\u2713' : ''}
+              </span>
+              <span onClick={() => setNewPlanIsTemplate(!newPlanIsTemplate)}>
+                Create as reusable template
+              </span>
+            </label>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setShowNewPlan(false)}
+                onClick={() => { setShowNewPlan(false); setNewPlanIsTemplate(false) }}
                 style={{ padding: '6px 16px', borderRadius: 4, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer' }}
               >
                 Cancel
@@ -3871,12 +3969,97 @@ export default function ParkingPage() {
                 disabled={!newPlanName.trim()}
                 style={{
                   padding: '6px 16px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                  background: newPlanName.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
-                  color: newPlanName.trim() ? '#000' : 'var(--color-text-secondary)',
+                  background: newPlanName.trim() ? (newPlanIsTemplate ? '#A855F7' : 'var(--color-cyan)') : 'var(--color-border)',
+                  color: newPlanName.trim() ? '#fff' : 'var(--color-text-secondary)',
                   fontWeight: 500,
                 }}
               >
-                Create Plan
+                {newPlanIsTemplate ? 'Create Template' : 'Create Plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Plan Modal */}
+      {showDuplicateModal && selectedPlan && (
+        <div
+          onClick={() => setShowDuplicateModal(false)}
+          className="modal-overlay"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: 400, background: 'var(--color-bg-surface)',
+              borderRadius: 8, border: '1px solid var(--color-border)', padding: 20,
+            }}
+          >
+            <h3 style={{ margin: '0 0 4px', fontSize: 'var(--fs-base)', color: 'var(--color-text-primary)' }}>
+              Duplicate Plan
+            </h3>
+            <p style={{ margin: '0 0 12px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+              Copies all aircraft, taxilanes, and apron boundaries from &ldquo;{selectedPlan.plan_name}&rdquo;
+            </p>
+            <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+              New Plan Name *
+              <input
+                autoFocus
+                value={duplicateName}
+                onChange={e => setDuplicateName(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: 4, marginTop: 4,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                  color: 'var(--color-text-primary)', fontSize: 'var(--fs-sm)',
+                }}
+              />
+            </label>
+            <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+              Description
+              <textarea
+                value={duplicateDesc}
+                onChange={e => setDuplicateDesc(e.target.value)}
+                rows={2}
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: 4, marginTop: 4,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                  color: 'var(--color-text-primary)', fontSize: 'var(--fs-sm)', resize: 'vertical',
+                }}
+              />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 16, cursor: 'pointer' }}>
+              <span
+                onClick={() => setDuplicateAsTemplate(!duplicateAsTemplate)}
+                style={{
+                  width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${duplicateAsTemplate ? '#A855F7' : 'var(--color-border)'}`,
+                  background: duplicateAsTemplate ? '#A855F722' : 'var(--color-bg)',
+                  color: '#A855F7', fontSize: 12, fontWeight: 700,
+                }}
+              >
+                {duplicateAsTemplate ? '\u2713' : ''}
+              </span>
+              <span onClick={() => setDuplicateAsTemplate(!duplicateAsTemplate)}>
+                Duplicate as template
+              </span>
+            </label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setShowDuplicateModal(false); setDuplicateName(''); setDuplicateDesc(''); setDuplicateAsTemplate(false) }}
+                style={{ padding: '6px 16px', borderRadius: 4, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDuplicatePlan}
+                disabled={!duplicateName.trim()}
+                style={{
+                  padding: '6px 16px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                  background: duplicateName.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
+                  color: duplicateName.trim() ? '#fff' : 'var(--color-text-secondary)',
+                  fontWeight: 500,
+                }}
+              >
+                Duplicate
               </button>
             </div>
           </div>

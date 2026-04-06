@@ -15,6 +15,7 @@ export type ParkingPlan = {
   plan_name: string
   description: string | null
   is_active: boolean
+  is_template: boolean
   created_by: string | null
   updated_by: string | null
   created_at: string
@@ -123,6 +124,7 @@ export async function createParkingPlan(input: {
   plan_name: string
   description?: string
   is_active?: boolean
+  is_template?: boolean
 }): Promise<ParkingPlan | null> {
   const supabase = db()
   if (!supabase) return null
@@ -149,7 +151,7 @@ export async function createParkingPlan(input: {
 
 export async function updateParkingPlan(
   id: string,
-  updates: Partial<Pick<ParkingPlan, 'plan_name' | 'description' | 'is_active'>>,
+  updates: Partial<Pick<ParkingPlan, 'plan_name' | 'description' | 'is_active' | 'is_template'>>,
   baseId?: string
 ): Promise<ParkingPlan | null> {
   const supabase = db()
@@ -204,6 +206,108 @@ export async function setActivePlan(planId: string, baseId: string): Promise<boo
     .eq('id', planId)
 
   return !error
+}
+
+/** Deep-copy a parking plan (spots, taxilanes, apron boundaries) into a new plan */
+export async function duplicateParkingPlan(
+  sourcePlanId: string,
+  baseId: string,
+  newName: string,
+  newDescription?: string,
+  asTemplate?: boolean,
+): Promise<ParkingPlan | null> {
+  const supabase = db()
+  if (!supabase) return null
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  // Create the new plan
+  const { data: planData, error: planErr } = await supabase
+    .from('parking_plans')
+    .insert({
+      base_id: baseId,
+      plan_name: newName,
+      description: newDescription || null,
+      is_active: false,
+      is_template: asTemplate || false,
+      created_by: user.id,
+      updated_by: user.id,
+    })
+    .select()
+    .single()
+
+  if (planErr || !planData) return null
+  const newPlan = planData as ParkingPlan
+
+  // Copy spots
+  const { data: srcSpots } = await supabase
+    .from('parking_spots')
+    .select('*')
+    .eq('plan_id', sourcePlanId)
+
+  if (srcSpots && srcSpots.length > 0) {
+    const spotInserts = srcSpots.map((s: any) => ({
+      plan_id: newPlan.id,
+      base_id: baseId,
+      spot_name: s.spot_name,
+      spot_type: s.spot_type,
+      aircraft_name: s.aircraft_name,
+      tail_number: s.tail_number,
+      unit_callsign: s.unit_callsign,
+      longitude: s.longitude,
+      latitude: s.latitude,
+      heading_deg: s.heading_deg,
+      clearance_ft: s.clearance_ft,
+      status: 'available',
+      notes: s.notes,
+      sort_order: s.sort_order,
+    }))
+    await supabase.from('parking_spots').insert(spotInserts)
+  }
+
+  // Copy taxilanes
+  const { data: srcTaxilanes } = await supabase
+    .from('parking_taxilanes')
+    .select('*')
+    .eq('plan_id', sourcePlanId)
+
+  if (srcTaxilanes && srcTaxilanes.length > 0) {
+    const taxiInserts = srcTaxilanes.map((t: any) => ({
+      plan_id: newPlan.id,
+      base_id: baseId,
+      name: t.name,
+      taxilane_type: t.taxilane_type,
+      design_aircraft: t.design_aircraft,
+      design_wingspan_ft: t.design_wingspan_ft,
+      line_coords: t.line_coords,
+      is_transient: t.is_transient,
+      notes: t.notes,
+      created_by: user.id,
+    }))
+    await supabase.from('parking_taxilanes').insert(taxiInserts)
+  }
+
+  // Copy apron boundaries
+  const { data: srcBoundaries } = await supabase
+    .from('parking_apron_boundaries')
+    .select('*')
+    .eq('plan_id', sourcePlanId)
+
+  if (srcBoundaries && srcBoundaries.length > 0) {
+    const boundInserts = srcBoundaries.map((b: any) => ({
+      plan_id: newPlan.id,
+      base_id: baseId,
+      name: b.name,
+      polygon_coords: b.polygon_coords,
+      notes: b.notes,
+      created_by: user.id,
+    }))
+    await supabase.from('parking_apron_boundaries').insert(boundInserts)
+  }
+
+  logActivity('created', 'parking_plan', newPlan.id, newPlan.plan_name, { duplicated_from: sourcePlanId }, baseId)
+  return newPlan
 }
 
 // ── Spots CRUD ──

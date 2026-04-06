@@ -102,7 +102,6 @@ export const BASE_DIRECTORY: readonly BaseDirectoryEntry[] = [
   { name: 'McEntire ANG Base', icao: 'KMMT' },
   { name: 'McGhee Tyson ANG Base', icao: 'KTYS' },
   { name: 'McLaughlin ANG Base (Charleston)', icao: 'KCHS' },
-  { name: 'Memphis ANG Base', icao: 'KNQA' },
   { name: 'Minot Air Force Base', icao: 'KMIB' },
   { name: 'Minneapolis-St. Paul ANG Base', icao: 'KMSP' },
   { name: 'Minneapolis-St. Paul ARS', icao: 'KMSP' },
