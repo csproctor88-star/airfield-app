@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
+import { LogOut } from 'lucide-react'
 
 type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
@@ -141,6 +143,34 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
   )
 }
 
+function SignOutButton() {
+  const router = useRouter()
+  const [signingOut, setSigningOut] = useState(false)
+
+  return (
+    <button
+      onClick={async () => {
+        setSigningOut(true)
+        const supabase = createClient()
+        if (supabase) await supabase.auth.signOut()
+        router.push('/login')
+      }}
+      disabled={signingOut}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        width: '100%', padding: '14px 16px', marginTop: 12,
+        background: 'transparent', border: 'none', borderRadius: 'var(--radius-base)',
+        cursor: signingOut ? 'not-allowed' : 'pointer',
+        color: 'var(--color-danger)', fontSize: 'var(--fs-xl)', fontWeight: 700,
+        fontFamily: 'inherit', opacity: signingOut ? 0.5 : 1,
+      }}
+    >
+      <LogOut size={18} />
+      {signingOut ? 'Signing out...' : 'Sign Out'}
+    </button>
+  )
+}
+
 export default function MorePage() {
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isSysAdmin, setIsSysAdmin] = useState(false)
@@ -209,6 +239,7 @@ export default function MorePage() {
             <NavItem key={item.href} item={item} />
           ))}
         </div>
+        <SignOutButton />
       </div>
     )
   }
@@ -241,6 +272,8 @@ export default function MorePage() {
         {/* Settings / Admin */}
         <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
       </div>
+
+      <SignOutButton />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
@@ -55,6 +55,7 @@ import {
   X,
   ArrowUp,
   ArrowDown,
+  LogOut,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -86,11 +87,13 @@ function getIcon(iconName: string): LucideIcon {
 
 export function SidebarNav() {
   const pathname = usePathname()
+  const router = useRouter()
   const { isOpen, toggle } = useSidebar()
   const { resolvedTheme } = useTheme()
   const expiringNotamCount = useExpiringNotamCount()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isCesRole, setIsCesRole] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [config, setConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
@@ -659,11 +662,14 @@ export function SidebarNav() {
         })}
       </div>
 
-      {/* Edit button at bottom */}
+      {/* Edit button + Sign Out at bottom */}
       {isOpen && (
         <div style={{
           padding: '8px 16px 12px',
           borderTop: '1px solid var(--color-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
         }}>
           <button
             onClick={enterEditMode}
@@ -677,6 +683,26 @@ export function SidebarNav() {
           >
             <Pencil size={13} />
             Customize Navigation
+          </button>
+          <button
+            onClick={async () => {
+              setSigningOut(true)
+              const supabase = createClient()
+              if (supabase) await supabase.auth.signOut()
+              router.push('/login')
+            }}
+            disabled={signingOut}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',
+              background: 'none', border: 'none',
+              color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              cursor: signingOut ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              opacity: signingOut ? 0.5 : 1,
+            }}
+          >
+            <LogOut size={13} />
+            {signingOut ? 'Signing out...' : 'Sign Out'}
           </button>
         </div>
       )}

@@ -2715,6 +2715,19 @@ function SeedPickerDialog({
 
 // --- Edit QRC Template Dialog ---
 
+const STEP_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'checkbox', label: 'Checkbox' },
+  { value: 'checkbox_with_note', label: 'Checkbox + Note' },
+  { value: 'fill_field', label: 'Fill-in Field' },
+  { value: 'time_field', label: 'Time Field' },
+  { value: 'notify_agencies', label: 'Agency Notification' },
+  { value: 'conditional', label: 'Conditional Ref' },
+  { value: 'text', label: 'Text (read-only)' },
+  { value: 'textarea', label: 'Text Area' },
+]
+
+const STEP_TYPE_LABELS: Record<string, string> = Object.fromEntries(STEP_TYPE_OPTIONS.map(o => [o.value, o.label]))
+
 function EditQrcDialog({
   template, inputStyle, onClose, onSaved,
 }: {
@@ -2732,6 +2745,7 @@ function EditQrcDialog({
   const [saving, setSaving] = useState(false)
   const [addingStep, setAddingStep] = useState(false)
   const [newStepLabel, setNewStepLabel] = useState('')
+  const [newStepType, setNewStepType] = useState('checkbox')
 
   async function handleSave() {
     if (!title.trim()) { toast.error('Title is required'); return }
@@ -2743,7 +2757,7 @@ function EditQrcDialog({
     const origMap = new Map(origSteps.map(s => [(s as { id: string }).id, s]))
     const fullSteps = steps.map(s => {
       const orig = origMap.get(s.id)
-      if (orig) return { ...orig, label: s.label }
+      if (orig) return { ...orig, label: s.label, type: s.type }
       return { id: s.id, type: s.type, label: s.label }
     })
 
@@ -2761,8 +2775,9 @@ function EditQrcDialog({
   function handleAddStep() {
     if (!newStepLabel.trim()) return
     const nextNum = steps.length + 1
-    setSteps([...steps, { id: String(nextNum), label: newStepLabel.trim(), type: 'checkbox' }])
+    setSteps([...steps, { id: String(nextNum), label: newStepLabel.trim(), type: newStepType }])
     setNewStepLabel('')
+    setNewStepType('checkbox')
     setAddingStep(false)
   }
 
@@ -2822,7 +2837,15 @@ function EditQrcDialog({
                 onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], label: e.target.value }; setSteps(arr) }}
                 style={{ ...inputStyle, padding: '4px 8px', flex: 1 }}
               />
-              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', whiteSpace: 'nowrap' }}>{s.type}</span>
+              <select
+                value={s.type}
+                onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], type: e.target.value }; setSteps(arr) }}
+                style={{ ...inputStyle, padding: '3px 4px', fontSize: 'var(--fs-xs)', minWidth: 90, flex: 'none' }}
+              >
+                {STEP_TYPE_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
               <button onClick={() => handleMoveStep(i, -1)} disabled={i === 0} style={{
                 background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer',
                 color: i === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
@@ -2838,22 +2861,31 @@ function EditQrcDialog({
             </div>
           ))}
           {addingStep && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
               <input
                 value={newStepLabel}
                 onChange={e => setNewStepLabel(e.target.value)}
                 placeholder="New step text"
                 onKeyDown={e => { if (e.key === 'Enter') handleAddStep() }}
-                style={{ ...inputStyle, flex: 1, padding: '4px 8px' }}
+                style={{ ...inputStyle, flex: 1, padding: '4px 8px', minWidth: 150 }}
                 autoFocus
               />
+              <select
+                value={newStepType}
+                onChange={e => setNewStepType(e.target.value)}
+                style={{ ...inputStyle, padding: '3px 4px', fontSize: 'var(--fs-xs)', minWidth: 90 }}
+              >
+                {STEP_TYPE_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
               <button onClick={handleAddStep} disabled={!newStepLabel.trim()} style={{
                 background: newStepLabel.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
                 color: newStepLabel.trim() ? '#000' : 'var(--color-text-3)',
                 border: 'none', borderRadius: 'var(--radius-sm)', padding: '4px 12px',
                 fontWeight: 700, fontSize: 'var(--fs-xs)', cursor: newStepLabel.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
               }}>Add</button>
-              <button onClick={() => { setAddingStep(false); setNewStepLabel('') }} style={{
+              <button onClick={() => { setAddingStep(false); setNewStepLabel(''); setNewStepType('checkbox') }} style={{
                 background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
                 padding: '4px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)',
                 fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',

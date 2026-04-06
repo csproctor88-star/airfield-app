@@ -1135,18 +1135,34 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
   const midItems = items.filter(i => i.shift === 'mid')
   const swingItems = items.filter(i => i.shift === 'swing')
   const totalCount = items.length
-  const completedCount = items.filter(i => responseMap.get(i.id)?.completed).length
-  const allComplete = totalCount > 0 && completedCount === totalCount
+  const doneCount = items.filter(i => {
+    const r = responseMap.get(i.id)
+    return r?.completed || r?.is_na
+  }).length
+  const allComplete = totalCount > 0 && doneCount === totalCount
   const isCompleted = checklist?.status === 'completed'
 
-  async function handleToggle(itemId: string, currentlyCompleted: boolean) {
+  async function handleToggle(itemId: string) {
     if (!checklist || isCompleted) return
+    const resp = responseMap.get(itemId)
+    const currentCompleted = resp?.completed ?? false
+    const currentNa = resp?.is_na ?? false
+
+    let nextCompleted = false
+    let nextNa = false
+    if (!currentCompleted && !currentNa) {
+      nextCompleted = true
+    } else if (currentCompleted && !currentNa) {
+      nextNa = true
+    }
+
     setSaving(itemId)
     const { upsertResponse } = await import('@/lib/supabase/shift-checklist')
     const { error } = await upsertResponse({
       checklist_id: checklist.id,
       item_id: itemId,
-      completed: !currentlyCompleted,
+      completed: nextCompleted,
+      is_na: nextNa,
     })
     if (error) toast.error(error)
     else await load()
@@ -1178,6 +1194,8 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
   function renderItem(item: import('@/lib/supabase/shift-checklist').ShiftChecklistItem) {
     const resp = responseMap.get(item.id)
     const checked = resp?.completed ?? false
+    const isNa = resp?.is_na ?? false
+    const isDone = checked || isNa
     const isSaving = saving === item.id
 
     return (
@@ -1187,26 +1205,28 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
       }}>
         <button
           disabled={isCompleted || isSaving}
-          onClick={() => handleToggle(item.id, checked)}
+          onClick={() => handleToggle(item.id)}
           style={{
             width: 22, height: 22, borderRadius: 'var(--radius-xs)', flexShrink: 0,
-            border: checked ? 'none' : '2px solid var(--color-border-mid)',
-            background: checked ? 'var(--color-status-pass)' : 'transparent',
+            border: isDone ? 'none' : '2px solid var(--color-border-mid)',
+            background: checked ? 'var(--color-status-pass)' : isNa ? 'var(--color-text-3)' : 'transparent',
             cursor: isCompleted ? 'default' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           {checked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>&#10003;</span>}
+          {isNa && <span style={{ color: '#fff', fontSize: 8, fontWeight: 800 }}>N/A</span>}
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 'var(--fs-base)', fontWeight: 600,
-            color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-            textDecoration: checked ? 'line-through' : 'none',
+            color: isDone ? 'var(--color-text-3)' : 'var(--color-text-1)',
+            textDecoration: isDone ? 'line-through' : 'none',
+            fontStyle: isNa ? 'italic' : 'normal',
           }}>{item.label}</div>
-          {checked && resp?.completed_by && (
+          {isDone && resp?.completed_by && (
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginTop: 1 }}>
-              {profiles[resp.completed_by] || 'Unknown'}
+              {profiles[resp.completed_by] || 'Unknown'}{isNa ? ' \u00b7 N/A' : ''}
               {resp.completed_at && ` \u00b7 ${formatZuluTime(new Date(resp.completed_at))}Z`}
             </div>
           )}
@@ -1223,7 +1243,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
 
   function renderSection(label: string, sectionItems: import('@/lib/supabase/shift-checklist').ShiftChecklistItem[]) {
     if (sectionItems.length === 0) return null
-    const done = sectionItems.filter(i => responseMap.get(i.id)?.completed).length
+    const done = sectionItems.filter(i => { const r = responseMap.get(i.id); return r?.completed || r?.is_na }).length
     return (
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -1252,7 +1272,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist</div>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>{today} &middot; {completedCount}/{totalCount} complete</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>{today} &middot; {doneCount}/{totalCount} complete</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{
@@ -1268,7 +1288,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
           {/* Progress bar */}
           {totalCount > 0 && (
             <div style={{ marginTop: 10, height: 4, borderRadius: 'var(--radius-xs)', background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${(completedCount / totalCount) * 100}%`, background: allComplete ? 'var(--color-status-pass)' : 'var(--color-cyan)', borderRadius: 'var(--radius-xs)', transition: 'width 0.3s' }} />
+              <div style={{ height: '100%', width: `${(doneCount / totalCount) * 100}%`, background: allComplete ? 'var(--color-status-pass)' : 'var(--color-cyan)', borderRadius: 'var(--radius-xs)', transition: 'width 0.3s' }} />
             </div>
           )}
         </div>
@@ -1307,7 +1327,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
                 color: allComplete ? '#fff' : 'var(--color-text-3)',
                 fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: allComplete ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
-              }}>{completing ? 'Filing...' : allComplete ? 'File Checklist' : `${totalCount - completedCount} items remaining`}</button>
+              }}>{completing ? 'Filing...' : allComplete ? 'File Checklist' : `${totalCount - doneCount} items remaining`}</button>
             )}
           </div>
         )}

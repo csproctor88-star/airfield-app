@@ -32,6 +32,7 @@ export interface ShiftChecklistResponse {
   checklist_id: string
   item_id: string
   completed: boolean
+  is_na: boolean
   completed_by: string | null
   completed_at: string | null
   notes: string | null
@@ -240,6 +241,7 @@ export async function upsertResponse(input: {
   checklist_id: string
   item_id: string
   completed: boolean
+  is_na?: boolean
   notes?: string
 }): Promise<{ error: string | null }> {
   const supabase = createClient()
@@ -251,12 +253,14 @@ export async function upsertResponse(input: {
     if (user) userId = user.id
   } catch { /* */ }
 
+  const isActioned = input.completed || input.is_na
   const row: Record<string, any> = {
     checklist_id: input.checklist_id,
     item_id: input.item_id,
     completed: input.completed,
-    completed_by: input.completed ? (userId || null) : null,
-    completed_at: input.completed ? new Date().toISOString() : null,
+    is_na: input.is_na ?? false,
+    completed_by: isActioned ? (userId || null) : null,
+    completed_at: isActioned ? new Date().toISOString() : null,
     updated_at: new Date().toISOString(),
   }
   if (input.notes !== undefined) row.notes = input.notes

@@ -124,18 +124,36 @@ export default function ShiftChecklistPage() {
   const swingItems = items.filter(i => i.shift === 'swing')
 
   const allItemIds = items.map(i => i.id)
-  const completedCount = allItemIds.filter(id => responseMap.get(id)?.completed).length
+  const doneCount = allItemIds.filter(id => {
+    const r = responseMap.get(id)
+    return r?.completed || r?.is_na
+  }).length
   const totalCount = allItemIds.length
-  const allComplete = totalCount > 0 && completedCount === totalCount
+  const allComplete = totalCount > 0 && doneCount === totalCount
   const isCompleted = checklist?.status === 'completed'
 
-  async function handleToggle(itemId: string, currentlyCompleted: boolean) {
+  async function handleToggle(itemId: string) {
     if (!checklist || isCompleted) return
+    const resp = responseMap.get(itemId)
+    const currentCompleted = resp?.completed ?? false
+    const currentNa = resp?.is_na ?? false
+
+    // Cycle: unchecked → completed → N/A → unchecked
+    let nextCompleted = false
+    let nextNa = false
+    if (!currentCompleted && !currentNa) {
+      nextCompleted = true  // → completed
+    } else if (currentCompleted && !currentNa) {
+      nextNa = true         // → N/A
+    }
+    // else: N/A → unchecked (both false)
+
     setSaving(itemId)
     const { error } = await upsertResponse({
       checklist_id: checklist.id,
       item_id: itemId,
-      completed: !currentlyCompleted,
+      completed: nextCompleted,
+      is_na: nextNa,
     })
     if (error) {
       toast.error(error)
@@ -170,6 +188,8 @@ export default function ShiftChecklistPage() {
   function renderItemRow(item: ShiftChecklistItem) {
     const resp = responseMap.get(item.id)
     const checked = resp?.completed ?? false
+    const isNa = resp?.is_na ?? false
+    const isDone = checked || isNa
     const isSaving = saving === item.id
 
     return (
@@ -181,18 +201,18 @@ export default function ShiftChecklistPage() {
           gap: 12,
           padding: '10px 14px',
           borderBottom: '1px solid var(--color-border)',
-          opacity: isCompleted && !checked ? 0.5 : 1,
+          opacity: isCompleted && !isDone ? 0.5 : 1,
         }}
       >
         <button
           disabled={isCompleted || isSaving}
-          onClick={() => handleToggle(item.id, checked)}
+          onClick={() => handleToggle(item.id)}
           style={{
             width: 24,
             height: 24,
             borderRadius: 'var(--radius-sm)',
-            border: checked ? 'none' : '2px solid var(--color-border-mid)',
-            background: checked ? 'var(--color-success)' : 'transparent',
+            border: isDone ? 'none' : '2px solid var(--color-border-mid)',
+            background: checked ? 'var(--color-success)' : isNa ? 'var(--color-text-3)' : 'transparent',
             cursor: isCompleted ? 'default' : 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -202,21 +222,23 @@ export default function ShiftChecklistPage() {
           }}
         >
           {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800, lineHeight: 1 }}>&#10003;</span>}
-          {isSaving && !checked && <span style={{ fontSize: 10 }}>...</span>}
+          {isNa && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1 }}>N/A</span>}
+          {isSaving && !isDone && <span style={{ fontSize: 10 }}>...</span>}
         </button>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 'var(--fs-base)',
             fontWeight: 600,
-            color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-            textDecoration: checked ? 'line-through' : 'none',
+            color: isDone ? 'var(--color-text-3)' : 'var(--color-text-1)',
+            textDecoration: checked ? 'line-through' : isNa ? 'line-through' : 'none',
+            fontStyle: isNa ? 'italic' : 'normal',
           }}>
             {item.label}
           </div>
-          {checked && resp?.completed_by && (
+          {isDone && resp?.completed_by && (
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              {profiles[resp.completed_by] || 'Unknown'} &middot; {resp.completed_at ? formatZuluTime(new Date(resp.completed_at)) + 'Z' : ''}
+              {profiles[resp.completed_by] || 'Unknown'}{isNa ? ' \u00b7 N/A' : ''} &middot; {resp.completed_at ? formatZuluTime(new Date(resp.completed_at)) + 'Z' : ''}
             </div>
           )}
         </div>
@@ -240,7 +262,11 @@ export default function ShiftChecklistPage() {
 
   function renderShiftSection(label: string, shiftItems: ShiftChecklistItem[]) {
     if (shiftItems.length === 0) return null
-    const shiftCompleted = shiftItems.every(i => responseMap.get(i.id)?.completed)
+    const shiftDoneCount = shiftItems.filter(i => {
+      const r = responseMap.get(i.id)
+      return r?.completed || r?.is_na
+    }).length
+    const shiftAllDone = shiftDoneCount === shiftItems.length
 
     return (
       <div style={{ marginBottom: 16 }}>
@@ -254,9 +280,9 @@ export default function ShiftChecklistPage() {
           <span style={{
             fontSize: 'var(--fs-xs)',
             fontWeight: 700,
-            color: shiftCompleted ? 'var(--color-success)' : 'var(--color-text-3)',
+            color: shiftAllDone ? 'var(--color-success)' : 'var(--color-text-3)',
           }}>
-            {shiftItems.filter(i => responseMap.get(i.id)?.completed).length}/{shiftItems.length}
+            {shiftDoneCount}/{shiftItems.length}
           </span>
         </div>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -305,7 +331,7 @@ export default function ShiftChecklistPage() {
             <div>
               <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{dateStr}</div>
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                {completedCount}/{totalCount} items complete
+                {doneCount}/{totalCount} items complete
               </div>
             </div>
             <div style={{
@@ -331,7 +357,7 @@ export default function ShiftChecklistPage() {
               }}>
                 <div style={{
                   height: '100%',
-                  width: `${(completedCount / totalCount) * 100}%`,
+                  width: `${(doneCount / totalCount) * 100}%`,
                   background: allComplete ? 'var(--color-success)' : 'var(--color-cyan)',
                   borderRadius: 'var(--radius-xs)',
                   transition: 'width 0.3s',
@@ -394,7 +420,7 @@ export default function ShiftChecklistPage() {
                       fontFamily: 'inherit',
                     }}
                   >
-                    {completing ? 'Filing...' : allComplete ? 'File Checklist (End of Swing Shift)' : `Complete all items to file (${totalCount - completedCount} remaining)`}
+                    {completing ? 'Filing...' : allComplete ? 'File Checklist (End of Swing Shift)' : `Complete all items to file (${totalCount - doneCount} remaining)`}
                   </button>
                 )}
               </div>
@@ -478,7 +504,7 @@ export default function ShiftChecklistPage() {
         function renderHistorySection(label: string, sectionItems: ShiftChecklistItem[]) {
           const filtered = filterResponded(sectionItems)
           if (filtered.length === 0) return null
-          const done = filtered.filter(i => hResponseMap.get(i.id)?.completed).length
+          const done = filtered.filter(i => { const r = hResponseMap.get(i.id); return r?.completed || r?.is_na }).length
           return (
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -491,6 +517,8 @@ export default function ShiftChecklistPage() {
                 {filtered.map(item => {
                   const resp = hResponseMap.get(item.id)
                   const checked = resp?.completed ?? false
+                  const isNa = resp?.is_na ?? false
+                  const isDone = checked || isNa
                   return (
                     <div key={item.id} style={{
                       display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
@@ -498,21 +526,23 @@ export default function ShiftChecklistPage() {
                     }}>
                       <div style={{
                         width: 24, height: 24, borderRadius: 'var(--radius-sm)', flexShrink: 0,
-                        border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                        background: checked ? 'var(--color-success)' : 'transparent',
+                        border: isDone ? 'none' : '2px solid var(--color-border-mid)',
+                        background: checked ? 'var(--color-success)' : isNa ? 'var(--color-text-3)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
+                        {isNa && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>N/A</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
                           fontSize: 'var(--fs-base)', fontWeight: 600,
-                          color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                          textDecoration: checked ? 'line-through' : 'none',
+                          color: isDone ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                          textDecoration: isDone ? 'line-through' : 'none',
+                          fontStyle: isNa ? 'italic' : 'normal',
                         }}>{item.label}</div>
-                        {checked && resp?.completed_by && (
+                        {isDone && resp?.completed_by && (
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                            {profiles[resp.completed_by] || 'Unknown'}
+                            {profiles[resp.completed_by] || 'Unknown'}{isNa ? ' \u00b7 N/A' : ''}
                             {resp.completed_at && ` \u00b7 ${formatZuluTime(new Date(resp.completed_at))}Z`}
                           </div>
                         )}
