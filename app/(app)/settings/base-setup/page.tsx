@@ -2828,36 +2828,42 @@ function EditQrcDialog({
           </div>
           {steps.map((s, i) => (
             <div key={`${s.id}-${i}`} style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0',
+              padding: '6px 0',
               borderBottom: '1px solid var(--color-border)',
             }}>
-              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', minWidth: 20 }}>{i + 1}.</span>
-              <input
-                value={s.label}
-                onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], label: e.target.value }; setSteps(arr) }}
-                style={{ ...inputStyle, padding: '4px 8px', flex: 1 }}
-              />
-              <select
-                value={s.type}
-                onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], type: e.target.value }; setSteps(arr) }}
-                style={{ ...inputStyle, padding: '3px 4px', fontSize: 'var(--fs-xs)', minWidth: 90, flex: 'none' }}
-              >
-                {STEP_TYPE_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <button onClick={() => handleMoveStep(i, -1)} disabled={i === 0} style={{
-                background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer',
-                color: i === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
-              }}>&uarr;</button>
-              <button onClick={() => handleMoveStep(i, 1)} disabled={i === steps.length - 1} style={{
-                background: 'none', border: 'none', cursor: i === steps.length - 1 ? 'default' : 'pointer',
-                color: i === steps.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
-              }}>&darr;</button>
-              <button onClick={() => handleRemoveStep(i)} style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', padding: '0 2px', fontFamily: 'inherit',
-              }}>&times;</button>
+              {/* Row 1: number + label text + action buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', minWidth: 20 }}>{i + 1}.</span>
+                <input
+                  value={s.label}
+                  onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], label: e.target.value }; setSteps(arr) }}
+                  style={{ ...inputStyle, padding: '4px 8px', flex: 1 }}
+                />
+                <button onClick={() => handleMoveStep(i, -1)} disabled={i === 0} style={{
+                  background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer',
+                  color: i === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
+                }}>&uarr;</button>
+                <button onClick={() => handleMoveStep(i, 1)} disabled={i === steps.length - 1} style={{
+                  background: 'none', border: 'none', cursor: i === steps.length - 1 ? 'default' : 'pointer',
+                  color: i === steps.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
+                }}>&darr;</button>
+                <button onClick={() => handleRemoveStep(i)} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', padding: '0 2px', fontFamily: 'inherit',
+                }}>&times;</button>
+              </div>
+              {/* Row 2: type selector */}
+              <div style={{ marginLeft: 26, marginTop: 4 }}>
+                <select
+                  value={s.type}
+                  onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], type: e.target.value }; setSteps(arr) }}
+                  style={{ ...inputStyle, padding: '3px 6px', fontSize: 'var(--fs-xs)', width: 'auto' }}
+                >
+                  {STEP_TYPE_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
           {addingStep && (
