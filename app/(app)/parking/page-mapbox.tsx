@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS, type GMapWrapper, createGMapWrapper, pixelToLatLng, queryFeatureAtPoint, clearAllObjects } from '@/lib/google-map-adapter'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
-import { formatCoordsDMS } from '@/lib/utils'
+import { isMapboxConfigured, formatCoordsDMS } from '@/lib/utils'
+import { useMapRuler } from '@/hooks/use-map-ruler'
 import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
 import silhouetteManifest from '@/public/aircraft_silhouette_manifest.json'
@@ -173,7 +176,7 @@ async function loadSvgElement(path: string): Promise<SVGElement | null> {
   }
 }
 
-// Fixed reference size for SVG rendering — marker icon scaling handles display size
+// Fixed reference size for SVG rendering — Mapbox icon-size handles scaling
 const REF_ICON_SIZE = 256
 
 /** Tighten an SVG's viewBox to the actual content bounding box.
@@ -296,16 +299,19 @@ function renderFallbackIcon(): { imageData: ImageData; width: number; height: nu
 
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
  *  the aircraft's real-world wingspan at the current map zoom.
- *  Uses Google Maps projection to convert real-world distance to pixels. */
-function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.maps.Map): number {
-  const center = gmap.getCenter()
-  if (!center) return 1
+ *  Uses 2D distance between projected points so bearing/pitch don't shrink the result. */
+function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: mapboxgl.Map): number {
+  const center = mapInstance.getCenter()
+  const p0 = mapInstance.project(center)
 
-  const zoom = gmap.getZoom() ?? 15
-  // Meters per pixel at this zoom level: 156543.03392 * cos(lat) / 2^zoom
-  const metersPerPx = 156543.03392 * Math.cos(center.lat() * Math.PI / 180) / Math.pow(2, zoom)
+  // Measure how many CSS pixels the wingspan should occupy
   const wingspanM = wingspanFt * FT_TO_M
-  const targetCssPx = wingspanM / metersPerPx
+  const dLng = wingspanM / (111319.9 * Math.cos(center.lat * Math.PI / 180))
+  const pW = mapInstance.project([center.lng + dLng, center.lat])
+  // Use full 2D distance — not just x — so rotation/pitch don't distort the scale
+  const dx = pW.x - p0.x
+  const dy = pW.y - p0.y
+  const targetCssPx = Math.sqrt(dx * dx + dy * dy)
 
   // The icon image is REF_ICON_SIZE px wide (for the wider dimension)
   // Figure out which dimension is wider in the image
@@ -416,23 +422,23 @@ export default function ParkingPage() {
   // Sidebar tab navigation
   const [sidebarTab, setSidebarTab] = useState<'aircraft' | 'environment' | 'clearance' | 'settings'>('aircraft')
 
-  // Placement mode
+  // Ruler tool
   const isPlacing = !!(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType)
   const isPlacingRef = useRef(isPlacing)
   isPlacingRef.current = isPlacing
 
-  // Google Maps ready state
-  const hasGoogleMaps = isGoogleMapsConfigured()
-  const [googleReady, setGoogleReady] = useState(false)
-
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<GMapWrapper | null>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+  const ruler = useMapRuler(map, !isPlacing)
+  const rulerActiveRef = useRef(ruler.active)
+  rulerActiveRef.current = ruler.active
   const dragSpotId = useRef<string | null>(null)
   const dragObstacleId = useRef<string | null>(null)
   const isDraggingRef = useRef(false)
   const dragOffsetRef = useRef<{ dLng: number; dLat: number }>({ dLng: 0, dLat: 0 })
   const dragStartPt = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const silhouetteImagesRef = useRef<Set<string>>(new Set()) // track registered image names
   // ── Derived data ──
 
   const selectedPlan = useMemo(
@@ -548,21 +554,20 @@ export default function ParkingPage() {
   useEffect(() => { loadTaxilanes() }, [loadTaxilanes])
   useEffect(() => { loadApronBoundaries() }, [loadApronBoundaries])
 
-  // ── Google Maps initialization ──
+  // ── Map initialization ──
+
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
   useEffect(() => {
-    if (!hasGoogleMaps) return
-    initGoogleMaps().then(() => setGoogleReady(true)).catch(() => {})
-  }, [hasGoogleMaps])
-
-  useEffect(() => {
-    if (!mapContainer.current || !googleReady || !installationId) return
+    if (!mapContainer.current || !token || !installationId) return
 
     if (map.current) {
-      clearAllObjects(map.current)
+      map.current.remove()
       map.current = null
       setMapLoaded(false)
     }
+
+    mapboxgl.accessToken = token
 
     const rwy = runways[0]
     const centerLat = rwy
@@ -572,43 +577,48 @@ export default function ParkingPage() {
       ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2
       : -82.8369
 
-    const gmap = new google.maps.Map(mapContainer.current, {
-      ...GOOGLE_MAP_OPTIONS,
-      center: { lat: centerLat, lng: centerLng },
+    const m = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: SATELLITE_STYLE,
+      center: [centerLng, centerLat],
       zoom: 15,
-      scaleControl: true,
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false,
+      preserveDrawingBuffer: true,
+      ...MAP_PERF_OPTIONS,
     })
 
-    const wrapper = createGMapWrapper(gmap)
-    map.current = wrapper
+    m.addControl(new mapboxgl.NavigationControl(), 'bottom-right')
+    m.addControl(new mapboxgl.ScaleControl({ unit: 'imperial' }), 'bottom-left')
 
-    // Google Maps is ready immediately after construction — tiles load async
-    google.maps.event.addListenerOnce(gmap, 'tilesloaded', () => {
+    m.on('load', () => {
       setMapLoaded(true)
     })
 
+    map.current = m
+
     return () => {
       if (map.current) {
-        clearAllObjects(map.current)
+        map.current.remove()
         map.current = null
         setMapLoaded(false)
       }
     }
-  }, [googleReady, installationId, runways])
+  }, [token, installationId, runways])
 
   // ── Map click handler for placing aircraft/obstacles ──
 
   useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    const gmap = w.gmap
+    const m = map.current
+    if (!m || !mapLoaded) return
 
-    const listener = gmap.addListener('click', async (e: google.maps.MapMouseEvent) => {
+    const handleClick = async (e: mapboxgl.MapMouseEvent) => {
+      // Ignore clicks when ruler is active or part of a drag operation
+      if (rulerActiveRef.current) return
       if (isDraggingRef.current) return
-      if (!e.latLng) return
 
-      const lat = e.latLng.lat()
-      const lng = e.latLng.lng()
+      const { lng, lat } = e.lngLat
 
       // ── Freeform obstacle drawing — second click finalizes ──
       if (drawingObsType && drawingObsStart && installationId) {
@@ -779,380 +789,827 @@ export default function ParkingPage() {
         setPlacingObstacle(null)
         return
       }
-    })
+    }
 
-    return () => { google.maps.event.removeListener(listener) }
+    m.on('click', handleClick)
+    return () => { m.off('click', handleClick) }
   }, [mapLoaded, placingAircraft, placingObstacle, selectedPlanId, installationId, obstacles.length, drawingLineObsId, drawingTaxilaneId, drawingBoundaryId, drawingObsType, drawingObsStart])
 
-  // ── Render all features on Google Maps ──
-  // Stored references for cleanup
-  const gmapObjectsRef = useRef<{
-    polygons: google.maps.Polygon[]
-    polylines: google.maps.Polyline[]
-    markers: google.maps.Marker[]
-    circles: google.maps.Circle[]
-    overlays: google.maps.OverlayView[]
-  }>({ polygons: [], polylines: [], markers: [], circles: [], overlays: [] })
+  // ── Render aircraft on map ──
 
   useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    const gmap = w.gmap
+    const m = map.current
+    if (!m || !mapLoaded) return
 
-    // Clean up previous objects
-    const prev = gmapObjectsRef.current
-    prev.polygons.forEach(p => p.setMap(null))
-    prev.polylines.forEach(p => p.setMap(null))
-    prev.markers.forEach(m => m.setMap(null))
-    prev.circles.forEach(c => c.setMap(null))
-    prev.overlays.forEach(o => o.setMap(null))
-    w.featureIndex.clear()
-    gmapObjectsRef.current = { polygons: [], polylines: [], markers: [], circles: [], overlays: [] }
-    const objs = gmapObjectsRef.current
+    // Clean up old sources/layers
+    const cleanIds = ['parking-clearance-fill', 'parking-clearance-line', 'parking-obstacles-fill', 'parking-obstacles-line', 'parking-obstacles-points', 'parking-obstacles-labels', 'parking-obstacles-lines-stroke', 'parking-aircraft-symbols', 'parking-aircraft-selection', 'parking-aircraft-labels', 'parking-nose-gear-markers', 'parking-nose-gear-labels', 'parking-drag-labels', 'parking-drawing-line-layer', 'parking-drawing-line-dots', 'parking-taxilane-envelope-fill', 'parking-taxilane-envelope-line', 'parking-taxilane-centerline', 'parking-taxilane-labels', 'parking-apron-boundary-fill', 'parking-apron-boundary-line', 'parking-apron-boundary-labels']
+    for (const id of cleanIds) {
+      if (m.getLayer(id)) m.removeLayer(id)
+    }
+    if (m.getSource('parking-clearance')) m.removeSource('parking-clearance')
+    if (m.getSource('parking-obstacles-src')) m.removeSource('parking-obstacles-src')
+    if (m.getSource('parking-aircraft')) m.removeSource('parking-aircraft')
+    if (m.getSource('parking-drag-labels')) m.removeSource('parking-drag-labels')
+    if (m.getSource('parking-drawing-line')) m.removeSource('parking-drawing-line')
+    if (m.getSource('parking-taxilane-envelopes')) m.removeSource('parking-taxilane-envelopes')
+    if (m.getSource('parking-taxilane-centerlines')) m.removeSource('parking-taxilane-centerlines')
+    if (m.getSource('parking-apron-boundaries-src')) m.removeSource('parking-apron-boundaries-src')
+    if (m.getSource('parking-nose-gear')) m.removeSource('parking-nose-gear')
 
-    // ── Clearance zones ──
-    if (showClearances && visibleLayers.clearance) {
-      for (const spot of spotsWithAircraft) {
-        const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext, spot.aircraft_name)
-        const polygon = generateClearanceZonePolygon(spot, clearanceFt)
-        const spotResults = allResults.filter(r => r.spot_a_id === spot.id || r.spot_b_id === spot.id)
-        const hasViolation = spotResults.some(r => r.status === 'violation')
-        const hasWarning = spotResults.some(r => r.status === 'warning')
-        const color = hasViolation ? '#EF4444' : hasWarning ? '#F59E0B' : '#22C55E'
+    // Clean up old silhouette images
+    Array.from(silhouetteImagesRef.current).forEach(imgName => {
+      if (m.hasImage(imgName)) m.removeImage(imgName)
+    })
+    silhouetteImagesRef.current.clear()
 
-        const poly = new google.maps.Polygon({
-          paths: polygon.map(([lng, lat]) => ({ lat, lng })),
-          fillColor: color,
-          fillOpacity: 0.15,
-          strokeColor: color,
-          strokeWeight: 1.5,
-          strokeOpacity: 0.6,
-          map: gmap,
-          clickable: false,
-          zIndex: 1,
+    // Build clearance zone GeoJSON
+    const clearanceFeatures: GeoJSON.Feature[] = []
+    for (const spot of spotsWithAircraft) {
+      const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext, spot.aircraft_name)
+      // Full clearance zone — violation triggers when another aircraft's body enters this zone
+      const polygon = generateClearanceZonePolygon(spot, clearanceFt)
+
+      // Determine status for this aircraft
+      const spotResults = allResults.filter(
+        r => r.spot_a_id === spot.id || r.spot_b_id === spot.id
+      )
+      const hasViolation = spotResults.some(r => r.status === 'violation')
+      const hasWarning = spotResults.some(r => r.status === 'warning')
+      const color = hasViolation ? '#EF4444' : hasWarning ? '#F59E0B' : '#22C55E'
+
+      clearanceFeatures.push({
+        type: 'Feature',
+        properties: { color, spotId: spot.id },
+        geometry: { type: 'Polygon', coordinates: [polygon] },
+      })
+    }
+
+    if (showClearances && visibleLayers.clearance && clearanceFeatures.length > 0) {
+      m.addSource('parking-clearance', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: clearanceFeatures },
+      })
+
+      m.addLayer({
+        id: 'parking-clearance-fill',
+        type: 'fill',
+        source: 'parking-clearance',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.15,
+        },
+      })
+
+      m.addLayer({
+        id: 'parking-clearance-line',
+        type: 'line',
+        source: 'parking-clearance',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1.5,
+          'line-opacity': 0.6,
+          'line-dasharray': [4, 4],
+        },
+      })
+    }
+
+    // Build obstacle GeoJSON
+    const obstacleFeatures: GeoJSON.Feature[] = []
+    for (const obs of obstacles) {
+      if (obs.obstacle_type === 'point') {
+        obstacleFeatures.push({
+          type: 'Feature',
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
+          geometry: { type: 'Point', coordinates: [obs.longitude, obs.latitude] },
         })
-        objs.polygons.push(poly)
+      } else if (obs.obstacle_type === 'building') {
+        const halfW = (obs.width_ft || 50) / 2
+        const halfL = (obs.length_ft || 50) / 2
+        const rot = obs.rotation_deg || 0
+        const center = { lat: obs.latitude, lon: obs.longitude }
+        const corners = [
+          offsetPoint(offsetPoint(center, rot, halfL), (rot + 90) % 360, halfW),
+          offsetPoint(offsetPoint(center, rot, halfL), (rot - 90 + 360) % 360, halfW),
+          offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot - 90 + 360) % 360, halfW),
+          offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot + 90) % 360, halfW),
+        ]
+        obstacleFeatures.push({
+          type: 'Feature',
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [corners.map(c => [c.lon, c.lat]).concat([[corners[0].lon, corners[0].lat]])],
+          },
+        })
+      } else if (obs.obstacle_type === 'circle') {
+        const center = { lat: obs.latitude, lon: obs.longitude }
+        const radius = obs.radius_ft || 50
+        const segs = 48
+        const coords: [number, number][] = []
+        for (let i = 0; i <= segs; i++) {
+          const bearing = (360 * i) / segs
+          const pt = offsetPoint(center, bearing, radius)
+          coords.push([pt.lon, pt.lat])
+        }
+        obstacleFeatures.push({
+          type: 'Feature',
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
+          geometry: { type: 'Polygon', coordinates: [coords] },
+        })
+      } else if (obs.obstacle_type === 'line' && obs.line_coords) {
+        obstacleFeatures.push({
+          type: 'Feature',
+          properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id },
+          geometry: { type: 'LineString', coordinates: obs.line_coords },
+        })
       }
     }
 
-    // ── Obstacles ──
-    if (visibleLayers.obstacles) {
-      for (const obs of obstacles) {
-        if (obs.obstacle_type === 'point') {
-          const marker = new google.maps.Marker({
-            position: { lat: obs.latitude, lng: obs.longitude },
-            map: gmap,
-            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 6, fillColor: '#F97316', fillOpacity: 1, strokeColor: '#FFF', strokeWeight: 1.5 },
-            zIndex: 5,
-            label: obs.name ? { text: obs.name, color: '#F97316', fontSize: '11px', fontWeight: 'bold', className: 'parking-obs-label' } : undefined,
+    if (obstacleFeatures.length > 0 && visibleLayers.obstacles) {
+      m.addSource('parking-obstacles-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: obstacleFeatures },
+      })
+
+      // Polygon obstacles
+      m.addLayer({
+        id: 'parking-obstacles-fill',
+        type: 'fill',
+        source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'Polygon'],
+        paint: {
+          'fill-color': '#F97316',
+          'fill-opacity': 0.35,
+        },
+      })
+
+      m.addLayer({
+        id: 'parking-obstacles-line',
+        type: 'line',
+        source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'Polygon'],
+        paint: {
+          'line-color': '#F97316',
+          'line-width': 2,
+        },
+      })
+
+      // Point obstacles — circle layer
+      m.addLayer({
+        id: 'parking-obstacles-points',
+        type: 'circle',
+        source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'Point'],
+        paint: {
+          'circle-radius': 6,
+          'circle-color': '#F97316',
+          'circle-stroke-color': '#FFF',
+          'circle-stroke-width': 1.5,
+        },
+      })
+
+      // Line obstacles — stroke layer
+      m.addLayer({
+        id: 'parking-obstacles-lines-stroke',
+        type: 'line',
+        source: 'parking-obstacles-src',
+        filter: ['==', '$type', 'LineString'],
+        paint: {
+          'line-color': '#F97316',
+          'line-width': 3,
+        },
+      })
+
+      // Obstacle labels
+      m.addLayer({
+        id: 'parking-obstacles-labels',
+        type: 'symbol',
+        source: 'parking-obstacles-src',
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': 11,
+          'text-offset': [0, 1.2],
+          'text-anchor': 'top',
+          'text-allow-overlap': true,
+        },
+        paint: {
+          'text-color': '#F97316',
+          'text-halo-color': '#000',
+          'text-halo-width': 1,
+        },
+      })
+    }
+
+    // Build taxilane envelopes + centerlines GeoJSON
+    const taxilaneEnvelopeFeatures: GeoJSON.Feature[] = []
+    const taxilaneCenterlineFeatures: GeoJSON.Feature[] = []
+    for (const tl of taxilanes) {
+      if (!tl.line_coords || tl.line_coords.length < 2) continue
+      const tlForCheck: TaxilaneForCheck = { id: tl.id, name: tl.name, taxilane_type: tl.taxilane_type, design_wingspan_ft: tl.design_wingspan_ft, line_coords: tl.line_coords, is_transient: tl.is_transient }
+      const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(tlForCheck)
+      const envelope = generateTaxilaneEnvelopePolygon(tl.line_coords, halfWidth)
+
+      // Check if any aircraft violates this taxilane
+      const hasViolation = spotsWithAircraft.some(s => {
+        const r = checkTaxilaneClearance(s, tlForCheck)
+        return r.status === 'violation'
+      })
+      const hasWarning = !hasViolation && spotsWithAircraft.some(s => {
+        const r = checkTaxilaneClearance(s, tlForCheck)
+        return r.status === 'warning'
+      })
+      const envelopeColor = hasViolation ? '#EF4444' : hasWarning ? '#F59E0B' : tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'
+
+      if (envelope.length > 0) {
+        taxilaneEnvelopeFeatures.push({
+          type: 'Feature',
+          properties: { color: envelopeColor, name: tl.name || (tl.taxilane_type === 'peripheral' ? 'Peripheral' : 'Interior'), halfWidth: Math.round(halfWidth), item: detail.ufc_item },
+          geometry: { type: 'Polygon', coordinates: [envelope] },
+        })
+      }
+      taxilaneCenterlineFeatures.push({
+        type: 'Feature',
+        properties: { name: tl.name || (tl.taxilane_type === 'peripheral' ? 'Peripheral' : 'Interior'), type: tl.taxilane_type, item: detail.ufc_item, halfWidth: Math.round(halfWidth) },
+        geometry: { type: 'LineString', coordinates: tl.line_coords },
+      })
+    }
+
+    if (taxilaneEnvelopeFeatures.length > 0 && showClearances && visibleLayers.taxilanes) {
+      m.addSource('parking-taxilane-envelopes', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: taxilaneEnvelopeFeatures },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-envelope-fill', type: 'fill', source: 'parking-taxilane-envelopes',
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.1 },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-envelope-line', type: 'line', source: 'parking-taxilane-envelopes',
+        paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-dasharray': [6, 3] },
+      })
+    }
+
+    if (taxilaneCenterlineFeatures.length > 0 && visibleLayers.taxilanes) {
+      m.addSource('parking-taxilane-centerlines', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: taxilaneCenterlineFeatures },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-centerline', type: 'line', source: 'parking-taxilane-centerlines',
+        paint: {
+          'line-color': ['match', ['get', 'type'], 'peripheral', '#8B5CF6', '#3B82F6'],
+          'line-width': 2.5,
+          'line-dasharray': [8, 4],
+        },
+      })
+      m.addLayer({
+        id: 'parking-taxilane-labels', type: 'symbol', source: 'parking-taxilane-centerlines',
+        layout: {
+          'symbol-placement': 'line-center',
+          'text-field': ['concat', ['get', 'name'], ' (', ['get', 'item'], ')'],
+          'text-size': 11,
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': ['match', ['get', 'type'], 'peripheral', '#8B5CF6', '#3B82F6'],
+          'text-halo-color': '#000',
+          'text-halo-width': 1,
+        },
+      })
+    }
+
+    // Build apron boundary GeoJSON
+    const apronBoundaryFeatures: GeoJSON.Feature[] = []
+    for (const ab of apronBoundaries) {
+      if (!ab.polygon_coords || ab.polygon_coords.length < 3) continue
+      const coords = [...ab.polygon_coords, ab.polygon_coords[0]]
+      apronBoundaryFeatures.push({
+        type: 'Feature',
+        properties: { name: ab.name || 'Apron Boundary' },
+        geometry: { type: 'Polygon', coordinates: [coords] },
+      })
+    }
+
+    if (apronBoundaryFeatures.length > 0 && visibleLayers.boundaries) {
+      m.addSource('parking-apron-boundaries-src', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: apronBoundaryFeatures },
+      })
+      m.addLayer({
+        id: 'parking-apron-boundary-fill', type: 'fill', source: 'parking-apron-boundaries-src',
+        paint: { 'fill-color': '#10B981', 'fill-opacity': 0.06 },
+      })
+      m.addLayer({
+        id: 'parking-apron-boundary-line', type: 'line', source: 'parking-apron-boundaries-src',
+        paint: { 'line-color': '#10B981', 'line-width': 2, 'line-dasharray': [4, 2] },
+      })
+      m.addLayer({
+        id: 'parking-apron-boundary-labels', type: 'symbol', source: 'parking-apron-boundaries-src',
+        layout: {
+          'text-field': ['get', 'name'],
+          'text-size': 11,
+          'text-allow-overlap': true,
+        },
+        paint: { 'text-color': '#10B981', 'text-halo-color': '#000', 'text-halo-width': 1 },
+      })
+    }
+
+    // Build aircraft GeoJSON with to-scale silhouettes
+    // Position = aircraft center (offset from nose gear block by pivot_point)
+    const aircraftFeatures: GeoJSON.Feature[] = spotsWithAircraft.map(s => {
+      const c = spotCenter(s)
+      return {
+        type: 'Feature',
+        properties: {
+          spotId: s.id,
+          isSelected: editingSpot?.id === s.id ? 1 : 0,
+          name: s.aircraft_name || 'Aircraft',
+          wingspan: s.wingspan_ft,
+          length: s.length_ft,
+          heading: s.heading_deg,
+          tailNumber: s.tail_number || '',
+          adg: getADGFromWingspan(s.wingspan_ft),
+          iconId: `sil-${s.id}`,
+          iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+        },
+        geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
+      }
+    })
+
+    // Nose gear block markers (small diamond at the stored spot position)
+    const noseGearFeatures: GeoJSON.Feature[] = spotsWithAircraft
+      .filter(s => s.pivot_point_ft > 0)
+      .map(s => ({
+        type: 'Feature',
+        properties: { spotId: s.id, name: s.spot_name || s.aircraft_name || '' },
+        geometry: { type: 'Point', coordinates: [s.longitude, s.latitude] },
+      }))
+
+    if (aircraftFeatures.length > 0 && visibleLayers.aircraft) {
+      m.addSource('parking-aircraft', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: aircraftFeatures },
+      })
+
+      // Register silhouette images for each aircraft at current zoom
+      const registerImages = async () => {
+        for (const spot of spotsWithAircraft) {
+          const imgName = `sil-${spot.id}`
+
+          // Remove old image if exists
+          if (m.hasImage(imgName)) {
+            m.removeImage(imgName)
+          }
+
+          const result = await renderSilhouetteImage(
+            spot.aircraft_name || '',
+            spot.wingspan_ft,
+            spot.length_ft,
+          )
+
+          if (result) {
+            m.addImage(imgName, result.imageData, { sdf: false, pixelRatio: 1 })
+            silhouetteImagesRef.current.add(imgName)
+          } else {
+            const fallback = renderFallbackIcon()
+            m.addImage(imgName, fallback.imageData, { sdf: false, pixelRatio: 1 })
+            silhouetteImagesRef.current.add(imgName)
+          }
+        }
+
+        // Add symbol layer with data-driven icon-size for to-scale rendering
+        if (!m.getLayer('parking-aircraft-symbols')) {
+          m.addLayer({
+            id: 'parking-aircraft-symbols',
+            type: 'symbol',
+            source: 'parking-aircraft',
+            layout: {
+              'icon-image': ['get', 'iconId'],
+              'icon-rotate': ['get', 'heading'],
+              'icon-rotation-alignment': 'map',
+              'icon-allow-overlap': true,
+              'icon-size': ['get', 'iconScale'],
+            },
+            paint: {
+              'icon-opacity': ['case', ['==', ['get', 'isSelected'], 1], 0.4, 1],
+            },
           })
-          objs.markers.push(marker)
-          w.featureIndex.set(`obs-${obs.id}`, { lat: obs.latitude, lng: obs.longitude, type: 'obstacle', props: { obsId: obs.id, type: obs.obstacle_type } })
+        }
+
+        // Selection highlight — cyan ring around selected aircraft
+        if (!m.getLayer('parking-aircraft-selection')) {
+          m.addLayer({
+            id: 'parking-aircraft-selection',
+            type: 'circle',
+            source: 'parking-aircraft',
+            filter: ['==', ['get', 'isSelected'], 1],
+            paint: {
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 8, 14, 14, 16, 22, 18, 36],
+              'circle-color': 'transparent',
+              'circle-stroke-color': '#22D3EE',
+              'circle-stroke-width': 3,
+              'circle-stroke-opacity': 0.8,
+            },
+          }, 'parking-aircraft-symbols')
+        }
+
+        // Labels layer on top
+        if (!m.getLayer('parking-aircraft-labels')) {
+          m.addLayer({
+            id: 'parking-aircraft-labels',
+            type: 'symbol',
+            source: 'parking-aircraft',
+            layout: {
+              'text-field': ['concat', ['get', 'name'], '\n', ['get', 'tailNumber']],
+              'text-size': 11,
+              'text-offset': [0, 2],
+              'text-anchor': 'top',
+              'text-allow-overlap': true,
+            },
+            paint: {
+              'text-color': '#FFFFFF',
+              'text-halo-color': '#000000',
+              'text-halo-width': 1,
+            },
+          })
+        }
+      }
+
+      registerImages()
+    }
+
+    // Nose gear block markers
+    if (noseGearFeatures.length > 0 && visibleLayers.aircraft) {
+      m.addSource('parking-nose-gear', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: noseGearFeatures },
+      })
+      m.addLayer({
+        id: 'parking-nose-gear-markers',
+        type: 'circle',
+        source: 'parking-nose-gear',
+        paint: {
+          'circle-radius': 5,
+          'circle-color': '#FFD700',
+          'circle-stroke-color': '#000',
+          'circle-stroke-width': 1.5,
+        },
+      })
+      m.addLayer({
+        id: 'parking-nose-gear-labels',
+        type: 'symbol',
+        source: 'parking-nose-gear',
+        layout: {
+          'text-field': 'NG',
+          'text-size': 9,
+          'text-offset': [0, -1.2],
+          'text-anchor': 'bottom',
+          'text-allow-overlap': true,
+        },
+        paint: { 'text-color': '#FFD700', 'text-halo-color': '#000', 'text-halo-width': 1 },
+      })
+    }
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot])
+
+  // ── Update icon scale on zoom change ──
+  // Images are fixed-size; only the iconScale property needs updating on zoom.
+  // Listen to 'zoom' (continuous) so icons stay to-scale during pinch/scroll.
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded || spotsWithAircraft.length === 0) return
+
+    const updateScale = () => {
+      const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
+      if (!src) return
+      const spots = spotsWithAircraftRef.current
+      src.setData({
+        type: 'FeatureCollection',
+        features: spots.map(s => {
+          const c = spotCenter(s)
+          return {
+            type: 'Feature' as const,
+            properties: {
+              spotId: s.id,
+              name: s.aircraft_name || 'Aircraft',
+              wingspan: s.wingspan_ft,
+              length: s.length_ft,
+              heading: s.heading_deg,
+              tailNumber: s.tail_number || '',
+              adg: getADGFromWingspan(s.wingspan_ft),
+              iconId: `sil-${s.id}`,
+              iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+            },
+            geometry: { type: 'Point' as const, coordinates: [c.lon, c.lat] },
+          }
+        }),
+      })
+    }
+
+    m.on('zoom', updateScale)
+    m.on('rotate', updateScale)
+    m.on('pitch', updateScale)
+    return () => { m.off('zoom', updateScale); m.off('rotate', updateScale); m.off('pitch', updateScale) }
+  }, [mapLoaded, spotsWithAircraft])
+
+  // ── Aircraft + Obstacle drag interaction ──
+  // Uses refs to avoid re-registering listeners on every data change.
+  // Updates GeoJSON sources directly during drag for smooth movement.
+
+  useEffect(() => {
+    const m = map.current
+    if (!m || !mapLoaded) return
+
+    // Build a tolerance bounding box around a point for easier click targets
+    const hitBox = (pt: mapboxgl.Point, tolerance = 8): [mapboxgl.PointLike, mapboxgl.PointLike] => [
+      [pt.x - tolerance, pt.y - tolerance],
+      [pt.x + tolerance, pt.y + tolerance],
+    ]
+
+    const onMouseDown = (e: mapboxgl.MapMouseEvent) => {
+      // Don't start drag when plan is locked or in placement/drawing mode
+      if (isPlacingRef.current) return
+
+      const box = hitBox(e.point)
+      dragStartPt.current = { x: e.point.x, y: e.point.y }
+
+      // Check aircraft layer first
+      if (m.getLayer('parking-aircraft-symbols')) {
+        const acFeatures = m.queryRenderedFeatures(box, { layers: ['parking-aircraft-symbols'] })
+        if (acFeatures.length) {
+          const spotId = acFeatures[0].properties?.spotId
+          if (spotId) {
+            const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+            // Always select the aircraft on mousedown
+            if (spot) {
+              setEditingSpot(spot)
+              setOpenSections(prev => ({ ...prev, aircraft: true }))
+              setSidebarTab('aircraft')
+            }
+            // Only start drag if plan is unlocked
+            if (!planLockedRef.current) {
+              dragOffsetRef.current = spot
+                ? { dLng: spot.longitude - e.lngLat.lng, dLat: spot.latitude - e.lngLat.lat }
+                : { dLng: 0, dLat: 0 }
+              isDraggingRef.current = true
+              dragSpotId.current = spotId
+              dragObstacleId.current = null
+              m.getCanvas().style.cursor = 'grabbing'
+              m.dragPan.disable()
+              // Make silhouette semi-transparent during drag to see nose gear + ground
+              if (m.getLayer('parking-aircraft-symbols')) {
+                m.setPaintProperty('parking-aircraft-symbols', 'icon-opacity', 0.4)
+              }
+              e.preventDefault()
+            }
+            return
+          }
+        }
+      }
+
+      // Check obstacle layers (points, polygon fills, lines, labels) — skip if obstacles are locked
+      if (obstaclesLockedRef.current) return
+      const obsLayers: string[] = []
+      if (m.getLayer('parking-obstacles-points')) obsLayers.push('parking-obstacles-points')
+      if (m.getLayer('parking-obstacles-fill')) obsLayers.push('parking-obstacles-fill')
+      if (m.getLayer('parking-obstacles-lines-stroke')) obsLayers.push('parking-obstacles-lines-stroke')
+      if (m.getLayer('parking-obstacles-labels')) obsLayers.push('parking-obstacles-labels')
+      if (m.getLayer('parking-obstacles-line')) obsLayers.push('parking-obstacles-line')
+      if (obsLayers.length > 0) {
+        const obsFeatures = m.queryRenderedFeatures(box, { layers: obsLayers })
+        if (obsFeatures.length) {
+          const matchId = obsFeatures[0].properties?.obsId
+          const matchObs = matchId ? obstaclesRef.current.find(o => o.id === matchId) : null
+          if (matchObs) {
+            dragOffsetRef.current = { dLng: matchObs.longitude - e.lngLat.lng, dLat: matchObs.latitude - e.lngLat.lat }
+            isDraggingRef.current = true
+            dragObstacleId.current = matchObs.id
+            dragSpotId.current = null
+            m.getCanvas().style.cursor = 'grabbing'
+            m.dragPan.disable()
+            e.preventDefault()
+            return
+          }
+        }
+      }
+    }
+
+    const buildObstacleGeoJSON = (currentObs: ParkingObstacle[], dragId: string | null, newLng: number, newLat: number): GeoJSON.FeatureCollection => {
+      const features: GeoJSON.Feature[] = []
+      for (const obs of currentObs) {
+        const isDragged = obs.id === dragId
+        const lng = isDragged ? newLng : obs.longitude
+        const lat = isDragged ? newLat : obs.latitude
+        if (obs.obstacle_type === 'point') {
+          features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'Point', coordinates: [lng, lat] } })
         } else if (obs.obstacle_type === 'building') {
           const halfW = (obs.width_ft || 50) / 2
           const halfL = (obs.length_ft || 50) / 2
           const rot = obs.rotation_deg || 0
-          const center = { lat: obs.latitude, lon: obs.longitude }
+          const center = { lat, lon: lng }
           const corners = [
             offsetPoint(offsetPoint(center, rot, halfL), (rot + 90) % 360, halfW),
             offsetPoint(offsetPoint(center, rot, halfL), (rot - 90 + 360) % 360, halfW),
             offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot - 90 + 360) % 360, halfW),
             offsetPoint(offsetPoint(center, (rot + 180) % 360, halfL), (rot + 90) % 360, halfW),
           ]
-          const poly = new google.maps.Polygon({
-            paths: corners.map(c => ({ lat: c.lat, lng: c.lon })),
-            fillColor: '#F97316', fillOpacity: 0.35,
-            strokeColor: '#F97316', strokeWeight: 2,
-            map: gmap, zIndex: 3,
-          })
-          objs.polygons.push(poly)
-          w.featureIndex.set(`obs-${obs.id}`, { lat: obs.latitude, lng: obs.longitude, type: 'obstacle', props: { obsId: obs.id, type: obs.obstacle_type } })
+          features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'Polygon', coordinates: [corners.map(c => [c.lon, c.lat]).concat([[corners[0].lon, corners[0].lat]])] } })
         } else if (obs.obstacle_type === 'circle') {
-          const center = { lat: obs.latitude, lon: obs.longitude }
+          const center = { lat, lon: lng }
           const radius = obs.radius_ft || 50
           const segs = 48
-          const coords: { lat: number; lng: number }[] = []
+          const coords: [number, number][] = []
           for (let i = 0; i <= segs; i++) {
             const bearing = (360 * i) / segs
             const pt = offsetPoint(center, bearing, radius)
-            coords.push({ lat: pt.lat, lng: pt.lon })
+            coords.push([pt.lon, pt.lat])
           }
-          const poly = new google.maps.Polygon({
-            paths: coords,
-            fillColor: '#F97316', fillOpacity: 0.35,
-            strokeColor: '#F97316', strokeWeight: 2,
-            map: gmap, zIndex: 3,
-          })
-          objs.polygons.push(poly)
-          w.featureIndex.set(`obs-${obs.id}`, { lat: obs.latitude, lng: obs.longitude, type: 'obstacle', props: { obsId: obs.id, type: obs.obstacle_type } })
+          features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'Polygon', coordinates: [coords] } })
         } else if (obs.obstacle_type === 'line' && obs.line_coords) {
-          const line = new google.maps.Polyline({
-            path: obs.line_coords.map(([lng, lat]) => ({ lat, lng })),
-            strokeColor: '#F97316', strokeWeight: 3,
-            map: gmap, zIndex: 3,
-          })
-          objs.polylines.push(line)
-          w.featureIndex.set(`obs-${obs.id}`, { lat: obs.latitude, lng: obs.longitude, type: 'obstacle', props: { obsId: obs.id, type: obs.obstacle_type } })
+          // For line obstacles, offset all line coords by the delta
+          if (isDragged) {
+            const dLng = newLng - obs.longitude
+            const dLat = newLat - obs.latitude
+            const movedCoords = obs.line_coords.map(c => [c[0] + dLng, c[1] + dLat] as [number, number])
+            features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'LineString', coordinates: movedCoords } })
+          } else {
+            features.push({ type: 'Feature', properties: { name: obs.name, type: obs.obstacle_type, obsId: obs.id }, geometry: { type: 'LineString', coordinates: obs.line_coords } })
+          }
         }
       }
+      return { type: 'FeatureCollection', features }
     }
 
-    // ── Taxilane envelopes + centerlines ──
-    for (const tl of taxilanes) {
-      if (!tl.line_coords || tl.line_coords.length < 2) continue
-      const tlForCheck: TaxilaneForCheck = { id: tl.id, name: tl.name, taxilane_type: tl.taxilane_type, design_wingspan_ft: tl.design_wingspan_ft, line_coords: tl.line_coords, is_transient: tl.is_transient }
-      const { halfWidth } = getTaxilaneEnvelopeHalfWidth(tlForCheck)
-      const envelope = generateTaxilaneEnvelopePolygon(tl.line_coords, halfWidth)
-
-      const hasViolation = spotsWithAircraft.some(s => checkTaxilaneClearance(s, tlForCheck).status === 'violation')
-      const hasWarning = !hasViolation && spotsWithAircraft.some(s => checkTaxilaneClearance(s, tlForCheck).status === 'warning')
-      const envelopeColor = hasViolation ? '#EF4444' : hasWarning ? '#F59E0B' : tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'
-
-      if (showClearances && visibleLayers.taxilanes && envelope.length > 0) {
-        const poly = new google.maps.Polygon({
-          paths: envelope.map(([lng, lat]) => ({ lat, lng })),
-          fillColor: envelopeColor, fillOpacity: 0.1,
-          strokeColor: envelopeColor, strokeWeight: 1.5,
-          map: gmap, zIndex: 2, clickable: false,
-        })
-        objs.polygons.push(poly)
+    const onMouseMove = (e: mapboxgl.MapMouseEvent) => {
+      // ── Freeform obstacle drawing ──
+      if (drawingObsTypeRef.current && drawingObsStartRef.current) {
+        setDrawingObsCurrent([e.lngLat.lng, e.lngLat.lat])
+        return
       }
 
-      if (visibleLayers.taxilanes) {
-        const centerline = new google.maps.Polyline({
-          path: tl.line_coords.map(([lng, lat]) => ({ lat, lng })),
-          strokeColor: tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6',
-          strokeWeight: 2.5,
-          strokeOpacity: 0.8,
-          map: gmap, zIndex: 3,
-        })
-        objs.polylines.push(centerline)
-      }
-    }
+      if (!isDraggingRef.current) return
 
-    // ── Apron boundaries ──
-    if (visibleLayers.boundaries) {
-      for (const ab of apronBoundaries) {
-        if (!ab.polygon_coords || ab.polygon_coords.length < 3) continue
-        const poly = new google.maps.Polygon({
-          paths: ab.polygon_coords.map(([lng, lat]) => ({ lat, lng })),
-          fillColor: '#10B981', fillOpacity: 0.06,
-          strokeColor: '#10B981', strokeWeight: 2,
-          map: gmap, zIndex: 2, clickable: false,
-        })
-        objs.polygons.push(poly)
-      }
-    }
+      const lng = e.lngLat.lng + dragOffsetRef.current.dLng
+      const lat = e.lngLat.lat + dragOffsetRef.current.dLat
 
-    // ── Aircraft silhouette markers ──
-    if (visibleLayers.aircraft) {
-      const renderAll = async () => {
-        for (const spot of spotsWithAircraft) {
-          const c = spotCenter(spot)
-          const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
-          const isSelected = editingSpot?.id === spot.id
+      // ── Aircraft drag ──
+      if (dragSpotId.current) {
+        const sid = dragSpotId.current
+        const src = m.getSource('parking-aircraft') as mapboxgl.GeoJSONSource | undefined
+        if (src) {
+          const currentSpots = spotsWithAircraftRef.current
+          src.setData({
+            type: 'FeatureCollection',
+            features: currentSpots.map(s => {
+              // During drag, lng/lat is the new nose gear block position (with offset)
+              const isBeingDragged = s.id === sid
+              const ngsLon = isBeingDragged ? lng : s.longitude
+              const ngsLat = isBeingDragged ? lat : s.latitude
+              const c = getAircraftCenter(ngsLon, ngsLat, s.heading_deg, s.length_ft, s.pivot_point_ft)
+              return {
+                type: 'Feature' as const,
+                properties: {
+                  spotId: s.id,
+                  name: s.aircraft_name || 'Aircraft',
+                  wingspan: s.wingspan_ft,
+                  length: s.length_ft,
+                  heading: s.heading_deg,
+                  tailNumber: s.tail_number || '',
+                  adg: getADGFromWingspan(s.wingspan_ft),
+                  iconId: `sil-${s.id}`,
+                  iconScale: computeIconScale(s.wingspan_ft, s.length_ft, m),
+                },
+                geometry: {
+                  type: 'Point' as const,
+                  coordinates: [c.lon, c.lat],
+                },
+              }
+            }),
+          })
 
-          // Render silhouette to canvas and get data URL
-          const result = await renderSilhouetteImage(spot.aircraft_name || '', spot.wingspan_ft, spot.length_ft)
-          const imgData = result || renderFallbackIcon()
+          // Also update nose gear markers during drag
+          const ngSrc = m.getSource('parking-nose-gear') as mapboxgl.GeoJSONSource | undefined
+          if (ngSrc) {
+            ngSrc.setData({
+              type: 'FeatureCollection',
+              features: currentSpots.filter(s => s.pivot_point_ft > 0).map(s => ({
+                type: 'Feature' as const,
+                properties: { spotId: s.id },
+                geometry: { type: 'Point' as const, coordinates: s.id === sid ? [lng, lat] : [s.longitude, s.latitude] },
+              })),
+            })
+          }
+        }
 
-          // Convert ImageData to data URL
-          const canvas = document.createElement('canvas')
-          canvas.width = imgData.width
-          canvas.height = imgData.height
-          const ctx = canvas.getContext('2d')!
-          ctx.putImageData(imgData.imageData, 0, 0)
-          const dataUrl = canvas.toDataURL('image/png')
+        // Show clearance distance labels
+        const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
+        if (draggedSpot) {
+          const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
+          const labelFeatures: GeoJSON.Feature[] = []
 
-          const scaledW = Math.max(8, Math.round(imgData.width * scale))
-          const scaledH = Math.max(8, Math.round(imgData.height * scale))
-
-          // Create a rotated icon using a canvas
-          const rotCanvas = document.createElement('canvas')
-          const maxDim = Math.max(scaledW, scaledH) * 1.5
-          rotCanvas.width = maxDim
-          rotCanvas.height = maxDim
-          const rotCtx = rotCanvas.getContext('2d')!
-          rotCtx.translate(maxDim / 2, maxDim / 2)
-          rotCtx.rotate((spot.heading_deg || 0) * Math.PI / 180)
-          if (isSelected) rotCtx.globalAlpha = 0.4
-          const img = new Image()
-          img.src = dataUrl
-          await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
-          rotCtx.drawImage(img, -scaledW / 2, -scaledH / 2, scaledW, scaledH)
-          rotCtx.globalAlpha = 1
-
-          // Selection ring
-          if (isSelected) {
-            rotCtx.strokeStyle = '#22D3EE'
-            rotCtx.lineWidth = 3
-            rotCtx.beginPath()
-            rotCtx.arc(0, 0, Math.max(scaledW, scaledH) / 2 + 4, 0, Math.PI * 2)
-            rotCtx.stroke()
+          for (const other of spotsWithAircraftRef.current) {
+            if (other.id === sid) continue
+            const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+            const dy = (lat - other.latitude) * 364567
+            if (Math.sqrt(dx * dx + dy * dy) > 500) continue
+            const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current)
+            if (result.length > 0) {
+              const r = result[0]
+              labelFeatures.push({ type: 'Feature', properties: { label: `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color: r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E' }, geometry: { type: 'Point', coordinates: [(lng + other.longitude) / 2, (lat + other.latitude) / 2] } })
+            }
           }
 
-          const rotDataUrl = rotCanvas.toDataURL('image/png')
+          for (const obs of obstaclesRef.current) {
+            const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+            const dy = (lat - obs.latitude) * 364567
+            if (Math.sqrt(dx * dx + dy * dy) > 500) continue
+            const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current)
+            if (result.length > 0) {
+              const r2 = result[0]
+              labelFeatures.push({ type: 'Feature', properties: { label: `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color: r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E' }, geometry: { type: 'Point', coordinates: [(lng + obs.longitude) / 2, (lat + obs.latitude) / 2] } })
+            }
+          }
 
-          const marker = new google.maps.Marker({
-            position: { lat: c.lat, lng: c.lon },
-            map: gmap,
-            icon: {
-              url: rotDataUrl,
-              scaledSize: new google.maps.Size(maxDim, maxDim),
-              anchor: new google.maps.Point(maxDim / 2, maxDim / 2),
-            },
-            zIndex: 10,
-            label: {
-              text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
-              color: '#FFFFFF',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              className: 'parking-ac-label',
-            },
-          })
-          objs.markers.push(marker)
-          w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
-        }
-
-        // Nose gear block markers
-        for (const spot of spotsWithAircraft.filter(s => s.pivot_point_ft > 0)) {
-          const marker = new google.maps.Marker({
-            position: { lat: spot.latitude, lng: spot.longitude },
-            map: gmap,
-            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#FFD700', fillOpacity: 1, strokeColor: '#000', strokeWeight: 1.5 },
-            zIndex: 9,
-          })
-          objs.markers.push(marker)
+          showDragLabels(m, labelFeatures)
         }
       }
-      renderAll()
-    }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot])
 
-  // ── Update icon scale on zoom change ──
-  useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    // Re-render on zoom change by triggering a state update
-    const listener = w.gmap.addListener('zoom_changed', () => {
-      // The main render effect handles everything — but we need a trigger.
-      // We use a no-op to force recalculation of marker sizes on next render.
-      // The render effect depends on spotsWithAircraft which won't change on zoom,
-      // so we use a direct marker update instead.
-      const gmap = w.gmap
-      const spots = spotsWithAircraftRef.current
-      if (spots.length === 0) return
-      // Markers are rebuilt in the render effect; for zoom we simply let them be
-      // since they're created with fixed pixel sizes at render time.
-      // A full re-render would be expensive. The current approach is acceptable
-      // as aircraft markers are recreated when data changes.
-      void gmap // suppress unused
-      void spots
-    })
-    return () => { google.maps.event.removeListener(listener) }
-  }, [mapLoaded])
-
-  // ── Aircraft + Obstacle drag interaction ──
-  // Uses refs to avoid re-registering listeners on every data change.
-  // Uses pixelToLatLng from adapter for coordinate conversion.
-
-  useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    const gmap = w.gmap
-    const mapDiv = gmap.getDiv()
-
-    const toLatLng = (x: number, y: number): { lat: number; lng: number } | null => {
-      return pixelToLatLng(w, x, y)
-    }
-
-    const onMouseDown = (clickLat: number, clickLng: number, clientX: number, clientY: number, preventDefault: () => void) => {
-      if (isPlacingRef.current) return
-      dragStartPt.current = { x: clientX, y: clientY }
-
-      // Check aircraft via spatial index
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 30)
-      if (acHit && acHit.type === 'aircraft') {
-        const spotId = acHit.props.spotId
-        const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
-        if (spot) {
-          setEditingSpot(spot)
-          setOpenSections(prev => ({ ...prev, aircraft: true }))
-          setSidebarTab('aircraft')
-        }
-        if (!planLockedRef.current && spot) {
-          dragOffsetRef.current = { dLng: spot.longitude - clickLng, dLat: spot.latitude - clickLat }
-          isDraggingRef.current = true
-          dragSpotId.current = spotId
-          dragObstacleId.current = null
-          mapDiv.style.cursor = 'grabbing'
-          gmap.setOptions({ draggable: false })
-          preventDefault()
-        }
-        return
-      }
-
-      // Check obstacles via spatial index
-      if (obstaclesLockedRef.current) return
-      const obsHit = queryFeatureAtPoint(w, clickLat, clickLng, 30)
-      if (obsHit && obsHit.type === 'obstacle') {
-        const matchObs = obstaclesRef.current.find(o => o.id === obsHit.props.obsId)
-        if (matchObs) {
-          dragOffsetRef.current = { dLng: matchObs.longitude - clickLng, dLat: matchObs.latitude - clickLat }
-          isDraggingRef.current = true
-          dragObstacleId.current = matchObs.id
-          dragSpotId.current = null
-          mapDiv.style.cursor = 'grabbing'
-          gmap.setOptions({ draggable: false })
-          preventDefault()
+      // ── Obstacle drag ──
+      if (dragObstacleId.current) {
+        const obsSrc = m.getSource('parking-obstacles-src') as mapboxgl.GeoJSONSource | undefined
+        if (obsSrc) {
+          obsSrc.setData(buildObstacleGeoJSON(obstaclesRef.current, dragObstacleId.current, lng, lat))
         }
       }
     }
 
-    const onMouseMove = (moveLat: number, moveLng: number) => {
-      // Freeform obstacle drawing
-      if (drawingObsTypeRef.current && drawingObsStartRef.current) {
-        setDrawingObsCurrent([moveLng, moveLat])
-        return
+    const showDragLabels = (mapInst: mapboxgl.Map, labelFeatures: GeoJSON.Feature[]) => {
+      const dragSrc = mapInst.getSource('parking-drag-labels') as mapboxgl.GeoJSONSource | undefined
+      const dragData: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: labelFeatures }
+      if (dragSrc) {
+        dragSrc.setData(dragData)
+      } else {
+        mapInst.addSource('parking-drag-labels', { type: 'geojson', data: dragData })
+        mapInst.addLayer({
+          id: 'parking-drag-labels',
+          type: 'symbol',
+          source: 'parking-drag-labels',
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-size': 13,
+            'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+            'text-allow-overlap': true,
+          },
+          paint: {
+            'text-color': ['get', 'color'],
+            'text-halo-color': '#000',
+            'text-halo-width': 1.5,
+          },
+        })
       }
+    }
+
+    const removeDragLabels = () => {
+      if (m.getLayer('parking-drag-labels')) m.removeLayer('parking-drag-labels')
+      if (m.getSource('parking-drag-labels')) m.removeSource('parking-drag-labels')
+    }
+
+    const onMouseUp = async (e: mapboxgl.MapMouseEvent) => {
       if (!isDraggingRef.current) return
 
-      const lng = moveLng + dragOffsetRef.current.dLng
-      const lat = moveLat + dragOffsetRef.current.dLat
+      const lng = e.lngLat.lng + dragOffsetRef.current.dLng
+      const lat = e.lngLat.lat + dragOffsetRef.current.dLat
 
-      // During drag — position update will happen on mouseup via state change + re-render
-      // For now, just track the position. The full re-render on drag end handles visual update.
-      void lng
-      void lat
-    }
-
-    const onMouseUp = async (upLat: number, upLng: number) => {
-      if (!isDraggingRef.current) return
-
-      const lng = upLng + dragOffsetRef.current.dLng
-      const lat = upLat + dragOffsetRef.current.dLat
-
+      // ── Aircraft drag end ──
       if (dragSpotId.current) {
         const sid = dragSpotId.current
         isDraggingRef.current = false
         dragSpotId.current = null
-        gmap.setOptions({ draggable: true })
-        mapDiv.style.cursor = ''
+        m.dragPan.enable()
+        m.getCanvas().style.cursor = ''
+        removeDragLabels()
+        // Restore selection-based opacity after drag
+        if (m.getLayer('parking-aircraft-symbols')) {
+          m.setPaintProperty('parking-aircraft-symbols', 'icon-opacity', ['case', ['==', ['get', 'isSelected'], 1], 0.4, 1])
+        }
         setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s))
         await updateParkingSpot(sid, { longitude: lng, latitude: lat })
         return
       }
 
+      // ── Obstacle drag end ──
       if (dragObstacleId.current) {
         const oid = dragObstacleId.current
         isDraggingRef.current = false
         dragObstacleId.current = null
-        gmap.setOptions({ draggable: true })
-        mapDiv.style.cursor = ''
+        m.dragPan.enable()
+        m.getCanvas().style.cursor = ''
+        removeDragLabels()
 
         const obs = obstaclesRef.current.find(o => o.id === oid)
         if (obs) {
           const updates: Partial<ParkingObstacle> = { longitude: lng, latitude: lat }
+          // For line obstacles, also shift line_coords
           if (obs.obstacle_type === 'line' && obs.line_coords) {
             const dLng = lng - obs.longitude
             const dLat = lat - obs.latitude
@@ -1165,105 +1622,118 @@ export default function ParkingPage() {
       }
     }
 
-    // Mouse events on the map div
+    // Bind mousedown/touchstart on canvas (not specific layer) so we can check multiple layers
+    const canvas = m.getCanvas()
     const onCanvasMouseDown = (ev: MouseEvent) => {
-      if (ev.button !== 0) return
-      const rect = mapDiv.getBoundingClientRect()
-      const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
-      if (!pos) return
-      onMouseDown(pos.lat, pos.lng, ev.clientX, ev.clientY, () => ev.preventDefault())
+      if (ev.button !== 0) return  // Only handle left-click; right-click → contextmenu handler
+      const point = new mapboxgl.Point(ev.offsetX, ev.offsetY)
+      const lngLat = m.unproject(point)
+      onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
     }
-
-    const onCanvasMouseMove = (ev: MouseEvent) => {
-      const rect = mapDiv.getBoundingClientRect()
-      const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
-      if (!pos) return
-      onMouseMove(pos.lat, pos.lng)
-    }
-
-    const onCanvasMouseUp = (ev: MouseEvent) => {
-      const rect = mapDiv.getBoundingClientRect()
-      const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
-      if (!pos) return
-      onMouseUp(pos.lat, pos.lng)
-    }
-
-    // Touch events
     const onCanvasTouchStart = (ev: TouchEvent) => {
       if (ev.touches.length !== 1) return
       const touch = ev.touches[0]
-      const rect = mapDiv.getBoundingClientRect()
-      const pos = toLatLng(touch.clientX - rect.left, touch.clientY - rect.top)
-      if (!pos) return
+      const rect = canvas.getBoundingClientRect()
+      const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
+      const lngLat = m.unproject(point)
 
-      // Long-press detection for context menu
+      // Long-press detection for context menu (500ms hold)
       if (contextMenuTimerRef.current) clearTimeout(contextMenuTimerRef.current)
       contextMenuTimerRef.current = setTimeout(() => {
-        const acHit = queryFeatureAtPoint(w, pos.lat, pos.lng, 30)
-        if (acHit && acHit.type === 'aircraft') {
-          const spotId = acHit.props.spotId
-          const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
-          if (spot) {
-            setContextMenuSpot({ spot, x: touch.clientX, y: touch.clientY })
-            setEditingSpot(spot)
+        if (m.getLayer('parking-aircraft-symbols')) {
+          const box2 = hitBox(point)
+          const features = m.queryRenderedFeatures(box2, { layers: ['parking-aircraft-symbols'] })
+          if (features.length) {
+            const spotId = features[0].properties?.spotId
+            const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+            if (spot) {
+              setContextMenuSpot({ spot, x: point.x, y: point.y })
+              setEditingSpot(spot)
+              return // don't start drag
+            }
           }
         }
       }, 500)
 
-      onMouseDown(pos.lat, pos.lng, touch.clientX, touch.clientY, () => ev.preventDefault())
+      onMouseDown({ point, lngLat, originalEvent: ev, preventDefault: () => ev.preventDefault() } as any)
     }
     const onTouchMove = (ev: TouchEvent) => {
       if (contextMenuTimerRef.current) { clearTimeout(contextMenuTimerRef.current); contextMenuTimerRef.current = null }
       if (!isDraggingRef.current || ev.touches.length !== 1) return
-      ev.preventDefault()
+      ev.preventDefault() // prevent map pan during drag
       const touch = ev.touches[0]
-      const rect = mapDiv.getBoundingClientRect()
-      const pos = toLatLng(touch.clientX - rect.left, touch.clientY - rect.top)
-      if (!pos) return
-      onMouseMove(pos.lat, pos.lng)
+      const rect = canvas.getBoundingClientRect()
+      const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
+      const lngLat = m.unproject(point)
+      onMouseMove({ point, lngLat, originalEvent: ev, preventDefault: () => {} } as any)
     }
     const onTouchEnd = (ev: TouchEvent) => {
       if (!isDraggingRef.current) return
       const touch = ev.changedTouches[0]
-      const rect = mapDiv.getBoundingClientRect()
-      const pos = toLatLng(touch.clientX - rect.left, touch.clientY - rect.top)
-      if (!pos) return
-      onMouseUp(pos.lat, pos.lng)
+      const rect = canvas.getBoundingClientRect()
+      const point = new mapboxgl.Point(touch.clientX - rect.left, touch.clientY - rect.top)
+      const lngLat = m.unproject(point)
+      onMouseUp({ point, lngLat, originalEvent: ev, preventDefault: () => {} } as any)
     }
+    canvas.addEventListener('mousedown', onCanvasMouseDown)
+    canvas.addEventListener('touchstart', onCanvasTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false })
+    canvas.addEventListener('touchend', onTouchEnd)
+    m.on('mousemove', onMouseMove as any)
+    m.on('mouseup', onMouseUp as any)
 
-    mapDiv.addEventListener('mousedown', onCanvasMouseDown)
-    mapDiv.addEventListener('mousemove', onCanvasMouseMove)
-    mapDiv.addEventListener('mouseup', onCanvasMouseUp)
-    mapDiv.addEventListener('touchstart', onCanvasTouchStart, { passive: false })
-    mapDiv.addEventListener('touchmove', onTouchMove, { passive: false })
-    mapDiv.addEventListener('touchend', onTouchEnd)
+    // Hover cursor for both aircraft and obstacles
+    const onAcEnter = () => { if (!isDraggingRef.current && !planLockedRef.current) m.getCanvas().style.cursor = 'grab' }
+    const onAcLeave = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = '' }
+    const onObsEnter = () => { if (!isDraggingRef.current && !planLockedRef.current) m.getCanvas().style.cursor = 'grab' }
+    const onObsLeave = () => { if (!isDraggingRef.current) m.getCanvas().style.cursor = '' }
+    m.on('mouseenter', 'parking-aircraft-symbols', onAcEnter)
+    m.on('mouseleave', 'parking-aircraft-symbols', onAcLeave)
+    m.on('mouseenter', 'parking-obstacles-points', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-points', onObsLeave)
+    m.on('mouseenter', 'parking-obstacles-fill', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-fill', onObsLeave)
+    m.on('mouseenter', 'parking-obstacles-labels', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-labels', onObsLeave)
+    m.on('mouseenter', 'parking-obstacles-lines-stroke', onObsEnter)
+    m.on('mouseleave', 'parking-obstacles-lines-stroke', onObsLeave)
 
-    // Right-click context menu
-    const contextListener = gmap.addListener('rightclick', (e: google.maps.MapMouseEvent) => {
-      if (!e.latLng) return
-      const clickLat = e.latLng.lat()
-      const clickLng = e.latLng.lng()
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 30)
-      if (acHit && acHit.type === 'aircraft') {
-        const spotId = acHit.props.spotId
+    // Right-click context menu on aircraft
+    const onContextMenu = (e: mapboxgl.MapMouseEvent) => {
+      if (!m.getLayer('parking-aircraft-symbols')) return
+      const box = hitBox(e.point)
+      const features = m.queryRenderedFeatures(box, { layers: ['parking-aircraft-symbols'] })
+      if (features.length) {
+        const spotId = features[0].properties?.spotId
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
         if (spot) {
-          // Use domEvent for screen coordinates
-          const de = (e as any).domEvent as MouseEvent | undefined
-          setContextMenuSpot({ spot, x: de?.clientX ?? 0, y: de?.clientY ?? 0 })
+          e.preventDefault()
+          const oe = e.originalEvent as MouseEvent
+          setContextMenuSpot({ spot, x: oe.clientX, y: oe.clientY })
           setEditingSpot(spot)
         }
       }
-    })
+    }
+    m.on('contextmenu', onContextMenu)
 
     return () => {
-      mapDiv.removeEventListener('mousedown', onCanvasMouseDown)
-      mapDiv.removeEventListener('mousemove', onCanvasMouseMove)
-      mapDiv.removeEventListener('mouseup', onCanvasMouseUp)
-      mapDiv.removeEventListener('touchstart', onCanvasTouchStart)
-      mapDiv.removeEventListener('touchmove', onTouchMove)
-      mapDiv.removeEventListener('touchend', onTouchEnd)
-      google.maps.event.removeListener(contextListener)
+      canvas.removeEventListener('mousedown', onCanvasMouseDown)
+      canvas.removeEventListener('touchstart', onCanvasTouchStart)
+      canvas.removeEventListener('touchmove', onTouchMove)
+      canvas.removeEventListener('touchend', onTouchEnd)
+      m.off('mousemove', onMouseMove as any)
+      m.off('mouseup', onMouseUp as any)
+      m.off('mouseenter', 'parking-aircraft-symbols', onAcEnter)
+      m.off('mouseleave', 'parking-aircraft-symbols', onAcLeave)
+      m.off('mouseenter', 'parking-obstacles-points', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-points', onObsLeave)
+      m.off('mouseenter', 'parking-obstacles-fill', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-fill', onObsLeave)
+      m.off('mouseenter', 'parking-obstacles-labels', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-labels', onObsLeave)
+      m.off('contextmenu', onContextMenu)
+      m.off('mouseenter', 'parking-obstacles-lines-stroke', onObsEnter)
+      m.off('mouseleave', 'parking-obstacles-lines-stroke', onObsLeave)
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
@@ -1299,11 +1769,7 @@ export default function ParkingPage() {
 
   // Resize map when sidebar collapses/expands or fullscreen toggles
   useEffect(() => {
-    setTimeout(() => {
-      if (map.current) {
-        google.maps.event.trigger(map.current.gmap, 'resize')
-      }
-    }, 200)
+    setTimeout(() => map.current?.resize(), 200)
   }, [isFullscreen])
 
   // ── Plan actions ──
@@ -1379,20 +1845,31 @@ export default function ParkingPage() {
 
   const buildParkingPdf = async () => {
     if (!selectedPlan) return null
-    const w = map.current
+    const m = map.current
     let mapDataUrl: string | null = null
 
-    if (w) {
-      // Try to capture the map's internal canvas element
-      const mapDiv = w.gmap.getDiv()
-      const canvas = mapDiv.querySelector('canvas') as HTMLCanvasElement | null
-      if (canvas) {
-        try {
-          mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
-        } catch {
-          // Cross-origin canvas — cannot capture
-          mapDataUrl = null
-        }
+    if (m) {
+      const prevPitch = m.getPitch()
+
+      // Flatten pitch for clean top-down capture, keep current zoom/center/bearing
+      if (prevPitch > 0) {
+        m.jumpTo({ pitch: 0 })
+      }
+
+      // Wait for tiles to load at current view
+      await new Promise<void>(resolve => {
+        const onIdle = () => { m.off('idle', onIdle); resolve() }
+        m.on('idle', onIdle)
+        m.triggerRepaint()
+      })
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      mapDataUrl = m.getCanvas().toDataURL('image/jpeg', 0.9)
+
+      // Restore pitch if changed
+      if (prevPitch > 0) {
+        m.jumpTo({ pitch: prevPitch })
       }
     }
 
@@ -1515,7 +1992,7 @@ export default function ParkingPage() {
     setDrawingLineObsId(null); setDrawingLinePoints([])
     setDrawingBoundaryId(null); setDrawingBoundaryPoints([])
     setDrawingObsType(null); setDrawingObsStart(null); setDrawingObsCurrent(null)
-    // ruler removed in Google Maps version
+    if (ruler.active) ruler.toggle() // deactivate ruler
     toast.success('Click on the map to draw taxilane centerline. Double-click or press Finish to complete.')
     // We'll create the DB record when finishing
     setDrawingTaxilaneId('pending')
@@ -1571,7 +2048,7 @@ export default function ParkingPage() {
     setDrawingLineObsId(null); setDrawingLinePoints([])
     setDrawingTaxilaneId(null); setDrawingTaxilanePoints([])
     setDrawingObsType(null); setDrawingObsStart(null); setDrawingObsCurrent(null)
-    // ruler removed in Google Maps version
+    if (ruler.active) ruler.toggle() // deactivate ruler
     toast.success('Click on the map to draw apron boundary. Double-click or press Finish to complete.')
     setDrawingBoundaryId('pending')
     setDrawingBoundaryPoints([])
@@ -1632,145 +2109,200 @@ export default function ParkingPage() {
     setDrawingLinePoints([])
   }, [drawingLineObsId, drawingLinePoints])
 
-  // ── Render drawing line preview on Google Maps ──
-
-  const drawingLineObjsRef = useRef<{ line: google.maps.Polyline | null; dots: google.maps.Marker[] }>({ line: null, dots: [] })
+  // ── Render drawing line preview on map ──
 
   useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    const gmap = w.gmap
+    const m = map.current
+    if (!m || !mapLoaded) return
 
-    // Clean previous
-    drawingLineObjsRef.current.line?.setMap(null)
-    drawingLineObjsRef.current.dots.forEach(m => m.setMap(null))
-    drawingLineObjsRef.current = { line: null, dots: [] }
+    const srcId = 'parking-drawing-line'
+    const layerId = 'parking-drawing-line-layer'
+    const dotsId = 'parking-drawing-line-dots'
 
-    if (drawingLinePoints.length >= 2) {
-      drawingLineObjsRef.current.line = new google.maps.Polyline({
-        path: drawingLinePoints.map(([lng, lat]) => ({ lat, lng })),
-        strokeColor: '#F97316', strokeWeight: 3,
-        map: gmap, zIndex: 20,
-      })
-    }
-    for (const [lng, lat] of drawingLinePoints) {
-      const dot = new google.maps.Marker({
-        position: { lat, lng }, map: gmap,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#F97316', fillOpacity: 1, strokeColor: '#FFF', strokeWeight: 1.5 },
-        zIndex: 21,
-      })
-      drawingLineObjsRef.current.dots.push(dot)
+    if (drawingLinePoints.length >= 1) {
+      const data: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          ...(drawingLinePoints.length >= 2 ? [{
+            type: 'Feature' as const,
+            properties: {},
+            geometry: { type: 'LineString' as const, coordinates: drawingLinePoints },
+          }] : []),
+          ...drawingLinePoints.map(pt => ({
+            type: 'Feature' as const,
+            properties: {},
+            geometry: { type: 'Point' as const, coordinates: pt },
+          })),
+        ],
+      }
+
+      const src = m.getSource(srcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(srcId, { type: 'geojson', data })
+        m.addLayer({
+          id: layerId, type: 'line', source: srcId,
+          paint: { 'line-color': '#F97316', 'line-width': 3, 'line-dasharray': [4, 3] },
+        })
+        m.addLayer({
+          id: dotsId, type: 'circle', source: srcId,
+          filter: ['==', '$type', 'Point'],
+          paint: { 'circle-radius': 5, 'circle-color': '#F97316', 'circle-stroke-color': '#FFF', 'circle-stroke-width': 1.5 },
+        })
+      }
+    } else {
+      if (m.getLayer(layerId)) m.removeLayer(layerId)
+      if (m.getLayer(dotsId)) m.removeLayer(dotsId)
+      if (m.getSource(srcId)) m.removeSource(srcId)
     }
   }, [mapLoaded, drawingLinePoints])
 
-  // ── Render taxilane/boundary drawing preview on Google Maps ──
-
-  const drawingTlBdObjsRef = useRef<{ lines: google.maps.Polyline[]; polygons: google.maps.Polygon[]; dots: google.maps.Marker[] }>({ lines: [], polygons: [], dots: [] })
+  // ── Render taxilane/boundary drawing preview on map ──
 
   useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    const gmap = w.gmap
+    const m = map.current
+    if (!m || !mapLoaded) return
 
-    // Clean previous
-    drawingTlBdObjsRef.current.lines.forEach(l => l.setMap(null))
-    drawingTlBdObjsRef.current.polygons.forEach(p => p.setMap(null))
-    drawingTlBdObjsRef.current.dots.forEach(m => m.setMap(null))
-    drawingTlBdObjsRef.current = { lines: [], polygons: [], dots: [] }
-    const objs = drawingTlBdObjsRef.current
-
-    const tlColor = drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6'
+    const tlSrcId = 'parking-drawing-taxilane'
+    const tlLineId = 'parking-drawing-taxilane-line'
+    const tlDotsId = 'parking-drawing-taxilane-dots'
+    const bdSrcId = 'parking-drawing-boundary'
+    const bdFillId = 'parking-drawing-boundary-fill'
+    const bdLineId = 'parking-drawing-boundary-line'
+    const bdDotsId = 'parking-drawing-boundary-dots'
 
     // Taxilane drawing preview
-    if (drawingTaxilanePoints.length >= 2) {
-      objs.lines.push(new google.maps.Polyline({
-        path: drawingTaxilanePoints.map(([lng, lat]) => ({ lat, lng })),
-        strokeColor: tlColor, strokeWeight: 3,
-        map: gmap, zIndex: 20,
-      }))
-    }
-    for (const [lng, lat] of drawingTaxilanePoints) {
-      objs.dots.push(new google.maps.Marker({
-        position: { lat, lng }, map: gmap,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: tlColor, fillOpacity: 1, strokeColor: '#FFF', strokeWeight: 1.5 },
-        zIndex: 21,
-      }))
+    if (drawingTaxilanePoints.length >= 1) {
+      const data: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          ...(drawingTaxilanePoints.length >= 2 ? [{
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'LineString' as const, coordinates: drawingTaxilanePoints },
+          }] : []),
+          ...drawingTaxilanePoints.map(pt => ({
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'Point' as const, coordinates: pt },
+          })),
+        ],
+      }
+      const src = m.getSource(tlSrcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(tlSrcId, { type: 'geojson', data })
+        m.addLayer({ id: tlLineId, type: 'line', source: tlSrcId, paint: { 'line-color': drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', 'line-width': 3, 'line-dasharray': [6, 3] } })
+        m.addLayer({ id: tlDotsId, type: 'circle', source: tlSrcId, filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 5, 'circle-color': drawingTaxilaneType === 'peripheral' ? '#8B5CF6' : '#3B82F6', 'circle-stroke-color': '#FFF', 'circle-stroke-width': 1.5 } })
+      }
+    } else {
+      if (m.getLayer(tlLineId)) m.removeLayer(tlLineId)
+      if (m.getLayer(tlDotsId)) m.removeLayer(tlDotsId)
+      if (m.getSource(tlSrcId)) m.removeSource(tlSrcId)
     }
 
     // Boundary drawing preview
-    if (drawingBoundaryPoints.length >= 3) {
-      objs.polygons.push(new google.maps.Polygon({
-        paths: drawingBoundaryPoints.map(([lng, lat]) => ({ lat, lng })),
-        fillColor: '#10B981', fillOpacity: 0.15,
-        strokeColor: '#10B981', strokeWeight: 2,
-        map: gmap, zIndex: 20,
-      }))
-    } else if (drawingBoundaryPoints.length >= 2) {
-      objs.lines.push(new google.maps.Polyline({
-        path: drawingBoundaryPoints.map(([lng, lat]) => ({ lat, lng })),
-        strokeColor: '#10B981', strokeWeight: 2,
-        map: gmap, zIndex: 20,
-      }))
-    }
-    for (const [lng, lat] of drawingBoundaryPoints) {
-      objs.dots.push(new google.maps.Marker({
-        position: { lat, lng }, map: gmap,
-        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#10B981', fillOpacity: 1, strokeColor: '#FFF', strokeWeight: 1.5 },
-        zIndex: 21,
-      }))
+    if (drawingBoundaryPoints.length >= 1) {
+      const coords = drawingBoundaryPoints.length >= 3
+        ? [...drawingBoundaryPoints, drawingBoundaryPoints[0]]
+        : drawingBoundaryPoints
+      const data: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: [
+          ...(drawingBoundaryPoints.length >= 3 ? [{
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'Polygon' as const, coordinates: [coords] },
+          }] : drawingBoundaryPoints.length >= 2 ? [{
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'LineString' as const, coordinates: drawingBoundaryPoints },
+          }] : []),
+          ...drawingBoundaryPoints.map(pt => ({
+            type: 'Feature' as const, properties: {},
+            geometry: { type: 'Point' as const, coordinates: pt },
+          })),
+        ],
+      }
+      const src = m.getSource(bdSrcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(bdSrcId, { type: 'geojson', data })
+        m.addLayer({ id: bdFillId, type: 'fill', source: bdSrcId, filter: ['==', '$type', 'Polygon'], paint: { 'fill-color': '#10B981', 'fill-opacity': 0.15 } })
+        m.addLayer({ id: bdLineId, type: 'line', source: bdSrcId, paint: { 'line-color': '#10B981', 'line-width': 2, 'line-dasharray': [4, 2] } })
+        m.addLayer({ id: bdDotsId, type: 'circle', source: bdSrcId, filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 5, 'circle-color': '#10B981', 'circle-stroke-color': '#FFF', 'circle-stroke-width': 1.5 } })
+      }
+    } else {
+      if (m.getLayer(bdFillId)) m.removeLayer(bdFillId)
+      if (m.getLayer(bdLineId)) m.removeLayer(bdLineId)
+      if (m.getLayer(bdDotsId)) m.removeLayer(bdDotsId)
+      if (m.getSource(bdSrcId)) m.removeSource(bdSrcId)
     }
   }, [mapLoaded, drawingTaxilanePoints, drawingTaxilaneType, drawingBoundaryPoints])
 
-  // ── Render freeform obstacle drawing preview on Google Maps ──
-
-  const drawingObsObjsRef = useRef<{ polygons: google.maps.Polygon[] }>({ polygons: [] })
+  // ── Render freeform obstacle drawing preview ──
 
   useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    const gmap = w.gmap
+    const m = map.current
+    if (!m || !mapLoaded) return
 
-    // Clean previous
-    drawingObsObjsRef.current.polygons.forEach(p => p.setMap(null))
-    drawingObsObjsRef.current = { polygons: [] }
+    const srcId = 'parking-drawing-obs'
+    const fillId = 'parking-drawing-obs-fill'
+    const lineId = 'parking-drawing-obs-line'
 
     if (drawingObsType && drawingObsStart && drawingObsCurrent) {
       const [startLng, startLat] = drawingObsStart
       const [curLng, curLat] = drawingObsCurrent
+      let features: GeoJSON.Feature[] = []
 
       if (drawingObsType === 'circle') {
+        // Preview circle from center to cursor
         const dEast = (curLng - startLng) * 111319.9 * Math.cos(startLat * Math.PI / 180) * 3.28084
         const dNorth = (curLat - startLat) * 111319.9 * 3.28084
         const radiusFt = Math.sqrt(dEast * dEast + dNorth * dNorth)
         if (radiusFt > 1) {
           const center = { lat: startLat, lon: startLng }
           const segs = 48
-          const coords: { lat: number; lng: number }[] = []
+          const coords: [number, number][] = []
           for (let i = 0; i <= segs; i++) {
             const bearing = (360 * i) / segs
             const pt = offsetPoint(center, bearing, radiusFt)
-            coords.push({ lat: pt.lat, lng: pt.lon })
+            coords.push([pt.lon, pt.lat])
           }
-          drawingObsObjsRef.current.polygons.push(new google.maps.Polygon({
-            paths: coords,
-            fillColor: '#F97316', fillOpacity: 0.3,
-            strokeColor: '#F97316', strokeWeight: 2,
-            map: gmap, zIndex: 20,
-          }))
+          features.push({
+            type: 'Feature', properties: { label: `${Math.round(radiusFt)}ft` },
+            geometry: { type: 'Polygon', coordinates: [coords] },
+          })
         }
       } else if (drawingObsType === 'building') {
-        drawingObsObjsRef.current.polygons.push(new google.maps.Polygon({
-          paths: [
-            { lat: startLat, lng: startLng },
-            { lat: startLat, lng: curLng },
-            { lat: curLat, lng: curLng },
-            { lat: curLat, lng: startLng },
-          ],
-          fillColor: '#F97316', fillOpacity: 0.3,
-          strokeColor: '#F97316', strokeWeight: 2,
-          map: gmap, zIndex: 20,
-        }))
+        // Preview rectangle from corner to corner
+        features.push({
+          type: 'Feature', properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [startLng, startLat],
+              [curLng, startLat],
+              [curLng, curLat],
+              [startLng, curLat],
+              [startLng, startLat],
+            ]],
+          },
+        })
       }
+
+      const data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features }
+      const src = m.getSource(srcId) as mapboxgl.GeoJSONSource | undefined
+      if (src) {
+        src.setData(data)
+      } else {
+        m.addSource(srcId, { type: 'geojson', data })
+        m.addLayer({ id: fillId, type: 'fill', source: srcId, paint: { 'fill-color': '#F97316', 'fill-opacity': 0.3 } })
+        m.addLayer({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': '#F97316', 'line-width': 2, 'line-dasharray': [4, 3] } })
+      }
+    } else {
+      if (m.getLayer(fillId)) m.removeLayer(fillId)
+      if (m.getLayer(lineId)) m.removeLayer(lineId)
+      if (m.getSource(srcId)) m.removeSource(srcId)
     }
   }, [mapLoaded, drawingObsType, drawingObsStart, drawingObsCurrent])
 
@@ -1778,7 +2310,6 @@ export default function ParkingPage() {
 
   const flyToResult = (result: ClearanceResult) => {
     if (!map.current) return
-    const gmap = map.current.gmap
     const spotA = spotsWithAircraft.find(s => s.id === result.spot_a_id)
 
     if (spotA) {
@@ -1787,20 +2318,21 @@ export default function ParkingPage() {
         if (spotB) {
           const lat = (spotA.latitude + spotB.latitude) / 2
           const lng = (spotA.longitude + spotB.longitude) / 2
-          gmap.panTo({ lat, lng }); gmap.setZoom(17)
+          map.current.flyTo({ center: [lng, lat], zoom: 17 })
         }
       } else if (result.obstacle_id) {
         const obs = obstacles.find(o => o.id === result.obstacle_id)
         if (obs) {
           const lat = (spotA.latitude + obs.latitude) / 2
           const lng = (spotA.longitude + obs.longitude) / 2
-          gmap.panTo({ lat, lng }); gmap.setZoom(17)
+          map.current.flyTo({ center: [lng, lat], zoom: 17 })
         }
       }
     } else if (result.obstacle_id && result.spot_b_id) {
+      // Obstacle-to-taxilane: fly to the obstacle
       const obs = obstacles.find(o => o.id === result.obstacle_id)
       if (obs) {
-        gmap.panTo({ lat: obs.latitude, lng: obs.longitude }); gmap.setZoom(17)
+        map.current.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })
       }
     }
   }
@@ -1832,11 +2364,11 @@ export default function ParkingPage() {
 
   // ── Render ──
 
-  if (!hasGoogleMaps) {
+  if (!isMapboxConfigured()) {
     return (
       <div style={{ padding: 32, textAlign: 'center', color: 'var(--color-text-secondary)' }}>
         <h2 style={{ color: 'var(--color-text-primary)', marginBottom: 8 }}>Aircraft Parking</h2>
-        <p>Google Maps API key not configured. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment.</p>
+        <p>Mapbox token not configured. Add NEXT_PUBLIC_MAPBOX_TOKEN to your environment.</p>
       </div>
     )
   }
@@ -2232,7 +2764,7 @@ export default function ParkingPage() {
                                   </select>
                                 </div>
                                 <div style={{ display: 'flex', gap: 4 }}>
-                                  <button onClick={() => (() => { map.current?.gmap.panTo({ lat: s.latitude, lng: s.longitude }); map.current?.gmap.setZoom(19) })()} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                                  <button onClick={() => map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 19 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                                   <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
                                   <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
                                 </div>
@@ -2402,7 +2934,7 @@ export default function ParkingPage() {
                           </label>
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => (() => { map.current?.gmap.panTo({ lat: obs.latitude, lng: obs.longitude }); map.current?.gmap.setZoom(17) })()} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => map.current?.flyTo({ center: [obs.longitude, obs.latitude], zoom: 17 })} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                           <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
@@ -2563,7 +3095,7 @@ export default function ParkingPage() {
                           </div>
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => { if (tl.line_coords?.length > 0) { map.current?.gmap.panTo({ lat: tl.line_coords[0][1], lng: tl.line_coords[0][0] }); map.current?.gmap.setZoom(17) } }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => { if (tl.line_coords?.length > 0) map.current?.flyTo({ center: tl.line_coords[0] as [number, number], zoom: 17 }) }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                           <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
@@ -2624,7 +3156,7 @@ export default function ParkingPage() {
                           <input value={ab.name || ''} onChange={e => handleUpdateBoundary(ab.id, { name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                         </label>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => { if (ab.polygon_coords?.length > 0) { map.current?.gmap.panTo({ lat: ab.polygon_coords[0][1], lng: ab.polygon_coords[0][0] }); map.current?.gmap.setZoom(17) } }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
+                          <button onClick={() => { if (ab.polygon_coords?.length > 0) map.current?.flyTo({ center: ab.polygon_coords[0] as [number, number], zoom: 17 }) }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
                           <button onClick={() => handleDeleteBoundary(ab.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
@@ -2877,7 +3409,19 @@ export default function ParkingPage() {
               {sidebarContent()}
             </div>
           )}
-          {/* Ruler removed in Google Maps version */}
+          {/* Ruler readout — bottom left when active */}
+          {ruler.active && ruler.points.length >= 2 && (
+            <div style={{
+              position: 'absolute', bottom: 24, left: 10, zIndex: 5,
+              background: 'rgba(0,0,0,0.8)', borderRadius: 6, padding: '6px 12px',
+              fontSize: 12, fontWeight: 700, color: '#FFD700', fontFamily: 'monospace',
+              border: '1px solid rgba(255,215,0,0.3)', display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              {Math.round(ruler.totalFt)}ft
+              {ruler.points.length > 2 && <span style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>({ruler.points.length - 1} seg)</span>}
+              <button onClick={ruler.clear} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 11, padding: 0 }}>Clear</button>
+            </div>
+          )}
           {/* Map controls — top left */}
           <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
             {!isMobile && (
@@ -2908,7 +3452,19 @@ export default function ParkingPage() {
             >
               {isFullscreen ? '\u2716 Exit' : '\u26F6'}
             </button>
-            {/* Ruler button removed in Google Maps version */}
+            <button
+              onClick={ruler.toggle}
+              title={ruler.active ? 'Disable ruler' : 'Measure distance'}
+              style={{
+                padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                background: ruler.active ? '#FFD70022' : 'var(--color-bg-surface)',
+                border: `1px solid ${ruler.active ? '#FFD700' : 'var(--color-border)'}`,
+                color: ruler.active ? '#FFD700' : 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              Ruler{ruler.active && ruler.totalFt > 0 ? ` ${Math.round(ruler.totalFt)}ft` : ''}
+            </button>
             {selectedPlan && (
               <>
                 <button
@@ -3156,7 +3712,7 @@ export default function ParkingPage() {
 
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: 0, borderTop: '1px solid var(--color-border)' }}>
-                <button onClick={() => { (() => { map.current?.gmap.panTo({ lat: s.latitude, lng: s.longitude }); map.current?.gmap.setZoom(19) })(); setContextMenuSpot(null) }}
+                <button onClick={() => { map.current?.flyTo({ center: [s.longitude, s.latitude], zoom: 19 }); setContextMenuSpot(null) }}
                   style={{ flex: 1, padding: '8px 0', border: 'none', borderRight: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-inset)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   Fly To

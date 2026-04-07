@@ -1,24 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
-import { formatZuluDateTime } from '@/lib/utils'
-import {
-  initGoogleMaps,
-  isGoogleMapsConfigured,
-  GOOGLE_MAP_OPTIONS,
-  type GMapWrapper,
-  createGMapWrapper,
-  registerIcon,
-  clearAllObjects,
-  addMarker,
-  queryFeaturesInBounds,
-  queryFeatureAtPoint,
-  createDraggableMarker,
-  pixelToLatLng,
-  imageDataToDataUrl,
-} from '@/lib/google-map-adapter'
+import { isMapboxConfigured, formatZuluDateTime } from '@/lib/utils'
+import { useMapRuler, RulerButton } from '@/hooks/use-map-ruler'
 import {
   fetchInfrastructureFeatures,
   createInfrastructureFeature,
@@ -317,34 +306,42 @@ const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> 
 }
 
 // Register labeled sign images with the map, returns set of registered image names
-function registerLabeledSigns(wrapper: GMapWrapper, features: InfrastructureFeature[]): Set<string> {
+function registerLabeledSigns(m: mapboxgl.Map, features: InfrastructureFeature[]): Set<string> {
   const registered = new Set<string>()
+  const pr = { pixelRatio: 1 }
+
   for (const f of features) {
     if (!f.label || !SIGN_COLORS[f.feature_type]) continue
     const imgName = `sign-label-${f.id}`
     const colors = SIGN_COLORS[f.feature_type]
+
+    // Remove old image if it exists (label may have changed)
+    if (m.hasImage(imgName)) m.removeImage(imgName)
+
     const img = createLabeledSign(f.label, colors.bg, colors.text, colors.border)
-    registerIcon(wrapper, imgName, img)
+    m.addImage(imgName, img, pr)
     registered.add(imgName)
   }
+
   return registered
 }
 
-function addMapIcons(wrapper: GMapWrapper) {
-  const s = 24
-  registerIcon(wrapper, 'icon-location-sign', createSignIcon('#000000', '#FBBF24', s))
-  registerIcon(wrapper, 'icon-directional-sign', createDirectionalSignIcon(s))
-  registerIcon(wrapper, 'icon-informational-sign', createSignIcon('#FBBF24', '#000000', s))
-  registerIcon(wrapper, 'icon-mandatory-sign', createSignIcon('#EF4444', '#FFFFFF', s))
-  registerIcon(wrapper, 'icon-approach-light', createSplitCircleIcon('#FFFFFF', '#FBBF24', s))
-  registerIcon(wrapper, 'icon-runway-threshold', createSplitCircleIcon('#EF4444', '#22C55E', s))
-  registerIcon(wrapper, 'icon-obstruction-light', createTriangleIcon('#EF4444', s))
-  registerIcon(wrapper, 'icon-runway-distance-marker', createSignIcon('#FFFFFF', '#000000', s))
-  registerIcon(wrapper, 'icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s))
-  registerIcon(wrapper, 'icon-reil', createSquareIcon('#EC4899', s))
-  registerIcon(wrapper, 'icon-windcone', createWindconeIcon(s))
-  registerIcon(wrapper, 'icon-stadium-light', createStadiumLightIcon(s))
-  registerIcon(wrapper, 'icon-rotating-beacon', createSplitCircleIcon('#22D3EE', '#22C55E', s))
+function addMapIcons(m: mapboxgl.Map) {
+  const s = 24, pr = { pixelRatio: 1 }
+  m.addImage('icon-location-sign', createSignIcon('#000000', '#FBBF24', s), pr)
+  m.addImage('icon-directional-sign', createDirectionalSignIcon(s), pr)
+  m.addImage('icon-informational-sign', createSignIcon('#FBBF24', '#000000', s), pr)
+  m.addImage('icon-mandatory-sign', createSignIcon('#EF4444', '#FFFFFF', s), pr)
+  m.addImage('icon-approach-light', createSplitCircleIcon('#FFFFFF', '#FBBF24', s), pr)
+  m.addImage('icon-runway-threshold', createSplitCircleIcon('#EF4444', '#22C55E', s), pr)
+  m.addImage('icon-obstruction-light', createTriangleIcon('#EF4444', s), pr)
+  m.addImage('icon-runway-distance-marker', createSignIcon('#FFFFFF', '#000000', s), pr)
+  m.addImage('icon-papi', createSplitCircleIcon('#EF4444', '#FFFFFF', s), pr)
+  // threshold_light now renders as circle layer, no icon needed
+  m.addImage('icon-reil', createSquareIcon('#EC4899', s), pr)
+  m.addImage('icon-windcone', createWindconeIcon(s), pr)
+  m.addImage('icon-stadium-light', createStadiumLightIcon(s), pr)
+  m.addImage('icon-rotating-beacon', createSplitCircleIcon('#22D3EE', '#22C55E', s), pr)
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -377,7 +374,10 @@ const ICON_MAP: Record<string, string> = {
 
 export default function InfrastructureMapPage() {
   const mapContainer = useRef<HTMLDivElement>(null)
-  const map = useRef<GMapWrapper | null>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+  const ruler = useMapRuler(map, true)
+  const rulerActiveRef = useRef(ruler.active)
+  rulerActiveRef.current = ruler.active
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
@@ -386,7 +386,7 @@ export default function InfrastructureMapPage() {
   const [expandedLocGroups, setExpandedLocGroups] = useState<Record<string, boolean>>({})
   // Location tracking
   const [trackingLocation, setTrackingLocation] = useState(false)
-  const locationMarkerRef = useRef<google.maps.Marker | null>(null)
+  const locationMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const watchIdRef = useRef<number | null>(null)
 
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
@@ -458,14 +458,14 @@ export default function InfrastructureMapPage() {
   const [gpsLoading, setGpsLoading] = useState(false)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const draggingRef = useRef<{ id: string; startLngLat: [number, number] } | null>(null)
-  const dragMarkerRef = useRef<google.maps.Marker | null>(null)
+  const dragMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const editModeRef = useRef(false)
   const placementTypeRef = useRef<InfrastructureFeatureType>('taxiway_light')
 
   // Free move mode
   const [freeMoveActive, setFreeMoveActive] = useState(false)
   const freeMoveRef = useRef(false)
-  const freeMoveMarkersRef = useRef<Map<string, google.maps.Marker>>(new Map())
+  const freeMoveMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
   const [pendingMoves, setPendingMoves] = useState<Map<string, { lng: number; lat: number }>>(new Map())
   const [savingFreeMove, setSavingFreeMove] = useState(false)
 
@@ -609,13 +609,8 @@ export default function InfrastructureMapPage() {
     return { areas, systems, unassignedCount, unassignedLayers }
   }, [dbFeatures, allComponentsList])
 
-  const hasGoogleMaps = isGoogleMapsConfigured()
-  const [googleReady, setGoogleReady] = useState(false)
-
-  useEffect(() => {
-    if (!hasGoogleMaps) return
-    initGoogleMaps().then(() => setGoogleReady(true))
-  }, [hasGoogleMaps])
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const mapboxReady = isMapboxConfigured()
 
   const isAdmin = userRole === 'sys_admin' || userRole === 'base_admin'
     || userRole === 'airfield_manager' || userRole === 'namo'
@@ -655,9 +650,7 @@ export default function InfrastructureMapPage() {
 
   // Fullscreen: resize map when toggling
   useEffect(() => {
-    setTimeout(() => {
-      if (map.current) google.maps.event.trigger(map.current.gmap, 'resize')
-    }, 50)
+    setTimeout(() => map.current?.resize(), 50)
   }, [isFullscreen])
 
   // Fetch DB features
@@ -903,6 +896,16 @@ export default function InfrastructureMapPage() {
       if (count > 0) {
         const refreshed = await fetchInfrastructureFeatures(installationId)
         setDbFeatures(refreshed)
+        // Force Mapbox to re-render all layers after import
+        if (map.current) {
+          const m = map.current
+          for (const layer of LAYERS) {
+            if (m.getLayer(layer.key)) {
+              m.setLayoutProperty(layer.key, 'visibility', 'none')
+              m.setLayoutProperty(layer.key, 'visibility', 'visible')
+            }
+          }
+        }
         toast.success(`Imported ${count} features from ${ext.toUpperCase()}`)
       }
       setKmlImportOpen(false)
@@ -1004,7 +1007,7 @@ export default function InfrastructureMapPage() {
   deleteHandlerRef.current = async (id: string) => {
     if (!installationId) return
     // Close popup immediately
-    if (map.current) map.current.infoWindow.close()
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
     const ok = await deleteInfrastructureFeature(id)
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
@@ -1020,14 +1023,31 @@ export default function InfrastructureMapPage() {
   moveHandlerRef.current = (id: string, lng: number, lat: number) => {
     if (!map.current || !editModeRef.current) return
     // Close any open popups
-    map.current.infoWindow.close()
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
 
     // Create a draggable marker at the feature's current position
-    const marker = createDraggableMarker(map.current, lat, lng, '#10B981', 20)
+    const el = document.createElement('div')
+    el.style.width = '20px'
+    el.style.height = '20px'
+    el.style.borderRadius = '50%'
+    el.style.background = '#10B981'
+    el.style.border = '3px solid #FFFFFF'
+    el.style.boxShadow = '0 0 12px rgba(16,185,129,0.6)'
+    el.style.cursor = 'grab'
 
-    // Show Save/Cancel InfoWindow on the drag marker
-    const iw = new google.maps.InfoWindow({
-      content: `
+    const marker = new mapboxgl.Marker({ element: el, draggable: true })
+      .setLngLat([lng, lat])
+      .addTo(map.current)
+
+    // Attach Save/Cancel popup to the marker
+    const popup = new mapboxgl.Popup({
+      offset: 20,
+      closeButton: false,
+      closeOnClick: false,
+      className: 'infrastructure-map-popup',
+      anchor: 'bottom',
+    })
+      .setHTML(`
         <div style="display:flex;gap:6px;padding:2px;">
           <button id="__drag-save" style="
             padding:5px 14px;border:none;border-radius:6px;
@@ -1035,32 +1055,31 @@ export default function InfrastructureMapPage() {
           ">Save</button>
           <button id="__drag-cancel" style="
             padding:5px 14px;border:none;border-radius:6px;
-            background:transparent;border:1px solid #475569;
+            background:transparent;border:1px solid var(--color-border);
             color:#94A3B8;font-size:12px;font-weight:600;cursor:pointer;
           ">Cancel</button>
         </div>
-      `,
-      disableAutoPan: true,
-    })
-    iw.open(map.current.gmap, marker)
+      `)
+    marker.setPopup(popup)
+    popup.addTo(map.current)
 
-    // Wire up buttons via DOM after InfoWindow renders
-    google.maps.event.addListenerOnce(iw, 'domready', () => {
+    // Wire up buttons via DOM after popup renders
+    setTimeout(() => {
       document.getElementById('__drag-save')?.addEventListener('click', () => {
         saveDragRef.current?.()
       })
       document.getElementById('__drag-cancel')?.addEventListener('click', () => {
         cancelDrag()
       })
-    })
+    }, 0)
 
     dragMarkerRef.current = marker
-    ;(marker as any).__infoWindow = iw
     setDraggingId(id)
     draggingRef.current = { id, startLngLat: [lng, lat] }
 
     // Disable map drag while moving a feature
-    map.current.gmap.setOptions({ draggable: false, scrollwheel: false })
+    map.current.dragPan.disable()
+    map.current.touchZoomRotate.disable()
   }
 
   // Save drag position
@@ -1068,13 +1087,12 @@ export default function InfrastructureMapPage() {
   saveDragRef.current = async () => {
     if (!draggingRef.current || !dragMarkerRef.current || !installationId) return
     const { id } = draggingRef.current
-    const pos = dragMarkerRef.current.getPosition()
-    if (!pos) return
+    const lngLat = dragMarkerRef.current.getLngLat()
 
     setSaving(true)
     const ok = await updateInfrastructureFeature(id, {
-      longitude: pos.lng(),
-      latitude: pos.lat(),
+      longitude: lngLat.lng,
+      latitude: lngLat.lat,
     })
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
@@ -1089,15 +1107,16 @@ export default function InfrastructureMapPage() {
 
   const cancelDrag = useCallback(() => {
     if (dragMarkerRef.current) {
-      const iw = (dragMarkerRef.current as any).__infoWindow as google.maps.InfoWindow | undefined
-      if (iw) iw.close()
-      dragMarkerRef.current.setMap(null)
+      const popup = dragMarkerRef.current.getPopup()
+      if (popup) popup.remove()
+      dragMarkerRef.current.remove()
       dragMarkerRef.current = null
     }
     draggingRef.current = null
     setDraggingId(null)
     if (map.current) {
-      map.current.gmap.setOptions({ draggable: true, scrollwheel: true })
+      map.current.dragPan.enable()
+      map.current.touchZoomRotate.enable()
     }
   }, [])
 
@@ -1105,17 +1124,27 @@ export default function InfrastructureMapPage() {
   const addFreeMoveMarker = useCallback((id: string, lng: number, lat: number) => {
     if (!map.current || freeMoveMarkersRef.current.has(id)) return
 
-    const marker = createDraggableMarker(
-      map.current, lat, lng, '#F59E0B', 18,
-      undefined,
-      (newLat, newLng) => {
-        setPendingMoves(prev => {
-          const next = new Map(prev)
-          next.set(id, { lng: newLng, lat: newLat })
-          return next
-        })
-      },
-    )
+    const el = document.createElement('div')
+    el.style.width = '18px'
+    el.style.height = '18px'
+    el.style.borderRadius = '50%'
+    el.style.background = '#F59E0B'
+    el.style.border = '2px solid #FFFFFF'
+    el.style.boxShadow = '0 0 10px rgba(245,158,11,0.5)'
+    el.style.cursor = 'grab'
+
+    const marker = new mapboxgl.Marker({ element: el, draggable: true })
+      .setLngLat([lng, lat])
+      .addTo(map.current)
+
+    marker.on('dragend', () => {
+      const pos = marker.getLngLat()
+      setPendingMoves(prev => {
+        const next = new Map(prev)
+        next.set(id, { lng: pos.lng, lat: pos.lat })
+        return next
+      })
+    })
 
     freeMoveMarkersRef.current.set(id, marker)
     setPendingMoves(prev => {
@@ -1136,7 +1165,7 @@ export default function InfrastructureMapPage() {
     const successCount = results.filter(Boolean).length
 
     // Clean up markers
-    freeMoveMarkersRef.current.forEach(m => m.setMap(null))
+    freeMoveMarkersRef.current.forEach(m => m.remove())
     freeMoveMarkersRef.current.clear()
     setPendingMoves(new Map())
 
@@ -1149,7 +1178,7 @@ export default function InfrastructureMapPage() {
   }, [installationId, pendingMoves])
 
   const cancelFreeMove = useCallback(() => {
-    freeMoveMarkersRef.current.forEach(m => m.setMap(null))
+    freeMoveMarkersRef.current.forEach(m => m.remove())
     freeMoveMarkersRef.current.clear()
     setPendingMoves(new Map())
     setFreeMoveActive(false)
@@ -1159,7 +1188,7 @@ export default function InfrastructureMapPage() {
   const freeMoveClickRef = useRef<((id: string, lng: number, lat: number) => void) | undefined>(undefined)
   freeMoveClickRef.current = (id: string, lng: number, lat: number) => {
     addFreeMoveMarker(id, lng, lat)
-    if (map.current) map.current.infoWindow.close()
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
   }
 
   // Save label handler
@@ -1177,7 +1206,7 @@ export default function InfrastructureMapPage() {
     if (ok) {
       const updated = await fetchInfrastructureFeatures(installationId)
       setDbFeatures(updated)
-      if (map.current) map.current.infoWindow.close()
+      document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
       toast.success('Feature updated')
     } else {
       toast.error('Failed to update feature')
@@ -1188,7 +1217,7 @@ export default function InfrastructureMapPage() {
   const reportOutageRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
   reportOutageRef.current = async (id: string) => {
     if (!installationId) return
-    if (map.current) map.current.infoWindow.close()
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
 
     const feature = dbFeatures.find(f => f.id === id)
     if (!feature) return
@@ -1309,7 +1338,7 @@ export default function InfrastructureMapPage() {
   const markOperationalRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
   markOperationalRef.current = async (id: string) => {
     if (!installationId) return
-    if (map.current) map.current.infoWindow.close()
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
 
     const feature = dbFeatures.find(f => f.id === id)
     if (!feature) return
@@ -1395,7 +1424,7 @@ export default function InfrastructureMapPage() {
     } else {
       toast.error('Failed to assign component')
     }
-    if (map.current) map.current.infoWindow.close()
+    document.querySelectorAll('.mapboxgl-popup').forEach(p => p.remove())
   }
 
   useEffect(() => {
@@ -1446,28 +1475,32 @@ export default function InfrastructureMapPage() {
       const updated = await fetchInfrastructureFeatures(installationId)
       setDbFeatures(updated)
 
-      // Show InfoWindow at placed location with type selector
+      // Show popup at placed location with type selector
       if (map.current) {
         const optionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
           `<option value="${opt.value}" ${opt.value === placementTypeRef.current ? 'selected' : ''}>${opt.label}</option>`
         ).join('')
 
-        const wrapper = map.current
-        const placedIW = new google.maps.InfoWindow({
-          content: `
+        const popup = new mapboxgl.Popup({
+          offset: 12,
+          closeButton: true,
+          closeOnClick: true,
+          className: 'infrastructure-map-popup',
+          maxWidth: '220px',
+        })
+          .setLngLat([lng, lat])
+          .setHTML(`
             <div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">
               <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#10B981;">Feature Placed</div>
               <select id="__placed-type" style="
-                width:100%;background:#1E293B;border:1px solid #475569;
+                width:100%;background:var(--color-bg-inset);border:1px solid var(--color-border);
                 border-radius:6px;padding:5px 8px;color:#E2E8F0;font-size:12px;cursor:pointer;
               ">${optionsHtml}</select>
             </div>
-          `,
-          position: { lat, lng },
-        })
-        placedIW.open(wrapper.gmap)
+          `)
+          .addTo(map.current)
 
-        google.maps.event.addListenerOnce(placedIW, 'domready', () => {
+        setTimeout(() => {
           const sel = document.getElementById('__placed-type') as HTMLSelectElement | null
           sel?.addEventListener('change', async () => {
             const newType = sel.value as InfrastructureFeatureType
@@ -1479,9 +1512,9 @@ export default function InfrastructureMapPage() {
               placementTypeRef.current = newType
               toast.success(`Changed to ${FEATURE_TYPE_OPTIONS.find(o => o.value === newType)?.label}`)
             }
-            placedIW.close()
+            popup.remove()
           })
-        })
+        }, 0)
       }
     } else {
       toast.error('Failed to place feature')
@@ -1500,10 +1533,7 @@ export default function InfrastructureMapPage() {
       async (pos) => {
         const { latitude, longitude } = pos.coords
         await placeFeatureRef.current?.(longitude, latitude)
-        if (map.current) {
-          map.current.gmap.panTo({ lat: latitude, lng: longitude })
-          map.current.gmap.setZoom(17)
-        }
+        map.current?.flyTo({ center: [longitude, latitude], zoom: 17, duration: 1500 })
         setGpsLoading(false)
       },
       (err) => {
@@ -1522,7 +1552,7 @@ export default function InfrastructureMapPage() {
         navigator.geolocation.clearWatch(watchIdRef.current)
         watchIdRef.current = null
       }
-      locationMarkerRef.current?.setMap(null)
+      locationMarkerRef.current?.remove()
       locationMarkerRef.current = null
       setTrackingLocation(false)
       return
@@ -1538,28 +1568,24 @@ export default function InfrastructureMapPage() {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords
+        const lngLat: [number, number] = [longitude, latitude]
 
         if (!locationMarkerRef.current && map.current) {
-          // Create a blue dot marker for location tracking
-          locationMarkerRef.current = new google.maps.Marker({
-            position: { lat: latitude, lng: longitude },
-            map: map.current.gmap,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 9,
-              fillColor: '#3B82F6',
-              fillOpacity: 1,
-              strokeColor: '#FFFFFF',
-              strokeWeight: 3,
-            },
-            zIndex: 9999,
-          })
+          // Create a pulsing blue dot marker
+          const el = document.createElement('div')
+          el.style.cssText = `
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #3B82F6; border: 3px solid #FFFFFF;
+            box-shadow: 0 0 8px rgba(59,130,246,0.6), 0 0 20px rgba(59,130,246,0.3);
+          `
+          locationMarkerRef.current = new mapboxgl.Marker({ element: el })
+            .setLngLat(lngLat)
+            .addTo(map.current)
 
-          // Pan to first position
-          map.current.gmap.panTo({ lat: latitude, lng: longitude })
-          map.current.gmap.setZoom(17)
+          // Fly to first position
+          map.current.flyTo({ center: lngLat, zoom: 17, duration: 1500 })
         } else {
-          locationMarkerRef.current?.setPosition({ lat: latitude, lng: longitude })
+          locationMarkerRef.current?.setLngLat(lngLat)
         }
       },
       (err) => {
@@ -1576,7 +1602,7 @@ export default function InfrastructureMapPage() {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current)
       }
-      locationMarkerRef.current?.setMap(null)
+      locationMarkerRef.current?.remove()
     }
   }, [])
 
@@ -1789,244 +1815,17 @@ export default function InfrastructureMapPage() {
     setDeletingSelected(false)
   }, [installationId, deletingSelected, selectedIds])
 
-  // ── Build popup HTML for a feature ──
-  const buildPopupHtml = useCallback((props: Record<string, any>, layerColor: string, layerLabel: string, lng: number, lat: number): string => {
-    const isEditing = editModeRef.current
-
-    let html = `<div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">`
-    html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">`
-    html += `<div style="font-weight:700;font-size:13px;color:${layerColor}">${layerLabel}</div>`
-    const isInop = props.status === 'inoperative'
-    html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? '#EF4444' : '#10B981'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
-    html += `</div>`
-    if (props.block) {
-      html += `<div style="font-size:11px;color:#CBD5E1;font-family:monospace;margin-bottom:2px;">${props.block}</div>`
-    }
-    if (props.text && ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)) {
-      html += `<div style="color:#CBD5E1;">Sign Text: ${props.text}</div>`
-    }
-    // System/component — show deduplicated
-    if (props.id && allComponentsRef.current.length > 0 && !isEditing) {
-      const currentCompId = props.system_component_id || ''
-      const currentComp = allComponentsRef.current.find(c => c.id === currentCompId)
-      if (currentComp) {
-        const sysName = currentComp.system_name
-        const compLabel = currentComp.label
-        if (sysName === compLabel || sysName.endsWith(compLabel)) {
-          html += `<div style="font-size:10px;color:#94A3B8;">${sysName}</div>`
-        } else {
-          html += `<div style="font-size:10px;color:#94A3B8;">${sysName} &mdash; ${compLabel}</div>`
-        }
-      }
-    }
-    if (props.notes) {
-      html += `<div style="margin-top:4px;font-size:10px;color:#94A3B8;">${props.notes}</div>`
-    }
-    // Status toggle button (always visible)
-    if (props.id) {
-      if (isInop) {
-        html += `<button onclick="window.__markOperational('${props.id}')" style="
-          margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
-          background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
-        ">Mark Operational</button>`
-      } else {
-        html += `<button onclick="window.__reportOutage('${props.id}')" style="
-          margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
-          background:#EF4444;color:white;font-size:11px;font-weight:600;cursor:pointer;
-        ">Report Outage</button>`
-      }
-    }
-    // ── Edit mode: full editable form ──
-    if (props.id && isEditing) {
-      const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
-      const currentRotation = props.rotation || 0
-      const currentCompId = props.system_component_id || ''
-      html += `<div style="margin-top:8px;border-top:1px solid #475569;padding-top:8px;">`
-      // Feature type dropdown
-      const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
-        `<option value="${opt.value}" ${opt.value === props.type ? 'selected' : ''}>${opt.label}</option>`
-      ).join('')
-      html += `<div style="margin-bottom:6px;">`
-      html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Feature Type</div>`
-      html += `<select id="__type-input" style="
-        width:100%;padding:4px 6px;border-radius:4px;
-        border:1px solid #475569;background:#1E293B;
-        color:#E2E8F0;font-size:11px;cursor:pointer;
-      ">${typeOptionsHtml}</select>`
-      html += `</div>`
-      // Component dropdown
-      const compOptGroups = groupedComponentsRef.current.map(g =>
-        `<optgroup label="${g.name}">${g.components.map(c =>
-          `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.label}</option>`
-        ).join('')}</optgroup>`
-      ).join('')
-      html += `<div style="margin-bottom:6px;">`
-      html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">System / Component</div>`
-      html += `<select id="__comp-input" style="
-        width:100%;padding:4px 6px;border-radius:4px;
-        border:1px solid #475569;background:#1E293B;
-        color:#E2E8F0;font-size:11px;cursor:pointer;
-      "><option value="">— None —</option>${compOptGroups}</select>`
-      html += `</div>`
-      // Label (signs only — shows sign face text)
-      const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(props.type)
-      if (isSign) {
-        html += `<div style="margin-bottom:6px;">`
-        html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Sign Text</div>`
-        html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Sign text..." style="
-          width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-          border:1px solid #475569;background:#1E293B;
-          color:#E2E8F0;font-size:12px;outline:none;
-        " />`
-        html += `</div>`
-      }
-      // Fixture ID
-      const escapedBlock = (props.block || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
-      html += `<div style="margin-bottom:6px;">`
-      html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Fixture ID</div>`
-      html += `<input id="__block-input" type="text" value="${escapedBlock}" placeholder="e.g. TWYK-TL-001" style="
-        width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-        border:1px solid #475569;background:#1E293B;
-        color:#E2E8F0;font-size:12px;outline:none;
-      " />`
-      html += `</div>`
-      // Bar group indicator (read-only)
-      if (props.bar_group_id) {
-        html += `<div style="font-size:10px;color:#38BDF8;margin-bottom:6px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
-      }
-      // Rotation slider with compass
-      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">`
-      html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
-      html += `<circle cx="16" cy="16" r="14" fill="none" stroke="#475569" stroke-width="1"/>`
-      html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="#94A3B8">N</text>`
-      html += `<line id="__compass-needle" x1="16" y1="16" x2="16" y2="5" stroke="#EF4444" stroke-width="2" transform="rotate(${currentRotation},16,16)"/>`
-      html += `</svg></div>`
-      html += `<div style="flex:1;">`
-      html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;">`
-      html += `<span style="font-size:10px;color:#94A3B8;">Rotation</span>`
-      html += `<span id="__rotation-value" style="font-size:10px;color:#CBD5E1;">${currentRotation}°</span>`
-      html += `</div>`
-      html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
-      html += `</div></div>`
-      // Save button
-      html += `<button onclick="window.__saveFeatureProps('${props.id}',(document.getElementById('__label-input')||{value:''}).value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
-        width:100%;padding:5px 0;border:none;border-radius:4px;
-        background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
-      ">Save</button>`
-      html += `</div>`
-
-      // Action buttons
-      html += `<div style="display:flex;gap:6px;margin-top:6px;">`
-      if (freeMoveRef.current) {
-        html += `<button onclick="window.__freeMoveFeature('${props.id}',${lng},${lat})" style="
-          flex:1;padding:5px 0;border:none;border-radius:5px;
-          background:#F59E0B;color:black;font-size:12px;font-weight:600;cursor:pointer;
-        ">Grab</button>`
-      } else {
-        html += `<button onclick="window.__moveInfraFeature('${props.id}',${lng},${lat})" style="
-          flex:1;padding:5px 0;border:none;border-radius:5px;
-          background:#3B82F6;color:white;font-size:12px;font-weight:600;cursor:pointer;
-        ">Move</button>`
-      }
-      html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
-        flex:1;padding:5px 0;border:none;border-radius:5px;
-        background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
-      ">Delete</button>`
-      html += `</div>`
-    }
-    html += `</div>`
-    return html
-  }, [])
-
-  // ── Render all features as Google Maps markers ──
-  // Refs for selection / health circles
-  const selectionCirclesRef = useRef<google.maps.Circle[]>([])
-  const healthCirclesRef = useRef<google.maps.Circle[]>([])
-  const auditCirclesRef = useRef<google.maps.Circle[]>([])
-  const inopCirclesRef = useRef<google.maps.Circle[]>([])
-
-  const renderFeatures = useCallback((wrapper: GMapWrapper, geojson: GeoJSON.FeatureCollection) => {
-    // Clear old markers (but keep non-feature markers like location, drag, freemove)
-    clearAllObjects(wrapper)
-
-    // Render each GeoJSON feature as a Google Maps marker
-    for (const gf of geojson.features) {
-      const coords = (gf.geometry as GeoJSON.Point).coordinates
-      const lng = coords[0]
-      const lat = coords[1]
-      const props = gf.properties || {}
-      const featureType = props.type as string
-      const featureId = props.id as string
-
-      // Find the layer config for this feature type
-      const layerCfg = LAYERS.find(l => l.types.includes(featureType))
-      if (!layerCfg) continue
-
-      // Check type-level visibility
-      if (!visibleLayers[layerCfg.key]) continue
-
-      // Determine icon
-      const signIcon = props.signIcon ? wrapper.iconCache.get(props.signIcon) : undefined
-      const iconName = ICON_MAP[featureType]
-      const iconUrl = signIcon || (iconName ? wrapper.iconCache.get(iconName) : undefined)
-
-      const isInop = props.status === 'inoperative'
-      const color = isInop ? '#EF4444' : layerCfg.color
-
-      // Build marker options
-      let markerIcon: google.maps.Icon | google.maps.Symbol | undefined
-      if (iconUrl) {
-        markerIcon = {
-          url: iconUrl,
-          scaledSize: new google.maps.Size(24, 24),
-          anchor: new google.maps.Point(12, 12),
-        } as google.maps.Icon
-      } else {
-        // Circle renderType — use a Symbol
-        markerIcon = {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 6,
-          fillColor: color,
-          fillOpacity: 0.85,
-          strokeColor: isInop ? '#FFFFFF' : (layerCfg.strokeColor || '#000000'),
-          strokeWeight: isInop ? 1.5 : (layerCfg.strokeColor ? 1.5 : 0.5),
-          rotation: props.rotation || 0,
-        }
-      }
-
-      const marker = new google.maps.Marker({
-        position: { lat, lng },
-        map: wrapper.gmap,
-        icon: markerIcon,
-        zIndex: isInop ? 100 : 10,
-      })
-
-      // Click handler — build popup HTML and show InfoWindow
-      marker.addListener('click', () => {
-        const html = buildPopupHtml(props, layerCfg.color, layerCfg.label, lng, lat)
-        wrapper.infoWindow.setContent(`<div style="background:#1E293B;color:#E2E8F0;padding:2px;max-width:240px;">${html}</div>`)
-        wrapper.infoWindow.open(wrapper.gmap, marker)
-      })
-
-      wrapper.markers.set(featureId, marker)
-      // Update spatial index for queryFeaturesInBounds
-      wrapper.featureIndex.set(featureId, {
-        lat, lng,
-        type: featureType,
-        props,
-      })
-    }
-  }, [visibleLayers, buildPopupHtml])
-
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || !googleReady) return
+    if (!mapContainer.current || !mapboxReady || !token) return
 
     if (map.current) {
-      clearAllObjects(map.current)
+      map.current.remove()
       map.current = null
       setMapLoaded(false)
     }
+
+    mapboxgl.accessToken = token
 
     const rwy = runways[0]
     const centerLat = rwy
@@ -2036,46 +1835,390 @@ export default function InfrastructureMapPage() {
       ? ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2
       : -82.8369
 
-    const gmap = new google.maps.Map(mapContainer.current, {
-      ...GOOGLE_MAP_OPTIONS,
-      center: { lat: centerLat, lng: centerLng },
+    const m = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: SATELLITE_STYLE,
+      center: [centerLng, centerLat],
       zoom: 14,
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false,
+      ...MAP_PERF_OPTIONS,
     })
 
-    const wrapper = createGMapWrapper(gmap)
+    m.addControl(new mapboxgl.NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right')
 
-    // Register all icon images
-    addMapIcons(wrapper)
-    registerLabeledSigns(wrapper, dbFeatures)
+    // Enable touch rotation and pitch
+    m.touchZoomRotate.enableRotation()
+    m.touchPitch.enable()
 
-    // Render features once map is idle
-    google.maps.event.addListenerOnce(gmap, 'idle', () => {
-      renderFeatures(wrapper, featureGeoJson)
+    m.on('load', () => {
+      addMapIcons(m)
 
-      // Click on empty map area — place feature or bar in edit mode
-      gmap.addListener('click', (e: google.maps.MapMouseEvent) => {
+      m.addSource('infrastructure', {
+        type: 'geojson',
+        data: featureGeoJson,
+      })
+
+      for (const layer of LAYERS) {
+        const filterExpr: mapboxgl.Expression = layer.types.length === 1
+          ? ['==', ['get', 'type'], layer.types[0]]
+          : ['any', ...layer.types.map(t => ['==', ['get', 'type'], t])] as mapboxgl.Expression
+
+        if (layer.renderType === 'symbol') {
+          const iconName = ICON_MAP[layer.types[0]]
+          const isSignLayer = SIGN_COLORS[layer.types[0]] !== undefined
+          // Red circle underlay for inoperative symbol features
+          m.addLayer({
+            id: `${layer.key}-inop-ring`,
+            type: 'circle',
+            source: 'infrastructure',
+            filter: ['all', filterExpr, ['==', ['get', 'status'], 'inoperative']] as any,
+            paint: {
+              'circle-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 4, 14, 7, 16, 11, 18, 16,
+              ],
+              'circle-color': '#EF4444',
+              'circle-opacity': 0.35,
+              'circle-stroke-color': '#EF4444',
+              'circle-stroke-width': 2,
+              'circle-stroke-opacity': 0.9,
+            },
+          })
+          m.addLayer({
+            id: layer.key,
+            type: 'symbol',
+            source: 'infrastructure',
+            filter: filterExpr,
+            layout: {
+              'icon-image': isSignLayer
+                ? ['coalesce', ['get', 'signIcon'], iconName] as any
+                : iconName,
+              'icon-size': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 0.2,
+                14, 0.4,
+                16, 0.7,
+                18, 1,
+              ],
+              'icon-allow-overlap': true,
+              'icon-rotate': ['get', 'rotation'],
+              'icon-rotation-alignment': 'map',
+            },
+          })
+        } else {
+          m.addLayer({
+            id: layer.key,
+            type: 'circle',
+            source: 'infrastructure',
+            filter: filterExpr,
+            paint: {
+              'circle-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                12, 2,
+                14, 4,
+                16, 6,
+                18, 10,
+              ],
+              'circle-color': [
+                'case',
+                ['==', ['get', 'status'], 'inoperative'], '#EF4444',
+                layer.color,
+              ] as any,
+              'circle-opacity': 0.85,
+              'circle-stroke-color': [
+                'case',
+                ['==', ['get', 'status'], 'inoperative'], '#FFFFFF',
+                layer.strokeColor || '#000000',
+              ] as any,
+              'circle-stroke-width': [
+                'case',
+                ['==', ['get', 'status'], 'inoperative'], 1.5,
+                layer.strokeColor ? 1.5 : 0.5,
+              ] as any,
+            },
+          })
+        }
+
+        // Click handler for popups
+        m.on('click', layer.key, (e) => {
+          if (!e.features || e.features.length === 0) return
+          e.originalEvent.stopPropagation()
+          const feat = e.features[0]
+          const coords = (feat.geometry as GeoJSON.Point).coordinates.slice() as [number, number]
+          const props = feat.properties || {}
+          const isEditing = editModeRef.current
+
+          let html = `<div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">`
+          html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">`
+          html += `<div style="font-weight:700;font-size:13px;color:${layer.color}">${layer.label}</div>`
+          const isInop = props.status === 'inoperative'
+          html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? '#EF4444' : '#10B981'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
+          html += `</div>`
+          if (props.block) {
+            html += `<div style="font-size:11px;color:#CBD5E1;font-family:monospace;margin-bottom:2px;">${props.block}</div>`
+          }
+          if (props.text && ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)) {
+            html += `<div style="color:#CBD5E1;">Sign Text: ${props.text}</div>`
+          }
+          // System/component — show deduplicated
+          if (props.id && allComponentsRef.current.length > 0 && !isEditing) {
+            const currentCompId = props.system_component_id || ''
+            const currentComp = allComponentsRef.current.find(c => c.id === currentCompId)
+            if (currentComp) {
+              // Only show component label after system name if they differ
+              const sysName = currentComp.system_name
+              const compLabel = currentComp.label
+              if (sysName === compLabel || sysName.endsWith(compLabel)) {
+                html += `<div style="font-size:10px;color:#94A3B8;">${sysName}</div>`
+              } else {
+                html += `<div style="font-size:10px;color:#94A3B8;">${sysName} &mdash; ${compLabel}</div>`
+              }
+            }
+          }
+          if (props.notes) {
+            html += `<div style="margin-top:4px;font-size:10px;color:#94A3B8;">${props.notes}</div>`
+          }
+          // Status toggle button (always visible)
+          if (props.id) {
+            if (isInop) {
+              html += `<button onclick="window.__markOperational('${props.id}')" style="
+                margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
+                background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
+              ">Mark Operational</button>`
+            } else {
+              html += `<button onclick="window.__reportOutage('${props.id}')" style="
+                margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
+                background:#EF4444;color:white;font-size:11px;font-weight:600;cursor:pointer;
+              ">Report Outage</button>`
+            }
+          }
+          // ── Edit mode: full editable form ──
+          if (props.id && isEditing) {
+            const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
+            const currentRotation = props.rotation || 0
+            const currentCompId = props.system_component_id || ''
+            html += `<div style="margin-top:8px;border-top:1px solid var(--color-border);padding-top:8px;">`
+            // Feature type dropdown
+            const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
+              `<option value="${opt.value}" ${opt.value === props.type ? 'selected' : ''}>${opt.label}</option>`
+            ).join('')
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Feature Type</div>`
+            html += `<select id="__type-input" style="
+              width:100%;padding:4px 6px;border-radius:4px;
+              border:1px solid var(--color-border);background:var(--color-bg-inset);
+              color:#E2E8F0;font-size:11px;cursor:pointer;
+            ">${typeOptionsHtml}</select>`
+            html += `</div>`
+            // Component dropdown
+            const compOptGroups = groupedComponentsRef.current.map(g =>
+              `<optgroup label="${g.name}">${g.components.map(c =>
+                `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.label}</option>`
+              ).join('')}</optgroup>`
+            ).join('')
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">System / Component</div>`
+            html += `<select id="__comp-input" style="
+              width:100%;padding:4px 6px;border-radius:4px;
+              border:1px solid var(--color-border);background:var(--color-bg-inset);
+              color:#E2E8F0;font-size:11px;cursor:pointer;
+            "><option value="">— None —</option>${compOptGroups}</select>`
+            html += `</div>`
+            // Label (signs only — shows sign face text)
+            const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(props.type)
+            if (isSign) {
+              html += `<div style="margin-bottom:6px;">`
+              html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Sign Text</div>`
+              html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Sign text..." style="
+                width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
+                border:1px solid var(--color-border);background:var(--color-bg-inset);
+                color:#E2E8F0;font-size:12px;outline:none;
+              " />`
+              html += `</div>`
+            }
+            // Fixture ID
+            const escapedBlock = (props.block || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
+            html += `<div style="margin-bottom:6px;">`
+            html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Fixture ID</div>`
+            html += `<input id="__block-input" type="text" value="${escapedBlock}" placeholder="e.g. TWYK-TL-001" style="
+              width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
+              border:1px solid var(--color-border);background:var(--color-bg-inset);
+              color:#E2E8F0;font-size:12px;outline:none;
+            " />`
+            html += `</div>`
+            // Bar group indicator (read-only)
+            if (props.bar_group_id) {
+              html += `<div style="font-size:10px;color:#38BDF8;margin-bottom:6px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
+            }
+            // Rotation slider with compass
+            html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">`
+            html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
+            html += `<circle cx="16" cy="16" r="14" fill="none" stroke="#475569" stroke-width="1"/>`
+            html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="#94A3B8">N</text>`
+            html += `<line id="__compass-needle" x1="16" y1="16" x2="16" y2="5" stroke="#EF4444" stroke-width="2" transform="rotate(${currentRotation},16,16)"/>`
+            html += `</svg></div>`
+            html += `<div style="flex:1;">`
+            html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;">`
+            html += `<span style="font-size:10px;color:#94A3B8;">Rotation</span>`
+            html += `<span id="__rotation-value" style="font-size:10px;color:#CBD5E1;">${currentRotation}°</span>`
+            html += `</div>`
+            html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
+            html += `</div></div>`
+            // Save button
+            html += `<button onclick="window.__saveFeatureProps('${props.id}',(document.getElementById('__label-input')||{value:''}).value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
+              width:100%;padding:5px 0;border:none;border-radius:4px;
+              background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
+            ">Save</button>`
+            html += `</div>`
+
+            // Action buttons
+            html += `<div style="display:flex;gap:6px;margin-top:6px;">`
+            if (freeMoveRef.current) {
+              html += `<button onclick="window.__freeMoveFeature('${props.id}',${coords[0]},${coords[1]})" style="
+                flex:1;padding:5px 0;border:none;border-radius:5px;
+                background:#F59E0B;color:black;font-size:12px;font-weight:600;cursor:pointer;
+              ">Grab</button>`
+            } else {
+              html += `<button onclick="window.__moveInfraFeature('${props.id}',${coords[0]},${coords[1]})" style="
+                flex:1;padding:5px 0;border:none;border-radius:5px;
+                background:#3B82F6;color:white;font-size:12px;font-weight:600;cursor:pointer;
+              ">Move</button>`
+            }
+            html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
+              flex:1;padding:5px 0;border:none;border-radius:5px;
+              background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
+            ">Delete</button>`
+            html += `</div>`
+          }
+          html += `</div>`
+
+          new mapboxgl.Popup({
+            offset: 12,
+            closeButton: true,
+            closeOnClick: true,
+            maxWidth: '240px',
+            className: 'infrastructure-map-popup',
+          })
+            .setLngLat(coords)
+            .setHTML(html)
+            .addTo(m)
+        })
+
+        m.on('mouseenter', layer.key, () => { m.getCanvas().style.cursor = 'pointer' })
+        m.on('mouseleave', layer.key, () => { m.getCanvas().style.cursor = '' })
+      }
+
+      // Inoperative overlay — red pulsing ring for all inoperative features (symbols)
+      m.addLayer({
+        id: 'inoperative-overlay',
+        type: 'circle',
+        source: 'infrastructure',
+        filter: ['==', ['get', 'status'], 'inoperative'],
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 4,
+            14, 7,
+            16, 10,
+            18, 14,
+          ],
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#EF4444',
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.9,
+        },
+      })
+
+      // System health ring — colored ring around operational features based on system health tier
+      m.addLayer({
+        id: 'system-health-ring',
+        type: 'circle',
+        source: 'infrastructure',
+        filter: ['all',
+          ['!=', ['get', 'status'], 'inoperative'],
+          ['any',
+            ['==', ['get', 'systemHealthTier'], 'yellow'],
+            ['==', ['get', 'systemHealthTier'], 'red'],
+            ['==', ['get', 'systemHealthTier'], 'black'],
+          ],
+        ] as any,
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 5,
+            14, 8,
+            16, 12,
+            18, 16,
+          ],
+          'circle-color': 'transparent',
+          'circle-stroke-color': [
+            'case',
+            ['==', ['get', 'systemHealthTier'], 'yellow'], '#F59E0B',
+            '#EF4444',
+          ] as any,
+          'circle-stroke-width': 2,
+          'circle-stroke-opacity': [
+            'case',
+            ['==', ['get', 'systemHealthTier'], 'yellow'], 0.4,
+            0.5,
+          ] as any,
+          'circle-opacity': 0,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      })
+
+      // Audit highlight ring — cyan pulsing ring around features matched by bulk assign filters
+      m.addLayer({
+        id: 'audit-highlight-ring',
+        type: 'circle',
+        source: 'infrastructure',
+        filter: ['==', ['get', 'auditHighlight'], 1] as any,
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            12, 7,
+            14, 10,
+            16, 14,
+            18, 18,
+          ],
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#22D3EE',
+          'circle-stroke-width': 2.5,
+          'circle-stroke-opacity': 0.7,
+          'circle-opacity': 0,
+        },
+        layout: {
+          visibility: 'none',
+        },
+      })
+
+      // Click on empty map area — place feature or bar in edit mode (skip if dragging or box selecting)
+      m.on('click', (e) => {
+        if (rulerActiveRef.current) return
         if (!editModeRef.current || draggingRef.current || boxSelectRef.current || freeMoveRef.current) return
-        if (!e.latLng) return
-
-        // Check if click was near any existing feature using spatial index
-        const hit = queryFeatureAtPoint(wrapper, e.latLng.lat(), e.latLng.lng(), 20)
-        if (hit) return // Clicked on a feature — let the marker click handler deal with it
+        const layerIds = LAYERS.map(l => l.key)
+        const clicked = m.queryRenderedFeatures(e.point, { layers: layerIds })
+        if (clicked.length > 0) return
 
         if (barPlacementRef.current) {
-          placeBarRef.current?.(e.latLng.lng(), e.latLng.lat())
+          placeBarRef.current?.(e.lngLat.lng, e.lngLat.lat)
         } else {
-          placeFeatureRef.current?.(e.latLng.lng(), e.latLng.lat())
+          placeFeatureRef.current?.(e.lngLat.lng, e.lngLat.lat)
         }
       })
 
-      // Box select: overlay div on the map container
-      const mapDiv = gmap.getDiv()
-
+      // Box select: shared helpers for mouse + touch
       function boxStart(clientX: number, clientY: number) {
         if (!boxSelectRef.current) return
-        gmap.setOptions({ draggable: false, scrollwheel: false })
+        m.dragPan.disable()
+        m.touchZoomRotate.disable()
 
-        const rect = mapDiv.getBoundingClientRect()
+        const canvas = m.getCanvasContainer()
+        const rect = canvas.getBoundingClientRect()
         boxStartRef.current = { x: clientX - rect.left, y: clientY - rect.top }
 
         const box = document.createElement('div')
@@ -2084,13 +2227,14 @@ export default function InfrastructureMapPage() {
         box.style.background = 'rgba(168, 85, 247, 0.1)'
         box.style.pointerEvents = 'none'
         box.style.zIndex = '20'
-        mapDiv.appendChild(box)
+        canvas.appendChild(box)
         boxElRef.current = box
       }
 
       function boxMove(clientX: number, clientY: number) {
         if (!boxStartRef.current || !boxElRef.current) return
-        const rect = mapDiv.getBoundingClientRect()
+        const canvas = m.getCanvasContainer()
+        const rect = canvas.getBoundingClientRect()
         const curX = clientX - rect.left
         const curY = clientY - rect.top
 
@@ -2102,7 +2246,8 @@ export default function InfrastructureMapPage() {
 
       function boxEnd(clientX: number, clientY: number) {
         if (!boxStartRef.current || !boxElRef.current) return
-        const rect = mapDiv.getBoundingClientRect()
+        const canvas = m.getCanvasContainer()
+        const rect = canvas.getBoundingClientRect()
         const endX = clientX - rect.left
         const endY = clientY - rect.top
 
@@ -2115,24 +2260,20 @@ export default function InfrastructureMapPage() {
         const maxY = Math.max(boxStartRef.current.y, endY)
         boxStartRef.current = null
 
-        gmap.setOptions({ draggable: true, scrollwheel: true })
+        m.dragPan.enable()
+        m.touchZoomRotate.enable()
 
         if (maxX - minX < 10 || maxY - minY < 10) return
 
-        // Convert pixel corners to lat/lng
-        const sw = pixelToLatLng(wrapper, minX, maxY) // bottom-left
-        const ne = pixelToLatLng(wrapper, maxX, minY) // top-right
-        if (!sw || !ne) return
-
-        const bounds = new google.maps.LatLngBounds(
-          { lat: sw.lat, lng: sw.lng },
-          { lat: ne.lat, lng: ne.lng },
+        const layerIds = LAYERS.map(l => l.key)
+        const features = m.queryRenderedFeatures(
+          [[minX, minY], [maxX, maxY]] as [mapboxgl.PointLike, mapboxgl.PointLike],
+          { layers: layerIds }
         )
-        const features = queryFeaturesInBounds(wrapper, bounds)
 
         const ids = new Set<string>()
         for (const f of features) {
-          if (f.id) ids.add(f.id)
+          if (f.properties?.id) ids.add(f.properties.id)
         }
 
         if (ids.size > 0) {
@@ -2140,35 +2281,37 @@ export default function InfrastructureMapPage() {
         }
       }
 
-      // Mouse events for box select
-      mapDiv.addEventListener('mousedown', (e: MouseEvent) => {
+      // Mouse events
+      m.on('mousedown', (e) => {
         if (!boxSelectRef.current) return
         e.preventDefault()
-        boxStart(e.clientX, e.clientY)
+        boxStart(e.originalEvent.clientX, e.originalEvent.clientY)
       })
 
-      mapDiv.addEventListener('mousemove', (e: MouseEvent) => {
-        boxMove(e.clientX, e.clientY)
+      m.on('mousemove', (e) => {
+        boxMove(e.originalEvent.clientX, e.originalEvent.clientY)
       })
 
-      mapDiv.addEventListener('mouseup', (e: MouseEvent) => {
-        boxEnd(e.clientX, e.clientY)
+      m.on('mouseup', (e) => {
+        boxEnd(e.originalEvent.clientX, e.originalEvent.clientY)
       })
 
-      // Touch events for box select
-      mapDiv.addEventListener('touchstart', (e: TouchEvent) => {
+      // Touch events (on the canvas container directly)
+      const canvasEl = m.getCanvasContainer()
+
+      canvasEl.addEventListener('touchstart', (e) => {
         if (!boxSelectRef.current || e.touches.length !== 1) return
         e.preventDefault()
         boxStart(e.touches[0].clientX, e.touches[0].clientY)
       }, { passive: false })
 
-      mapDiv.addEventListener('touchmove', (e: TouchEvent) => {
+      canvasEl.addEventListener('touchmove', (e) => {
         if (!boxStartRef.current) return
         e.preventDefault()
         boxMove(e.touches[0].clientX, e.touches[0].clientY)
       }, { passive: false })
 
-      mapDiv.addEventListener('touchend', (e: TouchEvent) => {
+      canvasEl.addEventListener('touchend', (e) => {
         if (!boxStartRef.current) return
         const touch = e.changedTouches[0]
         boxEnd(touch.clientX, touch.clientY)
@@ -2177,183 +2320,129 @@ export default function InfrastructureMapPage() {
       setMapLoaded(true)
     })
 
-    map.current = wrapper
+    map.current = m
 
     return () => {
-      clearAllObjects(wrapper)
+      m.remove()
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleReady, installationId])
+  }, [token, installationId])
 
-  // Re-render features when data or visibility changes
+  // Register labeled sign images and update map source when data changes
   useEffect(() => {
     if (!map.current || !mapLoaded) return
     registerLabeledSigns(map.current, dbFeatures)
-    renderFeatures(map.current, featureGeoJson)
-  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures])
+    const source = map.current.getSource('infrastructure') as mapboxgl.GeoJSONSource | undefined
+    if (source) {
+      source.setData(featureGeoJson)
+      // Force Mapbox to re-evaluate all layer filters after data change
+      map.current.triggerRepaint()
+    }
+  }, [featureGeoJson, dbFeatures, mapLoaded])
 
-  // Sync layer visibility — re-render features when toggling (markers are filtered in renderFeatures)
+  // Sync layer visibility
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    renderFeatures(map.current, featureGeoJson)
+    const m = map.current
+    for (const layer of LAYERS) {
+      if (m.getLayer(layer.key)) {
+        m.setLayoutProperty(layer.key, 'visibility', visibleLayers[layer.key] ? 'visible' : 'none')
+      }
+    }
   }, [visibleLayers, mapLoaded])
 
-  // Sync health ring circles visibility
+  // Sync health ring layer visibility
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    healthCirclesRef.current.forEach(c => c.setMap(colorByHealth ? map.current!.gmap : null))
+    const m = map.current
+    if (m.getLayer('system-health-ring')) {
+      m.setLayoutProperty('system-health-ring', 'visibility', colorByHealth ? 'visible' : 'none')
+    }
   }, [colorByHealth, mapLoaded])
 
-  // Toggle audit highlight circle visibility
+  // Toggle audit highlight ring visibility
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    auditCirclesRef.current.forEach(c => c.setMap(null))
-    auditCirclesRef.current = []
-    if (auditHighlightIds.length > 0) {
-      const wrapper = map.current
-      for (const id of auditHighlightIds) {
-        const entry = wrapper.featureIndex.get(id)
-        if (!entry) continue
-        const circle = new google.maps.Circle({
-          center: { lat: entry.lat, lng: entry.lng },
-          radius: 8,
-          map: wrapper.gmap,
-          fillColor: 'transparent',
-          fillOpacity: 0,
-          strokeColor: '#22D3EE',
-          strokeWeight: 2.5,
-          strokeOpacity: 0.7,
-          clickable: false,
-          zIndex: 5,
-        })
-        auditCirclesRef.current.push(circle)
-      }
+    const m = map.current
+    if (m.getLayer('audit-highlight-ring')) {
+      m.setLayoutProperty('audit-highlight-ring', 'visibility', auditHighlightIds.length > 0 ? 'visible' : 'none')
     }
   }, [auditHighlightIds, mapLoaded])
 
   // Update cursor in edit mode
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    const cursor = boxSelectActive ? 'crosshair' : editMode ? 'crosshair' : ''
-    map.current.gmap.setOptions({ draggableCursor: cursor || undefined } as any)
+    map.current.getCanvas().style.cursor = boxSelectActive ? 'crosshair' : editMode ? 'crosshair' : ''
   }, [editMode, boxSelectActive, mapLoaded])
 
-  // Highlight selected layer during bulk shift (dim non-matching markers)
+  // Highlight selected layer during bulk shift (dim others)
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    const wrapper = map.current
+    const m = map.current
     const highlighting = bulkShiftOpen && shiftLayer !== 'all'
 
-    wrapper.featureIndex.forEach((entry, id) => {
-      const marker = wrapper.markers.get(id)
-      if (!marker) return
-      if (highlighting) {
-        // Check if this feature's DB layer matches the selected layer
-        const dbFeat = dbFeatures.find(f => f.id === id)
-        const matches = dbFeat && dbFeat.layer === shiftLayer
-        marker.setOpacity(matches ? 1 : 0.15)
+    for (const layer of LAYERS) {
+      if (!m.getLayer(layer.key)) continue
+      if (layer.renderType === 'circle') {
+        if (highlighting) {
+          // Check if this layer's types have any features with the selected CAD layer
+          const hasMatch = dbFeatures.some(
+            f => layer.types.includes(f.feature_type) && f.layer === shiftLayer
+          )
+          m.setPaintProperty(layer.key, 'circle-opacity', hasMatch ? 0.95 : 0.15)
+        } else {
+          m.setPaintProperty(layer.key, 'circle-opacity', 0.85)
+        }
       } else {
-        marker.setOpacity(1)
+        if (highlighting) {
+          const hasMatch = dbFeatures.some(
+            f => layer.types.includes(f.feature_type) && f.layer === shiftLayer
+          )
+          m.setPaintProperty(layer.key, 'icon-opacity', hasMatch ? 1 : 0.15)
+        } else {
+          m.setPaintProperty(layer.key, 'icon-opacity', 1)
+        }
       }
-    })
+    }
   }, [bulkShiftOpen, shiftLayer, mapLoaded, dbFeatures])
 
-  // Highlight selected features with purple ring circles
+  // Highlight selected features with a ring overlay
   useEffect(() => {
     if (!map.current || !mapLoaded) return
-    const wrapper = map.current
+    const m = map.current
 
-    // Remove old selection circles
-    selectionCirclesRef.current.forEach(c => c.setMap(null))
-    selectionCirclesRef.current = []
+    const selectedGeoJson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: dbFeatures
+        .filter(f => selectedIds.has(f.id))
+        .map(f => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [f.longitude, f.latitude] },
+          properties: { id: f.id },
+        })),
+    }
 
-    if (selectedIds.size > 0) {
-      for (const id of Array.from(selectedIds)) {
-        const entry = wrapper.featureIndex.get(id)
-        if (!entry) continue
-        const circle = new google.maps.Circle({
-          center: { lat: entry.lat, lng: entry.lng },
-          radius: 6,
-          map: wrapper.gmap,
-          fillColor: 'transparent',
-          fillOpacity: 0,
-          strokeColor: '#A855F7',
-          strokeWeight: 2.5,
-          clickable: false,
-          zIndex: 200,
-        })
-        selectionCirclesRef.current.push(circle)
-      }
+    const source = m.getSource('selection-highlight') as mapboxgl.GeoJSONSource | undefined
+    if (source) {
+      source.setData(selectedGeoJson)
+    } else if (selectedIds.size > 0) {
+      m.addSource('selection-highlight', { type: 'geojson', data: selectedGeoJson })
+      m.addLayer({
+        id: 'selection-highlight-ring',
+        type: 'circle',
+        source: 'selection-highlight',
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 6, 14, 10, 16, 14, 18, 20],
+          'circle-color': 'transparent',
+          'circle-stroke-color': '#A855F7',
+          'circle-stroke-width': 2.5,
+        },
+      })
     }
   }, [selectedIds, dbFeatures, mapLoaded])
 
-  // Health ring circles — render once when systemHealths change
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return
-    const wrapper = map.current
-
-    healthCirclesRef.current.forEach(c => c.setMap(null))
-    healthCirclesRef.current = []
-
-    // Build component → tier map
-    const ctMap = new Map<string, AlertTier>()
-    for (const h of systemHealths) {
-      const tier = getAlertTier(h)
-      for (const comp of h.components) {
-        ctMap.set(comp.componentId, tier)
-      }
-    }
-
-    for (const f of dbFeatures) {
-      if (f.status === 'inoperative') continue
-      if (!f.system_component_id) continue
-      const tier = ctMap.get(f.system_component_id)
-      if (!tier || tier === 'green') continue
-      const strokeColor = tier === 'yellow' ? '#F59E0B' : '#EF4444'
-      const circle = new google.maps.Circle({
-        center: { lat: f.latitude, lng: f.longitude },
-        radius: 8,
-        map: colorByHealth ? wrapper.gmap : null,
-        fillColor: 'transparent',
-        fillOpacity: 0,
-        strokeColor,
-        strokeWeight: 2,
-        strokeOpacity: tier === 'yellow' ? 0.4 : 0.5,
-        clickable: false,
-        zIndex: 3,
-      })
-      healthCirclesRef.current.push(circle)
-    }
-  }, [systemHealths, dbFeatures, mapLoaded, colorByHealth])
-
-  // Inoperative overlay circles
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return
-    const wrapper = map.current
-
-    inopCirclesRef.current.forEach(c => c.setMap(null))
-    inopCirclesRef.current = []
-
-    for (const f of dbFeatures) {
-      if (f.status !== 'inoperative') continue
-      const circle = new google.maps.Circle({
-        center: { lat: f.latitude, lng: f.longitude },
-        radius: 6,
-        map: wrapper.gmap,
-        fillColor: '#EF4444',
-        fillOpacity: 0.15,
-        strokeColor: '#EF4444',
-        strokeWeight: 2,
-        strokeOpacity: 0.9,
-        clickable: false,
-        zIndex: 50,
-      })
-      inopCirclesRef.current.push(circle)
-    }
-  }, [dbFeatures, mapLoaded])
-
-  if (!hasGoogleMaps) {
+  if (!mapboxReady) {
     return (
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>
@@ -2367,7 +2456,7 @@ export default function InfrastructureMapPage() {
           borderRadius: 12,
           border: '1px solid var(--color-border)',
         }}>
-          Google Maps is not configured. Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment.
+          Mapbox is not configured. Add NEXT_PUBLIC_MAPBOX_TOKEN to your environment.
         </div>
       </div>
     )
@@ -2482,6 +2571,17 @@ export default function InfrastructureMapPage() {
       <div style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
+        {/* Ruler tool */}
+        <RulerButton
+          active={ruler.active}
+          toggle={ruler.toggle}
+          clear={ruler.clear}
+          totalFt={ruler.totalFt}
+          points={ruler.points}
+          segments={ruler.segments}
+          style={{ position: 'absolute', bottom: 24, left: 10, zIndex: 5 }}
+        />
+
         {/* Audit panel */}
         {auditMode && (
           <AuditPanel
@@ -2490,25 +2590,23 @@ export default function InfrastructureMapPage() {
             groupedComponents={groupedComponents}
             onFeatureClick={(f) => {
               if (!map.current) return
-              map.current.gmap.panTo({ lat: f.latitude, lng: f.longitude })
-              map.current.gmap.setZoom(19)
+              map.current.flyTo({ center: [f.longitude, f.latitude], zoom: 19, duration: 1200 })
             }}
             onComponentGroupClick={(_compId, featureIds) => {
               if (!map.current || featureIds.length === 0) return
               const matched = dbFeatures.filter(f => featureIds.includes(f.id))
               if (matched.length === 0) return
               if (matched.length === 1) {
-                map.current.gmap.panTo({ lat: matched[0].latitude, lng: matched[0].longitude })
-                map.current.gmap.setZoom(18)
+                map.current.flyTo({ center: [matched[0].longitude, matched[0].latitude], zoom: 18, duration: 1200 })
                 return
               }
               const lngs = matched.map(f => f.longitude)
               const lats = matched.map(f => f.latitude)
-              const bounds = new google.maps.LatLngBounds(
-                { lat: Math.min(...lats), lng: Math.min(...lngs) },
-                { lat: Math.max(...lats), lng: Math.max(...lngs) },
+              const bounds = new mapboxgl.LngLatBounds(
+                [Math.min(...lngs), Math.min(...lats)],
+                [Math.max(...lngs), Math.max(...lats)],
               )
-              map.current.gmap.fitBounds(bounds, 60)
+              map.current.fitBounds(bounds, { padding: 60, duration: 1200 })
             }}
             onLabelUpdate={async (featureId, newLabel) => {
               const ok = await updateInfrastructureFeature(featureId, { label: newLabel })
@@ -3823,23 +3921,23 @@ export default function InfrastructureMapPage() {
         )}
       </div>
 
-      {/* Google Maps InfoWindow styles */}
+      {/* Popup styles */}
       <style>{`
-        .gm-style-iw {
-          background: #1E293B !important;
-          border: 1px solid #475569 !important;
+        .infrastructure-map-popup .mapboxgl-popup-content {
+          background: var(--color-bg-surface) !important;
+          border: 1px solid var(--color-border) !important;
           border-radius: 8px !important;
-          padding: 2px !important;
+          padding: 10px 12px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
         }
-        .gm-style-iw-d {
-          overflow: auto !important;
+        .infrastructure-map-popup .mapboxgl-popup-close-button {
+          color: var(--color-text-3) !important;
+          font-size: 16px !important;
+          right: 4px !important;
+          top: 4px !important;
         }
-        .gm-style-iw button[aria-label="Close"] {
-          color: #94A3B8 !important;
-        }
-        .gm-style-iw-tc::after {
-          background: #1E293B !important;
+        .infrastructure-map-popup .mapboxgl-popup-tip {
+          border-top-color: var(--color-bg-surface) !important;
         }
       `}</style>
 
