@@ -2021,9 +2021,11 @@ export default function InfrastructureMapPage() {
       if (iconUrl) {
         const isSign = !!props.signIcon
         if (isSign) {
-          // Sign labels scale with zoom — at zoom 18 show near full size
-          const w = Math.max(Math.round(scale * 60), 40)
-          const h = Math.max(Math.round(scale * 18), 14)
+          // Sign labels: use actual image dimensions from iconSizes, scaled by zoom
+          const iconKey = props.signIcon as string
+          const natural = wrapper.iconSizes.get(iconKey) || { w: 60, h: 24 }
+          const w = Math.max(Math.round(natural.w * scale), 20)
+          const h = Math.max(Math.round(natural.h * scale), 10)
           markerIcon = {
             url: iconUrl,
             scaledSize: new google.maps.Size(w, h),

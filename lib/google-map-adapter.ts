@@ -22,6 +22,8 @@ export interface GMapWrapper {
   featureIndex: Map<string, { lat: number; lng: number; type: string; props: Record<string, any> }>
   /** Custom icon data URLs keyed by icon name */
   iconCache: Map<string, string>
+  /** Natural dimensions of cached icons (width, height) */
+  iconSizes: Map<string, { w: number; h: number }>
 }
 
 /** Convert canvas ImageData to a data URL for use as marker icon */
@@ -45,6 +47,7 @@ export function createGMapWrapper(gmap: google.maps.Map): GMapWrapper {
     infoWindow: new google.maps.InfoWindow(),
     featureIndex: new Map(),
     iconCache: new Map(),
+    iconSizes: new Map(),
   }
 }
 
@@ -52,6 +55,7 @@ export function createGMapWrapper(gmap: google.maps.Map): GMapWrapper {
 export function registerIcon(wrapper: GMapWrapper, name: string, imageData: ImageData): void {
   const url = imageDataToDataUrl(imageData)
   wrapper.iconCache.set(name, url)
+  wrapper.iconSizes.set(name, { w: imageData.width, h: imageData.height })
 }
 
 /** Clear all map objects from a wrapper */
