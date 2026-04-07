@@ -972,7 +972,7 @@ export default function ParkingPage() {
           const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
           const isSelected = editingSpot?.id === spot.id
 
-          // Render silhouette to canvas and get data URL
+          // Render silhouette to canvas at FULL size (REF_ICON_SIZE)
           const result = await renderSilhouetteImage(spot.aircraft_name || '', spot.wingspan_ft, spot.length_ft)
           const imgData = result || renderFallbackIcon()
 
@@ -984,37 +984,34 @@ export default function ParkingPage() {
           ctx.putImageData(imgData.imageData, 0, 0)
           const dataUrl = canvas.toDataURL('image/png')
 
-          const scaledW = Math.max(8, Math.round(imgData.width * scale))
-          const scaledH = Math.max(8, Math.round(imgData.height * scale))
-
-          // Create a rotated icon using a canvas
+          // Render rotated icon at FIXED large size — scaling done via scaledSize only
+          const fixedDim = Math.max(imgData.width, imgData.height) + 16
           const rotCanvas = document.createElement('canvas')
-          const maxDim = Math.max(scaledW, scaledH) * 1.5
-          rotCanvas.width = maxDim
-          rotCanvas.height = maxDim
+          rotCanvas.width = fixedDim
+          rotCanvas.height = fixedDim
           const rotCtx = rotCanvas.getContext('2d')!
-          rotCtx.translate(maxDim / 2, maxDim / 2)
+          rotCtx.translate(fixedDim / 2, fixedDim / 2)
           rotCtx.rotate((spot.heading_deg || 0) * Math.PI / 180)
           if (isSelected) rotCtx.globalAlpha = 0.4
           const img = new Image()
           img.src = dataUrl
           await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
-          rotCtx.drawImage(img, -scaledW / 2, -scaledH / 2, scaledW, scaledH)
+          rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
           rotCtx.globalAlpha = 1
 
           // Selection ring
           if (isSelected) {
             rotCtx.strokeStyle = '#22D3EE'
-            rotCtx.lineWidth = 3
+            rotCtx.lineWidth = 4
             rotCtx.beginPath()
-            rotCtx.arc(0, 0, Math.max(scaledW, scaledH) / 2 + 4, 0, Math.PI * 2)
+            rotCtx.arc(0, 0, Math.max(imgData.width, imgData.height) / 2 + 6, 0, Math.PI * 2)
             rotCtx.stroke()
           }
 
           const rotDataUrl = rotCanvas.toDataURL('image/png')
 
-          // Use the target pixel size (scaled wingspan/length), not the canvas size
-          const displayDim = Math.max(scaledW, scaledH) + 8
+          // Display size = full image size * scale factor from computeIconScale
+          const displayDim = Math.max(8, Math.round(fixedDim * scale))
           const marker = new google.maps.Marker({
             position: { lat: c.lat, lng: c.lon },
             map: gmap,
@@ -1065,11 +1062,12 @@ export default function ParkingPage() {
         const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
         const icon = marker.getIcon() as google.maps.Icon | undefined
         if (!icon?.url) return
-        const imgW = spot.wingspan_ft >= spot.length_ft ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE / (spot.length_ft / spot.wingspan_ft)) + 8
-        const imgH = spot.length_ft >= spot.wingspan_ft ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * (spot.length_ft / spot.wingspan_ft)) + 8
-        const scaledW = Math.max(8, Math.round(imgW * scale))
-        const scaledH = Math.max(8, Math.round(imgH * scale))
-        const dim = Math.max(scaledW, scaledH) + 8
+        // fixedDim matches render: max dimension of source image + 16
+        const aspect = spot.length_ft / spot.wingspan_ft
+        const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
+        const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
+        const fixedDim = Math.max(imgW, imgH) + 16
+        const dim = Math.max(8, Math.round(fixedDim * scale))
         marker.setIcon({
           ...icon,
           scaledSize: new google.maps.Size(dim, dim),
