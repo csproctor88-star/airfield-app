@@ -1537,10 +1537,29 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (w) {
-      // Capture the full map div (satellite + all overlays) using html2canvas
+      // Temporarily resize map to landscape for a wider capture
+      const gmap = w.gmap
+      const mapDiv = gmap.getDiv()
+      const parent = mapDiv.parentElement
+      const origWidth = parent?.style.width || ''
+      const origHeight = parent?.style.height || ''
+
       try {
+        // Expand to 1600×900 for high-quality landscape capture
+        if (parent) {
+          parent.style.width = '1600px'
+          parent.style.height = '900px'
+        }
+        google.maps.event.trigger(gmap, 'resize')
+        // Wait for tiles to load at new size
+        await new Promise<void>(resolve => {
+          google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
+          setTimeout(resolve, 3000) // fallback timeout
+        })
+        // Extra frame for rendering
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
         const html2canvas = (await import('html2canvas')).default
-        const mapDiv = w.gmap.getDiv()
         const canvas = await html2canvas(mapDiv, {
           useCORS: true,
           allowTaint: true,
@@ -1555,6 +1574,13 @@ export default function ParkingPage() {
         console.warn('Map capture error:', err)
         toast.error('Map capture failed')
         mapDataUrl = null
+      } finally {
+        // Restore original size
+        if (parent) {
+          parent.style.width = origWidth
+          parent.style.height = origHeight
+        }
+        google.maps.event.trigger(gmap, 'resize')
       }
     }
 
