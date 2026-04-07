@@ -1134,7 +1134,7 @@ export default function ParkingPage() {
       dragStartPt.current = { x: clientX, y: clientY }
 
       // Check aircraft via spatial index
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 50)
+      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, Math.max(5, 50 / Math.pow(2, (gmap.getZoom() ?? 15) - 14)))
       if (acHit && acHit.type === 'aircraft') {
         const spotId = acHit.props.spotId
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
@@ -1157,7 +1157,7 @@ export default function ParkingPage() {
 
       // Check obstacles via spatial index
       if (obstaclesLockedRef.current) return
-      const obsHit = queryFeatureAtPoint(w, clickLat, clickLng, 50)
+      const obsHit = queryFeatureAtPoint(w, clickLat, clickLng, Math.max(5, 50 / Math.pow(2, (gmap.getZoom() ?? 15) - 14)))
       if (obsHit && obsHit.type === 'obstacle') {
         const matchObs = obstaclesRef.current.find(o => o.id === obsHit.props.obsId)
         if (matchObs) {
@@ -1347,7 +1347,7 @@ export default function ParkingPage() {
       // Long-press detection for context menu
       if (contextMenuTimerRef.current) clearTimeout(contextMenuTimerRef.current)
       contextMenuTimerRef.current = setTimeout(() => {
-        const acHit = queryFeatureAtPoint(w, pos.lat, pos.lng, 50)
+        const acHit = queryFeatureAtPoint(w, pos.lat, pos.lng, Math.max(5, 50 / Math.pow(2, (gmap.getZoom() ?? 15) - 14)))
         if (acHit && acHit.type === 'aircraft') {
           const spotId = acHit.props.spotId
           const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
@@ -1395,7 +1395,7 @@ export default function ParkingPage() {
       if (!e.latLng) return
       const clickLat = e.latLng.lat()
       const clickLng = e.latLng.lng()
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 50)
+      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, Math.max(5, 50 / Math.pow(2, (gmap.getZoom() ?? 15) - 14)))
       if (acHit && acHit.type === 'aircraft') {
         const spotId = acHit.props.spotId
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
@@ -1409,7 +1409,7 @@ export default function ParkingPage() {
     })
 
     return () => {
-      mapDiv.removeEventListener('contextmenu', preventContextMenu)
+      mapDiv.removeEventListener('contextmenu', preventContextMenu, true)
       mapDiv.removeEventListener('mousedown', onCanvasMouseDown)
       mapDiv.removeEventListener('mousemove', onCanvasMouseMove)
       mapDiv.removeEventListener('mouseup', onCanvasMouseUp)
@@ -3017,7 +3017,7 @@ export default function ParkingPage() {
         )}
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
-          <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          <div ref={mapContainer} onContextMenu={e => e.preventDefault()} style={{ width: '100%', height: '100%' }} />
           {/* ── Floating panel — top right, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (
             <div style={{
