@@ -1529,14 +1529,25 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (w) {
-      // Try to capture the map's internal canvas element
-      const mapDiv = w.gmap.getDiv()
-      const canvas = mapDiv.querySelector('canvas') as HTMLCanvasElement | null
-      if (canvas) {
+      const gmap = w.gmap
+      const center = gmap.getCenter()
+      const zoom = gmap.getZoom()
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+
+      if (center && zoom && apiKey) {
+        // Use Google Maps Static API for a clean satellite snapshot
+        const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat()},${center.lng()}&zoom=${zoom}&size=1600x900&scale=2&maptype=satellite&key=${apiKey}`
         try {
-          mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+          const resp = await fetch(staticUrl)
+          if (resp.ok) {
+            const blob = await resp.blob()
+            mapDataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result as string)
+              reader.readAsDataURL(blob)
+            })
+          }
         } catch {
-          // Cross-origin canvas — cannot capture
           mapDataUrl = null
         }
       }
