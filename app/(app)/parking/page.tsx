@@ -1315,9 +1315,10 @@ export default function ParkingPage() {
 
     // Mouse events on the map div
     const onCanvasMouseDown = (ev: MouseEvent) => {
-      // Right-click → context menu
-      if (ev.button === 2) {
+      // Ctrl+click → context menu (replaces right-click which Google Maps intercepts)
+      if (ev.button === 0 && (ev.ctrlKey || ev.metaKey)) {
         ev.preventDefault()
+        ev.stopPropagation()
         const rect = mapDiv.getBoundingClientRect()
         const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
         if (!pos) return
@@ -1395,12 +1396,6 @@ export default function ParkingPage() {
       onMouseUp(pos.lat, pos.lng)
     }
 
-    // Suppress browser context menu on map — must use document-level capture
-    // because Google Maps creates deeply nested internal DOM elements
-    const onContextMenu = (ev: MouseEvent) => {
-      if (mapDiv.contains(ev.target as Node)) ev.preventDefault()
-    }
-    document.addEventListener('contextmenu', onContextMenu, true)
     mapDiv.addEventListener('mousedown', onCanvasMouseDown)
     mapDiv.addEventListener('mousemove', onCanvasMouseMove)
     mapDiv.addEventListener('mouseup', onCanvasMouseUp)
@@ -1409,7 +1404,6 @@ export default function ParkingPage() {
     mapDiv.addEventListener('touchend', onTouchEnd)
 
     return () => {
-      document.removeEventListener('contextmenu', onContextMenu, true)
       mapDiv.removeEventListener('mousedown', onCanvasMouseDown)
       mapDiv.removeEventListener('mousemove', onCanvasMouseMove)
       mapDiv.removeEventListener('mouseup', onCanvasMouseUp)
