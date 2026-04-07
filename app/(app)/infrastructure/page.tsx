@@ -1941,13 +1941,23 @@ export default function InfrastructureMapPage() {
   // ── Zoom-based icon scaling (replaces Mapbox interpolation expressions) ──
   const [currentZoom, setCurrentZoom] = useState(14)
 
+  // Trigger re-render on map idle (after zoom or pan settles) for viewport culling + icon scaling
+  const [mapIdleTick, setMapIdleTick] = useState(0)
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
-    const listener = w.gmap.addListener('zoom_changed', () => {
-      setCurrentZoom(w.gmap.getZoom() ?? 14)
+    const listener = w.gmap.addListener('idle', () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = setTimeout(() => {
+        setCurrentZoom(w.gmap.getZoom() ?? 14)
+        setMapIdleTick(t => t + 1)
+      }, 200)
     })
-    return () => { google.maps.event.removeListener(listener) }
+    return () => {
+      google.maps.event.removeListener(listener)
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    }
   }, [mapLoaded])
 
   /** Interpolate icon scale based on zoom — Google Maps markers need larger values than Mapbox */
@@ -1989,6 +1999,21 @@ export default function InfrastructureMapPage() {
     // Clear old markers (but keep non-feature markers like location, drag, freemove)
     clearAllObjects(wrapper)
 
+    // Get visible bounds for viewport culling (with padding)
+    const bounds = wrapper.gmap.getBounds()
+    let viewBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number } | null = null
+    if (bounds) {
+      const ne = bounds.getNorthEast()
+      const sw = bounds.getSouthWest()
+      // Pad by 20% to preload features just outside the viewport
+      const latPad = (ne.lat() - sw.lat()) * 0.2
+      const lngPad = (ne.lng() - sw.lng()) * 0.2
+      viewBounds = {
+        minLat: sw.lat() - latPad, maxLat: ne.lat() + latPad,
+        minLng: sw.lng() - lngPad, maxLng: ne.lng() + lngPad,
+      }
+    }
+
     // Render each GeoJSON feature as a Google Maps marker
     for (const gf of geojson.features) {
       const coords = (gf.geometry as GeoJSON.Point).coordinates
@@ -1998,12 +2023,18 @@ export default function InfrastructureMapPage() {
       const featureType = props.type as string
       const featureId = props.id as string
 
+      // Always populate spatial index (for hit testing even on offscreen features)
+      wrapper.featureIndex.set(featureId, { lat, lng, type: featureType, props })
+
       // Find the layer config for this feature type
       const layerCfg = LAYERS.find(l => l.types.includes(featureType))
       if (!layerCfg) continue
 
       // Check type-level visibility
       if (!visibleLayers[layerCfg.key]) continue
+
+      // Viewport culling — skip markers outside the visible area
+      if (viewBounds && (lat < viewBounds.minLat || lat > viewBounds.maxLat || lng < viewBounds.minLng || lng > viewBounds.maxLng)) continue
 
       // Determine icon
       const signIcon = props.signIcon ? wrapper.iconCache.get(props.signIcon) : undefined
@@ -2068,12 +2099,6 @@ export default function InfrastructureMapPage() {
       })
 
       wrapper.markers.set(featureId, marker)
-      // Update spatial index for queryFeaturesInBounds
-      wrapper.featureIndex.set(featureId, {
-        lat, lng,
-        type: featureType,
-        props,
-      })
     }
   }, [visibleLayers, buildPopupHtml])
 
@@ -2250,13 +2275,13 @@ export default function InfrastructureMapPage() {
     if (!map.current || !mapLoaded) return
     registerLabeledSigns(map.current, dbFeatures)
     renderFeatures(map.current, featureGeoJson)
-  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures, currentZoom])
+  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures, currentZoom, mapIdleTick])
 
   // Sync layer visibility — re-render features when toggling (markers are filtered in renderFeatures)
   useEffect(() => {
     if (!map.current || !mapLoaded) return
     renderFeatures(map.current, featureGeoJson)
-  }, [visibleLayers, mapLoaded, currentZoom])
+  }, [visibleLayers, mapLoaded, currentZoom, mapIdleTick])
 
   // Sync health ring circles visibility
   useEffect(() => {
