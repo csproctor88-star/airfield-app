@@ -2123,7 +2123,7 @@ export default function InfrastructureMapPage() {
     const gmap = new google.maps.Map(mapContainer.current, {
       ...GOOGLE_MAP_OPTIONS,
       center: { lat: centerLat, lng: centerLng },
-      zoom: 14,
+      zoom: 16,
     })
 
     const wrapper = createGMapWrapper(gmap)
