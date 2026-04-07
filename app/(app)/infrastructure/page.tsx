@@ -1950,33 +1950,32 @@ export default function InfrastructureMapPage() {
     return () => { google.maps.event.removeListener(listener) }
   }, [mapLoaded])
 
-  /** Interpolate icon size based on zoom (matches Mapbox: 12→0.2, 14→0.4, 16→0.7, 18→1.0) */
+  /** Interpolate icon scale based on zoom — Google Maps markers need larger values than Mapbox */
   function zoomScale(zoom: number): number {
-    if (zoom <= 12) return 0.2
-    if (zoom >= 18) return 1.0
-    // Linear interpolation between breakpoints
-    const stops = [[12, 0.2], [14, 0.4], [16, 0.7], [18, 1.0]]
+    if (zoom <= 12) return 0.4
+    if (zoom >= 18) return 2.0
+    const stops = [[12, 0.4], [14, 0.8], [16, 1.4], [18, 2.0]]
     for (let i = 0; i < stops.length - 1; i++) {
       if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
         const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
         return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
       }
     }
-    return 0.5
+    return 1.0
   }
 
-  /** Circle radius based on zoom (matches Mapbox: 12→2, 14→4, 16→6, 18→10) */
+  /** Circle radius in pixels based on zoom — sized to match Mapbox visual appearance */
   function zoomCircleRadius(zoom: number): number {
-    if (zoom <= 12) return 2
-    if (zoom >= 18) return 10
-    const stops = [[12, 2], [14, 4], [16, 6], [18, 10]]
+    if (zoom <= 12) return 4
+    if (zoom >= 18) return 16
+    const stops = [[12, 4], [14, 7], [16, 11], [18, 16]]
     for (let i = 0; i < stops.length - 1; i++) {
       if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
         const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
         return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
       }
     }
-    return 4
+    return 8
   }
 
   // ── Render all features as Google Maps markers ──
@@ -2020,15 +2019,30 @@ export default function InfrastructureMapPage() {
 
       let markerIcon: google.maps.Icon | google.maps.Symbol | undefined
       if (iconUrl) {
-        // Sign labels get larger scaling since they need to be readable
         const isSign = !!props.signIcon
-        const baseSize = isSign ? 48 : 24
-        const sz = Math.round(baseSize * scale)
-        markerIcon = {
-          url: iconUrl,
-          scaledSize: new google.maps.Size(Math.max(sz, isSign ? 24 : 8), Math.max(sz, isSign ? 12 : 8)),
-          anchor: new google.maps.Point(Math.max(sz, isSign ? 24 : 8) / 2, Math.max(sz, isSign ? 12 : 8) / 2),
-        } as google.maps.Icon
+        if (isSign) {
+          // Sign labels: use the actual image dimensions scaled by zoom
+          // The createLabeledSign function generates images sized to text width
+          const img = new Image()
+          img.src = iconUrl
+          // Use natural size scaled by zoom factor (signs are ~80-120px wide natively)
+          const signScale = scale * 0.6
+          const w = Math.max(Math.round((img.naturalWidth || 80) * signScale), 30)
+          const h = Math.max(Math.round((img.naturalHeight || 24) * signScale), 14)
+          markerIcon = {
+            url: iconUrl,
+            scaledSize: new google.maps.Size(w, h),
+            anchor: new google.maps.Point(w / 2, h / 2),
+          } as google.maps.Icon
+        } else {
+          // Regular feature icons (approach lights, PAPI, etc.)
+          const sz = Math.max(Math.round(24 * scale), 10)
+          markerIcon = {
+            url: iconUrl,
+            scaledSize: new google.maps.Size(sz, sz),
+            anchor: new google.maps.Point(sz / 2, sz / 2),
+          } as google.maps.Icon
+        }
       } else {
         // Circle renderType — use a Symbol
         markerIcon = {
