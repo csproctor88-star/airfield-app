@@ -1537,40 +1537,24 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (w) {
-      const gmap = w.gmap
-      const center = gmap.getCenter()
-      const zoom = gmap.getZoom()
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
-
-      if (center && zoom && apiKey) {
-        // Use Google Maps Static API for a clean satellite snapshot
-        const staticUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat()},${center.lng()}&zoom=${zoom}&size=1600x900&scale=2&maptype=satellite&key=${apiKey}`
-        try {
-          const resp = await fetch(staticUrl)
-          if (resp.ok) {
-            const contentType = resp.headers.get('content-type') || ''
-            if (contentType.includes('image')) {
-              const blob = await resp.blob()
-              mapDataUrl = await new Promise<string>((resolve) => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve(reader.result as string)
-                reader.readAsDataURL(blob)
-              })
-            } else {
-              // API returned an error (JSON response instead of image)
-              const text = await resp.text()
-              console.warn('Static Maps API error:', text)
-              toast.error('Map capture failed — enable Static Maps API in Google Cloud Console')
-            }
-          } else {
-            toast.error(`Map capture failed (${resp.status})`)
-          }
-        } catch (err) {
-          console.warn('Static Maps fetch error:', err)
-          mapDataUrl = null
-        }
-      } else if (!apiKey) {
-        toast.error('Map capture requires NEXT_PUBLIC_GOOGLE_MAPS_API_KEY')
+      // Capture the full map div (satellite + all overlays) using html2canvas
+      try {
+        const html2canvas = (await import('html2canvas')).default
+        const mapDiv = w.gmap.getDiv()
+        const canvas = await html2canvas(mapDiv, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          scale: 2,
+          logging: false,
+          width: mapDiv.clientWidth,
+          height: mapDiv.clientHeight,
+        })
+        mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+      } catch (err) {
+        console.warn('Map capture error:', err)
+        toast.error('Map capture failed')
+        mapDataUrl = null
       }
     }
 
