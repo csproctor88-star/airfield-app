@@ -1134,7 +1134,7 @@ export default function ParkingPage() {
       dragStartPt.current = { x: clientX, y: clientY }
 
       // Check aircraft via spatial index
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 30)
+      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 50)
       if (acHit && acHit.type === 'aircraft') {
         const spotId = acHit.props.spotId
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
@@ -1157,7 +1157,7 @@ export default function ParkingPage() {
 
       // Check obstacles via spatial index
       if (obstaclesLockedRef.current) return
-      const obsHit = queryFeatureAtPoint(w, clickLat, clickLng, 30)
+      const obsHit = queryFeatureAtPoint(w, clickLat, clickLng, 50)
       if (obsHit && obsHit.type === 'obstacle') {
         const matchObs = obstaclesRef.current.find(o => o.id === obsHit.props.obsId)
         if (matchObs) {
@@ -1347,7 +1347,7 @@ export default function ParkingPage() {
       // Long-press detection for context menu
       if (contextMenuTimerRef.current) clearTimeout(contextMenuTimerRef.current)
       contextMenuTimerRef.current = setTimeout(() => {
-        const acHit = queryFeatureAtPoint(w, pos.lat, pos.lng, 30)
+        const acHit = queryFeatureAtPoint(w, pos.lat, pos.lng, 50)
         if (acHit && acHit.type === 'aircraft') {
           const spotId = acHit.props.spotId
           const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
@@ -1379,6 +1379,10 @@ export default function ParkingPage() {
       onMouseUp(pos.lat, pos.lng)
     }
 
+    // Prevent browser context menu on map so our custom one works
+    const preventContextMenu = (ev: Event) => { ev.preventDefault() }
+    mapDiv.addEventListener('contextmenu', preventContextMenu)
+
     mapDiv.addEventListener('mousedown', onCanvasMouseDown)
     mapDiv.addEventListener('mousemove', onCanvasMouseMove)
     mapDiv.addEventListener('mouseup', onCanvasMouseUp)
@@ -1391,7 +1395,7 @@ export default function ParkingPage() {
       if (!e.latLng) return
       const clickLat = e.latLng.lat()
       const clickLng = e.latLng.lng()
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 30)
+      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 50)
       if (acHit && acHit.type === 'aircraft') {
         const spotId = acHit.props.spotId
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
@@ -1405,6 +1409,7 @@ export default function ParkingPage() {
     })
 
     return () => {
+      mapDiv.removeEventListener('contextmenu', preventContextMenu)
       mapDiv.removeEventListener('mousedown', onCanvasMouseDown)
       mapDiv.removeEventListener('mousemove', onCanvasMouseMove)
       mapDiv.removeEventListener('mouseup', onCanvasMouseUp)
