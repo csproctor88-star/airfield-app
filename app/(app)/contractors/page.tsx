@@ -15,7 +15,7 @@ type FilterTab = 'active' | 'all' | 'completed'
 
 export default function ContractorsPage() {
   const { installationId, userRole } = useInstallation()
-  const canManageTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
+  const canManageTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin' || userRole === 'amops'
   const [contractors, setContractors] = useState<ContractorRow[]>([])
   const [filter, setFilter] = useState<FilterTab>('active')
   const [search, setSearch] = useState('')
@@ -44,6 +44,7 @@ export default function ContractorsPage() {
   const [showTemplates, setShowTemplates] = useState(false)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
+  const [editingTemplateIdx, setEditingTemplateIdx] = useState<number | null>(null)
 
   // Load templates from Supabase
   useEffect(() => {
@@ -109,6 +110,43 @@ export default function ContractorsPage() {
     toast.success('Template deleted')
   }
 
+  const handleEditTemplate = (idx: number) => {
+    const t = templates[idx]
+    if (!t) return
+    setTemplateName(t.name)
+    setFormCompany(t.company)
+    setFormContact(t.contact)
+    setFormCallsign(t.callsign || '')
+    setFormNotes(t.notes || '')
+    setFormAf483(t.af_form_483 || '')
+    setFormAf483Exp(t.af_form_483_expiration || '')
+    setFormPhone(t.contact_phone || '')
+    setEditingTemplateIdx(idx)
+    setShowSaveTemplate(true)
+    setUsingTemplate(null)
+    setShowForm(true)
+  }
+
+  const handleUpdateTemplate = () => {
+    if (editingTemplateIdx === null || !templateName.trim() || !formCompany.trim()) return
+    const updated = [...templates]
+    updated[editingTemplateIdx] = {
+      name: templateName.trim(),
+      company: formCompany,
+      contact: formContact,
+      callsign: formCallsign,
+      notes: formNotes,
+      af_form_483: formAf483,
+      af_form_483_expiration: formAf483Exp,
+      contact_phone: formPhone,
+    }
+    saveTemplates(updated)
+    setTemplateName('')
+    setEditingTemplateIdx(null)
+    setShowSaveTemplate(false)
+    toast.success(`Template "${updated[editingTemplateIdx]?.name || templateName.trim()}" updated`)
+  }
+
   // Edit state
   const [editCompany, setEditCompany] = useState('')
   const [editContact, setEditContact] = useState('')
@@ -162,6 +200,9 @@ export default function ContractorsPage() {
     setFormAf483Exp('')
     setFormPhone('')
     setUsingTemplate(null)
+    setEditingTemplateIdx(null)
+    setShowSaveTemplate(false)
+    setTemplateName('')
   }
 
   async function handleCreate() {
@@ -309,10 +350,10 @@ export default function ContractorsPage() {
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-              New Personnel Entry
+              {editingTemplateIdx !== null ? 'Edit Template' : 'New Personnel Entry'}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              {canManageTemplates && formCompany.trim() && (
+              {canManageTemplates && formCompany.trim() && editingTemplateIdx === null && (
                 <button onClick={() => setShowSaveTemplate(t => !t)} style={{
                   padding: '4px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                   background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
@@ -322,7 +363,7 @@ export default function ContractorsPage() {
             </div>
           </div>
 
-          {/* Save as template mini-form */}
+          {/* Save/edit template mini-form */}
           {showSaveTemplate && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
               <input
@@ -332,12 +373,20 @@ export default function ContractorsPage() {
                 style={{ ...inputStyle, flex: 1 }}
                 autoFocus
               />
-              <button onClick={handleSaveAsTemplate} disabled={!templateName.trim()} style={{
+              <button onClick={editingTemplateIdx !== null ? handleUpdateTemplate : handleSaveAsTemplate} disabled={!templateName.trim()} style={{
                 padding: '6px 14px', borderRadius: 'var(--radius-md)', border: 'none',
                 background: 'var(--color-cyan)', color: '#0F172A', fontSize: 'var(--fs-xs)',
                 fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 opacity: templateName.trim() ? 1 : 0.5,
-              }}>Save</button>
+              }}>{editingTemplateIdx !== null ? 'Update' : 'Save'}</button>
+              {editingTemplateIdx !== null && (
+                <button onClick={() => { setEditingTemplateIdx(null); setShowSaveTemplate(false); setTemplateName('') }} style={{
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>Cancel</button>
+              )}
             </div>
           )}
 
@@ -363,15 +412,26 @@ export default function ContractorsPage() {
                 ))}
               </select>
               {canManageTemplates && usingTemplate && (
-                <button onClick={() => {
-                  const idx = templates.findIndex(t => t.name === usingTemplate.name)
-                  if (idx >= 0) handleDeleteTemplate(idx)
-                }} style={{
-                  padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-danger)', background: 'rgba(239,68,68,0.1)',
-                  color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                }}>Delete Template</button>
+                <>
+                  <button onClick={() => {
+                    const idx = templates.findIndex(t => t.name === usingTemplate.name)
+                    if (idx >= 0) handleEditTemplate(idx)
+                  }} style={{
+                    padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.1)',
+                    color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  }}>Edit</button>
+                  <button onClick={() => {
+                    const idx = templates.findIndex(t => t.name === usingTemplate.name)
+                    if (idx >= 0) handleDeleteTemplate(idx)
+                  }} style={{
+                    padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--color-danger)', background: 'rgba(239,68,68,0.1)',
+                    color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                  }}>Delete</button>
+                </>
               )}
             </div>
           )}
@@ -397,7 +457,7 @@ export default function ContractorsPage() {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {!usingTemplate && (
+            {(!usingTemplate || editingTemplateIdx !== null) && (
               <>
                 <div>
                   <div style={labelStyle}>Company Name *</div>
@@ -409,28 +469,32 @@ export default function ContractorsPage() {
                 </div>
               </>
             )}
-            <div>
-              <div style={labelStyle}>Location *</div>
-              <input value={formLocation} onChange={e => setFormLocation(e.target.value)} placeholder="e.g. TWY A/B Intersection" style={inputStyle} />
-            </div>
-            <div>
-              <div style={labelStyle}>Work Description *</div>
-              <input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Joint sealing and pavement repair" style={inputStyle} />
-            </div>
-            <div>
-              <div style={labelStyle}>Start Date</div>
-              <input type="date" value={formStartDate} onChange={e => setFormStartDate(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
-            <div>
-              <div style={labelStyle}>Radio Number Issued</div>
-              <input value={formRadio} onChange={e => setFormRadio(e.target.value)} placeholder="e.g. Radio 12" style={inputStyle} />
-            </div>
-            <div>
-              <div style={labelStyle}>Flag Number Issued (Vehicle Escort)</div>
-              <input value={formFlag} onChange={e => setFormFlag(e.target.value)} placeholder="e.g. Flag 3" style={inputStyle} />
-            </div>
-            {!usingTemplate && (
+            {editingTemplateIdx === null && (
+              <>
+                <div>
+                  <div style={labelStyle}>Location *</div>
+                  <input value={formLocation} onChange={e => setFormLocation(e.target.value)} placeholder="e.g. TWY A/B Intersection" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>Work Description *</div>
+                  <input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Joint sealing and pavement repair" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>Start Date</div>
+                  <input type="date" value={formStartDate} onChange={e => setFormStartDate(e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
+                <div>
+                  <div style={labelStyle}>Radio Number Issued</div>
+                  <input value={formRadio} onChange={e => setFormRadio(e.target.value)} placeholder="e.g. Radio 12" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={labelStyle}>Flag Number Issued (Vehicle Escort)</div>
+                  <input value={formFlag} onChange={e => setFormFlag(e.target.value)} placeholder="e.g. Flag 3" style={inputStyle} />
+                </div>
+              </>
+            )}
+            {(!usingTemplate || editingTemplateIdx !== null) && (
               <>
                 <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
                 <div>
@@ -459,16 +523,18 @@ export default function ContractorsPage() {
               </>
             )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-            <button
-              onClick={handleCreate}
-              disabled={saving}
-              className="btn-accent"
-              style={{ padding: '8px 20px', width: 'auto', opacity: saving ? 0.6 : 1 }}
-            >
-              {saving ? 'Saving...' : 'Add Personnel'}
-            </button>
-          </div>
+          {editingTemplateIdx === null && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <button
+                onClick={handleCreate}
+                disabled={saving}
+                className="btn-accent"
+                style={{ padding: '8px 20px', width: 'auto', opacity: saving ? 0.6 : 1 }}
+              >
+                {saving ? 'Saving...' : 'Add Personnel'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

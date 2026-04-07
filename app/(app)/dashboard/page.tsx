@@ -428,9 +428,9 @@ export default function AMDashboardPage() {
       </div>
 
       {/* ===== Inspection Status Strip ===== */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Link href="/inspections" style={{
-          flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', gap: 8,
+          flex: '1 1 200px', maxWidth: 360, display: 'flex', alignItems: 'center', gap: 8,
           padding: '8px 14px', borderRadius: 'var(--radius-md)', textDecoration: 'none',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           borderLeft: todayAirfieldStatus.status === 'completed' ? '3px solid var(--color-status-pass)'
@@ -448,7 +448,7 @@ export default function AMDashboardPage() {
           </div>
         </Link>
         <Link href="/inspections" style={{
-          flex: 1, minWidth: 140, display: 'flex', alignItems: 'center', gap: 8,
+          flex: '1 1 200px', maxWidth: 360, display: 'flex', alignItems: 'center', gap: 8,
           padding: '8px 14px', borderRadius: 'var(--radius-md)', textDecoration: 'none',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           borderLeft: todayLightingStatus.status === 'completed' ? '3px solid var(--color-status-pass)'
@@ -467,15 +467,16 @@ export default function AMDashboardPage() {
         </Link>
       </div>
 
-      {/* ===== Quick Actions — touch-friendly pill strip ===== */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* ===== Quick Actions — centered, responsive grid ===== */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
         {[
           { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
           { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
         ].map(q => (
           <Link key={q.label} href={q.href} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
+            flex: '1 1 120px', maxWidth: 200,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
             textDecoration: 'none', fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)',
           }}>
@@ -483,24 +484,27 @@ export default function AMDashboardPage() {
           </Link>
         ))}
         <button onClick={() => setShowContractorForm(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
+          flex: '1 1 120px', maxWidth: 200,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
           <span style={{ fontSize: 'var(--fs-lg)' }}>🏗️</span> Personnel
         </button>
         <button onClick={() => setShowShiftChecklist(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
+          flex: '1 1 120px', maxWidth: 200,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
           <span style={{ fontSize: 'var(--fs-lg)' }}>☑️</span> Checklist
         </button>
         <button onClick={() => setShowQrc(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 8,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
+          flex: '1 1 120px', maxWidth: 200,
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
@@ -538,7 +542,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Manual Entry — collapsed by default ===== */}
       {!logEntryExpanded ? (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
           <button
             onClick={() => setLogEntryExpanded(true)}
             style={{

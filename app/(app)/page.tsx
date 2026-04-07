@@ -1218,8 +1218,85 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== Runway & NAVAID Status ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${3 + customBoards.length}, 1fr)`, gap: 8, marginBottom: 12, alignItems: 'start' }}>
+      {/* ===== Airfield Status Sections ===== */}
+      {(() => {
+        // Group custom boards by section
+        const boardsBySection: Record<string, typeof customBoards> = { runway: [], navaid: [], arff: [], standalone: [] }
+        for (const b of customBoards) {
+          const sec = (b as any).section || 'standalone'
+          if (!boardsBySection[sec]) boardsBySection[sec] = []
+          boardsBySection[sec].push(b)
+        }
+
+        // Render a custom board card (reused across sections)
+        const renderBoardCard = (board: typeof customBoards[0]) => {
+          const boardItems = customItems.filter(i => i.board_id === board.id)
+          const BOARD_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
+          return (
+            <div key={board.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 140 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{board.board_name}</div>
+              {boardItems.length === 0 ? (
+                <div className="card" style={{ padding: 12 }}>
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>No items configured</div>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: '8px 12px 4px' }}>
+                  {boardItems.map(item => (
+                    <div key={item.id} style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>{item.item_name}</span>
+                        <button
+                          onClick={() => setCustomItemDialog({ item, boardName: board.board_name, selectedStatus: item.status, notes: customItemNotes[item.id] || '' })}
+                          style={{
+                            width: 36, height: 28, borderRadius: 'var(--radius-sm)',
+                            border: `2px solid ${STATUS_COLORS[item.status]}`,
+                            background: `${STATUS_HEX[item.status]}20`,
+                            cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
+                            color: STATUS_COLORS[item.status], textTransform: 'uppercase', padding: 0,
+                          }}
+                        >{BOARD_LABELS[item.status] || 'G'}</button>
+                      </div>
+                      {(item.status === 'yellow' || item.status === 'red') && (
+                        <textarea
+                          placeholder="Add note..."
+                          value={customItemNotes[item.id] || ''}
+                          onChange={(e) => setCustomItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          onBlur={() => handleCustomItemNotesSave(item, board.board_name)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleCustomItemNotesSave(item, board.board_name) }}
+                          rows={1}
+                          style={{
+                            width: '100%', boxSizing: 'border-box',
+                            background: 'var(--color-bg-inset)',
+                            border: `1px solid ${STATUS_HEX[item.status]}40`,
+                            borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 'var(--fs-lg)',
+                            color: 'var(--color-text-1)', outline: 'none', resize: 'none', overflow: 'hidden',
+                            fontFamily: 'inherit', fieldSizing: 'content' as unknown as undefined, minHeight: 32,
+                          }}
+                          ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
+                          onInput={(e) => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px' }}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        }
+
+        // Section row style: responsive grid, max 3 per row on mobile, more on wider screens
+        const sectionRowStyle = {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          gap: 8,
+          alignItems: 'start',
+        }
+
+        return (<>
+      {/* ── RUNWAY STATUS ROW ── */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Runway Status</div>
+        <div style={sectionRowStyle}>
       {(() => {
         // Build runway entries from installation runways
         const rwyEntries = runways.map(r => {
@@ -1391,6 +1468,9 @@ export default function HomePage() {
           </div>
         )
       })()}
+      {boardsBySection.runway.map(b => renderBoardCard(b))}
+        </div>
+      </div>
 
       {/* ARFF Aircraft Readiness Dialog */}
       {arffDialog && (
@@ -1488,9 +1568,11 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* NAVAID cards — stacked vertically */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 160 }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>NAVAID Status</div>
+      {/* ── NAVAID STATUS ROW ── */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>NAVAID Status</div>
+        <div style={sectionRowStyle}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 140 }}>
           {navaids.length === 0 ? (
             <div className="card" style={{ padding: 12 }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
@@ -1585,11 +1667,16 @@ export default function HomePage() {
                 )}
             </>)
           })()}
-      </div>{/* end NAVAID column */}
+      </div>{/* end NAVAID inner column */}
+      {boardsBySection.navaid.map(b => renderBoardCard(b))}
+        </div>
+      </div>
 
-      {/* ARFF Status — stacked vertically */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ARFF Status</div>
+      {/* ── ARFF STATUS ROW ── */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>ARFF Status</div>
+        <div style={sectionRowStyle}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 140 }}>
           {/* ARFF CAT card */}
           <div className="card" style={{
             padding: '8px 12px',
@@ -1664,85 +1751,22 @@ export default function HomePage() {
               </div>
             )
           })}
-      </div>{/* end ARFF column */}
+      </div>{/* end ARFF inner column */}
+      {boardsBySection.arff.map(b => renderBoardCard(b))}
+        </div>
+      </div>
 
-      {/* Custom Status Boards — dynamically rendered per base config */}
-      {customBoards.map(board => {
-        const boardItems = customItems.filter(i => i.board_id === board.id)
-        const BOARD_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
-        return (
-          <div key={board.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{board.board_name}</div>
-            {boardItems.length === 0 ? (
-              <div className="card" style={{ padding: 12 }}>
-                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
-                  No items configured
-                </div>
-              </div>
-            ) : (
-              <div className="card" style={{ padding: '8px 12px 4px' }}>
-                {boardItems.map(item => (
-                  <div key={item.id} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
-                        {item.item_name}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setCustomItemDialog({ item, boardName: board.board_name, selectedStatus: item.status, notes: customItemNotes[item.id] || '' })
-                        }}
-                        style={{
-                          width: 36, height: 28, borderRadius: 'var(--radius-sm)',
-                          border: `2px solid ${STATUS_COLORS[item.status]}`,
-                          background: `${STATUS_HEX[item.status]}20`,
-                          cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
-                          color: STATUS_COLORS[item.status], textTransform: 'uppercase', padding: 0,
-                        }}
-                      >
-                        {BOARD_LABELS[item.status] || 'G'}
-                      </button>
-                    </div>
-                    {(item.status === 'yellow' || item.status === 'red') && (
-                      <textarea
-                        placeholder="Add note..."
-                        value={customItemNotes[item.id] || ''}
-                        onChange={(e) => setCustomItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))}
-                        onBlur={() => handleCustomItemNotesSave(item, board.board_name)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleCustomItemNotesSave(item, board.board_name) }}
-                        rows={1}
-                        style={{
-                          width: '100%', boxSizing: 'border-box',
-                          background: 'var(--color-bg-inset)',
-                          border: `1px solid ${STATUS_HEX[item.status]}40`,
-                          borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 'var(--fs-lg)',
-                          color: 'var(--color-text-1)', outline: 'none',
-                          resize: 'none', overflow: 'hidden',
-                          fontFamily: 'inherit',
-                          fieldSizing: 'content' as unknown as undefined,
-                          minHeight: 32,
-                        }}
-                        ref={(el) => {
-                          if (el) {
-                            el.style.height = 'auto'
-                            el.style.height = el.scrollHeight + 'px'
-                          }
-                        }}
-                        onInput={(e) => {
-                          const target = e.target as HTMLTextAreaElement
-                          target.style.height = 'auto'
-                          target.style.height = target.scrollHeight + 'px'
-                        }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* ── STANDALONE BOARDS ROW ── */}
+      {boardsBySection.standalone.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={sectionRowStyle}>
+            {boardsBySection.standalone.map(b => renderBoardCard(b))}
           </div>
-        )
-      })}
+        </div>
+      )}
 
-      </div>{/* end main status row */}
+      </>)
+      })()}
 
       {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
       <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>

@@ -13,6 +13,7 @@ export type CustomStatusBoard = {
   id: string
   base_id: string
   board_name: string
+  section: 'runway' | 'navaid' | 'arff' | 'standalone'
   sort_order: number
   created_by: string | null
   created_at: string
@@ -50,6 +51,7 @@ export async function createCustomStatusBoard(input: {
   base_id: string
   board_name: string
   sort_order?: number
+  section?: 'runway' | 'navaid' | 'arff' | 'standalone'
 }): Promise<CustomStatusBoard | null> {
   const supabase = db()
   if (!supabase) return null
@@ -68,7 +70,7 @@ export async function createCustomStatusBoard(input: {
 
 export async function updateCustomStatusBoard(
   id: string,
-  updates: Partial<Pick<CustomStatusBoard, 'board_name' | 'sort_order'>>,
+  updates: Partial<Pick<CustomStatusBoard, 'board_name' | 'sort_order' | 'section'>>,
 ): Promise<CustomStatusBoard | null> {
   const supabase = db()
   if (!supabase) return null

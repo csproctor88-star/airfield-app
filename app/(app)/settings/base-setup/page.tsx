@@ -3664,6 +3664,7 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
   const [newItemNames, setNewItemNames] = useState<Record<string, string>>({})
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null)
   const [editingBoardName, setEditingBoardName] = useState('')
+  const [newBoardSection, setNewBoardSection] = useState<'runway' | 'navaid' | 'arff' | 'standalone'>('standalone')
   const [loading, setLoading] = useState(true)
 
   const loadBoards = useCallback(async () => {
@@ -3687,12 +3688,21 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
       base_id: installationId,
       board_name: newBoardName.trim(),
       sort_order: boards.length,
+      section: newBoardSection,
     })
     if (board) {
       setBoards(prev => [...prev, board])
       setItemsByBoard(prev => ({ ...prev, [board.id]: [] }))
       setNewBoardName('')
+      setNewBoardSection('standalone')
       toast.success(`Board "${board.board_name}" created`)
+    }
+  }
+
+  const handleSectionChange = async (board: CustomStatusBoard, section: 'runway' | 'navaid' | 'arff' | 'standalone') => {
+    const updated = await updateCustomStatusBoard(board.id, { section })
+    if (updated) {
+      setBoards(prev => prev.map(b => b.id === updated.id ? updated : b))
     }
   }
 
@@ -3806,6 +3816,21 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
                   {board.board_name}
                 </span>
               )}
+              <select
+                value={board.section || 'standalone'}
+                onChange={e => handleSectionChange(board, e.target.value as 'runway' | 'navaid' | 'arff' | 'standalone')}
+                style={{
+                  padding: '2px 6px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                  color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                }}
+                title="Dashboard section"
+              >
+                <option value="standalone">Standalone</option>
+                <option value="runway">Runway</option>
+                <option value="navaid">NAVAID</option>
+                <option value="arff">ARFF</option>
+              </select>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
               <button
                 onClick={() => handleDeleteBoard(board)}
@@ -3876,19 +3901,33 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
       })}
 
       {/* Add new board */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <input
           value={newBoardName}
           onChange={e => setNewBoardName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAddBoard()}
           placeholder="New board name (e.g., Arresting Systems, Comm Status)..."
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            flex: 1, minWidth: 180, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
+        <select
+          value={newBoardSection}
+          onChange={e => setNewBoardSection(e.target.value as any)}
+          style={{
+            padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+          }}
+        >
+          <option value="standalone">Standalone Row</option>
+          <option value="runway">Runway Section</option>
+          <option value="navaid">NAVAID Section</option>
+          <option value="arff">ARFF Section</option>
+        </select>
         <button
           onClick={handleAddBoard}
           disabled={!newBoardName.trim()}
