@@ -1395,9 +1395,12 @@ export default function ParkingPage() {
       onMouseUp(pos.lat, pos.lng)
     }
 
-    // Suppress browser context menu on map
-    const onContextMenu = (ev: MouseEvent) => { ev.preventDefault() }
-    mapDiv.addEventListener('contextmenu', onContextMenu)
+    // Suppress browser context menu on map — must use document-level capture
+    // because Google Maps creates deeply nested internal DOM elements
+    const onContextMenu = (ev: MouseEvent) => {
+      if (mapDiv.contains(ev.target as Node)) ev.preventDefault()
+    }
+    document.addEventListener('contextmenu', onContextMenu, true)
     mapDiv.addEventListener('mousedown', onCanvasMouseDown)
     mapDiv.addEventListener('mousemove', onCanvasMouseMove)
     mapDiv.addEventListener('mouseup', onCanvasMouseUp)
@@ -1406,7 +1409,7 @@ export default function ParkingPage() {
     mapDiv.addEventListener('touchend', onTouchEnd)
 
     return () => {
-      mapDiv.removeEventListener('contextmenu', onContextMenu)
+      document.removeEventListener('contextmenu', onContextMenu, true)
       mapDiv.removeEventListener('mousedown', onCanvasMouseDown)
       mapDiv.removeEventListener('mousemove', onCanvasMouseMove)
       mapDiv.removeEventListener('mouseup', onCanvasMouseUp)
