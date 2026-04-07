@@ -991,26 +991,30 @@ export default function ParkingPage() {
     // ── Aircraft silhouette markers ──
     if (visibleLayers.aircraft) {
       // Pre-compute pixels-per-degree ONCE before the async loop
+      // This replicates the Mapbox approach: project center and center+wingspan, measure px distance
       const bounds = gmap.getBounds()
-      const mapDiv = gmap.getDiv()
+      const mapDivEl = gmap.getDiv()
       const mapCenter = gmap.getCenter()
-      const pxPerDegLng = (bounds && mapDiv && mapDiv.clientWidth > 0)
-        ? mapDiv.clientWidth / (bounds.getNorthEast().lng() - bounds.getSouthWest().lng())
+      const pxPerDegLng = (bounds && mapDivEl && mapDivEl.clientWidth > 0)
+        ? mapDivEl.clientWidth / Math.abs(bounds.getNorthEast().lng() - bounds.getSouthWest().lng())
         : 1000
       const centerLat = mapCenter?.lat() ?? 42
 
       const renderAll = async () => {
         for (const spot of spotsWithAircraft) {
           const c = spotCenter(spot)
-          // Use pre-computed pxPerDegLng for consistent scaling across all aircraft
+
+          // Exactly replicate Mapbox computeIconScale:
+          // 1. wingspan in degrees of longitude at this latitude
           const wingspanM = spot.wingspan_ft * FT_TO_M
           const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
-          const targetPx = wingspanDegLng * pxPerDegLng
+          // 2. wingspan in screen pixels
+          const targetCssPx = wingspanDegLng * pxPerDegLng
+          // 3. imageWidthPx = source image width (NOT the rotated canvas)
           const aspect = spot.length_ft / spot.wingspan_ft
-          const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
-          const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
-          const fixedDimCalc = Math.max(imgW, imgH) + 16
-          const scale = Math.max(0.02, Math.min(targetPx / fixedDimCalc, 4.0))
+          const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
+          // 4. scale = same as Mapbox icon-size
+          const scale = Math.max(0.02, Math.min(targetCssPx / imageWidthPx, 4.0))
           const isSelected = editingSpot?.id === spot.id
           const heading = spot.heading_deg || 0
 
@@ -1048,7 +1052,7 @@ export default function ParkingPage() {
           }
 
           // Display size = fixedDim * scale
-          const displayDim = Math.min(300, Math.max(8, Math.round(cached.fixedDim * scale)))
+          const displayDim = Math.min(800, Math.max(8, Math.round(cached.fixedDim * scale)))
           const marker = new google.maps.Marker({
             position: { lat: c.lat, lng: c.lon },
             map: gmap,
