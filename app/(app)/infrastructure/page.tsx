@@ -390,7 +390,7 @@ export default function InfrastructureMapPage() {
   const watchIdRef = useRef<number | null>(null)
 
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
+    () => Object.fromEntries(LAYERS.map(l => [l.key, false]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
   const { runways, installationId, userRole, facilities } = useInstallation()
@@ -420,6 +420,9 @@ export default function InfrastructureMapPage() {
   // Cached full component data for outage recalculation
   const fullComponentsRef = useRef<any[]>([])
   const lightingSystemsRef = useRef<any[]>([])
+
+  // Lighting status panel collapsed by default
+  const [showHealthPanel, setShowHealthPanel] = useState(false)
 
   // Show outages only filter
   const [showOutagesOnly, setShowOutagesOnly] = useState(false)
@@ -2465,6 +2468,7 @@ export default function InfrastructureMapPage() {
         display: 'flex',
         flexDirection: 'column',
         height: isFullscreen ? '100vh' : 'calc(100vh - 60px)',
+        paddingBottom: isFullscreen ? 0 : 8,
         ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999, background: 'var(--color-bg)', padding: 0 } : {}),
       }}
     >
@@ -2473,15 +2477,15 @@ export default function InfrastructureMapPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: isFullscreen ? 0 : 10,
+        marginBottom: isFullscreen ? 0 : 6,
         padding: isFullscreen ? '8px 14px' : 0,
         flexShrink: 0,
         flexWrap: 'wrap',
-        gap: 8,
+        gap: 6,
       }}>
-        <div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Visual NAVAIDs</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Visual NAVAIDs</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
             {totalFeatures.toLocaleString()} features
           </div>
         </div>
@@ -2555,10 +2559,41 @@ export default function InfrastructureMapPage() {
         )}
       </div>
 
-      {/* System Health Panel */}
+      {/* System Health Panel — collapsible */}
       {!editMode && !auditMode && (
-        <div style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 8 }}>
-          <SystemHealthPanel healths={systemHealths} loading={healthLoading} outageEvents={outageEvents} />
+        <div style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 4 }}>
+          <button
+            onClick={() => setShowHealthPanel(prev => !prev)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 10px',
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: showHealthPanel ? '10px 10px 0 0' : 10,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', width: 12, textAlign: 'center' }}>
+              {showHealthPanel ? '▼' : '▶'}
+            </span>
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', flex: 1, textAlign: 'left' }}>
+              LIGHTING STATUS
+            </span>
+            {systemHealths.reduce((s, h) => s + h.inoperativeFeatures, 0) > 0 && (
+              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 4 }}>
+                {systemHealths.reduce((s, h) => s + h.inoperativeFeatures, 0)} INOP
+              </span>
+            )}
+          </button>
+          {showHealthPanel && (
+            <div style={{ border: '1px solid var(--color-border)', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '8px 10px' }}>
+              <SystemHealthPanel healths={systemHealths} loading={healthLoading} outageEvents={outageEvents} hideHeader />
+            </div>
+          )}
         </div>
       )}
 

@@ -154,11 +154,13 @@ export default function SystemHealthPanel({
   healths,
   loading,
   outageEvents,
+  hideHeader,
 }: {
   healths: SystemHealth[]
   loading?: boolean
   compact?: boolean
   outageEvents?: EnrichedOutageEvent[]
+  hideHeader?: boolean
 }) {
   const [activityExpanded, setActivityExpanded] = useState(false)
 
@@ -230,16 +232,18 @@ export default function SystemHealthPanel({
   return (
     <div>
       {/* Summary header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', flex: 1 }}>
-          LIGHTING STATUS
-        </span>
-        {totalInop > 0 && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: 4 }}>
-            {totalInop} INOP
+      {!hideHeader && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', flex: 1 }}>
+            LIGHTING STATUS
           </span>
-        )}
-      </div>
+          {totalInop > 0 && (
+            <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: 4 }}>
+              {totalInop} INOP
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Category cards */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
