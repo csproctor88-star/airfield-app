@@ -1319,9 +1319,7 @@ export default function HomePage() {
           selectBorder: s === 'closed' ? 'rgba(239,68,68,0.4)' : s === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)',
         })
 
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '0 0 auto' }}>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Runway Status</div>
+        return (<>
             {rwyEntries.map((rwy) => {
               const c = getColors(rwy.status)
               return (
@@ -1329,7 +1327,6 @@ export default function HomePage() {
                   padding: '10px 12px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   background: c.bg, border: `1px solid ${c.border}`,
-                  flex: '0 1 auto', minWidth: 100,
                 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
                   <button
@@ -1430,7 +1427,7 @@ export default function HomePage() {
           {/* RSC / RCR card */}
           {rcrValue ? (
             <div className="card" style={{
-              flex: '0 1 140px', minWidth: 100, padding: '8px 10px',
+              padding: '8px 10px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center',
             }}>
@@ -1443,7 +1440,7 @@ export default function HomePage() {
           ) : (
             <div className="card" onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
               style={{
-                flex: '0 1 140px', minWidth: 100, padding: '8px 10px',
+                padding: '8px 10px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', textAlign: 'center',
               }}>
@@ -1456,7 +1453,7 @@ export default function HomePage() {
           {/* BWC card */}
           <div className="card" onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
             style={{
-              flex: '0 1 140px', minWidth: 100, padding: '8px 10px',
+              padding: '8px 10px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', textAlign: 'center',
             }}>
@@ -1465,8 +1462,7 @@ export default function HomePage() {
               {bwcValue || '—'}
             </div>
           </div>
-          </div>
-        )
+        </>)
       })()}
       {boardsBySection.runway.map(b => renderBoardCard(b))}
         </div>
@@ -1572,7 +1568,6 @@ export default function HomePage() {
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>NAVAID Status</div>
         <div style={sectionRowStyle}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 140 }}>
           {navaids.length === 0 ? (
             <div className="card" style={{ padding: 12 }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
@@ -1667,7 +1662,6 @@ export default function HomePage() {
                 )}
             </>)
           })()}
-      </div>{/* end NAVAID inner column */}
       {boardsBySection.navaid.map(b => renderBoardCard(b))}
         </div>
       </div>
@@ -1676,7 +1670,6 @@ export default function HomePage() {
       <div style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>ARFF Status</div>
         <div style={sectionRowStyle}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 140 }}>
           {/* ARFF CAT card */}
           <div className="card" style={{
             padding: '8px 12px',
@@ -1751,7 +1744,6 @@ export default function HomePage() {
               </div>
             )
           })}
-      </div>{/* end ARFF inner column */}
       {boardsBySection.arff.map(b => renderBoardCard(b))}
         </div>
       </div>
