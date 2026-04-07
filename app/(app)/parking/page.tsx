@@ -299,20 +299,21 @@ function renderFallbackIcon(): { imageData: ImageData; width: number; height: nu
  *  Uses Google Maps projection to convert real-world distance to pixels. */
 function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.maps.Map): number {
   const center = gmap.getCenter()
-  if (!center) return 1
+  if (!center) return 0.1
 
   const zoom = gmap.getZoom() ?? 15
   // Meters per pixel at this zoom level: 156543.03392 * cos(lat) / 2^zoom
   const metersPerPx = 156543.03392 * Math.cos(center.lat() * Math.PI / 180) / Math.pow(2, zoom)
+  if (metersPerPx <= 0) return 0.1
   const wingspanM = wingspanFt * FT_TO_M
   const targetCssPx = wingspanM / metersPerPx
 
   // The icon image is REF_ICON_SIZE px wide (for the wider dimension)
-  // Figure out which dimension is wider in the image
   const aspect = lengthFt / wingspanFt
   const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
 
-  return targetCssPx / imageWidthPx
+  const scale = targetCssPx / imageWidthPx
+  return Math.max(0.02, Math.min(scale, 2.0))
 }
 
 // ── Main Page ──
@@ -1011,7 +1012,8 @@ export default function ParkingPage() {
           const rotDataUrl = rotCanvas.toDataURL('image/png')
 
           // Display size = full image size * scale factor from computeIconScale
-          const displayDim = Math.max(8, Math.round(fixedDim * scale))
+          // Capped to prevent oversized icons on low zoom or calculation errors
+          const displayDim = Math.min(300, Math.max(8, Math.round(fixedDim * scale)))
           const marker = new google.maps.Marker({
             position: { lat: c.lat, lng: c.lon },
             map: gmap,
@@ -1067,7 +1069,7 @@ export default function ParkingPage() {
         const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
         const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
         const fixedDim = Math.max(imgW, imgH) + 16
-        const dim = Math.max(8, Math.round(fixedDim * scale))
+        const dim = Math.min(300, Math.max(8, Math.round(fixedDim * scale)))
         marker.setIcon({
           ...icon,
           scaledSize: new google.maps.Size(dim, dim),
