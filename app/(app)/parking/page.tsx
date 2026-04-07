@@ -1050,15 +1050,32 @@ export default function ParkingPage() {
       }
       renderAll()
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot, zoomTick])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot])
 
   // ── Update icon scale on zoom change ──
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
-    // Re-render on zoom change to rescale aircraft silhouettes
+    // Rescale aircraft markers on zoom change without full re-render
     const listener = w.gmap.addListener('zoom_changed', () => {
-      setZoomTick(t => t + 1)
+      const gmap = w.gmap
+      spotMarkersMapRef.current.forEach((marker, spotId) => {
+        const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+        if (!spot) return
+        const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
+        const icon = marker.getIcon() as google.maps.Icon | undefined
+        if (!icon?.url) return
+        const imgW = spot.wingspan_ft >= spot.length_ft ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE / (spot.length_ft / spot.wingspan_ft)) + 8
+        const imgH = spot.length_ft >= spot.wingspan_ft ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * (spot.length_ft / spot.wingspan_ft)) + 8
+        const scaledW = Math.max(8, Math.round(imgW * scale))
+        const scaledH = Math.max(8, Math.round(imgH * scale))
+        const dim = Math.max(scaledW, scaledH) + 8
+        marker.setIcon({
+          ...icon,
+          scaledSize: new google.maps.Size(dim, dim),
+          anchor: new google.maps.Point(dim / 2, dim / 2),
+        })
+      })
     })
     return () => { google.maps.event.removeListener(listener) }
   }, [mapLoaded])
