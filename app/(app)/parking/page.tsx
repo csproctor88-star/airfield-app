@@ -965,7 +965,7 @@ export default function ParkingPage() {
           const lbl = new google.maps.Marker({
             position: { lat: midPt[1], lng: midPt[0] },
             map: gmap,
-            label: { text: tl.name, color: lineColor, fontWeight: 'bold', fontSize: '12px', className: 'parking-ac-label' },
+            label: { text: tl.name, color: '#FFFFFF', fontWeight: 'bold', fontSize: '12px', className: 'parking-ac-label' },
             icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
             clickable: false, zIndex: 4,
           })
@@ -3017,7 +3017,7 @@ export default function ParkingPage() {
           {!isMobile && !sidebarCollapsed && (
             <div style={{
               position: 'absolute', top: 10, right: 10, zIndex: 10,
-              width: 340, maxHeight: 'calc(100vh - 140px)',
+              width: 344, maxHeight: 'calc(100vh - 140px)',
               display: 'flex', flexDirection: 'column',
               background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
               borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
