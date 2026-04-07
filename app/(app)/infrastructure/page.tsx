@@ -1942,24 +1942,62 @@ export default function InfrastructureMapPage() {
   }, [])
 
   // ── Zoom-based icon scaling (replaces Mapbox interpolation expressions) ──
-  const [currentZoom, setCurrentZoom] = useState(14)
+  const currentZoomRef = useRef(14)
 
-  // Trigger re-render on map idle (after zoom or pan settles) for viewport culling + icon scaling
-  const [mapIdleTick, setMapIdleTick] = useState(0)
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Per-marker metadata for in-place zoom rescaling (avoids full re-render on zoom)
+  type MarkerMeta = { kind: 'sign'; signKey: string } | { kind: 'icon' } | { kind: 'circle'; color: string; isInop: boolean }
+  const markerMetaRef = useRef<Map<string, MarkerMeta>>(new Map())
+
+  // In-place zoom rescale — updates existing marker icon sizes without destroying/rebuilding
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
-    const listener = w.gmap.addListener('idle', () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
-      idleTimerRef.current = setTimeout(() => {
-        setCurrentZoom(w.gmap.getZoom() ?? 14)
-        setMapIdleTick(t => t + 1)
-      }, 200)
-    })
+
+    const rescaleMarkers = () => {
+      const zoom = w.gmap.getZoom() ?? 14
+      currentZoomRef.current = zoom
+      const scale = zoomScale(zoom)
+      const circleRad = zoomCircleRadius(zoom)
+
+      w.markers.forEach((marker, featureId) => {
+        const meta = markerMetaRef.current.get(featureId)
+        if (!meta) return
+
+        if (meta.kind === 'sign') {
+          const natural = w.iconSizes.get(meta.signKey) || { w: 60, h: 24 }
+          const mw = Math.max(Math.round(natural.w * scale), 20)
+          const mh = Math.max(Math.round(natural.h * scale), 10)
+          marker.setIcon({
+            url: w.iconCache.get(meta.signKey) || '',
+            scaledSize: new google.maps.Size(mw, mh),
+            anchor: new google.maps.Point(mw / 2, mh / 2),
+          } as google.maps.Icon)
+        } else if (meta.kind === 'icon') {
+          const sz = Math.max(Math.round(24 * scale), 10)
+          const currentIcon = marker.getIcon() as google.maps.Icon | undefined
+          if (currentIcon?.url) {
+            marker.setIcon({
+              url: currentIcon.url,
+              scaledSize: new google.maps.Size(sz, sz),
+              anchor: new google.maps.Point(sz / 2, sz / 2),
+            } as google.maps.Icon)
+          }
+        } else if (meta.kind === 'circle') {
+          marker.setIcon({
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: circleRad,
+            fillColor: meta.color,
+            fillOpacity: 0.85,
+            strokeColor: meta.isInop ? '#FFFFFF' : '#000000',
+            strokeWeight: meta.isInop ? 2 : 1,
+          })
+        }
+      })
+    }
+
+    const listener = w.gmap.addListener('zoom_changed', rescaleMarkers)
     return () => {
       google.maps.event.removeListener(listener)
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     }
   }, [mapLoaded])
 
@@ -2001,21 +2039,13 @@ export default function InfrastructureMapPage() {
   const renderFeatures = useCallback((wrapper: GMapWrapper, geojson: GeoJSON.FeatureCollection) => {
     // Clear old markers (but keep non-feature markers like location, drag, freemove)
     clearAllObjects(wrapper)
+    markerMetaRef.current.clear()
 
-    // Get visible bounds for viewport culling (with padding)
-    const bounds = wrapper.gmap.getBounds()
-    let viewBounds: { minLat: number; maxLat: number; minLng: number; maxLng: number } | null = null
-    if (bounds) {
-      const ne = bounds.getNorthEast()
-      const sw = bounds.getSouthWest()
-      // Pad by 20% to preload features just outside the viewport
-      const latPad = (ne.lat() - sw.lat()) * 0.2
-      const lngPad = (ne.lng() - sw.lng()) * 0.2
-      viewBounds = {
-        minLat: sw.lat() - latPad, maxLat: ne.lat() + latPad,
-        minLng: sw.lng() - lngPad, maxLng: ne.lng() + lngPad,
-      }
-    }
+    const zoom = currentZoomRef.current
+
+    // All visible-layer features are rendered regardless of viewport position.
+    // Since layers start hidden and users enable 1-2 at a time, the feature count
+    // per render is manageable — and this avoids needing a pan-based re-render cycle.
 
     // Render each GeoJSON feature as a Google Maps marker
     for (const gf of geojson.features) {
@@ -2036,9 +2066,6 @@ export default function InfrastructureMapPage() {
       // Check type-level visibility
       if (!visibleLayers[layerCfg.key]) continue
 
-      // Viewport culling — skip markers outside the visible area
-      if (viewBounds && (lat < viewBounds.minLat || lat > viewBounds.maxLat || lng < viewBounds.minLng || lng > viewBounds.maxLng)) continue
-
       // Determine icon
       const signIcon = props.signIcon ? wrapper.iconCache.get(props.signIcon) : undefined
       const iconName = ICON_MAP[featureType]
@@ -2048,10 +2075,11 @@ export default function InfrastructureMapPage() {
       const color = isInop ? '#EF4444' : layerCfg.color
 
       // Build marker options
-      const scale = zoomScale(currentZoom)
-      const circleRad = zoomCircleRadius(currentZoom)
+      const scale = zoomScale(zoom)
+      const circleRad = zoomCircleRadius(zoom)
 
       let markerIcon: google.maps.Icon | google.maps.Symbol | undefined
+      let meta: MarkerMeta
       if (iconUrl) {
         const isSign = !!props.signIcon
         if (isSign) {
@@ -2065,6 +2093,7 @@ export default function InfrastructureMapPage() {
             scaledSize: new google.maps.Size(w, h),
             anchor: new google.maps.Point(w / 2, h / 2),
           } as google.maps.Icon
+          meta = { kind: 'sign', signKey: iconKey }
         } else {
           // Regular feature icons (approach lights, PAPI, etc.)
           const sz = Math.max(Math.round(24 * scale), 10)
@@ -2073,6 +2102,7 @@ export default function InfrastructureMapPage() {
             scaledSize: new google.maps.Size(sz, sz),
             anchor: new google.maps.Point(sz / 2, sz / 2),
           } as google.maps.Icon
+          meta = { kind: 'icon' }
         }
       } else {
         // Circle renderType — use a Symbol
@@ -2085,6 +2115,7 @@ export default function InfrastructureMapPage() {
           strokeWeight: isInop ? 2 : 1,
           rotation: props.rotation || 0,
         }
+        meta = { kind: 'circle', color, isInop }
       }
 
       const marker = new google.maps.Marker({
@@ -2102,6 +2133,7 @@ export default function InfrastructureMapPage() {
       })
 
       wrapper.markers.set(featureId, marker)
+      markerMetaRef.current.set(featureId, meta)
     }
   }, [visibleLayers, buildPopupHtml])
 
@@ -2278,13 +2310,13 @@ export default function InfrastructureMapPage() {
     if (!map.current || !mapLoaded) return
     registerLabeledSigns(map.current, dbFeatures)
     renderFeatures(map.current, featureGeoJson)
-  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures, currentZoom, mapIdleTick])
+  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures])
 
   // Sync layer visibility — re-render features when toggling (markers are filtered in renderFeatures)
   useEffect(() => {
     if (!map.current || !mapLoaded) return
     renderFeatures(map.current, featureGeoJson)
-  }, [visibleLayers, mapLoaded, currentZoom, mapIdleTick])
+  }, [visibleLayers, mapLoaded])
 
   // Sync health ring circles visibility
   useEffect(() => {
