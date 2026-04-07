@@ -1380,8 +1380,8 @@ export default function ParkingPage() {
     }
 
     // Prevent browser context menu on map so our custom one works
-    const preventContextMenu = (ev: Event) => { ev.preventDefault() }
-    mapDiv.addEventListener('contextmenu', preventContextMenu)
+    const preventContextMenu = (ev: Event) => { ev.preventDefault(); ev.stopPropagation() }
+    mapDiv.addEventListener('contextmenu', preventContextMenu, true)
 
     mapDiv.addEventListener('mousedown', onCanvasMouseDown)
     mapDiv.addEventListener('mousemove', onCanvasMouseMove)
