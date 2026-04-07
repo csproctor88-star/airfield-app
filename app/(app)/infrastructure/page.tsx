@@ -1948,13 +1948,18 @@ export default function InfrastructureMapPage() {
   type MarkerMeta = { kind: 'sign'; signKey: string } | { kind: 'icon' } | { kind: 'circle'; color: string; isInop: boolean }
   const markerMetaRef = useRef<Map<string, MarkerMeta>>(new Map())
 
-  // In-place zoom rescale — updates existing marker icon sizes without destroying/rebuilding
+  // In-place zoom rescale — fires on 'idle' (after zoom/pan animation settles),
+  // not on 'zoom_changed' (which fires during the animation and causes flicker).
+  // Markers keep their old size during the animation and snap to new size once settled.
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
+    let lastZoom = currentZoomRef.current
 
-    const rescaleMarkers = () => {
+    const onIdle = () => {
       const zoom = w.gmap.getZoom() ?? 14
+      if (zoom === lastZoom) return // pan-only — no rescale needed
+      lastZoom = zoom
       currentZoomRef.current = zoom
       const scale = zoomScale(zoom)
       const circleRad = zoomCircleRadius(zoom)
@@ -1995,7 +2000,7 @@ export default function InfrastructureMapPage() {
       })
     }
 
-    const listener = w.gmap.addListener('zoom_changed', rescaleMarkers)
+    const listener = w.gmap.addListener('idle', onIdle)
     return () => {
       google.maps.event.removeListener(listener)
     }

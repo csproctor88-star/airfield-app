@@ -1148,13 +1148,19 @@ export default function ParkingPage() {
     renderAircraft()
   }, [mapLoaded, spotsWithAircraft, visibleLayers.aircraft])
 
-  // ── Layer 3: Zoom rescaling — updates existing markers in-place, no destroy/rebuild ──
+  // ── Layer 3: Zoom rescaling — fires on 'idle' (after zoom animation settles),
+  // not on 'zoom_changed' (which fires during animation and causes flicker).
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
     const gmap = w.gmap
+    let lastZoom = gmap.getZoom() ?? 15
 
-    const rescaleMarkers = () => {
+    const onIdle = () => {
+      const zoom = gmap.getZoom() ?? 15
+      if (zoom === lastZoom) return // pan-only — no rescale needed
+      lastZoom = zoom
+
       const bounds = gmap.getBounds()
       const mapDivEl = gmap.getDiv()
       const mapCenter = gmap.getCenter()
@@ -1186,7 +1192,7 @@ export default function ParkingPage() {
       })
     }
 
-    const listener = gmap.addListener('zoom_changed', rescaleMarkers)
+    const listener = gmap.addListener('idle', onIdle)
     return () => { google.maps.event.removeListener(listener) }
   }, [mapLoaded])
 
