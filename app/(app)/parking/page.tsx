@@ -298,26 +298,42 @@ function renderFallbackIcon(): { imageData: ImageData; width: number; height: nu
  *  the aircraft's real-world wingspan at the current map zoom.
  *  Uses Google Maps projection to convert real-world distance to pixels. */
 function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.maps.Map): number {
+  // Directly measure how many pixels the wingspan should occupy by projecting
+  // two real-world points and measuring their screen distance.
+  // This matches the Mapbox approach exactly.
+  const bounds = gmap.getBounds()
+  const div = gmap.getDiv()
+  if (!bounds || !div) return 0.1
+
   const center = gmap.getCenter()
   if (!center) return 0.1
 
-  const zoom = gmap.getZoom() ?? 15
-  // Meters per pixel at this zoom level (accounts for device pixel ratio)
-  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-  const metersPerPx = 156543.03392 * Math.cos(center.lat() * Math.PI / 180) / Math.pow(2, zoom)
-  if (metersPerPx <= 0) return 0.1
-  const wingspanM = wingspanFt * FT_TO_M
-  // Target CSS pixels the wingspan should occupy (adjusted for device pixel ratio)
-  const targetCssPx = (wingspanM / metersPerPx) * dpr
+  const ne = bounds.getNorthEast()
+  const sw = bounds.getSouthWest()
+  const mapWidthPx = div.clientWidth
+  if (mapWidthPx <= 0) return 0.1
 
-  // fixedDim = max dimension of source image + 16
+  // Degrees of longitude visible in the map
+  const lngSpan = ne.lng() - sw.lng()
+  if (lngSpan <= 0) return 0.1
+
+  // Pixels per degree of longitude
+  const pxPerDegLng = mapWidthPx / lngSpan
+
+  // Wingspan in degrees of longitude at this latitude
+  const wingspanM = wingspanFt * FT_TO_M
+  const wingspanDegLng = wingspanM / (111319.9 * Math.cos(center.lat() * Math.PI / 180))
+
+  // Target screen pixels for the wingspan
+  const targetPx = wingspanDegLng * pxPerDegLng
+
+  // fixedDim = canvas size of the rendered icon
   const aspect = lengthFt / wingspanFt
   const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
   const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
   const fixedDim = Math.max(imgW, imgH) + 16
 
-  const scale = targetCssPx / fixedDim
-  return Math.max(0.02, Math.min(scale, 3.0))
+  return Math.max(0.02, Math.min(targetPx / fixedDim, 4.0))
 }
 
 // ── Main Page ──
