@@ -822,10 +822,15 @@ export default function ParkingPage() {
     overlays: google.maps.OverlayView[]
   }>({ polygons: [], polylines: [], markers: [], circles: [], overlays: [] })
 
+  const renderCancelRef = useRef(0)
+
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
     const gmap = w.gmap
+
+    // Increment cancel token — any async render from a previous effect invocation will bail out
+    const renderToken = ++renderCancelRef.current
 
     // Clean up previous objects
     const prev = gmapObjectsRef.current
@@ -1002,6 +1007,8 @@ export default function ParkingPage() {
 
       const renderAll = async () => {
         for (const spot of spotsWithAircraft) {
+          // Bail out if a newer render has started
+          if (renderCancelRef.current !== renderToken) return
           const c = spotCenter(spot)
 
           // Exactly replicate Mapbox computeIconScale:
@@ -1091,6 +1098,7 @@ export default function ParkingPage() {
         }
 
         // Nose gear block markers
+        if (renderCancelRef.current !== renderToken) return
         for (const spot of spotsWithAircraft.filter(s => s.pivot_point_ft > 0)) {
           const marker = new google.maps.Marker({
             position: { lat: spot.latitude, lng: spot.longitude },
