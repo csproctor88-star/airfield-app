@@ -331,6 +331,7 @@ export default function ParkingPage() {
   const [loading, setLoading] = useState(true)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [zoomTick, setZoomTick] = useState(0)
+  const [zoomLevel, setZoomLevel] = useState(15)
 
   // UI state
   const [showNewPlan, setShowNewPlan] = useState(false)
@@ -438,6 +439,8 @@ export default function ParkingPage() {
   const dragLabelMarkersRef = useRef<google.maps.Marker[]>([])
   const dragLineRef = useRef<google.maps.Polyline[]>([])
   const spotMarkersMapRef = useRef<Map<string, google.maps.Marker>>(new Map())
+  // Cache rotated silhouette data URLs to avoid re-rendering on every zoom change
+  const silhouetteCacheRef = useRef<Map<string, { url: string; fixedDim: number; heading: number }>>(new Map())
   // ── Derived data ──
 
   const selectedPlan = useMemo(
@@ -972,57 +975,53 @@ export default function ParkingPage() {
           const c = spotCenter(spot)
           const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
           const isSelected = editingSpot?.id === spot.id
+          const heading = spot.heading_deg || 0
 
-          // Render silhouette to canvas at FULL size (REF_ICON_SIZE)
-          const result = await renderSilhouetteImage(spot.aircraft_name || '', spot.wingspan_ft, spot.length_ft)
-          const imgData = result || renderFallbackIcon()
+          // Check cache — reuse rotated image if heading hasn't changed
+          const cacheKey = `${spot.id}-${heading}`
+          let cached = silhouetteCacheRef.current.get(cacheKey)
 
-          // Convert ImageData to data URL
-          const canvas = document.createElement('canvas')
-          canvas.width = imgData.width
-          canvas.height = imgData.height
-          const ctx = canvas.getContext('2d')!
-          ctx.putImageData(imgData.imageData, 0, 0)
-          const dataUrl = canvas.toDataURL('image/png')
+          if (!cached) {
+            // Render silhouette to canvas at FULL size
+            const result = await renderSilhouetteImage(spot.aircraft_name || '', spot.wingspan_ft, spot.length_ft)
+            const imgData = result || renderFallbackIcon()
 
-          // Render rotated icon at FIXED large size — scaling done via scaledSize only
-          const fixedDim = Math.max(imgData.width, imgData.height) + 16
-          const rotCanvas = document.createElement('canvas')
-          rotCanvas.width = fixedDim
-          rotCanvas.height = fixedDim
-          const rotCtx = rotCanvas.getContext('2d')!
-          rotCtx.translate(fixedDim / 2, fixedDim / 2)
-          rotCtx.rotate((spot.heading_deg || 0) * Math.PI / 180)
-          if (isSelected) rotCtx.globalAlpha = 0.4
-          const img = new Image()
-          img.src = dataUrl
-          await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
-          rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
-          rotCtx.globalAlpha = 1
+            const canvas = document.createElement('canvas')
+            canvas.width = imgData.width
+            canvas.height = imgData.height
+            const ctx = canvas.getContext('2d')!
+            ctx.putImageData(imgData.imageData, 0, 0)
+            const dataUrl = canvas.toDataURL('image/png')
 
-          // Selection ring
-          if (isSelected) {
-            rotCtx.strokeStyle = '#22D3EE'
-            rotCtx.lineWidth = 4
-            rotCtx.beginPath()
-            rotCtx.arc(0, 0, Math.max(imgData.width, imgData.height) / 2 + 6, 0, Math.PI * 2)
-            rotCtx.stroke()
+            // Render rotated at fixed full size
+            const fixedDim = Math.max(imgData.width, imgData.height) + 16
+            const rotCanvas = document.createElement('canvas')
+            rotCanvas.width = fixedDim
+            rotCanvas.height = fixedDim
+            const rotCtx = rotCanvas.getContext('2d')!
+            rotCtx.translate(fixedDim / 2, fixedDim / 2)
+            rotCtx.rotate(heading * Math.PI / 180)
+            const img = new Image()
+            img.src = dataUrl
+            await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
+            rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
+
+            cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, heading }
+            silhouetteCacheRef.current.set(cacheKey, cached)
           }
 
-          const rotDataUrl = rotCanvas.toDataURL('image/png')
-
-          // Display size = full image size * scale factor from computeIconScale
-          // Capped to prevent oversized icons on low zoom or calculation errors
-          const displayDim = Math.min(300, Math.max(8, Math.round(fixedDim * scale)))
+          // Display size = fixedDim * scale
+          const displayDim = Math.min(300, Math.max(8, Math.round(cached.fixedDim * scale)))
           const marker = new google.maps.Marker({
             position: { lat: c.lat, lng: c.lon },
             map: gmap,
             icon: {
-              url: rotDataUrl,
+              url: cached.url,
               scaledSize: new google.maps.Size(displayDim, displayDim),
               anchor: new google.maps.Point(displayDim / 2, displayDim / 2),
-            },
-            zIndex: 10,
+            } as google.maps.Icon,
+            zIndex: isSelected ? 20 : 10,
+            opacity: isSelected ? 0.5 : 1,
             label: {
               text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
               color: '#FFFFFF',
@@ -1034,6 +1033,20 @@ export default function ParkingPage() {
           objs.markers.push(marker)
           spotMarkersMapRef.current.set(spot.id, marker)
           w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
+
+          // Selection ring for editing spot
+          if (isSelected) {
+            const wingspanM = spot.wingspan_ft * FT_TO_M
+            const ring = new google.maps.Circle({
+              center: { lat: c.lat, lng: c.lon },
+              radius: wingspanM / 2 + 5,
+              map: gmap,
+              fillColor: 'transparent', fillOpacity: 0,
+              strokeColor: '#22D3EE', strokeWeight: 3,
+              clickable: false, zIndex: 15,
+            })
+            objs.circles.push(ring)
+          }
         }
 
         // Nose gear block markers
@@ -1049,33 +1062,14 @@ export default function ParkingPage() {
       }
       renderAll()
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot, zoomLevel])
 
-  // ── Update icon scale on zoom change ──
+  // ── Track zoom level to trigger re-render for aircraft scaling ──
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
-    // Rescale aircraft markers on zoom change without full re-render
     const listener = w.gmap.addListener('zoom_changed', () => {
-      const gmap = w.gmap
-      spotMarkersMapRef.current.forEach((marker, spotId) => {
-        const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
-        if (!spot) return
-        const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
-        const icon = marker.getIcon() as google.maps.Icon | undefined
-        if (!icon?.url) return
-        // fixedDim matches render: max dimension of source image + 16
-        const aspect = spot.length_ft / spot.wingspan_ft
-        const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
-        const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
-        const fixedDim = Math.max(imgW, imgH) + 16
-        const dim = Math.min(300, Math.max(8, Math.round(fixedDim * scale)))
-        marker.setIcon({
-          ...icon,
-          scaledSize: new google.maps.Size(dim, dim),
-          anchor: new google.maps.Point(dim / 2, dim / 2),
-        })
-      })
+      setZoomLevel(w.gmap.getZoom() ?? 15)
     })
     return () => { google.maps.event.removeListener(listener) }
   }, [mapLoaded])
