@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.30.0 | **Build:** Clean | **54 routes** | **209 source files** | **126 migrations**
+**Version:** 2.31.0 | **Build:** Clean | **55 routes** | **225 source files** | **130 migrations**
 
 ## Tech Stack
 
@@ -12,7 +12,7 @@ Mobile-first, responsive web application for managing airfield operations across
 | Language | TypeScript (strict mode) | 5.9.3 |
 | Styling | Tailwind CSS + CSS custom properties — light/dark/auto theme | 3.4.19 |
 | Backend | Supabase (PostgreSQL, Auth, Storage) | SSR 0.8.0 |
-| Maps | Mapbox GL JS | 3.18.1 |
+| Maps | Google Maps JS API + @googlemaps/js-api-loader | weekly |
 | PDF Viewing | react-pdf (PDF.js) | 10.3.0 |
 | PDF Export | jsPDF + jspdf-autotable | 4.1.0 |
 | Email Delivery | Resend | 6.9.3 |
@@ -373,8 +373,12 @@ airfield-app/
 | Item | Priority | Notes |
 |------|----------|-------|
 | No test suite | High | No unit or integration tests |
-| ~182 `as any` casts | Medium | Across 43 files — Mapbox layer expressions (~28), Supabase row inserts (~70), jsPDF hooks (~11), misc (~73). Regenerate Supabase types to eliminate ~50% |
-| 68 files > 500 lines | Low | Largest: `infrastructure/page.tsx` (4,090), `parking/page.tsx` (3,908), `base-setup/page.tsx` (3,624), `inspections/page.tsx` (2,515) |
+| ~223 `as any` casts | Medium | Across ~50 files — Google Maps adapter (~15), Supabase row inserts (~70), jsPDF hooks (~11), misc (~127). Regenerate Supabase types to eliminate ~40% |
+| 70+ files > 500 lines | Low | Largest: `base-setup/page.tsx` (4,135), `infrastructure/page.tsx` (4,053), `parking/page.tsx` (3,735), `inspections/page.tsx` (2,515) |
+| 11 orphaned Mapbox files | Low | Original Mapbox component files retained alongside Google Maps versions; 2 page-mapbox.tsx backups. Safe to delete after migration is validated |
+| `map-load-gate.tsx` unused | Low | Created but never imported — can be deleted |
+| Ruler tool not ported | Low | `hooks/use-map-ruler.tsx` is Mapbox-only; not used by any Google Maps component |
+| `lib/map-config.ts` partially orphaned | Low | `SATELLITE_STYLE` still referenced by Mapbox backup files only |
 | 3 unused UI components | Low | `airfield-diagram-viewer.tsx`, `confirm-dialog.tsx`, `page-header.tsx` — never imported |
 | Map init duplication | Low | 6 Mapbox components share similar init logic |
 | PDF boilerplate duplication | Low | 16 PDF generators share similar header/footer/photo helper patterns |
@@ -393,4 +397,4 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 - [`docs/Glidepath_SRS_v6.0_Leadership.docx`](./docs/Glidepath_SRS_v6.0_Leadership.docx) — Software Requirements Specification (Leadership Edition)
 - [`docs/Glidepath_SRS_v6.0_Developer.docx`](./docs/Glidepath_SRS_v6.0_Developer.docx) — Software Requirements Specification (Developer Edition)
-- [`docs/SESSION_HANDOFF_v2.30.0.md`](./docs/SESSION_HANDOFF_v2.30.0.md) — Latest session handoff
+- [`docs/SESSION_HANDOFF_v2.31.0.md`](./docs/SESSION_HANDOFF_v2.31.0.md) — Latest session handoff

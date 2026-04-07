@@ -17,6 +17,69 @@ All notable changes to Glidepath.
 
 ---
 
+## [2.31.0] — 2026-04-07
+
+### Google Maps Migration
+- **Full Mapbox → Google Maps migration** — all 13 map components now use Google Maps JS API for government network compatibility. Mapbox GL JS was unusable on gov networks due to WebGL rendering + TLS inspection latency.
+- **Infrastructure page** — 4,090 lines migrated: custom canvas icons, zoom-scaled sizing, spatial index hit testing, drag-to-move, health rings, box select, GPS tracking, edit/audit mode
+- **Parking page** — 3,908 lines migrated: to-scale silhouettes with bounds-based scaling, drag with connecting lines + distance labels, clearance zone polygons, html2canvas PDF capture
+- **Taxiway editor** — polyline drawing, buffer zone polygons, vertex markers, KML/GeoJSON import
+- **Location pickers** (7 consumers) — discrepancies, waivers, ACSI, wildlife sighting/strike, simple discrepancy panel
+- **Map view components** — discrepancy COP, waiver map, obstruction history, obstruction eval (was already on Google tiles)
+- **Wildlife heatmap** — Google Maps HeatmapLayer with zoom-gated point markers
+- **Infrastructure feature picker** — click-to-select with spatial index
+- **Base setup** — runway adjustment map with draggable endpoint markers
+- **Shared utilities** — `lib/google-maps.ts` (single API init), `lib/google-map-adapter.ts` (GMapWrapper, spatial index, icon caching, hit testing)
+- **Context menu** — Ctrl+click on desktop, long-press on touch (Google Maps intercepts right-click)
+- **PDF capture** — html2canvas with temporary 1600x900 resize replaces Mapbox canvas.toDataURL()
+- **Mapbox preserved** — `page-mapbox.tsx` backup files for infrastructure and parking; original Mapbox component files retained alongside `-google.tsx` versions
+
+### Parking Plan Templates
+- **Plan templates** — `is_template` flag on parking_plans, reusable plan shells for different aircraft configurations
+- **Duplicate plan** — deep-copies all spots, taxilanes, and apron boundaries into a new plan or template
+- **Save as Template / Convert to Plan** toggle on any selected plan
+- **Template section** in plan dropdown with purple badge, grouped optgroups
+
+### Auto-Spacing & Heading Preset
+- **Auto-space bulk aircraft** — places aircraft at wingspan + 2x wingtip clearance intervals, perpendicular to heading direction
+- **Heading preset** (Hdg) in aircraft picker — set direction before placing, all placed aircraft use preset heading
+
+### Custom Status Boards
+- **Configurable G/Y/R status panels** on the Airfield Status page for arresting systems, comm status, ARFF equipment, etc.
+- **Base Setup step 13** — create boards with named items, each with green/yellow/red toggle + notes
+- **Dashboard integration** — boards render as additional columns in the status grid with click-to-toggle dialog
+- **Activity logging** — all status changes logged with board name + item name
+
+### PPR (Prior Permission Required) Log
+- **New `/ppr` page** — browsable PPR table with date filtering (Today/7d/30d/Custom), create/edit/delete
+- **Auto PPR# generation** — Julian day + 3-digit sequence + approver operating initials (e.g., 096-003-CP)
+- **Configurable columns** — admins define custom fields per base with 7 field types (Text, Date, Time, Yes/No/N/A, Phone, Number, Email)
+- **Column management** — inline rename, type selection, required toggle, up/down reorder arrows
+- **Dashboard integration** — today's PPRs displayed at bottom of Airfield Status page
+- **Sidebar nav** — registered under Operations as "PPR Log" with ClipboardPen icon
+
+### Weather Info
+- **Advisory number persistence** — weather number now stored on the AdvisoryItem and persists through edit, cancel, and expiry
+- **Display on card** — shows as "WARNING #WW-042" etc.
+- **Included in logs** — cancel and expiry activity log entries include the advisory number
+
+### T-3 Waiver Assessment
+- **PDF document** — 5-page analysis of DAFMAN 13-204v2 compliance, confirming only 1 T-3 waiver required (CAC signature)
+- **Generated via** `scripts/generate-waiver-pdf.js`
+
+### Other
+- **Removed Memphis ANGB (KNQA)** from base directory and Supabase
+- **Service worker tile caching** — CacheFirst rules for ESRI, Google, and Mapbox satellite tiles
+- **Tile pre-cache** — Settings > Data & Storage "Cache Map Tiles" button downloads base area tiles
+
+### Database Migrations (+4)
+- `2026040600` — add `is_template` boolean to `parking_plans`
+- `2026040601` — create `custom_status_boards` + `custom_status_items` tables
+- `2026040602` — create `ppr_columns` + `ppr_entries` tables with JSONB column_values
+- `2026040603` — add `column_type` to `ppr_columns` (text/date/time/yes_no_na/phone/number/email)
+
+---
+
 ## [2.30.0] — 2026-04-06
 
 ### Navigation & UX

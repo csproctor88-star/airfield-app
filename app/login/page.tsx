@@ -598,7 +598,7 @@ function LoginContent() {
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-4)' }}>
-            Glidepath v2.30.0
+            Glidepath v2.31.0
           </div>
         </div>
       </div>
