@@ -2398,13 +2398,13 @@ export default function InfrastructureMapPage() {
       if (f.status !== 'inoperative') continue
       const circle = new google.maps.Circle({
         center: { lat: f.latitude, lng: f.longitude },
-        radius: 6,
+        radius: 2,
         map: wrapper.gmap,
         fillColor: '#EF4444',
-        fillOpacity: 0.15,
+        fillOpacity: 0.2,
         strokeColor: '#EF4444',
-        strokeWeight: 2,
-        strokeOpacity: 0.9,
+        strokeWeight: 1.5,
+        strokeOpacity: 0.8,
         clickable: false,
         zIndex: 50,
       })
