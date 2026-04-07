@@ -1548,16 +1548,29 @@ export default function ParkingPage() {
         try {
           const resp = await fetch(staticUrl)
           if (resp.ok) {
-            const blob = await resp.blob()
-            mapDataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader()
-              reader.onloadend = () => resolve(reader.result as string)
-              reader.readAsDataURL(blob)
-            })
+            const contentType = resp.headers.get('content-type') || ''
+            if (contentType.includes('image')) {
+              const blob = await resp.blob()
+              mapDataUrl = await new Promise<string>((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.readAsDataURL(blob)
+              })
+            } else {
+              // API returned an error (JSON response instead of image)
+              const text = await resp.text()
+              console.warn('Static Maps API error:', text)
+              toast.error('Map capture failed — enable Static Maps API in Google Cloud Console')
+            }
+          } else {
+            toast.error(`Map capture failed (${resp.status})`)
           }
-        } catch {
+        } catch (err) {
+          console.warn('Static Maps fetch error:', err)
           mapDataUrl = null
         }
+      } else if (!apiKey) {
+        toast.error('Map capture requires NEXT_PUBLIC_GOOGLE_MAPS_API_KEY')
       }
     }
 
