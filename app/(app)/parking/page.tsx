@@ -329,6 +329,7 @@ export default function ParkingPage() {
   const [apronBoundaries, setApronBoundaries] = useState<ParkingApronBoundary[]>([])
   const [loading, setLoading] = useState(true)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [zoomTick, setZoomTick] = useState(0)
 
   // UI state
   const [showNewPlan, setShowNewPlan] = useState(false)
@@ -1027,27 +1028,15 @@ export default function ParkingPage() {
       }
       renderAll()
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, editingSpot, zoomTick])
 
   // ── Update icon scale on zoom change ──
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
-    // Re-render on zoom change by triggering a state update
+    // Re-render on zoom change to rescale aircraft silhouettes
     const listener = w.gmap.addListener('zoom_changed', () => {
-      // The main render effect handles everything — but we need a trigger.
-      // We use a no-op to force recalculation of marker sizes on next render.
-      // The render effect depends on spotsWithAircraft which won't change on zoom,
-      // so we use a direct marker update instead.
-      const gmap = w.gmap
-      const spots = spotsWithAircraftRef.current
-      if (spots.length === 0) return
-      // Markers are rebuilt in the render effect; for zoom we simply let them be
-      // since they're created with fixed pixel sizes at render time.
-      // A full re-render would be expensive. The current approach is acceptable
-      // as aircraft markers are recreated when data changes.
-      void gmap // suppress unused
-      void spots
+      setZoomTick(t => t + 1)
     })
     return () => { google.maps.event.removeListener(listener) }
   }, [mapLoaded])
@@ -2873,6 +2862,7 @@ export default function ParkingPage() {
               display: 'flex', flexDirection: 'column',
               background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
               borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
+              wordBreak: 'break-word',
             }}>
               {sidebarContent()}
             </div>

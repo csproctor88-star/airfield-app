@@ -1938,6 +1938,47 @@ export default function InfrastructureMapPage() {
     return html
   }, [])
 
+  // ── Zoom-based icon scaling (replaces Mapbox interpolation expressions) ──
+  const [currentZoom, setCurrentZoom] = useState(14)
+
+  useEffect(() => {
+    const w = map.current
+    if (!w || !mapLoaded) return
+    const listener = w.gmap.addListener('zoom_changed', () => {
+      setCurrentZoom(w.gmap.getZoom() ?? 14)
+    })
+    return () => { google.maps.event.removeListener(listener) }
+  }, [mapLoaded])
+
+  /** Interpolate icon size based on zoom (matches Mapbox: 12→0.2, 14→0.4, 16→0.7, 18→1.0) */
+  function zoomScale(zoom: number): number {
+    if (zoom <= 12) return 0.2
+    if (zoom >= 18) return 1.0
+    // Linear interpolation between breakpoints
+    const stops = [[12, 0.2], [14, 0.4], [16, 0.7], [18, 1.0]]
+    for (let i = 0; i < stops.length - 1; i++) {
+      if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
+        const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
+        return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
+      }
+    }
+    return 0.5
+  }
+
+  /** Circle radius based on zoom (matches Mapbox: 12→2, 14→4, 16→6, 18→10) */
+  function zoomCircleRadius(zoom: number): number {
+    if (zoom <= 12) return 2
+    if (zoom >= 18) return 10
+    const stops = [[12, 2], [14, 4], [16, 6], [18, 10]]
+    for (let i = 0; i < stops.length - 1; i++) {
+      if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
+        const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
+        return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
+      }
+    }
+    return 4
+  }
+
   // ── Render all features as Google Maps markers ──
   // Refs for selection / health circles
   const selectionCirclesRef = useRef<google.maps.Circle[]>([])
@@ -1974,22 +2015,29 @@ export default function InfrastructureMapPage() {
       const color = isInop ? '#EF4444' : layerCfg.color
 
       // Build marker options
+      const scale = zoomScale(currentZoom)
+      const circleRad = zoomCircleRadius(currentZoom)
+
       let markerIcon: google.maps.Icon | google.maps.Symbol | undefined
       if (iconUrl) {
+        // Sign labels get larger scaling since they need to be readable
+        const isSign = !!props.signIcon
+        const baseSize = isSign ? 48 : 24
+        const sz = Math.round(baseSize * scale)
         markerIcon = {
           url: iconUrl,
-          scaledSize: new google.maps.Size(24, 24),
-          anchor: new google.maps.Point(12, 12),
+          scaledSize: new google.maps.Size(Math.max(sz, isSign ? 24 : 8), Math.max(sz, isSign ? 12 : 8)),
+          anchor: new google.maps.Point(Math.max(sz, isSign ? 24 : 8) / 2, Math.max(sz, isSign ? 12 : 8) / 2),
         } as google.maps.Icon
       } else {
         // Circle renderType — use a Symbol
         markerIcon = {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 6,
+          scale: circleRad,
           fillColor: color,
           fillOpacity: 0.85,
-          strokeColor: isInop ? '#FFFFFF' : (layerCfg.strokeColor || '#000000'),
-          strokeWeight: isInop ? 1.5 : (layerCfg.strokeColor ? 1.5 : 0.5),
+          strokeColor: isInop ? '#FFFFFF' : '#000000',
+          strokeWeight: isInop ? 2 : 1,
           rotation: props.rotation || 0,
         }
       }
@@ -2191,13 +2239,13 @@ export default function InfrastructureMapPage() {
     if (!map.current || !mapLoaded) return
     registerLabeledSigns(map.current, dbFeatures)
     renderFeatures(map.current, featureGeoJson)
-  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures])
+  }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures, currentZoom])
 
   // Sync layer visibility — re-render features when toggling (markers are filtered in renderFeatures)
   useEffect(() => {
     if (!map.current || !mapLoaded) return
     renderFeatures(map.current, featureGeoJson)
-  }, [visibleLayers, mapLoaded])
+  }, [visibleLayers, mapLoaded, currentZoom])
 
   // Sync health ring circles visibility
   useEffect(() => {
