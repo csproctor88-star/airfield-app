@@ -435,7 +435,8 @@ export default function ParkingPage() {
   const dragOffsetRef = useRef<{ dLng: number; dLat: number }>({ dLng: 0, dLat: 0 })
   const dragStartPt = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const dragLabelMarkersRef = useRef<google.maps.Marker[]>([])
-  const dragPreviewMarkerRef = useRef<google.maps.Marker | null>(null)
+  const dragLineRef = useRef<google.maps.Polyline[]>([])
+  const spotMarkersMapRef = useRef<Map<string, google.maps.Marker>>(new Map())
   // ── Derived data ──
 
   const selectedPlan = useMemo(
@@ -811,6 +812,7 @@ export default function ParkingPage() {
     prev.overlays.forEach(o => o.setMap(null))
     w.featureIndex.clear()
     gmapObjectsRef.current = { polygons: [], polylines: [], markers: [], circles: [], overlays: [] }
+    spotMarkersMapRef.current.clear()
     const objs = gmapObjectsRef.current
 
     // ── Clearance zones ──
@@ -1014,6 +1016,7 @@ export default function ParkingPage() {
             },
           })
           objs.markers.push(marker)
+          spotMarkersMapRef.current.set(spot.id, marker)
           w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
         }
 
@@ -1113,24 +1116,56 @@ export default function ParkingPage() {
 
       // Move the dragged marker visually
       if (dragSpotId.current) {
-        const marker = map.current?.markers.get(`spot-${dragSpotId.current}`)
-        if (marker) marker.setPosition({ lat, lng })
-      }
-      if (dragObstacleId.current) {
-        const marker = map.current?.markers.get(`obs-${dragObstacleId.current}`)
-        if (marker) marker.setPosition({ lat, lng })
+        const marker = spotMarkersMapRef.current.get(dragSpotId.current)
+        if (marker) {
+          // Compute aircraft center from the new nose gear position
+          const spot = spotsWithAircraftRef.current.find(s => s.id === dragSpotId.current)
+          if (spot) {
+            const c = getAircraftCenter(lng, lat, spot.heading_deg, spot.length_ft, spot.pivot_point_ft)
+            marker.setPosition({ lat: c.lat, lng: c.lon })
+          } else {
+            marker.setPosition({ lat, lng })
+          }
+        }
       }
 
-      // Show clearance distance labels during aircraft drag
+      // Clear old drag labels and lines
+      dragLabelMarkersRef.current.forEach(m => m.setMap(null))
+      dragLabelMarkersRef.current = []
+      dragLineRef.current.forEach(l => l.setMap(null))
+      dragLineRef.current = []
+
+      // Show clearance distance labels + connecting lines during aircraft drag
       if (dragSpotId.current && map.current) {
         const sid = dragSpotId.current
         const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
         if (draggedSpot) {
-          // Clear old drag labels
-          dragLabelMarkersRef.current.forEach(m => m.setMap(null))
-          dragLabelMarkersRef.current = []
-
           const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
+
+          const addLabel = (otherLat: number, otherLng: number, text: string, color: string) => {
+            // Connecting line
+            const line = new google.maps.Polyline({
+              path: [{ lat, lng }, { lat: otherLat, lng: otherLng }],
+              strokeColor: color, strokeWeight: 1.5, strokeOpacity: 0.6,
+              map: gmap, clickable: false, zIndex: 9998,
+            })
+            dragLineRef.current.push(line)
+
+            // Distance label at midpoint with dark background for readability
+            const lbl = new google.maps.Marker({
+              position: { lat: (lat + otherLat) / 2, lng: (lng + otherLng) / 2 },
+              map: gmap,
+              label: { text, color: '#FFFFFF', fontWeight: 'bold', fontSize: '12px', className: 'parking-drag-label' },
+              icon: {
+                path: 'M -30,-10 L 30,-10 L 30,10 L -30,10 Z',
+                fillColor: color === '#22C55E' ? 'rgba(0,80,0,0.85)' : color === '#F59E0B' ? 'rgba(120,80,0,0.85)' : 'rgba(120,0,0,0.85)',
+                fillOpacity: 1, strokeColor: color, strokeWeight: 1.5, scale: 0.6,
+                anchor: new google.maps.Point(0, 0),
+              },
+              clickable: false, zIndex: 9999,
+            })
+            dragLabelMarkersRef.current.push(lbl)
+          }
 
           // Check distances to other aircraft
           for (const other of spotsWithAircraftRef.current) {
@@ -1142,15 +1177,7 @@ export default function ParkingPage() {
             if (result.length > 0) {
               const r = result[0]
               const color = r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E'
-              const lbl = new google.maps.Marker({
-                position: { lat: (lat + other.latitude) / 2, lng: (lng + other.longitude) / 2 },
-                map: gmap,
-                label: { text: `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color, fontWeight: 'bold', fontSize: '13px' },
-                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
-                clickable: false,
-                zIndex: 9999,
-              })
-              dragLabelMarkersRef.current.push(lbl)
+              addLabel(other.latitude, other.longitude, `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color)
             }
           }
 
@@ -1163,15 +1190,7 @@ export default function ParkingPage() {
             if (result.length > 0) {
               const r2 = result[0]
               const color = r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E'
-              const lbl = new google.maps.Marker({
-                position: { lat: (lat + obs.latitude) / 2, lng: (lng + obs.longitude) / 2 },
-                map: gmap,
-                label: { text: `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color, fontWeight: 'bold', fontSize: '13px' },
-                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
-                clickable: false,
-                zIndex: 9999,
-              })
-              dragLabelMarkersRef.current.push(lbl)
+              addLabel(obs.latitude, obs.longitude, `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color)
             }
           }
         }
@@ -1181,9 +1200,11 @@ export default function ParkingPage() {
     }
 
     const onMouseUp = async (upLat: number, upLng: number) => {
-      // Clean up drag labels
+      // Clean up drag labels and lines
       dragLabelMarkersRef.current.forEach(m => m.setMap(null))
       dragLabelMarkersRef.current = []
+      dragLineRef.current.forEach(l => l.setMap(null))
+      dragLineRef.current = []
 
       if (!isDraggingRef.current) return
 
@@ -3591,6 +3612,15 @@ export default function ParkingPage() {
         filename={emailPdfData?.filename}
         defaultEmail={defaultPdfEmail}
       />
+      {/* Global styles for map labels */}
+      <style>{`
+        .parking-ac-label {
+          text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000, 1px 0 0 #000;
+        }
+        .parking-drag-label {
+          text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+      `}</style>
     </div>
   )
 }
