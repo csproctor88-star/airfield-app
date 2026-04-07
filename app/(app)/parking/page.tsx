@@ -990,10 +990,27 @@ export default function ParkingPage() {
 
     // ── Aircraft silhouette markers ──
     if (visibleLayers.aircraft) {
+      // Pre-compute pixels-per-degree ONCE before the async loop
+      const bounds = gmap.getBounds()
+      const mapDiv = gmap.getDiv()
+      const mapCenter = gmap.getCenter()
+      const pxPerDegLng = (bounds && mapDiv && mapDiv.clientWidth > 0)
+        ? mapDiv.clientWidth / (bounds.getNorthEast().lng() - bounds.getSouthWest().lng())
+        : 1000
+      const centerLat = mapCenter?.lat() ?? 42
+
       const renderAll = async () => {
         for (const spot of spotsWithAircraft) {
           const c = spotCenter(spot)
-          const scale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
+          // Use pre-computed pxPerDegLng for consistent scaling across all aircraft
+          const wingspanM = spot.wingspan_ft * FT_TO_M
+          const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
+          const targetPx = wingspanDegLng * pxPerDegLng
+          const aspect = spot.length_ft / spot.wingspan_ft
+          const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
+          const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
+          const fixedDimCalc = Math.max(imgW, imgH) + 16
+          const scale = Math.max(0.02, Math.min(targetPx / fixedDimCalc, 4.0))
           const isSelected = editingSpot?.id === spot.id
           const heading = spot.heading_deg || 0
 
