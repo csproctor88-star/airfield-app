@@ -40,7 +40,7 @@ import {
   type PprColumn,
   type PprColumnType,
 } from '@/lib/supabase/ppr'
-import TaxiwayEditor from '@/components/taxiway-editor'
+import TaxiwayEditor from '@/components/taxiway-editor-google'
 import {
   fetchLightingSystems,
   fetchLightingSystemWithComponents,
