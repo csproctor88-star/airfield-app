@@ -434,6 +434,8 @@ export default function ParkingPage() {
   const isDraggingRef = useRef(false)
   const dragOffsetRef = useRef<{ dLng: number; dLat: number }>({ dLng: 0, dLat: 0 })
   const dragStartPt = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const dragLabelMarkersRef = useRef<google.maps.Marker[]>([])
+  const dragPreviewMarkerRef = useRef<google.maps.Marker | null>(null)
   // ── Derived data ──
 
   const selectedPlan = useMemo(
@@ -1109,13 +1111,80 @@ export default function ParkingPage() {
       const lng = moveLng + dragOffsetRef.current.dLng
       const lat = moveLat + dragOffsetRef.current.dLat
 
-      // During drag — position update will happen on mouseup via state change + re-render
-      // For now, just track the position. The full re-render on drag end handles visual update.
-      void lng
-      void lat
+      // Move the dragged marker visually
+      if (dragSpotId.current) {
+        const marker = map.current?.markers.get(`spot-${dragSpotId.current}`)
+        if (marker) marker.setPosition({ lat, lng })
+      }
+      if (dragObstacleId.current) {
+        const marker = map.current?.markers.get(`obs-${dragObstacleId.current}`)
+        if (marker) marker.setPosition({ lat, lng })
+      }
+
+      // Show clearance distance labels during aircraft drag
+      if (dragSpotId.current && map.current) {
+        const sid = dragSpotId.current
+        const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
+        if (draggedSpot) {
+          // Clear old drag labels
+          dragLabelMarkersRef.current.forEach(m => m.setMap(null))
+          dragLabelMarkersRef.current = []
+
+          const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
+
+          // Check distances to other aircraft
+          for (const other of spotsWithAircraftRef.current) {
+            if (other.id === sid) continue
+            const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+            const dy = (lat - other.latitude) * 364567
+            if (Math.sqrt(dx * dx + dy * dy) > 500) continue
+            const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current)
+            if (result.length > 0) {
+              const r = result[0]
+              const color = r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E'
+              const lbl = new google.maps.Marker({
+                position: { lat: (lat + other.latitude) / 2, lng: (lng + other.longitude) / 2 },
+                map: gmap,
+                label: { text: `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color, fontWeight: 'bold', fontSize: '13px' },
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+                clickable: false,
+                zIndex: 9999,
+              })
+              dragLabelMarkersRef.current.push(lbl)
+            }
+          }
+
+          // Check distances to obstacles
+          for (const obs of obstaclesRef.current) {
+            const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
+            const dy = (lat - obs.latitude) * 364567
+            if (Math.sqrt(dx * dx + dy * dy) > 500) continue
+            const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current)
+            if (result.length > 0) {
+              const r2 = result[0]
+              const color = r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E'
+              const lbl = new google.maps.Marker({
+                position: { lat: (lat + obs.latitude) / 2, lng: (lng + obs.longitude) / 2 },
+                map: gmap,
+                label: { text: `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color, fontWeight: 'bold', fontSize: '13px' },
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+                clickable: false,
+                zIndex: 9999,
+              })
+              dragLabelMarkersRef.current.push(lbl)
+            }
+          }
+        }
+      }
+
+      mapDiv.style.cursor = 'grabbing'
     }
 
     const onMouseUp = async (upLat: number, upLng: number) => {
+      // Clean up drag labels
+      dragLabelMarkersRef.current.forEach(m => m.setMap(null))
+      dragLabelMarkersRef.current = []
+
       if (!isDraggingRef.current) return
 
       const lng = upLng + dragOffsetRef.current.dLng
