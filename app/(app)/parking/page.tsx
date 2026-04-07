@@ -924,14 +924,29 @@ export default function ParkingPage() {
       }
 
       if (visibleLayers.taxilanes) {
+        const lineColor = tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6'
         const centerline = new google.maps.Polyline({
           path: tl.line_coords.map(([lng, lat]) => ({ lat, lng })),
-          strokeColor: tl.taxilane_type === 'peripheral' ? '#8B5CF6' : '#3B82F6',
+          strokeColor: lineColor,
           strokeWeight: 2.5,
           strokeOpacity: 0.8,
           map: gmap, zIndex: 3,
         })
         objs.polylines.push(centerline)
+
+        // Label at midpoint
+        if (tl.name) {
+          const midIdx = Math.floor(tl.line_coords.length / 2)
+          const midPt = tl.line_coords[midIdx]
+          const lbl = new google.maps.Marker({
+            position: { lat: midPt[1], lng: midPt[0] },
+            map: gmap,
+            label: { text: tl.name, color: lineColor, fontWeight: 'bold', fontSize: '12px', className: 'parking-ac-label' },
+            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
+            clickable: false, zIndex: 4,
+          })
+          objs.markers.push(lbl)
+        }
       }
     }
 
@@ -998,13 +1013,15 @@ export default function ParkingPage() {
 
           const rotDataUrl = rotCanvas.toDataURL('image/png')
 
+          // Use the target pixel size (scaled wingspan/length), not the canvas size
+          const displayDim = Math.max(scaledW, scaledH) + 8
           const marker = new google.maps.Marker({
             position: { lat: c.lat, lng: c.lon },
             map: gmap,
             icon: {
               url: rotDataUrl,
-              scaledSize: new google.maps.Size(maxDim, maxDim),
-              anchor: new google.maps.Point(maxDim / 2, maxDim / 2),
+              scaledSize: new google.maps.Size(displayDim, displayDim),
+              anchor: new google.maps.Point(displayDim / 2, displayDim / 2),
             },
             zIndex: 10,
             label: {
