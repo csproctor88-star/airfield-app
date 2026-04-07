@@ -328,6 +328,96 @@ export default function BaseSetupPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Runway Edit Form — inline editing for imported/existing runways
+// ═══════════════════════════════════════════════════════════════
+
+function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
+  rwy: any
+  fieldStyle: Record<string, any>
+  saving: boolean
+  onSave: (updates: Record<string, any>) => void
+  onCancel: () => void
+}) {
+  const [f, setF] = useState({
+    runway_id: rwy.runway_id || '', length_ft: String(rwy.length_ft || ''), width_ft: String(rwy.width_ft || ''),
+    surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''), runway_class: rwy.runway_class || 'B',
+    end1_designator: rwy.end1_designator || '', end1_latitude: String(rwy.end1_latitude ?? ''),
+    end1_longitude: String(rwy.end1_longitude ?? ''), end1_elevation_msl: String(rwy.end1_elevation_msl ?? ''),
+    end1_heading: String(rwy.end1_heading ?? ''), end1_approach_lighting: rwy.end1_approach_lighting || '',
+    end2_designator: rwy.end2_designator || '', end2_latitude: String(rwy.end2_latitude ?? ''),
+    end2_longitude: String(rwy.end2_longitude ?? ''), end2_elevation_msl: String(rwy.end2_elevation_msl ?? ''),
+    end2_heading: String(rwy.end2_heading ?? ''), end2_approach_lighting: rwy.end2_approach_lighting || '',
+  })
+  const labelStyle = { fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 2, display: 'block' }
+  const handleSave = () => {
+    onSave({
+      runway_id: f.runway_id, length_ft: parseInt(f.length_ft) || 0, width_ft: parseInt(f.width_ft) || 0,
+      surface: f.surface, true_heading: parseFloat(f.true_heading) || null, runway_class: f.runway_class,
+      end1_designator: f.end1_designator, end1_latitude: parseFloat(f.end1_latitude) || null,
+      end1_longitude: parseFloat(f.end1_longitude) || null, end1_elevation_msl: parseFloat(f.end1_elevation_msl) || null,
+      end1_heading: parseFloat(f.end1_heading) || null, end1_approach_lighting: f.end1_approach_lighting || null,
+      end2_designator: f.end2_designator, end2_latitude: parseFloat(f.end2_latitude) || null,
+      end2_longitude: parseFloat(f.end2_longitude) || null, end2_elevation_msl: parseFloat(f.end2_elevation_msl) || null,
+      end2_heading: parseFloat(f.end2_heading) || null, end2_approach_lighting: f.end2_approach_lighting || null,
+    })
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div><label style={labelStyle}>Runway ID</label><input value={f.runway_id} onChange={e => setF(p => ({ ...p, runway_id: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Runway Class</label>
+          <select value={f.runway_class} onChange={e => setF(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
+            <option value="B">Class B</option><option value="Army_B">Army Class B</option>
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+        <div><label style={labelStyle}>Length (ft)</label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Width (ft)</label><input type="number" value={f.width_ft} onChange={e => setF(p => ({ ...p, width_ft: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Surface</label>
+          <select value={f.surface} onChange={e => setF(p => ({ ...p, surface: e.target.value }))} style={fieldStyle}>
+            <option>Asphalt</option><option>Concrete</option><option>Asphalt/Concrete</option>
+          </select>
+        </div>
+        <div><label style={labelStyle}>True Heading (°)</label><input type="number" value={f.true_heading} onChange={e => setF(p => ({ ...p, true_heading: e.target.value }))} style={fieldStyle} /></div>
+      </div>
+      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1 — {f.end1_designator || '?'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+        <div><label style={labelStyle}>Designator</label><input value={f.end1_designator} onChange={e => setF(p => ({ ...p, end1_designator: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Latitude</label><input type="number" step="0.00001" value={f.end1_latitude} onChange={e => setF(p => ({ ...p, end1_latitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Longitude</label><input type="number" step="0.00001" value={f.end1_longitude} onChange={e => setF(p => ({ ...p, end1_longitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Elev (ft MSL)</label><input type="number" step="0.1" value={f.end1_elevation_msl} onChange={e => setF(p => ({ ...p, end1_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Heading (°)</label><input type="number" value={f.end1_heading} onChange={e => setF(p => ({ ...p, end1_heading: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Approach Lighting</label><input value={f.end1_approach_lighting} onChange={e => setF(p => ({ ...p, end1_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
+      </div>
+      <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 2 — {f.end2_designator || '?'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+        <div><label style={labelStyle}>Designator</label><input value={f.end2_designator} onChange={e => setF(p => ({ ...p, end2_designator: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Latitude</label><input type="number" step="0.00001" value={f.end2_latitude} onChange={e => setF(p => ({ ...p, end2_latitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Longitude</label><input type="number" step="0.00001" value={f.end2_longitude} onChange={e => setF(p => ({ ...p, end2_longitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Elev (ft MSL)</label><input type="number" step="0.1" value={f.end2_elevation_msl} onChange={e => setF(p => ({ ...p, end2_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Heading (°)</label><input type="number" value={f.end2_heading} onChange={e => setF(p => ({ ...p, end2_heading: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Approach Lighting</label><input value={f.end2_approach_lighting} onChange={e => setF(p => ({ ...p, end2_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button onClick={handleSave} disabled={saving} style={{
+          flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-base)', border: 'none',
+          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+          cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1,
+        }}>{saving ? 'Saving...' : 'Save Changes'}</button>
+        <button onClick={onCancel} style={{
+          padding: '10px 16px', borderRadius: 'var(--radius-base)',
+          border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+          color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Runway Tab — editable
 // ═══════════════════════════════════════════════════════════════
 
@@ -341,6 +431,29 @@ function RunwayTab({
   const [runways, setRunways] = useState(initialRunways)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [editingRunwayId, setEditingRunwayId] = useState<string | null>(null)
+
+  // Base elevation
+  const [baseElevation, setBaseElevation] = useState<number | null>(null)
+  const [elevSaving, setElevSaving] = useState(false)
+  useEffect(() => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.from('bases').select('elevation_msl').eq('id', installationId).single()
+      .then(({ data }) => { if ((data as any)?.elevation_msl != null) setBaseElevation((data as any).elevation_msl) })
+  }, [installationId])
+
+  const handleSaveElevation = async (val: number | null) => {
+    if (!installationId) return
+    setElevSaving(true)
+    const supabase = createClient()
+    if (!supabase) { setElevSaving(false); return }
+    await supabase.from('bases').update({ elevation_msl: val } as any).eq('id', installationId)
+    setBaseElevation(val)
+    setElevSaving(false)
+    toast.success('Airfield elevation saved')
+  }
 
   // ICAO lookup state
   const [lookupOpen, setLookupOpen] = useState(false)
@@ -478,6 +591,12 @@ function RunwayTab({
           await supabase.from('navaid_statuses').insert({ base_id: installationId, navaid_name: (n as any).navaid_name, status: 'green' } as any)
         }
       }
+    }
+
+    // Save airport elevation to bases table
+    if (lookupResult.elevation_ft != null) {
+      await supabase.from('bases').update({ elevation_msl: lookupResult.elevation_ft } as any).eq('id', installationId)
+      setBaseElevation(lookupResult.elevation_ft)
     }
 
     // Ensure airfield_status row exists
@@ -704,6 +823,21 @@ function RunwayTab({
     }
   }
 
+  const handleUpdateRunway = async (rwy: typeof runways[0], updates: Record<string, any>) => {
+    const supabase = createClient()
+    if (!supabase) return
+    setSaving(true)
+    const { data, error } = await supabase.from('base_runways').update(updates).eq('id', rwy.id).select('*').single()
+    if (error) {
+      toast.error(`Failed to update: ${error.message}`)
+    } else if (data) {
+      setRunways(prev => prev.map(r => r.id === rwy.id ? data as any : r))
+      setEditingRunwayId(null)
+      toast.success(`Runway ${rwy.runway_id} updated`)
+    }
+    setSaving(false)
+  }
+
   const fieldStyle = {
     padding: '8px 10px',
     borderRadius: 'var(--radius-sm)',
@@ -720,59 +854,115 @@ function RunwayTab({
     <div>
       <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 12 }}>Runways</h3>
 
+      {/* Established Airfield Elevation */}
+      <div style={{
+        padding: '10px 14px', marginBottom: 12,
+        background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)',
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+      }}>
+        <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
+          Established Airfield Elevation (ft MSL)
+        </label>
+        <input
+          type="number"
+          step="0.1"
+          value={baseElevation ?? ''}
+          onChange={e => setBaseElevation(e.target.value ? parseFloat(e.target.value) : null)}
+          placeholder="e.g. 580"
+          style={{ ...fieldStyle, width: 120, flex: '0 0 auto' }}
+        />
+        <button
+          onClick={() => handleSaveElevation(baseElevation)}
+          disabled={elevSaving}
+          style={{
+            padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+            cursor: elevSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
+            opacity: elevSaving ? 0.5 : 1,
+          }}
+        >{elevSaving ? 'Saving...' : 'Save'}</button>
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+          Used by Obstruction Evaluation Tool
+        </span>
+      </div>
+
       {runways.length === 0 && !adding && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 12 }}>No runways configured yet.</p>
       )}
 
-      {runways.map(rwy => (
+      {runways.map(rwy => {
+        const isEditing = editingRunwayId === rwy.id
+        return (
         <div key={rwy.id} style={{
           padding: 12,
           background: 'var(--color-bg-inset)',
           borderRadius: 'var(--radius-base)',
           marginBottom: 8,
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 8,
+          border: isEditing ? '1px solid var(--color-cyan)' : undefined,
         }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
-              {rwy.runway_id} — {rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}
+          {isEditing ? (
+            // ── Inline edit form ──
+            <RunwayEditForm
+              rwy={rwy}
+              fieldStyle={fieldStyle}
+              saving={saving}
+              onSave={(updates) => handleUpdateRunway(rwy, updates)}
+              onCancel={() => setEditingRunwayId(null)}
+            />
+          ) : (
+            // ── Read-only display ──
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
+                  {rwy.runway_id} — {rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}
+                </div>
+                <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginTop: 4 }}>
+                  {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
+                </div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
+                  {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(6)}°{(rwy.end1_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(6) : '—'}°{(rwy.end1_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
+                </div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
+                  {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(6)}°{(rwy.end2_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(6) : '—'}°{(rwy.end2_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <button
+                    onClick={() => setEditingRunwayId(rwy.id)}
+                    style={{
+                      padding: '4px 10px', borderRadius: 4,
+                      background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
+                      color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >Edit</button>
+                  <button
+                    onClick={() => openAdjustMap(rwy)}
+                    style={{
+                      padding: '4px 10px', borderRadius: 4,
+                      background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
+                      color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >Adjust on Map</button>
+                </div>
+              </div>
+              <button
+                onClick={() => handleDeleteRunway(rwy)}
+                style={{
+                  background: 'none', border: 'none',
+                  color: 'var(--color-danger)', cursor: 'pointer',
+                  fontSize: 'var(--fs-3xl)', padding: '0 4px', flexShrink: 0,
+                }}
+                title="Delete runway"
+              >
+                &times;
+              </button>
             </div>
-            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginTop: 4 }}>
-              {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
-              {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(6)}°{(rwy.end1_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(6) : '—'}°{(rwy.end1_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
-              {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(6)}°{(rwy.end2_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(6) : '—'}°{(rwy.end2_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
-            </div>
-            <button
-              onClick={() => openAdjustMap(rwy)}
-              style={{
-                marginTop: 6, padding: '4px 10px', borderRadius: 4,
-                background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
-                color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Adjust on Map
-            </button>
-          </div>
-          <button
-            onClick={() => handleDeleteRunway(rwy)}
-            style={{
-              background: 'none', border: 'none',
-              color: 'var(--color-danger)', cursor: 'pointer',
-              fontSize: 'var(--fs-3xl)', padding: '0 4px', flexShrink: 0,
-            }}
-            title="Delete runway"
-          >
-            &times;
-          </button>
+          )}
         </div>
-      ))}
+        )
+      })}
 
       {adding ? (
         <div style={{
@@ -840,7 +1030,7 @@ function RunwayTab({
             </div>
             <div>
               <label style={labelStyle}>Elev (ft MSL)</label>
-              <input type="number" step="0.1" value={newRunway.end1_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end1_elevation_msl: e.target.value }))} placeholder="580" style={fieldStyle} />
+              <input type="number" step="0.1" value={newRunway.end1_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end1_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
 
@@ -860,7 +1050,7 @@ function RunwayTab({
             </div>
             <div>
               <label style={labelStyle}>Elev (ft MSL)</label>
-              <input type="number" step="0.1" value={newRunway.end2_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end2_elevation_msl: e.target.value }))} placeholder="580" style={fieldStyle} />
+              <input type="number" step="0.1" value={newRunway.end2_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end2_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
 
