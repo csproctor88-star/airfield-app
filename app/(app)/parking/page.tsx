@@ -302,18 +302,22 @@ function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.map
   if (!center) return 0.1
 
   const zoom = gmap.getZoom() ?? 15
-  // Meters per pixel at this zoom level: 156543.03392 * cos(lat) / 2^zoom
+  // Meters per pixel at this zoom level (accounts for device pixel ratio)
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
   const metersPerPx = 156543.03392 * Math.cos(center.lat() * Math.PI / 180) / Math.pow(2, zoom)
   if (metersPerPx <= 0) return 0.1
   const wingspanM = wingspanFt * FT_TO_M
-  const targetCssPx = wingspanM / metersPerPx
+  // Target CSS pixels the wingspan should occupy (adjusted for device pixel ratio)
+  const targetCssPx = (wingspanM / metersPerPx) * dpr
 
-  // The icon image is REF_ICON_SIZE px wide (for the wider dimension)
+  // fixedDim = max dimension of source image + 16
   const aspect = lengthFt / wingspanFt
-  const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
+  const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
+  const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
+  const fixedDim = Math.max(imgW, imgH) + 16
 
-  const scale = targetCssPx / imageWidthPx
-  return Math.max(0.02, Math.min(scale, 2.0))
+  const scale = targetCssPx / fixedDim
+  return Math.max(0.02, Math.min(scale, 3.0))
 }
 
 // ── Main Page ──
