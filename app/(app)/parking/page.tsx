@@ -1315,6 +1315,22 @@ export default function ParkingPage() {
 
     // Mouse events on the map div
     const onCanvasMouseDown = (ev: MouseEvent) => {
+      // Right-click → context menu
+      if (ev.button === 2) {
+        ev.preventDefault()
+        const rect = mapDiv.getBoundingClientRect()
+        const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
+        if (!pos) return
+        const acHit = queryFeatureAtPoint(w, pos.lat, pos.lng, 15)
+        if (acHit && acHit.type === 'aircraft') {
+          const spot = spotsWithAircraftRef.current.find(s => s.id === acHit.props.spotId)
+          if (spot) {
+            setContextMenuSpot({ spot, x: ev.clientX, y: ev.clientY })
+            setEditingSpot(spot)
+          }
+        }
+        return
+      }
       if (ev.button !== 0) return
       const rect = mapDiv.getBoundingClientRect()
       const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
@@ -1379,10 +1395,9 @@ export default function ParkingPage() {
       onMouseUp(pos.lat, pos.lng)
     }
 
-    // Prevent browser context menu on map so our custom one works
-    const preventContextMenu = (ev: Event) => { ev.preventDefault() }
-    mapDiv.addEventListener('contextmenu', preventContextMenu)
-
+    // Suppress browser context menu on map
+    const onContextMenu = (ev: MouseEvent) => { ev.preventDefault() }
+    mapDiv.addEventListener('contextmenu', onContextMenu)
     mapDiv.addEventListener('mousedown', onCanvasMouseDown)
     mapDiv.addEventListener('mousemove', onCanvasMouseMove)
     mapDiv.addEventListener('mouseup', onCanvasMouseUp)
@@ -1390,33 +1405,14 @@ export default function ParkingPage() {
     mapDiv.addEventListener('touchmove', onTouchMove, { passive: false })
     mapDiv.addEventListener('touchend', onTouchEnd)
 
-    // Right-click context menu
-    const contextListener = gmap.addListener('rightclick', (e: google.maps.MapMouseEvent) => {
-      if (!e.latLng) return
-      const clickLat = e.latLng.lat()
-      const clickLng = e.latLng.lng()
-      const acHit = queryFeatureAtPoint(w, clickLat, clickLng, 15)
-      if (acHit && acHit.type === 'aircraft') {
-        const spotId = acHit.props.spotId
-        const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
-        if (spot) {
-          // Use domEvent for screen coordinates
-          const de = (e as any).domEvent as MouseEvent | undefined
-          setContextMenuSpot({ spot, x: de?.clientX ?? 0, y: de?.clientY ?? 0 })
-          setEditingSpot(spot)
-        }
-      }
-    })
-
     return () => {
-      mapDiv.removeEventListener('contextmenu', preventContextMenu)
+      mapDiv.removeEventListener('contextmenu', onContextMenu)
       mapDiv.removeEventListener('mousedown', onCanvasMouseDown)
       mapDiv.removeEventListener('mousemove', onCanvasMouseMove)
       mapDiv.removeEventListener('mouseup', onCanvasMouseUp)
       mapDiv.removeEventListener('touchstart', onCanvasTouchStart)
       mapDiv.removeEventListener('touchmove', onTouchMove)
       mapDiv.removeEventListener('touchend', onTouchEnd)
-      google.maps.event.removeListener(contextListener)
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
@@ -3017,7 +3013,7 @@ export default function ParkingPage() {
         )}
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
-          <div ref={mapContainer} onContextMenu={e => e.preventDefault()} style={{ width: '100%', height: '100%' }} />
+          <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
           {/* ── Floating panel — top right, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (
             <div style={{
