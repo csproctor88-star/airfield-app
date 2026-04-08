@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useGoogleMapRuler } from '@/hooks/use-google-map-ruler'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import { useInstallation } from '@/lib/installation-context'
 import {
@@ -198,6 +199,8 @@ function generateCenterlineBuffer(centerline: LatLon[], halfWidthFt: number): [n
 export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [] }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
+  const [rulerActive, setRulerActive] = useState(false)
+  const ruler = useGoogleMapRuler(mapRef, rulerActive)
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(null)
   const polygonsRef = useRef<google.maps.Polygon[]>([])
   const taxiwayPolygonsRef = useRef<google.maps.Polygon[]>([])
@@ -529,6 +532,34 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
           border: '1px solid var(--color-border-mid)',
         }}
       />
+      {/* Ruler overlay — captures clicks through polygons */}
+      <div ref={ruler.overlayRef} style={ruler.overlayStyle} />
+      {/* Ruler button — top right */}
+      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+        <button
+          onClick={() => setRulerActive(r => !r)}
+          title={rulerActive ? 'Disable ruler (Esc to clear)' : 'Measure distance'}
+          style={{
+            padding: '6px 10px', borderRadius: 6, fontSize: 'var(--fs-xs)', fontWeight: 600,
+            background: 'rgba(4, 7, 12, 0.88)',
+            border: `1px solid ${rulerActive ? '#22D3EE' : 'rgba(255,255,255,0.3)'}`,
+            color: rulerActive ? '#22D3EE' : '#FFF',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          📏 {rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Ruler'}
+        </button>
+        {rulerActive && ruler.points.length >= 2 && (
+          <button
+            onClick={() => ruler.clear()}
+            style={{
+              padding: '3px 8px', borderRadius: 4, fontSize: 'var(--fs-2xs)', fontWeight: 600,
+              background: 'rgba(4, 7, 12, 0.88)', border: '1px solid rgba(255,255,255,0.2)',
+              color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >Clear</button>
+        )}
+      </div>
       {/* Legend */}
       <div style={{
         position: 'absolute', top: 8, left: 8,

@@ -59,7 +59,7 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 export default function HomePage() {
   const router = useRouter()
   const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, refreshStatus } = useDashboard()
-  const { installationId, runways, arffAircraft } = useInstallation()
+  const { installationId, runways, arffAircraft, userRole } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
@@ -67,6 +67,12 @@ export default function HomePage() {
   const [customBoards, setCustomBoards] = useState<CustomStatusBoard[]>([])
   const [customItems, setCustomItems] = useState<CustomStatusItem[]>([])
   const [customItemNotes, setCustomItemNotes] = useState<Record<string, string>>({})
+
+  // Editable status board labels (stored on bases.status_labels JSONB)
+  const [statusLabels, setStatusLabels] = useState<Record<string, string>>({})
+  const [editingLabel, setEditingLabel] = useState<string | null>(null)
+  const [editingLabelValue, setEditingLabelValue] = useState('')
+  const canEditLabels = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
   const [customItemDialog, setCustomItemDialog] = useState<{
     item: CustomStatusItem
     boardName: string
@@ -223,6 +229,30 @@ export default function HomePage() {
   }, [installationId])
 
   useEffect(() => { loadCustomBoards() }, [loadCustomBoards])
+
+  // --- Load status labels ---
+  useEffect(() => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.from('bases').select('status_labels').eq('id', installationId).single()
+      .then(({ data }) => {
+        const row = data as Record<string, unknown> | null
+        if (row?.status_labels && typeof row.status_labels === 'object') {
+          setStatusLabels(row.status_labels as Record<string, string>)
+        }
+      })
+  }, [installationId])
+
+  const saveStatusLabel = async (key: string, value: string) => {
+    const updated = { ...statusLabels, [key]: value }
+    setStatusLabels(updated)
+    setEditingLabel(null)
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    await supabase.from('bases').update({ status_labels: updated } as any).eq('id', installationId)
+  }
 
   // --- Load today's PPRs ---
   const loadTodayPprs = useCallback(async () => {
@@ -1284,6 +1314,48 @@ export default function HomePage() {
           )
         }
 
+        // Inline-editable label — click to rename (admins only)
+        const renderEditableLabel = (key: string, defaultText: string, style: Record<string, any>) => {
+          const displayText = statusLabels[key] || defaultText
+          if (editingLabel === key) {
+            return (
+              <input
+                autoFocus
+                value={editingLabelValue}
+                onChange={e => setEditingLabelValue(e.target.value)}
+                onBlur={() => saveStatusLabel(key, editingLabelValue.trim() || defaultText)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveStatusLabel(key, editingLabelValue.trim() || defaultText)
+                  if (e.key === 'Escape') setEditingLabel(null)
+                }}
+                style={{
+                  ...style,
+                  background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-cyan)',
+                  borderRadius: 4,
+                  padding: '2px 6px',
+                  outline: 'none',
+                  width: '100%',
+                  boxSizing: 'border-box' as const,
+                }}
+              />
+            )
+          }
+          return (
+            <div
+              onClick={canEditLabels ? () => { setEditingLabel(key); setEditingLabelValue(displayText) } : undefined}
+              style={{
+                ...style,
+                cursor: canEditLabels ? 'pointer' : 'default',
+                ...(canEditLabels ? { borderBottom: '1px dashed transparent' } : {}),
+              }}
+              title={canEditLabels ? 'Click to rename' : undefined}
+            >
+              {displayText}
+            </div>
+          )
+        }
+
         // Inner grid for cards within each section container
         const sectionRowStyle = {
           display: 'grid',
@@ -1317,7 +1389,7 @@ export default function HomePage() {
 
       {/* ── RUNWAY STATUS ── */}
       <div style={sectionCardStyle}>
-        <div style={sectionHeaderStyle}>Runway Status</div>
+        {renderEditableLabel('section_runway', 'Runway Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
       {(() => {
         // Build runway entries from installation runways
@@ -1492,7 +1564,7 @@ export default function HomePage() {
 
       {/* ── NAVAID STATUS ── */}
       <div style={sectionCardStyle}>
-        <div style={sectionHeaderStyle}>NAVAID Status</div>
+        {renderEditableLabel('section_navaid', 'NAVAID Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
 
       {/* ARFF Aircraft Readiness Dialog */}
@@ -1673,13 +1745,13 @@ export default function HomePage() {
             return (<>
                 {endGroups.filter(group => group.items.length > 0).map(group => (
                   <div key={group.designator} className="card" style={{ padding: '8px 12px 4px' }}>
-                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>RWY {group.designator}</div>
+                    {renderEditableLabel(`navaid_rwy_${group.designator}`, `RWY ${group.designator}`, { fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' })}
                     {group.items.map(renderNavaidItem)}
                   </div>
                 ))}
                 {otherNavaids.length > 0 && (
                   <div className="card" style={{ padding: '8px 12px 4px' }}>
-                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' }}>OTHER</div>
+                    {renderEditableLabel('navaid_other', 'OTHER', { fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' })}
                     {otherNavaids.map(renderNavaidItem)}
                   </div>
                 )}
@@ -1691,7 +1763,7 @@ export default function HomePage() {
 
       {/* ── ARFF STATUS ── */}
       <div style={sectionCardStyle}>
-        <div style={sectionHeaderStyle}>ARFF Status</div>
+        {renderEditableLabel('section_arff', 'ARFF Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
           {/* ARFF CAT card */}
           <div className="card" style={{

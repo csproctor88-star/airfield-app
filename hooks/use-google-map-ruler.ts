@@ -8,9 +8,26 @@ function formatDist(ft: number): string {
   return `${Math.round(ft)} ft`
 }
 
+/** Convert pixel coordinates on the map div to lat/lng using bounds interpolation. */
+function pixelToLatLng(gmap: google.maps.Map, x: number, y: number): RulerPoint | null {
+  const bounds = gmap.getBounds()
+  const div = gmap.getDiv()
+  if (!bounds || !div) return null
+  const ne = bounds.getNorthEast()
+  const sw = bounds.getSouthWest()
+  return {
+    lng: sw.lng() + (x / div.clientWidth) * (ne.lng() - sw.lng()),
+    lat: ne.lat() - (y / div.clientHeight) * (ne.lat() - sw.lat()),
+  }
+}
+
 /**
- * Google Maps ruler hook. When active, clicks on the map add measurement points.
- * Segments show distance labels. Press Escape or toggle off to clear.
+ * Google Maps ruler hook. When active, a transparent overlay captures all clicks
+ * (including on top of markers/polygons) and adds measurement points.
+ * Press Escape or toggle off to clear.
+ *
+ * The consumer must render the overlay div on top of their map:
+ *   <div ref={ruler.overlayRef} style={ruler.overlayStyle} />
  */
 export function useGoogleMapRuler(
   gmapRef: React.MutableRefObject<google.maps.Map | null>,
@@ -24,7 +41,9 @@ export function useGoogleMapRuler(
   const markersRef = useRef<google.maps.Marker[]>([])
   const polylinesRef = useRef<google.maps.Polyline[]>([])
   const labelsRef = useRef<google.maps.Marker[]>([])
-  const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
+
+  // Overlay div ref for capturing clicks through markers/polygons
+  const overlayRef = useRef<HTMLDivElement | null>(null)
 
   const clearObjects = useCallback(() => {
     markersRef.current.forEach(m => m.setMap(null))
@@ -75,7 +94,6 @@ export function useGoogleMapRuler(
       const segFt = distanceFt({ lat: a.lat, lon: a.lng }, { lat: b.lat, lon: b.lng })
       totalFt += segFt
 
-      // Polyline
       const line = new google.maps.Polyline({
         path: [a, b],
         strokeColor: '#22D3EE',
@@ -132,10 +150,7 @@ export function useGoogleMapRuler(
           fontSize: '11px',
           className: 'ruler-total-label',
         },
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 0,
-        },
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0 },
         zIndex: 10002,
         clickable: false,
       })
@@ -143,31 +158,25 @@ export function useGoogleMapRuler(
     }
   }, [gmapRef, clearObjects])
 
-  // Listen for map clicks when active
+  // Handle clicks on the overlay div — works through markers/polygons
   useEffect(() => {
-    const gmap = gmapRef.current
-    if (!gmap || !active) {
-      if (listenerRef.current) {
-        google.maps.event.removeListener(listenerRef.current)
-        listenerRef.current = null
-      }
-      return
-    }
+    if (!active) return
+    const overlay = overlayRef.current
+    if (!overlay) return
 
-    listenerRef.current = gmap.addListener('click', (e: google.maps.MapMouseEvent) => {
-      if (!e.latLng) return
-      const newPt: RulerPoint = { lat: e.latLng.lat(), lng: e.latLng.lng() }
-      const updated = [...pointsRef.current, newPt]
+    const handleClick = (e: MouseEvent) => {
+      const gmap = gmapRef.current
+      if (!gmap) return
+      const rect = overlay.getBoundingClientRect()
+      const pt = pixelToLatLng(gmap, e.clientX - rect.left, e.clientY - rect.top)
+      if (!pt) return
+      const updated = [...pointsRef.current, pt]
       setPoints(updated)
       render(updated)
-    })
-
-    return () => {
-      if (listenerRef.current) {
-        google.maps.event.removeListener(listenerRef.current)
-        listenerRef.current = null
-      }
     }
+
+    overlay.addEventListener('click', handleClick)
+    return () => overlay.removeEventListener('click', handleClick)
   }, [active, gmapRef, render])
 
   // Escape key to clear
@@ -193,5 +202,13 @@ export function useGoogleMapRuler(
     )
   }, 0)
 
-  return { points, totalFt, clear, formatDist }
+  // Style for the transparent overlay div — consumer renders this on top of the map
+  const overlayStyle: React.CSSProperties = active ? {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 9998,
+    cursor: 'crosshair',
+  } : { display: 'none' }
+
+  return { points, totalFt, clear, formatDist, overlayRef, overlayStyle }
 }
