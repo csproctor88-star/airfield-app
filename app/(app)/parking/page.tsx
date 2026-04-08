@@ -3186,8 +3186,6 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          {/* Ruler overlay — captures clicks through markers/polygons */}
-          <div ref={ruler.overlayRef} style={ruler.overlayStyle} />
           {/* ── Floating panel — top right, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (
             <div style={{

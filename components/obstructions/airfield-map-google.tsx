@@ -532,8 +532,6 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
           border: '1px solid var(--color-border-mid)',
         }}
       />
-      {/* Ruler overlay — captures clicks through polygons */}
-      <div ref={ruler.overlayRef} style={ruler.overlayStyle} />
       {/* Ruler button — top right */}
       <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
         <button

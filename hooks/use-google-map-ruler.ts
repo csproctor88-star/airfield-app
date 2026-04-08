@@ -22,12 +22,9 @@ function pixelToLatLng(gmap: google.maps.Map, x: number, y: number): RulerPoint 
 }
 
 /**
- * Google Maps ruler hook. When active, a transparent overlay captures all clicks
- * (including on top of markers/polygons) and adds measurement points.
- * Press Escape or toggle off to clear.
- *
- * The consumer must render the overlay div on top of their map:
- *   <div ref={ruler.overlayRef} style={ruler.overlayStyle} />
+ * Google Maps ruler hook. When active, clicks on the map div add measurement
+ * points — works through markers, polygons, and all other map objects without
+ * blocking panning, zooming, or other interactions.
  */
 export function useGoogleMapRuler(
   gmapRef: React.MutableRefObject<google.maps.Map | null>,
@@ -41,9 +38,6 @@ export function useGoogleMapRuler(
   const markersRef = useRef<google.maps.Marker[]>([])
   const polylinesRef = useRef<google.maps.Polyline[]>([])
   const labelsRef = useRef<google.maps.Marker[]>([])
-
-  // Overlay div ref for capturing clicks through markers/polygons
-  const overlayRef = useRef<HTMLDivElement | null>(null)
 
   const clearObjects = useCallback(() => {
     markersRef.current.forEach(m => m.setMap(null))
@@ -158,16 +152,29 @@ export function useGoogleMapRuler(
     }
   }, [gmapRef, clearObjects])
 
-  // Handle clicks on the overlay div — works through markers/polygons
+  // Listen for clicks on the map div element directly (not Google Maps click event).
+  // This captures clicks on markers/polygons without blocking panning or any interaction.
   useEffect(() => {
-    if (!active) return
-    const overlay = overlayRef.current
-    if (!overlay) return
+    const gmap = gmapRef.current
+    if (!gmap || !active) return
+    const mapDiv = gmap.getDiv()
 
-    const handleClick = (e: MouseEvent) => {
-      const gmap = gmapRef.current
-      if (!gmap) return
-      const rect = overlay.getBoundingClientRect()
+    let downPos: { x: number; y: number } | null = null
+
+    // Track mousedown position to distinguish clicks from drags
+    const onDown = (e: MouseEvent) => {
+      downPos = { x: e.clientX, y: e.clientY }
+    }
+
+    const onUp = (e: MouseEvent) => {
+      if (!downPos) return
+      // Only treat as a click if mouse didn't move much (not a drag/pan)
+      const dx = e.clientX - downPos.x
+      const dy = e.clientY - downPos.y
+      if (Math.sqrt(dx * dx + dy * dy) > 5) { downPos = null; return }
+      downPos = null
+
+      const rect = mapDiv.getBoundingClientRect()
       const pt = pixelToLatLng(gmap, e.clientX - rect.left, e.clientY - rect.top)
       if (!pt) return
       const updated = [...pointsRef.current, pt]
@@ -175,8 +182,12 @@ export function useGoogleMapRuler(
       render(updated)
     }
 
-    overlay.addEventListener('click', handleClick)
-    return () => overlay.removeEventListener('click', handleClick)
+    mapDiv.addEventListener('mousedown', onDown, true)
+    mapDiv.addEventListener('mouseup', onUp, true)
+    return () => {
+      mapDiv.removeEventListener('mousedown', onDown, true)
+      mapDiv.removeEventListener('mouseup', onUp, true)
+    }
   }, [active, gmapRef, render])
 
   // Escape key to clear
@@ -202,13 +213,5 @@ export function useGoogleMapRuler(
     )
   }, 0)
 
-  // Style for the transparent overlay div — consumer renders this on top of the map
-  const overlayStyle: React.CSSProperties = active ? {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 9998,
-    cursor: 'crosshair',
-  } : { display: 'none' }
-
-  return { points, totalFt, clear, formatDist, overlayRef, overlayStyle }
+  return { points, totalFt, clear, formatDist }
 }
