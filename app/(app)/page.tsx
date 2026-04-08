@@ -73,6 +73,7 @@ export default function HomePage() {
   const [editingLabel, setEditingLabel] = useState<string | null>(null)
   const [editingLabelValue, setEditingLabelValue] = useState('')
   const canEditLabels = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
+  const [oooMinimized, setOooMinimized] = useState(false)
   const [customItemDialog, setCustomItemDialog] = useState<{
     item: CustomStatusItem
     boardName: string
@@ -426,51 +427,75 @@ export default function HomePage() {
     <div className="page-container">
       <LoginActivityDialog />
 
-      {/* AFM Out of Office overlay */}
-      {afmOutOfOffice && (
+      {/* AFM Out of Office banner — semi-transparent, minimizable */}
+      {afmOutOfOffice && !oooMinimized && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0, 0, 0, 0.85)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          padding: 32,
+          position: 'sticky', top: 0, zIndex: 100,
+          background: 'rgba(127, 29, 29, 0.92)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(239, 68, 68, 0.5)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: 12,
+          textAlign: 'center',
         }}>
-          <div style={{
-            background: 'var(--color-bg-surface-solid, #1E293B)',
-            border: '2px solid rgba(239, 68, 68, 0.5)',
-            borderRadius: 16,
-            padding: '40px 48px',
-            maxWidth: 600,
-            width: '100%',
-            textAlign: 'center',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
-            <div style={{
-              fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-danger)',
-              marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em',
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 24 }}>🚪</span>
+            <span style={{
+              fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#FECACA',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
               Out of Office
-            </div>
-            <div style={{
-              fontSize: 'var(--fs-xl)', color: 'var(--color-text-1)', lineHeight: 1.6,
-              whiteSpace: 'pre-wrap',
-            }}>
-              {afmOooMessage || 'Airfield Management is currently out of office.'}
-            </div>
-            {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo') && (
+            </span>
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-md)', color: '#FEE2E2', lineHeight: 1.5,
+            marginTop: 8, whiteSpace: 'pre-wrap',
+          }}>
+            {afmOooMessage || 'Airfield Management is currently out of office.'}
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+            <button
+              onClick={() => setOooMinimized(true)}
+              style={{
+                padding: '6px 16px', borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(254,202,202,0.3)', background: 'rgba(0,0,0,0.3)',
+                color: '#FECACA', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >Minimize</button>
+            {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
               <button
                 onClick={() => setAfmOutOfOffice(false)}
                 style={{
-                  marginTop: 24, padding: '10px 24px', borderRadius: 'var(--radius-md)',
+                  padding: '6px 16px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
-                  color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
-              >
-                Deactivate Out of Office
-              </button>
+              >Deactivate</button>
             )}
           </div>
+        </div>
+      )}
+      {afmOutOfOffice && oooMinimized && (
+        <div
+          onClick={() => setOooMinimized(false)}
+          style={{
+            position: 'sticky', top: 0, zIndex: 100,
+            background: 'rgba(127, 29, 29, 0.9)',
+            borderRadius: 'var(--radius-md)',
+            padding: '6px 14px',
+            marginBottom: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 14 }}>🚪</span>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: '#FECACA', textTransform: 'uppercase' }}>
+            AFM Out of Office
+          </span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: '#FCA5A5' }}>— tap to expand</span>
         </div>
       )}
 

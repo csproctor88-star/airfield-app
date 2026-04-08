@@ -190,8 +190,9 @@ export default function AMDashboardPage() {
   const { installationId, currentInstallation, userRole } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
+  const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
   const [showOooDialog, setShowOooDialog] = useState(false)
-  const [oooMessage, setOooMessage] = useState('Airfield Management Out of Office - Contact Command Post and 586-239-6528 or Airfield 3 via Tower Net')
+  const [oooMessage, setOooMessage] = useState('Airfield Management Out of Office - Contact Command Post at 586-239-6528 or Airfield 3 via Tower Net')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
   useEffect(() => {
@@ -514,13 +515,13 @@ export default function AMDashboardPage() {
         }}>
           <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
         </button>
-        {isAdmin && (
+        {canToggleOoo && (
           <button onClick={() => {
             if (afmOutOfOffice) {
               setAfmOutOfOffice(false)
               toast.success('Out of Office deactivated')
             } else {
-              setOooMessage(afmOooMessage || 'Airfield Management Out of Office - Contact Command Post and 586-239-6528 or Airfield 3 via Tower Net')
+              setOooMessage(afmOooMessage || 'Airfield Management Out of Office - Contact Command Post at 586-239-6528 or Airfield 3 via Tower Net')
               setShowOooDialog(true)
             }
           }} style={{
