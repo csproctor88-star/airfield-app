@@ -1284,18 +1284,40 @@ export default function HomePage() {
           )
         }
 
-        // Section row style: responsive grid, max 3 per row on mobile, more on wider screens
+        // Inner grid for cards within each section container
         const sectionRowStyle = {
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
           gap: 8,
           alignItems: 'start',
         }
 
+        // Section container card style
+        const sectionCardStyle = {
+          flex: '1 1 280px',
+          minWidth: 0,
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '10px 12px',
+        }
+
+        const sectionHeaderStyle = {
+          fontSize: 'var(--fs-sm)',
+          fontWeight: 700,
+          color: 'var(--color-text-3)',
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.05em',
+          marginBottom: 8,
+        }
+
         return (<>
-      {/* ── RUNWAY STATUS ROW ── */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Runway Status</div>
+      {/* ── Status Sections — side-by-side on desktop, stacked on mobile ── */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+
+      {/* ── RUNWAY STATUS ── */}
+      <div style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>Runway Status</div>
         <div style={sectionRowStyle}>
       {(() => {
         // Build runway entries from installation runways
@@ -1468,6 +1490,11 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ── NAVAID STATUS ── */}
+      <div style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>NAVAID Status</div>
+        <div style={sectionRowStyle}>
+
       {/* ARFF Aircraft Readiness Dialog */}
       {arffDialog && (
         <div
@@ -1564,10 +1591,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ── NAVAID STATUS ROW ── */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>NAVAID Status</div>
-        <div style={sectionRowStyle}>
           {navaids.length === 0 ? (
             <div className="card" style={{ padding: 12 }}>
               <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', textAlign: 'center' }}>
@@ -1666,9 +1689,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── ARFF STATUS ROW ── */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>ARFF Status</div>
+      {/* ── ARFF STATUS ── */}
+      <div style={sectionCardStyle}>
+        <div style={sectionHeaderStyle}>ARFF Status</div>
         <div style={sectionRowStyle}>
           {/* ARFF CAT card */}
           <div className="card" style={{
@@ -1748,14 +1771,14 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── STANDALONE BOARDS ROW ── */}
-      {boardsBySection.standalone.length > 0 && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={sectionRowStyle}>
-            {boardsBySection.standalone.map(b => renderBoardCard(b))}
-          </div>
+      {/* ── STANDALONE BOARDS ── */}
+      {boardsBySection.standalone.map(b => (
+        <div key={b.id} style={sectionCardStyle}>
+          {renderBoardCard(b)}
         </div>
-      )}
+      ))}
+
+      </div>{/* end sections flex row */}
 
       </>)
       })()}
@@ -1785,7 +1808,7 @@ export default function HomePage() {
             const daysSinceStart = Math.max(1, Math.ceil((Date.now() - new Date(c.start_date).getTime()) / 86400000))
             return (
               <div key={c.id} className="card" style={{ padding: 14, overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Header: Callsign (or company name fallback) + status badge + day counter */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
