@@ -16,6 +16,7 @@ import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
+import { useDashboard } from '@/lib/dashboard-context'
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
@@ -187,7 +188,10 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 export default function AMDashboardPage() {
   const router = useRouter()
   const { installationId, currentInstallation, userRole } = useInstallation()
+  const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
+  const [showOooDialog, setShowOooDialog] = useState(false)
+  const [oooMessage, setOooMessage] = useState('Airfield Management Out of Office - Contact Command Post and 586-239-6528 or Airfield 3 via Tower Net')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
   useEffect(() => {
@@ -510,7 +514,79 @@ export default function AMDashboardPage() {
         }}>
           <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
         </button>
+        {isAdmin && (
+          <button onClick={() => {
+            if (afmOutOfOffice) {
+              setAfmOutOfOffice(false)
+              toast.success('Out of Office deactivated')
+            } else {
+              setOooMessage(afmOooMessage || 'Airfield Management Out of Office - Contact Command Post and 586-239-6528 or Airfield 3 via Tower Net')
+              setShowOooDialog(true)
+            }
+          }} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
+            flex: '1 1 120px', maxWidth: 200,
+            background: afmOutOfOffice ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-surface)',
+            border: afmOutOfOffice ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-base)', fontWeight: 600,
+            color: afmOutOfOffice ? 'var(--color-danger)' : 'var(--color-text-1)',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            {afmOutOfOffice ? '🔴 End OOO' : '🚪 Out of Office'}
+          </button>
+        )}
       </div>
+
+      {/* Out of Office dialog */}
+      {showOooDialog && (
+        <div className="modal-overlay" onClick={() => setShowOooDialog(false)} style={{ padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              Out of Office
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+              This message will display as a full-screen overlay on the Airfield Status page for all users.
+            </div>
+            <textarea
+              value={oooMessage}
+              onChange={e => setOooMessage(e.target.value)}
+              rows={4}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 80, marginBottom: 14,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmOutOfOffice(true, oooMessage)
+                  setShowOooDialog(false)
+                  toast.success('Out of Office activated')
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid rgba(239,68,68,0.4)',
+                  background: 'rgba(239,68,68,0.15)', color: 'var(--color-danger)',
+                }}
+              >Activate</button>
+              <button
+                onClick={() => setShowOooDialog(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== Contractor Form Dialog ===== */}
       {showContractorForm && (

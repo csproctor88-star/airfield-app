@@ -58,7 +58,7 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, refreshStatus } = useDashboard()
+  const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft, userRole } = useInstallation()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
@@ -425,6 +425,54 @@ export default function HomePage() {
   return (
     <div className="page-container">
       <LoginActivityDialog />
+
+      {/* AFM Out of Office overlay */}
+      {afmOutOfOffice && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0, 0, 0, 0.85)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          padding: 32,
+        }}>
+          <div style={{
+            background: 'var(--color-bg-surface-solid, #1E293B)',
+            border: '2px solid rgba(239, 68, 68, 0.5)',
+            borderRadius: 16,
+            padding: '40px 48px',
+            maxWidth: 600,
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🚪</div>
+            <div style={{
+              fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-danger)',
+              marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>
+              Out of Office
+            </div>
+            <div style={{
+              fontSize: 'var(--fs-xl)', color: 'var(--color-text-1)', lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {afmOooMessage || 'Airfield Management is currently out of office.'}
+            </div>
+            {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo') && (
+              <button
+                onClick={() => setAfmOutOfOffice(false)}
+                style={{
+                  marginTop: 24, padding: '10px 24px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
+                  color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Deactivate Out of Office
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===== Weather Strip ===== */}
       <div

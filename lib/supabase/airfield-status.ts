@@ -40,6 +40,8 @@ export interface AirfieldStatus {
   bwc_updated_at: string | null
   construction_remarks: string | null
   misc_remarks: string | null
+  afm_out_of_office: boolean
+  afm_ooo_message: string | null
   updated_by: string | null
   updated_at: string
 }

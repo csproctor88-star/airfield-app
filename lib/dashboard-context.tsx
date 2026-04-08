@@ -42,6 +42,9 @@ type DashboardState = {
   setConstructionRemarks: (val: string | null) => Promise<void>
   miscRemarks: string | null
   setMiscRemarks: (val: string | null) => Promise<void>
+  afmOutOfOffice: boolean
+  afmOooMessage: string | null
+  setAfmOutOfOffice: (active: boolean, message?: string | null) => Promise<void>
   refreshStatus: () => Promise<void>
 }
 
@@ -63,6 +66,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [bwcUpdatedAt, setBwcUpdatedAtLocal] = useState<string | null>(null)
   const [constructionRemarks, setConstructionRemarksLocal] = useState<string | null>(null)
   const [miscRemarks, setMiscRemarksLocal] = useState<string | null>(null)
+  const [afmOutOfOffice, setAfmOooLocal] = useState(false)
+  const [afmOooMessage, setAfmOooMsgLocal] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const lastLocalUpdate = useRef(0)
 
@@ -114,6 +119,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
         setConstructionRemarksLocal(status.construction_remarks ?? null)
         setMiscRemarksLocal(status.misc_remarks ?? null)
+        setAfmOooLocal(status.afm_out_of_office ?? false)
+        setAfmOooMsgLocal(status.afm_ooo_message ?? null)
       }
       setLoaded(true)
     }
@@ -149,6 +156,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           // Construction / Misc remarks realtime
           setConstructionRemarksLocal(row.construction_remarks ?? null)
           setMiscRemarksLocal(row.misc_remarks ?? null)
+          // AFM out of office realtime
+          setAfmOooLocal(row.afm_out_of_office ?? false)
+          setAfmOooMsgLocal(row.afm_ooo_message ?? null)
           // RSC / RCR / BWC realtime
           setRscConditionLocal(row.rsc_condition ?? null)
           setRscUpdatedAtLocal(row.rsc_updated_at ?? null)
@@ -316,6 +326,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await updateAirfieldStatus({ misc_remarks: val }, installationId)
   }, [installationId])
 
+  const setAfmOutOfOffice = useCallback(async (active: boolean, message?: string | null) => {
+    setAfmOooLocal(active)
+    setAfmOooMsgLocal(message ?? null)
+    markLocalUpdate()
+    await updateAirfieldStatus({ afm_out_of_office: active, afm_ooo_message: message ?? null } as any, installationId)
+  }, [installationId])
+
   // Re-fetch airfield_status (called on mount, by dashboard realtime, and by polling fallback)
   const refreshStatus = useCallback(async () => {
     // Skip polling refresh if a local update was made within the last 15 seconds
@@ -347,6 +364,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setBwcUpdatedAtLocal(status.bwc_updated_at ?? null)
       setConstructionRemarksLocal(status.construction_remarks ?? null)
       setMiscRemarksLocal(status.misc_remarks ?? null)
+      setAfmOooLocal(status.afm_out_of_office ?? false)
+      setAfmOooMsgLocal(status.afm_ooo_message ?? null)
     }
   }, [installationId])
 
@@ -374,6 +393,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         bwcValue, bwcUpdatedAt, setBwcValue,
         constructionRemarks, setConstructionRemarks,
         miscRemarks, setMiscRemarks,
+        afmOutOfOffice, afmOooMessage, setAfmOutOfOffice,
         refreshStatus,
       }}
     >
