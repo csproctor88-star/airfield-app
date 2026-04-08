@@ -10,7 +10,8 @@ import { fetchPprEntriesForDate, fetchPprColumns, type PprEntry, type PprColumn 
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
-import { logActivity } from '@/lib/supabase/activity'
+import { logActivity, logManualEntry } from '@/lib/supabase/activity'
+import { toast } from 'sonner'
 import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES, CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
@@ -74,6 +75,8 @@ export default function HomePage() {
   const [editingLabelValue, setEditingLabelValue] = useState('')
   const canEditLabels = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
   const [oooMinimized, setOooMinimized] = useState(false)
+  const [showOooDeactivate, setShowOooDeactivate] = useState(false)
+  const [oooCpInitials, setOooCpInitials] = useState('')
   const [customItemDialog, setCustomItemDialog] = useState<{
     item: CustomStatusItem
     boardName: string
@@ -466,7 +469,7 @@ export default function HomePage() {
             >Minimize</button>
             {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
               <button
-                onClick={() => setAfmOutOfOffice(false)}
+                onClick={() => { setOooCpInitials(''); setShowOooDeactivate(true) }}
                 style={{
                   padding: '6px 16px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
@@ -496,6 +499,60 @@ export default function HomePage() {
             AFM Out of Office
           </span>
           <span style={{ fontSize: 'var(--fs-xs)', color: '#FCA5A5' }}>— tap to expand</span>
+        </div>
+      )}
+
+      {/* OOO Deactivation dialog — CP initials required */}
+      {showOooDeactivate && (
+        <div className="modal-overlay" onClick={() => setShowOooDeactivate(false)} style={{ padding: 24, zIndex: 10000 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid, #1E293B)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              End Out of Office
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
+            <input
+              autoFocus
+              value={oooCpInitials}
+              onChange={e => setOooCpInitials(e.target.value.toUpperCase())}
+              placeholder="CP Initials (e.g. JD)"
+              maxLength={4}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmOutOfOffice(false)
+                  const cpText = oooCpInitials.trim() ? `/${oooCpInitials.trim()}` : ''
+                  await logManualEntry(`AMOPS BACK IN THE OFFICE, COMMAND POST${cpText} NOTIFIED`, installationId)
+                  setShowOooDeactivate(false)
+                  toast.success('Out of Office deactivated')
+                }}
+                disabled={!oooCpInitials.trim()}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: oooCpInitials.trim() ? 'pointer' : 'default', border: '1px solid var(--color-success)',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
+                  opacity: oooCpInitials.trim() ? 1 : 0.4,
+                }}
+              >Deactivate</button>
+              <button
+                onClick={() => setShowOooDeactivate(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
         </div>
       )}
 
