@@ -1077,13 +1077,17 @@ export default function ParkingPage() {
         const heading = spot.heading_deg || 0
         const cacheKey = `${spot.id}-${heading}`
 
-        // Compute scale
+        // Compute scale — target: wingspan in CSS pixels should match real wingspan
+        // The wingspan occupies (w) pixels in a (w + 2*padding) image, centered in a (fixedDim) rotation canvas.
+        // So the wingspan fraction of fixedDim = w / fixedDim. We need: displayDim * (w / fixedDim) = targetCssPx
+        // → scale = targetCssPx / w  (then displayDim = fixedDim * scale gives correct wingspan)
         const wingspanM = spot.wingspan_ft * FT_TO_M
         const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
         const targetCssPx = wingspanDegLng * pxPerDegLng
         const aspect = spot.length_ft / spot.wingspan_ft
-        const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
-        const scale = Math.max(0.02, Math.min(targetCssPx / imageWidthPx, 4.0))
+        // w = wingspan pixels in the source image (before padding/rotation)
+        const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
+        const scale = Math.max(0.02, Math.min(targetCssPx / wingspanPx, 4.0))
 
         // Get or create cached rotated image
         let cached = silhouetteCacheRef.current.get(cacheKey)
@@ -1187,8 +1191,8 @@ export default function ParkingPage() {
         const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
         const targetCssPx = wingspanDegLng * pxPerDegLng
         const aspect = meta.lengthFt / meta.wingspanFt
-        const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
-        const scale = Math.max(0.02, Math.min(targetCssPx / imageWidthPx, 4.0))
+        const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
+        const scale = Math.max(0.02, Math.min(targetCssPx / wingspanPx, 4.0))
         const displayDim = Math.min(800, Math.max(8, Math.round(meta.fixedDim * scale)))
 
         marker.setIcon({
