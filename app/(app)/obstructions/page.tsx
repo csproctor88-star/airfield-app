@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
-import { getRunwayGeometry, pointToRunwayRelation, distanceFt } from '@/lib/calculations/geometry'
+import { getRunwayGeometry, pointToRunwayRelation, distanceFt, bearing } from '@/lib/calculations/geometry'
 import {
   evaluateObstruction,
   evaluateObstructionAllRunways,
@@ -619,6 +619,31 @@ function ObstructionsContent() {
                   : (runways[pointInfo.closestRunwayIndex]?.end2_designator ?? '19')})
               </div>
             </div>
+            {/* NOTAM-ready: NM distance and bearing from nearest threshold */}
+            {(() => {
+              const rwy = runways[pointInfo.closestRunwayIndex]
+              if (!rwy) return null
+              const thresholdCoord = pointInfo.nearerEnd === 'end1'
+                ? { lat: rwy.end1_latitude ?? 0, lon: rwy.end1_longitude ?? 0 }
+                : { lat: rwy.end2_latitude ?? 0, lon: rwy.end2_longitude ?? 0 }
+              const designator = pointInfo.nearerEnd === 'end1'
+                ? (rwy.end1_designator ?? '01')
+                : (rwy.end2_designator ?? '19')
+              const nmDist = pointInfo.distFromThreshold / 6076.12
+              const brg = bearing(thresholdCoord, pointInfo.point)
+              const cardinalDir = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(brg / 22.5) % 16]
+              return (
+                <div style={{
+                  padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)',
+                }}>
+                  <span style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700 }}>NOTAM Reference</span>
+                  <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 4, lineHeight: 1.5 }}>
+                    {nmDist.toFixed(2)} NM {cardinalDir} ({brg.toFixed(0)}°) from RWY {designator} threshold
+                  </div>
+                </div>
+              )
+            })()}
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>Ground Elevation</span>
               <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>

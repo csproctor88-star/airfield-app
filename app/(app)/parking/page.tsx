@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS, type GMapWrapper, createGMapWrapper, pixelToLatLng, queryFeatureAtPoint, clearAllObjects } from '@/lib/google-map-adapter'
 import { toast } from 'sonner'
+import { useGoogleMapRuler } from '@/hooks/use-google-map-ruler'
 import { useInstallation } from '@/lib/installation-context'
 import { formatCoordsDMS } from '@/lib/utils'
 import { allAircraft } from '@/lib/aircraft-data'
@@ -455,6 +456,11 @@ export default function ParkingPage() {
   const dragStartPt = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const dragLabelMarkersRef = useRef<google.maps.Marker[]>([])
   const dragLineRef = useRef<google.maps.Polyline[]>([])
+
+  // Ruler tool
+  const [rulerActive, setRulerActive] = useState(false)
+  const gmapRawRef = useRef<google.maps.Map | null>(null)
+  const ruler = useGoogleMapRuler(gmapRawRef, rulerActive)
   const spotMarkersMapRef = useRef<Map<string, google.maps.Marker>>(new Map())
   // Per-spot metadata for zoom rescaling (avoids full re-render)
   const spotMetaRef = useRef<Map<string, { fixedDim: number; wingspanFt: number; lengthFt: number; cacheKey: string }>>(new Map())
@@ -612,6 +618,7 @@ export default function ParkingPage() {
 
     const wrapper = createGMapWrapper(gmap)
     map.current = wrapper
+    gmapRawRef.current = gmap
 
     // Google Maps is ready immediately after construction — tiles load async
     google.maps.event.addListenerOnce(gmap, 'tilesloaded', () => {
@@ -3219,7 +3226,19 @@ export default function ParkingPage() {
             >
               {isFullscreen ? '\u2716 Exit' : '\u26F6'}
             </button>
-            {/* Ruler button removed in Google Maps version */}
+            <button
+              onClick={() => setRulerActive(r => !r)}
+              title={rulerActive ? 'Disable ruler' : 'Measure distance'}
+              style={{
+                padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                background: 'var(--color-bg-surface)',
+                border: `1px solid ${rulerActive ? '#22D3EE' : 'var(--color-border)'}`,
+                color: rulerActive ? '#22D3EE' : 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              📏 {rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Ruler'}
+            </button>
             {selectedPlan && (
               <>
                 <button
