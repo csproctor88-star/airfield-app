@@ -16,6 +16,7 @@ type FilterTab = 'active' | 'all' | 'completed'
 export default function ContractorsPage() {
   const { installationId, userRole } = useInstallation()
   const canManageTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin' || userRole === 'amops'
+  const canDeleteTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
   const [contractors, setContractors] = useState<ContractorRow[]>([])
   const [filter, setFilter] = useState<FilterTab>('active')
   const [search, setSearch] = useState('')
@@ -442,15 +443,17 @@ export default function ContractorsPage() {
                     color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
                   }}>Edit</button>
-                  <button onClick={() => {
-                    const idx = templates.findIndex(t => t.name === usingTemplate.name)
-                    if (idx >= 0) handleDeleteTemplate(idx)
-                  }} style={{
-                    padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-danger)', background: 'rgba(239,68,68,0.1)',
-                    color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  }}>Delete</button>
+                  {canDeleteTemplates && (
+                    <button onClick={() => {
+                      const idx = templates.findIndex(t => t.name === usingTemplate.name)
+                      if (idx >= 0) handleDeleteTemplate(idx)
+                    }} style={{
+                      padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--color-danger)', background: 'rgba(239,68,68,0.1)',
+                      color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                    }}>Delete</button>
+                  )}
                 </>
               )}
             </div>
