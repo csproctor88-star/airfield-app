@@ -192,7 +192,9 @@ export default function AMDashboardPage() {
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
   const [showOooDialog, setShowOooDialog] = useState(false)
+  const [showOooDeactivateDialog, setShowOooDeactivateDialog] = useState(false)
   const [oooMessage, setOooMessage] = useState('Airfield Management Out of Office - Contact Command Post at 586-239-6528 or Airfield 3 via Tower Net')
+  const [oooCpInitials, setOooCpInitials] = useState('')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
   useEffect(() => {
@@ -518,10 +520,11 @@ export default function AMDashboardPage() {
         {canToggleOoo && (
           <button onClick={() => {
             if (afmOutOfOffice) {
-              setAfmOutOfOffice(false)
-              toast.success('Out of Office deactivated')
+              setOooCpInitials('')
+              setShowOooDeactivateDialog(true)
             } else {
               setOooMessage(afmOooMessage || 'Airfield Management Out of Office - Contact Command Post at 586-239-6528 or Airfield 3 via Tower Net')
+              setOooCpInitials('')
               setShowOooDialog(true)
             }
           }} style={{
@@ -552,24 +555,41 @@ export default function AMDashboardPage() {
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
               This message will display as a full-screen overlay on the Airfield Status page for all users.
             </div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Display Message</div>
             <textarea
               value={oooMessage}
               onChange={e => setOooMessage(e.target.value)}
-              rows={4}
+              rows={3}
               style={{
                 width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
-                fontFamily: 'inherit', resize: 'vertical', minHeight: 80, marginBottom: 14,
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 60, marginBottom: 14,
+              }}
+            />
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
+            <input
+              value={oooCpInitials}
+              onChange={e => setOooCpInitials(e.target.value.toUpperCase())}
+              placeholder="CP Initials (e.g. JD)"
+              maxLength={4}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
               }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={async () => {
                   await setAfmOutOfOffice(true, oooMessage)
+                  const cpText = oooCpInitials.trim() ? `/${oooCpInitials.trim()}` : ''
+                  await logManualEntry(`AMOPS OUT OF OFFICE INITIATED, COMMAND POST${cpText} NOTIFIED`, installationId)
                   setShowOooDialog(false)
                   toast.success('Out of Office activated')
                 }}
+                disabled={!oooCpInitials.trim()}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid rgba(239,68,68,0.4)',
@@ -578,6 +598,60 @@ export default function AMDashboardPage() {
               >Activate</button>
               <button
                 onClick={() => setShowOooDialog(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Out of Office deactivation dialog */}
+      {showOooDeactivateDialog && (
+        <div className="modal-overlay" onClick={() => setShowOooDeactivateDialog(false)} style={{ padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              End Out of Office
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
+            <input
+              autoFocus
+              value={oooCpInitials}
+              onChange={e => setOooCpInitials(e.target.value.toUpperCase())}
+              placeholder="CP Initials (e.g. JD)"
+              maxLength={4}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmOutOfOffice(false)
+                  const cpText = oooCpInitials.trim() ? `/${oooCpInitials.trim()}` : ''
+                  await logManualEntry(`AMOPS BACK IN THE OFFICE, COMMAND POST${cpText} NOTIFIED`, installationId)
+                  setShowOooDeactivateDialog(false)
+                  toast.success('Out of Office deactivated')
+                }}
+                disabled={!oooCpInitials.trim()}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: oooCpInitials.trim() ? 'pointer' : 'default', border: '1px solid var(--color-success)',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
+                  opacity: oooCpInitials.trim() ? 1 : 0.4,
+                }}
+              >Deactivate</button>
+              <button
+                onClick={() => setShowOooDeactivateDialog(false)}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
