@@ -60,6 +60,7 @@ export default function ContractorsPage() {
       })
   }, [installationId])
 
+  // Read-then-write to avoid race conditions overwriting other users' templates
   const saveTemplates = async (updated: ContractorTemplate[]) => {
     setTemplates(updated)
     if (!installationId) return
@@ -68,7 +69,21 @@ export default function ContractorsPage() {
     await supabase.from('bases').update({ contractor_templates: updated } as any).eq('id', installationId)
   }
 
-  const handleSaveAsTemplate = () => {
+  // Fetch latest templates from DB before appending, to avoid overwriting
+  const refreshAndGetTemplates = async (): Promise<ContractorTemplate[]> => {
+    if (!installationId) return templates
+    const supabase = createClient()
+    if (!supabase) return templates
+    const { data } = await supabase.from('bases').select('contractor_templates').eq('id', installationId).single()
+    const row = data as Record<string, unknown> | null
+    const latest = (row?.contractor_templates && Array.isArray(row.contractor_templates))
+      ? row.contractor_templates as ContractorTemplate[]
+      : []
+    setTemplates(latest)
+    return latest
+  }
+
+  const handleSaveAsTemplate = async () => {
     if (!templateName.trim() || !formCompany.trim()) return
     const newTemplate: ContractorTemplate = {
       name: templateName.trim(),
@@ -80,7 +95,8 @@ export default function ContractorsPage() {
       af_form_483_expiration: formAf483Exp,
       contact_phone: formPhone,
     }
-    saveTemplates([...templates, newTemplate])
+    const latest = await refreshAndGetTemplates()
+    await saveTemplates([...latest, newTemplate])
     setTemplateName('')
     setShowSaveTemplate(false)
     toast.success(`Template "${newTemplate.name}" saved`)
@@ -104,9 +120,10 @@ export default function ContractorsPage() {
     toast.success(`Template "${t.name}" applied`)
   }
 
-  const handleDeleteTemplate = (idx: number) => {
-    const updated = templates.filter((_, i) => i !== idx)
-    saveTemplates(updated)
+  const handleDeleteTemplate = async (idx: number) => {
+    const latest = await refreshAndGetTemplates()
+    const updated = latest.filter((_, i) => i !== idx)
+    await saveTemplates(updated)
     toast.success('Template deleted')
   }
 
@@ -127,24 +144,27 @@ export default function ContractorsPage() {
     setShowForm(true)
   }
 
-  const handleUpdateTemplate = () => {
+  const handleUpdateTemplate = async () => {
     if (editingTemplateIdx === null || !templateName.trim() || !formCompany.trim()) return
-    const updated = [...templates]
-    updated[editingTemplateIdx] = {
-      name: templateName.trim(),
-      company: formCompany,
-      contact: formContact,
-      callsign: formCallsign,
-      notes: formNotes,
-      af_form_483: formAf483,
-      af_form_483_expiration: formAf483Exp,
-      contact_phone: formPhone,
+    const latest = await refreshAndGetTemplates()
+    const updated = [...latest]
+    if (editingTemplateIdx < updated.length) {
+      updated[editingTemplateIdx] = {
+        name: templateName.trim(),
+        company: formCompany,
+        contact: formContact,
+        callsign: formCallsign,
+        notes: formNotes,
+        af_form_483: formAf483,
+        af_form_483_expiration: formAf483Exp,
+        contact_phone: formPhone,
+      }
     }
-    saveTemplates(updated)
+    await saveTemplates(updated)
     setTemplateName('')
     setEditingTemplateIdx(null)
     setShowSaveTemplate(false)
-    toast.success(`Template "${updated[editingTemplateIdx]?.name || templateName.trim()}" updated`)
+    toast.success(`Template "${templateName.trim()}" updated`)
   }
 
   // Edit state
