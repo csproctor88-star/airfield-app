@@ -252,8 +252,9 @@ async function renderSilhouetteImage(
   }
 
   const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
+  const padding = 4
+  canvas.width = w + padding * 2
+  canvas.height = h + padding * 2
   const ctx = canvas.getContext('2d')!
 
   const svgMarkup = new XMLSerializer().serializeToString(tightSvg)
@@ -264,7 +265,9 @@ async function renderSilhouetteImage(
   return new Promise(resolve => {
     const img = new Image()
     img.onload = () => {
-      ctx.drawImage(img, 0, 0, w, h)
+      ctx.filter = 'drop-shadow(0px 0px 2px rgba(0,0,0,0.8))'
+      ctx.drawImage(img, padding, padding, w, h)
+      ctx.filter = 'none'
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       resolve({ imageData, width: canvas.width, height: canvas.height })
@@ -1093,8 +1096,7 @@ export default function ParkingPage() {
           ctx.putImageData(imgData.imageData, 0, 0)
           const dataUrl = canvas.toDataURL('image/png')
 
-          // Rotation canvas — just large enough to contain the rotated image (no extra padding)
-          const fixedDim = Math.ceil(Math.sqrt(imgData.width * imgData.width + imgData.height * imgData.height))
+          const fixedDim = Math.max(imgData.width, imgData.height) + 16
           const rotCanvas = document.createElement('canvas')
           rotCanvas.width = fixedDim
           rotCanvas.height = fixedDim
@@ -1106,17 +1108,16 @@ export default function ParkingPage() {
           await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
           rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
 
-          // svgW = the width the SVG was drawn at = wingspan pixels (no padding)
-          const svgAspect = spot.length_ft / spot.wingspan_ft
-          const svgW = svgAspect >= 1 ? Math.round(REF_ICON_SIZE / svgAspect) : REF_ICON_SIZE
-          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, svgW, heading }
+          // imageWidthPx matches the Mapbox formula: canvas width (w + padding*2)
+          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, svgW: imgData.width, heading }
           silhouetteCacheRef.current.set(cacheKey, cached)
         }
 
         if (renderCancelRef.current !== renderToken) return
 
-        // displayDim: scale so wingspan pixels (svgW) within the fixedDim canvas = targetCssPx on screen
-        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * cached.fixedDim / cached.svgW)))
+        // Exact Mapbox formula: scale = targetCssPx / imageWidthPx, displayDim = fixedDim * scale
+        const scale = Math.max(0.02, Math.min(targetCssPx / cached.svgW, 4.0))
+        const displayDim = Math.min(800, Math.max(8, Math.round(cached.fixedDim * scale)))
         const marker = new google.maps.Marker({
           position: { lat: c.lat, lng: c.lon },
           map: gmap,
@@ -1186,7 +1187,8 @@ export default function ParkingPage() {
         const wingspanM = meta.wingspanFt * FT_TO_M
         const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
         const targetCssPx = wingspanDegLng * pxPerDegLng
-        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * meta.fixedDim / meta.svgW)))
+        const scale = Math.max(0.02, Math.min(targetCssPx / meta.svgW, 4.0))
+        const displayDim = Math.min(800, Math.max(8, Math.round(meta.fixedDim * scale)))
 
         marker.setIcon({
           url: cached.url,
