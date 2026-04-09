@@ -313,12 +313,12 @@ function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: map
   const dy = pW.y - p0.y
   const targetCssPx = Math.sqrt(dx * dx + dy * dy)
 
-  // The icon image is REF_ICON_SIZE px wide (for the wider dimension)
-  // Figure out which dimension is wider in the image
+  // Divide by the SVG drawing width (w) — not canvas width (w+8).
+  // The SVG artwork fills w pixels; padding is extra space outside the wingspan.
   const aspect = lengthFt / wingspanFt
-  const imageWidthPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
+  const svgDrawW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
 
-  return targetCssPx / imageWidthPx
+  return targetCssPx / svgDrawW
 }
 
 // ── Main Page ──
