@@ -313,12 +313,14 @@ function computeIconScale(wingspanFt: number, lengthFt: number, mapInstance: map
   const dy = pW.y - p0.y
   const targetCssPx = Math.sqrt(dx * dx + dy * dy)
 
-  // Divide by the SVG drawing width (w) — not canvas width (w+8).
-  // The SVG artwork fills w pixels; padding is extra space outside the wingspan.
+  // Divide by SVG drawing width (w). Apply 1.03 overcompensation so silhouettes
+  // render slightly larger than actual — SVG wing tip artwork doesn't extend to
+  // the exact edge of the bounding box, so without this factor wingspans measure
+  // ~3% short. Oversized is safer than undersized for clearance planning.
   const aspect = lengthFt / wingspanFt
   const svgDrawW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
 
-  return targetCssPx / svgDrawW
+  return (targetCssPx / svgDrawW) * 1.03
 }
 
 // ── Main Page ──
@@ -3330,6 +3332,15 @@ export default function ParkingPage() {
               ))}
             </div>
           )}
+
+            {/* Disclaimer */}
+            <div style={{
+              padding: '8px 10px', marginTop: 8,
+              fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)',
+              lineHeight: 1.5, borderTop: '1px solid var(--color-border)',
+            }}>
+              Aircraft silhouettes are rendered to-scale using dimensions from the aircraft database. SVG artwork may not extend to exact wing tip edges, resulting in visual measurements up to ~2% smaller than actual. All clearance calculations use precise database dimensions, not visual rendering.
+            </div>
 
             </div>
           )}
