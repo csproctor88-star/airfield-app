@@ -1077,17 +1077,10 @@ export default function ParkingPage() {
         const heading = spot.heading_deg || 0
         const cacheKey = `${spot.id}-${heading}`
 
-        // Compute scale — target: wingspan in CSS pixels should match real wingspan
-        // The wingspan occupies (w) pixels in a (w + 2*padding) image, centered in a (fixedDim) rotation canvas.
-        // So the wingspan fraction of fixedDim = w / fixedDim. We need: displayDim * (w / fixedDim) = targetCssPx
-        // → scale = targetCssPx / w  (then displayDim = fixedDim * scale gives correct wingspan)
+        // Compute scale — target: icon should render at real-world wingspan
         const wingspanM = spot.wingspan_ft * FT_TO_M
         const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
         const targetCssPx = wingspanDegLng * pxPerDegLng
-        const aspect = spot.length_ft / spot.wingspan_ft
-        // w = wingspan pixels in the source image (before padding/rotation)
-        const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
-        const scale = Math.max(0.02, Math.min(targetCssPx / wingspanPx, 4.0))
 
         // Get or create cached rotated image
         let cached = silhouetteCacheRef.current.get(cacheKey)
@@ -1120,7 +1113,10 @@ export default function ParkingPage() {
 
         if (renderCancelRef.current !== renderToken) return
 
-        const displayDim = Math.min(800, Math.max(8, Math.round(cached.fixedDim * scale)))
+        // displayDim: scale the rotation canvas so the wingspan pixels within it match targetCssPx
+        const aspect = spot.length_ft / spot.wingspan_ft
+        const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
+        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * cached.fixedDim / wingspanPx)))
         const marker = new google.maps.Marker({
           position: { lat: c.lat, lng: c.lon },
           map: gmap,
@@ -1192,8 +1188,7 @@ export default function ParkingPage() {
         const targetCssPx = wingspanDegLng * pxPerDegLng
         const aspect = meta.lengthFt / meta.wingspanFt
         const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
-        const scale = Math.max(0.02, Math.min(targetCssPx / wingspanPx, 4.0))
-        const displayDim = Math.min(800, Math.max(8, Math.round(meta.fixedDim * scale)))
+        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * meta.fixedDim / wingspanPx)))
 
         marker.setIcon({
           url: cached.url,

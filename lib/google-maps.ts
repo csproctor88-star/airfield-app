@@ -44,4 +44,5 @@ export const GOOGLE_MAP_OPTIONS: google.maps.MapOptions = {
   disableDefaultUI: true,
   zoomControl: true,
   gestureHandling: 'greedy',
+  isFractionalZoomEnabled: true,
 }
