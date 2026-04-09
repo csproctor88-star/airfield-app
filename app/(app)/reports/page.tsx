@@ -243,6 +243,16 @@ export default function ReportsPage() {
             )}
           </StyledCard>
 
+          {/* Customer Feedback */}
+          <StyledCard accent="#FBBF24">
+            <CardHeader>Customer Feedback</CardHeader>
+            <BigNumber value={analytics.feedback.recentCount} label={`submissions (${periodLabel})`} />
+            <StatRow label="Total all-time" value={analytics.feedback.total} />
+            {analytics.feedback.avgRating != null && (
+              <StatRow label="Avg rating" value={`${analytics.feedback.avgRating.toFixed(1)} / 5`} />
+            )}
+          </StyledCard>
+
         </div>
       )}
     </div>

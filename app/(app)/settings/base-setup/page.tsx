@@ -57,7 +57,7 @@ import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, Infra
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
 
-type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife' | 'statusboards' | 'pprcolumns'
+type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife' | 'statusboards' | 'pprcolumns' | 'feedback'
 
 type WizardStep = {
   key: SetupTab
@@ -82,6 +82,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'lighting', number: 12, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
   { key: 'statusboards', number: 13, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
   { key: 'pprcolumns', number: 14, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
+  { key: 'feedback', number: 15, label: 'Customer Feedback', description: 'Configure a public feedback form and generate a QR code. Anyone who scans the code can submit feedback that is stored in your installation\'s database.', required: false },
 ]
 
 export default function BaseSetupPage() {
@@ -238,6 +239,7 @@ export default function BaseSetupPage() {
         {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
         {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} />}
         {step.key === 'pprcolumns' && <PprColumnsTab installationId={installationId} />}
+        {step.key === 'feedback' && <FeedbackConfigTab installationId={installationId} />}
       </div>
 
       {/* Navigation buttons */}
@@ -4358,6 +4360,184 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
         >
           Add
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Customer Feedback Config Tab ──
+function FeedbackConfigTab({ installationId }: { installationId: string | null }) {
+  const [config, setConfig] = useState<import('@/lib/supabase/feedback').FeedbackFormConfig | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [newFieldLabel, setNewFieldLabel] = useState('')
+  const [newFieldType, setNewFieldType] = useState<'text' | 'textarea' | 'rating' | 'yes_no' | 'dropdown'>('text')
+  const [showQr, setShowQr] = useState(false)
+  const [qrUrl, setQrUrl] = useState('')
+
+  useEffect(() => {
+    if (!installationId) return
+    import('@/lib/supabase/feedback').then(({ fetchFeedbackConfig }) =>
+      fetchFeedbackConfig(installationId).then(setConfig)
+    )
+  }, [installationId])
+
+  const handleSave = async (updates: Partial<import('@/lib/supabase/feedback').FeedbackFormConfig>) => {
+    if (!installationId || !config) return
+    setSaving(true)
+    const updated = { ...config, ...updates }
+    setConfig(updated)
+    const { saveFeedbackConfig } = await import('@/lib/supabase/feedback')
+    await saveFeedbackConfig(installationId, updated)
+    setSaving(false)
+    toast.success('Feedback form saved')
+  }
+
+  const addField = () => {
+    if (!config || !newFieldLabel.trim()) return
+    const field: import('@/lib/supabase/feedback').FeedbackFormField = {
+      id: crypto.randomUUID(),
+      label: newFieldLabel.trim(),
+      type: newFieldType,
+      required: false,
+      options: newFieldType === 'dropdown' ? ['Option 1', 'Option 2'] : undefined,
+    }
+    handleSave({ fields: [...config.fields, field] })
+    setNewFieldLabel('')
+  }
+
+  const removeField = (id: string) => {
+    if (!config) return
+    handleSave({ fields: config.fields.filter(f => f.id !== id) })
+  }
+
+  const generateQr = () => {
+    const url = `${window.location.origin}/feedback/${installationId}`
+    setQrUrl(url)
+    setShowQr(true)
+  }
+
+  if (!config) return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading...</p>
+
+  const fieldStyle = {
+    padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+    color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+    width: '100%', boxSizing: 'border-box' as const,
+  }
+  const labelStyle = { fontSize: 'var(--fs-xs)', fontWeight: 600 as const, color: 'var(--color-text-3)', marginBottom: 2, display: 'block' as const }
+
+  return (
+    <div>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Customer Feedback Form</h3>
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+        Configure a public feedback form accessible via QR code. Submissions are stored in your database.
+      </p>
+
+      {/* Enable toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input type="checkbox" checked={config.enabled} onChange={e => handleSave({ enabled: e.target.checked })} style={{ accentColor: 'var(--color-cyan)' }} />
+          <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: config.enabled ? 'var(--color-success)' : 'var(--color-text-3)' }}>
+            {config.enabled ? 'Form Active' : 'Form Inactive'}
+          </span>
+        </label>
+        {config.enabled && (
+          <button onClick={generateQr} style={{
+            padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Generate QR Code</button>
+        )}
+      </div>
+
+      {/* QR Code display */}
+      {showQr && (
+        <div style={{
+          padding: 16, marginBottom: 16, borderRadius: 'var(--radius-base)',
+          background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>Feedback Form URL</div>
+          <div style={{
+            padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+            fontFamily: 'monospace', fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)',
+            wordBreak: 'break-all', marginBottom: 12,
+          }}>{qrUrl}</div>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}&bgcolor=0B1120&color=22D3EE`}
+            alt="QR Code"
+            width={200}
+            height={200}
+            style={{ borderRadius: 8, border: '2px solid var(--color-border)' }}
+          />
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 8 }}>
+            Right-click the QR code to save, or copy the URL above.
+          </div>
+        </div>
+      )}
+
+      {/* Form title and description */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+        <div>
+          <label style={labelStyle}>Form Title</label>
+          <input value={config.title} onChange={e => setConfig(prev => prev ? { ...prev, title: e.target.value } : prev)} onBlur={() => handleSave({ title: config.title })} style={fieldStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Description</label>
+          <textarea value={config.description} onChange={e => setConfig(prev => prev ? { ...prev, description: e.target.value } : prev)} onBlur={() => handleSave({ description: config.description })} rows={2} style={{ ...fieldStyle, resize: 'vertical' }} />
+        </div>
+        <div>
+          <label style={labelStyle}>Thank You Message</label>
+          <input value={config.thank_you_message} onChange={e => setConfig(prev => prev ? { ...prev, thank_you_message: e.target.value } : prev)} onBlur={() => handleSave({ thank_you_message: config.thank_you_message })} style={fieldStyle} />
+        </div>
+      </div>
+
+      {/* Standard fields toggles */}
+      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 6 }}>Standard Fields</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16, padding: '8px 12px', background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)' }}>
+        {[
+          { key: 'show_name' as const, label: 'Name' },
+          { key: 'show_email' as const, label: 'Email' },
+          { key: 'show_organization' as const, label: 'Organization / Unit' },
+          { key: 'show_overall_rating' as const, label: 'Overall Rating (1-5 stars)' },
+        ].map(item => (
+          <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 0' }}>
+            <input type="checkbox" checked={config[item.key]} onChange={e => handleSave({ [item.key]: e.target.checked })} style={{ accentColor: 'var(--color-cyan)' }} />
+            <span style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)' }}>{item.label}</span>
+          </label>
+        ))}
+      </div>
+
+      {/* Custom fields */}
+      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 6 }}>Custom Fields</div>
+      {config.fields.length === 0 && (
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>No custom fields added yet.</p>
+      )}
+      {config.fields.map(field => (
+        <div key={field.id} style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4,
+          background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)',
+        }}>
+          <span style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)' }}>{field.label}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', textTransform: 'uppercase' }}>{field.type.replace('_', '/')}</span>
+          <button onClick={() => removeField(field.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: 0, lineHeight: 1 }}>&times;</button>
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <input value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)} onKeyDown={e => e.key === 'Enter' && addField()} placeholder="Field label..." style={{ ...fieldStyle, flex: 1 }} />
+        <select value={newFieldType} onChange={e => setNewFieldType(e.target.value as any)} style={{ ...fieldStyle, width: 'auto' }}>
+          <option value="text">Text</option>
+          <option value="textarea">Text Area</option>
+          <option value="rating">Rating (1-5)</option>
+          <option value="yes_no">Yes / No</option>
+          <option value="dropdown">Dropdown</option>
+        </select>
+        <button onClick={addField} disabled={!newFieldLabel.trim()} style={{
+          padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+          background: newFieldLabel.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+          color: newFieldLabel.trim() ? '#fff' : 'var(--color-text-3)', cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+        }}>Add</button>
       </div>
     </div>
   )

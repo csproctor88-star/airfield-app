@@ -51,6 +51,12 @@ export interface AnalyticsData {
     createdInPeriod: number
     activePlan: string | null
   }
+  // Customer Feedback
+  feedback: {
+    total: number
+    recentCount: number
+    avgRating: number | null
+  }
 }
 
 const EMPTY_INSP: InspectionMetrics = { completed: 0, avgMinutes: null, passRate: null }
@@ -65,6 +71,7 @@ const EMPTY: AnalyticsData = {
   wildlife: { sightings: 0, strikes: 0, topSpecies: null },
   obstructions: { evaluated: 0, violations: 0 },
   parking: { totalPlans: 0, createdInPeriod: 0, activePlan: null },
+  feedback: { total: 0, recentCount: 0, avgRating: null },
 }
 
 export async function fetchAnalyticsData(baseId: string | null, days = 30): Promise<AnalyticsData> {
@@ -85,6 +92,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       wildlifeData,
       obstructionData,
       parkingData,
+      feedbackData,
     ] = await Promise.all([
       fetchInspectionAnalytics(supabase, baseId, since),
       fetchCheckAnalytics(supabase, baseId, since),
@@ -94,6 +102,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       fetchWildlifeAnalytics(supabase, baseId, since),
       fetchObstructionAnalytics(supabase, baseId, since),
       fetchParkingAnalytics(supabase, baseId, since),
+      fetchFeedbackAnalytics(supabase, baseId, since),
     ])
 
     return {
@@ -106,6 +115,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       wildlife: wildlifeData,
       obstructions: obstructionData,
       parking: parkingData,
+      feedback: feedbackData,
     }
   } catch (e) {
     console.error('Analytics fetch failed:', e)
@@ -373,5 +383,26 @@ async function fetchParkingAnalytics(supabase: any, baseId: string, since: strin
     totalPlans: all.length,
     createdInPeriod: (recentPlans.data ?? []).length,
     activePlan: active?.plan_name || null,
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchFeedbackAnalytics(supabase: any, baseId: string, since: string) {
+  const { data } = await supabase
+    .from('customer_feedback')
+    .select('overall_rating, submitted_at')
+    .eq('base_id', baseId)
+
+  const rows = (data ?? []) as { overall_rating: number | null; submitted_at: string }[]
+  const recent = rows.filter(r => r.submitted_at >= since)
+  const rated = rows.filter(r => r.overall_rating != null)
+  const avgRating = rated.length > 0
+    ? rated.reduce((s, r) => s + (r.overall_rating || 0), 0) / rated.length
+    : null
+
+  return {
+    total: rows.length,
+    recentCount: recent.length,
+    avgRating,
   }
 }

@@ -31,6 +31,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'All Inspections', href: '/inspections/all', iconName: 'ClipboardList' },
   { name: 'Wildlife / BASH', href: '/wildlife', iconName: 'Bird' },
   { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen' },
+  { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare' },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
   { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
