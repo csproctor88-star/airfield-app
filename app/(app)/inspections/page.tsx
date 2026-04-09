@@ -929,9 +929,22 @@ export default function InspectionsPage() {
       const type = member.inspection_type as FormType
       if (type !== 'airfield' && type !== 'lighting') continue
 
+      // Check localStorage first — it may have more recent data than the DB
+      const localDraft = loadTypeDraft(type, installationId)
+      const localResponses = localDraft?.half?.responses ? Object.keys(localDraft.half.responses).length : 0
+
       let half: InspectionHalfDraft
       if (member.draft_data) {
-        half = { ...(member.draft_data as unknown as InspectionHalfDraft), dbRowId: member.id }
+        const dbResponses = (member.draft_data as any)?.responses ? Object.keys((member.draft_data as any).responses).length : 0
+        // Prefer localStorage if it has more responses (user toggled items but didn't Save Draft)
+        if (localResponses > dbResponses) {
+          half = { ...localDraft!.half, dbRowId: member.id }
+        } else {
+          half = { ...(member.draft_data as unknown as InspectionHalfDraft), dbRowId: member.id }
+        }
+      } else if (localResponses > 0) {
+        // DB has no draft_data but localStorage does — use localStorage
+        half = { ...localDraft!.half, dbRowId: member.id }
       } else if (member.items && member.items.length > 0) {
         half = itemsToDraftHalf(
           member.items, member.id,
