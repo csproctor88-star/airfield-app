@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchActivityLog } from '@/lib/supabase/activity-queries'
+import { fetchActivityLog, fetchDashboardActivity } from '@/lib/supabase/activity-queries'
 import { fetchInspections } from '@/lib/supabase/inspections'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
@@ -259,7 +259,7 @@ export default function AMDashboardPage() {
 
   // --- Load Activity Feed ---
   const loadActivity = useCallback(async () => {
-    const { data } = await fetchActivityLog({ baseId: installationId, limit: 20 })
+    const data = await fetchDashboardActivity(installationId, 30)
     setActivity(data as ActivityEntry[])
   }, [installationId])
 

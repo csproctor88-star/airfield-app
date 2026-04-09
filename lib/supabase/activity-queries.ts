@@ -88,6 +88,142 @@ export async function fetchActivityLog(options: {
   return { data: [], error: null }
 }
 
+/**
+ * Fetch a unified activity feed for the Dashboard's "Recent Activity" section.
+ * Merges activity_log entries with recent discrepancy, check, and inspection events
+ * so the Dashboard shows everything that happens — not just manual log entries.
+ */
+export async function fetchDashboardActivity(baseId: string | null, limit = 30): Promise<ActivityEntry[]> {
+  const supabase = createClient()
+  if (!supabase || !baseId) return []
+
+  const since = new Date(Date.now() - 7 * 86400000).toISOString() // last 7 days
+
+  // 1. Standard activity log entries
+  const { data: logData } = await supabase
+    .from('activity_log')
+    .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank, role, edipi, operating_initials)')
+    .eq('base_id', baseId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  const entries: ActivityEntry[] = (logData || []).map((r: any) => ({
+    id: r.id,
+    action: r.action,
+    entity_type: r.entity_type,
+    entity_id: r.entity_id,
+    entity_display_id: r.entity_display_id,
+    metadata: r.metadata || null,
+    created_at: r.created_at,
+    user_name: r.profiles?.name || 'Unknown',
+    user_rank: r.profiles?.rank || null,
+    user_role: r.profiles?.role || null,
+    user_edipi: r.profiles?.edipi || null,
+    user_operating_initials: r.profiles?.operating_initials || null,
+  }))
+
+  const usedIds = new Set(entries.map(e => `${e.entity_type}-${e.entity_id}-${e.action}`))
+
+  // 2. Recent discrepancy changes (created, status updates, completed)
+  const { data: discData } = await supabase
+    .from('discrepancies')
+    .select('id, display_id, title, status, current_status, type, location_text, created_at, updated_at, reported_by, profiles:reported_by(name, rank, operating_initials)')
+    .eq('base_id', baseId)
+    .gte('updated_at', since)
+    .order('updated_at', { ascending: false })
+    .limit(20)
+
+  for (const d of (discData || []) as any[]) {
+    const key = `discrepancy-${d.id}-updated`
+    if (usedIds.has(key)) continue
+    usedIds.add(key)
+    const isNew = new Date(d.created_at).getTime() > Date.now() - 7 * 86400000 &&
+      Math.abs(new Date(d.created_at).getTime() - new Date(d.updated_at).getTime()) < 60000
+    entries.push({
+      id: `disc-${d.id}`,
+      action: isNew ? 'created' : d.status === 'completed' ? 'completed' : 'updated',
+      entity_type: 'discrepancy',
+      entity_id: d.id,
+      entity_display_id: d.display_id,
+      metadata: { details: `${d.title || d.type?.toUpperCase() || 'DISCREPANCY'}${d.location_text ? ' — ' + d.location_text : ''}${d.current_status ? ' [' + d.current_status.replace(/_/g, ' ').toUpperCase() + ']' : ''}` },
+      created_at: isNew ? d.created_at : d.updated_at,
+      user_name: d.profiles?.name || 'Unknown',
+      user_rank: d.profiles?.rank || null,
+      user_role: null,
+      user_edipi: null,
+      user_operating_initials: d.profiles?.operating_initials || null,
+    })
+  }
+
+  // 3. Recent check completions
+  const { data: checkData } = await supabase
+    .from('airfield_checks')
+    .select('id, display_id, check_type, completed_at, completed_by, profiles:completed_by(name, rank, operating_initials)')
+    .eq('base_id', baseId)
+    .not('completed_at', 'is', null)
+    .gte('completed_at', since)
+    .order('completed_at', { ascending: false })
+    .limit(20)
+
+  for (const c of (checkData || []) as any[]) {
+    const key = `check-${c.id}-completed`
+    if (usedIds.has(key)) continue
+    usedIds.add(key)
+    const typeLabel = (c.check_type || '').replace(/_/g, ' ').toUpperCase()
+    entries.push({
+      id: `chk-${c.id}`,
+      action: 'completed',
+      entity_type: 'check',
+      entity_id: c.id,
+      entity_display_id: c.display_id,
+      metadata: { details: `${typeLabel} CHECK COMPLETED` },
+      created_at: c.completed_at,
+      user_name: c.profiles?.name || 'Unknown',
+      user_rank: c.profiles?.rank || null,
+      user_role: null,
+      user_edipi: null,
+      user_operating_initials: c.profiles?.operating_initials || null,
+    })
+  }
+
+  // 4. Recent inspection filings
+  const { data: inspData } = await supabase
+    .from('inspections')
+    .select('id, display_id, inspection_type, status, filed_at, inspector_id, profiles:inspector_id(name, rank, operating_initials)')
+    .eq('base_id', baseId)
+    .eq('status', 'completed')
+    .not('filed_at', 'is', null)
+    .gte('filed_at', since)
+    .order('filed_at', { ascending: false })
+    .limit(10)
+
+  for (const ins of (inspData || []) as any[]) {
+    const key = `inspection-${ins.id}-filed`
+    if (usedIds.has(key)) continue
+    usedIds.add(key)
+    const typeLabel = (ins.inspection_type || '').toUpperCase()
+    entries.push({
+      id: `insp-${ins.id}`,
+      action: 'filed',
+      entity_type: 'inspection',
+      entity_id: ins.id,
+      entity_display_id: ins.display_id,
+      metadata: { details: `${typeLabel} INSPECTION FILED` },
+      created_at: ins.filed_at,
+      user_name: ins.profiles?.name || 'Unknown',
+      user_rank: ins.profiles?.rank || null,
+      user_role: null,
+      user_edipi: null,
+      user_operating_initials: ins.profiles?.operating_initials || null,
+    })
+  }
+
+  // Sort all entries by created_at descending and trim to limit
+  entries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  return entries.slice(0, limit)
+}
+
 export type EntityDetails = {
   title?: string
   description?: string
