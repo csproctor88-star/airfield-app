@@ -922,7 +922,6 @@ export default function InspectionsPage() {
     }
 
     setShowHistory(false)
-    logActivity('resumed', 'inspection', members[0].id, members[0].display_id, { details: 'AFLD INSPECTION RESUMED' }, installationId)
     window.scrollTo(0, 0)
     toast.success('Inspection resumed')
   }
