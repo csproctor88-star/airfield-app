@@ -36,9 +36,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 const ACTION_LABELS: Record<string, string> = {
   created: 'Created', updated: 'Updated', deleted: 'Deleted', completed: 'Completed',
-  opened: 'Opened', closed: 'Closed', status_updated: 'Status Changed',
+  opened: 'Opened', closed: 'Closed', status_updated: 'Status changed on',
   saved: 'Saved', filed: 'Filed', resumed: 'Resumed', reviewed: 'Reviewed',
-  noted: 'Logged', logged_personnel: 'Logged', personnel_off_airfield: 'Personnel Off',
+  waiver_review_deleted: 'Deleted review for',
+  noted: 'Logged', logged_personnel: 'Logged', personnel_off_airfield: 'Personnel Off Airfield',
   cancelled: 'Cancelled',
 }
 
@@ -46,9 +47,37 @@ const ENTITY_LABELS: Record<string, string> = {
   discrepancy: 'Discrepancy', check: 'Check', airfield_check: 'Check', inspection: 'Inspection',
   acsi_inspection: 'ACSI Inspection', obstruction_evaluation: 'Obstruction Eval',
   navaid_status: 'NAVAID', airfield_status: 'Runway', weather_info: 'Weather Info', arff_status: 'ARFF',
-  contractor: 'Personnel', qrc: 'QRC', manual: 'Manual Entry',
+  contractor: 'Personnel', qrc: 'QRC', manual: 'Logged Entry',
   wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike',
   parking_plan: 'Parking Plan', waiver: 'Waiver', waiver_review: 'Waiver Review',
+}
+
+const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  'Inspections/Checks': 'Logged Inspection/Check', 'AMOPS Reporting': 'Logged AMOPS Report',
+  'Tower Reporting': 'Logged Tower Report', 'Shift Changes': 'Logged Shift Change',
+  'Daily Tasks': 'Logged Daily Task', 'QRC': 'Logged QRC Entry',
+  'PCAS/SCN Tests & Activations': 'Logged PCAS/SCN', 'Personnel on Airfield': 'Logged Personnel',
+  'NOTAMs': 'Logged NOTAM', 'ARFF': 'Logged ARFF', 'IFE/GE': 'Logged IFE/GE',
+  'CMA Violations': 'Logged CMA Violation', 'BWC Declarations': 'Logged BWC Change',
+  'Miscellaneous': 'Logged Entry',
+}
+
+function inferActionFromText(details: string): string | null {
+  const d = (details || '').toUpperCase()
+  if (d.includes('SHIFT CHANGE')) return 'Shift Change'
+  if (d.includes('AMOPS OPEN')) return 'AMOPS Open'
+  if (d.includes('AMOPS CLOSED') || d.includes('AMOPS CLSD')) return 'AMOPS Closed'
+  if (d.includes('NOTAM CANCEL') || d.includes('NOTAMC')) return 'NOTAM Canceled'
+  if (d.includes('NOTAM ISSUED') || d.includes('NOTAMN')) return 'NOTAM Issued'
+  if (d.includes('SCN CHECK')) return 'SCN Check Complete'
+  if (d.includes('SCN ACTIVATED')) return 'SCN Activated'
+  if (d.includes('PCAS TESTED') || d.includes('PCAS TEST')) return 'PCAS Tested'
+  if (d.includes('TOWER IS NOW OPEN') || d.includes('TOWER OPEN')) return 'Tower Open'
+  if (d.includes('TOWER CLOSED') || d.includes('TOWER CLSD')) return 'Tower Closed'
+  if (d.includes('BWC CHANGE') || d.includes('BWC/')) return 'BWC Change'
+  if (d.includes('ON AIRFIELD FOR') || d.includes('ON THE AFLD FOR')) return 'On Airfield'
+  if (d.includes('OPS RESUMED')) return 'Ops Resumed'
+  return null
 }
 
 function fmtTime(iso: string) {
@@ -65,10 +94,26 @@ function fmtDateLong(dateStr: string) {
 }
 
 function formatActivityAction(entry: ActivityEntryForReport): string {
+  const m = entry.metadata as Record<string, unknown> | null
+
+  // Template-based manual entries — use template label
+  if (entry.entity_type === 'manual' && m?.template_label) {
+    return m.template_label as string
+  }
+  if (entry.entity_type === 'manual' && m?.template_category) {
+    return TEMPLATE_CATEGORY_LABELS[m.template_category as string] || 'Logged Entry'
+  }
+  // Infer action from free-typed text
+  if (entry.entity_type === 'manual' && m?.details) {
+    const inferred = inferActionFromText(m.details as string)
+    if (inferred) return inferred
+  }
+
   const action = ACTION_LABELS[entry.action] || entry.action.charAt(0).toUpperCase() + entry.action.slice(1).replace(/_/g, ' ')
   const entity = ENTITY_LABELS[entry.entity_type] || entry.entity_type.replace(/_/g, ' ')
   const id = entry.entity_display_id ? ` ${entry.entity_display_id}` : ''
-  if (entry.action === 'personnel_off_airfield') return `Personnel Off${id}`
+  if (entry.action === 'personnel_off_airfield') return `${action}${id}`
+  if (entry.entity_type === 'manual') return entity
   return `${action} ${entity}${id}`
 }
 
