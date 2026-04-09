@@ -422,6 +422,27 @@ export default function InspectionsPage() {
     if (draftLoaded && lightingDraft) saveTypeDraft('lighting', lightingDraft, installationId)
   }, [lightingDraft, draftLoaded, installationId])
 
+  // ── Flush draft on unmount + visibility change (mobile nav away) ──
+  const airfieldDraftRef = useRef(airfieldDraft)
+  const lightingDraftRef = useRef(lightingDraft)
+  airfieldDraftRef.current = airfieldDraft
+  lightingDraftRef.current = lightingDraft
+
+  useEffect(() => {
+    const flush = () => {
+      if (airfieldDraftRef.current) saveTypeDraft('airfield', airfieldDraftRef.current, installationId)
+      if (lightingDraftRef.current) saveTypeDraft('lighting', lightingDraftRef.current, installationId)
+    }
+    const onVisChange = () => { if (document.visibilityState === 'hidden') flush() }
+    document.addEventListener('visibilitychange', onVisChange)
+    window.addEventListener('beforeunload', flush)
+    return () => {
+      flush() // save on unmount (component navigation)
+      document.removeEventListener('visibilitychange', onVisChange)
+      window.removeEventListener('beforeunload', flush)
+    }
+  }, [installationId])
+
   // ── Current form helpers ──
   const currentDraft = activeForm === 'airfield' ? airfieldDraft : activeForm === 'lighting' ? lightingDraft : null
   const currentHalf: InspectionHalfDraft | null = currentDraft?.half || null
