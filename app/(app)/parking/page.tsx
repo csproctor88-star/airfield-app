@@ -463,12 +463,11 @@ export default function ParkingPage() {
   const ruler = useGoogleMapRuler(gmapRawRef, rulerActive)
   const spotMarkersMapRef = useRef<Map<string, google.maps.Marker>>(new Map())
   // Per-spot metadata for zoom rescaling (avoids full re-render)
-  const spotMetaRef = useRef<Map<string, { fixedDim: number; svgW: number; wingspanFt: number; lengthFt: number; cacheKey: string }>>(new Map())
+  const spotMetaRef = useRef<Map<string, { fixedDim: number; wingspanFt: number; lengthFt: number; cacheKey: string }>>(new Map())
   // Selection ring — managed separately from main render
   const selectionRingRef = useRef<google.maps.Circle | null>(null)
   // Cache rotated silhouette data URLs to avoid re-rendering on every zoom change
-  // svgW = the pixel width the SVG wingspan was drawn at (no padding)
-  const silhouetteCacheRef = useRef<Map<string, { url: string; fixedDim: number; svgW: number; heading: number }>>(new Map())
+  const silhouetteCacheRef = useRef<Map<string, { url: string; fixedDim: number; heading: number }>>(new Map())
   // Nose gear markers — managed with aircraft layer
   const noseGearMarkersRef = useRef<google.maps.Marker[]>([])
   // ── Derived data ──
@@ -1003,7 +1002,6 @@ export default function ParkingPage() {
     const gmap = w.gmap
 
     if (!visibleLayers.aircraft) {
-      // Hide all aircraft markers
       spotMarkersMapRef.current.forEach(m => m.setMap(null))
       spotMarkersMapRef.current.clear()
       spotMetaRef.current.clear()
@@ -1016,7 +1014,7 @@ export default function ParkingPage() {
       return
     }
 
-    // Detect if this is a position-only update (same set of aircraft, same headings — just moved)
+    // Detect position-only update
     const prevRendered = renderedSpotsRef.current
     const isPositionOnlyUpdate = spotsWithAircraft.length === prevRendered.size &&
       spotsWithAircraft.every(s => {
@@ -1025,51 +1023,33 @@ export default function ParkingPage() {
       })
 
     if (isPositionOnlyUpdate && spotMarkersMapRef.current.size > 0) {
-      // Fast path: just update positions on existing markers — no destroy/rebuild
       for (const spot of spotsWithAircraft) {
         const c = spotCenter(spot)
         const marker = spotMarkersMapRef.current.get(spot.id)
-        if (marker) {
-          marker.setPosition({ lat: c.lat, lng: c.lon })
-        }
+        if (marker) marker.setPosition({ lat: c.lat, lng: c.lon })
         w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
       }
-      // Update nose gear positions
       const spotsWithNoseGear = spotsWithAircraft.filter(s => s.pivot_point_ft > 0)
       spotsWithNoseGear.forEach((spot, i) => {
-        if (noseGearMarkersRef.current[i]) {
-          noseGearMarkersRef.current[i].setPosition({ lat: spot.latitude, lng: spot.longitude })
-        }
+        if (noseGearMarkersRef.current[i]) noseGearMarkersRef.current[i].setPosition({ lat: spot.latitude, lng: spot.longitude })
       })
-      // Update rendered positions cache
       for (const s of spotsWithAircraft) {
         renderedSpotsRef.current.set(s.id, { lat: s.latitude, lng: s.longitude, heading: s.heading_deg || 0, name: s.aircraft_name || '' })
       }
       return
     }
 
-    // Full rebuild path: aircraft added/removed/heading changed
+    // Full rebuild
     const renderToken = ++renderCancelRef.current
-
     spotMarkersMapRef.current.forEach(m => m.setMap(null))
     spotMarkersMapRef.current.clear()
     spotMetaRef.current.clear()
     noseGearMarkersRef.current.forEach(m => m.setMap(null))
     noseGearMarkersRef.current = []
     renderedSpotsRef.current.clear()
-
     for (const key of Array.from(w.featureIndex.keys())) {
       if (key.startsWith('spot-')) w.featureIndex.delete(key)
     }
-
-    // Pre-compute pixels-per-degree ONCE
-    const bounds = gmap.getBounds()
-    const mapDivEl = gmap.getDiv()
-    const mapCenter = gmap.getCenter()
-    const pxPerDegLng = (bounds && mapDivEl && mapDivEl.clientWidth > 0)
-      ? mapDivEl.clientWidth / Math.abs(bounds.getNorthEast().lng() - bounds.getSouthWest().lng())
-      : 1000
-    const centerLat = mapCenter?.lat() ?? 42
 
     const renderAircraft = async () => {
       for (const spot of spotsWithAircraft) {
@@ -1078,10 +1058,8 @@ export default function ParkingPage() {
         const heading = spot.heading_deg || 0
         const cacheKey = `${spot.id}-${heading}`
 
-        // Compute scale — target: icon should render at real-world wingspan
-        const wingspanM = spot.wingspan_ft * FT_TO_M
-        const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
-        const targetCssPx = wingspanDegLng * pxPerDegLng
+        // Use computeIconScale — same formula that worked in Mapbox
+        const iconScale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
 
         // Get or create cached rotated image
         let cached = silhouetteCacheRef.current.get(cacheKey)
@@ -1108,16 +1086,14 @@ export default function ParkingPage() {
           await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
           rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
 
-          // imageWidthPx matches the Mapbox formula: canvas width (w + padding*2)
-          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, svgW: imgData.width, heading }
+          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, heading }
           silhouetteCacheRef.current.set(cacheKey, cached)
         }
 
         if (renderCancelRef.current !== renderToken) return
 
-        // Exact Mapbox formula: scale = targetCssPx / imageWidthPx, displayDim = fixedDim * scale
-        const scale = Math.max(0.02, Math.min(targetCssPx / cached.svgW, 4.0))
-        const displayDim = Math.min(800, Math.max(8, Math.round(cached.fixedDim * scale)))
+        // displayDim = fixedDim * iconScale (iconScale is targetPx / imageWidthPx from computeIconScale)
+        const displayDim = Math.min(800, Math.max(8, Math.round(cached.fixedDim * iconScale)))
         const marker = new google.maps.Marker({
           position: { lat: c.lat, lng: c.lon },
           map: gmap,
@@ -1136,7 +1112,7 @@ export default function ParkingPage() {
           },
         })
         spotMarkersMapRef.current.set(spot.id, marker)
-        spotMetaRef.current.set(spot.id, { fixedDim: cached.fixedDim, svgW: cached.svgW, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
+        spotMetaRef.current.set(spot.id, { fixedDim: cached.fixedDim, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
         w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
         renderedSpotsRef.current.set(spot.id, { lat: spot.latitude, lng: spot.longitude, heading, name: spot.aircraft_name || '' })
       }
@@ -1169,26 +1145,14 @@ export default function ParkingPage() {
       if (zoom === lastZoom) return // pan-only — no rescale needed
       lastZoom = zoom
 
-      const bounds = gmap.getBounds()
-      const mapDivEl = gmap.getDiv()
-      const mapCenter = gmap.getCenter()
-      if (!bounds || !mapDivEl || !mapCenter) return
-      const lngSpan = bounds.getNorthEast().lng() - bounds.getSouthWest().lng()
-      if (lngSpan <= 0) return
-      const pxPerDegLng = mapDivEl.clientWidth / lngSpan
-      const centerLat = mapCenter.lat()
-
       spotMetaRef.current.forEach((meta, spotId) => {
         const marker = spotMarkersMapRef.current.get(spotId)
         if (!marker) return
         const cached = silhouetteCacheRef.current.get(meta.cacheKey)
         if (!cached) return
 
-        const wingspanM = meta.wingspanFt * FT_TO_M
-        const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
-        const targetCssPx = wingspanDegLng * pxPerDegLng
-        const scale = Math.max(0.02, Math.min(targetCssPx / meta.svgW, 4.0))
-        const displayDim = Math.min(800, Math.max(8, Math.round(meta.fixedDim * scale)))
+        const iconScale = computeIconScale(meta.wingspanFt, meta.lengthFt, gmap)
+        const displayDim = Math.min(800, Math.max(8, Math.round(meta.fixedDim * iconScale)))
 
         marker.setIcon({
           url: cached.url,
