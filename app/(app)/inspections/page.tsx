@@ -306,17 +306,20 @@ export default function InspectionsPage() {
         if (dbRow.draft_data) {
           const dd = dbRow.draft_data as unknown as Record<string, unknown>
           const ddResponses = dd.responses as Record<string, unknown> | undefined
-          // Clean up orphans (empty, unsaved)
-          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt) {
+          const stored = type === 'airfield' ? afStored : ltStored
+
+          // Clean up orphans ONLY if no localStorage draft exists either
+          if (ddResponses && Object.keys(ddResponses).length === 0 && !dd.savedAt && !stored) {
             deleteInspection(dbRow.id)
             continue
           }
 
-          const stored = type === 'airfield' ? afStored : ltStored
-          const localTime = stored?.half.savedAt ? new Date(stored.half.savedAt).getTime() : 0
-          const dbTime = dbRow.saved_at ? new Date(dbRow.saved_at).getTime() : 0
+          // If localStorage has responses, prefer it over a DB version with fewer responses
+          const localResponses = stored?.half?.responses ? Object.keys(stored.half.responses).length : 0
+          const dbResponses = ddResponses ? Object.keys(ddResponses).length : 0
 
-          if (dbTime > localTime) {
+          // Only use DB version if it genuinely has more data than localStorage
+          if (dbResponses > localResponses) {
             const newDraft: SingleInspectionDraft = {
               id: stored?.id || crypto.randomUUID(),
               createdAt: stored?.createdAt || new Date().toISOString(),
@@ -331,6 +334,16 @@ export default function InspectionsPage() {
               saveTypeDraft('lighting', newDraft, installationId)
             }
             toast.info(`${type === 'airfield' ? 'Airfield' : 'Lighting'} draft loaded from server`)
+          } else if (stored && !stored.half.dbRowId) {
+            // Attach the DB row ID to the localStorage draft so Save Draft works
+            const patched = { ...stored, half: { ...stored.half, dbRowId: dbRow.id } }
+            if (type === 'airfield') {
+              setAirfieldDraft(patched)
+              saveTypeDraft('airfield', patched, installationId)
+            } else {
+              setLightingDraft(patched)
+              saveTypeDraft('lighting', patched, installationId)
+            }
           }
         } else if (dbRow.items && dbRow.items.length > 0) {
           // Only reconstruct drafts from this user's data
@@ -492,22 +505,24 @@ export default function InspectionsPage() {
     : 0
 
   // ── Draft mutation helpers ──
+  // Every mutation immediately saves to localStorage for mobile reliability
   const setCurrentDraft = useCallback((updater: (prev: SingleInspectionDraft) => SingleInspectionDraft) => {
-    if (activeForm === 'airfield') {
-      setAirfieldDraft((prev) => prev ? updater(prev) : prev)
-    } else if (activeForm === 'lighting') {
-      setLightingDraft((prev) => prev ? updater(prev) : prev)
+    const persist = (prev: SingleInspectionDraft | null) => {
+      if (!prev) return prev
+      const updated = updater(prev)
+      saveTypeDraft(updated.type, updated, installationId)
+      return updated
     }
-  }, [activeForm])
+    if (activeForm === 'airfield') {
+      setAirfieldDraft(persist)
+    } else if (activeForm === 'lighting') {
+      setLightingDraft(persist)
+    }
+  }, [activeForm, installationId])
 
   const updateHalf = useCallback((updater: (h: InspectionHalfDraft) => InspectionHalfDraft) => {
-    setCurrentDraft((prev) => {
-      const updated = { ...prev, half: updater(prev.half) }
-      // Immediately persist to localStorage — don't rely on useEffect for mobile
-      saveTypeDraft(prev.type, updated, installationId)
-      return updated
-    })
-  }, [setCurrentDraft, installationId])
+    setCurrentDraft((prev) => ({ ...prev, half: updater(prev.half) }))
+  }, [setCurrentDraft])
 
   const toggle = (id: string) => {
     updateHalf((h) => {
