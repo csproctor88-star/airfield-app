@@ -328,13 +328,13 @@ function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.map
   // Target screen pixels for the wingspan
   const targetPx = wingspanDegLng * pxPerDegLng
 
-  // fixedDim = canvas size of the rendered icon
+  // In Mapbox: icon-size applied to source image (imgW wide), GPU handled rotation.
+  // In Google Maps: we pre-rotate into a larger fixedDim canvas, so we must divide
+  // by imgW (not fixedDim) so the wings within displayDim = fixedDim * scale span targetPx.
   const aspect = lengthFt / wingspanFt
   const imgW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) + 8 : REF_ICON_SIZE + 8
-  const imgH = aspect >= 1 ? REF_ICON_SIZE + 8 : Math.round(REF_ICON_SIZE * aspect) + 8
-  const fixedDim = Math.max(imgW, imgH) + 16
 
-  return Math.max(0.02, Math.min(targetPx / fixedDim, 4.0))
+  return Math.max(0.02, Math.min(targetPx / imgW, 4.0))
 }
 
 // ── Main Page ──
