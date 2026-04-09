@@ -252,9 +252,8 @@ async function renderSilhouetteImage(
   }
 
   const canvas = document.createElement('canvas')
-  const padding = 4
-  canvas.width = w + padding * 2
-  canvas.height = h + padding * 2
+  canvas.width = w
+  canvas.height = h
   const ctx = canvas.getContext('2d')!
 
   const svgMarkup = new XMLSerializer().serializeToString(tightSvg)
@@ -265,9 +264,7 @@ async function renderSilhouetteImage(
   return new Promise(resolve => {
     const img = new Image()
     img.onload = () => {
-      ctx.filter = 'drop-shadow(0px 0px 2px rgba(0,0,0,0.8))'
-      ctx.drawImage(img, padding, padding, w, h)
-      ctx.filter = 'none'
+      ctx.drawImage(img, 0, 0, w, h)
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       resolve({ imageData, width: canvas.width, height: canvas.height })
@@ -463,11 +460,12 @@ export default function ParkingPage() {
   const ruler = useGoogleMapRuler(gmapRawRef, rulerActive)
   const spotMarkersMapRef = useRef<Map<string, google.maps.Marker>>(new Map())
   // Per-spot metadata for zoom rescaling (avoids full re-render)
-  const spotMetaRef = useRef<Map<string, { fixedDim: number; wingspanFt: number; lengthFt: number; cacheKey: string }>>(new Map())
+  const spotMetaRef = useRef<Map<string, { fixedDim: number; svgW: number; wingspanFt: number; lengthFt: number; cacheKey: string }>>(new Map())
   // Selection ring — managed separately from main render
   const selectionRingRef = useRef<google.maps.Circle | null>(null)
   // Cache rotated silhouette data URLs to avoid re-rendering on every zoom change
-  const silhouetteCacheRef = useRef<Map<string, { url: string; fixedDim: number; heading: number }>>(new Map())
+  // svgW = the pixel width the SVG wingspan was drawn at (no padding)
+  const silhouetteCacheRef = useRef<Map<string, { url: string; fixedDim: number; svgW: number; heading: number }>>(new Map())
   // Nose gear markers — managed with aircraft layer
   const noseGearMarkersRef = useRef<google.maps.Marker[]>([])
   // ── Derived data ──
@@ -1095,7 +1093,8 @@ export default function ParkingPage() {
           ctx.putImageData(imgData.imageData, 0, 0)
           const dataUrl = canvas.toDataURL('image/png')
 
-          const fixedDim = Math.max(imgData.width, imgData.height) + 16
+          // Rotation canvas — just large enough to contain the rotated image (no extra padding)
+          const fixedDim = Math.ceil(Math.sqrt(imgData.width * imgData.width + imgData.height * imgData.height))
           const rotCanvas = document.createElement('canvas')
           rotCanvas.width = fixedDim
           rotCanvas.height = fixedDim
@@ -1107,16 +1106,17 @@ export default function ParkingPage() {
           await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
           rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
 
-          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, heading }
+          // svgW = the width the SVG was drawn at = wingspan pixels (no padding)
+          const svgAspect = spot.length_ft / spot.wingspan_ft
+          const svgW = svgAspect >= 1 ? Math.round(REF_ICON_SIZE / svgAspect) : REF_ICON_SIZE
+          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, svgW, heading }
           silhouetteCacheRef.current.set(cacheKey, cached)
         }
 
         if (renderCancelRef.current !== renderToken) return
 
-        // displayDim: scale the rotation canvas so the wingspan pixels within it match targetCssPx
-        const aspect = spot.length_ft / spot.wingspan_ft
-        const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
-        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * cached.fixedDim / wingspanPx)))
+        // displayDim: scale so wingspan pixels (svgW) within the fixedDim canvas = targetCssPx on screen
+        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * cached.fixedDim / cached.svgW)))
         const marker = new google.maps.Marker({
           position: { lat: c.lat, lng: c.lon },
           map: gmap,
@@ -1135,7 +1135,7 @@ export default function ParkingPage() {
           },
         })
         spotMarkersMapRef.current.set(spot.id, marker)
-        spotMetaRef.current.set(spot.id, { fixedDim: cached.fixedDim, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
+        spotMetaRef.current.set(spot.id, { fixedDim: cached.fixedDim, svgW: cached.svgW, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
         w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
         renderedSpotsRef.current.set(spot.id, { lat: spot.latitude, lng: spot.longitude, heading, name: spot.aircraft_name || '' })
       }
@@ -1186,9 +1186,7 @@ export default function ParkingPage() {
         const wingspanM = meta.wingspanFt * FT_TO_M
         const wingspanDegLng = wingspanM / (111319.9 * Math.cos(centerLat * Math.PI / 180))
         const targetCssPx = wingspanDegLng * pxPerDegLng
-        const aspect = meta.lengthFt / meta.wingspanFt
-        const wingspanPx = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
-        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * meta.fixedDim / wingspanPx)))
+        const displayDim = Math.min(800, Math.max(8, Math.round(targetCssPx * meta.fixedDim / meta.svgW)))
 
         marker.setIcon({
           url: cached.url,
