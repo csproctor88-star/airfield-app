@@ -190,19 +190,38 @@ export default function InspectionsPage() {
     getAirfieldDiagram(installationId).then(setDiagramUrl).catch(() => setDiagramUrl(null))
   }, [installationId])
 
-  const handleItemPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleItemPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!activePhotoItemId) return
     const files = e.target.files
     if (!files?.length) return
     const itemId = activePhotoItemId
-    Array.from(files).forEach((file) => {
+    const dbRowId = currentHalf?.dbRowId
+    e.target.value = ''
+
+    for (const file of Array.from(files)) {
       const url = URL.createObjectURL(file)
+      // Add to local state for immediate preview
       setItemPhotos((prev) => ({
         ...prev,
         [itemId]: [...(prev[itemId] || []), { file, url, name: file.name }],
       }))
-    })
-    e.target.value = ''
+
+      // Upload immediately if we have a DB row ID — so photos persist across navigation
+      if (dbRowId) {
+        const loc = itemLocations[itemId] || null
+        const { data: photoRow } = await uploadInspectionPhoto(dbRowId, file, itemId, loc?.lat, loc?.lon, installationId)
+        if (photoRow) {
+          // Store uploaded photo ID in the draft so it persists in localStorage
+          updateHalf((h) => {
+            const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
+            if (!uploadedPhotos[itemId]) uploadedPhotos[itemId] = []
+            uploadedPhotos[itemId].push(photoRow.id)
+            return { ...h, uploadedPhotos }
+          })
+          toast.success('Photo uploaded')
+        }
+      }
+    }
   }
 
   const captureLocation = useCallback((itemId: string) => {
@@ -1175,7 +1194,9 @@ export default function InspectionsPage() {
         }
       }
     }
-    if (filedEntityId && Object.keys(itemPhotos).length > 0) {
+    // Upload any remaining photos that weren't already uploaded during the inspection
+    const alreadyUploaded = new Set(Object.values(completedHalf.uploadedPhotos || {}).flat())
+    if (filedEntityId && Object.keys(itemPhotos).length > 0 && alreadyUploaded.size === 0) {
       for (const [itemId, photos] of Object.entries(itemPhotos)) {
         const loc = itemLocations[itemId] || null
         for (const photo of photos) {

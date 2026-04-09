@@ -81,6 +81,8 @@ export interface InspectionHalfDraft {
   personnelNames: Record<string, string>
   dbRowId: string | null
   discrepancies: Record<string, SimpleDiscrepancy[]>
+  /** Photo IDs already uploaded to Supabase Storage — keyed by item ID */
+  uploadedPhotos?: Record<string, string[]>
 }
 
 export interface DailyInspectionDraft {
