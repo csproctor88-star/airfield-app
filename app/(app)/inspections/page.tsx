@@ -501,8 +501,13 @@ export default function InspectionsPage() {
   }, [activeForm])
 
   const updateHalf = useCallback((updater: (h: InspectionHalfDraft) => InspectionHalfDraft) => {
-    setCurrentDraft((prev) => ({ ...prev, half: updater(prev.half) }))
-  }, [setCurrentDraft])
+    setCurrentDraft((prev) => {
+      const updated = { ...prev, half: updater(prev.half) }
+      // Immediately persist to localStorage — don't rely on useEffect for mobile
+      saveTypeDraft(prev.type, updated, installationId)
+      return updated
+    })
+  }, [setCurrentDraft, installationId])
 
   const toggle = (id: string) => {
     updateHalf((h) => {
