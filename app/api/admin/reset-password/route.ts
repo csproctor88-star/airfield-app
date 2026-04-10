@@ -128,6 +128,7 @@ export async function POST(request: Request) {
         <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
           <div style="font-size:11px;color:#64748B;">Glidepath Airfield Operations Platform</div>
           <div style="font-size:11px;color:#475569;margin-top:4px;">Guiding You to Mission Success</div>
+          <div style="font-size:9px;color:#334155;margin-top:8px;line-height:1.4;">This application is not endorsed by, affiliated with, or associated with the Department of Defense (DoD) or any branch of the U.S. Armed Forces. The views and content herein do not reflect the official policy or position of the DoD.</div>
         </td></tr>
       </table>
     </td></tr>
