@@ -95,6 +95,29 @@ function rejectedEmail(userName: string, reason?: string): string {
   `)
 }
 
+function pendingApprovalEmail(userName: string, formUrl?: string): string {
+  return brandedEmail('Account Created — Pending Approval', `
+    <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(userName)}</strong>,</p>
+    <p style="margin:0 0 16px;">Thank you for creating a Glidepath account. Your account has been received and is <span style="color:#F59E0B;font-weight:700;">pending approval</span> by your installation's administrator.</p>
+    ${formUrl ? `<div style="background:#0F172A;border:1px solid #22D3EE40;border-left:3px solid #22D3EE;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+      <div style="color:#22D3EE;font-weight:600;font-size:12px;margin-bottom:6px;">IMPORTANT — COMPLETE THIS STEP</div>
+      <div style="color:#E2E8F0;margin-bottom:10px;">If you are onboarding a new base, please complete the Beta Access Request Form so we can verify your information and expedite your approval:</div>
+      <div style="text-align:center;">
+        <a href="${escapeHtml(formUrl)}" style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:14px;text-decoration:none;border-radius:6px;">Complete Beta Access Form</a>
+      </div>
+    </div>` : ''}
+    <div style="font-size:13px;color:#94A3B8;border-top:1px solid #334155;padding-top:14px;">
+      <strong>What happens next?</strong>
+      <ul style="margin:8px 0 0;padding-left:20px;">
+        <li>Your installation's Airfield Manager will review your request</li>
+        <li>You will receive an email once your account is approved</li>
+        <li>If additional information is needed, you will be contacted</li>
+      </ul>
+    </div>
+    <p style="margin:16px 0 0;font-size:13px;color:#64748B;">If you have questions, contact <a href="mailto:info@glidepathops.com" style="color:#22D3EE;text-decoration:none;">info@glidepathops.com</a></p>
+  `)
+}
+
 // ── API Route ──
 
 export async function POST(request: Request) {

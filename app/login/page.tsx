@@ -182,7 +182,14 @@ function LoginContent() {
           return
         }
 
-        setSuccess('Account created! Check your email to confirm your address. Your account will be available once approved by your base administrator.')
+        // Send branded pending approval email (non-blocking)
+        fetch('/api/signup-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name: `${firstName.trim()} ${lastName.trim()}` }),
+        }).catch(() => {}) // don't fail signup if email fails
+
+        setSuccess('Account created! Check your email for next steps. Your account will be available once approved by your base administrator.')
         setMode('signin')
         setPassword('')
         return
