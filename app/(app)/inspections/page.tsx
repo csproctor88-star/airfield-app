@@ -630,19 +630,33 @@ export default function InspectionsPage() {
     })
   }
 
-  const handleDiscAddPhotos = (itemId: string, discIndex: number, files: FileList) => {
-    const newPhotos = Array.from(files).map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name,
-    }))
-    setDiscPhotos((prev) => {
-      const arr = [...(prev[itemId] || [])]
-      while (arr.length <= discIndex) arr.push([])
-      arr[discIndex] = [...arr[discIndex], ...newPhotos]
-      return { ...prev, [itemId]: arr }
-    })
-    toast.success(`${files.length} photo(s) added`)
+  const handleDiscAddPhotos = async (itemId: string, discIndex: number, files: FileList) => {
+    const dbRowId = currentHalf?.dbRowId
+    for (const file of Array.from(files)) {
+      const url = URL.createObjectURL(file)
+      setDiscPhotos((prev) => {
+        const arr = [...(prev[itemId] || [])]
+        while (arr.length <= discIndex) arr.push([])
+        arr[discIndex] = [...arr[discIndex], { file, url, name: file.name }]
+        return { ...prev, [itemId]: arr }
+      })
+
+      // Upload immediately so photos persist across navigation
+      if (dbRowId) {
+        const loc = currentHalf?.discrepancies[itemId]?.[discIndex]?.location || null
+        const { data: photoRow } = await uploadInspectionPhoto(dbRowId, file, itemId, loc?.lat, loc?.lon, installationId, discIndex)
+        if (photoRow) {
+          updateHalf((h) => {
+            const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
+            const key = `${itemId}:${discIndex}`
+            if (!uploadedPhotos[key]) uploadedPhotos[key] = []
+            uploadedPhotos[key].push(photoRow.id)
+            return { ...h, uploadedPhotos }
+          })
+        }
+      }
+    }
+    toast.success(`${files.length} photo(s) uploaded`)
   }
 
   const handleDiscRemovePhoto = (itemId: string, discIndex: number, photoIdx: number) => {
@@ -1182,25 +1196,28 @@ export default function InspectionsPage() {
       }
     }
 
-    // Upload photos
-    if (filedEntityId && Object.keys(discPhotos).length > 0) {
-      for (const [itemId, photoArrays] of Object.entries(discPhotos)) {
-        for (let discIdx = 0; discIdx < photoArrays.length; discIdx++) {
-          const photos = photoArrays[discIdx] || []
-          const loc = currentHalf?.discrepancies[itemId]?.[discIdx]?.location || itemLocations[itemId] || null
-          for (const photo of photos) {
-            await uploadInspectionPhoto(filedEntityId, photo.file, itemId, loc?.lat, loc?.lon, installationId, discIdx)
+    // Upload any photos not already uploaded during the inspection
+    const alreadyUploaded = new Set(Object.values(completedHalf.uploadedPhotos || {}).flat())
+    if (filedEntityId && alreadyUploaded.size === 0) {
+      // Disc photos
+      if (Object.keys(discPhotos).length > 0) {
+        for (const [itemId, photoArrays] of Object.entries(discPhotos)) {
+          for (let discIdx = 0; discIdx < photoArrays.length; discIdx++) {
+            const photos = photoArrays[discIdx] || []
+            const loc = currentHalf?.discrepancies[itemId]?.[discIdx]?.location || itemLocations[itemId] || null
+            for (const photo of photos) {
+              await uploadInspectionPhoto(filedEntityId, photo.file, itemId, loc?.lat, loc?.lon, installationId, discIdx)
+            }
           }
         }
       }
-    }
-    // Upload any remaining photos that weren't already uploaded during the inspection
-    const alreadyUploaded = new Set(Object.values(completedHalf.uploadedPhotos || {}).flat())
-    if (filedEntityId && Object.keys(itemPhotos).length > 0 && alreadyUploaded.size === 0) {
-      for (const [itemId, photos] of Object.entries(itemPhotos)) {
-        const loc = itemLocations[itemId] || null
-        for (const photo of photos) {
-          await uploadInspectionPhoto(filedEntityId, photo.file, itemId, loc?.lat, loc?.lon, installationId)
+      // Item photos
+      if (Object.keys(itemPhotos).length > 0) {
+        for (const [itemId, photos] of Object.entries(itemPhotos)) {
+          const loc = itemLocations[itemId] || null
+          for (const photo of photos) {
+            await uploadInspectionPhoto(filedEntityId, photo.file, itemId, loc?.lat, loc?.lon, installationId)
+          }
         }
       }
     }
@@ -1855,17 +1872,27 @@ export default function InspectionsPage() {
                     </div>
 
                     {/* Uploaded photos badge — shows when resuming a draft with previously uploaded photos */}
-                    {currentHalf?.uploadedPhotos?.[item.id]?.length ? (
-                      <div style={{ paddingLeft: 58, paddingBottom: 4 }}>
-                        <span style={{
-                          fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-success)',
-                          background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
-                          borderRadius: 'var(--radius-sm)', padding: '2px 8px',
-                        }}>
-                          {currentHalf.uploadedPhotos[item.id].length} photo{currentHalf.uploadedPhotos[item.id].length > 1 ? 's' : ''} uploaded
-                        </span>
-                      </div>
-                    ) : null}
+                    {(() => {
+                      if (!currentHalf?.uploadedPhotos) return null
+                      // Count photos for this item (direct + per-discrepancy)
+                      let count = currentHalf.uploadedPhotos[item.id]?.length || 0
+                      const discs = currentHalf.discrepancies?.[item.id] || []
+                      for (let di = 0; di < discs.length; di++) {
+                        count += currentHalf.uploadedPhotos[`${item.id}:${di}`]?.length || 0
+                      }
+                      if (count === 0) return null
+                      return (
+                        <div style={{ paddingLeft: 58, paddingBottom: 4 }}>
+                          <span style={{
+                            fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-success)',
+                            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                            borderRadius: 'var(--radius-sm)', padding: '2px 8px',
+                          }}>
+                            {count} photo{count > 1 ? 's' : ''} uploaded
+                          </span>
+                        </div>
+                      )
+                    })()}
                     {state === 'fail' && currentHalf?.discrepancies[item.id] && (
                       <div style={{ paddingLeft: 58, paddingBottom: 10 }}>
                         <SimpleDiscrepancyPanelGroup
