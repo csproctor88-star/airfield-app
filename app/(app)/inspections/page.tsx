@@ -1854,6 +1854,18 @@ export default function InspectionsPage() {
                       </div>
                     </div>
 
+                    {/* Uploaded photos badge — shows when resuming a draft with previously uploaded photos */}
+                    {currentHalf?.uploadedPhotos?.[item.id]?.length ? (
+                      <div style={{ paddingLeft: 58, paddingBottom: 4 }}>
+                        <span style={{
+                          fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-success)',
+                          background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                          borderRadius: 'var(--radius-sm)', padding: '2px 8px',
+                        }}>
+                          {currentHalf.uploadedPhotos[item.id].length} photo{currentHalf.uploadedPhotos[item.id].length > 1 ? 's' : ''} uploaded
+                        </span>
+                      </div>
+                    ) : null}
                     {state === 'fail' && currentHalf?.discrepancies[item.id] && (
                       <div style={{ paddingLeft: 58, paddingBottom: 10 }}>
                         <SimpleDiscrepancyPanelGroup
