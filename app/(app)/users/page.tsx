@@ -107,6 +107,11 @@ export default function UserManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserCardData | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Email approval workflow
+  const [emailDialog, setEmailDialog] = useState<{ user: UserCardData; template: 'approved' | 'info_needed' | 'rejected' } | null>(null)
+  const [emailMessage, setEmailMessage] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+
   const isSysAdmin = callerRole === 'sys_admin'
   const isBaseAdmin = callerRole === 'base_admin' || callerRole === 'airfield_manager' || callerRole === 'namo'
 
@@ -413,6 +418,11 @@ export default function UserManagementPage() {
           onReactivate={handleReactivate}
           onDelete={handleDeleteRequest}
           onClose={() => setSelectedUser(null)}
+          onSendEmail={(template) => {
+            setEmailMessage('')
+            setEmailDialog({ user: selectedUser, template })
+            setSelectedUser(null)
+          }}
         />
       )}
 
@@ -438,6 +448,106 @@ export default function UserManagementPage() {
           loading={deleting}
         />
       )}
+
+      {/* Email Approval Dialog */}
+      {emailDialog && (() => {
+        const u = emailDialog.user
+        const userName = `${u.rank ? u.rank + ' ' : ''}${u.first_name} ${u.last_name}`
+        const titleMap = { approved: 'Approve Account', info_needed: 'Request Additional Info', rejected: 'Reject Account' }
+        const colorMap = { approved: '#22C55E', info_needed: '#F59E0B', rejected: '#EF4444' }
+        const btnMap = { approved: 'Send Approval Email', info_needed: 'Send Info Request', rejected: 'Send Rejection Email' }
+        const t = emailDialog.template
+        return (
+          <div className="modal-overlay" onClick={() => setEmailDialog(null)} style={{ padding: 24, zIndex: 10000 }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: 'var(--color-bg-surface-solid, #1E293B)', borderRadius: 'var(--radius-lg)', padding: 24,
+              width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)',
+            }}>
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: colorMap[t], marginBottom: 4 }}>
+                {titleMap[t]}
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+                {userName} &bull; {u.email}
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>
+                {t === 'approved' ? 'Message (optional)' : t === 'info_needed' ? 'What information is needed?' : 'Reason (optional)'}
+              </div>
+              <textarea
+                autoFocus
+                value={emailMessage}
+                onChange={e => setEmailMessage(e.target.value)}
+                placeholder={t === 'info_needed' ? 'Please provide your unit, duty position, and supervisor name...' : t === 'rejected' ? 'Reason for rejection...' : 'Additional message...'}
+                rows={4}
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', outline: 'none',
+                  fontFamily: 'inherit', resize: 'vertical', minHeight: 80, marginBottom: 16,
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={async () => {
+                    if (t === 'info_needed' && !emailMessage.trim()) {
+                      toast.error('Please describe what information is needed')
+                      return
+                    }
+                    setEmailSending(true)
+                    try {
+                      const res = await fetch('/api/user-emails', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          template: t,
+                          toEmail: u.email,
+                          toName: `${u.first_name} ${u.last_name}`,
+                          customMessage: emailMessage.trim() || undefined,
+                          userId: u.id,
+                        }),
+                      })
+                      const result = await res.json()
+                      if (res.ok) {
+                        toast.success(`${titleMap[t]} email sent to ${u.email}`)
+                        setEmailDialog(null)
+                        setEmailMessage('')
+                        // Refresh user list to reflect status change
+                        const supabase = (await import('@/lib/supabase/client')).createClient()
+                        if (supabase) {
+                          const result = await loadUsers(supabase, selectedBaseId, baseLookup)
+                          setUsers(result.users)
+                        }
+                      } else {
+                        toast.error(result.error || 'Failed to send email')
+                      }
+                    } catch {
+                      toast.error('Failed to send email')
+                    }
+                    setEmailSending(false)
+                  }}
+                  disabled={emailSending || (t === 'info_needed' && !emailMessage.trim())}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                    cursor: emailSending ? 'wait' : 'pointer',
+                    border: `1px solid ${colorMap[t]}`,
+                    background: `${colorMap[t]}20`,
+                    color: colorMap[t],
+                    opacity: emailSending || (t === 'info_needed' && !emailMessage.trim()) ? 0.5 : 1,
+                    fontFamily: 'inherit',
+                  }}
+                >{emailSending ? 'Sending...' : btnMap[t]}</button>
+                <button
+                  onClick={() => { setEmailDialog(null); setEmailMessage('') }}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                    background: 'var(--color-bg-inset)', color: 'var(--color-text-3)', fontFamily: 'inherit',
+                  }}
+                >Cancel</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

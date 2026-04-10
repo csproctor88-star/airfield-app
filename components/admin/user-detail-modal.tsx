@@ -21,6 +21,7 @@ interface UserDetailModalProps {
   onReactivate: (userId: string) => Promise<void>
   onDelete: (userId: string) => void
   onClose: () => void
+  onSendEmail?: (template: 'approved' | 'info_needed' | 'rejected') => void
 }
 
 export function UserDetailModal({
@@ -34,6 +35,7 @@ export function UserDetailModal({
   onReactivate,
   onDelete,
   onClose,
+  onSendEmail,
 }: UserDetailModalProps) {
   const [rank, setRank] = useState(user.rank || '')
   const [firstName, setFirstName] = useState(user.first_name || '')
@@ -750,6 +752,27 @@ export function UserDetailModal({
             borderTop: '1px solid var(--color-border)',
           }}
         >
+          {/* Email Actions */}
+          {onSendEmail && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button type="button" onClick={() => onSendEmail('approved')} style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)',
+                color: '#22C55E', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Approve</button>
+              <button type="button" onClick={() => onSendEmail('info_needed')} style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.1)',
+                color: '#F59E0B', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Request Info</button>
+              <button type="button" onClick={() => onSendEmail('rejected')} style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)',
+                color: '#EF4444', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Reject</button>
+            </div>
+          )}
+
           {/* Reset Password */}
           <button
             type="button"
