@@ -770,7 +770,7 @@ export default function AMDashboardPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Recent Activity</span>
         <button
-          onClick={() => router.push('/activity')}
+          onClick={() => router.push('/recent-activity')}
           style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
         >
           View All Recent Activity →
