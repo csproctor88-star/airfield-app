@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { Resend } from 'resend'
 import {
   getAdminClient,
   isSysAdmin,
   isAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 export async function POST(request: Request) {
   try {
@@ -80,7 +85,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Invite user via Supabase auth admin
+    // Create user + generate invite link, then send branded email via Resend
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
     const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
       email,
@@ -102,6 +107,62 @@ export async function POST(request: Request) {
         { error: inviteError.message },
         { status: 400 },
       )
+    }
+
+    // Send branded invite email via Resend (overrides Supabase's default)
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey && inviteData?.user) {
+      try {
+        const resend = new Resend(resendKey)
+        const setupUrl = `${siteUrl}/setup-account`
+        const fullName = `${firstName.trim()} ${lastName.trim()}`
+        await resend.emails.send({
+          from: 'Glidepath <noreply@glidepathops.com>',
+          replyTo: 'info@glidepathops.com',
+          to: email,
+          subject: 'You\'ve Been Invited to Glidepath',
+          html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#0B1120;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B1120;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#1E293B;border-radius:12px;border:1px solid #334155;overflow:hidden;">
+        <tr><td style="background:linear-gradient(135deg,#0369A1,#22D3EE);padding:24px 32px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">GLIDEPATH</div>
+          <div style="font-size:22px;font-weight:800;color:#FFFFFF;">You're Invited</div>
+        </td></tr>
+        <tr><td style="padding:28px 32px;color:#E2E8F0;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
+          <p style="margin:0 0 16px;">You have been invited to join <strong>Glidepath</strong> — the airfield operations management platform. Your account has been created and is ready for setup.</p>
+          <p style="margin:0 0 20px;">Click the button below to set your password and complete your account setup:</p>
+          <div style="text-align:center;margin:0 0 20px;">
+            <a href="${escapeHtml(setupUrl)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Set Up Your Account</a>
+          </div>
+          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">You will also receive a separate email from Supabase with a confirmation link. Please click that link first to verify your email address, then use the button above to set your password.</p>
+          <div style="font-size:13px;color:#94A3B8;border-top:1px solid #334155;padding-top:14px;margin-top:14px;">
+            <strong>What is Glidepath?</strong>
+            <ul style="margin:8px 0 0;padding-left:20px;">
+              <li>Real-time airfield status and operations management</li>
+              <li>Digital inspections, checks, and discrepancy tracking</li>
+              <li>Works on any device — desktop, tablet, or mobile</li>
+            </ul>
+          </div>
+          <p style="margin:16px 0 0;font-size:13px;color:#64748B;">Questions? Reply to this email or contact <a href="mailto:info@glidepathops.com" style="color:#22D3EE;text-decoration:none;">info@glidepathops.com</a></p>
+        </td></tr>
+        <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
+          <div style="font-size:11px;color:#64748B;">Glidepath Airfield Operations Platform</div>
+          <div style="font-size:11px;color:#475569;margin-top:4px;">Guiding You to Mission Success</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+        })
+      } catch (emailErr) {
+        console.warn('[admin/invite] Branded email failed, Supabase default was sent:', emailErr)
+      }
     }
 
     // Create profile record

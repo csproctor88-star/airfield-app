@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { Resend } from 'resend'
 import {
   getAdminClient,
   isAdmin,
   isSysAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 
 export async function POST(request: Request) {
   try {
@@ -68,15 +73,78 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send password reset email
-    const { error: resetError } = await admin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/auth/confirm?next=/reset-password`,
+    // Generate password reset link
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${siteUrl}/auth/confirm?next=/reset-password` },
     })
 
-    if (resetError) {
-      return NextResponse.json({ error: resetError.message }, { status: 400 })
+    if (linkError) {
+      // Fallback to default Supabase email if generateLink fails
+      const { error: resetError } = await admin.auth.resetPasswordForEmail(email, {
+        redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
+      })
+      if (resetError) return NextResponse.json({ error: resetError.message }, { status: 400 })
+      return NextResponse.json({ success: true })
     }
 
+    // Get user name for the email
+    const { data: targetUser } = await admin.from('profiles').select('name, rank').eq('id', userId).single()
+    const userName = targetUser?.name || email
+    const resetUrl = linkData?.properties?.action_link || `${siteUrl}/reset-password`
+
+    // Send branded email via Resend
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey) {
+      try {
+        const resend = new Resend(resendKey)
+        await resend.emails.send({
+          from: 'Glidepath <noreply@glidepathops.com>',
+          replyTo: 'info@glidepathops.com',
+          to: email,
+          subject: 'Glidepath — Password Reset',
+          html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#0B1120;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B1120;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#1E293B;border-radius:12px;border:1px solid #334155;overflow:hidden;">
+        <tr><td style="background:linear-gradient(135deg,#0369A1,#22D3EE);padding:24px 32px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">GLIDEPATH</div>
+          <div style="font-size:22px;font-weight:800;color:#FFFFFF;">Password Reset</div>
+        </td></tr>
+        <tr><td style="padding:28px 32px;color:#E2E8F0;font-size:15px;line-height:1.6;">
+          <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(userName)}</strong>,</p>
+          <p style="margin:0 0 16px;">A password reset has been requested for your Glidepath account. Click the button below to set a new password:</p>
+          <div style="text-align:center;margin:0 0 20px;">
+            <a href="${escapeHtml(resetUrl)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Reset Password</a>
+          </div>
+          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">This link will expire in 24 hours. If you did not request this reset, you can safely ignore this email.</p>
+          <p style="margin:0;font-size:13px;color:#64748B;">Questions? Reply to this email or contact <a href="mailto:info@glidepathops.com" style="color:#22D3EE;text-decoration:none;">info@glidepathops.com</a></p>
+        </td></tr>
+        <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
+          <div style="font-size:11px;color:#64748B;">Glidepath Airfield Operations Platform</div>
+          <div style="font-size:11px;color:#475569;margin-top:4px;">Guiding You to Mission Success</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+        })
+        return NextResponse.json({ success: true })
+      } catch (emailErr) {
+        console.warn('[admin/reset-password] Branded email failed:', emailErr)
+      }
+    }
+
+    // Fallback: use Supabase default email
+    await admin.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
+    })
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[admin/reset-password] Error:', err)
