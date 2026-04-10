@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { X } from 'lucide-react'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
+import { BASE_DIRECTORY } from '@/lib/base-directory'
 import type { Installation, UserRole } from '@/lib/supabase/types'
 
 interface InviteUserModalProps {
@@ -38,6 +39,15 @@ export function InviteUserModal({
     isSysAdmin ? (defaultInstallationId || '') : (callerBaseId || ''),
   )
   const [error, setError] = useState<string | null>(null)
+
+  // Merge DB installations with full base directory (dedup by ICAO)
+  const allInstallations = useMemo(() => {
+    const dbIcaos = new Set(installations.map(i => i.icao))
+    const directoryExtras = BASE_DIRECTORY
+      .filter(d => !dbIcaos.has(d.icao))
+      .map(d => ({ id: `dir:${d.icao}`, name: d.name, icao: d.icao } as Installation))
+    return [...installations, ...directoryExtras].sort((a, b) => a.name.localeCompare(b.name))
+  }, [installations])
   const [loading, setLoading] = useState(false)
 
   // Sys admins see all roles; base admins see non-admin roles only
@@ -66,7 +76,17 @@ export function InviteUserModal({
 
     setLoading(true)
     try {
-      await onInvite({ email, rank, firstName, lastName, role, installationId })
+      let resolvedInstId = installationId
+      // If selecting a directory-only base, create it first
+      if (installationId.startsWith('dir:')) {
+        const icao = installationId.slice(4)
+        const dirEntry = BASE_DIRECTORY.find(d => d.icao === icao)
+        if (!dirEntry) { setError('Installation not found'); setLoading(false); return }
+        const { createInstallation } = await import('@/lib/supabase/installations')
+        const created = await createInstallation(dirEntry.name, dirEntry.icao)
+        resolvedInstId = created.id
+      }
+      await onInvite({ email, rank, firstName, lastName, role, installationId: resolvedInstId })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send invite')
     } finally {
@@ -192,7 +212,7 @@ export function InviteUserModal({
               style={{ width: '100%' }}
             >
               <option value="">Select installation...</option>
-              {installations.map((inst) => (
+              {allInstallations.map((inst) => (
                 <option key={inst.id} value={inst.id}>
                   {inst.name} · {inst.icao}
                 </option>

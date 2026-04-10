@@ -89,6 +89,8 @@ export default function BaseSetupPage() {
   const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole } = useInstallation()
   const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
+  const [editingBaseName, setEditingBaseName] = useState(false)
+  const [baseNameDraft, setBaseNameDraft] = useState('')
 
   const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
 
@@ -134,8 +136,39 @@ export default function BaseSetupPage() {
         <h1 style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 2 }}>
           Base Setup
         </h1>
-        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
-          {currentInstallation?.name ?? 'Current Base'} ({currentInstallation?.icao ?? '—'})
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {editingBaseName ? (
+            <input
+              autoFocus
+              value={baseNameDraft}
+              onChange={e => setBaseNameDraft(e.target.value)}
+              onBlur={async () => {
+                if (baseNameDraft.trim() && baseNameDraft.trim() !== currentInstallation?.name && installationId) {
+                  const supabase = createClient()
+                  if (supabase) {
+                    await supabase.from('bases').update({ name: baseNameDraft.trim() } as any).eq('id', installationId)
+                    toast.success('Installation name updated')
+                  }
+                }
+                setEditingBaseName(false)
+              }}
+              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingBaseName(false) }}
+              style={{
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-cyan)',
+                borderRadius: 4, padding: '2px 8px', color: 'var(--color-text-1)',
+                fontSize: 'var(--fs-md)', fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+          ) : (
+            <span
+              onClick={() => { setBaseNameDraft(currentInstallation?.name || ''); setEditingBaseName(true) }}
+              style={{ cursor: 'pointer' }}
+              title="Click to rename"
+            >
+              {currentInstallation?.name ?? 'Current Base'}
+            </span>
+          )}
+          <span>({currentInstallation?.icao ?? '—'})</span>
         </p>
       </div>
 
