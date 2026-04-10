@@ -482,8 +482,8 @@ export default function AMDashboardPage() {
         ].map(q => (
           <Link key={q.label} href={q.href} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-            flex: '1 1 120px', maxWidth: 200,
+            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+            flex: '1 1 140px',
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
             textDecoration: 'none', fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)',
           }}>
@@ -492,8 +492,8 @@ export default function AMDashboardPage() {
         ))}
         <button onClick={() => setShowContractorForm(true)} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-          flex: '1 1 120px', maxWidth: 200,
+          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+          flex: '1 1 140px',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
@@ -501,8 +501,8 @@ export default function AMDashboardPage() {
         </button>
         <button onClick={() => setShowShiftChecklist(true)} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-          flex: '1 1 120px', maxWidth: 200,
+          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+          flex: '1 1 140px',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
@@ -510,8 +510,8 @@ export default function AMDashboardPage() {
         </button>
         <button onClick={() => setShowQrc(true)} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-          flex: '1 1 120px', maxWidth: 200,
+          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+          flex: '1 1 140px',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
         }}>
@@ -529,8 +529,8 @@ export default function AMDashboardPage() {
             }
           }} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-            flex: '1 1 120px', maxWidth: 200,
+            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+            flex: '1 1 140px',
             background: afmOutOfOffice ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-surface)',
             border: afmOutOfOffice ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-border)',
             fontSize: 'var(--fs-base)', fontWeight: 600,

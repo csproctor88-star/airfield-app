@@ -219,6 +219,93 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     })
   }
 
+  // 5. QRC executions
+  const { data: qrcData } = await (supabase as any)
+    .from('qrc_executions')
+    .select('id, qrc_number, title, status, opened_at, closed_at, opened_by, profiles:opened_by(name, rank, operating_initials)')
+    .eq('base_id', baseId)
+    .gte('opened_at', since)
+    .order('opened_at', { ascending: false })
+    .limit(10)
+
+  for (const q of (qrcData || []) as any[]) {
+    const key = `qrc-${q.id}-opened`
+    if (usedIds.has(key)) continue
+    usedIds.add(key)
+    entries.push({
+      id: `qrc-${q.id}`,
+      action: q.status === 'closed' ? 'closed' : 'opened',
+      entity_type: 'qrc',
+      entity_id: q.id,
+      entity_display_id: `QRC-${q.qrc_number}`,
+      metadata: { details: q.title || `QRC-${q.qrc_number}` },
+      created_at: q.status === 'closed' && q.closed_at ? q.closed_at : q.opened_at,
+      user_name: q.profiles?.name || 'Unknown',
+      user_rank: q.profiles?.rank || null,
+      user_role: null,
+      user_edipi: null,
+      user_operating_initials: q.profiles?.operating_initials || null,
+    })
+  }
+
+  // 6. Wildlife sightings
+  const { data: sightingData } = await (supabase as any)
+    .from('wildlife_sightings')
+    .select('id, display_id, species_common, count_observed, location_text, created_at, observed_by, profiles:observed_by(name, rank, operating_initials)')
+    .eq('base_id', baseId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  for (const s of (sightingData || []) as any[]) {
+    const key = `wildlife_sighting-${s.id}-created`
+    if (usedIds.has(key)) continue
+    usedIds.add(key)
+    entries.push({
+      id: `ws-${s.id}`,
+      action: 'created',
+      entity_type: 'wildlife_sighting',
+      entity_id: s.id,
+      entity_display_id: s.display_id,
+      metadata: { details: `${s.species_common || 'Wildlife'} (${s.count_observed || 1})${s.location_text ? ' — ' + s.location_text : ''}` },
+      created_at: s.created_at,
+      user_name: s.profiles?.name || 'Unknown',
+      user_rank: s.profiles?.rank || null,
+      user_role: null,
+      user_edipi: null,
+      user_operating_initials: s.profiles?.operating_initials || null,
+    })
+  }
+
+  // 7. Wildlife strikes
+  const { data: strikeData } = await (supabase as any)
+    .from('wildlife_strikes')
+    .select('id, display_id, species_common, created_at, reported_by, profiles:reported_by(name, rank, operating_initials)')
+    .eq('base_id', baseId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  for (const s of (strikeData || []) as any[]) {
+    const key = `wildlife_strike-${s.id}-created`
+    if (usedIds.has(key)) continue
+    usedIds.add(key)
+    entries.push({
+      id: `wk-${s.id}`,
+      action: 'created',
+      entity_type: 'wildlife_strike',
+      entity_id: s.id,
+      entity_display_id: s.display_id,
+      metadata: { details: `BIRD STRIKE — ${s.species_common || 'Unknown species'}` },
+      created_at: s.created_at,
+      user_name: s.profiles?.name || 'Unknown',
+      user_rank: s.profiles?.rank || null,
+      user_role: null,
+      user_edipi: null,
+      user_operating_initials: s.profiles?.operating_initials || null,
+    })
+  }
+
   // Sort all entries by created_at descending and trim to limit
   entries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   return entries.slice(0, limit)
