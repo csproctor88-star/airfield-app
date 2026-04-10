@@ -691,35 +691,8 @@ export default function AMDashboardPage() {
         />
       )}
 
-      {/* ===== Manual Entry — collapsed by default ===== */}
-      {!logEntryExpanded ? (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12, justifyContent: 'center' }}>
-          <button
-            onClick={() => setLogEntryExpanded(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-              fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-cyan)',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            + New Entry
-          </button>
-          <button
-            onClick={() => setShowTemplatePicker(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '10px 18px', borderRadius: 'var(--radius-md)', minHeight: 44,
-              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-              fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Use Template
-          </button>
-        </div>
-      ) : (
+      {/* ===== Manual Entry ===== */}
+      {logEntryExpanded && (
         <div className="card" style={{ marginBottom: 12, padding: '12px', border: '1px solid var(--color-border-active)' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             <textarea
@@ -800,7 +773,7 @@ export default function AMDashboardPage() {
           onClick={() => router.push('/activity')}
           style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
         >
-          View Entire Events Log →
+          View All Recent Activity →
         </button>
       </div>
       {activity.length === 0 ? (
