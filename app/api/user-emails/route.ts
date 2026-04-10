@@ -212,6 +212,7 @@ export async function POST(request: Request) {
 
     const { error: sendError } = await resend.emails.send({
       from: 'Glidepath <noreply@glidepathops.com>',
+      replyTo: 'info@glidepathops.com',
       to: toEmail,
       subject,
       html,
