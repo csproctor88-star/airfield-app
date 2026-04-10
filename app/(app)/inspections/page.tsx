@@ -632,7 +632,9 @@ export default function InspectionsPage() {
 
   const handleDiscAddPhotos = async (itemId: string, discIndex: number, files: FileList) => {
     const dbRowId = currentHalf?.dbRowId
-    for (const file of Array.from(files)) {
+    const fileArr = Array.from(files)
+    const count = fileArr.length
+    for (const file of fileArr) {
       const url = URL.createObjectURL(file)
       setDiscPhotos((prev) => {
         const arr = [...(prev[itemId] || [])]
@@ -656,7 +658,7 @@ export default function InspectionsPage() {
         }
       }
     }
-    toast.success(`${files.length} photo(s) uploaded`)
+    toast.success(`${count} photo${count > 1 ? 's' : ''} uploaded`)
   }
 
   const handleDiscRemovePhoto = (itemId: string, discIndex: number, photoIdx: number) => {
