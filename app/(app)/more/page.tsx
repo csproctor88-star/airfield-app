@@ -240,7 +240,19 @@ export default function MorePage() {
             <NavItem key={item.href} item={item} />
           ))}
         </div>
-        <SignOutButton />
+        <a
+        href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', padding: '14px 16px', marginTop: 12,
+          background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)',
+          color: 'var(--color-cyan)', fontSize: 'var(--fs-lg)', fontWeight: 600,
+          fontFamily: 'inherit', textDecoration: 'none',
+        }}
+      >
+        Contact Support
+      </a>
+      <SignOutButton />
       </div>
     )
   }
@@ -274,6 +286,18 @@ export default function MorePage() {
         <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
       </div>
 
+      <a
+        href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', padding: '14px 16px', marginTop: 12,
+          background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)',
+          color: 'var(--color-cyan)', fontSize: 'var(--fs-lg)', fontWeight: 600,
+          fontFamily: 'inherit', textDecoration: 'none',
+        }}
+      >
+        Contact Support
+      </a>
       <SignOutButton />
     </div>
   )

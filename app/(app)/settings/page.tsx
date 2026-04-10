@@ -1393,6 +1393,19 @@ function AboutSectionContent() {
             <ExternalLink size={10} />
           </a>
         </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Support</span>
+          <a
+            href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+            style={{
+              fontSize: 'var(--fs-base)', color: 'var(--color-cyan)', fontWeight: 600,
+              textDecoration: 'none',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            Contact Support
+          </a>
+        </div>
       </div>
     </>
   )

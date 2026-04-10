@@ -685,6 +685,19 @@ export function SidebarNav() {
             <Pencil size={13} />
             Customize Navigation
           </button>
+          <a
+            href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',
+              background: 'none', border: '1px solid var(--color-border)',
+              color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Contact Support
+          </a>
           <button
             onClick={async () => {
               setSigningOut(true)
