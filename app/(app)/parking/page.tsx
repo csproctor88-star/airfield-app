@@ -3609,11 +3609,11 @@ export default function ParkingPage() {
                     >
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>{ac.aircraft}</div>
-                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                          {ac.manufacturer || 'Unknown'} &middot;{' '}
-                          {ws > 0 ? `${ws}ft span` : 'No wingspan data'}
-                          {ac.turn_radius_ft ? ` &middot; ${ac.turn_radius_ft}ft turn` : ''}
-                        </div>
+                        {ws > 0 && (
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                            {ws}ft wingspan
+                          </div>
+                        )}
                       </div>
                       {adg && (
                         <span style={{
@@ -3624,14 +3624,6 @@ export default function ParkingPage() {
                           ADG {adg}
                         </span>
                       )}
-                      <span style={{
-                        fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                        background: ac.category === 'military' ? '#22C55E22' : '#3B82F622',
-                        color: ac.category === 'military' ? 'var(--color-success)' : 'var(--color-status-inwork)',
-                        textTransform: 'capitalize',
-                      }}>
-                        {ac.category}
-                      </span>
                     </button>
                   </div>
                 )
