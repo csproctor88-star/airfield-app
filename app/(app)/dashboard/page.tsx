@@ -854,20 +854,25 @@ export default function AMDashboardPage() {
                       {initials || '—'}
                     </td>
                     <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
-                        title="Edit entry"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
-                        title="Delete entry"
-                      >
-                        Del
-                      </button>
+                      {/* Only show Edit/Del for real activity_log entries, not synthetic disc/chk/insp entries */}
+                      {!a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-') && (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
+                            title="Edit entry"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
+                            title="Delete entry"
+                          >
+                            Del
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 )
