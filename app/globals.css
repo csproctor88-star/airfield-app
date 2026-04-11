@@ -945,17 +945,17 @@ html, body {
 /* ── Desktop (1024px+) ── */
 @media (min-width: 1024px) {
   :root, [data-theme="dark"], [data-theme="light"] {
-    --fs-2xs: 11px;
-    --fs-xs: 12px;
-    --fs-sm: 13px;
-    --fs-base: 14px;
-    --fs-md: 15px;
-    --fs-lg: 16px;
-    --fs-xl: 17px;
-    --fs-2xl: 19px;
-    --fs-3xl: 22px;
-    --fs-4xl: 26px;
-    --fs-5xl: 32px;
+    --fs-2xs: 12px;
+    --fs-xs: 13px;
+    --fs-sm: 14px;
+    --fs-base: 15px;
+    --fs-md: 16px;
+    --fs-lg: 18px;
+    --fs-xl: 20px;
+    --fs-2xl: 22px;
+    --fs-3xl: 26px;
+    --fs-4xl: 30px;
+    --fs-5xl: 36px;
 
     --map-height: 40vh;
     --map-height-expanded: 55vh;

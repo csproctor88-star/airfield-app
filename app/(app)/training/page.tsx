@@ -704,7 +704,7 @@ export default function TrainingPage() {
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 720 }}>
+      <div style={{ width: '100%' }}>
 
         {/* Back link */}
         <Link href="/more" style={{
