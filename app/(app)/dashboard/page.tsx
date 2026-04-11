@@ -854,8 +854,8 @@ export default function AMDashboardPage() {
                       {initials || '—'}
                     </td>
                     <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {/* Only show Edit/Del for real activity_log entries, not synthetic disc/chk/insp entries */}
-                      {!a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-') && (
+                      {/* Only show Edit/Del for real activity_log entries (not synthetic) and only for admins */}
+                      {isAdmin && !a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-') && (
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
