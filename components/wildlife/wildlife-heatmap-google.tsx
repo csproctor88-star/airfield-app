@@ -55,10 +55,10 @@ export function WildlifeHeatmapGoogle({ baseId }: Props) {
       heatmapLayerRef.current = new google.maps.visualization.HeatmapLayer({
         data: heatmapData,
         map: mapRef.current,
-        radius: 30,
+        radius: 35,
         opacity: 0.75,
         maxIntensity: 8,
-        dissipating: true,
+        dissipating: false,
         gradient: [
           'rgba(0,0,0,0)',
           'rgba(16,185,129,0.3)',
