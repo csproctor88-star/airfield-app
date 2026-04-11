@@ -55,19 +55,17 @@ export function WildlifeHeatmapGoogle({ baseId }: Props) {
       heatmapLayerRef.current = new google.maps.visualization.HeatmapLayer({
         data: heatmapData,
         map: mapRef.current,
-        radius: 40,
-        opacity: 0.85,
-        maxIntensity: 5,
+        radius: 30,
+        opacity: 0.75,
+        maxIntensity: 8,
         dissipating: true,
         gradient: [
           'rgba(0,0,0,0)',
-          'rgba(16,185,129,0.2)',
-          'rgba(16,185,129,0.5)',
-          'rgba(34,211,238,0.6)',
-          'rgba(251,191,36,0.7)',
-          'rgba(249,115,22,0.8)',
-          'rgba(239,68,68,0.9)',
-          'rgba(239,68,68,1)',
+          'rgba(16,185,129,0.3)',
+          'rgba(34,211,238,0.5)',
+          'rgba(251,191,36,0.6)',
+          'rgba(249,115,22,0.7)',
+          'rgba(239,68,68,0.8)',
         ],
       })
     }
