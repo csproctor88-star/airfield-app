@@ -44,7 +44,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     obstruction_evaluation: 'Obstruction Eval', navaid_status: 'NAVAID', airfield_status: 'Runway',
     weather_info: 'Weather Info', arff_status: 'ARFF', contractor: 'Personnel', qrc: 'QRC',
     wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike', manual: 'Logged Entry',
-    parking_plan: 'Parking Plan', acsi_inspection: 'ACSI Inspection', waiver: 'Waiver', waiver_review: 'Waiver Review',
+    parking_plan: 'Parking Plan', ppr_entry: 'PPR', acsi_inspection: 'ACSI Inspection', waiver: 'Waiver', waiver_review: 'Waiver Review',
   }
   const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''

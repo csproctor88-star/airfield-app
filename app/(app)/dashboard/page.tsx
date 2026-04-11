@@ -112,6 +112,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     wildlife_strike: 'Wildlife Strike',
     manual: 'Logged Entry',
     parking_plan: 'Parking Plan',
+    ppr_entry: 'PPR',
     waiver: 'Waiver',
     waiver_review: 'Waiver Review',
   }

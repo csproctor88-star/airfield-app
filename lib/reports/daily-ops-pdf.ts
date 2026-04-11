@@ -49,7 +49,7 @@ const ENTITY_LABELS: Record<string, string> = {
   navaid_status: 'NAVAID', airfield_status: 'Runway', weather_info: 'Weather Info', arff_status: 'ARFF',
   contractor: 'Personnel', qrc: 'QRC', manual: 'Logged Entry',
   wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike',
-  parking_plan: 'Parking Plan', waiver: 'Waiver', waiver_review: 'Waiver Review',
+  parking_plan: 'Parking Plan', ppr_entry: 'PPR', waiver: 'Waiver', waiver_review: 'Waiver Review',
 }
 
 const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
