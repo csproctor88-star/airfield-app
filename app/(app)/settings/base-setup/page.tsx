@@ -228,7 +228,7 @@ export default function BaseSetupPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: 'var(--color-cyan)', color: '#0F172A',
+            background: 'var(--color-cyan)', color: '#FFFFFF',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 'var(--fs-md)', fontWeight: 800,
           }}>
@@ -1200,7 +1200,7 @@ function RunwayTab({
                 disabled={lookupLoading || !lookupIcao.trim()}
                 style={{
                   padding: '10px 20px', borderRadius: 'var(--radius-sm)', border: 'none',
-                  background: 'var(--color-cyan)', color: '#0F172A',
+                  background: 'var(--color-cyan)', color: '#FFFFFF',
                   fontSize: 'var(--fs-md)', fontWeight: 700, cursor: lookupLoading ? 'wait' : 'pointer',
                   fontFamily: 'inherit', opacity: lookupLoading || !lookupIcao.trim() ? 0.5 : 1,
                 }}
@@ -1244,7 +1244,7 @@ function RunwayTab({
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: 8, border: 'none',
                     background: 'linear-gradient(135deg, var(--color-cyan), var(--color-accent))',
-                    color: '#0F172A', fontSize: 'var(--fs-md)', fontWeight: 700,
+                    color: '#FFFFFF', fontSize: 'var(--fs-md)', fontWeight: 700,
                     cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
                     marginBottom: 12, opacity: saving ? 0.6 : 1,
                   }}

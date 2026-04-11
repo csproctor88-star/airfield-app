@@ -396,7 +396,7 @@ export default function ContractorsPage() {
               />
               <button onClick={editingTemplateIdx !== null ? handleUpdateTemplate : handleSaveAsTemplate} disabled={!templateName.trim()} style={{
                 padding: '6px 14px', borderRadius: 'var(--radius-md)', border: 'none',
-                background: 'var(--color-cyan)', color: '#0F172A', fontSize: 'var(--fs-xs)',
+                background: 'var(--color-cyan)', color: '#FFFFFF', fontSize: 'var(--fs-xs)',
                 fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 opacity: templateName.trim() ? 1 : 0.5,
               }}>{editingTemplateIdx !== null ? 'Update' : 'Save'}</button>

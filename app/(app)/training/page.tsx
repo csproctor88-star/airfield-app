@@ -534,7 +534,7 @@ function QuickStartStep({ step, index, total }: { step: typeof QUICK_START_STEPS
     }}>
       <div style={{
         width: 44, height: 44, minWidth: 44, borderRadius: 12,
-        background: 'var(--color-cyan)', color: '#0F172A',
+        background: 'var(--color-cyan)', color: '#FFFFFF',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 'var(--fs-lg)', fontWeight: 800, letterSpacing: '-0.02em',
       }}>
@@ -719,7 +719,7 @@ export default function TrainingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
-              background: 'var(--color-cyan)', color: '#0F172A',
+              background: 'var(--color-cyan)', color: '#FFFFFF',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <Rocket size={22} />
@@ -1318,7 +1318,7 @@ function BaseSetupStep({ number, title, description, instructions, screenshots, 
       >
         <div style={{
           width: 36, height: 36, minWidth: 36, borderRadius: 10,
-          background: 'var(--color-cyan)', color: '#0F172A',
+          background: 'var(--color-cyan)', color: '#FFFFFF',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 'var(--fs-sm)', fontWeight: 800,
         }}>
