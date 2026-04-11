@@ -406,7 +406,42 @@ export default function AMDashboardPage() {
       toast.success('Entry deleted (demo mode)')
       return
     }
-    if (!confirm('Delete this events log entry? This cannot be undone.')) return
+    if (!confirm('Delete this entry? This cannot be undone.')) return
+
+    // Synthetic entries — delete from their source table
+    if (a.id.startsWith('disc-')) {
+      const realId = a.id.slice(5)
+      const { error } = await supabase.from('discrepancies').delete().eq('id', realId)
+      if (error) { toast.error(error.message) } else { toast.success('Discrepancy deleted'); await loadActivity() }
+      return
+    }
+    if (a.id.startsWith('chk-')) {
+      const realId = a.id.slice(4)
+      const { error } = await supabase.from('airfield_checks').delete().eq('id', realId)
+      if (error) { toast.error(error.message) } else { toast.success('Check deleted'); await loadActivity() }
+      return
+    }
+    if (a.id.startsWith('insp-')) {
+      const realId = a.id.slice(5)
+      const { error } = await supabase.from('inspections').delete().eq('id', realId)
+      if (error) { toast.error(error.message) } else { toast.success('Inspection deleted'); await loadActivity() }
+      return
+    }
+    if (a.id.startsWith('qrc-')) {
+      const realId = a.id.slice(4)
+      const { error } = await supabase.from('qrc_executions').delete().eq('id', realId)
+      if (error) { toast.error(error.message) } else { toast.success('QRC deleted'); await loadActivity() }
+      return
+    }
+    if (a.id.startsWith('ws-') || a.id.startsWith('wk-')) {
+      const table = a.id.startsWith('ws-') ? 'wildlife_sightings' : 'wildlife_strikes'
+      const realId = a.id.slice(3)
+      const { error } = await supabase.from(table).delete().eq('id', realId)
+      if (error) { toast.error(error.message) } else { toast.success('Entry deleted'); await loadActivity() }
+      return
+    }
+
+    // Real activity_log entry
     const { error } = await deleteActivityEntry(a.id)
     if (error) {
       toast.error(error)
@@ -854,8 +889,8 @@ export default function AMDashboardPage() {
                       {initials || '—'}
                     </td>
                     <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {/* Only show Edit/Del for real activity_log entries (not synthetic) and only for admins */}
-                      {isAdmin && !a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-') && (
+                      {/* Admins: edit/delete any entry. Others: only real activity_log entries (their manual entries) */}
+                      {(isAdmin || (!a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-'))) && (
                         <>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
