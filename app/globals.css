@@ -821,7 +821,7 @@ html, body {
 
   /* Constrain and center content; remove mobile bottom-nav clearance */
   .app-content {
-    max-width: 768px;
+    max-width: 960px;
     margin: 0 auto;
     padding-bottom: 0;
   }
@@ -982,7 +982,7 @@ html, body {
   }
 
   .app-content {
-    max-width: 1000px;
+    max-width: 1400px;
   }
 
   /* ── Element scaling ── */
