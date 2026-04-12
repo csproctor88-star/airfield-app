@@ -2409,9 +2409,11 @@ export default function ParkingPage() {
                             type="number" min={0} max={360} step={1}
                             value={groupSpots[0]?.heading_deg ?? 0}
                             onChange={e => {
-                              const deg = Math.min(360, Math.max(0, Number(e.target.value) || 0))
-                              for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                              const raw = e.target.value; if (raw === '') return
+                              const deg = Math.min(360, Math.max(0, Number(raw)))
+                              if (!isNaN(deg)) for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg })
                             }}
+                            onFocus={e => e.target.select()}
                             style={{ width: 44, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
                           />
                           <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>°</span>
@@ -2488,7 +2490,8 @@ export default function ParkingPage() {
                                     <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ width: '100%' }} />
                                   </label>
                                   <input type="number" min={0} max={360} step={1} value={s.heading_deg}
-                                    onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateSpot(s.id, { heading_deg: v }) }}
+                                    onChange={e => { const raw = e.target.value; if (raw === '') return; const v = Math.min(360, Math.max(0, Number(raw))); if (!isNaN(v)) handleUpdateSpot(s.id, { heading_deg: v }) }}
+                                    onFocus={e => e.target.select()}
                                     style={{ width: 48, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
                                   />
                                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
