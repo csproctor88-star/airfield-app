@@ -388,6 +388,21 @@ export default function ParkingPage() {
     try { return JSON.parse(localStorage.getItem('glidepath_fav_aircraft') || '[]') } catch { return [] }
   })
 
+  // Multi-select state for aircraft
+  const [selectedSpotIds, setSelectedSpotIds] = useState<Set<string>>(new Set())
+  const selectedSpotIdsRef = useRef<Set<string>>(new Set())
+  selectedSpotIdsRef.current = selectedSpotIds
+  const editingSpotRef = useRef<ParkingSpot | null>(null)
+  editingSpotRef.current = editingSpot
+  const [boxSelectActive, setBoxSelectActive] = useState(false)
+  const boxSelectActiveRef = useRef(false)
+  boxSelectActiveRef.current = boxSelectActive
+
+  // Taxilane point-editing mode
+  const [editingTaxilanePoints, setEditingTaxilanePoints] = useState(false)
+  const vertexMarkersRef = useRef<google.maps.Marker[]>([])
+  const midpointMarkersRef = useRef<google.maps.Marker[]>([])
+
   // Line drawing state
   const [drawingLinePoints, setDrawingLinePoints] = useState<[number, number][]>([])
   const [drawingLineObsId, setDrawingLineObsId] = useState<string | null>(null)
@@ -454,6 +469,8 @@ export default function ParkingPage() {
   const isDraggingRef = useRef(false)
   const dragOffsetRef = useRef<{ dLng: number; dLat: number }>({ dLng: 0, dLat: 0 })
   const dragStartPt = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  // Group drag: snapshot initial positions of all selected spots to translate as a unit
+  const groupDragStartRef = useRef<Map<string, { lng: number; lat: number }>>(new Map())
   const dragLabelMarkersRef = useRef<google.maps.Marker[]>([])
   const dragLineRef = useRef<google.maps.Polyline[]>([])
 
@@ -1166,45 +1183,75 @@ export default function ParkingPage() {
     return () => { google.maps.event.removeListener(listener) }
   }, [mapLoaded])
 
-  // ── Layer 4: Selection ring — lightweight, no full re-render ──
+  // ── Layer 4: Selection rings (single editingSpot + multi-select) ──
+  const multiRingsRef = useRef<google.maps.Circle[]>([])
   useEffect(() => {
-    // Clean up previous ring
+    // Clean up previous rings
     if (selectionRingRef.current) {
       selectionRingRef.current.setMap(null)
       selectionRingRef.current = null
     }
+    multiRingsRef.current.forEach(c => c.setMap(null))
+    multiRingsRef.current = []
 
     const w = map.current
-    if (!w || !mapLoaded || !editingSpot) return
+    if (!w || !mapLoaded) return
 
-    // Update marker opacity: dim selected, restore others
+    // Build highlighted id set
+    const highlighted = new Set<string>(selectedSpotIds)
+    if (editingSpot) highlighted.add(editingSpot.id)
+
+    // Update marker opacity
     spotMarkersMapRef.current.forEach((marker, spotId) => {
-      marker.setOpacity(spotId === editingSpot.id ? 0.5 : 1)
-      marker.setZIndex(spotId === editingSpot.id ? 20 : 10)
+      const isHi = highlighted.has(spotId)
+      marker.setOpacity(isHi ? 0.5 : 1)
+      marker.setZIndex(isHi ? 20 : 10)
     })
 
-    const spot = spotsWithAircraft.find(s => s.id === editingSpot.id)
-    if (!spot) return
-    const c = spotCenter(spot)
-    const wingspanM = spot.wingspan_ft * FT_TO_M
+    if (highlighted.size === 0) return
 
-    selectionRingRef.current = new google.maps.Circle({
-      center: { lat: c.lat, lng: c.lon },
-      radius: wingspanM / 2 + 5,
-      map: w.gmap,
-      fillColor: 'transparent', fillOpacity: 0,
-      strokeColor: '#22D3EE', strokeWeight: 3,
-      clickable: false, zIndex: 15,
-    })
+    // Render single cyan ring for editingSpot (primary)
+    if (editingSpot) {
+      const spot = spotsWithAircraft.find(s => s.id === editingSpot.id)
+      if (spot) {
+        const c = spotCenter(spot)
+        const wingspanM = spot.wingspan_ft * FT_TO_M
+        selectionRingRef.current = new google.maps.Circle({
+          center: { lat: c.lat, lng: c.lon },
+          radius: wingspanM / 2 + 5,
+          map: w.gmap,
+          fillColor: 'transparent', fillOpacity: 0,
+          strokeColor: '#22D3EE', strokeWeight: 3,
+          clickable: false, zIndex: 15,
+        })
+      }
+    }
+
+    // Render purple rings for multi-select members
+    for (const sid of Array.from(selectedSpotIds)) {
+      if (editingSpot && sid === editingSpot.id) continue
+      const spot = spotsWithAircraft.find(s => s.id === sid)
+      if (!spot) continue
+      const c = spotCenter(spot)
+      const wingspanM = spot.wingspan_ft * FT_TO_M
+      const ring = new google.maps.Circle({
+        center: { lat: c.lat, lng: c.lon },
+        radius: wingspanM / 2 + 5,
+        map: w.gmap,
+        fillColor: 'transparent', fillOpacity: 0,
+        strokeColor: '#A855F7', strokeWeight: 3,
+        clickable: false, zIndex: 15,
+      })
+      multiRingsRef.current.push(ring)
+    }
 
     return () => {
-      // Reset all marker opacity when selection clears
       spotMarkersMapRef.current.forEach(marker => {
         marker.setOpacity(1)
         marker.setZIndex(10)
       })
     }
-  }, [mapLoaded, editingSpot, spotsWithAircraft])
+  }, [mapLoaded, editingSpot, selectedSpotIds, spotsWithAircraft])
 
   // ── Aircraft + Obstacle drag interaction ──
   // Uses refs to avoid re-registering listeners on every data change.
@@ -1224,7 +1271,7 @@ export default function ParkingPage() {
     let lastLabelUpdate = 0
     const LABEL_THROTTLE_MS = 80
 
-    const onMouseDown = (clickLat: number, clickLng: number, clientX: number, clientY: number, preventDefault: () => void) => {
+    const onMouseDown = (clickLat: number, clickLng: number, clientX: number, clientY: number, preventDefault: () => void, shiftKey: boolean = false) => {
       if (isPlacingRef.current) return
       dragStartPt.current = { x: clientX, y: clientY }
 
@@ -1234,20 +1281,56 @@ export default function ParkingPage() {
         const spotId = acHit.props.spotId
         const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
         if (spot) {
-          setEditingSpot(spot)
+          if (shiftKey) {
+            // Toggle spot in multi-select; add current editingSpot if leaving single mode
+            setSelectedSpotIds(prev => {
+              const next = new Set(prev)
+              const currentEditing = editingSpotRef.current
+              if (next.size === 0 && currentEditing && currentEditing.id !== spotId) {
+                next.add(currentEditing.id)
+              }
+              if (next.has(spotId)) next.delete(spotId)
+              else next.add(spotId)
+              return next
+            })
+            setEditingSpot(null)
+            setOpenSections(prev => ({ ...prev, aircraft: true }))
+            setSidebarTab('aircraft')
+            preventDefault()
+            return
+          }
+          // Plain click: if spot is in multi-select, start group drag; else single select
+          const isInSelection = selectedSpotIdsRef.current.has(spotId)
+          if (!isInSelection) {
+            setSelectedSpotIds(new Set())
+            setEditingSpot(spot)
+          }
           setOpenSections(prev => ({ ...prev, aircraft: true }))
           setSidebarTab('aircraft')
         }
-        if (!planLockedRef.current && spot) {
+        if (!planLockedRef.current && spot && !shiftKey) {
           dragOffsetRef.current = { dLng: spot.longitude - clickLng, dLat: spot.latitude - clickLat }
           isDraggingRef.current = true
           dragSpotId.current = spotId
           dragObstacleId.current = null
           mapDiv.style.cursor = 'grabbing'
           gmap.setOptions({ draggable: false })
+          // If spot is part of multi-select, snapshot all selected positions for group drag
+          groupDragStartRef.current.clear()
+          if (selectedSpotIdsRef.current.has(spotId)) {
+            Array.from(selectedSpotIdsRef.current).forEach(sid => {
+              const s = spotsWithAircraftRef.current.find(x => x.id === sid)
+              if (s) groupDragStartRef.current.set(sid, { lng: s.longitude, lat: s.latitude })
+            })
+          }
           preventDefault()
         }
         return
+      }
+
+      // Clicked empty map: clear multi-select (unless shift held or box-select active)
+      if (!shiftKey && !boxSelectActiveRef.current && selectedSpotIdsRef.current.size > 0) {
+        setSelectedSpotIds(new Set())
       }
 
       // Check obstacles via spatial index
@@ -1278,17 +1361,33 @@ export default function ParkingPage() {
       const lng = moveLng + dragOffsetRef.current.dLng
       const lat = moveLat + dragOffsetRef.current.dLat
 
-      // Move the dragged marker visually
+      // Move the dragged marker(s) visually
       if (dragSpotId.current) {
-        const marker = spotMarkersMapRef.current.get(dragSpotId.current)
-        if (marker) {
-          // Compute aircraft center from the new nose gear position
-          const spot = spotsWithAircraftRef.current.find(s => s.id === dragSpotId.current)
-          if (spot) {
-            const c = getAircraftCenter(lng, lat, spot.heading_deg, spot.length_ft, spot.pivot_point_ft)
-            marker.setPosition({ lat: c.lat, lng: c.lon })
-          } else {
-            marker.setPosition({ lat, lng })
+        const primarySpot = spotsWithAircraftRef.current.find(s => s.id === dragSpotId.current)
+        const isGroupDrag = groupDragStartRef.current.size > 1 && primarySpot && groupDragStartRef.current.has(primarySpot.id)
+        if (isGroupDrag && primarySpot) {
+          const startPrimary = groupDragStartRef.current.get(primarySpot.id)!
+          const dLng = lng - startPrimary.lng
+          const dLat = lat - startPrimary.lat
+          groupDragStartRef.current.forEach((start, sid) => {
+            const marker = spotMarkersMapRef.current.get(sid)
+            const s = spotsWithAircraftRef.current.find(x => x.id === sid)
+            if (marker && s) {
+              const nLng = start.lng + dLng
+              const nLat = start.lat + dLat
+              const c = getAircraftCenter(nLng, nLat, s.heading_deg, s.length_ft, s.pivot_point_ft)
+              marker.setPosition({ lat: c.lat, lng: c.lon })
+            }
+          })
+        } else {
+          const marker = spotMarkersMapRef.current.get(dragSpotId.current)
+          if (marker) {
+            if (primarySpot) {
+              const c = getAircraftCenter(lng, lat, primarySpot.heading_deg, primarySpot.length_ft, primarySpot.pivot_point_ft)
+              marker.setPosition({ lat: c.lat, lng: c.lon })
+            } else {
+              marker.setPosition({ lat, lng })
+            }
           }
         }
       }
@@ -1386,6 +1485,26 @@ export default function ParkingPage() {
         dragSpotId.current = null
         gmap.setOptions({ draggable: true })
         mapDiv.style.cursor = ''
+        const groupSnapshot = groupDragStartRef.current
+        const isGroupDrag = groupSnapshot.size > 1 && groupSnapshot.has(sid)
+        if (isGroupDrag) {
+          const startPrimary = groupSnapshot.get(sid)!
+          const dLng = lng - startPrimary.lng
+          const dLat = lat - startPrimary.lat
+          const updates: { id: string; longitude: number; latitude: number; heading_deg: number }[] = []
+          setSpots(prev => prev.map(s => {
+            const start = groupSnapshot.get(s.id)
+            if (!start) return s
+            const nLng = start.lng + dLng
+            const nLat = start.lat + dLat
+            updates.push({ id: s.id, longitude: nLng, latitude: nLat, heading_deg: s.heading_deg })
+            return { ...s, longitude: nLng, latitude: nLat }
+          }))
+          groupDragStartRef.current = new Map()
+          await bulkUpdateSpotPositions(updates)
+          return
+        }
+        groupDragStartRef.current = new Map()
         setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s))
         await updateParkingSpot(sid, { longitude: lng, latitude: lat })
         return
@@ -1436,7 +1555,7 @@ export default function ParkingPage() {
       const rect = mapDiv.getBoundingClientRect()
       const pos = toLatLng(ev.clientX - rect.left, ev.clientY - rect.top)
       if (!pos) return
-      onMouseDown(pos.lat, pos.lng, ev.clientX, ev.clientY, () => ev.preventDefault())
+      onMouseDown(pos.lat, pos.lng, ev.clientX, ev.clientY, () => ev.preventDefault(), ev.shiftKey)
     }
 
     const onCanvasMouseMove = (ev: MouseEvent) => {
@@ -1513,17 +1632,42 @@ export default function ParkingPage() {
     }
   }, [mapLoaded]) // Only re-register on map load — refs handle current data
 
-  // ── Keyboard shortcuts: arrow nudge + spacebar fullscreen ──
+  // ── Keyboard shortcuts: arrow nudge + spacebar fullscreen + ESC box-select ──
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       // Ignore if typing in an input/select/textarea
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
 
+      // ESC: toggle box-select mode (or cancel multi-selection)
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        if (boxSelectActive) {
+          setBoxSelectActive(false)
+        } else if (selectedSpotIds.size > 0) {
+          setSelectedSpotIds(new Set())
+        } else {
+          setBoxSelectActive(true)
+          toast.success('Box-select: drag to select aircraft. ESC to cancel.')
+        }
+        return
+      }
+
       // Spacebar toggles fullscreen
       if (e.key === ' ') {
         e.preventDefault()
         setIsFullscreen(f => !f)
+        return
+      }
+
+      // Delete / Backspace: remove all selected spots
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedSpotIds.size > 0) {
+        e.preventDefault()
+        if (!confirm(`Remove ${selectedSpotIds.size} aircraft?`)) return
+        for (const sid of Array.from(selectedSpotIds)) {
+          await handleDeleteSpot(sid)
+        }
+        setSelectedSpotIds(new Set())
         return
       }
 
@@ -1541,7 +1685,206 @@ export default function ParkingPage() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [editingSpot])
+  }, [editingSpot, boxSelectActive, selectedSpotIds])
+
+  // ── Taxilane point editing: vertex + midpoint drag/insert markers ──
+  useEffect(() => {
+    const w = map.current
+    if (!w || !mapLoaded) return
+    // Clear prior markers
+    vertexMarkersRef.current.forEach(m => m.setMap(null))
+    vertexMarkersRef.current = []
+    midpointMarkersRef.current.forEach(m => m.setMap(null))
+    midpointMarkersRef.current = []
+    if (!editingTaxilanePoints || !editingTaxilane) return
+    const tl = taxilanes.find(t => t.id === editingTaxilane.id)
+    if (!tl || !tl.line_coords || tl.line_coords.length < 2) return
+    const gmap = w.gmap
+
+    const persist = async (newCoords: [number, number][]) => {
+      setTaxilanes(prev => prev.map(x => x.id === tl.id ? { ...x, line_coords: newCoords } : x))
+      setEditingTaxilane(prev => prev && prev.id === tl.id ? { ...prev, line_coords: newCoords } : prev)
+      await updateParkingTaxilane(tl.id, { line_coords: newCoords })
+    }
+
+    // Vertex markers — draggable, shift+click to delete
+    tl.line_coords.forEach((pt, idx) => {
+      const marker = new google.maps.Marker({
+        position: { lat: pt[1], lng: pt[0] },
+        map: gmap,
+        draggable: true,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: '#3B82F6',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
+        },
+        zIndex: 100,
+        title: `Vertex ${idx + 1} — drag to move, shift+click to delete`,
+      })
+      marker.addListener('click', (ev: google.maps.MapMouseEvent & { domEvent?: MouseEvent }) => {
+        const shift = (ev.domEvent as MouseEvent | undefined)?.shiftKey
+        if (!shift) return
+        const current = taxilanes.find(t => t.id === tl.id)
+        if (!current || !current.line_coords || current.line_coords.length <= 2) {
+          toast.error('Taxilane must have at least 2 points')
+          return
+        }
+        const next = current.line_coords.filter((_, i) => i !== idx)
+        persist(next)
+      })
+      marker.addListener('dragend', () => {
+        const pos = marker.getPosition()
+        if (!pos) return
+        const current = taxilanes.find(t => t.id === tl.id)
+        if (!current) return
+        const next = current.line_coords.map((c, i) => i === idx ? [pos.lng(), pos.lat()] as [number, number] : c)
+        persist(next)
+      })
+      vertexMarkersRef.current.push(marker)
+    })
+
+    // Midpoint markers — click to insert new vertex
+    for (let i = 0; i < tl.line_coords.length - 1; i++) {
+      const a = tl.line_coords[i]
+      const b = tl.line_coords[i + 1]
+      const midLng = (a[0] + b[0]) / 2
+      const midLat = (a[1] + b[1]) / 2
+      const marker = new google.maps.Marker({
+        position: { lat: midLat, lng: midLng },
+        map: gmap,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 4,
+          fillColor: '#FFFFFF',
+          fillOpacity: 0.8,
+          strokeColor: '#3B82F6',
+          strokeWeight: 2,
+        },
+        zIndex: 99,
+        title: 'Click to insert vertex',
+      })
+      const insertIdx = i + 1
+      marker.addListener('click', () => {
+        const current = taxilanes.find(t => t.id === tl.id)
+        if (!current) return
+        const next = [...current.line_coords]
+        next.splice(insertIdx, 0, [midLng, midLat])
+        persist(next)
+      })
+      midpointMarkersRef.current.push(marker)
+    }
+
+    return () => {
+      vertexMarkersRef.current.forEach(m => m.setMap(null))
+      vertexMarkersRef.current = []
+      midpointMarkersRef.current.forEach(m => m.setMap(null))
+      midpointMarkersRef.current = []
+    }
+  }, [editingTaxilanePoints, editingTaxilane, taxilanes, mapLoaded])
+
+  // Exit taxilane-points mode when the selected taxilane is cleared
+  useEffect(() => {
+    if (!editingTaxilane && editingTaxilanePoints) setEditingTaxilanePoints(false)
+  }, [editingTaxilane, editingTaxilanePoints])
+
+  // ── Box-select: drag rectangle on map to select aircraft ──
+  useEffect(() => {
+    if (!boxSelectActive || !mapLoaded) return
+    const w = map.current
+    if (!w) return
+    const gmap = w.gmap
+    const mapDiv = gmap.getDiv()
+
+    // Disable map pan while boxing
+    gmap.setOptions({ draggable: false, gestureHandling: 'none' })
+    mapDiv.style.cursor = 'crosshair'
+
+    let boxDiv: HTMLDivElement | null = null
+    let startX = 0, startY = 0
+    let active = false
+
+    const onDown = (ev: MouseEvent) => {
+      if (ev.button !== 0) return
+      ev.preventDefault()
+      ev.stopPropagation()
+      const rect = mapDiv.getBoundingClientRect()
+      startX = ev.clientX - rect.left
+      startY = ev.clientY - rect.top
+      active = true
+      boxDiv = document.createElement('div')
+      boxDiv.style.cssText = `position:absolute;left:${startX}px;top:${startY}px;width:0;height:0;border:2px dashed #A855F7;background:rgba(168,85,247,0.1);pointer-events:none;z-index:9999;`
+      mapDiv.appendChild(boxDiv)
+    }
+
+    const onMove = (ev: MouseEvent) => {
+      if (!active || !boxDiv) return
+      const rect = mapDiv.getBoundingClientRect()
+      const x = ev.clientX - rect.left
+      const y = ev.clientY - rect.top
+      const left = Math.min(startX, x)
+      const top = Math.min(startY, y)
+      const width = Math.abs(x - startX)
+      const height = Math.abs(y - startY)
+      boxDiv.style.left = `${left}px`
+      boxDiv.style.top = `${top}px`
+      boxDiv.style.width = `${width}px`
+      boxDiv.style.height = `${height}px`
+    }
+
+    const onUp = (ev: MouseEvent) => {
+      if (!active) return
+      active = false
+      const rect = mapDiv.getBoundingClientRect()
+      const endX = ev.clientX - rect.left
+      const endY = ev.clientY - rect.top
+      if (boxDiv) { boxDiv.remove(); boxDiv = null }
+
+      // Convert corners to lat/lng
+      const p1 = pixelToLatLng(w, Math.min(startX, endX), Math.min(startY, endY))
+      const p2 = pixelToLatLng(w, Math.max(startX, endX), Math.max(startY, endY))
+      if (!p1 || !p2) return
+
+      const bounds = new google.maps.LatLngBounds(
+        { lat: Math.min(p1.lat, p2.lat), lng: Math.min(p1.lng, p2.lng) },
+        { lat: Math.max(p1.lat, p2.lat), lng: Math.max(p1.lng, p2.lng) },
+      )
+
+      const hits = new Set<string>()
+      for (const spot of spotsWithAircraftRef.current) {
+        const c = spotCenter(spot)
+        if (bounds.contains({ lat: c.lat, lng: c.lon })) hits.add(spot.id)
+      }
+
+      if (hits.size === 0) {
+        toast.info('No aircraft in selection')
+      } else {
+        setSelectedSpotIds(prev => {
+          const next = new Set(prev)
+          hits.forEach(id => next.add(id))
+          return next
+        })
+        setEditingSpot(null)
+        toast.success(`Selected ${hits.size} aircraft`)
+      }
+      setBoxSelectActive(false)
+    }
+
+    mapDiv.addEventListener('mousedown', onDown, true)
+    mapDiv.addEventListener('mousemove', onMove, true)
+    mapDiv.addEventListener('mouseup', onUp, true)
+
+    return () => {
+      mapDiv.removeEventListener('mousedown', onDown, true)
+      mapDiv.removeEventListener('mousemove', onMove, true)
+      mapDiv.removeEventListener('mouseup', onUp, true)
+      if (boxDiv) boxDiv.remove()
+      gmap.setOptions({ draggable: true, gestureHandling: 'auto' })
+      mapDiv.style.cursor = ''
+    }
+  }, [boxSelectActive, mapLoaded])
 
   // Resize map when sidebar collapses/expands or fullscreen toggles
   useEffect(() => {
@@ -2309,17 +2652,135 @@ export default function ParkingPage() {
           {sidebarTab === 'aircraft' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {selectedPlanId && (
-                <button
-                  onClick={() => setShowAircraftPicker(true)}
-                  style={{
-                    padding: '5px 12px', borderRadius: 4, marginBottom: 4, alignSelf: 'flex-start',
-                    background: 'var(--color-cyan)11', border: '1px dashed var(--color-cyan)',
-                    color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)',
-                  }}
-                >
-                  + Add Aircraft
-                </button>
+                <div style={{ display: 'flex', gap: 4, padding: '4px 8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setShowAircraftPicker(true)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 4,
+                      background: 'var(--color-cyan)11', border: '1px dashed var(--color-cyan)',
+                      color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                    }}
+                  >
+                    + Add Aircraft
+                  </button>
+                  <button
+                    onClick={() => setBoxSelectActive(v => !v)}
+                    title="Drag a box on the map to select multiple aircraft (ESC)"
+                    style={{
+                      padding: '5px 10px', borderRadius: 4,
+                      background: boxSelectActive ? '#A855F733' : 'var(--color-bg-surface)',
+                      border: `1px solid ${boxSelectActive ? '#A855F7' : 'var(--color-border)'}`,
+                      color: boxSelectActive ? '#A855F7' : 'var(--color-text-secondary)',
+                      cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    }}
+                  >
+                    {boxSelectActive ? 'Drawing Box…' : 'Box Select'}
+                  </button>
+                  {selectedSpotIds.size > 0 && (
+                    <button
+                      onClick={() => setSelectedSpotIds(new Set())}
+                      style={{
+                        padding: '5px 10px', borderRadius: 4,
+                        background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)',
+                      }}
+                    >
+                      Clear ({selectedSpotIds.size})
+                    </button>
+                  )}
+                </div>
               )}
+
+              {/* Multi-select operations panel */}
+              {selectedSpotIds.size > 1 && (() => {
+                const selSpots = spotsWithAircraft.filter(s => selectedSpotIds.has(s.id))
+                const firstHeading = selSpots[0]?.heading_deg ?? 0
+                const allSameHeading = selSpots.every(s => s.heading_deg === firstHeading)
+                const selViolations = allResults.filter(r =>
+                  (r.spot_a_id && selectedSpotIds.has(r.spot_a_id)) ||
+                  (r.spot_b_id && selectedSpotIds.has(r.spot_b_id))
+                )
+                return (
+                  <div style={{
+                    padding: '8px 10px', background: 'rgba(168,85,247,0.08)',
+                    borderBottom: '2px solid #A855F7', display: 'flex', flexDirection: 'column', gap: 6,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#A855F7' }}>
+                        {selectedSpotIds.size} aircraft selected
+                      </span>
+                      {selViolations.length > 0 && (
+                        <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-danger)', fontWeight: 700 }}>
+                          {selViolations.filter(v => v.status === 'violation').length} violations
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                        Heading:
+                      </span>
+                      <input
+                        type="range" min={0} max={360} step={1}
+                        value={allSameHeading ? firstHeading : 0}
+                        onChange={e => {
+                          const deg = Number(e.target.value)
+                          for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <input
+                        type="number" min={0} max={360} step={1}
+                        value={allSameHeading ? firstHeading : ''}
+                        placeholder={allSameHeading ? '' : 'mixed'}
+                        onChange={e => {
+                          const raw = e.target.value; if (raw === '') return
+                          const deg = Math.min(360, Math.max(0, Number(raw)))
+                          if (!isNaN(deg)) for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                        }}
+                        onFocus={e => e.target.select()}
+                        style={{ width: 50, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: '#A855F7', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
+                      />
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>°</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>Clearance:</span>
+                      {[null, 10, 15, 25].map(val => (
+                        <button
+                          key={val ?? 'adg'}
+                          onClick={() => { for (const s of selSpots) handleUpdateSpot(s.id, { clearance_ft: val as any }) }}
+                          style={{
+                            padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-2xs)', border: '1px solid var(--color-border)',
+                            background: 'var(--color-bg-surface)', color: 'var(--color-text-secondary)', cursor: 'pointer',
+                          }}
+                        >
+                          {val ? `${val}ft` : 'UFC'}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button
+                        onClick={() => {
+                          setClearanceFilter('all')
+                          setSidebarTab('clearance')
+                        }}
+                        style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}
+                      >
+                        View Clearance
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Remove ${selectedSpotIds.size} aircraft?`)) return
+                          for (const sid of Array.from(selectedSpotIds)) await handleDeleteSpot(sid)
+                          setSelectedSpotIds(new Set())
+                        }}
+                        style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)', marginLeft: 'auto' }}
+                      >
+                        Delete All
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {spots.length === 0 && !selectedPlanId && (
                 <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', padding: '4px 0', margin: 0 }}>
@@ -2434,13 +2895,26 @@ export default function ParkingPage() {
                         return (
                           <div key={s.id}>
                             <div
-                              onClick={() => setEditingSpot(isEditing ? null : s)}
+                              onClick={e => {
+                                if (e.shiftKey) {
+                                  setSelectedSpotIds(prev => {
+                                    const next = new Set(prev)
+                                    if (next.size === 0 && editingSpot && editingSpot.id !== s.id) next.add(editingSpot.id)
+                                    if (next.has(s.id)) next.delete(s.id); else next.add(s.id)
+                                    return next
+                                  })
+                                  setEditingSpot(null)
+                                } else {
+                                  setSelectedSpotIds(new Set())
+                                  setEditingSpot(isEditing ? null : s)
+                                }
+                              }}
                               style={{
                                 display: 'flex', alignItems: 'center', gap: 6,
                                 padding: isMobile ? '8px 12px 8px 24px' : '3px 8px 3px 20px', cursor: 'pointer',
-                                background: isEditing ? 'var(--color-bg)' : 'transparent',
+                                background: selectedSpotIds.has(s.id) ? 'rgba(168,85,247,0.15)' : isEditing ? 'var(--color-bg)' : 'transparent',
                                 borderBottom: '1px solid var(--color-border)',
-                                borderLeft: spotViolations.length > 0 ? '3px solid var(--color-danger)' : '3px solid transparent',
+                                borderLeft: selectedSpotIds.has(s.id) ? '3px solid #A855F7' : spotViolations.length > 0 ? '3px solid var(--color-danger)' : '3px solid transparent',
                               }}
                             >
                               <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
@@ -2845,9 +3319,26 @@ export default function ParkingPage() {
                             {tlViolations.length} violation{tlViolations.length === 1 ? '' : 's'} in taxilane envelope
                           </div>
                         )}
-                        <div style={{ display: 'flex', gap: 4 }}>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                           <button onClick={() => { if (tl.line_coords?.length > 0) { map.current?.gmap.panTo({ lat: tl.line_coords[0][1], lng: tl.line_coords[0][0] }); map.current?.gmap.setZoom(17) } }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                          <button
+                            onClick={() => setEditingTaxilanePoints(v => !v)}
+                            style={{
+                              padding: '4px 8px', borderRadius: 3,
+                              background: editingTaxilanePoints ? '#3B82F633' : 'var(--color-bg-surface)',
+                              border: `1px solid ${editingTaxilanePoints ? '#3B82F6' : 'var(--color-border)'}`,
+                              color: editingTaxilanePoints ? '#3B82F6' : 'var(--color-text-secondary)',
+                              cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: editingTaxilanePoints ? 700 : 400,
+                            }}
+                          >
+                            {editingTaxilanePoints ? 'Exit Edit Points' : 'Edit Points'}
+                          </button>
+                          {editingTaxilanePoints && (
+                            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
+                              Drag blue dots to move · click white dots to insert · shift+click to delete
+                            </span>
+                          )}
+                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)', marginLeft: 'auto' }}>Delete</button>
                         </div>
                       </div>
                     )}
