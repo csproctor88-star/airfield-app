@@ -12,7 +12,7 @@ import {
 import { formatZuluDateTime } from '@/lib/utils'
 import { SightingForm } from '@/components/wildlife/sighting-form'
 import { StrikeForm } from '@/components/wildlife/strike-form'
-import { WildlifeHeatmapGoogle as WildlifeHeatmap } from '@/components/wildlife/wildlife-heatmap-google'
+import { WildlifeHeatmap } from '@/components/wildlife/wildlife-heatmap'
 import { WildlifeAnalytics } from '@/components/wildlife/wildlife-analytics'
 import { WildlifeReport } from '@/components/wildlife/wildlife-report'
 import {
