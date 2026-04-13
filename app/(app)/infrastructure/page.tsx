@@ -266,6 +266,8 @@ function createTriangleIcon(color: string, size: number = 24): ImageData {
 }
 
 // Generate a labeled sign image that looks like a real airfield sign
+// Source canvas rendered at ~2x resolution so high-zoom display stays crisp.
+// Display size is then tuned via SIGN_DISPLAY_SCALE in the render paths.
 function createLabeledSign(
   text: string,
   bgColor: string,
@@ -275,14 +277,14 @@ function createLabeledSign(
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
-  // Measure text to size the canvas
-  const fontSize = 14
+  // Measure text to size the canvas — high-resolution source (was fontSize 14)
+  const fontSize = 28
   const fontBold = `bold ${fontSize}px system-ui, sans-serif`
   ctx.font = fontBold
   const metrics = ctx.measureText(text)
   const textW = Math.ceil(metrics.width)
 
-  const padX = 8, padY = 5, borderW = 2
+  const padX = 16, padY = 10, borderW = 4
   const w = textW + padX * 2 + borderW * 2
   const h = fontSize + padY * 2 + borderW * 2
 
@@ -306,6 +308,13 @@ function createLabeledSign(
 
   return ctx.getImageData(0, 0, w, h)
 }
+
+// Sign display scale — reduces the on-map size of labeled signs.
+// Source canvas is rendered at ~2x; this scale maps that source down to the
+// final pixel size, keeping signs sharp at high zoom while shrinking screen
+// footprint. 0.4 means: source-pixel:displayed-pixel ratio is 2.5:1 at scale 1,
+// so even a fully zoomed-in sign upscales the source minimally.
+const SIGN_DISPLAY_SCALE = 0.4
 
 // Sign type → colors for labeled signs
 const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -1970,8 +1979,8 @@ export default function InfrastructureMapPage() {
 
         if (meta.kind === 'sign') {
           const natural = w.iconSizes.get(meta.signKey) || { w: 60, h: 24 }
-          const mw = Math.max(Math.round(natural.w * scale), 20)
-          const mh = Math.max(Math.round(natural.h * scale), 10)
+          const mw = Math.max(Math.round(natural.w * scale * SIGN_DISPLAY_SCALE), 20)
+          const mh = Math.max(Math.round(natural.h * scale * SIGN_DISPLAY_SCALE), 10)
           marker.setIcon({
             url: w.iconCache.get(meta.signKey) || '',
             scaledSize: new google.maps.Size(mw, mh),
@@ -2088,11 +2097,12 @@ export default function InfrastructureMapPage() {
       if (iconUrl) {
         const isSign = !!props.signIcon
         if (isSign) {
-          // Sign labels: use actual image dimensions from iconSizes, scaled by zoom
+          // Sign labels: source canvas is high-res; SIGN_DISPLAY_SCALE shrinks
+          // the on-map footprint while keeping the source crisp at high zoom.
           const iconKey = props.signIcon as string
           const natural = wrapper.iconSizes.get(iconKey) || { w: 60, h: 24 }
-          const w = Math.max(Math.round(natural.w * scale), 20)
-          const h = Math.max(Math.round(natural.h * scale), 10)
+          const w = Math.max(Math.round(natural.w * scale * SIGN_DISPLAY_SCALE), 20)
+          const h = Math.max(Math.round(natural.h * scale * SIGN_DISPLAY_SCALE), 10)
           markerIcon = {
             url: iconUrl,
             scaledSize: new google.maps.Size(w, h),
