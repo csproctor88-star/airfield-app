@@ -46,6 +46,11 @@ function getWildlifeImageManifest(): Record<string, ManifestEntry> {
  * 2. Deterministic local path: /wildlife_images/{group}/{safe_name}.jpg
  *    (relies on img onError handler to hide if file doesn't exist)
  * 3. Remote USFWS URL (image_url field) as last resort
+ *
+ * IMPORTANT: filename convention must match scripts/scrape_wildlife_images.py's
+ * safe_filename() exactly — apostrophes and parens are stripped (not replaced),
+ * spaces and hyphens become underscores. Mismatch here breaks photo display
+ * for any species containing an apostrophe (Bonaparte's, Saunders's, etc.).
  */
 export function resolveWildlifeImage(species: WildlifeSpecies): string | null {
   // Check manifest first
@@ -53,8 +58,13 @@ export function resolveWildlifeImage(species: WildlifeSpecies): string | null {
   if (entry?.filename) {
     return `/wildlife_images/${entry.filename}`
   }
-  // Deterministic local path (matches scraper filename convention)
-  const safeName = species.common_name.toLowerCase().replace(/[' ()-]/g, '_').replace(/[^a-z0-9_]/g, '').replace(/_+/g, '_')
+  // Deterministic local path (matches scripts/scrape_wildlife_images.py:safe_filename)
+  const safeName = species.common_name
+    .toLowerCase()
+    .replace(/['()]/g, '')          // strip apostrophes and parens
+    .replace(/[ \-]/g, '_')         // spaces and hyphens → underscore
+    .replace(/[^a-z0-9_]/g, '')     // strip anything else
+    .replace(/_+/g, '_')            // collapse multiple underscores
   return `/wildlife_images/${species.group}/${safeName}.jpg`
 }
 
@@ -996,6 +1006,34 @@ export const WILDLIFE_SPECIES: WildlifeSpecies[] = [
   { common_name: 'Least Tern', scientific_name: 'Sternula antillarum', group: 'bird', size_category: 'small', mean_mass_g: 45, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
   { common_name: "Forster's Tern", scientific_name: 'Sterna forsteri', group: 'bird', size_category: 'medium', mean_mass_g: 170, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
   { common_name: 'Black Skimmer', scientific_name: 'Rynchops niger', group: 'bird', size_category: 'medium', mean_mass_g: 300, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Hooded / Masked Gulls (Chroicocephalus / Leucophaeus / others) ──
+  { common_name: 'Black-headed Gull', scientific_name: 'Chroicocephalus ridibundus', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Common Gull', scientific_name: 'Larus canus', group: 'bird', size_category: 'medium', mean_mass_g: 430, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Laughing Gull', scientific_name: 'Leucophaeus atricilla', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Little Gull', scientific_name: 'Hydrocoloeus minutus', group: 'bird', size_category: 'small', mean_mass_g: 110, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Bonaparte's Gull", scientific_name: 'Chroicocephalus philadelphia', group: 'bird', size_category: 'small', mean_mass_g: 210, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Saunders's Gull", scientific_name: 'Saundersilarus saundersi', group: 'bird', size_category: 'small', mean_mass_g: 210, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Slender-billed Gull', scientific_name: 'Chroicocephalus genei', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Brown-hooded Gull', scientific_name: 'Chroicocephalus maculipennis', group: 'bird', size_category: 'medium', mean_mass_g: 330, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Brown-headed Gull', scientific_name: 'Chroicocephalus brunnicephalus', group: 'bird', size_category: 'small', mean_mass_g: 250, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Grey Gull', scientific_name: 'Leucophaeus modestus', group: 'bird', size_category: 'medium', mean_mass_g: 360, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Silver Gull', scientific_name: 'Chroicocephalus novaehollandiae', group: 'bird', size_category: 'medium', mean_mass_g: 340, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Grey-headed Gull', scientific_name: 'Chroicocephalus cirrocephalus', group: 'bird', size_category: 'small', mean_mass_g: 270, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Black-billed Gull', scientific_name: 'Chroicocephalus bulleri', group: 'bird', size_category: 'small', mean_mass_g: 255, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Dolphin Gull', scientific_name: 'Leucophaeus scoresbii', group: 'bird', size_category: 'medium', mean_mass_g: 440, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Andean Gull', scientific_name: 'Chroicocephalus serranus', group: 'bird', size_category: 'medium', mean_mass_g: 390, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Lava Gull', scientific_name: 'Leucophaeus fuliginosus', group: 'bird', size_category: 'medium', mean_mass_g: 380, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: "Hartlaub's Gull", scientific_name: 'Chroicocephalus hartlaubii', group: 'bird', size_category: 'medium', mean_mass_g: 280, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Terns ──
+  { common_name: 'Arctic Tern', scientific_name: 'Sterna paradisaea', group: 'bird', size_category: 'small', mean_mass_g: 110, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Inca Tern', scientific_name: 'Larosterna inca', group: 'bird', size_category: 'small', mean_mass_g: 200, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Large-billed Tern', scientific_name: 'Phaetusa simplex', group: 'bird', size_category: 'medium', mean_mass_g: 250, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+
+  // ── Additional Kestrels (Falco) ──
+  { common_name: 'Common Kestrel', scientific_name: 'Falco tinnunculus', group: 'bird', size_category: 'medium', mean_mass_g: 185, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },
+  { common_name: 'Malagasy Kestrel', scientific_name: 'Falco newtoni', group: 'bird', size_category: 'small', mean_mass_g: 110, strike_risk: 'low', image_url: null, image_credit: 'USFWS' },
 
   // ── Additional Shorebirds ──
   { common_name: 'Willet', scientific_name: 'Tringa semipalmata', group: 'bird', size_category: 'medium', mean_mass_g: 250, strike_risk: 'medium', image_url: null, image_credit: 'USFWS' },

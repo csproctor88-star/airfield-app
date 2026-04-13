@@ -15,9 +15,12 @@ import {
   type PprColumn,
   type PprEntry,
 } from '@/lib/supabase/ppr'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import type jsPDF from 'jspdf'
 
 export default function PprPage() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
 
   const [columns, setColumns] = useState<PprColumn[]>([])
   const [entries, setEntries] = useState<PprEntry[]>([])
@@ -36,6 +39,68 @@ export default function PprPage() {
   const [formDate, setFormDate] = useState(today)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [formNotes, setFormNotes] = useState('')
+
+  // PDF export
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: jsPDF; filename: string } | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  async function preparePdf() {
+    const { generatePprPdf } = await import('@/lib/ppr-pdf')
+    return generatePprPdf({
+      columns,
+      entries,
+      dateFrom,
+      dateTo,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao || undefined,
+    })
+  }
+
+  async function handleExportPdf() {
+    setGeneratingPdf(true)
+    try {
+      const { doc, filename } = await preparePdf()
+      doc.save(filename)
+      toast.success('PDF exported')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  async function handleEmailPdf() {
+    setGeneratingPdf(true)
+    try {
+      const result = await preparePdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  async function handleSendEmail(email: string) {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    try {
+      await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, 'PPR Log')
+      toast.success(`Emailed to ${email}`)
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } catch (err) {
+      console.error(err)
+      toast.error('Email failed')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   // Load current user's operating initials
   useEffect(() => {
@@ -155,19 +220,50 @@ export default function PprPage() {
         <h1 style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
           Prior Permission Required
         </h1>
-        <button
-          onClick={handleNew}
-          disabled={noColumns}
-          title={noColumns ? 'Configure PPR columns in Base Setup first' : 'New PPR'}
-          style={{
-            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: noColumns ? 'var(--color-border)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-            color: noColumns ? 'var(--color-text-3)' : '#fff',
-            cursor: noColumns ? 'not-allowed' : 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
-          }}
-        >
-          + New PPR
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={handleExportPdf}
+            disabled={generatingPdf || entries.length === 0}
+            title={entries.length === 0 ? 'No entries in the selected range' : 'Export PDF'}
+            style={{
+              padding: '8px 14px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-surface)', color: 'var(--color-text-1)',
+              cursor: generatingPdf || entries.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: 'var(--fs-sm)', fontWeight: 600, fontFamily: 'inherit',
+              opacity: generatingPdf || entries.length === 0 ? 0.6 : 1,
+            }}
+          >
+            {generatingPdf ? 'Generating…' : 'Export PDF'}
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            disabled={generatingPdf || entries.length === 0}
+            style={{
+              padding: '8px 14px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-surface)', color: 'var(--color-text-1)',
+              cursor: generatingPdf || entries.length === 0 ? 'not-allowed' : 'pointer',
+              fontSize: 'var(--fs-sm)', fontWeight: 600, fontFamily: 'inherit',
+              opacity: generatingPdf || entries.length === 0 ? 0.6 : 1,
+            }}
+          >
+            Email PDF
+          </button>
+          <button
+            onClick={handleNew}
+            disabled={noColumns}
+            title={noColumns ? 'Configure PPR columns in Base Setup first' : 'New PPR'}
+            style={{
+              padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+              background: noColumns ? 'var(--color-border)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+              color: noColumns ? 'var(--color-text-3)' : '#fff',
+              cursor: noColumns ? 'not-allowed' : 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            }}
+          >
+            + New PPR
+          </button>
+        </div>
       </div>
 
       {noColumns && (
@@ -414,6 +510,16 @@ export default function PprPage() {
           </div>
         </div>
       )}
+
+      {/* Email PDF modal */}
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename || 'ppr-log.pdf'}
+        defaultEmail={defaultPdfEmail}
+      />
     </div>
   )
 }

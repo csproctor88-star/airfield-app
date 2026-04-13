@@ -341,6 +341,29 @@ SPECIES = [
     ("Cave Myotis", "Myotis velifer", "bat", None),
     ("Western Small-footed Myotis", "Myotis ciliolabrum", "bat", None),
     ("Townsend's Big-eared Bat", "Corynorhinus townsendii", "bat", None),
+    # ── Additional Gulls (added 2026-04-13) ──
+    ("Black-headed Gull", "Chroicocephalus ridibundus", "bird", None),
+    ("Common Gull", "Larus canus", "bird", None),
+    ("Little Gull", "Hydrocoloeus minutus", "bird", None),
+    ("Saunders's Gull", "Saundersilarus saundersi", "bird", None),
+    ("Slender-billed Gull", "Chroicocephalus genei", "bird", None),
+    ("Brown-hooded Gull", "Chroicocephalus maculipennis", "bird", None),
+    ("Brown-headed Gull", "Chroicocephalus brunnicephalus", "bird", None),
+    ("Grey Gull", "Leucophaeus modestus", "bird", None),
+    ("Silver Gull", "Chroicocephalus novaehollandiae", "bird", None),
+    ("Grey-headed Gull", "Chroicocephalus cirrocephalus", "bird", None),
+    ("Black-billed Gull", "Chroicocephalus bulleri", "bird", None),
+    ("Dolphin Gull", "Leucophaeus scoresbii", "bird", None),
+    ("Andean Gull", "Chroicocephalus serranus", "bird", None),
+    ("Lava Gull", "Leucophaeus fuliginosus", "bird", None),
+    ("Hartlaub's Gull", "Chroicocephalus hartlaubii", "bird", None),
+    # ── Additional Terns ──
+    ("Arctic Tern", "Sterna paradisaea", "bird", None),
+    ("Inca Tern", "Larosterna inca", "bird", None),
+    ("Large-billed Tern", "Phaetusa simplex", "bird", None),
+    # ── Additional Kestrels ──
+    ("Common Kestrel", "Falco tinnunculus", "bird", None),
+    ("Malagasy Kestrel", "Falco newtoni", "bird", None),
 ]
 
 

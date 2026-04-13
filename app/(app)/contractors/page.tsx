@@ -10,11 +10,14 @@ import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import { toast } from 'sonner'
 import { formatZuluDate } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import type jsPDF from 'jspdf'
 
 type FilterTab = 'active' | 'all' | 'completed'
 
 export default function ContractorsPage() {
-  const { installationId, userRole } = useInstallation()
+  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
   const canManageTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin' || userRole === 'amops'
   const canDeleteTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
   const [contractors, setContractors] = useState<ContractorRow[]>([])
@@ -206,6 +209,68 @@ export default function ContractorsPage() {
   })
 
   const activeCount = contractors.filter(c => c.status === 'active').length
+
+  // PDF export
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: jsPDF; filename: string } | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  async function preparePdf() {
+    const { generatePersonnelPdf } = await import('@/lib/personnel-pdf')
+    const filterLabel = filter.charAt(0).toUpperCase() + filter.slice(1)
+    return generatePersonnelPdf({
+      contractors: filtered,
+      filterLabel,
+      searchQuery: search || undefined,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao || undefined,
+    })
+  }
+
+  async function handleExportPdf() {
+    setGeneratingPdf(true)
+    try {
+      const { doc, filename } = await preparePdf()
+      doc.save(filename)
+      toast.success('PDF exported')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  async function handleEmailPdf() {
+    setGeneratingPdf(true)
+    try {
+      const result = await preparePdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  async function handleSendEmail(email: string) {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    try {
+      await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, 'Personnel on Airfield')
+      toast.success(`Emailed to ${email}`)
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } catch (err) {
+      console.error(err)
+      toast.error('Email failed')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   function resetForm() {
     setFormCompany('')
@@ -588,6 +653,32 @@ export default function ContractorsPage() {
           placeholder="Search personnel..."
           style={{ ...inputStyle, flex: 1, minWidth: 180 }}
         />
+        <button
+          onClick={handleExportPdf}
+          disabled={generatingPdf || filtered.length === 0}
+          style={{
+            padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+            border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+            color: 'var(--color-text-2)', fontFamily: 'inherit',
+            cursor: generatingPdf || filtered.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: generatingPdf || filtered.length === 0 ? 0.6 : 1,
+          }}
+        >
+          {generatingPdf ? 'Generating…' : 'Export PDF'}
+        </button>
+        <button
+          onClick={handleEmailPdf}
+          disabled={generatingPdf || filtered.length === 0}
+          style={{
+            padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+            border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+            color: 'var(--color-text-2)', fontFamily: 'inherit',
+            cursor: generatingPdf || filtered.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: generatingPdf || filtered.length === 0 ? 0.6 : 1,
+          }}
+        >
+          Email PDF
+        </button>
       </div>
 
       {/* Contractor List */}
@@ -763,6 +854,15 @@ export default function ContractorsPage() {
           })}
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename || 'personnel.pdf'}
+        defaultEmail={defaultPdfEmail}
+      />
     </div>
   )
 }

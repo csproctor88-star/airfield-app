@@ -27,6 +27,8 @@ export interface InstallationContextValue {
   facilities: FacilityRow[]
   /** Switch to a different installation */
   switchInstallation: (installationId: string) => Promise<void>
+  /** Refetch the current installation row (e.g., after an in-place config change) */
+  refreshCurrentInstallation: () => Promise<void>
   /** Remove an installation from the user's list */
   removeInstallation: (baseId: string) => Promise<boolean>
   /** Current user's role */
@@ -99,6 +101,11 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [loadInstallationConfig])
+
+  const refreshCurrentInstallation = useCallback(async () => {
+    if (!installationId) return
+    await loadInstallationConfig(installationId)
+  }, [installationId, loadInstallationConfig])
 
   // Roles that can switch between installations
   const MULTI_INSTALL_ROLES: UserRole[] = ['airfield_manager', 'sys_admin', 'base_admin', 'namo']
@@ -199,7 +206,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
     >
       {children}
     </InstallationContext.Provider>

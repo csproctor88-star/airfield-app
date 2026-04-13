@@ -5,17 +5,82 @@ import { useInstallation } from '@/lib/installation-context'
 import { fetchFeedback, fetchFeedbackStats, deleteFeedback, type CustomerFeedback } from '@/lib/supabase/feedback'
 import { formatZuluDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import type jsPDF from 'jspdf'
 
 const STAR = '\u2605'
 const STAR_EMPTY = '\u2606'
 
 export default function FeedbackPage() {
-  const { installationId, userRole } = useInstallation()
+  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const [feedback, setFeedback] = useState<CustomerFeedback[]>([])
   const [stats, setStats] = useState<{ total: number; avgRating: number | null; ratingCounts: Record<number, number>; recentCount: number }>({ total: 0, avgRating: null, ratingCounts: {}, recentCount: 0 })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | '30d' | '7d'>('30d')
+
+  // PDF export
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: jsPDF; filename: string } | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  async function preparePdf() {
+    const { generateFeedbackPdf } = await import('@/lib/feedback-pdf')
+    const windowLabel = filter === '7d' ? 'Last 7 days' : filter === '30d' ? 'Last 30 days' : 'All time'
+    return generateFeedbackPdf({
+      feedback,
+      stats,
+      windowLabel,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao || undefined,
+    })
+  }
+
+  async function handleExportPdf() {
+    setGeneratingPdf(true)
+    try {
+      const { doc, filename } = await preparePdf()
+      doc.save(filename)
+      toast.success('PDF exported')
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  async function handleEmailPdf() {
+    setGeneratingPdf(true)
+    try {
+      const result = await preparePdf()
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to generate PDF')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  async function handleSendEmail(email: string) {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    try {
+      await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, 'Customer Feedback Report')
+      toast.success(`Emailed to ${email}`)
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } catch (err) {
+      console.error(err)
+      toast.error('Email failed')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   const loadData = useCallback(async () => {
     if (!installationId) return
@@ -59,7 +124,7 @@ export default function FeedbackPage() {
             {stats.total} total submissions
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {(['7d', '30d', 'all'] as const).map(f => (
             <button
               key={f}
@@ -73,6 +138,32 @@ export default function FeedbackPage() {
               }}
             >{f === 'all' ? 'All' : f === '30d' ? '30 Days' : '7 Days'}</button>
           ))}
+          <button
+            onClick={handleExportPdf}
+            disabled={generatingPdf || feedback.length === 0}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+              color: 'var(--color-text-2)', fontFamily: 'inherit',
+              cursor: generatingPdf || feedback.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: generatingPdf || feedback.length === 0 ? 0.6 : 1,
+            }}
+          >
+            {generatingPdf ? 'Generating…' : 'Export PDF'}
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            disabled={generatingPdf || feedback.length === 0}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+              color: 'var(--color-text-2)', fontFamily: 'inherit',
+              cursor: generatingPdf || feedback.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: generatingPdf || feedback.length === 0 ? 0.6 : 1,
+            }}
+          >
+            Email PDF
+          </button>
         </div>
       </div>
 
@@ -163,6 +254,15 @@ export default function FeedbackPage() {
           ))}
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename || 'customer-feedback.pdf'}
+        defaultEmail={defaultPdfEmail}
+      />
     </div>
   )
 }

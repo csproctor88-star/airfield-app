@@ -262,7 +262,7 @@ export default function BaseSetupPage() {
         {step.key === 'taxiways' && <TaxiwayEditor />}
         {step.key === 'navaids' && <NavaidTab installationId={installationId} />}
         {step.key === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
-        {step.key === 'arff' && <SimpleListTab title="ARFF Aircraft" items={arffAircraft} tableName="base_arff_aircraft" fieldName="aircraft_name" installationId={installationId} />}
+        {step.key === 'arff' && <ArffTab arffAircraft={arffAircraft} installationId={installationId} currentInstallation={currentInstallation} />}
         {step.key === 'shops' && <ShopsTab shops={ceShops} typeShopMap={typeShopMap} installationId={installationId} />}
         {step.key === 'facilities' && <FacilitiesTab installationId={installationId} />}
         {step.key === 'templates' && <TemplatesTab installationId={installationId} />}
@@ -4394,6 +4394,93 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           Add
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── ARFF Tab — Aircraft list + per-base CAT visibility toggle ──
+function ArffTab({
+  arffAircraft,
+  installationId,
+  currentInstallation,
+}: {
+  arffAircraft: string[]
+  installationId: string | null
+  currentInstallation: import('@/lib/supabase/types').Installation | null
+}) {
+  const { refreshCurrentInstallation } = useInstallation()
+  const initialShowCat = (() => {
+    const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
+    return cfg?.show_cat_dropdown !== false  // default true (backward-compat)
+  })()
+  const [showCat, setShowCat] = useState(initialShowCat)
+  const [saving, setSaving] = useState(false)
+
+  // Re-sync if the installation changes
+  useEffect(() => {
+    const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
+    setShowCat(cfg?.show_cat_dropdown !== false)
+  }, [currentInstallation])
+
+  const toggleShowCat = async (next: boolean) => {
+    if (!installationId) return
+    setShowCat(next)
+    setSaving(true)
+    try {
+      const supabase = createClient()
+      if (!supabase) return
+      const existing = (currentInstallation as unknown as { arff_config?: Record<string, unknown> } | null)?.arff_config || {}
+      const updated = { ...existing, show_cat_dropdown: next }
+      const { error } = await (supabase as any).from('bases').update({ arff_config: updated }).eq('id', installationId)
+      if (error) {
+        toast.error('Failed to save ARFF setting')
+        setShowCat(!next)
+      } else {
+        toast.success(next ? 'CAT dropdown enabled on Airfield Status' : 'CAT dropdown hidden on Airfield Status')
+        await refreshCurrentInstallation()
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div>
+      {/* Show CAT toggle */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        padding: '12px 14px', marginBottom: 16, borderRadius: 'var(--radius-base)',
+        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+            Show CAT (Aircraft Rescue Category) dropdown on Airfield Status
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            Bases that report ARFF readiness only by aircraft type can hide the CAT picker.
+          </div>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: saving ? 'wait' : 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={showCat}
+            disabled={saving}
+            onChange={e => toggleShowCat(e.target.checked)}
+            style={{ accentColor: 'var(--color-cyan)' }}
+          />
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: showCat ? 'var(--color-success)' : 'var(--color-text-3)' }}>
+            {showCat ? 'Visible' : 'Hidden'}
+          </span>
+        </label>
+      </div>
+
+      <SimpleListTab
+        title="ARFF Aircraft"
+        items={arffAircraft}
+        tableName="base_arff_aircraft"
+        fieldName="aircraft_name"
+        installationId={installationId}
+      />
     </div>
   )
 }

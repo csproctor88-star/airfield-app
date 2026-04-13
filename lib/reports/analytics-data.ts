@@ -74,12 +74,17 @@ const EMPTY: AnalyticsData = {
   feedback: { total: 0, recentCount: 0, avgRating: null },
 }
 
-export async function fetchAnalyticsData(baseId: string | null, days = 30): Promise<AnalyticsData> {
+export async function fetchAnalyticsData(
+  baseId: string | null,
+  days = 30,
+  untilIso?: string,
+): Promise<AnalyticsData> {
   const supabase = createClient()
   if (!supabase || !baseId) return EMPTY
 
-  const now = new Date()
+  const now = untilIso ? new Date(untilIso) : new Date()
   const since = new Date(now.getTime() - days * 86400000).toISOString()
+  const until = now.toISOString()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
   try {
@@ -94,15 +99,15 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
       parkingData,
       feedbackData,
     ] = await Promise.all([
-      fetchInspectionAnalytics(supabase, baseId, since),
-      fetchCheckAnalytics(supabase, baseId, since),
-      fetchDiscrepancyAnalytics(supabase, baseId, since),
-      fetchPersonnelAnalytics(supabase, baseId, todayStart, since),
-      fetchQrcAnalytics(supabase, baseId, since),
-      fetchWildlifeAnalytics(supabase, baseId, since),
-      fetchObstructionAnalytics(supabase, baseId, since),
-      fetchParkingAnalytics(supabase, baseId, since),
-      fetchFeedbackAnalytics(supabase, baseId, since),
+      fetchInspectionAnalytics(supabase, baseId, since, until),
+      fetchCheckAnalytics(supabase, baseId, since, until),
+      fetchDiscrepancyAnalytics(supabase, baseId, since, until),
+      fetchPersonnelAnalytics(supabase, baseId, todayStart, since, until),
+      fetchQrcAnalytics(supabase, baseId, since, until),
+      fetchWildlifeAnalytics(supabase, baseId, since, until),
+      fetchObstructionAnalytics(supabase, baseId, since, until),
+      fetchParkingAnalytics(supabase, baseId, since, until),
+      fetchFeedbackAnalytics(supabase, baseId, since, until),
     ])
 
     return {
@@ -124,7 +129,7 @@ export async function fetchAnalyticsData(baseId: string | null, days = 30): Prom
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchInspectionAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchInspectionAnalytics(supabase: any, baseId: string, since: string, until: string) {
   // Fetch completed inspections — started_at = walkdown start, filed_at = completion time
   const { data } = await supabase
     .from('inspections')
@@ -132,6 +137,7 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
     .eq('base_id', baseId)
     .eq('status', 'completed')
     .gte('created_at', since)
+    .lte('created_at', until)
 
   const rows = (data ?? []) as { id: string; inspection_type: string; created_at: string; started_at: string | null; filed_at: string | null; passed_count: number; failed_count: number; na_count: number }[]
 
@@ -169,12 +175,13 @@ async function fetchInspectionAnalytics(supabase: any, baseId: string, since: st
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchCheckAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchCheckAnalytics(supabase: any, baseId: string, since: string, until: string) {
   const { data } = await supabase
     .from('airfield_checks')
     .select('check_type, created_at, started_at, completed_at')
     .eq('base_id', baseId)
     .gte('created_at', since)
+    .lte('created_at', until)
 
   const rows = (data ?? []) as { check_type: string; created_at: string; started_at: string | null; completed_at: string | null }[]
 
@@ -211,7 +218,7 @@ async function fetchCheckAnalytics(supabase: any, baseId: string, since: string)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchDiscrepancyAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchDiscrepancyAnalytics(supabase: any, baseId: string, since: string, until: string) {
   // Current open count
   const { data: openData } = await supabase
     .from('discrepancies')
@@ -219,20 +226,22 @@ async function fetchDiscrepancyAnalytics(supabase: any, baseId: string, since: s
     .eq('base_id', baseId)
     .eq('status', 'open')
 
-  // Opened in last 30 days
+  // Opened within window
   const { data: openedData } = await supabase
     .from('discrepancies')
     .select('id')
     .eq('base_id', baseId)
     .gte('created_at', since)
+    .lte('created_at', until)
 
-  // Closed in last 30 days (with resolution timing)
+  // Closed within window (with resolution timing)
   const { data: closedData } = await supabase
     .from('discrepancies')
     .select('created_at, resolution_date, updated_at')
     .eq('base_id', baseId)
     .in('status', ['completed', 'cancelled'])
     .gte('updated_at', since)
+    .lte('updated_at', until)
 
   const closedRows = (closedData ?? []) as { created_at: string; resolution_date: string | null; updated_at: string }[]
 
@@ -256,7 +265,7 @@ async function fetchDiscrepancyAnalytics(supabase: any, baseId: string, since: s
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchPersonnelAnalytics(supabase: any, baseId: string, todayStart: string, since: string) {
+async function fetchPersonnelAnalytics(supabase: any, baseId: string, todayStart: string, since: string, until: string) {
   // Active today
   const { data: todayData } = await supabase
     .from('airfield_contractors')
@@ -264,12 +273,13 @@ async function fetchPersonnelAnalytics(supabase: any, baseId: string, todayStart
     .eq('base_id', baseId)
     .eq('status', 'active')
 
-  // Get all records from last 30 days for avg per day
+  // Get all records within window for avg per day
   const { data: recentData } = await supabase
     .from('airfield_contractors')
     .select('start_date')
     .eq('base_id', baseId)
     .gte('start_date', since.slice(0, 10))
+    .lte('start_date', until.slice(0, 10))
 
   const recentRows = (recentData ?? []) as { start_date: string }[]
   const dayCounts: Record<string, number> = {}
@@ -286,12 +296,13 @@ async function fetchPersonnelAnalytics(supabase: any, baseId: string, todayStart
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchQrcAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchQrcAnalytics(supabase: any, baseId: string, since: string, until: string) {
   const { data } = await supabase
     .from('qrc_executions')
     .select('opened_at, closed_at, status')
     .eq('base_id', baseId)
     .gte('opened_at', since)
+    .lte('opened_at', until)
 
   const rows = (data ?? []) as { opened_at: string; closed_at: string | null; status: string }[]
 
@@ -314,18 +325,20 @@ async function fetchQrcAnalytics(supabase: any, baseId: string, since: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchWildlifeAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchWildlifeAnalytics(supabase: any, baseId: string, since: string, until: string) {
   const [sightingsRes, strikesRes] = await Promise.all([
     supabase
       .from('wildlife_sightings')
       .select('species_group')
       .eq('base_id', baseId)
-      .gte('observed_at', since),
+      .gte('observed_at', since)
+      .lte('observed_at', until),
     supabase
       .from('wildlife_strikes')
       .select('species_group')
       .eq('base_id', baseId)
-      .gte('strike_date', since.slice(0, 10)),
+      .gte('strike_date', since.slice(0, 10))
+      .lte('strike_date', until.slice(0, 10)),
   ])
 
   const sightings = (sightingsRes.data ?? []) as { species_group: string }[]
@@ -348,12 +361,13 @@ async function fetchWildlifeAnalytics(supabase: any, baseId: string, since: stri
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchObstructionAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchObstructionAnalytics(supabase: any, baseId: string, since: string, until: string) {
   const { data } = await supabase
     .from('obstruction_evaluations')
     .select('has_violation')
     .eq('base_id', baseId)
     .gte('created_at', since)
+    .lte('created_at', until)
 
   const rows = (data ?? []) as { has_violation: boolean }[]
   return {
@@ -363,7 +377,7 @@ async function fetchObstructionAnalytics(supabase: any, baseId: string, since: s
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchParkingAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchParkingAnalytics(supabase: any, baseId: string, since: string, until: string) {
   const [allPlans, recentPlans] = await Promise.all([
     supabase
       .from('parking_plans')
@@ -373,7 +387,8 @@ async function fetchParkingAnalytics(supabase: any, baseId: string, since: strin
       .from('parking_plans')
       .select('id')
       .eq('base_id', baseId)
-      .gte('created_at', since),
+      .gte('created_at', since)
+      .lte('created_at', until),
   ])
 
   const all = (allPlans.data ?? []) as { id: string; plan_name: string; is_active: boolean }[]
@@ -387,14 +402,14 @@ async function fetchParkingAnalytics(supabase: any, baseId: string, since: strin
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function fetchFeedbackAnalytics(supabase: any, baseId: string, since: string) {
+async function fetchFeedbackAnalytics(supabase: any, baseId: string, since: string, until: string) {
   const { data } = await supabase
     .from('customer_feedback')
     .select('overall_rating, submitted_at')
     .eq('base_id', baseId)
 
   const rows = (data ?? []) as { overall_rating: number | null; submitted_at: string }[]
-  const recent = rows.filter(r => r.submitted_at >= since)
+  const recent = rows.filter(r => r.submitted_at >= since && r.submitted_at <= until)
   const rated = rows.filter(r => r.overall_rating != null)
   const avgRating = rated.length > 0
     ? rated.reduce((s, r) => s + (r.overall_rating || 0), 0) / rated.length

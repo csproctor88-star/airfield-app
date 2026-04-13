@@ -32,16 +32,36 @@ export default function ReportsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(30)
+  const [mode, setMode] = useState<'preset' | 'custom'>('preset')
+
+  // Custom range — defaults to last 30 days
+  const today = new Date().toISOString().slice(0, 10)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const [customStart, setCustomStart] = useState(thirtyDaysAgo)
+  const [customEnd, setCustomEnd] = useState(today)
 
   useEffect(() => {
     setLoading(true)
-    fetchAnalyticsData(installationId, days).then(data => {
-      setAnalytics(data)
-      setLoading(false)
-    })
-  }, [installationId, days])
+    if (mode === 'custom') {
+      const startMs = new Date(customStart + 'T00:00:00').getTime()
+      const endMs = new Date(customEnd + 'T23:59:59').getTime()
+      const computedDays = Math.max(1, Math.round((endMs - startMs) / 86400000))
+      const untilIso = new Date(endMs).toISOString()
+      fetchAnalyticsData(installationId, computedDays, untilIso).then(data => {
+        setAnalytics(data)
+        setLoading(false)
+      })
+    } else {
+      fetchAnalyticsData(installationId, days).then(data => {
+        setAnalytics(data)
+        setLoading(false)
+      })
+    }
+  }, [installationId, days, mode, customStart, customEnd])
 
-  const periodLabel = TIME_FRAMES.find(t => t.value === days)?.label || `${days}d`
+  const periodLabel = mode === 'custom'
+    ? `${customStart} → ${customEnd}`
+    : TIME_FRAMES.find(t => t.value === days)?.label || `${days}d`
 
   return (
     <div className="page-container">
@@ -68,7 +88,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Analytics header with time frame selector */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
           Analytics
         </div>
@@ -76,19 +96,65 @@ export default function ReportsPage() {
           {TIME_FRAMES.map(tf => (
             <button
               key={tf.value}
-              onClick={() => setDays(tf.value)}
+              onClick={() => { setMode('preset'); setDays(tf.value) }}
               style={{
                 padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
-                background: days === tf.value ? 'var(--color-cyan)' : 'transparent',
-                color: days === tf.value ? '#fff' : 'var(--color-text-3)',
+                background: mode === 'preset' && days === tf.value ? 'var(--color-cyan)' : 'transparent',
+                color: mode === 'preset' && days === tf.value ? '#fff' : 'var(--color-text-3)',
               }}
             >
               {tf.label}
             </button>
           ))}
+          <button
+            onClick={() => setMode('custom')}
+            style={{
+              padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+              background: mode === 'custom' ? 'var(--color-cyan)' : 'transparent',
+              color: mode === 'custom' ? '#fff' : 'var(--color-text-3)',
+              borderLeft: '1px solid var(--color-border)',
+            }}
+          >
+            Custom
+          </button>
         </div>
       </div>
+
+      {mode === 'custom' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap',
+          padding: '8px 10px', borderRadius: 6, background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+        }}>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>From</span>
+          <input
+            type="date"
+            value={customStart}
+            max={customEnd}
+            onChange={e => setCustomStart(e.target.value)}
+            style={{
+              padding: '4px 8px', border: '1px solid var(--color-border)', borderRadius: 4,
+              background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+              fontFamily: 'inherit',
+            }}
+          />
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>To</span>
+          <input
+            type="date"
+            value={customEnd}
+            min={customStart}
+            max={today}
+            onChange={e => setCustomEnd(e.target.value)}
+            style={{
+              padding: '4px 8px', border: '1px solid var(--color-border)', borderRadius: 4,
+              background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+              fontFamily: 'inherit',
+            }}
+          />
+        </div>
+      )}
 
       {loading ? (
         <div className="card" style={{ textAlign: 'center', padding: '30px 20px' }}>

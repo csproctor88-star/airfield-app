@@ -1902,5 +1902,145 @@
     "source_page": "https://en.wikipedia.org/wiki/Corynorhinus_townsendii",
     "license": "CC BY-SA (Wikipedia)",
     "group": "bat"
+  },
+  "Black-headed Gull": {
+    "filename": "bird/black_headed_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/090_Wild_Black-headed_gull_in_flight_at_Lake_Geneva_during_sunset_Photo_by_Giles_Laurent.jpg/960px-090_Wild_Black-headed_gull_in_flight_at_Lake_Geneva_during_sunset_Photo_by_Giles_Laurent.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:090_Wild_Black-headed_gull_in_flight_at_Lake_Geneva_during_sunset_Photo_by_Giles_Laurent.jpg",
+    "license": "CC BY-SA (Wikimedia Commons)",
+    "group": "bird"
+  },
+  "Common Gull": {
+    "filename": "bird/common_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Common_gull_%28Larus_canus%29_adult_breeding_Oppdal.jpg/960px-Common_gull_%28Larus_canus%29_adult_breeding_Oppdal.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Common_gull_(Larus_canus)_adult_breeding_Oppdal.jpg",
+    "license": "CC BY-SA (Wikimedia Commons)",
+    "group": "bird"
+  },
+  "Little Gull": {
+    "filename": "bird/little_gull.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/126657733/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144512",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Saunders's Gull": {
+    "filename": "bird/saunderss_gull.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/2739737/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144319",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Slender-billed Gull": {
+    "filename": "bird/slender_billed_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/CSN_109.jpg/960px-CSN_109.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:CSN_109.jpg",
+    "license": "CC BY-SA (Wikimedia Commons)",
+    "group": "bird"
+  },
+  "Brown-hooded Gull": {
+    "filename": "bird/brown_hooded_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Gaviota_capucho_caf%C3%A9.jpg/960px-Gaviota_capucho_caf%C3%A9.jpg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Gaviota_capucho_caf%C3%A9.jpg",
+    "license": "CC BY-SA (Wikimedia Commons)",
+    "group": "bird"
+  },
+  "Brown-headed Gull": {
+    "filename": "bird/brown_headed_gull.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/43104055/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144511",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Grey Gull": {
+    "filename": "bird/grey_gull.jpg",
+    "source_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Relaxing_Bird_%28111216219%29.jpeg/960px-Relaxing_Bird_%28111216219%29.jpeg",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Relaxing_Bird_(111216219).jpeg",
+    "license": "CC BY-SA (Wikimedia Commons)",
+    "group": "bird"
+  },
+  "Silver Gull": {
+    "filename": "bird/silver_gull.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/446195228/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144507",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Grey-headed Gull": {
+    "filename": "bird/grey_headed_gull.jpg",
+    "source_url": "https://static.inaturalist.org/photos/66911159/large.jpeg",
+    "source_page": "https://www.inaturalist.org/taxa/144508",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Black-billed Gull": {
+    "filename": "bird/black_billed_gull.jpg",
+    "source_url": "https://static.inaturalist.org/photos/1190875/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144505",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Dolphin Gull": {
+    "filename": "bird/dolphin_gull.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/57016970/large.jpeg",
+    "source_page": "https://www.inaturalist.org/taxa/72981",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Andean Gull": {
+    "filename": "bird/andean_gull.jpg",
+    "source_url": "https://static.inaturalist.org/photos/66863410/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144503",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Lava Gull": {
+    "filename": "bird/lava_gull.jpg",
+    "source_url": "https://static.inaturalist.org/photos/208821901/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/144516",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Hartlaub's Gull": {
+    "filename": "bird/hartlaubs_gull.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/150525083/large.jpeg",
+    "source_page": "https://www.inaturalist.org/taxa/144509",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Arctic Tern": {
+    "filename": "bird/arctic_tern.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/96821961/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/4449",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Inca Tern": {
+    "filename": "bird/inca_tern.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/143658416/large.jpeg",
+    "source_page": "https://www.inaturalist.org/taxa/4551",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Large-billed Tern": {
+    "filename": "bird/large_billed_tern.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/54870147/large.jpeg",
+    "source_page": "https://www.inaturalist.org/taxa/4569",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Common Kestrel": {
+    "filename": "bird/common_kestrel.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/598044895/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/472766",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
+  },
+  "Malagasy Kestrel": {
+    "filename": "bird/malagasy_kestrel.jpg",
+    "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/3640060/large.jpg",
+    "source_page": "https://www.inaturalist.org/taxa/4658",
+    "license": "CC (iNaturalist)",
+    "group": "bird"
   }
 }

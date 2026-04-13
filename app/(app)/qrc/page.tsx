@@ -362,7 +362,7 @@ function QrcExecutionView({
     return flat
   }
   const allSteps = flattenSteps(steps)
-  const checkableSteps = allSteps.filter(s => s.type !== 'conditional')
+  const checkableSteps = allSteps.filter(s => s.type !== 'conditional' && s.type !== 'text' && s.type !== 'textarea')
   const completedSteps = checkableSteps.filter(s => responses[s.id]?.completed)
   const progress = checkableSteps.length > 0 ? (completedSteps.length / checkableSteps.length) * 100 : 0
 
@@ -656,6 +656,27 @@ function QrcExecutionView({
               <div style={{
                 fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-warning)',
                 fontStyle: 'italic',
+              }}>
+                {step.label}
+              </div>
+            )}
+
+            {step.type === 'text' && (
+              <div style={{
+                fontSize: 'var(--fs-md)', color: 'var(--color-text-2)',
+                padding: '6px 10px', background: 'var(--color-bg-inset)',
+                borderLeft: '3px solid var(--color-cyan)', borderRadius: 4,
+              }}>
+                {step.label}
+              </div>
+            )}
+
+            {step.type === 'textarea' && (
+              <div style={{
+                fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', whiteSpace: 'pre-wrap',
+                padding: '10px 12px', background: 'var(--color-bg-inset)',
+                borderLeft: '3px solid var(--color-cyan)', borderRadius: 4,
+                lineHeight: 1.5,
               }}>
                 {step.label}
               </div>

@@ -60,7 +60,11 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 export default function HomePage() {
   const router = useRouter()
   const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, refreshStatus } = useDashboard()
-  const { installationId, runways, arffAircraft, userRole } = useInstallation()
+  const { installationId, runways, arffAircraft, userRole, currentInstallation } = useInstallation()
+  const showArffCat = (() => {
+    const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
+    return cfg?.show_cat_dropdown !== false  // default true
+  })()
   const [weather, setWeather] = useState<WeatherResult | null>(null)
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
@@ -1895,7 +1899,8 @@ export default function HomePage() {
       <div style={sectionCardStyle}>
         {renderEditableLabel('section_arff', 'ARFF Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
-          {/* ARFF CAT card */}
+          {/* ARFF CAT card — hidden per Base Setup → ARFF → Show CAT toggle */}
+          {showArffCat && (
           <div className="card" style={{
             padding: '8px 12px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -1936,6 +1941,7 @@ export default function HomePage() {
               ))}
             </select>
           </div>
+          )}
 
           {/* Aircraft readiness cards */}
           {arffAircraft.map(aircraft => {

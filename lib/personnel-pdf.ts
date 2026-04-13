@@ -1,0 +1,145 @@
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { sanitizePdfText } from '@/lib/pdf-config'
+import type { ContractorRow } from '@/lib/supabase/contractors'
+
+interface PersonnelPdfInput {
+  contractors: ContractorRow[]
+  filterLabel: string  // e.g., "Active", "All", "Completed"
+  searchQuery?: string
+  baseName?: string
+  baseIcao?: string
+}
+
+function af483Status(exp: string | null): string {
+  if (!exp) return ''
+  try {
+    const expDate = new Date(exp + 'T00:00:00')
+    const now = new Date()
+    const days = Math.round((expDate.getTime() - now.getTime()) / 86400000)
+    if (days < 0) return ` (EXPIRED ${Math.abs(days)}d)`
+    if (days <= 30) return ` (exp ${days}d)`
+    return ''
+  } catch { return '' }
+}
+
+export async function generatePersonnelPdf(input: PersonnelPdfInput): Promise<{ doc: jsPDF; filename: string }> {
+  const { contractors, filterLabel, searchQuery, baseName, baseIcao } = input
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 12
+  const contentWidth = pageWidth - margin * 2
+  let y = margin
+
+  // ── Header ──
+  doc.setFontSize(8)
+  doc.setTextColor(100)
+  doc.text(sanitizePdfText(baseName ? `${baseName.toUpperCase()}${baseIcao ? ` (${baseIcao})` : ''}` : 'AIRFIELD OPERATIONS'), margin, y)
+  y += 4
+  doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
+  y += 8
+
+  // ── Title ──
+  doc.setFontSize(16)
+  doc.setTextColor(0)
+  doc.text('PERSONNEL ON AIRFIELD', margin, y)
+  y += 7
+
+  doc.setFontSize(11)
+  doc.setTextColor(60)
+  doc.text(`Filter: ${filterLabel}${searchQuery ? ` · Search: "${searchQuery}"` : ''}`, margin, y)
+  y += 8
+
+  // ── Info box ──
+  doc.setDrawColor(200)
+  doc.setFillColor(248, 248, 248)
+  doc.roundedRect(margin, y, contentWidth, 16, 2, 2, 'FD')
+
+  const activeCount = contractors.filter(c => c.status === 'active').length
+  const completedCount = contractors.filter(c => c.status === 'completed').length
+
+  doc.setFontSize(7)
+  doc.setTextColor(120)
+  doc.text('Active:', margin + 4, y + 5)
+  doc.text('Completed:', margin + 60, y + 5)
+  doc.text('Total Shown:', margin + 120, y + 5)
+  doc.text('Generated:', margin + 180, y + 5)
+
+  doc.setFontSize(9)
+  doc.setTextColor(0)
+  doc.text(String(activeCount), margin + 4, y + 11)
+  doc.text(String(completedCount), margin + 60, y + 11)
+  doc.text(String(contractors.length), margin + 120, y + 11)
+  doc.text(formatZuluDateTime(new Date()), margin + 180, y + 11)
+  y += 22
+
+  // ── Table ──
+  if (contractors.length === 0) {
+    doc.setFontSize(10)
+    doc.setTextColor(120)
+    doc.text('No personnel match the current filter.', margin, y)
+  } else {
+    autoTable(doc, {
+      startY: y,
+      head: [['Status', 'Company', 'Contact', 'Phone', 'Location', 'Work', 'Radio', 'Flag', 'Callsign', 'AF Form 483', 'Start', 'End']],
+      body: contractors.map(c => {
+        const af483 = c.af_form_483
+          ? `${c.af_form_483}${af483Status(c.af_form_483_expiration)}`
+          : ''
+        return [
+          c.status === 'active' ? 'ACTIVE' : 'CLOSED',
+          sanitizePdfText(c.company_name),
+          sanitizePdfText(c.contact_name || ''),
+          sanitizePdfText(c.contact_phone || ''),
+          sanitizePdfText(c.location || ''),
+          sanitizePdfText(c.work_description || ''),
+          sanitizePdfText(c.radio_number || ''),
+          sanitizePdfText(c.flag_number || ''),
+          sanitizePdfText(c.callsign || ''),
+          sanitizePdfText(af483),
+          c.start_date ? formatZuluDate(new Date(c.start_date + 'T00:00:00')) : '',
+          c.end_date ? formatZuluDate(new Date(c.end_date + 'T00:00:00')) : '',
+        ]
+      }),
+      theme: 'grid',
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 7, cellPadding: 1.5, overflow: 'linebreak' },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: {
+        0: { cellWidth: 14, halign: 'center' },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 22 },
+      },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 9) {
+          // AF Form 483 column — color expired entries red
+          const text = hookData.cell.text.join(' ')
+          if (text.includes('EXPIRED')) {
+            hookData.cell.styles.textColor = [220, 38, 38]
+            hookData.cell.styles.fontStyle = 'bold'
+          }
+        }
+      },
+      didDrawPage: () => {
+        const total = doc.getNumberOfPages()
+        const current = doc.getCurrentPageInfo().pageNumber
+        doc.setFontSize(7)
+        doc.setTextColor(140)
+        doc.text(
+          `Generated by Glidepath — ${formatZuluDateTime(new Date())}`,
+          margin,
+          pageHeight - 8,
+        )
+        doc.text(`Page ${current} of ${total}`, pageWidth - margin, pageHeight - 8, { align: 'right' })
+      },
+    })
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const filename = `personnel-${filterLabel.toLowerCase()}-${today}.pdf`
+  return { doc, filename }
+}

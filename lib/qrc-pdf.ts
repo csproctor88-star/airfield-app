@@ -165,19 +165,24 @@ export async function generateQrcPdf(input: QrcPdfInput): Promise<{ doc: jsPDF; 
     const resp = responses[step.id] || {}
     const checked = resp.completed ?? false
     const indent = margin + depth * 8
+    const isReadOnly = step.type === 'text' || step.type === 'textarea'
 
     checkPageBreak(14)
 
-    // Step number + checkbox symbol
+    // Step number + checkbox symbol (suppressed for read-only step types)
     doc.setFontSize(9)
     doc.setTextColor(0)
     doc.setFont('helvetica', 'bold')
-    const symbol = checked ? '\u2713' : '\u2610'
-    doc.text(`${step.id}. [${symbol}]`, indent, y)
+    if (isReadOnly) {
+      doc.text(`${step.id}.`, indent, y)
+    } else {
+      const symbol = checked ? '\u2713' : '\u2610'
+      doc.text(`${step.id}. [${symbol}]`, indent, y)
+    }
     doc.setFont('helvetica', 'normal')
 
     // Label
-    const labelX = indent + 16
+    const labelX = indent + (isReadOnly ? 8 : 16)
     const labelWidth = contentWidth - (labelX - margin)
     doc.setTextColor(checked ? 100 : 0)
     const labelLines = doc.splitTextToSize(step.label, labelWidth)

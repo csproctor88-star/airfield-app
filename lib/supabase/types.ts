@@ -1127,7 +1127,7 @@ export type BaseWildlifeSpecies = Database['public']['Tables']['base_wildlife_sp
 
 // === QRC (Quick Reaction Checklist) Types ===
 
-export type QrcStepType = 'checkbox' | 'checkbox_with_note' | 'notify_agencies' | 'fill_field' | 'time_field' | 'conditional'
+export type QrcStepType = 'checkbox' | 'checkbox_with_note' | 'notify_agencies' | 'fill_field' | 'time_field' | 'conditional' | 'text' | 'textarea'
 
 export type QrcStep = {
   id: string
