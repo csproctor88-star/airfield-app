@@ -116,7 +116,7 @@ export async function createContractor(input: {
 
   const { data, error } = await supabase
     .from('airfield_contractors')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -163,7 +163,7 @@ export async function updateContractor(
 
   const { data, error } = await supabase
     .from('airfield_contractors')
-    .update(updateFields as any)
+    .update(updateFields as never)
     .eq('id', id)
     .select()
     .single()

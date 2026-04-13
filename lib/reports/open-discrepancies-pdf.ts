@@ -12,8 +12,8 @@ import {
 
 interface Options {
   generatedBy: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
   selectedColumns?: string[]
 }
 

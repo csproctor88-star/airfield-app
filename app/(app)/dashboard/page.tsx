@@ -1652,7 +1652,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
 
   const activeExec = openExecs.find(e => e.id === activeExecId)
   const activeTemplate = activeExec ? templates.find(t => t.id === activeExec.template_id) : null
-  const steps = activeTemplate?.steps || []
+  const steps = (activeTemplate?.steps as unknown as QrcStep[] | null) || []
 
   function renderStep(step: QrcStep) {
     const resp = responses[step.id] || {}

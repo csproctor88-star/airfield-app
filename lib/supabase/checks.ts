@@ -2,7 +2,7 @@ import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import { updateAirfieldStatus } from './airfield-status'
-import type { CheckType } from './types'
+import type { CheckType, Json } from './types'
 import type { CheckDraft } from '@/lib/check-draft'
 
 export type CheckPhotoRow = {
@@ -89,7 +89,7 @@ export async function createCheck(input: {
 
   const { data, error } = await supabase
     .from('airfield_checks')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -113,7 +113,7 @@ export async function createCheck(input: {
     })
       const { error: commentError } = await supabase
       .from('check_comments')
-      .insert(commentRows as any)
+      .insert(commentRows as never)
     if (commentError) {
       console.error('Failed to save comments:', commentError.message)
     }
@@ -263,7 +263,7 @@ export async function addCheckComment(
 
   const { data, error } = await supabase
     .from('check_comments')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -429,7 +429,7 @@ export async function uploadCheckPhoto(
 
   const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow as any)
+    .insert(photoRow as never)
     .select()
     .single()
 
@@ -493,7 +493,7 @@ export async function saveCheckDraftToDb(input: {
       const { data, error } = await supabase
       .from('airfield_checks')
       .update({
-        draft_data: input.draft_data as unknown as Record<string, unknown>,
+        draft_data: input.draft_data as unknown as Json,
         saved_by_name: savedByName,
         saved_by_id: userId || null,
         saved_at: now.toISOString(),
@@ -532,7 +532,7 @@ export async function saveCheckDraftToDb(input: {
 
   const { data, error } = await supabase
     .from('airfield_checks')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 

@@ -7,8 +7,8 @@ import { getAlertTier, ALERT_TIER_CONFIG } from '@/lib/outage-rules'
 
 interface Options {
   generatedBy: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export function generateLightingReportPdf(data: LightingReportData, opts: Options) {

@@ -6,8 +6,8 @@ import { formatZuluDateTime } from '@/lib/utils'
 
 interface Options {
   generatedBy: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export function generateDiscrepancyTrendsPdf(data: DiscrepancyTrendsData, opts: Options) {

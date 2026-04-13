@@ -2,7 +2,7 @@ import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
 import { updateAirfieldStatus } from './airfield-status'
-import type { InspectionType, InspectionItem } from './types'
+import type { InspectionType, InspectionItem, Json } from './types'
 import type { InspectionHalfDraft } from '@/lib/inspection-draft'
 
 export type InspectionRow = {
@@ -68,7 +68,7 @@ export async function fetchInspections(baseId?: string | null, status?: 'in_prog
     return []
   }
 
-  return (data ?? []) as InspectionRow[]
+  return (data ?? []) as unknown as InspectionRow[]
 }
 
 export async function fetchInspection(id: string): Promise<InspectionRow | null> {
@@ -86,7 +86,7 @@ export async function fetchInspection(id: string): Promise<InspectionRow | null>
     return null
   }
 
-  return data as InspectionRow
+  return data as unknown as InspectionRow
 }
 
 /** Fetch both halves of a daily inspection by group ID */
@@ -105,7 +105,7 @@ export async function fetchDailyGroup(groupId: string): Promise<InspectionRow[]>
     return []
   }
 
-  return (data ?? []) as InspectionRow[]
+  return (data ?? []) as unknown as InspectionRow[]
 }
 
 export async function createInspection(input: {
@@ -197,7 +197,7 @@ export async function createInspection(input: {
 
   const { data, error } = await supabase
     .from('inspections')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -206,7 +206,7 @@ export async function createInspection(input: {
     return { data: null, error: friendlyError(error.message) }
   }
 
-  const created = data as InspectionRow
+  const created = data as unknown as InspectionRow
 
   // Activity logging is handled by the page (AFLD3/{OI} on/off the AFLD format)
 
@@ -294,7 +294,7 @@ export async function saveInspectionDraft(input: {
       const { data, error } = await supabase
       .from('inspections')
       .update({
-        draft_data: input.draft_data as unknown as Record<string, unknown>,
+        draft_data: input.draft_data as unknown as Json,
         items: input.items,
         total_items: input.total_items,
         passed_count: input.passed_count,
@@ -319,7 +319,7 @@ export async function saveInspectionDraft(input: {
       return { data: null, error: friendlyError(error.message) }
     }
 
-    const updated = data as InspectionRow
+    const updated = data as unknown as InspectionRow
     // Activity logging (AFLD3/{OI} format) is handled by the page
     return { data: updated, error: null }
   }
@@ -368,7 +368,7 @@ export async function saveInspectionDraft(input: {
 
   const { data, error } = await supabase
     .from('inspections')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -377,7 +377,7 @@ export async function saveInspectionDraft(input: {
     return { data: null, error: friendlyError(error.message) }
   }
 
-  const created = data as InspectionRow
+  const created = data as unknown as InspectionRow
   // Activity logging (AFLD3/{OI} format) is handled by the page
   return { data: created, error: null }
 }
@@ -457,7 +457,7 @@ export async function fileInspection(input: {
     return { data: null, error: friendlyError(error.message) }
   }
 
-  const filed = data as InspectionRow
+  const filed = data as unknown as InspectionRow
 
   // Auto-update airfield_status BWC from filed inspection
   if (input.bwc_value) {
@@ -510,7 +510,7 @@ export async function reopenInspection(id: string): Promise<{ data: InspectionRo
     return { data: null, error: friendlyError(error.message) }
   }
 
-  const reopened = data as InspectionRow
+  const reopened = data as unknown as InspectionRow
   logActivity('updated', 'inspection', reopened.id, reopened.display_id, {
     details: `INSPECTION ${reopened.display_id} REOPENED FOR EDITING`,
   }, reopened.base_id)
@@ -646,7 +646,7 @@ export async function uploadInspectionPhoto(
 
   const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow as any)
+    .insert(photoRow as never)
     .select()
     .single()
 

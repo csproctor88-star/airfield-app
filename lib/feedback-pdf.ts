@@ -13,8 +13,8 @@ interface FeedbackPdfInput {
     recentCount: number
   }
   windowLabel: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export async function generateFeedbackPdf(input: FeedbackPdfInput): Promise<{ doc: jsPDF; filename: string }> {

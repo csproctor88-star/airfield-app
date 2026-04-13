@@ -9,8 +9,8 @@ interface Options {
   endDate: string
   isRange: boolean
   generatedBy: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 const CHECK_TYPE_LABELS: Record<string, string> = {

@@ -172,7 +172,7 @@ export function RealtimeAlertBanner() {
       .eq('base_id', installationId)
       .single()
       .then(({ data }) => {
-        if (data) prevStatus.current = data as AirfieldStatus
+        if (data) prevStatus.current = data as unknown as AirfieldStatus
       })
 
     const channel = supabase
@@ -182,10 +182,10 @@ export function RealtimeAlertBanner() {
         { event: 'UPDATE', schema: 'public', table: 'airfield_status', filter: `base_id=eq.${installationId}` },
         async (payload) => {
           if (isOwnUpdate.current) {
-            prevStatus.current = payload.new as AirfieldStatus
+            prevStatus.current = payload.new as unknown as AirfieldStatus
             return
           }
-          const row = payload.new as AirfieldStatus
+          const row = payload.new as unknown as AirfieldStatus
           const changes = describeChanges(prevStatus.current, row)
           prevStatus.current = row
 

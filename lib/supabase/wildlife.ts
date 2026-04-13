@@ -161,7 +161,7 @@ export async function createSighting(input: {
 
   const { data, error } = await supabase
     .from('wildlife_sightings')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -259,7 +259,7 @@ export async function updateSighting(
 
   const { data, error } = await supabase
     .from('wildlife_sightings')
-    .update(input as any)
+    .update(input as never)
     .eq('id', id)
     .select()
     .single()
@@ -387,7 +387,7 @@ export async function createStrike(input: {
 
   const { data, error } = await supabase
     .from('wildlife_strikes')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -500,7 +500,7 @@ export async function updateStrike(
 
   const { data, error } = await supabase
     .from('wildlife_strikes')
-    .update(input as any)
+    .update(input as never)
     .eq('id', id)
     .select()
     .single()
@@ -554,7 +554,7 @@ export async function logBwcChange(
 
   const { error } = await supabase
     .from('bwc_history')
-    .insert(row as any)
+    .insert(row as never)
 
   if (error) {
     console.error('Failed to log BWC change:', error.message)

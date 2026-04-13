@@ -179,7 +179,7 @@ export default function QrcPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                    {tmpl.steps.length} steps
+                    {((tmpl.steps as unknown as QrcStep[] | null) || []).length} steps
                   </span>
                   {tmpl.last_reviewed_at ? (
                     <span style={{
@@ -337,7 +337,7 @@ function QrcExecutionView({
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
 
   const isClosed = execution.status === 'closed'
-  const steps = template?.steps || []
+  const steps = (template?.steps as unknown as QrcStep[] | null) || []
 
   // Load reviewer name
   useEffect(() => {

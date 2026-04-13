@@ -227,7 +227,7 @@ export async function createWaiver(input: {
 
   const { data, error } = await supabase
     .from('waivers')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -308,7 +308,7 @@ export async function updateWaiverStatus(
 
   const { data, error } = await supabase
     .from('waivers')
-    .update(updateFields as any)
+    .update(updateFields as never)
     .eq('id', id)
     .select()
     .single()
@@ -495,7 +495,7 @@ export async function uploadWaiverAttachment(input: {
 
   const { data, error } = await supabase
     .from('waiver_attachments')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -612,7 +612,7 @@ export async function createWaiverReview(input: {
 
   const { data, error } = await supabase
     .from('waiver_reviews')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 

@@ -305,7 +305,7 @@ export async function addTemplateSection(
 
   const { data, error } = await supabase
     .from('base_inspection_sections')
-    .insert({ template_id: (tmpl as { id: string }).id, ...section } as any)
+    .insert({ template_id: (tmpl as { id: string }).id, ...section })
     .select('id')
     .single()
 

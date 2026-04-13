@@ -69,7 +69,7 @@ export async function createChecklistItem(input: {
       shift: input.shift,
       frequency: input.frequency,
       sort_order: input.sort_order ?? 0,
-    } as any)
+    })
     .select()
     .single()
   if (error) return { data: null, error: friendlyError(error.message) }
@@ -84,7 +84,7 @@ export async function updateChecklistItem(
   if (!supabase) return { error: 'Supabase not configured' }
   const { error } = await supabase
     .from('shift_checklist_items')
-    .update({ ...updates, updated_at: new Date().toISOString() } as any)
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
   return { error: error?.message || null }
 }
@@ -157,7 +157,7 @@ export async function fetchOrCreateTodayChecklist(
   // Create new
   const { data: created, error } = await supabase
     .from('shift_checklists')
-    .insert({ base_id: baseId, checklist_date: today } as any)
+    .insert({ base_id: baseId, checklist_date: today })
     .select()
     .single()
 
@@ -205,7 +205,7 @@ export async function completeChecklist(checklistId: string): Promise<{ error: s
       completed_by: completedBy || null,
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', checklistId)
   return { error: error?.message || null }
 }
@@ -220,7 +220,7 @@ export async function reopenChecklist(checklistId: string): Promise<{ error: str
       completed_by: null,
       completed_at: null,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', checklistId)
   return { error: error?.message || null }
 }

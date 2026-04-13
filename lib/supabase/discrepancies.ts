@@ -127,7 +127,7 @@ export async function createDiscrepancy(input: {
 
   const { data, error } = await supabase
     .from('discrepancies')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -164,7 +164,7 @@ export async function updateDiscrepancy(
 
   const { data, error } = await supabase
     .from('discrepancies')
-    .update({ ...fields, updated_at: new Date().toISOString() } as any)
+    .update({ ...fields, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
@@ -199,7 +199,7 @@ export async function updateDiscrepancyStatus(
 
   const { data: rawData, error } = await supabase
     .from('discrepancies')
-    .update(updateFields as any)
+    .update(updateFields as never)
     .eq('id', id)
     .select()
     .single()
@@ -223,7 +223,7 @@ export async function updateDiscrepancyStatus(
         updated_by: user.id,
       }
       if (statusUpdated?.base_id) auditRow.base_id = statusUpdated.base_id
-          const { error: auditError } = await supabase.from('status_updates').insert(auditRow as any)
+          const { error: auditError } = await supabase.from('status_updates').insert(auditRow as never)
       if (auditError) {
         console.error('Failed to save status update note:', auditError.message)
       }
@@ -357,7 +357,7 @@ export async function uploadDiscrepancyPhoto(
 
   const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow as any)
+    .insert(photoRow as never)
     .select()
     .single()
 
@@ -499,7 +499,7 @@ export async function addStatusNote(discrepancyId: string, notes: string, baseId
 
       const { error } = await supabase
       .from('status_updates')
-      .insert(row as any)
+      .insert(row as never)
 
     if (error) {
       console.error('Failed to add note:', error.message)

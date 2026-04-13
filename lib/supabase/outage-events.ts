@@ -57,7 +57,7 @@ export async function createOutageEvent(input: {
       reported_by: user?.id || null,
       discrepancy_id: input.discrepancy_id || null,
       notes: input.notes || null,
-    } as any)
+    })
     .select('*')
     .single()
 

@@ -9,8 +9,8 @@ interface PprPdfInput {
   entries: PprEntry[]
   dateFrom: string
   dateTo: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 function formatYesNoNa(v: string): string {

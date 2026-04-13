@@ -141,7 +141,7 @@ export async function saveFeedbackConfig(baseId: string, config: FeedbackFormCon
 
   const { error } = await supabase
     .from('bases')
-    .update({ feedback_form_config: config } as any)
+    .update({ feedback_form_config: config })
     .eq('id', baseId)
 
   return !error

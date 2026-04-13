@@ -34,7 +34,7 @@ export type PdfGeneralPhotos = string[]  // dataUrl[]
 
 export interface PdfBaseInfo {
   name: string       // e.g. "Selfridge ANG Base"
-  icao: string       // e.g. "KMTC"
+  icao: string | null  // e.g. "KMTC"
   unit: string       // e.g. "127th Wing"
 }
 

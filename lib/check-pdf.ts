@@ -10,8 +10,8 @@ interface CheckPdfInput {
   photoDataUrls: string[]
   /** Photo data URLs grouped by issue index */
   photoDataUrlsByIssue?: Record<number, string[]>
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export async function generateCheckPdf(input: CheckPdfInput) {

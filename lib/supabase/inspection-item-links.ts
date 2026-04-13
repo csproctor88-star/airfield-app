@@ -114,7 +114,7 @@ export async function setLinksForItem(
   }))
   const { error: insErr } = await supabase
     .from('inspection_item_system_links')
-    .insert(rows as any)
+    .insert(rows as never)
 
   if (insErr) {
     console.error('[setLinksForItem] insert failed:', insErr.message)

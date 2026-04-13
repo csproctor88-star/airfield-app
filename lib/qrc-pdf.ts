@@ -5,8 +5,8 @@ import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 interface QrcPdfInput {
   execution: QrcExecution
   template: QrcTemplate | null
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export async function generateQrcPdf(input: QrcPdfInput): Promise<{ doc: jsPDF; filename: string }> {
@@ -26,7 +26,7 @@ export async function generateQrcPdf(input: QrcPdfInput): Promise<{ doc: jsPDF; 
   }
 
   const responses = (execution.step_responses || {}) as Record<string, QrcStepResponse>
-  const steps = template?.steps || []
+  const steps = (template?.steps as unknown as QrcStep[] | null) || []
   const scnData = (execution.scn_data || {}) as Record<string, unknown>
 
   // ── Header ──

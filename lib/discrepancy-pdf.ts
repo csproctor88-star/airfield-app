@@ -8,8 +8,8 @@ interface DiscrepancyPdfInput {
   photoDataUrls: string[]
   mapDataUrl: string | null
   systemMapDataUrl?: string | null
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {

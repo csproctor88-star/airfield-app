@@ -102,7 +102,7 @@ export async function createObstructionEvaluation(input: {
 
   const { data, error } = await supabase
     .from('obstruction_evaluations')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -204,7 +204,7 @@ export async function updateObstructionEvaluation(
 
   const { data: updateData, error: updateError } = await supabase
     .from('obstruction_evaluations')
-    .update(updatePayload)
+    .update(updatePayload as Record<string, unknown>)
     .eq('id', id)
     .select()
 
@@ -255,7 +255,7 @@ export async function deleteObstructionEvaluation(
     return { error: 'Delete was blocked. You may not have permission to delete this evaluation.' }
   }
 
-  logActivity('deleted', 'obstruction_evaluation', id, existing?.display_id, undefined, existing?.base_id)
+  logActivity('deleted', 'obstruction_evaluation', id, existing?.display_id ?? undefined, undefined, existing?.base_id)
 
   return { error: null }
 }

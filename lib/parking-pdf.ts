@@ -21,8 +21,8 @@ interface ParkingPdfInput {
   warnings: ClearanceResult[]
   apronContext: ApronContext
   mapDataUrl: string | null
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc: jsPDF; filename: string }> {

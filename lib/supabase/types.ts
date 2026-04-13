@@ -1,1022 +1,4201 @@
-// Database types — generated from Supabase schema (Section 5)
-// This file will be replaced by `supabase gen types` once the DB is provisioned.
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
-      bases: {
+      acsi_inspections: {
         Row: {
-          id: string
-          name: string
-          icao: string
-          unit: string | null
-          majcom: string | null
-          location: string | null
-          elevation_msl: number | null
-          timezone: string
-          installation_code: string | null
-          ce_shops: string[]
-          discrepancy_type_shop_map: Record<string, string>
-          checklist_reset_time: string
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['bases']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'checklist_reset_time'>
-        Update: Partial<Database['public']['Tables']['bases']['Insert']>
-        Relationships: []
-      }
-      base_runways: {
-        Row: {
-          id: string
-          base_id: string
-          runway_id: string
-          length_ft: number
-          width_ft: number
-          surface: string
-          true_heading: number | null
-          end1_designator: string
-          end1_latitude: number | null
-          end1_longitude: number | null
-          end1_heading: number | null
-          end1_approach_lighting: string | null
-          end2_designator: string
-          end2_latitude: number | null
-          end2_longitude: number | null
-          end2_heading: number | null
-          end2_approach_lighting: string | null
-          runway_class: string
-          end1_elevation_msl: number | null
-          end2_elevation_msl: number | null
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['base_runways']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['base_runways']['Insert']>
-        Relationships: []
-      }
-      base_navaids: {
-        Row: {
-          id: string
-          base_id: string
-          navaid_name: string
-          sort_order: number
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['base_navaids']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['base_navaids']['Insert']>
-        Relationships: []
-      }
-      base_areas: {
-        Row: {
-          id: string
-          base_id: string
-          area_name: string
-          sort_order: number
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['base_areas']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['base_areas']['Insert']>
-        Relationships: []
-      }
-      base_members: {
-        Row: {
-          id: string
-          base_id: string
-          user_id: string
-          role: string
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['base_members']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['base_members']['Insert']>
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          id: string
-          email: string
-          name: string
-          first_name: string | null
-          last_name: string | null
-          rank: string | null
-          role: UserRole
-          organization: string | null
-          shop: string | null
-          phone: string | null
-          is_active: boolean
-          status: ProfileStatus
-          last_seen_at: string | null
-          primary_base_id: string | null
-          default_pdf_email: string | null
-          edipi: string | null
-          operating_initials: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at' | 'last_seen_at'>
-        Update: Partial<Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>>
-        Relationships: []
-      }
-      discrepancies: {
-        Row: {
-          id: string
-          display_id: string
+          airfield_name: string
           base_id: string | null
-          type: string
-          status: DiscrepancyStatus
-          current_status: CurrentStatus
-          title: string
-          description: string
-          location_text: string
-          latitude: number | null
-          longitude: number | null
-          assigned_shop: string | null
-          assigned_to: string | null
-          reported_by: string
-          work_order_number: string | null
-          notam_reference: string | null
-          linked_notam_id: string | null
-          inspection_id: string | null
-          resolution_notes: string | null
-          resolution_date: string | null
-          facility_number: string | null
-          infrastructure_feature_id: string | null
-          lighting_system_id: string | null
-          photo_count: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['discrepancies']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
-        Update: Partial<Omit<Database['public']['Tables']['discrepancies']['Row'], 'id' | 'created_at'>>
-        Relationships: []
-      }
-      photos: {
-        Row: {
-          id: string
-          discrepancy_id: string | null
-          check_id: string | null
-          inspection_id: string | null
-          inspection_item_id: string | null
-          acsi_inspection_id: string | null
-          acsi_item_id: string | null
-          base_id: string | null
-          storage_path: string
-          thumbnail_path: string | null
-          file_name: string
-          file_size: number | null
-          mime_type: string
-          latitude: number | null
-          longitude: number | null
-          captured_at: string
-          uploaded_by: string
-          issue_index: number | null
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['photos']['Row'], 'id' | 'created_at' | 'captured_at'>
-        Update: Partial<Database['public']['Tables']['photos']['Insert']>
-        Relationships: []
-      }
-      status_updates: {
-        Row: {
-          id: string
-          discrepancy_id: string
-          base_id: string | null
-          old_status: string | null
-          new_status: string | null
-          notes: string | null
-          updated_by: string
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['status_updates']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['status_updates']['Insert']>
-        Relationships: []
-      }
-      airfield_checks: {
-        Row: {
-          id: string
-          display_id: string
-          base_id: string | null
-          check_type: CheckType
-          areas: string[]
-          data: Record<string, unknown>
-          completed_by: string | null
           completed_at: string | null
-          started_at: string | null
-          latitude: number | null
-          longitude: number | null
-          photo_count: number
-          status: string
-          draft_data: Record<string, unknown> | null
-          saved_by_name: string | null
-          saved_by_id: string | null
-          saved_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count'>
-        Update: Partial<Omit<Database['public']['Tables']['airfield_checks']['Row'], 'id' | 'created_at'>>
-        Relationships: []
-      }
-      check_comments: {
-        Row: {
-          id: string
-          check_id: string
-          base_id: string | null
-          comment: string
-          user_name: string
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['check_comments']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['check_comments']['Insert']>
-        Relationships: []
-      }
-      inspections: {
-        Row: {
-          id: string
-          display_id: string
-          base_id: string | null
-          inspection_type: InspectionType
-          inspector_id: string
-          inspector_name: string | null
-          inspection_date: string
-          status: 'in_progress' | 'completed'
-          items: InspectionItem[]
-          total_items: number
-          passed_count: number
-          failed_count: number
-          na_count: number
-          completion_percent: number
-          construction_meeting: boolean
-          joint_monthly: boolean
-          personnel: string[]
-          bwc_value: string | null
-          rsc_condition: string | null
-          rcr_value: string | null
-          rcr_condition: string | null
-          weather_conditions: string | null
-          temperature_f: number | null
-          notes: string | null
-          daily_group_id: string | null
-          completed_by_name: string | null
           completed_by_id: string | null
-          completed_at: string | null
-          filed_by_name: string | null
-          filed_by_id: string | null
-          filed_at: string | null
-          draft_data: Record<string, unknown> | null
-          saved_by_name: string | null
-          saved_by_id: string | null
-          saved_at: string | null
+          completed_by_name: string | null
           created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['inspections']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['inspections']['Insert']>
-        Relationships: []
-      }
-      notams: {
-        Row: {
-          id: string
-          notam_number: string
-          base_id: string | null
-          source: 'faa' | 'local'
-          status: NotamStatus
-          notam_type: string | null
-          title: string
-          full_text: string
-          effective_start: string
-          effective_end: string | null
-          linked_discrepancy_id: string | null
-          created_by: string | null
-          cancelled_by: string | null
-          cancelled_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['notams']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['notams']['Insert']>
-        Relationships: []
-      }
-      obstruction_evaluations: {
-        Row: {
-          id: string
           display_id: string
-          base_id: string | null
-          runway_class: 'B' | 'Army_B'
-          object_height_agl: number
-          object_distance_ft: number | null
-          distance_from_centerline_ft: number | null
-          object_elevation_msl: number | null
-          obstruction_top_msl: number | null
-          latitude: number | null
-          longitude: number | null
-          description: string | null
-          photo_storage_path: string | null
-          results: Record<string, unknown>[]
-          controlling_surface: string | null
-          violated_surfaces: string[]
-          has_violation: boolean
-          evaluated_by: string
-          linked_discrepancy_id: string | null
-          notes: string | null
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['obstruction_evaluations']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['obstruction_evaluations']['Insert']>
-        Relationships: []
-      }
-      waivers: {
-        Row: {
+          draft_data: Json | null
+          failed_count: number
+          filed_at: string | null
+          filed_by_id: string | null
+          filed_by_name: string | null
+          fiscal_year: number
           id: string
-          base_id: string | null
-          waiver_number: string
-          classification: WaiverClassification
-          status: WaiverStatus
-          hazard_rating: WaiverHazardRating | null
-          action_requested: WaiverActionRequested | null
-          description: string
-          justification: string | null
-          risk_assessment_summary: string | null
-          corrective_action: string | null
-          criteria_impact: string | null
-          proponent: string | null
-          project_number: string | null
-          program_fy: number | null
-          estimated_cost: number | null
-          project_status: string | null
-          faa_case_number: string | null
-          period_valid: string | null
-          date_submitted: string | null
-          date_approved: string | null
-          expiration_date: string | null
-          last_reviewed_date: string | null
-          next_review_due: string | null
-          location_description: string | null
-          location_lat: number | null
-          location_lng: number | null
+          inspection_date: string
+          inspection_team: Json
+          inspector_id: string | null
+          inspector_name: string | null
+          items: Json
+          na_count: number
           notes: string | null
-          photo_count: number
-          attachment_count: number
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
+          passed_count: number
+          risk_cert_signatures: Json
+          saved_at: string | null
+          saved_by_id: string | null
+          saved_by_name: string | null
+          status: string
+          total_items: number
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['waivers']['Row'], 'id' | 'created_at' | 'updated_at' | 'photo_count' | 'attachment_count'>
-        Update: Partial<Omit<Database['public']['Tables']['waivers']['Row'], 'id' | 'created_at'>>
-        Relationships: []
-      }
-      waiver_criteria: {
-        Row: {
-          id: string
-          waiver_id: string
-          criteria_source: WaiverCriteriaSource
-          reference: string | null
-          description: string | null
-          sort_order: number
+        Insert: {
+          airfield_name?: string
+          base_id?: string | null
+          completed_at?: string | null
+          completed_by_id?: string | null
+          completed_by_name?: string | null
+          created_at?: string
+          display_id: string
+          draft_data?: Json | null
+          failed_count?: number
+          filed_at?: string | null
+          filed_by_id?: string | null
+          filed_by_name?: string | null
+          fiscal_year?: number
+          id?: string
+          inspection_date?: string
+          inspection_team?: Json
+          inspector_id?: string | null
+          inspector_name?: string | null
+          items?: Json
+          na_count?: number
+          notes?: string | null
+          passed_count?: number
+          risk_cert_signatures?: Json
+          saved_at?: string | null
+          saved_by_id?: string | null
+          saved_by_name?: string | null
+          status?: string
+          total_items?: number
+          updated_at?: string
         }
-        Insert: Omit<Database['public']['Tables']['waiver_criteria']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['waiver_criteria']['Insert']>
-        Relationships: []
-      }
-      waiver_attachments: {
-        Row: {
-          id: string
-          waiver_id: string
-          file_path: string
-          file_name: string
-          file_type: WaiverAttachmentType
-          file_size: number | null
-          mime_type: string | null
-          caption: string | null
-          uploaded_by: string | null
-          created_at: string
+        Update: {
+          airfield_name?: string
+          base_id?: string | null
+          completed_at?: string | null
+          completed_by_id?: string | null
+          completed_by_name?: string | null
+          created_at?: string
+          display_id?: string
+          draft_data?: Json | null
+          failed_count?: number
+          filed_at?: string | null
+          filed_by_id?: string | null
+          filed_by_name?: string | null
+          fiscal_year?: number
+          id?: string
+          inspection_date?: string
+          inspection_team?: Json
+          inspector_id?: string | null
+          inspector_name?: string | null
+          items?: Json
+          na_count?: number
+          notes?: string | null
+          passed_count?: number
+          risk_cert_signatures?: Json
+          saved_at?: string | null
+          saved_by_id?: string | null
+          saved_by_name?: string | null
+          status?: string
+          total_items?: number
+          updated_at?: string
         }
-        Insert: Omit<Database['public']['Tables']['waiver_attachments']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['waiver_attachments']['Insert']>
-        Relationships: []
-      }
-      waiver_reviews: {
-        Row: {
-          id: string
-          waiver_id: string
-          review_year: number
-          review_date: string | null
-          reviewed_by: string | null
-          recommendation: WaiverReviewRecommendation | null
-          mitigation_verified: boolean
-          project_status_update: string | null
-          notes: string | null
-          presented_to_facilities_board: boolean
-          facilities_board_date: string | null
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['waiver_reviews']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['waiver_reviews']['Insert']>
-        Relationships: []
-      }
-      waiver_coordination: {
-        Row: {
-          id: string
-          waiver_id: string
-          office: WaiverCoordinationOffice
-          office_label: string | null
-          coordinator_name: string | null
-          coordinated_date: string | null
-          status: WaiverCoordinationStatus
-          comments: string | null
-        }
-        Insert: Omit<Database['public']['Tables']['waiver_coordination']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['waiver_coordination']['Insert']>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "acsi_inspections_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       activity_log: {
         Row: {
-          id: string
-          user_id: string
-          base_id: string | null
           action: string
-          entity_type: string
-          entity_id: string
+          base_id: string | null
+          created_at: string
           entity_display_id: string | null
-          metadata: Record<string, unknown>
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['activity_log']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['activity_log']['Insert']>
-        Relationships: []
-      }
-      navaid_statuses: {
-        Row: {
+          entity_id: string
+          entity_type: string
           id: string
-          navaid_name: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          base_id?: string | null
+          created_at?: string
+          entity_display_id?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          base_id?: string | null
+          created_at?: string
+          entity_display_id?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      airfield_checks: {
+        Row: {
+          areas: string[]
           base_id: string | null
-          status: 'green' | 'yellow' | 'red'
-          notes: string | null
-          updated_by: string | null
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['navaid_statuses']['Row'], 'id' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['navaid_statuses']['Insert']>
-        Relationships: []
-      }
-      regulations: {
-        Row: {
-          id: string
-          reg_id: string
-          title: string
-          description: string
-          publication_date: string | null
-          url: string | null
-          source_section: string
-          source_volume: string | null
-          category: string
-          pub_type: RegulationPubType
-          is_core: boolean
-          is_cross_ref: boolean
-          is_scrubbed: boolean
-          tags: string[]
-          storage_path: string | null
-          file_size_bytes: number | null
-          last_verified_at: string | null
-          verified_date: string | null
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['regulations']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['regulations']['Insert']>
-        Relationships: []
-      }
-      user_regulation_pdfs: {
-        Row: {
-          id: string
-          user_id: string
-          reg_id: string
-          storage_path: string
-          file_name: string
-          file_size_bytes: number | null
-          uploaded_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['user_regulation_pdfs']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['user_regulation_pdfs']['Insert']>
-        Relationships: []
-      }
-      acsi_inspections: {
-        Row: {
-          id: string
-          display_id: string
-          base_id: string | null
-          airfield_name: string
-          inspection_date: string
-          fiscal_year: number
-          status: AcsiStatus
-          items: AcsiItem[]
-          total_items: number
-          passed_count: number
-          failed_count: number
-          na_count: number
-          inspection_team: AcsiTeamMember[]
-          risk_cert_signatures: AcsiSignatureBlock[]
-          notes: string | null
-          inspector_id: string | null
-          inspector_name: string | null
-          draft_data: AcsiDraftData | null
+          check_type: string
           completed_at: string | null
-          completed_by_name: string | null
-          completed_by_id: string | null
-          filed_at: string | null
-          filed_by_name: string | null
-          filed_by_id: string | null
+          completed_by: string | null
+          created_at: string
+          data: Json
+          display_id: string
+          draft_data: Json | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          photo_count: number
           saved_at: string | null
-          saved_by_name: string | null
           saved_by_id: string | null
-          created_at: string
+          saved_by_name: string | null
+          started_at: string | null
+          status: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['acsi_inspections']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['acsi_inspections']['Insert']>
-        Relationships: []
+        Insert: {
+          areas?: string[]
+          base_id?: string | null
+          check_type: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          data?: Json
+          display_id: string
+          draft_data?: Json | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          photo_count?: number
+          saved_at?: string | null
+          saved_by_id?: string | null
+          saved_by_name?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          areas?: string[]
+          base_id?: string | null
+          check_type?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          data?: Json
+          display_id?: string
+          draft_data?: Json | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          photo_count?: number
+          saved_at?: string | null
+          saved_by_id?: string | null
+          saved_by_name?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airfield_checks_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      base_inspection_templates: {
+      airfield_contractors: {
         Row: {
+          af_form_483: string | null
+          af_form_483_expiration: string | null
+          base_id: string | null
+          callsign: string | null
+          company_name: string
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          flag_number: string | null
           id: string
+          location: string
+          notes: string | null
+          radio_number: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          work_description: string
+        }
+        Insert: {
+          af_form_483?: string | null
+          af_form_483_expiration?: string | null
+          base_id?: string | null
+          callsign?: string | null
+          company_name: string
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          flag_number?: string | null
+          id?: string
+          location: string
+          notes?: string | null
+          radio_number?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          work_description: string
+        }
+        Update: {
+          af_form_483?: string | null
+          af_form_483_expiration?: string | null
+          base_id?: string | null
+          callsign?: string | null
+          company_name?: string
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          flag_number?: string | null
+          id?: string
+          location?: string
+          notes?: string | null
+          radio_number?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          work_description?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airfield_contractors_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      airfield_status: {
+        Row: {
+          active_runway: string
+          advisories: Json
+          advisory_text: string | null
+          advisory_type: string | null
+          afm_ooo_message: string | null
+          afm_out_of_office: boolean
+          arff_cat: number | null
+          arff_statuses: Json | null
+          base_id: string | null
+          bwc_updated_at: string | null
+          bwc_value: string | null
+          construction_remarks: string | null
+          id: string
+          misc_remarks: string | null
+          rcr_condition: string | null
+          rcr_midpoint: string | null
+          rcr_rollout: string | null
+          rcr_touchdown: string | null
+          rcr_updated_at: string | null
+          rsc_condition: string | null
+          rsc_updated_at: string | null
+          runway_status: string
+          runway_statuses: Json | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active_runway?: string
+          advisories?: Json
+          advisory_text?: string | null
+          advisory_type?: string | null
+          afm_ooo_message?: string | null
+          afm_out_of_office?: boolean
+          arff_cat?: number | null
+          arff_statuses?: Json | null
+          base_id?: string | null
+          bwc_updated_at?: string | null
+          bwc_value?: string | null
+          construction_remarks?: string | null
+          id?: string
+          misc_remarks?: string | null
+          rcr_condition?: string | null
+          rcr_midpoint?: string | null
+          rcr_rollout?: string | null
+          rcr_touchdown?: string | null
+          rcr_updated_at?: string | null
+          rsc_condition?: string | null
+          rsc_updated_at?: string | null
+          runway_status?: string
+          runway_statuses?: Json | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active_runway?: string
+          advisories?: Json
+          advisory_text?: string | null
+          advisory_type?: string | null
+          afm_ooo_message?: string | null
+          afm_out_of_office?: boolean
+          arff_cat?: number | null
+          arff_statuses?: Json | null
+          base_id?: string | null
+          bwc_updated_at?: string | null
+          bwc_value?: string | null
+          construction_remarks?: string | null
+          id?: string
+          misc_remarks?: string | null
+          rcr_condition?: string | null
+          rcr_midpoint?: string | null
+          rcr_rollout?: string | null
+          rcr_touchdown?: string | null
+          rcr_updated_at?: string | null
+          rsc_condition?: string | null
+          rsc_updated_at?: string | null
+          runway_status?: string
+          runway_statuses?: Json | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airfield_status_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airfield_status_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_areas: {
+        Row: {
+          area_name: string
           base_id: string
-          template_type: string
           created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['base_inspection_templates']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['base_inspection_templates']['Insert']>
-        Relationships: []
-      }
-      base_inspection_sections: {
-        Row: {
           id: string
-          template_id: string
-          section_id: string
-          title: string
-          guidance: string | null
-          conditional: string | null
           sort_order: number
         }
-        Insert: Omit<Database['public']['Tables']['base_inspection_sections']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['base_inspection_sections']['Insert']>
-        Relationships: []
+        Insert: {
+          area_name: string
+          base_id: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+        }
+        Update: {
+          area_name?: string
+          base_id?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_areas_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_arff_aircraft: {
+        Row: {
+          aircraft_name: string
+          base_id: string
+          created_at: string
+          id: string
+          sort_order: number
+        }
+        Insert: {
+          aircraft_name: string
+          base_id: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+        }
+        Update: {
+          aircraft_name?: string
+          base_id?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_arff_aircraft_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_facilities: {
+        Row: {
+          base_id: string
+          created_at: string
+          description: string
+          facility_number: string
+          id: string
+          sort_order: number
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          description: string
+          facility_number: string
+          id?: string
+          sort_order?: number
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          description?: string
+          facility_number?: string
+          id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_facilities_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       base_inspection_items: {
         Row: {
           id: string
-          section_id: string
           item_key: string
           item_number: number
           item_text: string
           item_type: string
+          section_id: string
           sort_order: number
         }
-        Insert: Omit<Database['public']['Tables']['base_inspection_items']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['base_inspection_items']['Insert']>
-        Relationships: []
-      }
-      airfield_status: {
-        Row: {
-          id: string
-          base_id: string | null
-          advisory_type: string | null
-          advisory_text: string | null
-          active_runway: string
-          runway_status: string
-          runway_statuses: Record<string, unknown>
-          arff_cat: number | null
-          arff_statuses: Record<string, string>
-          rsc_condition: string | null
-          rsc_updated_at: string | null
-          rcr_touchdown: string | null
-          rcr_midpoint: string | null
-          rcr_rollout: string | null
-          rcr_condition: string | null
-          rcr_updated_at: string | null
-          bwc_value: string | null
-          bwc_updated_at: string | null
-          updated_by: string | null
-          updated_at: string
+        Insert: {
+          id?: string
+          item_key: string
+          item_number: number
+          item_text: string
+          item_type?: string
+          section_id: string
+          sort_order?: number
         }
-        Insert: Omit<Database['public']['Tables']['airfield_status']['Row'], 'id' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['airfield_status']['Insert']>
-        Relationships: []
+        Update: {
+          id?: string
+          item_key?: string
+          item_number?: number
+          item_text?: string
+          item_type?: string
+          section_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_inspection_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "base_inspection_sections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      base_arff_aircraft: {
+      base_inspection_sections: {
         Row: {
+          conditional: string | null
+          guidance: string | null
           id: string
-          base_id: string
-          aircraft_name: string
+          section_id: string
           sort_order: number
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['base_arff_aircraft']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['base_arff_aircraft']['Insert']>
-        Relationships: []
-      }
-      airfield_contractors: {
-        Row: {
-          id: string
-          base_id: string | null
-          company_name: string
-          contact_name: string | null
-          location: string
-          work_description: string
-          status: 'active' | 'completed'
-          start_date: string
-          end_date: string | null
-          notes: string | null
-          radio_number: string | null
-          flag_number: string | null
-          callsign: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['airfield_contractors']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<Database['public']['Tables']['airfield_contractors']['Row'], 'id' | 'created_at'>>
-        Relationships: []
-      }
-      runway_status_log: {
-        Row: {
-          id: string
-          base_id: string | null
-          old_runway_status: string | null
-          new_runway_status: string | null
-          old_active_runway: string | null
-          new_active_runway: string | null
-          old_advisory_type: string | null
-          new_advisory_type: string | null
-          old_advisory_text: string | null
-          new_advisory_text: string | null
-          changed_by: string | null
-          reason: string | null
-          created_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['runway_status_log']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['runway_status_log']['Insert']>
-        Relationships: []
-      }
-      shift_checklist_items: {
-        Row: {
-          id: string
-          base_id: string
-          label: string
-          shift: string
-          frequency: string
-          sort_order: number
-          is_active: boolean
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['shift_checklist_items']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'sort_order'>
-        Update: Partial<Database['public']['Tables']['shift_checklist_items']['Insert']>
-        Relationships: []
-      }
-      shift_checklists: {
-        Row: {
-          id: string
-          base_id: string
-          checklist_date: string
-          status: string
-          completed_by: string | null
-          completed_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['shift_checklists']['Row'], 'id' | 'created_at' | 'updated_at' | 'status'>
-        Update: Partial<Database['public']['Tables']['shift_checklists']['Insert']>
-        Relationships: []
-      }
-      shift_checklist_responses: {
-        Row: {
-          id: string
-          checklist_id: string
-          item_id: string
-          completed: boolean
-          completed_by: string | null
-          completed_at: string | null
-          notes: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['shift_checklist_responses']['Row'], 'id' | 'created_at' | 'updated_at' | 'completed'>
-        Update: Partial<Database['public']['Tables']['shift_checklist_responses']['Insert']>
-        Relationships: []
-      }
-      qrc_templates: {
-        Row: {
-          id: string
-          base_id: string
-          qrc_number: number
-          title: string
-          notes: string | null
-          steps: QrcStep[]
-          references: string | null
-          has_scn_form: boolean
-          scn_fields: Record<string, unknown> | null
-          is_active: boolean
-          sort_order: number
-          last_reviewed_at: string | null
-          last_reviewed_by: string | null
-          review_notes: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['qrc_templates']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active' | 'sort_order' | 'last_reviewed_at' | 'last_reviewed_by' | 'review_notes'>
-        Update: Partial<Database['public']['Tables']['qrc_templates']['Insert']>
-        Relationships: []
-      }
-      qrc_executions: {
-        Row: {
-          id: string
-          base_id: string
           template_id: string
-          qrc_number: number
           title: string
-          status: 'open' | 'closed'
-          opened_by: string | null
-          opened_at: string
-          open_initials: string | null
-          closed_by: string | null
-          closed_at: string | null
-          close_initials: string | null
-          step_responses: Record<string, QrcStepResponse>
-          scn_data: Record<string, unknown> | null
+        }
+        Insert: {
+          conditional?: string | null
+          guidance?: string | null
+          id?: string
+          section_id: string
+          sort_order?: number
+          template_id: string
+          title: string
+        }
+        Update: {
+          conditional?: string | null
+          guidance?: string | null
+          id?: string
+          section_id?: string
+          sort_order?: number
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_inspection_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "base_inspection_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_inspection_templates: {
+        Row: {
+          base_id: string
           created_at: string
+          id: string
+          template_type: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['qrc_executions']['Row'], 'id' | 'created_at' | 'updated_at' | 'status' | 'step_responses'>
-        Update: Partial<Database['public']['Tables']['qrc_executions']['Insert']>
-        Relationships: []
-      }
-      infrastructure_features: {
-        Row: {
-          id: string
+        Insert: {
           base_id: string
-          feature_type: string
-          longitude: number
-          latitude: number
-          layer: string | null
-          block: string | null
-          label: string | null
-          notes: string | null
-          rotation: number
-          source: 'import' | 'user'
-          status: 'operational' | 'inoperative'
-          status_changed_at: string | null
-          status_changed_by: string | null
-          system_component_id: string | null
-          bar_group_id: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
+          created_at?: string
+          id?: string
+          template_type: string
+          updated_at?: string
         }
-        Insert: Omit<Database['public']['Tables']['infrastructure_features']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['infrastructure_features']['Insert']>
-        Relationships: []
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_inspection_templates_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      lighting_systems: {
+      base_members: {
         Row: {
-          id: string
           base_id: string
-          system_type: string
-          name: string
-          runway_or_taxiway: string | null
-          is_precision: boolean
-          notes: string | null
           created_at: string
-          updated_at: string
-        }
-        Insert: Omit<Database['public']['Tables']['lighting_systems']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['lighting_systems']['Insert']>
-        Relationships: []
-      }
-      lighting_system_components: {
-        Row: {
           id: string
-          system_id: string
-          component_type: string
-          label: string
-          total_count: number
-          allowable_outage_pct: number | null
-          allowable_outage_count: number | null
-          allowable_outage_consecutive: number | null
-          allowable_no_adjacent: boolean
-          allowable_outage_text: string | null
-          is_zero_tolerance: boolean
-          requires_notam: boolean
-          requires_ce_notification: boolean
-          requires_system_shutoff: boolean
-          requires_terps_notification: boolean
-          requires_obstruction_notam_attrs: boolean
-          q_code: string | null
-          notam_text_template: string | null
-          sort_order: number
-          created_at: string
+          role: string
+          user_id: string
         }
-        Insert: Omit<Database['public']['Tables']['lighting_system_components']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['lighting_system_components']['Insert']>
-        Relationships: []
-      }
-      outage_events: {
-        Row: {
-          id: string
+        Insert: {
           base_id: string
-          feature_id: string
-          system_component_id: string | null
-          event_type: 'reported' | 'resolved'
-          reported_by: string | null
-          discrepancy_id: string | null
-          notes: string | null
-          created_at: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
         }
-        Insert: Omit<Database['public']['Tables']['outage_events']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['outage_events']['Insert']>
-        Relationships: []
-      }
-      inspection_item_system_links: {
-        Row: {
-          id: string
-          item_id: string
-          system_id: string
-          created_at: string
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
         }
-        Insert: Omit<Database['public']['Tables']['inspection_item_system_links']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['inspection_item_system_links']['Insert']>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "base_members_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "base_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      outage_rule_templates: {
+      base_navaids: {
         Row: {
+          base_id: string
+          created_at: string
           id: string
-          system_type: string
-          component_type: string
-          label: string
-          allowable_outage_pct: number | null
-          allowable_outage_count: number | null
-          allowable_outage_consecutive: number | null
-          allowable_no_adjacent: boolean
-          allowable_outage_text: string | null
-          is_zero_tolerance: boolean
-          dafman_notes: string | null
-          requires_notam: boolean
-          requires_ce_notification: boolean
-          requires_system_shutoff: boolean
-          requires_terps_notification: boolean
-          requires_obstruction_notam_attrs: boolean
-          q_code: string | null
-          notam_text_template: string | null
+          navaid_name: string
           sort_order: number
         }
-        Insert: Omit<Database['public']['Tables']['outage_rule_templates']['Row'], 'id'>
-        Update: Partial<Database['public']['Tables']['outage_rule_templates']['Insert']>
-        Relationships: []
-      }
-      wildlife_sightings: {
-        Row: {
-          id: string
-          base_id: string | null
-          display_id: string
-          species_common: string
-          species_scientific: string | null
-          species_group: string
-          size_category: string | null
-          count_observed: number
-          behavior: string | null
-          latitude: number | null
-          longitude: number | null
-          location_text: string | null
-          airfield_zone: string | null
-          observed_at: string
-          time_of_day: string | null
-          sky_condition: string | null
-          precipitation: string | null
-          bwc_at_time: string | null
-          action_taken: string | null
-          dispersal_method: string | null
-          dispersal_effective: boolean | null
-          observed_by: string
-          observed_by_id: string | null
-          check_id: string | null
-          inspection_id: string | null
-          discrepancy_id: string | null
-          photo_count: number | null
-          notes: string | null
-          created_at: string | null
-          updated_at: string | null
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          navaid_name: string
+          sort_order?: number
         }
-        Insert: Omit<Database['public']['Tables']['wildlife_sightings']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['wildlife_sightings']['Insert']>
-        Relationships: []
-      }
-      wildlife_strikes: {
-        Row: {
-          id: string
-          base_id: string | null
-          display_id: string
-          species_common: string | null
-          species_scientific: string | null
-          species_group: string | null
-          size_category: string | null
-          number_struck: number | null
-          number_seen: number | null
-          latitude: number | null
-          longitude: number | null
-          location_text: string | null
-          strike_date: string
-          time_of_day: string | null
-          sky_condition: string | null
-          precipitation: string | null
-          bwc_at_time: string | null
-          aircraft_type: string | null
-          aircraft_registration: string | null
-          engine_type: string | null
-          phase_of_flight: string | null
-          altitude_agl: number | null
-          speed_ias: number | null
-          pilot_warned: boolean | null
-          parts_struck: string[] | null
-          parts_damaged: string[] | null
-          damage_level: string | null
-          engine_ingested: boolean | null
-          engines_ingested: number[] | null
-          flight_effect: string | null
-          repair_cost: number | null
-          other_cost: number | null
-          hours_out_of_service: number | null
-          remains_collected: boolean | null
-          remains_sent_to_lab: boolean | null
-          lab_identification: string | null
-          reported_by: string
-          reported_by_id: string | null
-          discrepancy_id: string | null
-          sighting_id: string | null
-          photo_count: number | null
-          notes: string | null
-          created_at: string | null
-          updated_at: string | null
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          navaid_name?: string
+          sort_order?: number
         }
-        Insert: Omit<Database['public']['Tables']['wildlife_strikes']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['wildlife_strikes']['Insert']>
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "base_navaids_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_runways: {
+        Row: {
+          base_id: string
+          created_at: string
+          end1_approach_lighting: string | null
+          end1_designator: string
+          end1_elevation_msl: number | null
+          end1_heading: number | null
+          end1_latitude: number | null
+          end1_longitude: number | null
+          end2_approach_lighting: string | null
+          end2_designator: string
+          end2_elevation_msl: number | null
+          end2_heading: number | null
+          end2_latitude: number | null
+          end2_longitude: number | null
+          id: string
+          length_ft: number
+          runway_class: string
+          runway_id: string
+          surface: string
+          true_heading: number | null
+          width_ft: number
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          end1_approach_lighting?: string | null
+          end1_designator: string
+          end1_elevation_msl?: number | null
+          end1_heading?: number | null
+          end1_latitude?: number | null
+          end1_longitude?: number | null
+          end2_approach_lighting?: string | null
+          end2_designator: string
+          end2_elevation_msl?: number | null
+          end2_heading?: number | null
+          end2_latitude?: number | null
+          end2_longitude?: number | null
+          id?: string
+          length_ft: number
+          runway_class?: string
+          runway_id: string
+          surface?: string
+          true_heading?: number | null
+          width_ft: number
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          end1_approach_lighting?: string | null
+          end1_designator?: string
+          end1_elevation_msl?: number | null
+          end1_heading?: number | null
+          end1_latitude?: number | null
+          end1_longitude?: number | null
+          end2_approach_lighting?: string | null
+          end2_designator?: string
+          end2_elevation_msl?: number | null
+          end2_heading?: number | null
+          end2_latitude?: number | null
+          end2_longitude?: number | null
+          id?: string
+          length_ft?: number
+          runway_class?: string
+          runway_id?: string
+          surface?: string
+          true_heading?: number | null
+          width_ft?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_runways_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       base_taxiways: {
         Row: {
-          id: string
           base_id: string
+          centerline_coords: Json
+          created_at: string | null
+          created_by: string | null
           designator: string
-          taxiway_type: string
-          tdg: number | null
-          width_ft: number | null
-          centerline_coords: [number, number][]
+          id: string
           notes: string | null
-          standard: string
           runway_class: string | null
           service_branch: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
+          standard: string
+          taxiway_type: string
+          tdg: number | null
+          updated_at: string | null
+          width_ft: number | null
         }
-        Insert: Omit<Database['public']['Tables']['base_taxiways']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['base_taxiways']['Insert']>
-        Relationships: []
+        Insert: {
+          base_id: string
+          centerline_coords?: Json
+          created_at?: string | null
+          created_by?: string | null
+          designator: string
+          id?: string
+          notes?: string | null
+          runway_class?: string | null
+          service_branch?: string | null
+          standard?: string
+          taxiway_type?: string
+          tdg?: number | null
+          updated_at?: string | null
+          width_ft?: number | null
+        }
+        Update: {
+          base_id?: string
+          centerline_coords?: Json
+          created_at?: string | null
+          created_by?: string | null
+          designator?: string
+          id?: string
+          notes?: string | null
+          runway_class?: string | null
+          service_branch?: string | null
+          standard?: string
+          taxiway_type?: string
+          tdg?: number | null
+          updated_at?: string | null
+          width_ft?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_taxiways_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "base_taxiways_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       base_wildlife_species: {
         Row: {
-          id: string
-          base_id: string
-          species_common: string
           added_by: string | null
-          created_at: string
+          base_id: string
+          created_at: string | null
+          id: string
+          is_favorite: boolean
+          species_common: string
         }
-        Insert: Omit<Database['public']['Tables']['base_wildlife_species']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['base_wildlife_species']['Insert']>
+        Insert: {
+          added_by?: string | null
+          base_id: string
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean
+          species_common: string
+        }
+        Update: {
+          added_by?: string | null
+          base_id?: string
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean
+          species_common?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_wildlife_species_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "base_wildlife_species_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bases: {
+        Row: {
+          activity_templates: Json | null
+          arff_config: Json
+          ce_shops: string[]
+          checklist_reset_time: string
+          contractor_templates: Json | null
+          created_at: string
+          discrepancy_type_shop_map: Json | null
+          elevation_msl: number | null
+          feedback_form_config: Json
+          icao: string | null
+          id: string
+          installation_code: string | null
+          is_active: boolean
+          location: string | null
+          majcom: string | null
+          name: string
+          status_labels: Json
+          timezone: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_templates?: Json | null
+          arff_config?: Json
+          ce_shops?: string[]
+          checklist_reset_time?: string
+          contractor_templates?: Json | null
+          created_at?: string
+          discrepancy_type_shop_map?: Json | null
+          elevation_msl?: number | null
+          feedback_form_config?: Json
+          icao?: string | null
+          id?: string
+          installation_code?: string | null
+          is_active?: boolean
+          location?: string | null
+          majcom?: string | null
+          name: string
+          status_labels?: Json
+          timezone?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_templates?: Json | null
+          arff_config?: Json
+          ce_shops?: string[]
+          checklist_reset_time?: string
+          contractor_templates?: Json | null
+          created_at?: string
+          discrepancy_type_shop_map?: Json | null
+          elevation_msl?: number | null
+          feedback_form_config?: Json
+          icao?: string | null
+          id?: string
+          installation_code?: string | null
+          is_active?: boolean
+          location?: string | null
+          majcom?: string | null
+          name?: string
+          status_labels?: Json
+          timezone?: string
+          unit?: string | null
+          updated_at?: string
+        }
         Relationships: []
       }
       bwc_history: {
         Row: {
-          id: string
           base_id: string | null
           bwc_value: string
+          created_at: string | null
+          id: string
+          notes: string | null
           set_at: string
           set_by: string | null
           source: string | null
           source_id: string | null
-          notes: string | null
-          created_at: string | null
         }
-        Insert: Omit<Database['public']['Tables']['bwc_history']['Row'], 'id' | 'created_at'>
-        Update: Partial<Database['public']['Tables']['bwc_history']['Insert']>
+        Insert: {
+          base_id?: string | null
+          bwc_value: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          set_at?: string
+          set_by?: string | null
+          source?: string | null
+          source_id?: string | null
+        }
+        Update: {
+          base_id?: string | null
+          bwc_value?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          set_at?: string
+          set_by?: string | null
+          source?: string | null
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bwc_history_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      check_comments: {
+        Row: {
+          base_id: string | null
+          check_id: string
+          comment: string
+          created_at: string
+          id: string
+          user_name: string
+        }
+        Insert: {
+          base_id?: string | null
+          check_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          user_name: string
+        }
+        Update: {
+          base_id?: string | null
+          check_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_comments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_comments_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "airfield_checks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_status_boards: {
+        Row: {
+          base_id: string
+          board_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          section: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          board_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          section?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          board_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          section?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_status_boards_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_status_boards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_status_items: {
+        Row: {
+          base_id: string
+          board_id: string
+          id: string
+          item_name: string
+          notes: string | null
+          sort_order: number
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id: string
+          board_id: string
+          id?: string
+          item_name: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          board_id?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_status_items_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_status_items_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "custom_status_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_status_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_feedback: {
+        Row: {
+          base_id: string
+          comments: string | null
+          email: string | null
+          id: string
+          ip_hash: string | null
+          name: string | null
+          organization: string | null
+          overall_rating: number | null
+          responses: Json
+          submitted_at: string
+        }
+        Insert: {
+          base_id: string
+          comments?: string | null
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          name?: string | null
+          organization?: string | null
+          overall_rating?: number | null
+          responses?: Json
+          submitted_at?: string
+        }
+        Update: {
+          base_id?: string
+          comments?: string | null
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          name?: string | null
+          organization?: string | null
+          overall_rating?: number | null
+          responses?: Json
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_feedback_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discrepancies: {
+        Row: {
+          assigned_shop: string | null
+          assigned_to: string | null
+          base_id: string | null
+          created_at: string
+          current_status: string
+          description: string
+          display_id: string
+          facility_number: string | null
+          id: string
+          infrastructure_feature_id: string | null
+          inspection_id: string | null
+          latitude: number | null
+          lighting_system_id: string | null
+          linked_notam_id: string | null
+          location_text: string
+          longitude: number | null
+          notam_reference: string | null
+          photo_count: number
+          reported_by: string | null
+          resolution_date: string | null
+          resolution_notes: string | null
+          severity: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          work_order_number: string | null
+        }
+        Insert: {
+          assigned_shop?: string | null
+          assigned_to?: string | null
+          base_id?: string | null
+          created_at?: string
+          current_status?: string
+          description: string
+          display_id: string
+          facility_number?: string | null
+          id?: string
+          infrastructure_feature_id?: string | null
+          inspection_id?: string | null
+          latitude?: number | null
+          lighting_system_id?: string | null
+          linked_notam_id?: string | null
+          location_text: string
+          longitude?: number | null
+          notam_reference?: string | null
+          photo_count?: number
+          reported_by?: string | null
+          resolution_date?: string | null
+          resolution_notes?: string | null
+          severity?: string
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+          work_order_number?: string | null
+        }
+        Update: {
+          assigned_shop?: string | null
+          assigned_to?: string | null
+          base_id?: string | null
+          created_at?: string
+          current_status?: string
+          description?: string
+          display_id?: string
+          facility_number?: string | null
+          id?: string
+          infrastructure_feature_id?: string | null
+          inspection_id?: string | null
+          latitude?: number | null
+          lighting_system_id?: string | null
+          linked_notam_id?: string | null
+          location_text?: string
+          longitude?: number | null
+          notam_reference?: string | null
+          photo_count?: number
+          reported_by?: string | null
+          resolution_date?: string | null
+          resolution_notes?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          work_order_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discrepancies_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancies_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancies_infrastructure_feature_id_fkey"
+            columns: ["infrastructure_feature_id"]
+            isOneToOne: false
+            referencedRelation: "infrastructure_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancies_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancies_lighting_system_id_fkey"
+            columns: ["lighting_system_id"]
+            isOneToOne: false
+            referencedRelation: "lighting_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancies_linked_notam_id_fkey"
+            columns: ["linked_notam_id"]
+            isOneToOne: false
+            referencedRelation: "notams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancies_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      infrastructure_features: {
+        Row: {
+          bar_group_id: string | null
+          base_id: string
+          block: string | null
+          created_at: string
+          created_by: string | null
+          feature_type: string
+          id: string
+          label: string | null
+          latitude: number
+          layer: string | null
+          longitude: number
+          notes: string | null
+          rotation: number
+          source: string
+          status: string
+          status_changed_at: string | null
+          status_changed_by: string | null
+          system_component_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bar_group_id?: string | null
+          base_id: string
+          block?: string | null
+          created_at?: string
+          created_by?: string | null
+          feature_type: string
+          id?: string
+          label?: string | null
+          latitude: number
+          layer?: string | null
+          longitude: number
+          notes?: string | null
+          rotation?: number
+          source?: string
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          system_component_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bar_group_id?: string | null
+          base_id?: string
+          block?: string | null
+          created_at?: string
+          created_by?: string | null
+          feature_type?: string
+          id?: string
+          label?: string | null
+          latitude?: number
+          layer?: string | null
+          longitude?: number
+          notes?: string | null
+          rotation?: number
+          source?: string
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
+          system_component_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_infrastructure_features_component"
+            columns: ["system_component_id"]
+            isOneToOne: false
+            referencedRelation: "lighting_system_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "infrastructure_features_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "infrastructure_features_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "infrastructure_features_status_changed_by_fkey"
+            columns: ["status_changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspection_item_system_links: {
+        Row: {
+          component_id: string | null
+          created_at: string
+          id: string
+          item_id: string
+          system_id: string
+        }
+        Insert: {
+          component_id?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          system_id: string
+        }
+        Update: {
+          component_id?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          system_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_item_system_links_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "lighting_system_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_item_system_links_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "base_inspection_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_item_system_links_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "lighting_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          base_id: string | null
+          bwc_value: string | null
+          completed_at: string | null
+          completed_by_id: string | null
+          completed_by_name: string | null
+          completion_percent: number
+          construction_meeting: boolean
+          created_at: string
+          daily_group_id: string | null
+          display_id: string
+          draft_data: Json | null
+          failed_count: number
+          filed_at: string | null
+          filed_by_id: string | null
+          filed_by_name: string | null
+          id: string
+          inspection_date: string
+          inspection_type: string
+          inspector_id: string | null
+          inspector_name: string | null
+          items: Json
+          joint_monthly: boolean
+          na_count: number
+          notes: string | null
+          passed_count: number
+          personnel: string[]
+          rcr_condition: string | null
+          rcr_value: string | null
+          rsc_condition: string | null
+          saved_at: string | null
+          saved_by_id: string | null
+          saved_by_name: string | null
+          started_at: string | null
+          status: string
+          temperature_f: number | null
+          total_items: number
+          updated_at: string
+          weather_conditions: string | null
+        }
+        Insert: {
+          base_id?: string | null
+          bwc_value?: string | null
+          completed_at?: string | null
+          completed_by_id?: string | null
+          completed_by_name?: string | null
+          completion_percent?: number
+          construction_meeting?: boolean
+          created_at?: string
+          daily_group_id?: string | null
+          display_id: string
+          draft_data?: Json | null
+          failed_count?: number
+          filed_at?: string | null
+          filed_by_id?: string | null
+          filed_by_name?: string | null
+          id?: string
+          inspection_date?: string
+          inspection_type: string
+          inspector_id?: string | null
+          inspector_name?: string | null
+          items?: Json
+          joint_monthly?: boolean
+          na_count?: number
+          notes?: string | null
+          passed_count?: number
+          personnel?: string[]
+          rcr_condition?: string | null
+          rcr_value?: string | null
+          rsc_condition?: string | null
+          saved_at?: string | null
+          saved_by_id?: string | null
+          saved_by_name?: string | null
+          started_at?: string | null
+          status?: string
+          temperature_f?: number | null
+          total_items?: number
+          updated_at?: string
+          weather_conditions?: string | null
+        }
+        Update: {
+          base_id?: string | null
+          bwc_value?: string | null
+          completed_at?: string | null
+          completed_by_id?: string | null
+          completed_by_name?: string | null
+          completion_percent?: number
+          construction_meeting?: boolean
+          created_at?: string
+          daily_group_id?: string | null
+          display_id?: string
+          draft_data?: Json | null
+          failed_count?: number
+          filed_at?: string | null
+          filed_by_id?: string | null
+          filed_by_name?: string | null
+          id?: string
+          inspection_date?: string
+          inspection_type?: string
+          inspector_id?: string | null
+          inspector_name?: string | null
+          items?: Json
+          joint_monthly?: boolean
+          na_count?: number
+          notes?: string | null
+          passed_count?: number
+          personnel?: string[]
+          rcr_condition?: string | null
+          rcr_value?: string | null
+          rsc_condition?: string | null
+          saved_at?: string | null
+          saved_by_id?: string | null
+          saved_by_name?: string | null
+          started_at?: string | null
+          status?: string
+          temperature_f?: number | null
+          total_items?: number
+          updated_at?: string
+          weather_conditions?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_completed_by_id_fkey"
+            columns: ["completed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_filed_by_id_fkey"
+            columns: ["filed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lighting_system_components: {
+        Row: {
+          allowable_no_adjacent: boolean | null
+          allowable_outage_consecutive: number | null
+          allowable_outage_count: number | null
+          allowable_outage_pct: number | null
+          allowable_outage_text: string | null
+          component_type: string
+          created_at: string
+          id: string
+          is_zero_tolerance: boolean | null
+          label: string
+          notam_text_template: string | null
+          q_code: string | null
+          requires_ce_notification: boolean | null
+          requires_notam: boolean | null
+          requires_obstruction_notam_attrs: boolean | null
+          requires_system_shutoff: boolean | null
+          requires_terps_notification: boolean | null
+          sort_order: number | null
+          system_id: string
+          total_count: number
+        }
+        Insert: {
+          allowable_no_adjacent?: boolean | null
+          allowable_outage_consecutive?: number | null
+          allowable_outage_count?: number | null
+          allowable_outage_pct?: number | null
+          allowable_outage_text?: string | null
+          component_type: string
+          created_at?: string
+          id?: string
+          is_zero_tolerance?: boolean | null
+          label: string
+          notam_text_template?: string | null
+          q_code?: string | null
+          requires_ce_notification?: boolean | null
+          requires_notam?: boolean | null
+          requires_obstruction_notam_attrs?: boolean | null
+          requires_system_shutoff?: boolean | null
+          requires_terps_notification?: boolean | null
+          sort_order?: number | null
+          system_id: string
+          total_count?: number
+        }
+        Update: {
+          allowable_no_adjacent?: boolean | null
+          allowable_outage_consecutive?: number | null
+          allowable_outage_count?: number | null
+          allowable_outage_pct?: number | null
+          allowable_outage_text?: string | null
+          component_type?: string
+          created_at?: string
+          id?: string
+          is_zero_tolerance?: boolean | null
+          label?: string
+          notam_text_template?: string | null
+          q_code?: string | null
+          requires_ce_notification?: boolean | null
+          requires_notam?: boolean | null
+          requires_obstruction_notam_attrs?: boolean | null
+          requires_system_shutoff?: boolean | null
+          requires_terps_notification?: boolean | null
+          sort_order?: number | null
+          system_id?: string
+          total_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lighting_system_components_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "lighting_systems"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lighting_systems: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          is_precision: boolean | null
+          name: string
+          notes: string | null
+          runway_or_taxiway: string | null
+          system_type: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          is_precision?: boolean | null
+          name: string
+          notes?: string | null
+          runway_or_taxiway?: string | null
+          system_type: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          is_precision?: boolean | null
+          name?: string
+          notes?: string | null
+          runway_or_taxiway?: string | null
+          system_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lighting_systems_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      navaid_statuses: {
+        Row: {
+          base_id: string | null
+          id: string
+          navaid_name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id?: string | null
+          id?: string
+          navaid_name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string | null
+          id?: string
+          navaid_name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "navaid_statuses_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "navaid_statuses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notams: {
+        Row: {
+          base_id: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          effective_end: string | null
+          effective_start: string
+          full_text: string
+          id: string
+          linked_discrepancy_id: string | null
+          notam_number: string
+          notam_type: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          base_id?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_end?: string | null
+          effective_start: string
+          full_text: string
+          id?: string
+          linked_discrepancy_id?: string | null
+          notam_number: string
+          notam_type?: string | null
+          source: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_end?: string | null
+          effective_start?: string
+          full_text?: string
+          id?: string
+          linked_discrepancy_id?: string | null
+          notam_number?: string
+          notam_type?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_notams_discrepancy"
+            columns: ["linked_discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notams_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notams_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obstruction_evaluations: {
+        Row: {
+          base_id: string | null
+          controlling_surface: string | null
+          created_at: string
+          description: string | null
+          display_id: string | null
+          distance_from_centerline_ft: number | null
+          evaluated_by: string | null
+          has_violation: boolean
+          id: string
+          latitude: number | null
+          linked_discrepancy_id: string | null
+          longitude: number | null
+          notes: string | null
+          object_distance_ft: number | null
+          object_elevation_msl: number | null
+          object_height_agl: number
+          obstruction_top_msl: number | null
+          photo_storage_path: string | null
+          results: Json
+          runway_class: string
+          violated_surfaces: string[] | null
+        }
+        Insert: {
+          base_id?: string | null
+          controlling_surface?: string | null
+          created_at?: string
+          description?: string | null
+          display_id?: string | null
+          distance_from_centerline_ft?: number | null
+          evaluated_by?: string | null
+          has_violation?: boolean
+          id?: string
+          latitude?: number | null
+          linked_discrepancy_id?: string | null
+          longitude?: number | null
+          notes?: string | null
+          object_distance_ft?: number | null
+          object_elevation_msl?: number | null
+          object_height_agl: number
+          obstruction_top_msl?: number | null
+          photo_storage_path?: string | null
+          results?: Json
+          runway_class: string
+          violated_surfaces?: string[] | null
+        }
+        Update: {
+          base_id?: string | null
+          controlling_surface?: string | null
+          created_at?: string
+          description?: string | null
+          display_id?: string | null
+          distance_from_centerline_ft?: number | null
+          evaluated_by?: string | null
+          has_violation?: boolean
+          id?: string
+          latitude?: number | null
+          linked_discrepancy_id?: string | null
+          longitude?: number | null
+          notes?: string | null
+          object_distance_ft?: number | null
+          object_elevation_msl?: number | null
+          object_height_agl?: number
+          obstruction_top_msl?: number | null
+          photo_storage_path?: string | null
+          results?: Json
+          runway_class?: string
+          violated_surfaces?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obstruction_evaluations_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obstruction_evaluations_evaluated_by_fkey"
+            columns: ["evaluated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obstruction_evaluations_linked_discrepancy_id_fkey"
+            columns: ["linked_discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outage_events: {
+        Row: {
+          base_id: string
+          created_at: string
+          discrepancy_id: string | null
+          event_type: string
+          feature_id: string
+          id: string
+          notes: string | null
+          reported_by: string | null
+          system_component_id: string | null
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          discrepancy_id?: string | null
+          event_type: string
+          feature_id: string
+          id?: string
+          notes?: string | null
+          reported_by?: string | null
+          system_component_id?: string | null
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          discrepancy_id?: string | null
+          event_type?: string
+          feature_id?: string
+          id?: string
+          notes?: string | null
+          reported_by?: string | null
+          system_component_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outage_events_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outage_events_discrepancy_id_fkey"
+            columns: ["discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outage_events_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "infrastructure_features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outage_events_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outage_events_system_component_id_fkey"
+            columns: ["system_component_id"]
+            isOneToOne: false
+            referencedRelation: "lighting_system_components"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outage_rule_templates: {
+        Row: {
+          allowable_no_adjacent: boolean | null
+          allowable_outage_consecutive: number | null
+          allowable_outage_count: number | null
+          allowable_outage_pct: number | null
+          allowable_outage_text: string | null
+          component_type: string
+          dafman_notes: string | null
+          id: string
+          is_zero_tolerance: boolean | null
+          label: string
+          notam_text_template: string | null
+          q_code: string | null
+          requires_ce_notification: boolean | null
+          requires_notam: boolean | null
+          requires_obstruction_notam_attrs: boolean | null
+          requires_system_shutoff: boolean | null
+          requires_terps_notification: boolean | null
+          sort_order: number | null
+          system_type: string
+        }
+        Insert: {
+          allowable_no_adjacent?: boolean | null
+          allowable_outage_consecutive?: number | null
+          allowable_outage_count?: number | null
+          allowable_outage_pct?: number | null
+          allowable_outage_text?: string | null
+          component_type: string
+          dafman_notes?: string | null
+          id?: string
+          is_zero_tolerance?: boolean | null
+          label: string
+          notam_text_template?: string | null
+          q_code?: string | null
+          requires_ce_notification?: boolean | null
+          requires_notam?: boolean | null
+          requires_obstruction_notam_attrs?: boolean | null
+          requires_system_shutoff?: boolean | null
+          requires_terps_notification?: boolean | null
+          sort_order?: number | null
+          system_type: string
+        }
+        Update: {
+          allowable_no_adjacent?: boolean | null
+          allowable_outage_consecutive?: number | null
+          allowable_outage_count?: number | null
+          allowable_outage_pct?: number | null
+          allowable_outage_text?: string | null
+          component_type?: string
+          dafman_notes?: string | null
+          id?: string
+          is_zero_tolerance?: boolean | null
+          label?: string
+          notam_text_template?: string | null
+          q_code?: string | null
+          requires_ce_notification?: boolean | null
+          requires_notam?: boolean | null
+          requires_obstruction_notam_attrs?: boolean | null
+          requires_system_shutoff?: boolean | null
+          requires_terps_notification?: boolean | null
+          sort_order?: number | null
+          system_type?: string
+        }
         Relationships: []
       }
+      parking_apron_boundaries: {
+        Row: {
+          base_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string | null
+          notes: string | null
+          plan_id: string
+          polygon_coords: Json
+          updated_at: string | null
+        }
+        Insert: {
+          base_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          plan_id: string
+          polygon_coords?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          base_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          plan_id?: string
+          polygon_coords?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_apron_boundaries_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_apron_boundaries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_apron_boundaries_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "parking_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parking_obstacles: {
+        Row: {
+          base_id: string | null
+          created_at: string | null
+          created_by: string | null
+          height_ft: number | null
+          id: string
+          latitude: number
+          length_ft: number | null
+          line_coords: Json | null
+          longitude: number
+          name: string | null
+          notes: string | null
+          obstacle_type: string | null
+          radius_ft: number | null
+          rotation_deg: number | null
+          updated_at: string | null
+          width_ft: number | null
+        }
+        Insert: {
+          base_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          height_ft?: number | null
+          id?: string
+          latitude: number
+          length_ft?: number | null
+          line_coords?: Json | null
+          longitude: number
+          name?: string | null
+          notes?: string | null
+          obstacle_type?: string | null
+          radius_ft?: number | null
+          rotation_deg?: number | null
+          updated_at?: string | null
+          width_ft?: number | null
+        }
+        Update: {
+          base_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          height_ft?: number | null
+          id?: string
+          latitude?: number
+          length_ft?: number | null
+          line_coords?: Json | null
+          longitude?: number
+          name?: string | null
+          notes?: string | null
+          obstacle_type?: string | null
+          radius_ft?: number | null
+          rotation_deg?: number | null
+          updated_at?: string | null
+          width_ft?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_obstacles_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_obstacles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parking_plans: {
+        Row: {
+          base_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_template: boolean
+          plan_name: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          base_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_template?: boolean
+          plan_name: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_template?: boolean
+          plan_name?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_plans_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_plans_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parking_spots: {
+        Row: {
+          aircraft_name: string | null
+          base_id: string | null
+          clearance_ft: number | null
+          created_at: string | null
+          heading_deg: number | null
+          id: string
+          latitude: number
+          longitude: number
+          notes: string | null
+          plan_id: string | null
+          sort_order: number | null
+          spot_name: string | null
+          spot_type: string | null
+          status: string | null
+          tail_number: string | null
+          unit_callsign: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aircraft_name?: string | null
+          base_id?: string | null
+          clearance_ft?: number | null
+          created_at?: string | null
+          heading_deg?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          notes?: string | null
+          plan_id?: string | null
+          sort_order?: number | null
+          spot_name?: string | null
+          spot_type?: string | null
+          status?: string | null
+          tail_number?: string | null
+          unit_callsign?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aircraft_name?: string | null
+          base_id?: string | null
+          clearance_ft?: number | null
+          created_at?: string | null
+          heading_deg?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          notes?: string | null
+          plan_id?: string | null
+          sort_order?: number | null
+          spot_name?: string | null
+          spot_type?: string | null
+          status?: string | null
+          tail_number?: string | null
+          unit_callsign?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_spots_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_spots_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "parking_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parking_taxilanes: {
+        Row: {
+          base_id: string
+          created_at: string | null
+          created_by: string | null
+          design_aircraft: string | null
+          design_wingspan_ft: number | null
+          id: string
+          is_transient: boolean | null
+          line_coords: Json
+          name: string | null
+          notes: string | null
+          plan_id: string
+          taxilane_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_id: string
+          created_at?: string | null
+          created_by?: string | null
+          design_aircraft?: string | null
+          design_wingspan_ft?: number | null
+          id?: string
+          is_transient?: boolean | null
+          line_coords?: Json
+          name?: string | null
+          notes?: string | null
+          plan_id: string
+          taxilane_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          design_aircraft?: string | null
+          design_wingspan_ft?: number | null
+          id?: string
+          is_transient?: boolean | null
+          line_coords?: Json
+          name?: string | null
+          notes?: string | null
+          plan_id?: string
+          taxilane_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_taxilanes_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_taxilanes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parking_taxilanes_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "parking_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdf_extraction_status: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          extracted_at: string | null
+          file_name: string
+          file_size: number | null
+          status: string
+          total_pages: number | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          extracted_at?: string | null
+          file_name: string
+          file_size?: number | null
+          status?: string
+          total_pages?: number | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          extracted_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          status?: string
+          total_pages?: number | null
+        }
+        Relationships: []
+      }
+      pdf_text_pages: {
+        Row: {
+          extracted_at: string
+          file_name: string
+          id: number
+          page_number: number
+          text_content: string
+          tsv: unknown
+        }
+        Insert: {
+          extracted_at?: string
+          file_name: string
+          id?: never
+          page_number: number
+          text_content?: string
+          tsv?: unknown
+        }
+        Update: {
+          extracted_at?: string
+          file_name?: string
+          id?: never
+          page_number?: number
+          text_content?: string
+          tsv?: unknown
+        }
+        Relationships: []
+      }
+      photos: {
+        Row: {
+          acsi_inspection_id: string | null
+          acsi_item_id: string | null
+          base_id: string | null
+          captured_at: string
+          check_id: string | null
+          created_at: string
+          discrepancy_id: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          inspection_id: string | null
+          inspection_item_id: string | null
+          issue_index: number | null
+          latitude: number | null
+          longitude: number | null
+          mime_type: string
+          storage_path: string
+          thumbnail_path: string | null
+          uploaded_by: string | null
+          wildlife_sighting_id: string | null
+          wildlife_strike_id: string | null
+        }
+        Insert: {
+          acsi_inspection_id?: string | null
+          acsi_item_id?: string | null
+          base_id?: string | null
+          captured_at?: string
+          check_id?: string | null
+          created_at?: string
+          discrepancy_id?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          inspection_id?: string | null
+          inspection_item_id?: string | null
+          issue_index?: number | null
+          latitude?: number | null
+          longitude?: number | null
+          mime_type?: string
+          storage_path: string
+          thumbnail_path?: string | null
+          uploaded_by?: string | null
+          wildlife_sighting_id?: string | null
+          wildlife_strike_id?: string | null
+        }
+        Update: {
+          acsi_inspection_id?: string | null
+          acsi_item_id?: string | null
+          base_id?: string | null
+          captured_at?: string
+          check_id?: string | null
+          created_at?: string
+          discrepancy_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          inspection_id?: string | null
+          inspection_item_id?: string | null
+          issue_index?: number | null
+          latitude?: number | null
+          longitude?: number | null
+          mime_type?: string
+          storage_path?: string
+          thumbnail_path?: string | null
+          uploaded_by?: string | null
+          wildlife_sighting_id?: string | null
+          wildlife_strike_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_acsi_inspection_id_fkey"
+            columns: ["acsi_inspection_id"]
+            isOneToOne: false
+            referencedRelation: "acsi_inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "airfield_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_discrepancy_id_fkey"
+            columns: ["discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_wildlife_sighting_id_fkey"
+            columns: ["wildlife_sighting_id"]
+            isOneToOne: false
+            referencedRelation: "wildlife_sightings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_wildlife_strike_id_fkey"
+            columns: ["wildlife_strike_id"]
+            isOneToOne: false
+            referencedRelation: "wildlife_strikes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppr_columns: {
+        Row: {
+          base_id: string
+          column_name: string
+          column_type: string
+          created_at: string
+          id: string
+          is_required: boolean
+          sort_order: number
+        }
+        Insert: {
+          base_id: string
+          column_name: string
+          column_type?: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          sort_order?: number
+        }
+        Update: {
+          base_id?: string
+          column_name?: string
+          column_type?: string
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_columns_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppr_entries: {
+        Row: {
+          approver_oi: string | null
+          arrival_date: string
+          base_id: string
+          column_values: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          ppr_number: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          approver_oi?: string | null
+          arrival_date: string
+          base_id: string
+          column_values?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          ppr_number: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          approver_oi?: string | null
+          arrival_date?: string
+          base_id?: string
+          column_values?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          ppr_number?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_entries_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_entries_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          default_pdf_email: string | null
+          edipi: string | null
+          email: string
+          first_name: string | null
+          id: string
+          is_active: boolean
+          last_name: string | null
+          last_seen_at: string | null
+          name: string
+          operating_initials: string | null
+          organization: string | null
+          phone: string | null
+          primary_base_id: string | null
+          rank: string | null
+          role: string
+          shop: string | null
+          sidebar_config: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_pdf_email?: string | null
+          edipi?: string | null
+          email: string
+          first_name?: string | null
+          id: string
+          is_active?: boolean
+          last_name?: string | null
+          last_seen_at?: string | null
+          name: string
+          operating_initials?: string | null
+          organization?: string | null
+          phone?: string | null
+          primary_base_id?: string | null
+          rank?: string | null
+          role?: string
+          shop?: string | null
+          sidebar_config?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_pdf_email?: string | null
+          edipi?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_name?: string | null
+          last_seen_at?: string | null
+          name?: string
+          operating_initials?: string | null
+          organization?: string | null
+          phone?: string | null
+          primary_base_id?: string | null
+          rank?: string | null
+          role?: string
+          shop?: string | null
+          sidebar_config?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_primary_base_id_fkey"
+            columns: ["primary_base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qrc_executions: {
+        Row: {
+          base_id: string
+          close_initials: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          open_initials: string | null
+          opened_at: string
+          opened_by: string | null
+          qrc_number: number
+          scn_data: Json | null
+          status: string
+          step_responses: Json
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          close_initials?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          open_initials?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          qrc_number: number
+          scn_data?: Json | null
+          status?: string
+          step_responses?: Json
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          close_initials?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          open_initials?: string | null
+          opened_at?: string
+          opened_by?: string | null
+          qrc_number?: number
+          scn_data?: Json | null
+          status?: string
+          step_responses?: Json
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qrc_executions_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrc_executions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "qrc_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qrc_templates: {
+        Row: {
+          base_id: string
+          created_at: string
+          has_scn_form: boolean
+          id: string
+          is_active: boolean
+          last_reviewed_at: string | null
+          last_reviewed_by: string | null
+          notes: string | null
+          qrc_number: number
+          references: string | null
+          review_notes: string | null
+          scn_fields: Json | null
+          sort_order: number
+          steps: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          has_scn_form?: boolean
+          id?: string
+          is_active?: boolean
+          last_reviewed_at?: string | null
+          last_reviewed_by?: string | null
+          notes?: string | null
+          qrc_number: number
+          references?: string | null
+          review_notes?: string | null
+          scn_fields?: Json | null
+          sort_order?: number
+          steps?: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          has_scn_form?: boolean
+          id?: string
+          is_active?: boolean
+          last_reviewed_at?: string | null
+          last_reviewed_by?: string | null
+          notes?: string | null
+          qrc_number?: number
+          references?: string | null
+          review_notes?: string | null
+          scn_fields?: Json | null
+          sort_order?: number
+          steps?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qrc_templates_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regulations: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          file_size_bytes: number | null
+          id: string
+          is_core: boolean
+          is_cross_ref: boolean
+          is_scrubbed: boolean
+          last_verified_at: string | null
+          pub_type: string
+          publication_date: string | null
+          reg_id: string
+          source_section: string
+          source_volume: string | null
+          storage_path: string | null
+          tags: string[]
+          title: string
+          url: string | null
+          verified_date: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          file_size_bytes?: number | null
+          id?: string
+          is_core?: boolean
+          is_cross_ref?: boolean
+          is_scrubbed?: boolean
+          last_verified_at?: string | null
+          pub_type: string
+          publication_date?: string | null
+          reg_id: string
+          source_section: string
+          source_volume?: string | null
+          storage_path?: string | null
+          tags?: string[]
+          title: string
+          url?: string | null
+          verified_date?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          file_size_bytes?: number | null
+          id?: string
+          is_core?: boolean
+          is_cross_ref?: boolean
+          is_scrubbed?: boolean
+          last_verified_at?: string | null
+          pub_type?: string
+          publication_date?: string | null
+          reg_id?: string
+          source_section?: string
+          source_volume?: string | null
+          storage_path?: string | null
+          tags?: string[]
+          title?: string
+          url?: string | null
+          verified_date?: string | null
+        }
+        Relationships: []
+      }
+      runway_status_log: {
+        Row: {
+          base_id: string | null
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_active_runway: string | null
+          new_advisory_text: string | null
+          new_advisory_type: string | null
+          new_runway_status: string | null
+          old_active_runway: string | null
+          old_advisory_text: string | null
+          old_advisory_type: string | null
+          old_runway_status: string | null
+          reason: string | null
+        }
+        Insert: {
+          base_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_active_runway?: string | null
+          new_advisory_text?: string | null
+          new_advisory_type?: string | null
+          new_runway_status?: string | null
+          old_active_runway?: string | null
+          old_advisory_text?: string | null
+          old_advisory_type?: string | null
+          old_runway_status?: string | null
+          reason?: string | null
+        }
+        Update: {
+          base_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_active_runway?: string | null
+          new_advisory_text?: string | null
+          new_advisory_type?: string | null
+          new_runway_status?: string | null
+          old_active_runway?: string | null
+          old_advisory_text?: string | null
+          old_advisory_type?: string | null
+          old_runway_status?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runway_status_log_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "runway_status_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_checklist_items: {
+        Row: {
+          base_id: string
+          created_at: string
+          created_by: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          label: string
+          shift: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          shift?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          shift?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_items_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_checklist_responses: {
+        Row: {
+          checklist_id: string
+          completed: boolean
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          is_na: boolean
+          item_id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          checklist_id: string
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          is_na?: boolean
+          item_id: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          checklist_id?: string
+          completed?: boolean
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          is_na?: boolean
+          item_id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_responses_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_responses_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_checklists: {
+        Row: {
+          base_id: string
+          checklist_date: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          checklist_date?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          checklist_date?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklists_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      status_updates: {
+        Row: {
+          base_id: string | null
+          created_at: string
+          discrepancy_id: string
+          id: string
+          new_status: string | null
+          notes: string | null
+          old_status: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          base_id?: string | null
+          created_at?: string
+          discrepancy_id: string
+          id?: string
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string | null
+          created_at?: string
+          discrepancy_id?: string
+          id?: string
+          new_status?: string | null
+          notes?: string | null
+          old_status?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_updates_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_updates_discrepancy_id_fkey"
+            columns: ["discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_updates_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_document_pages: {
+        Row: {
+          document_id: string
+          extracted_at: string
+          file_name: string
+          id: number
+          page_number: number
+          text_content: string
+          tsv: unknown
+          user_id: string
+        }
+        Insert: {
+          document_id: string
+          extracted_at?: string
+          file_name: string
+          id?: never
+          page_number: number
+          text_content?: string
+          tsv?: unknown
+          user_id: string
+        }
+        Update: {
+          document_id?: string
+          extracted_at?: string
+          file_name?: string
+          id?: never
+          page_number?: number
+          text_content?: string
+          tsv?: unknown
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_document_pages_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "user_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_documents: {
+        Row: {
+          base_id: string | null
+          display_name: string
+          extracted_at: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          notes: string | null
+          status: string
+          total_pages: number | null
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          base_id?: string | null
+          display_name: string
+          extracted_at?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          total_pages?: number | null
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string | null
+          display_name?: string
+          extracted_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          notes?: string | null
+          status?: string
+          total_pages?: number | null
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_regulation_pdfs: {
+        Row: {
+          file_name: string
+          file_size_bytes: number | null
+          id: string
+          reg_id: string
+          storage_path: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          file_name: string
+          file_size_bytes?: number | null
+          id?: string
+          reg_id: string
+          storage_path: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          file_name?: string
+          file_size_bytes?: number | null
+          id?: string
+          reg_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_regulation_pdfs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waiver_attachments: {
+        Row: {
+          caption: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string
+          id: string
+          mime_type: string | null
+          uploaded_by: string | null
+          waiver_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          mime_type?: string | null
+          uploaded_by?: string | null
+          waiver_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          mime_type?: string | null
+          uploaded_by?: string | null
+          waiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiver_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiver_attachments_waiver_id_fkey"
+            columns: ["waiver_id"]
+            isOneToOne: false
+            referencedRelation: "waivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waiver_coordination: {
+        Row: {
+          comments: string | null
+          coordinated_date: string | null
+          coordinator_name: string | null
+          id: string
+          office: string
+          office_label: string | null
+          status: string
+          waiver_id: string
+        }
+        Insert: {
+          comments?: string | null
+          coordinated_date?: string | null
+          coordinator_name?: string | null
+          id?: string
+          office: string
+          office_label?: string | null
+          status?: string
+          waiver_id: string
+        }
+        Update: {
+          comments?: string | null
+          coordinated_date?: string | null
+          coordinator_name?: string | null
+          id?: string
+          office?: string
+          office_label?: string | null
+          status?: string
+          waiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiver_coordination_waiver_id_fkey"
+            columns: ["waiver_id"]
+            isOneToOne: false
+            referencedRelation: "waivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waiver_criteria: {
+        Row: {
+          criteria_source: string
+          description: string | null
+          id: string
+          reference: string | null
+          sort_order: number
+          waiver_id: string
+        }
+        Insert: {
+          criteria_source: string
+          description?: string | null
+          id?: string
+          reference?: string | null
+          sort_order?: number
+          waiver_id: string
+        }
+        Update: {
+          criteria_source?: string
+          description?: string | null
+          id?: string
+          reference?: string | null
+          sort_order?: number
+          waiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiver_criteria_waiver_id_fkey"
+            columns: ["waiver_id"]
+            isOneToOne: false
+            referencedRelation: "waivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waiver_reviews: {
+        Row: {
+          created_at: string
+          facilities_board_date: string | null
+          id: string
+          mitigation_verified: boolean | null
+          notes: string | null
+          presented_to_facilities_board: boolean | null
+          project_status_update: string | null
+          recommendation: string | null
+          review_date: string | null
+          review_year: number
+          reviewed_by: string | null
+          waiver_id: string
+        }
+        Insert: {
+          created_at?: string
+          facilities_board_date?: string | null
+          id?: string
+          mitigation_verified?: boolean | null
+          notes?: string | null
+          presented_to_facilities_board?: boolean | null
+          project_status_update?: string | null
+          recommendation?: string | null
+          review_date?: string | null
+          review_year: number
+          reviewed_by?: string | null
+          waiver_id: string
+        }
+        Update: {
+          created_at?: string
+          facilities_board_date?: string | null
+          id?: string
+          mitigation_verified?: boolean | null
+          notes?: string | null
+          presented_to_facilities_board?: boolean | null
+          project_status_update?: string | null
+          recommendation?: string | null
+          review_date?: string | null
+          review_year?: number
+          reviewed_by?: string | null
+          waiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiver_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiver_reviews_waiver_id_fkey"
+            columns: ["waiver_id"]
+            isOneToOne: false
+            referencedRelation: "waivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waivers: {
+        Row: {
+          action_requested: string | null
+          attachment_count: number
+          base_id: string | null
+          classification: string
+          corrective_action: string | null
+          created_at: string
+          created_by: string | null
+          criteria_impact: string | null
+          date_approved: string | null
+          date_submitted: string | null
+          description: string
+          estimated_cost: number | null
+          expiration_date: string | null
+          faa_case_number: string | null
+          hazard_rating: string | null
+          id: string
+          justification: string | null
+          last_reviewed_date: string | null
+          location_description: string | null
+          location_lat: number | null
+          location_lng: number | null
+          next_review_due: string | null
+          notes: string | null
+          period_valid: string | null
+          photo_count: number
+          program_fy: number | null
+          project_number: string | null
+          project_status: string | null
+          proponent: string | null
+          risk_assessment_summary: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          waiver_number: string
+        }
+        Insert: {
+          action_requested?: string | null
+          attachment_count?: number
+          base_id?: string | null
+          classification: string
+          corrective_action?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria_impact?: string | null
+          date_approved?: string | null
+          date_submitted?: string | null
+          description?: string
+          estimated_cost?: number | null
+          expiration_date?: string | null
+          faa_case_number?: string | null
+          hazard_rating?: string | null
+          id?: string
+          justification?: string | null
+          last_reviewed_date?: string | null
+          location_description?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          next_review_due?: string | null
+          notes?: string | null
+          period_valid?: string | null
+          photo_count?: number
+          program_fy?: number | null
+          project_number?: string | null
+          project_status?: string | null
+          proponent?: string | null
+          risk_assessment_summary?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          waiver_number: string
+        }
+        Update: {
+          action_requested?: string | null
+          attachment_count?: number
+          base_id?: string | null
+          classification?: string
+          corrective_action?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria_impact?: string | null
+          date_approved?: string | null
+          date_submitted?: string | null
+          description?: string
+          estimated_cost?: number | null
+          expiration_date?: string | null
+          faa_case_number?: string | null
+          hazard_rating?: string | null
+          id?: string
+          justification?: string | null
+          last_reviewed_date?: string | null
+          location_description?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          next_review_due?: string | null
+          notes?: string | null
+          period_valid?: string | null
+          photo_count?: number
+          program_fy?: number | null
+          project_number?: string | null
+          project_status?: string | null
+          proponent?: string | null
+          risk_assessment_summary?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          waiver_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waivers_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waivers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waivers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wildlife_sightings: {
+        Row: {
+          action_taken: string | null
+          airfield_zone: string | null
+          base_id: string | null
+          behavior: string | null
+          bwc_at_time: string | null
+          check_id: string | null
+          count_observed: number
+          created_at: string | null
+          discrepancy_id: string | null
+          dispersal_effective: boolean | null
+          dispersal_method: string | null
+          display_id: string
+          id: string
+          inspection_id: string | null
+          latitude: number | null
+          location_text: string | null
+          longitude: number | null
+          notes: string | null
+          observed_at: string
+          observed_by: string
+          observed_by_id: string | null
+          photo_count: number | null
+          precipitation: string | null
+          size_category: string | null
+          sky_condition: string | null
+          species_common: string
+          species_group: string
+          species_scientific: string | null
+          time_of_day: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          airfield_zone?: string | null
+          base_id?: string | null
+          behavior?: string | null
+          bwc_at_time?: string | null
+          check_id?: string | null
+          count_observed?: number
+          created_at?: string | null
+          discrepancy_id?: string | null
+          dispersal_effective?: boolean | null
+          dispersal_method?: string | null
+          display_id: string
+          id?: string
+          inspection_id?: string | null
+          latitude?: number | null
+          location_text?: string | null
+          longitude?: number | null
+          notes?: string | null
+          observed_at?: string
+          observed_by: string
+          observed_by_id?: string | null
+          photo_count?: number | null
+          precipitation?: string | null
+          size_category?: string | null
+          sky_condition?: string | null
+          species_common: string
+          species_group: string
+          species_scientific?: string | null
+          time_of_day?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          airfield_zone?: string | null
+          base_id?: string | null
+          behavior?: string | null
+          bwc_at_time?: string | null
+          check_id?: string | null
+          count_observed?: number
+          created_at?: string | null
+          discrepancy_id?: string | null
+          dispersal_effective?: boolean | null
+          dispersal_method?: string | null
+          display_id?: string
+          id?: string
+          inspection_id?: string | null
+          latitude?: number | null
+          location_text?: string | null
+          longitude?: number | null
+          notes?: string | null
+          observed_at?: string
+          observed_by?: string
+          observed_by_id?: string | null
+          photo_count?: number | null
+          precipitation?: string | null
+          size_category?: string | null
+          sky_condition?: string | null
+          species_common?: string
+          species_group?: string
+          species_scientific?: string | null
+          time_of_day?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wildlife_sightings_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_sightings_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "airfield_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_sightings_discrepancy_id_fkey"
+            columns: ["discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_sightings_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wildlife_strikes: {
+        Row: {
+          aircraft_registration: string | null
+          aircraft_type: string | null
+          altitude_agl: number | null
+          base_id: string | null
+          bwc_at_time: string | null
+          created_at: string | null
+          damage_level: string | null
+          discrepancy_id: string | null
+          display_id: string
+          engine_ingested: boolean | null
+          engine_type: string | null
+          engines_ingested: number[] | null
+          flight_effect: string | null
+          hours_out_of_service: number | null
+          id: string
+          lab_identification: string | null
+          latitude: number | null
+          location_text: string | null
+          longitude: number | null
+          notes: string | null
+          number_seen: number | null
+          number_struck: number | null
+          other_cost: number | null
+          parts_damaged: string[] | null
+          parts_struck: string[] | null
+          phase_of_flight: string | null
+          photo_count: number | null
+          pilot_warned: boolean | null
+          precipitation: string | null
+          remains_collected: boolean | null
+          remains_sent_to_lab: boolean | null
+          repair_cost: number | null
+          reported_by: string
+          reported_by_id: string | null
+          sighting_id: string | null
+          size_category: string | null
+          sky_condition: string | null
+          species_common: string | null
+          species_group: string | null
+          species_scientific: string | null
+          speed_ias: number | null
+          strike_date: string
+          time_of_day: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aircraft_registration?: string | null
+          aircraft_type?: string | null
+          altitude_agl?: number | null
+          base_id?: string | null
+          bwc_at_time?: string | null
+          created_at?: string | null
+          damage_level?: string | null
+          discrepancy_id?: string | null
+          display_id: string
+          engine_ingested?: boolean | null
+          engine_type?: string | null
+          engines_ingested?: number[] | null
+          flight_effect?: string | null
+          hours_out_of_service?: number | null
+          id?: string
+          lab_identification?: string | null
+          latitude?: number | null
+          location_text?: string | null
+          longitude?: number | null
+          notes?: string | null
+          number_seen?: number | null
+          number_struck?: number | null
+          other_cost?: number | null
+          parts_damaged?: string[] | null
+          parts_struck?: string[] | null
+          phase_of_flight?: string | null
+          photo_count?: number | null
+          pilot_warned?: boolean | null
+          precipitation?: string | null
+          remains_collected?: boolean | null
+          remains_sent_to_lab?: boolean | null
+          repair_cost?: number | null
+          reported_by: string
+          reported_by_id?: string | null
+          sighting_id?: string | null
+          size_category?: string | null
+          sky_condition?: string | null
+          species_common?: string | null
+          species_group?: string | null
+          species_scientific?: string | null
+          speed_ias?: number | null
+          strike_date?: string
+          time_of_day?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aircraft_registration?: string | null
+          aircraft_type?: string | null
+          altitude_agl?: number | null
+          base_id?: string | null
+          bwc_at_time?: string | null
+          created_at?: string | null
+          damage_level?: string | null
+          discrepancy_id?: string | null
+          display_id?: string
+          engine_ingested?: boolean | null
+          engine_type?: string | null
+          engines_ingested?: number[] | null
+          flight_effect?: string | null
+          hours_out_of_service?: number | null
+          id?: string
+          lab_identification?: string | null
+          latitude?: number | null
+          location_text?: string | null
+          longitude?: number | null
+          notes?: string | null
+          number_seen?: number | null
+          number_struck?: number | null
+          other_cost?: number | null
+          parts_damaged?: string[] | null
+          parts_struck?: string[] | null
+          phase_of_flight?: string | null
+          photo_count?: number | null
+          pilot_warned?: boolean | null
+          precipitation?: string | null
+          remains_collected?: boolean | null
+          remains_sent_to_lab?: boolean | null
+          repair_cost?: number | null
+          reported_by?: string
+          reported_by_id?: string | null
+          sighting_id?: string | null
+          size_category?: string | null
+          sky_condition?: string | null
+          species_common?: string | null
+          species_group?: string | null
+          species_scientific?: string | null
+          speed_ias?: number | null
+          strike_date?: string
+          time_of_day?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wildlife_strikes_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_strikes_discrepancy_id_fkey"
+            columns: ["discrepancy_id"]
+            isOneToOne: false
+            referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_strikes_sighting_id_fkey"
+            columns: ["sighting_id"]
+            isOneToOne: false
+            referencedRelation: "wildlife_sightings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
-    Enums: Record<string, never>
-    CompositeTypes: Record<string, never>
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      generate_display_id: {
+        Args: { prefix: string; seq_name: string }
+        Returns: string
+      }
+      search_all_pdfs: {
+        Args: { max_results?: number; search_query: string }
+        Returns: {
+          file_name: string
+          headline: string
+          page_number: number
+          rank: number
+        }[]
+      }
+      search_pdf: {
+        Args: { search_query: string; target_file: string }
+        Returns: {
+          headline: string
+          page_number: number
+          rank: number
+        }[]
+      }
+      search_user_documents: {
+        Args: { max_results?: number; search_query: string }
+        Returns: {
+          document_id: string
+          file_name: string
+          headline: string
+          page_number: number
+          rank: number
+        }[]
+      }
+      update_airfield_status:
+        | {
+            Args: { p_updated_by?: string; p_updates: Json }
+            Returns: undefined
+          }
+        | {
+            Args: { p_base_id?: string; p_updated_by?: string; p_updates: Json }
+            Returns: undefined
+          }
+      user_can_write: { Args: { p_user_id: string }; Returns: boolean }
+      user_has_base_access: {
+        Args: { p_base_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      user_is_admin: { Args: { p_user_id: string }; Returns: boolean }
+      user_is_base_admin_at: {
+        Args: { p_base_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      user_is_sys_admin: { Args: { p_user_id: string }; Returns: boolean }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
+
+
 
 // Convenience type aliases
 export type UserRole =

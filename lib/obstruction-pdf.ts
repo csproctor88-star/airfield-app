@@ -21,8 +21,8 @@ interface ObstructionPdfInput {
   evaluation: ObstructionRow
   photoDataUrls: string[]
   mapDataUrl?: string | null
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 export async function generateObstructionPdf(input: ObstructionPdfInput) {

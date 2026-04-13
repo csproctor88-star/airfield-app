@@ -83,7 +83,7 @@ export async function fetchAirfieldStatus(baseId?: string | null): Promise<Airfi
     return null
   }
 
-  return data as AirfieldStatus
+  return data as unknown as AirfieldStatus
 }
 
 export async function updateAirfieldStatus(
@@ -111,7 +111,7 @@ export async function updateAirfieldStatus(
   const { error } = await supabase
     .from('airfield_status')
     .update({
-      ...updates,
+      ...(updates as Record<string, unknown>),
       updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     })
@@ -156,7 +156,7 @@ export async function logRunwayStatusChange(
     new_advisory_text: params.newAdvisoryText ?? null,
     changed_by: user?.id ?? null,
     reason: null,
-  } as any)
+  })
 }
 
 /** Fetch runway status changes within a date range */

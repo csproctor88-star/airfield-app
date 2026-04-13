@@ -25,7 +25,7 @@ export async function logActivity(
   }
   if (baseId) row.base_id = baseId
 
-  await supabase.from('activity_log').insert(row as any)
+  await supabase.from('activity_log').insert(row as never)
 }
 
 export async function logManualEntry(text: string, baseId?: string | null, category?: string, templateLabel?: string): Promise<{ error: string | null }> {
@@ -45,7 +45,7 @@ export async function logManualEntry(text: string, baseId?: string | null, categ
   }
   if (baseId) row.base_id = baseId
 
-  const { error } = await supabase.from('activity_log').insert(row as any)
+  const { error } = await supabase.from('activity_log').insert(row as never)
 
   if (error) {
     console.error('Manual activity entry failed:', error.message)
@@ -69,7 +69,7 @@ export async function updateActivityEntry(id: string, notes: string, createdAt?:
 
   const { data, error } = await supabase
     .from('activity_log')
-    .update(updates as any)
+    .update(updates as never)
     .eq('id', id)
     .select('id')
 

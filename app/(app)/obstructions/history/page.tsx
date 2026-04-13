@@ -13,7 +13,7 @@ const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruct
 function matchesSearch(ev: ObstructionRow, query: string): boolean {
   const q = query.toLowerCase()
   const fields: string[] = [
-    ev.display_id,
+    ev.display_id ?? '',
     ev.notes ?? '',
     ev.description ?? '',
     ev.controlling_surface ?? '',

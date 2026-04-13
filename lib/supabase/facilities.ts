@@ -44,7 +44,7 @@ export async function createFacility(input: {
       facility_number: input.facility_number,
       description: input.description,
       sort_order: input.sort_order ?? 0,
-    } as any)
+    })
     .select()
     .single()
 
@@ -72,7 +72,7 @@ export async function bulkCreateFacilities(
 
   const { data, error } = await supabase
     .from('base_facilities')
-    .insert(inserts as any)
+    .insert(inserts as never)
     .select()
 
   if (error) {

@@ -8,8 +8,8 @@ interface PersonnelPdfInput {
   contractors: ContractorRow[]
   filterLabel: string  // e.g., "Active", "All", "Completed"
   searchQuery?: string
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 function af483Status(exp: string | null): string {

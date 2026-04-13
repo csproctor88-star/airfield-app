@@ -51,7 +51,7 @@ export async function createTaxiway(
       standard: taxiway.standard || 'faa',
       runway_class: taxiway.runway_class ?? null,
       service_branch: taxiway.service_branch ?? null,
-    } as any)
+    })
     .select('*')
     .single()
 
@@ -81,7 +81,7 @@ export async function updateTaxiway(
 
   const { data, error } = await supabase
     .from('base_taxiways')
-    .update({ ...updates, updated_at: new Date().toISOString() } as any)
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*')
     .single()

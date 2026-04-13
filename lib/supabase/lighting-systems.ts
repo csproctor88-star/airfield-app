@@ -90,7 +90,7 @@ export async function createLightingSystem(input: {
       runway_or_taxiway: input.runway_or_taxiway || null,
       is_precision: input.is_precision || false,
       notes: input.notes || null,
-    } as any)
+    })
     .select('*')
     .single()
 
@@ -109,7 +109,7 @@ export async function updateLightingSystem(
 
   const { error } = await supabase
     .from('lighting_systems')
-    .update({ ...updates, updated_at: new Date().toISOString() } as any)
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
 
   return !error
@@ -139,17 +139,17 @@ export async function createSystemComponent(input: {
   allowable_outage_pct?: number | null
   allowable_outage_count?: number | null
   allowable_outage_consecutive?: number | null
-  allowable_no_adjacent?: boolean
-  allowable_outage_text?: string
-  is_zero_tolerance?: boolean
-  requires_notam?: boolean
-  requires_ce_notification?: boolean
-  requires_system_shutoff?: boolean
-  requires_terps_notification?: boolean
-  requires_obstruction_notam_attrs?: boolean
-  q_code?: string
-  notam_text_template?: string
-  sort_order?: number
+  allowable_no_adjacent?: boolean | null
+  allowable_outage_text?: string | null
+  is_zero_tolerance?: boolean | null
+  requires_notam?: boolean | null
+  requires_ce_notification?: boolean | null
+  requires_system_shutoff?: boolean | null
+  requires_terps_notification?: boolean | null
+  requires_obstruction_notam_attrs?: boolean | null
+  q_code?: string | null
+  notam_text_template?: string | null
+  sort_order?: number | null
 }): Promise<LightingSystemComponent | null> {
   const supabase = createClient()
   if (!supabase) return null
@@ -175,7 +175,7 @@ export async function createSystemComponent(input: {
       q_code: input.q_code || null,
       notam_text_template: input.notam_text_template || null,
       sort_order: input.sort_order ?? 0,
-    } as any)
+    })
     .select('*')
     .single()
 
@@ -194,7 +194,7 @@ export async function updateSystemComponent(
 
   const { error } = await supabase
     .from('lighting_system_components')
-    .update(updates as any)
+    .update(updates as never)
     .eq('id', id)
 
   return !error

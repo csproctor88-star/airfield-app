@@ -1,7 +1,7 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { logActivity } from './activity'
-import type { QrcTemplate, QrcExecution, QrcStepResponse } from './types'
+import type { QrcTemplate, QrcExecution, QrcStepResponse, Json } from './types'
 
 // --- Templates ---
 
@@ -37,12 +37,12 @@ export async function createQrcTemplate(input: {
       qrc_number: input.qrc_number,
       title: input.title,
       notes: input.notes ?? null,
-      steps: input.steps as any,
+      steps: input.steps as unknown as Json,
       references: input.references ?? null,
       has_scn_form: input.has_scn_form ?? false,
-      scn_fields: input.scn_fields ?? null,
+      scn_fields: (input.scn_fields ?? null) as Json | null,
       sort_order: input.sort_order ?? input.qrc_number,
-    } as any)
+    })
     .select()
     .single()
   if (error) return { data: null, error: friendlyError(error.message) }
@@ -57,7 +57,7 @@ export async function updateQrcTemplate(
   if (!supabase) return { error: 'Supabase not configured' }
   const { error } = await supabase
     .from('qrc_templates')
-    .update({ ...updates, updated_at: new Date().toISOString() } as any)
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
   return { error: error?.message || null }
 }
@@ -82,7 +82,7 @@ export async function reviewQrcTemplate(
       last_reviewed_by: userId || null,
       review_notes: reviewNotes?.trim() || null,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', id)
   return { error: error?.message || null }
 }
@@ -124,7 +124,7 @@ export async function seedQrcTemplates(baseId: string, selectedNumbers?: number[
 
   if (toInsert.length === 0) return { count: 0, error: null }
 
-  const { error } = await supabase.from('qrc_templates').insert(toInsert as any)
+  const { error } = await supabase.from('qrc_templates').insert(toInsert as never)
   if (error) return { count: 0, error: friendlyError(error.message) }
   return { count: toInsert.length, error: null }
 }
@@ -156,7 +156,7 @@ export async function startQrcExecution(input: {
       title: input.title,
       opened_by: userId || null,
       open_initials: input.initials || null,
-    } as any)
+    })
     .select()
     .single()
 
@@ -231,7 +231,7 @@ export async function updateStepResponse(
 
   const { error } = await supabase
     .from('qrc_executions')
-    .update({ step_responses: responses, updated_at: new Date().toISOString() } as any)
+    .update({ step_responses: responses, updated_at: new Date().toISOString() })
     .eq('id', executionId)
 
   return { error: error?.message || null }
@@ -245,7 +245,7 @@ export async function updateScnData(
   if (!supabase) return { error: 'Supabase not configured' }
   const { error } = await supabase
     .from('qrc_executions')
-    .update({ scn_data: scnData, updated_at: new Date().toISOString() } as any)
+    .update({ scn_data: scnData as unknown as Json, updated_at: new Date().toISOString() })
     .eq('id', executionId)
   return { error: error?.message || null }
 }
@@ -272,7 +272,7 @@ export async function closeQrcExecution(
       closed_at: new Date().toISOString(),
       close_initials: initials || null,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', executionId)
     .select('qrc_number, title, scn_data, template_id')
     .single()
@@ -320,7 +320,7 @@ export async function reopenQrcExecution(executionId: string): Promise<{ error: 
       closed_at: null,
       close_initials: null,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', executionId)
   return { error: error?.message || null }
 }

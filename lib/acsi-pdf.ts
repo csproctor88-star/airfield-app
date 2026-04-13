@@ -7,8 +7,8 @@ import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
 import type { AcsiInspection, AcsiItem } from '@/lib/supabase/types'
 
 interface AcsiPdfOptions {
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
   baseId?: string | null
 }
 

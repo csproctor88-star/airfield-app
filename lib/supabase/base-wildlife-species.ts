@@ -26,7 +26,7 @@ export async function addBaseSpecies(installationId: string, speciesCommon: stri
   if (!supabase) return { error: 'Not connected' }
   const { error } = await supabase
     .from('base_wildlife_species')
-    .insert({ base_id: installationId, species_common: speciesCommon } as any)
+    .insert({ base_id: installationId, species_common: speciesCommon })
   if (error) {
     if (error.code === '23505') return { error: null } // duplicate, treat as success
     return { error: friendlyError(error.message) }
@@ -73,7 +73,7 @@ export async function toggleFavoriteSpecies(installationId: string, speciesCommo
   if (!supabase) return { error: 'Not connected' }
   const { error } = await supabase
     .from('base_wildlife_species')
-    .update({ is_favorite: isFavorite } as any)
+    .update({ is_favorite: isFavorite })
     .eq('base_id', installationId)
     .eq('species_common', speciesCommon)
   if (error) return { error: friendlyError(error.message) }

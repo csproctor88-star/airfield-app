@@ -188,7 +188,7 @@ export async function createInfrastructureFeature(input: {
       notes: input.notes || null,
       source: input.source || 'user',
       created_by: user?.id || null,
-    } as any)
+    })
     .select('*')
     .single()
 
@@ -216,7 +216,7 @@ export async function updateInfrastructureFeature(
 
   const { data, error } = await supabase
     .from('infrastructure_features')
-    .update({ ...updates, updated_at: new Date().toISOString() } as any)
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('id')
     .single()
@@ -256,7 +256,7 @@ export async function updateFeatureStatus(
       status_changed_at: new Date().toISOString(),
       status_changed_by: user?.id || null,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', id)
     .select('*')
     .single()
@@ -286,7 +286,7 @@ export async function bulkUpdateStatus(
         status_changed_at: new Date().toISOString(),
         status_changed_by: user?.id || null,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .in('id', batch)
     if (!error) updated += batch.length
   }
@@ -328,7 +328,7 @@ export async function bulkShiftFeatures(
           longitude: f.longitude + lngOffset,
           latitude: f.latitude + latOffset,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', f.id)
     )
     const results = await Promise.all(promises)
@@ -365,7 +365,7 @@ export async function bulkShiftByIds(
           longitude: f.longitude + lngOffset,
           latitude: f.latitude + latOffset,
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', f.id)
     )
     const results = await Promise.all(promises)
@@ -389,7 +389,7 @@ export async function bulkRelayerFeatures(
     const batch = ids.slice(i, i + 200)
     const { error } = await supabase
       .from('infrastructure_features')
-      .update({ layer: newLayer, updated_at: new Date().toISOString() } as any)
+      .update({ layer: newLayer, updated_at: new Date().toISOString() })
       .in('id', batch)
     if (!error) updated += batch.length
   }
@@ -439,7 +439,7 @@ export async function bulkCreateInfrastructureFeatures(
     const batch = rows.slice(i, i + 500)
     const { error } = await supabase
       .from('infrastructure_features')
-      .insert(batch as any)
+      .insert(batch)
     if (!error) inserted += batch.length
   }
 
@@ -457,7 +457,7 @@ export async function bulkAssignBarGroup(ids: string[], barGroupId: string): Pro
     const batch = ids.slice(i, i + 200)
     const { error, count } = await supabase
       .from('infrastructure_features')
-      .update({ bar_group_id: barGroupId, updated_at: new Date().toISOString() } as any)
+      .update({ bar_group_id: barGroupId, updated_at: new Date().toISOString() })
       .in('id', batch)
     if (error) {
       console.error('bulkAssignBarGroup error:', error.message, error.details, error.hint)
@@ -576,7 +576,7 @@ export async function bulkPrefixLabels(
         .update({
           label: `${prefix}${f.label || ''}`.trim(),
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', f.id)
     )
     const results = await Promise.all(promises)
@@ -600,7 +600,7 @@ export async function bulkUpdateFixtureIds(
     const promises = batch.map(u =>
       supabase
         .from('infrastructure_features')
-        .update({ block: u.block, updated_at: new Date().toISOString() } as any)
+        .update({ block: u.block, updated_at: new Date().toISOString() })
         .eq('id', u.id)
     )
     const results = await Promise.all(promises)
@@ -637,7 +637,7 @@ export async function bulkUpdateLabels(
     const promises = batch.map(u =>
       supabase
         .from('infrastructure_features')
-        .update({ label: u.label, updated_at: new Date().toISOString() } as any)
+        .update({ label: u.label, updated_at: new Date().toISOString() })
         .eq('id', u.id)
     )
     const results = await Promise.all(promises)
@@ -664,7 +664,7 @@ export async function bulkAssignComponentByIds(
       .update({
         system_component_id: componentId,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .in('id', batch)
     if (!error) updated += batch.length
   }
@@ -689,7 +689,7 @@ export async function bulkUpdateFeatureType(
       .update({
         feature_type: featureType,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .in('id', batch)
     if (!error) updated += batch.length
   }
@@ -727,7 +727,7 @@ export async function bulkAssignComponent(
       .update({
         system_component_id: componentId,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .in('id', batch)
     if (!error) updated += batch.length
   }

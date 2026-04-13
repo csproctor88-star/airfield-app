@@ -40,7 +40,7 @@ export async function saveCustomActivityTemplates(
 
   const { error } = await (supabase
     .from('bases')
-    .update({ activity_templates: templates } as any)
+    .update({ activity_templates: templates })
     .eq('id', baseId) as any)
 
   if (error) return { error: friendlyError(error.message) }

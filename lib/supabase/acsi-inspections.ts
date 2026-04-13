@@ -151,7 +151,7 @@ export async function saveAcsiDraft(input: {
 
   const { data, error } = await supabase
     .from('acsi_inspections')
-    .insert(row as any)
+    .insert(row as never)
     .select()
     .single()
 
@@ -310,7 +310,7 @@ export async function reopenAcsiInspection(id: string): Promise<{ data: AcsiInsp
       completed_by_name: null,
       completed_by_id: null,
       updated_at: new Date().toISOString(),
-    } as any)
+    })
     .eq('id', id)
     .select()
     .single()
@@ -443,7 +443,7 @@ export async function uploadAcsiPhoto(
 
   const { data, error } = await supabase
     .from('photos')
-    .insert(photoRow as any)
+    .insert(photoRow as never)
     .select()
     .single()
 

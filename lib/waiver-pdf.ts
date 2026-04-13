@@ -14,8 +14,8 @@ interface WaiverPdfInput {
   coordination: WaiverCoordinationRow[]
   attachments: WaiverAttachmentRow[]
   photoDataUrls: { name: string; dataUrl: string }[]
-  baseName?: string
-  baseIcao?: string
+  baseName?: string | null
+  baseIcao?: string | null
 }
 
 const STATUS_LABELS: Record<string, string> = {

@@ -167,7 +167,7 @@ export default function UserManagementPage() {
         const typedBases = bases as Installation[]
         setInstallations(typedBases)
         for (const b of typedBases) {
-          lookup.set(b.id, { name: b.name, icao: b.icao })
+          lookup.set(b.id, { name: b.name, icao: b.icao ?? '' })
         }
         setBaseLookup(lookup)
         const userBase = typedBases.find((b) => b.id === profile.primary_base_id)
