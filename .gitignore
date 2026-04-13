@@ -53,3 +53,16 @@ public/swe-worker-*.js
 public/swe-worker-*.js.map
 public/workbox-*.js
 public/workbox-*.js.map
+
+# Personal/working files — not part of the app
+/Video_Walkthrough_Script.md
+/scripts/generate-waiver-pdf.js
+docs/Airfield Diagram/
+docs/Airport Seed Documents/
+docs/Business Idea/
+docs/Future Development/
+docs/Reference Documents/
+docs/Screenshots/
+docs/Screenshot *.png
+docs/*_1.png
+public/training/Screenshot *.png
