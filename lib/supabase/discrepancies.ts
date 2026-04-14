@@ -385,6 +385,59 @@ export async function uploadDiscrepancyPhoto(
   return { data: data as PhotoRow, error: null }
 }
 
+/**
+ * Link already-uploaded photo rows (e.g. those attached to an inspection draft via
+ * `inspection_id` + `issue_index`) to a newly-created discrepancy by setting their
+ * `discrepancy_id` FK. Increments the discrepancy's photo_count.
+ */
+export async function linkPhotosToDiscrepancy(
+  photoIds: string[],
+  discrepancyId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+  if (!photoIds.length) return { error: null }
+
+  const { error } = await supabase
+    .from('photos')
+    .update({ discrepancy_id: discrepancyId } as never)
+    .in('id', photoIds)
+
+  if (error) {
+    console.error('linkPhotosToDiscrepancy:', error.message)
+    return { error: friendlyError(error.message) }
+  }
+
+  const { data: disc } = await supabase
+    .from('discrepancies')
+    .select('photo_count')
+    .eq('id', discrepancyId)
+    .single()
+  if (disc) {
+    await supabase
+      .from('discrepancies')
+      .update({ photo_count: (disc.photo_count || 0) + photoIds.length })
+      .eq('id', discrepancyId)
+  }
+
+  return { error: null }
+}
+
+/**
+ * Delete a photo row (does not remove the storage object — storage cleanup is
+ * a separate maintenance concern).
+ */
+export async function deletePhotoRow(photoId: string): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+  const { error } = await supabase.from('photos').delete().eq('id', photoId)
+  if (error) {
+    console.error('deletePhotoRow:', error.message)
+    return { error: friendlyError(error.message) }
+  }
+  return { error: null }
+}
+
 export async function fetchDiscrepancyPhotos(discrepancyId: string): Promise<PhotoRow[]> {
   const supabase = createClient()
   if (!supabase) return []

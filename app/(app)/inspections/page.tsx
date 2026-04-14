@@ -36,7 +36,7 @@ import {
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
-import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
+import { createDiscrepancy, uploadDiscrepancyPhoto, linkPhotosToDiscrepancy, deletePhotoRow } from '@/lib/supabase/discrepancies'
 import { bulkUpdateStatus, fetchInfrastructureFeatures, formatFeatureType, updateFeatureStatus } from '@/lib/supabase/infrastructure-features'
 import { fetchAllComponentsForBase, fetchLightingSystems } from '@/lib/supabase/lighting-systems'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
@@ -670,6 +670,24 @@ export default function InspectionsPage() {
       }
       return { ...prev, [itemId]: arr }
     })
+
+    // Keep the persisted photo row and uploadedPhotos index in sync with the
+    // in-memory array so a later re-link to a discrepancy doesn't pick up
+    // photos the user removed. The two arrays are appended in lockstep, so
+    // position-based correspondence is valid.
+    const key = `${itemId}:${discIndex}`
+    const uploadedIds = currentHalf?.uploadedPhotos?.[key]
+    const removedId = uploadedIds?.[photoIdx]
+    if (removedId) {
+      void deletePhotoRow(removedId)
+      updateHalf((h) => {
+        const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
+        const arr = [...(uploadedPhotos[key] || [])]
+        arr.splice(photoIdx, 1)
+        uploadedPhotos[key] = arr
+        return { ...h, uploadedPhotos }
+      })
+    }
   }
 
   const handleDiscPointSelected = (itemId: string, discIndex: number, lat: number, lng: number) => {
@@ -1120,9 +1138,20 @@ export default function InspectionsPage() {
           await updateFeatureStatus(d.linked_feature_ids![0], 'inoperative')
         }
 
-        const photos = discPhotos[itemId]?.[discIdx] || []
-        for (const photo of photos) {
-          await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
+        // Photos added during the inspection are uploaded immediately to the
+        // `photos` table tagged with inspection_id + issue_index. Re-link those
+        // rows to the new discrepancy so they survive draft resume / cross-device.
+        const key = `${itemId}:${discIdx}`
+        const uploadedIds = completedHalf.uploadedPhotos?.[key] || []
+        if (uploadedIds.length > 0) {
+          await linkPhotosToDiscrepancy(uploadedIds, disc.id)
+        } else {
+          // Fallback for the case where photos were captured but never uploaded
+          // (e.g. no dbRowId at capture time). Upload directly from the blob.
+          const photos = discPhotos[itemId]?.[discIdx] || []
+          for (const photo of photos) {
+            await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
+          }
         }
         discCreated++
       }
