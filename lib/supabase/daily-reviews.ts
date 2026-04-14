@@ -104,6 +104,47 @@ export async function fetchDailyReview(baseId: string, date: string): Promise<Da
   return data as DailyReviewRow | null
 }
 
+export interface SignerInfo {
+  id: string
+  name: string | null
+  rank: string | null
+  operating_initials: string | null
+}
+
+/**
+ * Resolve the signer profile for each signed slot on a daily review row.
+ * Returns a map keyed by slot; slots with no signer are omitted.
+ */
+export async function fetchDailyReviewSigners(row: DailyReviewRow): Promise<Partial<Record<DailyReviewSlot, SignerInfo>>> {
+  const supabase = createClient()
+  if (!supabase) return {}
+
+  const slots: DailyReviewSlot[] = ['day_amsl', 'swing_amsl', 'mid_amsl', 'namo', 'afm']
+  const ids = new Set<string>()
+  for (const slot of slots) {
+    const id = row[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
+    if (id) ids.add(id)
+  }
+  if (ids.size === 0) return {}
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, rank, operating_initials')
+    .in('id', Array.from(ids))
+
+  if (error || !data) return {}
+
+  const byId = new Map<string, SignerInfo>()
+  for (const p of data as unknown as SignerInfo[]) byId.set(p.id, p)
+
+  const out: Partial<Record<DailyReviewSlot, SignerInfo>> = {}
+  for (const slot of slots) {
+    const id = row[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
+    if (id && byId.has(id)) out[slot] = byId.get(id)!
+  }
+  return out
+}
+
 export async function fetchRecentReviews(baseId: string, days = 14): Promise<DailyReviewRow[]> {
   const supabase = createClient()
   if (!supabase) return []

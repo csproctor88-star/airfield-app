@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   fetchDailyReview,
+  fetchDailyReviewSigners,
   signDailyReview,
   computeEventsHash,
   canUserSignSlot,
@@ -11,9 +12,11 @@ import {
   requiredSlotsForShifts,
   type DailyReviewRow,
   type DailyReviewSlot,
+  type SignerInfo,
 } from '@/lib/supabase/daily-reviews'
-import { fetchDailyReportData } from '@/lib/reports/daily-ops-data'
-import { generateDailyOpsPdf } from '@/lib/reports/daily-ops-pdf'
+import { fetchDailyReportData, type DailyReportData } from '@/lib/reports/daily-ops-data'
+import { generateDailyOpsPdf, type DailyReviewSignoff } from '@/lib/reports/daily-ops-pdf'
+import { formatZuluDateTime } from '@/lib/utils'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import type jsPDF from 'jspdf'
@@ -39,6 +42,7 @@ export default function DailyReviewSignModal({
 }: SignModalProps) {
   const [loading, setLoading] = useState(false)
   const [row, setRow] = useState<DailyReviewRow | null>(null)
+  const [signers, setSigners] = useState<Partial<Record<DailyReviewSlot, SignerInfo>>>({})
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [pdfDoc, setPdfDoc] = useState<jsPDF | null>(null)
   const [pdfFilename, setPdfFilename] = useState<string>('')
@@ -58,6 +62,42 @@ export default function DailyReviewSignModal({
     return () => mq.removeEventListener('change', update)
   }, [])
 
+  const [reportData, setReportData] = useState<DailyReportData | null>(null)
+
+  const buildReviewSignoff = (r: DailyReviewRow | null, signerMap: Partial<Record<DailyReviewSlot, SignerInfo>>): DailyReviewSignoff | null => {
+    if (!r) return null
+    const required = requiredSlotsForShifts(shiftCount)
+    const slots = required.map((slot) => {
+      const signedAt = r[`${slot}_signed_at` as keyof DailyReviewRow] as string | null
+      const notes = r[`${slot}_notes` as keyof DailyReviewRow] as string | null
+      const signer = signerMap[slot]
+      const signerStr = signer ? formatSigner(signer) : null
+      return { label: SLOT_LABELS[slot], signer: signerStr, signedAt, notes }
+    })
+    return { slots, fullyCertifiedAt: r.fully_certified_at }
+  }
+
+  const regeneratePdf = (
+    data: DailyReportData,
+    currentRow: DailyReviewRow | null,
+    currentSigners: Partial<Record<DailyReviewSlot, SignerInfo>>,
+  ) => {
+    const { doc, filename } = generateDailyOpsPdf(data, {
+      startDate: reviewDate,
+      endDate: reviewDate,
+      isRange: false,
+      generatedBy: userName,
+      baseName,
+      baseIcao,
+      review: buildReviewSignoff(currentRow, currentSigners),
+    })
+    const blob = doc.output('blob')
+    const url = URL.createObjectURL(blob)
+    setPdfDoc(doc)
+    setPdfFilename(filename)
+    setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return url })
+  }
+
   useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -73,6 +113,11 @@ export default function DailyReviewSignModal({
         ])
         if (cancelled) return
         setRow(existing)
+        setReportData(data)
+
+        const signerMap = existing ? await fetchDailyReviewSigners(existing) : {}
+        if (cancelled) return
+        setSigners(signerMap)
 
         const ids = [
           ...data.inspections.map((x) => x.id),
@@ -87,24 +132,12 @@ export default function DailyReviewSignModal({
         const hash = await computeEventsHash(ids)
         setEventsHash(hash)
 
-        const { doc, filename } = generateDailyOpsPdf(data, {
-          startDate: reviewDate,
-          endDate: reviewDate,
-          isRange: false,
-          generatedBy: userName,
-          baseName,
-          baseIcao,
-        })
-        const blob = doc.output('blob')
-        const url = URL.createObjectURL(blob)
-        setPdfDoc(doc)
-        setPdfFilename(filename)
-        setPdfUrl(url)
+        regeneratePdf(data, existing, signerMap)
 
         // Pre-select first slot the user is eligible to sign and isn't already signed
         const required = requiredSlotsForShifts(shiftCount)
-        const open = required.find((s) => canUserSignSlot(userRole, s) && !(existing as DailyReviewRow | null)?.[`${s}_signed_at` as keyof DailyReviewRow])
-        if (open) setSelectedSlot(open)
+        const openSlot = required.find((s) => canUserSignSlot(userRole, s) && !(existing as DailyReviewRow | null)?.[`${s}_signed_at` as keyof DailyReviewRow])
+        if (openSlot) setSelectedSlot(openSlot)
       } catch (e) {
         console.error('sign-modal load:', e)
         toast.error('Failed to load daily review')
@@ -144,9 +177,20 @@ export default function DailyReviewSignModal({
     setNotes('')
     toast.success(`Signed as ${SLOT_LABELS[selectedSlot]}`)
     onSigned()
+
+    // Refresh signer profiles and regenerate the preview PDF
+    const signerMap = await fetchDailyReviewSigners(data)
+    setSigners(signerMap)
+    if (reportData) regeneratePdf(reportData, data, signerMap)
+
     if (data.fully_certified_at) {
       setEmailOpen(true)
     }
+  }
+
+  const handleDownload = () => {
+    if (!pdfDoc) return
+    pdfDoc.save(pdfFilename)
   }
 
   const handleEmail = async (to: string) => {
@@ -169,6 +213,7 @@ export default function DailyReviewSignModal({
   if (!open) return null
 
   const required = requiredSlotsForShifts(shiftCount)
+  const canDownload = !!pdfDoc && !!row?.fully_certified_at
 
   return (
     <div
@@ -239,17 +284,26 @@ export default function DailyReviewSignModal({
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Signatures</div>
               {required.map((slot) => {
                 const signedAt = row?.[`${slot}_signed_at` as keyof DailyReviewRow] as string | null
+                const signer = signers[slot]
+                const signerLabel = signer ? formatSigner(signer) : null
                 return (
                   <div key={slot} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '6px 8px', marginBottom: 4, borderRadius: 'var(--radius-sm)',
                     background: signedAt ? 'rgba(52,211,153,0.08)' : 'var(--color-bg-inset)',
                     border: `1px solid ${signedAt ? 'rgba(52,211,153,0.3)' : 'var(--color-border)'}`,
                   }}>
-                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{SLOT_LABELS[slot]}</span>
-                    <span style={{ fontSize: 'var(--fs-xs)', color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)' }}>
-                      {signedAt ? `✓ ${new Date(signedAt).toLocaleString()}` : 'Pending'}
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{SLOT_LABELS[slot]}</span>
+                      <span style={{ fontSize: 'var(--fs-xs)', color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)' }}>
+                        {signedAt ? '✓ Signed' : 'Pending'}
+                      </span>
+                    </div>
+                    {signedAt && (
+                      <div style={{ marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.3 }}>
+                        <div>{signerLabel || 'Unknown'}</div>
+                        <div style={{ color: 'var(--color-text-3)', fontFamily: 'monospace' }}>{formatZuluDateTime(signedAt)}</div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -304,6 +358,18 @@ export default function DailyReviewSignModal({
                   }}
                 >Email this review…</button>
               )}
+
+              {canDownload && (
+                <button
+                  onClick={handleDownload}
+                  style={{
+                    marginTop: 8, width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                    background: 'rgba(52,211,153,0.12)', color: 'var(--color-success)',
+                    border: '1px solid rgba(52,211,153,0.3)', cursor: 'pointer',
+                    fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                  }}
+                >Download Reviewed PDF</button>
+              )}
             </div>
           </div>
         </div>
@@ -319,4 +385,10 @@ export default function DailyReviewSignModal({
       />
     </div>
   )
+}
+
+function formatSigner(s: SignerInfo): string {
+  const parts = [s.rank, s.name].filter(Boolean)
+  const primary = parts.length > 0 ? parts.join(' ') : 'Unknown'
+  return s.operating_initials ? `${primary} (${s.operating_initials})` : primary
 }

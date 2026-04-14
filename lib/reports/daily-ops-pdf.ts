@@ -5,6 +5,18 @@ import type { ArffStatusLogRow } from '@/lib/supabase/airfield-status'
 import { formatDiscrepancyType } from './open-discrepancies-data'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
+export interface DailyReviewSignoffSlot {
+  label: string
+  signer: string | null
+  signedAt: string | null
+  notes: string | null
+}
+
+export interface DailyReviewSignoff {
+  slots: DailyReviewSignoffSlot[]
+  fullyCertifiedAt: string | null
+}
+
 interface Options {
   startDate: string
   endDate: string
@@ -12,6 +24,7 @@ interface Options {
   generatedBy: string
   baseName?: string | null
   baseIcao?: string | null
+  review?: DailyReviewSignoff | null
 }
 
 const CHECK_TYPE_LABELS: Record<string, string> = {
@@ -535,6 +548,52 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   }
 
+  // ── Daily Review Sign-Off section ──
+  function renderReviewSignoff(review: DailyReviewSignoff) {
+    sectionHeader('DAILY REVIEW SIGN-OFF')
+
+    const tableBody = review.slots.map((s) => [
+      s.label,
+      s.signer || '— Pending —',
+      s.signedAt ? formatZuluDateTime(s.signedAt) : '—',
+      s.notes || '',
+    ])
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Role', 'Signed By', 'Signed At (Z)', 'Notes']],
+      body: tableBody,
+      styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 0: { cellWidth: 38, fontStyle: 'bold' }, 2: { cellWidth: 34 } },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 1) {
+          const raw = String(hookData.cell.raw)
+          if (raw.startsWith('—')) {
+            hookData.cell.styles.textColor = [180, 0, 0]
+            hookData.cell.styles.fontStyle = 'italic'
+          }
+        }
+      },
+    })
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
+
+    if (review.fullyCertifiedAt) {
+      checkPageBreak(8)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(21, 128, 61)
+      doc.text(`FULLY REVIEWED — ${formatZuluDateTime(review.fullyCertifiedAt)}`, margin, y)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(0)
+      y += 6
+    } else {
+      y += 2
+    }
+  }
+
   // ── QRC Executions section ──
   function renderQrcSection(execs: QrcExecutionForReport[]) {
     sectionHeader(`QRC EXECUTIONS (${execs.length})`)
@@ -670,6 +729,9 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
   y += 4
   doc.text(`Generated: ${formatZuluDateTime(new Date())}`, margin, y)
   y += 8
+
+  // ── REVIEW SIGN-OFF (single-day only) ──
+  if (!opts.isRange && opts.review) renderReviewSignoff(opts.review)
 
   // ── RENDER SECTIONS ──
   if (opts.isRange && opts.startDate !== opts.endDate) {
