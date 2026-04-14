@@ -16,6 +16,7 @@ import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
 import { precacheTiles, getCachedTileCount, clearTileCache, type PrecacheProgress } from '@/lib/tile-precache'
 import { saveAirfieldDiagram, getAirfieldDiagram, deleteAirfieldDiagram } from '@/lib/airfield-diagram'
 import type { UserRole } from '@/lib/supabase/types'
+import ContactSupport from '@/components/ui/contact-support'
 
 // ═══════════════════════════════════════════════════════════════
 // Settings Page
@@ -1395,16 +1396,15 @@ function AboutSectionContent() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Support</span>
-          <a
-            href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+          <ContactSupport
             style={{
               fontSize: 'var(--fs-base)', color: 'var(--color-cyan)', fontWeight: 600,
-              textDecoration: 'none',
+              background: 'none', border: 'none', padding: 0,
               display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
             Contact Support
-          </a>
+          </ContactSupport>
         </div>
       </div>
     </>

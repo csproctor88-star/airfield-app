@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
 import { LogOut } from 'lucide-react'
+import ContactSupport from '@/components/ui/contact-support'
 
 type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
@@ -240,18 +241,16 @@ export default function MorePage() {
             <NavItem key={item.href} item={item} />
           ))}
         </div>
-        <a
-        href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+        <ContactSupport
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '14px 16px', marginTop: 12,
           background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)',
           color: 'var(--color-cyan)', fontSize: 'var(--fs-lg)', fontWeight: 600,
-          fontFamily: 'inherit', textDecoration: 'none',
         }}
       >
         Contact Support
-      </a>
+      </ContactSupport>
       <SignOutButton />
       </div>
     )
@@ -286,18 +285,16 @@ export default function MorePage() {
         <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
       </div>
 
-      <a
-        href="mailto:info@glidepathops.com?subject=Glidepath Support Request"
+      <ContactSupport
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           width: '100%', padding: '14px 16px', marginTop: 12,
           background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)',
           color: 'var(--color-cyan)', fontSize: 'var(--fs-lg)', fontWeight: 600,
-          fontFamily: 'inherit', textDecoration: 'none',
         }}
       >
         Contact Support
-      </a>
+      </ContactSupport>
       <SignOutButton />
     </div>
   )
