@@ -2,6 +2,15 @@ import jsPDF from 'jspdf'
 import { DISCREPANCY_TYPES, STATUS_CONFIG, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { formatZuluDateTime, formatZuluDate } from '@/lib/utils'
 
+export interface DiscrepancyNoteEntry {
+  created_at: string
+  user_name?: string | null
+  user_rank?: string | null
+  old_status?: string | null
+  new_status?: string | null
+  notes?: string | null
+}
+
 interface DiscrepancyPdfInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   discrepancy: any
@@ -10,10 +19,11 @@ interface DiscrepancyPdfInput {
   systemMapDataUrl?: string | null
   baseName?: string | null
   baseIcao?: string | null
+  notesHistory?: DiscrepancyNoteEntry[]
 }
 
 export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
-  const { discrepancy: d, photoDataUrls, mapDataUrl, systemMapDataUrl, baseName, baseIcao } = input
+  const { discrepancy: d, photoDataUrls, mapDataUrl, systemMapDataUrl, baseName, baseIcao, notesHistory } = input
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -174,6 +184,62 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
     const resLines = doc.splitTextToSize(d.resolution_notes, contentWidth)
     doc.text(resLines, margin, y)
     y += resLines.length * 4 + 4
+  }
+
+  // -- Notes History --
+  if (notesHistory && notesHistory.length > 0) {
+    checkPageBreak(16)
+    y += 2
+    doc.setFontSize(10)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`NOTES HISTORY (${notesHistory.length})`, margin, y)
+    y += 6
+    doc.setFont('helvetica', 'normal')
+
+    // Show newest first, matching the on-screen view
+    const sorted = [...notesHistory].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+
+    for (const entry of sorted) {
+      const signer = [entry.user_rank, entry.user_name].filter(Boolean).join(' ') || 'Unknown'
+      const when = formatZuluDateTime(new Date(entry.created_at))
+      const statusLine = entry.old_status
+        ? `Status: ${entry.old_status}  ->  ${entry.new_status || ''}`
+        : null
+      const notesText = entry.notes?.trim() || null
+
+      const noteLines = notesText ? doc.splitTextToSize(notesText, contentWidth - 6) : []
+      const needed = 6 + 4 + (statusLine ? 4 : 0) + noteLines.length * 4 + 3
+      checkPageBreak(needed)
+
+      doc.setDrawColor(200)
+      doc.setLineWidth(0.3)
+      doc.line(margin, y, margin + 2, y + 6)
+
+      doc.setFontSize(8)
+      doc.setTextColor(60)
+      doc.text(`${signer}  -  ${when}`, margin + 4, y + 3)
+      y += 6
+
+      if (statusLine) {
+        doc.setFontSize(8)
+        doc.setTextColor(100)
+        doc.text(statusLine, margin + 4, y)
+        y += 4
+      }
+
+      if (notesText) {
+        doc.setFontSize(9)
+        doc.setTextColor(20)
+        doc.text(noteLines, margin + 4, y)
+        y += noteLines.length * 4
+      }
+
+      y += 3
+    }
+    y += 2
   }
 
   // -- Location / Map --

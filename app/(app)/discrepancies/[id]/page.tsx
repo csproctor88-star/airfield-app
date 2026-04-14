@@ -254,6 +254,14 @@ export default function DiscrepancyDetailPage() {
       systemMapDataUrl: systemMapUrl,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
+      notesHistory: statusUpdates.map((u) => ({
+        created_at: u.created_at,
+        user_name: u.user_name,
+        user_rank: u.user_rank,
+        old_status: u.old_status,
+        new_status: u.new_status,
+        notes: u.notes,
+      })),
     })
   }
 
