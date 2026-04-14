@@ -24,6 +24,7 @@ export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const captureInputRef = useRef<HTMLInputElement>(null)
 
   const [liveData, setLiveData] = useState<CheckRow | null>(null)
   const [comments, setComments] = useState<CheckCommentRow[]>([])
@@ -44,6 +45,7 @@ export default function CheckDetailPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const issueFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  const issueCaptureInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
   const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
   const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
 
@@ -525,28 +527,27 @@ export default function CheckDetailPage() {
                   </div>
                 )}
                 {canEdit && (
-                  <>
+                  <div style={{ marginTop: 8 }}>
                     <input
                       ref={(el) => { issueFileInputRefs.current[idx] = el }}
                       type="file" accept="image/*" multiple
                       onChange={(e) => handleIssuePhoto(e, idx)}
                       style={{ display: 'none' }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => issueFileInputRefs.current[idx]?.click()}
+                    <input
+                      ref={(el) => { issueCaptureInputRefs.current[idx] = el }}
+                      type="file" accept="image/*" capture="environment"
+                      onChange={(e) => handleIssuePhoto(e, idx)}
+                      style={{ display: 'none' }}
+                    />
+                    <PhotoPickerButton
+                      variant="compact"
+                      onUpload={() => issueFileInputRefs.current[idx]?.click()}
+                      onCapture={() => issueCaptureInputRefs.current[idx]?.click()}
                       disabled={uploadingIssueIdx === idx}
-                      style={{
-                        marginTop: 8, padding: '6px 12px', borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                        color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-                        cursor: uploadingIssueIdx === idx ? 'default' : 'pointer', fontFamily: 'inherit',
-                        opacity: uploadingIssueIdx === idx ? 0.6 : 1,
-                      }}
-                    >
-                      {uploadingIssueIdx === idx ? 'Uploading...' : `+ Add Photo to Issue ${idx + 1}`}
-                    </button>
-                  </>
+                      label={uploadingIssueIdx === idx ? 'Uploading...' : `+ Add Photo to Issue ${idx + 1}`}
+                    />
+                  </div>
                 )}
                 {!!(issue as Record<string, unknown>).log_as_discrepancy && (
                   <div style={{
@@ -608,8 +609,10 @@ export default function CheckDetailPage() {
       {canEdit && (
         <div style={{ marginBottom: 8 }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
+          <input ref={captureInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
+            onCapture={() => captureInputRef.current?.click()}
             disabled={uploading}
             label={uploading ? 'Uploading...' : undefined}
           />

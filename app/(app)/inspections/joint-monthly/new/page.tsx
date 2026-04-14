@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -9,7 +9,7 @@ import { INSPECTION_PERSONNEL } from '@/lib/constants'
 import { createInspection, uploadInspectionPhoto, getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchCurrentWeather } from '@/lib/weather'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { createClient } from '@/lib/supabase/client'
 
@@ -31,8 +31,14 @@ export default function JointMonthlyInspectionPage() {
   const [photos, setPhotos] = useState<PhotoEntry[]>([])
   const [filing, setFiling] = useState(false)
 
-  const fileRef = useRef<HTMLInputElement>(null)
-
+  const handleFiles = (files: FileList) => {
+    const newPhotos: PhotoEntry[] = Array.from(files).map((f) => ({
+      file: f,
+      url: URL.createObjectURL(f),
+      name: f.name,
+    }))
+    setPhotos((prev) => [...prev, ...newPhotos])
+  }
 
   const togglePersonnel = (person: string) => {
     setSelectedPersonnel((prev) =>
@@ -42,18 +48,6 @@ export default function JointMonthlyInspectionPage() {
 
   const handlePersonnelName = (person: string, name: string) => {
     setPersonnelNames((prev) => ({ ...prev, [person]: name }))
-  }
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
-    const newPhotos: PhotoEntry[] = Array.from(files).map((f) => ({
-      file: f,
-      url: URL.createObjectURL(f),
-      name: f.name,
-    }))
-    setPhotos((prev) => [...prev, ...newPhotos])
-    e.target.value = ''
   }
 
   const removePhoto = (idx: number) => {
@@ -242,9 +236,7 @@ export default function JointMonthlyInspectionPage() {
             </div>
           )}
 
-          <PhotoPickerButton
-            onUpload={() => fileRef.current?.click()}
-          />
+          <PhotoPickerInput onFiles={handleFiles} />
         </div>
 
         {/* Complete & File Button */}
@@ -261,9 +253,6 @@ export default function JointMonthlyInspectionPage() {
         >
           {filing ? 'Filing...' : 'Complete & File'}
         </button>
-
-        {/* Hidden file inputs */}
-        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoChange} />
 
       </div>
     </div>

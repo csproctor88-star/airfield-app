@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
+import { Suspense, useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
@@ -25,7 +25,7 @@ import {
   fetchObstructionEvaluation,
   parsePhotoPaths,
 } from '@/lib/supabase/obstructions'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 
 // Dynamic import for map (client-only, no SSR)
 // Google Maps version for gov network performance; Mapbox version preserved as airfield-map.tsx
@@ -58,7 +58,6 @@ export default function ObstructionsPage() {
 function ObstructionsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { installationId, currentInstallation, runways } = useInstallation()
 
@@ -387,12 +386,9 @@ function ObstructionsContent() {
     })
 
   // Handle photo — use FileReader for immediate preview
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files
+  const handlePhoto = async (fileList: FileList) => {
     if (!fileList?.length) return
-    // Copy files before clearing input (some browsers invalidate FileList on reset)
     const fileArray = Array.from(fileList)
-    e.target.value = ''
     for (const file of fileArray) {
       try {
         const dataUrl = await readFileAsDataUrl(file)
@@ -722,18 +718,8 @@ function ObstructionsContent() {
         </div>
 
         {/* Photos */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handlePhoto}
-          style={{ display: 'none' }}
-        />
         <div style={{ marginBottom: 10 }}>
-          <PhotoPickerButton
-            onUpload={() => fileInputRef.current?.click()}
-          />
+          <PhotoPickerInput onFiles={handlePhoto} />
           {photos.length > 0 && (
             <div className="photo-grid" style={{ marginTop: 8 }}>
               {photos.map((p, i) => (

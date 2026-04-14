@@ -7,7 +7,7 @@ import { WAIVER_CLASSIFICATIONS, WAIVER_HAZARD_RATINGS, WAIVER_CRITERIA_SOURCES 
 import { createWaiver, upsertWaiverCriteria, uploadWaiverAttachment } from '@/lib/supabase/waivers'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 import type { WaiverStatus, WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 
 const WaiverLocationMap = dynamic(
@@ -75,7 +75,6 @@ export default function NewWaiverPage() {
   const [attachFile, setAttachFile] = useState<File | null>(null)
   const [attachType, setAttachType] = useState<WaiverAttachmentType>('site_map')
   const [attachCaption, setAttachCaption] = useState('')
-  const photoInputRef = useRef<HTMLInputElement>(null)
 
 
   // Close dropdowns on click outside
@@ -608,10 +607,6 @@ export default function NewWaiverPage() {
         {sectionHeader('photos', '6. Photos', expandedSections.photos, photos.length)}
         {expandedSections.photos && (
           <>
-            {/* Hidden file inputs */}
-            <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
-              onChange={(e) => { handlePhotoSelected(e.target.files); e.target.value = '' }} />
-
             {/* Photo previews */}
             {photos.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
@@ -636,9 +631,7 @@ export default function NewWaiverPage() {
             )}
 
             {/* Upload / Capture button */}
-            <PhotoPickerButton
-              onUpload={() => photoInputRef.current?.click()}
-            />
+            <PhotoPickerInput onFiles={(files) => handlePhotoSelected(files)} />
           </>
         )}
       </div>

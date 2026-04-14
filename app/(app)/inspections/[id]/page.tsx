@@ -18,6 +18,7 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
+import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 import { DetailGrid } from '@/components/ui/detail-grid'
 
 export default function InspectionDetailPage() {
@@ -731,23 +732,17 @@ export default function InspectionDetailPage() {
                             )}
                             {renderDiscPhotos(discPhotosForIdx)}
                             {canEdit && (
-                              <label style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-                                fontSize: 'var(--fs-xs)', color: 'var(--color-blue)', cursor: 'pointer', fontWeight: 600,
-                              }}>
-                                + Add Photo
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  style={{ display: 'none' }}
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0]
+                              <div style={{ marginTop: 4 }}>
+                                <PhotoPickerInput
+                                  variant="compact"
+                                  label="+ Add Photo"
+                                  multiple={false}
+                                  onFiles={(files) => {
+                                    const f = files[0]
                                     if (f) handlePhotoUpload(inspection.id, f, item.id, di)
-                                    e.target.value = ''
                                   }}
                                 />
-                              </label>
+                              </div>
                             )}
                             {disc.log_as_discrepancy && (
                               <div style={{
@@ -852,23 +847,17 @@ export default function InspectionDetailPage() {
                       )}
                       {isFail && renderItemPhotos(item.id)}
                       {isFail && canEdit && (
-                        <label style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4,
-                          fontSize: 'var(--fs-xs)', color: 'var(--color-blue)', cursor: 'pointer', fontWeight: 600,
-                        }}>
-                          + Add Photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            style={{ display: 'none' }}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0]
+                        <div style={{ marginTop: 4 }}>
+                          <PhotoPickerInput
+                            variant="compact"
+                            label="+ Add Photo"
+                            multiple={false}
+                            onFiles={(files) => {
+                              const f = files[0]
                               if (f) handlePhotoUpload(inspection.id, f, item.id)
-                              e.target.value = ''
                             }}
                           />
-                        </label>
+                        </div>
                       )}
                     </>
                   )}
@@ -1161,23 +1150,17 @@ export default function InspectionDetailPage() {
                 ))}
               </div>
               {canEdit && (
-                <label style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8,
-                  fontSize: 'var(--fs-xs)', color: 'var(--color-blue)', cursor: 'pointer', fontWeight: 600,
-                }}>
-                  + Add Photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
+                <div style={{ marginTop: 8 }}>
+                  <PhotoPickerInput
+                    variant="compact"
+                    label="+ Add Photo"
+                    multiple={false}
+                    onFiles={(files) => {
+                      const f = files[0]
                       if (f) handlePhotoUpload(primary.id, f)
-                      e.target.value = ''
                     }}
                   />
-                </label>
+                </div>
               )}
             </div>
           )}

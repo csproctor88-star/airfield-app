@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useInstallation } from '@/lib/installation-context'
-import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
+import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 import { uploadAcsiPhoto, fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
 import { fetchDiscrepancyPhotos } from '@/lib/supabase/discrepancies'
 import { toast } from 'sonner'
@@ -22,7 +22,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
   const [uploading, setUploading] = useState(false)
   const [photoUrls, setPhotoUrls] = useState<{ url: string; name: string }[]>([])
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
 
   // Stable key for photo_ids to use as effect dependency
@@ -83,8 +82,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
     update('areas', next)
   }
 
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+  const handlePhoto = async (files: FileList) => {
     if (!files?.length) return
 
     if (!inspectionId) {
@@ -101,7 +99,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       if (!error && data) {
         uploaded++
         newPhotoIds.push(data.id)
-        // Build display URL
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
         const url = data.storage_path.startsWith('data:')
           ? data.storage_path
@@ -115,7 +112,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       update('photo_ids', newPhotoIds)
     }
     setUploading(false)
-    e.target.value = ''
   }
 
   const inputStyle: React.CSSProperties = {
@@ -271,9 +267,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       <div>
         <label style={labelStyle}>Photos</label>
 
-        {/* Hidden file inputs */}
-        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-
         {/* Photo thumbnails */}
         {photoUrls.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
@@ -292,8 +285,8 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
           </div>
         )}
 
-        <PhotoPickerButton
-          onUpload={() => fileInputRef.current?.click()}
+        <PhotoPickerInput
+          onFiles={handlePhoto}
           disabled={uploading}
           variant="compact"
           label={uploading ? 'Uploading...' : photoUrls.length > 0 ? `Add Photo (${photoUrls.length})` : 'Add Photo'}
