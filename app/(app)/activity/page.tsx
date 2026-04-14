@@ -9,6 +9,7 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
+import { fetchRecentReviews } from '@/lib/supabase/daily-reviews'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -263,6 +264,7 @@ export default function ActivityPage() {
   const [customEnd, setCustomEnd] = useState(today)
   const [entries, setEntries] = useState<ActivityEntry[]>([])
   const [detailsMap, setDetailsMap] = useState<Map<string, EntityDetails>>(new Map())
+  const [certifiedAtByDate, setCertifiedAtByDate] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [manualText, setManualText] = useState('')
@@ -309,6 +311,14 @@ export default function ActivityPage() {
     setEntries(data)
     const details = await fetchEntityDetails(data)
     setDetailsMap(details)
+    if (installationId) {
+      const reviews = await fetchRecentReviews(installationId, 90)
+      const map = new Map<string, string>()
+      for (const r of reviews) {
+        if (r.fully_certified_at) map.set(r.review_date, r.fully_certified_at)
+      }
+      setCertifiedAtByDate(map)
+    }
     setLoading(false)
   }, [installationId, getDateRange])
 
@@ -710,6 +720,9 @@ export default function ActivityPage() {
 
                       const initials = a.user_operating_initials || null
 
+                      const certifiedAt = certifiedAtByDate.get(d.toISOString().slice(0, 10))
+                      const amended = certifiedAt != null && new Date(a.created_at).getTime() > new Date(certifiedAt).getTime()
+
                       return (
                         <tr key={a.id}>
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
@@ -721,6 +734,17 @@ export default function ActivityPage() {
                           >
                             {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
                             {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
+                            {amended && (
+                              <span
+                                title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was certified.`}
+                                style={{
+                                  marginLeft: 6, padding: '1px 6px', borderRadius: 999,
+                                  fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.04em',
+                                  background: 'rgba(251,191,36,0.15)', color: 'var(--color-warning)',
+                                  border: '1px solid rgba(251,191,36,0.35)', textTransform: 'uppercase',
+                                }}
+                              >Amended</span>
+                            )}
                           </td>
                           <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300 }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>

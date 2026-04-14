@@ -17,6 +17,7 @@ import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-featu
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { useDashboard } from '@/lib/dashboard-context'
+import { fetchRecentReviews, isFullyCertified, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
@@ -223,6 +224,27 @@ export default function AMDashboardPage() {
   const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
   const [lastCheckType, setLastCheckType] = useState<string | null>(null)
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
+
+  // ── Daily reviews summary ──
+  const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
+  const [recentReviews, setRecentReviews] = useState<DailyReviewRow[]>([])
+  useEffect(() => {
+    if (!installationId) return
+    fetchRecentReviews(installationId, 14).then(setRecentReviews)
+  }, [installationId])
+  const pendingReviewDates: string[] = (() => {
+    const reviewed = new Map(recentReviews.map(r => [r.review_date, r] as const))
+    const dates: string[] = []
+    const today = new Date()
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const iso = d.toISOString().slice(0, 10)
+      const row = reviewed.get(iso)
+      if (!row || !isFullyCertified(row, shiftCount)) dates.push(iso)
+    }
+    return dates
+  })()
 
   // ── Today's inspection status ──
   const [todayAirfieldStatus, setTodayAirfieldStatus] = useState<{ status: 'none' | 'in_progress' | 'completed'; inspector?: string }>({ status: 'none' })
@@ -800,6 +822,28 @@ export default function AMDashboardPage() {
           onTemplatesSaved={setCustomTemplates}
           icao={currentInstallation?.icao}
         />
+      )}
+
+      {/* ===== Daily Reviews ===== */}
+      {pendingReviewDates.length > 0 && (
+        <div
+          onClick={() => router.push('/daily-reviews')}
+          style={{
+            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
+            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-warning)' }}>
+              {pendingReviewDates.length} Daily Review{pendingReviewDates.length === 1 ? '' : 's'} Pending
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              Oldest: {pendingReviewDates[pendingReviewDates.length - 1]} — DAFMAN 13-204v1 Para 2.5.2.10
+            </div>
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Review →</div>
+        </div>
       )}
 
       {/* ===== Recent Activity ===== */}
