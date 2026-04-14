@@ -17,7 +17,8 @@ import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-featu
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { useDashboard } from '@/lib/dashboard-context'
-import { fetchRecentReviews, isFullyCertified, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import { fetchRecentReviews, isFullyCertified, canUserSignSlot, requiredSlotsForShifts, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
@@ -189,7 +190,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole } = useInstallation()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
@@ -228,10 +229,31 @@ export default function AMDashboardPage() {
   // ── Daily reviews summary ──
   const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
   const [recentReviews, setRecentReviews] = useState<DailyReviewRow[]>([])
-  useEffect(() => {
+  const refreshReviews = useCallback(() => {
     if (!installationId) return
     fetchRecentReviews(installationId, 14).then(setRecentReviews)
   }, [installationId])
+  useEffect(() => { refreshReviews() }, [refreshReviews])
+
+  // Current user (for the sign modal)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('')
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled || !user) return
+      setCurrentUserId(user.id)
+      const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).single()
+      if (cancelled) return
+      setCurrentUserName((profile as { name?: string } | null)?.name || '')
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const [shiftReviewOpen, setShiftReviewOpen] = useState(false)
   const pendingReviewDates: string[] = (() => {
     const reviewed = new Map(recentReviews.map(r => [r.review_date, r] as const))
     const dates: string[] = []
@@ -244,6 +266,20 @@ export default function AMDashboardPage() {
       if (!row || !isFullyCertified(row, shiftCount)) dates.push(iso)
     }
     return dates
+  })()
+
+  // ── Today's shift review — visible only when the current user can sign an
+  //    AMSL slot and at least one AMSL slot for today is still unsigned. ──
+  const todayShiftReview = (() => {
+    const amslSlots = requiredSlotsForShifts(shiftCount).filter((s) => s.endsWith('_amsl'))
+    const canSignAny = amslSlots.some((s) => canUserSignSlot(userRole, s))
+    if (!canSignAny) return null
+
+    const todayIso = new Date().toISOString().slice(0, 10)
+    const todayRow = recentReviews.find((r) => r.review_date === todayIso) || null
+    const signedCount = amslSlots.filter((s) => todayRow?.[`${s}_signed_at` as keyof DailyReviewRow]).length
+    if (signedCount >= amslSlots.length) return null
+    return { signedCount, total: amslSlots.length }
   })()
 
   // ── Today's inspection status ──
@@ -824,6 +860,28 @@ export default function AMDashboardPage() {
         />
       )}
 
+      {/* ===== Today's Shift Review ===== */}
+      {todayShiftReview && (
+        <div
+          onClick={() => setShiftReviewOpen(true)}
+          style={{
+            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
+            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+              Review Shift
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL signatures captured for today
+            </div>
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Sign →</div>
+        </div>
+      )}
+
       {/* ===== Daily Reviews ===== */}
       {pendingReviewDates.length > 0 && (
         <div
@@ -1132,6 +1190,24 @@ export default function AMDashboardPage() {
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
           icao={currentInstallation?.icao}
+        />
+      )}
+
+      {/* ===== Daily Shift Review Sign Modal ===== */}
+      {installationId && currentUserId && (
+        <DailyReviewSignModal
+          open={shiftReviewOpen}
+          onClose={() => setShiftReviewOpen(false)}
+          baseId={installationId}
+          baseName={currentInstallation?.name || ''}
+          baseIcao={(currentInstallation as { icao?: string | null } | null)?.icao || null}
+          shiftCount={shiftCount}
+          reviewDate={new Date().toISOString().slice(0, 10)}
+          userId={currentUserId}
+          userRole={userRole}
+          userName={currentUserName}
+          defaultPdfEmail={defaultPdfEmail}
+          onSigned={refreshReviews}
         />
       )}
     </div>
