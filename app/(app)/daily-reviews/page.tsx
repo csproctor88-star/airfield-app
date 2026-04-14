@@ -74,7 +74,7 @@ export default function DailyReviewsPage() {
         Daily Reviews
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
-        DAFMAN 13-204v1 Para 2.5.2.10.3 & 10.4 — shift turnover + daily certification.
+        DAFMAN 13-204v1 Para 2.5.2.10.3 & 10.4 — shift turnover + daily review.
       </div>
 
       {!loaded ? (
@@ -100,7 +100,7 @@ export default function DailyReviewsPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>{date}</div>
                   <div style={{ fontSize: 'var(--fs-xs)', color: certified ? 'var(--color-success)' : 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {certified ? 'Certified' : 'Pending'}
+                    {certified ? 'Reviewed' : 'Pending'}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

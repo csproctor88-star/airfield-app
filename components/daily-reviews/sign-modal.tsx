@@ -48,6 +48,15 @@ export default function DailyReviewSignModal({
   const [signing, setSigning] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailSending, setEmailSending] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -144,7 +153,7 @@ export default function DailyReviewSignModal({
     if (!pdfDoc) return
     setEmailSending(true)
     try {
-      const subject = `Certified Daily Review — ${baseName}${baseIcao ? ` (${baseIcao})` : ''} — ${reviewDate}`
+      const subject = `Reviewed Daily Operations — ${baseName}${baseIcao ? ` (${baseIcao})` : ''} — ${reviewDate}`
       const { success, error } = await sendPdfViaEmail(pdfDoc, pdfFilename, to, subject)
       if (success) {
         toast.success(`Emailed to ${to}`)
@@ -182,13 +191,43 @@ export default function DailyReviewSignModal({
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', fontSize: 20, cursor: 'pointer' }}>✕</button>
         </div>
 
-        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 320px', gap: 0, overflow: 'hidden' }}>
+        <div style={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 320px',
+          gridTemplateRows: isMobile ? 'auto 1fr' : '1fr',
+          gap: 0,
+          overflow: 'hidden',
+        }}>
           {/* PDF preview */}
-          <div style={{ background: '#2a2a2a', borderRight: '1px solid var(--color-border-mid)' }}>
+          <div style={{
+            background: '#2a2a2a',
+            borderRight: isMobile ? 'none' : '1px solid var(--color-border-mid)',
+            borderBottom: isMobile ? '1px solid var(--color-border-mid)' : 'none',
+            minHeight: isMobile ? 'auto' : undefined,
+          }}>
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>Loading review…</div>
             ) : pdfUrl ? (
-              <iframe src={pdfUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Daily Ops Preview" />
+              isMobile ? (
+                <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                    PDF preview isn&apos;t supported inline on mobile. Open it in a new tab to review before signing.
+                  </div>
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-block', textAlign: 'center', padding: '10px 12px',
+                      borderRadius: 'var(--radius-md)', background: 'var(--color-cyan)',
+                      color: '#000', fontWeight: 700, textDecoration: 'none',
+                    }}
+                  >Open Daily Ops PDF</a>
+                </div>
+              ) : (
+                <iframe src={pdfUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="Daily Ops Preview" />
+              )
             ) : (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>No preview available</div>
             )}
@@ -216,7 +255,7 @@ export default function DailyReviewSignModal({
               })}
               {row?.fully_certified_at && (
                 <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(52,211,153,0.12)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 700, textAlign: 'center' }}>
-                  FULLY CERTIFIED
+                  FULLY REVIEWED
                 </div>
               )}
             </div>
@@ -253,7 +292,7 @@ export default function DailyReviewSignModal({
                   cursor: signing || loading || !selectedSlot ? 'not-allowed' : 'pointer',
                   opacity: signing || loading || !selectedSlot ? 0.5 : 1,
                 }}
-              >{signing ? 'Signing…' : 'Sign & Certify'}</button>
+              >{signing ? 'Signing…' : 'Sign Review'}</button>
 
               {pdfDoc && (
                 <button
@@ -265,10 +304,6 @@ export default function DailyReviewSignModal({
                   }}
                 >Email this review…</button>
               )}
-            </div>
-
-            <div style={{ marginTop: 'auto', fontSize: 10, color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
-              Events hash: {eventsHash || '—'}
             </div>
           </div>
         </div>

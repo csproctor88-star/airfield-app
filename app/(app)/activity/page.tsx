@@ -736,7 +736,7 @@ export default function ActivityPage() {
                             {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
                             {amended && (
                               <span
-                                title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was certified.`}
+                                title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was signed.`}
                                 style={{
                                   marginLeft: 6, padding: '1px 6px', borderRadius: 999,
                                   fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.04em',
