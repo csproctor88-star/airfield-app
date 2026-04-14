@@ -270,6 +270,7 @@ function createSupabaseClient(url: string | undefined, key: string | undefined):
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ─── IndexedDB (shared with lib/idb.ts — single source of truth) ───
 import { idbSet, idbGet, idbGetAllKeys, idbGetAll, idbDelete, STORE_BLOBS, STORE_META, STORE_TEXT, STORE_TEXT_META } from '@/lib/idb';
+import { useInstallation } from '@/lib/installation-context';
 
 // ─── Text extraction with PDF.js ─────────────────────────────
 async function extractTextFromBuffer(arrayBuffer: ArrayBuffer): Promise<ExtractedPage[]> {
@@ -416,6 +417,11 @@ function LazyPage({ pageNumber, scale, searchTerm }: LazyPageProps) {
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════
 export default function PDFLibrary() {
+  // Only admin roles may extract (RLS on pdf_extraction_status / pdf_text_pages
+  // is gated via user_is_admin — hide the Extract All button for everyone else).
+  const { userRole } = useInstallation();
+  const canExtract = userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'airfield_manager' || userRole === 'namo';
+
   // File list
   const [files, setFiles] = useState<StorageFileObject[]>([]);
   const [cachedKeys, setCachedKeys] = useState<Set<IDBValidKey>>(new Set());
@@ -888,10 +894,12 @@ export default function PDFLibrary() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
               <button onClick={fetchFileList} disabled={!isOnline || loading} style={Object.assign({}, S.btn, S.btnG, (!isOnline || loading) ? S.off : {})}>&#8635; Refresh</button>
               <button onClick={cacheAll} disabled={!isOnline || cachedCount === files.length} style={Object.assign({}, S.btn, S.btnA, (!isOnline || cachedCount === files.length) ? S.off : {})}>&darr; Cache All</button>
-              <button onClick={extractAll} disabled={extracting || (!isOnline && extractedCount === files.length)}
-                style={Object.assign({}, S.btn, S.btnE, (extracting) ? S.off : {})}>
-                {extracting ? `Extracting ${extractProgress.current}/${extractProgress.total}...` : `\u2699 Extract All${extractedCount > 0 ? ` (${extractedCount}/${files.length})` : ""}`}
-              </button>
+              {canExtract && (
+                <button onClick={extractAll} disabled={extracting || (!isOnline && extractedCount === files.length)}
+                  style={Object.assign({}, S.btn, S.btnE, (extracting) ? S.off : {})}>
+                  {extracting ? `Extracting ${extractProgress.current}/${extractProgress.total}...` : `\u2699 Extract All${extractedCount > 0 ? ` (${extractedCount}/${files.length})` : ""}`}
+                </button>
+              )}
             </div>
           </div>
 
