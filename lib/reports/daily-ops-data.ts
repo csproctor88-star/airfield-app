@@ -3,6 +3,7 @@ import type { InspectionRow } from '@/lib/supabase/inspections'
 import type { CheckRow } from '@/lib/supabase/checks'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
+import { fetchArffStatusLog, type ArffStatusLogRow } from '@/lib/supabase/airfield-status'
 
 // ── Types ──
 
@@ -109,6 +110,7 @@ export interface DailyReportData {
   activityEntries: ActivityEntryForReport[]
   qrcExecutions: QrcExecutionForReport[]
   outageEvents: OutageEventForReport[]
+  arffStatusLog: ArffStatusLogRow[]
   /** Photos keyed by entity — e.g. "check:<id>", "discrepancy:<id>", "obstruction:<id>" */
   photos: Record<string, PhotoForDailyReport[]>
 }
@@ -131,6 +133,7 @@ export async function fetchDailyReportData(
     fetchActivityForDate(supabase, startUTC, endUTC, baseId),
     fetchQrcExecutionsForDate(supabase, startUTC, endUTC, baseId),
     fetchOutageEventsForDate(supabase, startUTC, endUTC, baseId),
+    fetchArffStatusLog(startUTC, endUTC, baseId),
   ])
 
   const checks = results[1] as CheckRow[]
@@ -138,6 +141,7 @@ export async function fetchDailyReportData(
   const obstructionEvals = results[4] as ObstructionEvalForReport[]
   const activityEntries = results[5] as ActivityEntryForReport[]
   const qrcExecutions = results[6] as QrcExecutionForReport[]
+  const arffStatusLog = results[8] as ArffStatusLogRow[]
   const outageEvents = results[7] as OutageEventForReport[]
 
   // Fetch photos for checks, discrepancies, and obstruction evaluations
@@ -169,6 +173,7 @@ export async function fetchDailyReportData(
     activityEntries,
     qrcExecutions,
     outageEvents,
+    arffStatusLog,
     photos,
   }
 }

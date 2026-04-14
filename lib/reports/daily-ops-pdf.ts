@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { DailyReportData, PhotoForDailyReport, ActivityEntryForReport, QrcExecutionForReport, OutageEventForReport } from './daily-ops-data'
+import type { ArffStatusLogRow } from '@/lib/supabase/airfield-status'
 import { formatDiscrepancyType } from './open-discrepancies-data'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 
@@ -158,6 +159,7 @@ function filterDataForDate(data: DailyReportData, dateStr: string): DailyReportD
     activityEntries: data.activityEntries.filter((a) => inRange(a.created_at)),
     qrcExecutions: data.qrcExecutions.filter((q) => inRange(q.opened_at) || (q.closed_at && inRange(q.closed_at))),
     outageEvents: data.outageEvents.filter((o) => inRange(o.created_at)),
+    arffStatusLog: data.arffStatusLog.filter((a) => inRange(a.created_at)),
     photos: data.photos,
   }
 }
@@ -274,6 +276,9 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
 
     // 1.5. VISUAL NAVAID OUTAGES
     renderOutageSection(dayData.outageEvents)
+
+    // 1.6. ARFF STATUS CHANGES
+    renderArffStatusSection(dayData.arffStatusLog)
 
     // 2. COMPLETED CHECKS
     sectionHeader('COMPLETED CHECKS')
@@ -475,6 +480,52 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
             hookData.cell.styles.textColor = [220, 38, 38]
             hookData.cell.styles.fontStyle = 'bold'
           } else if (val === 'Resolved') {
+            hookData.cell.styles.textColor = [34, 197, 94]
+            hookData.cell.styles.fontStyle = 'bold'
+          }
+        }
+      },
+    })
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
+  }
+
+  // ── ARFF Status Changes section ──
+  function renderArffStatusSection(rows: ArffStatusLogRow[]) {
+    sectionHeader(`ARFF STATUS CHANGES (${rows.length})`)
+
+    if (rows.length === 0) {
+      emptyState('No ARFF status changes recorded.')
+      return
+    }
+
+    const tableBody = rows.map((r) => {
+      const who = r.user_rank ? `${r.user_rank} ${r.user_name || ''}`.trim() : (r.user_name || 'Unknown')
+      const isCat = r.new_cat !== null || r.old_cat !== null
+      const target = isCat ? 'ARFF CAT' : (r.aircraft_name || 'Aircraft')
+      const oldVal = isCat ? (r.old_cat ?? '—') : (r.old_readiness ?? '—')
+      const newVal = isCat ? (r.new_cat ?? '—') : (r.new_readiness ?? '—')
+      return [fmtTime(r.created_at), target, String(oldVal), String(newVal), r.reason || '—', who]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Time', 'Target', 'From', 'To', 'Reason', 'User']],
+      body: tableBody,
+      styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 0: { cellWidth: 18 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 } },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 3) {
+          const val = String(hookData.cell.raw).toLowerCase()
+          if (val === 'inadequate' || val === 'critical' || val === '—' && rows[hookData.row.index].new_cat === null) {
+            hookData.cell.styles.textColor = [220, 38, 38]
+            hookData.cell.styles.fontStyle = 'bold'
+          } else if (val === 'marginal') {
+            hookData.cell.styles.textColor = [234, 179, 8]
+            hookData.cell.styles.fontStyle = 'bold'
+          } else if (val === 'full') {
             hookData.cell.styles.textColor = [34, 197, 94]
             hookData.cell.styles.fontStyle = 'bold'
           }

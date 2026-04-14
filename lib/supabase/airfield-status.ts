@@ -128,6 +128,78 @@ export async function updateAirfieldStatus(
   return true
 }
 
+export interface ArffStatusLogRow {
+  id: string
+  base_id: string | null
+  old_cat: number | null
+  new_cat: number | null
+  aircraft_name: string | null
+  old_readiness: string | null
+  new_readiness: string | null
+  changed_by: string | null
+  reason: string | null
+  created_at: string
+  // Joined
+  user_name?: string
+  user_rank?: string
+}
+
+/** Log a change to arff_status_log — either a CAT change or an aircraft-readiness change. */
+export async function logArffStatusChange(
+  params: {
+    oldCat?: number | null
+    newCat?: number | null
+    aircraftName?: string | null
+    oldReadiness?: string | null
+    newReadiness?: string | null
+    reason?: string | null
+  },
+  baseId?: string | null,
+): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  const { data: { user } } = await supabase.auth.getUser()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('arff_status_log').insert({
+    base_id: baseId ?? null,
+    old_cat: params.oldCat ?? null,
+    new_cat: params.newCat ?? null,
+    aircraft_name: params.aircraftName ?? null,
+    old_readiness: params.oldReadiness ?? null,
+    new_readiness: params.newReadiness ?? null,
+    changed_by: user?.id ?? null,
+    reason: params.reason ?? null,
+  })
+}
+
+/** Fetch ARFF status changes within a date range for the daily ops report. */
+export async function fetchArffStatusLog(
+  startUTC: string,
+  endUTC: string,
+  baseId?: string | null,
+): Promise<ArffStatusLogRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
+    .from('arff_status_log')
+    .select('*, profiles:changed_by(name, rank)')
+    .gte('created_at', startUTC)
+    .lte('created_at', endUTC)
+    .order('created_at', { ascending: true })
+  if (baseId) query = query.eq('base_id', baseId)
+  const { data, error } = await query
+  if (error) {
+    console.error('fetchArffStatusLog:', error.message)
+    return []
+  }
+  return (data || []).map((r: Record<string, unknown>) => ({
+    ...r,
+    user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+    user_rank: (r.profiles as { rank?: string } | null)?.rank,
+  })) as ArffStatusLogRow[]
+}
+
 /** Log a change to runway_status_log for the daily operations report */
 export async function logRunwayStatusChange(
   params: {

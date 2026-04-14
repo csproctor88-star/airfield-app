@@ -12,7 +12,7 @@ import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
 import { logActivity, logManualEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
-import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
+import { logRunwayStatusChange, logArffStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES, CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
@@ -1800,9 +1800,16 @@ export default function HomePage() {
                   <button
                     onClick={() => {
                       const { aircraft, selectedStatus, notes } = arffDialog
+                      const prev = arffStatuses[aircraft] ?? null
                       setArffStatusForAircraft(aircraft, selectedStatus)
                       if (installationId) {
                         logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, { details: `REPORTS ${aircraft.toUpperCase()} ${selectedStatus.toUpperCase()}${notes.trim() ? `. ${notes.trim().toUpperCase()}` : ''}` }, installationId)
+                        logArffStatusChange({
+                          aircraftName: aircraft,
+                          oldReadiness: prev,
+                          newReadiness: selectedStatus,
+                          reason: notes.trim() || null,
+                        }, installationId)
                       }
                       setArffDialog(null)
                     }}
@@ -1955,6 +1962,7 @@ export default function HomePage() {
                     setArffCat(val)
                     if (installationId) {
                       logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, { details: `REPORTS ARFF CAT CHANGED TO ${val ?? 'NONE'}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
+                      logArffStatusChange({ oldCat: current, newCat: val, reason: remarks || null }, installationId)
                     }
                   },
                 })
