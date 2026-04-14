@@ -1,5 +1,89 @@
 import { createClient } from './client'
 
+type ProfileFragment = {
+  name?: string | null
+  rank?: string | null
+  role?: string | null
+  edipi?: string | null
+  operating_initials?: string | null
+} | null
+
+type LogRow = {
+  id: string
+  action: string
+  entity_type: string
+  entity_id: string | null
+  entity_display_id: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  user_id: string | null
+  profiles: ProfileFragment
+}
+
+type DiscRow = {
+  id: string
+  display_id: string | null
+  title: string | null
+  status: string
+  current_status: string | null
+  type: string | null
+  location_text: string | null
+  created_at: string
+  updated_at: string
+  reported_by: string | null
+  profiles: ProfileFragment
+}
+
+type CheckRow = {
+  id: string
+  display_id: string | null
+  check_type: string | null
+  completed_at: string
+  completed_by: string | null
+  profiles: ProfileFragment
+}
+
+type InspRow = {
+  id: string
+  display_id: string | null
+  inspection_type: string | null
+  status: string
+  filed_at: string
+  inspector_id: string | null
+  profiles: ProfileFragment
+}
+
+type QrcRow = {
+  id: string
+  qrc_number: string | number
+  title: string | null
+  status: string
+  opened_at: string
+  closed_at: string | null
+  opened_by: string | null
+  profiles: ProfileFragment
+}
+
+type SightingRow = {
+  id: string
+  display_id: string | null
+  species_common: string | null
+  count_observed: number | null
+  location_text: string | null
+  created_at: string
+  observed_by: string | null
+  profiles: ProfileFragment
+}
+
+type StrikeRow = {
+  id: string
+  display_id: string | null
+  species_common: string | null
+  created_at: string
+  reported_by: string | null
+  profiles: ProfileFragment
+}
+
 export type ActivityEntry = {
   id: string
   action: string
@@ -108,7 +192,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  const entries: ActivityEntry[] = (logData || []).map((r: any) => ({
+  const entries: ActivityEntry[] = ((logData || []) as unknown as LogRow[]).map((r) => ({
     id: r.id,
     action: r.action,
     entity_type: r.entity_type,
@@ -134,7 +218,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('updated_at', { ascending: false })
     .limit(20)
 
-  for (const d of (discData || []) as any[]) {
+  for (const d of (discData || []) as unknown as DiscRow[]) {
     const key = `discrepancy-${d.id}-updated`
     if (usedIds.has(key)) continue
     usedIds.add(key)
@@ -166,7 +250,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('completed_at', { ascending: false })
     .limit(20)
 
-  for (const c of (checkData || []) as any[]) {
+  for (const c of (checkData || []) as unknown as CheckRow[]) {
     const key = `check-${c.id}-completed`
     if (usedIds.has(key)) continue
     usedIds.add(key)
@@ -198,7 +282,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('filed_at', { ascending: false })
     .limit(10)
 
-  for (const ins of (inspData || []) as any[]) {
+  for (const ins of (inspData || []) as unknown as InspRow[]) {
     const key = `inspection-${ins.id}-filed`
     if (usedIds.has(key)) continue
     usedIds.add(key)
@@ -228,7 +312,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('opened_at', { ascending: false })
     .limit(10)
 
-  for (const q of (qrcData || []) as any[]) {
+  for (const q of (qrcData || []) as unknown as QrcRow[]) {
     const key = `qrc-${q.id}-opened`
     if (usedIds.has(key)) continue
     usedIds.add(key)
@@ -257,7 +341,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('created_at', { ascending: false })
     .limit(10)
 
-  for (const s of (sightingData || []) as any[]) {
+  for (const s of (sightingData || []) as unknown as SightingRow[]) {
     const key = `wildlife_sighting-${s.id}-created`
     if (usedIds.has(key)) continue
     usedIds.add(key)
@@ -286,7 +370,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('created_at', { ascending: false })
     .limit(10)
 
-  for (const s of (strikeData || []) as any[]) {
+  for (const s of (strikeData || []) as unknown as StrikeRow[]) {
     const key = `wildlife_strike-${s.id}-created`
     if (usedIds.has(key)) continue
     usedIds.add(key)
