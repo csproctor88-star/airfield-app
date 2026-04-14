@@ -50,10 +50,10 @@ CREATE INDEX IF NOT EXISTS daily_reviews_base_date_idx ON daily_reviews (base_id
 ALTER TABLE daily_reviews ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "daily_reviews_select" ON daily_reviews
-  FOR SELECT USING (user_has_base_access(base_id));
+  FOR SELECT USING (user_has_base_access(auth.uid(), base_id));
 
 CREATE POLICY "daily_reviews_insert" ON daily_reviews
-  FOR INSERT WITH CHECK (user_has_base_access(base_id) AND user_can_write());
+  FOR INSERT WITH CHECK (user_has_base_access(auth.uid(), base_id) AND user_can_write(auth.uid()));
 
 CREATE POLICY "daily_reviews_update" ON daily_reviews
-  FOR UPDATE USING (user_has_base_access(base_id) AND user_can_write());
+  FOR UPDATE USING (user_has_base_access(auth.uid(), base_id) AND user_can_write(auth.uid()));
