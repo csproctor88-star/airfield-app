@@ -2442,6 +2442,7 @@ const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
 const FREQ_TAG_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: 'var(--color-warning)' }
 
 function ShiftChecklistTab({ installationId, currentInstallation }: { installationId: string | null; currentInstallation: any }) {
+  const { refreshCurrentInstallation } = useInstallation()
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
   const [loaded, setLoaded] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -2449,6 +2450,8 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
   const [saving, setSaving] = useState(false)
   const [resetTime, setResetTime] = useState('06:00')
   const [savingReset, setSavingReset] = useState(false)
+  const [shiftCount, setShiftCount] = useState<2 | 3>(2)
+  const [savingShiftCount, setSavingShiftCount] = useState(false)
 
   const [formLabel, setFormLabel] = useState('')
   const [formShift, setFormShift] = useState<ShiftType>('day')
@@ -2462,7 +2465,29 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
     if (currentInstallation?.checklist_reset_time) {
       setResetTime(currentInstallation.checklist_reset_time)
     }
+    const sc = (currentInstallation as { shift_count?: number } | null)?.shift_count
+    if (sc === 3) setShiftCount(3)
+    else setShiftCount(2)
   }, [currentInstallation])
+
+  async function handleSaveShiftCount(next: 2 | 3) {
+    if (!installationId) return
+    setSavingShiftCount(true)
+    setShiftCount(next)
+    const supabase = createClient()
+    if (supabase) {
+      const { error } = await (supabase as any)
+        .from('bases')
+        .update({ shift_count: next, updated_at: new Date().toISOString() })
+        .eq('id', installationId)
+      if (error) toast.error(error.message)
+      else {
+        toast.success(`Shift count set to ${next}`)
+        await refreshCurrentInstallation()
+      }
+    }
+    setSavingShiftCount(false)
+  }
 
   const load = useCallback(async () => {
     const data = await fetchChecklistItems(installationId)
@@ -2625,6 +2650,29 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
 
   return (
     <div>
+      {/* Shift Count Configuration — controls Daily Review slots */}
+      <div style={{
+        background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-base)', padding: 14, marginBottom: 12,
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shifts per Day</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            Determines AMSL signature slots on Daily Reviews (2 = Day + Swing; 3 = Day + Swing + Mid).
+          </div>
+        </div>
+        <select
+          value={shiftCount}
+          onChange={(e) => handleSaveShiftCount(Number(e.target.value) as 2 | 3)}
+          disabled={savingShiftCount}
+          style={{ ...selectStyle, minWidth: 100 }}
+        >
+          <option value={2}>2 shifts</option>
+          <option value={3}>3 shifts</option>
+        </select>
+      </div>
+
       {/* Reset Time Configuration */}
       <div style={{
         background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
