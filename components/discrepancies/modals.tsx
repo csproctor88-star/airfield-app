@@ -82,6 +82,7 @@ export function EditDiscrepancyModal({
     facility_number: (discrepancy as DiscrepancyRow & { facility_number?: string | null }).facility_number || '',
     work_order_number: discrepancy.work_order_number || '',
     assigned_shop: (discrepancy as DiscrepancyRow & { assigned_shop?: string | null }).assigned_shop || '',
+    estimated_completion_date: (discrepancy as DiscrepancyRow & { estimated_completion_date?: string | null }).estimated_completion_date || '',
     latitude: discrepancy.latitude,
     longitude: discrepancy.longitude,
   })
@@ -164,6 +165,7 @@ export function EditDiscrepancyModal({
       facility_number: form.facility_number || null,
       work_order_number: form.work_order_number || null,
       assigned_shop: form.assigned_shop || null,
+      estimated_completion_date: form.estimated_completion_date || null,
       latitude: form.latitude,
       longitude: form.longitude,
       infrastructure_feature_id: newFeatureId,
@@ -281,6 +283,16 @@ export function EditDiscrepancyModal({
             value={form.assigned_shop}
             onChange={(e) => setForm(p => ({ ...p, assigned_shop: e.target.value }))} />
         )}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Estimated Completion Date</FieldLabel>
+        <input
+          type="date"
+          className="input-dark"
+          value={form.estimated_completion_date}
+          onChange={(e) => setForm(p => ({ ...p, estimated_completion_date: e.target.value }))}
+        />
       </div>
 
       {/* Link to Visual NAVAID */}

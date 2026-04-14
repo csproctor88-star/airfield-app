@@ -16,7 +16,7 @@ import { logRunwayStatusChange } from '@/lib/supabase/airfield-status'
 import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES, CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
 import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
-import { formatZuluDate, formatZuluTime } from '@/lib/utils'
+import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 
@@ -132,7 +132,10 @@ export default function HomePage() {
     message: string
     color: string
     notes: string
-    onConfirm: (notes: string) => void
+    // When set, the dialog renders a datetime-local picker (for runway close/suspend)
+    showEstimatedResume?: boolean
+    estimatedResumeAt?: string
+    onConfirm: (notes: string, estimatedResumeAt?: string) => void
   } | null>(null)
 
   // NAVAID status dialog state
@@ -1203,10 +1206,28 @@ export default function HomePage() {
                 fontFamily: 'inherit', resize: 'vertical', minHeight: 44,
               }}
             />
+            {confirmDialog.showEstimatedResume && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 6 }}>
+                  Estimated Resume Time (local, optional) — DAFMAN 6.2.2
+                </div>
+                <input
+                  type="datetime-local"
+                  value={confirmDialog.estimatedResumeAt || ''}
+                  onChange={(e) => setConfirmDialog({ ...confirmDialog, estimatedResumeAt: e.target.value })}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                    background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                    color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => {
-                  confirmDialog.onConfirm(confirmDialog.notes.trim())
+                  confirmDialog.onConfirm(confirmDialog.notes.trim(), confirmDialog.estimatedResumeAt)
                   setConfirmDialog(null)
                 }}
                 style={{
@@ -1605,6 +1626,16 @@ export default function HomePage() {
                       {rwy.remarks}
                     </div>
                   )}
+                  {(rwy as { estimated_resume_at?: string | null }).estimated_resume_at && (rwy.status === 'suspended' || rwy.status === 'closed') && (
+                    <div style={{
+                      fontSize: 'var(--fs-xs)',
+                      color: 'var(--color-text-3)',
+                      textAlign: 'center',
+                      lineHeight: 1.3,
+                    }}>
+                      Est. resume: {formatZuluDateTime(new Date((rwy as { estimated_resume_at: string }).estimated_resume_at))}
+                    </div>
+                  )}
                   <select
                     value={runways.length > 0 ? rwy.status : runwayStatus}
                     onChange={(e) => {
@@ -1617,9 +1648,12 @@ export default function HomePage() {
                         message: `Change RWY ${rwy.active_end} status from ${currentVal.toUpperCase()} to ${val.toUpperCase()}?`,
                         color: statusColor,
                         notes: '',
-                        onConfirm: (remarks) => {
+                        showEstimatedResume: val !== 'open',
+                        estimatedResumeAt: '',
+                        onConfirm: (remarks, estimatedResumeAt) => {
+                          const resumeIso = estimatedResumeAt ? new Date(estimatedResumeAt).toISOString() : null
                           if (runways.length > 0) {
-                            setRunwayStatusForRunway(rwy.label, val, remarks || null)
+                            setRunwayStatusForRunway(rwy.label, val, remarks || null, resumeIso)
                             if (installationId) {
                               const rwyStatusText = val === 'open' ? 'OPS RESUMED' : val.toUpperCase()
                               logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { details: `ADVISES RWY ${rwy.active_end} ${rwyStatusText}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)

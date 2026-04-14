@@ -283,6 +283,12 @@ export default function DiscrepancyDetailPage() {
           { label: 'Work Order Currently Assigned to', value: d.assigned_shop || 'Unassigned' },
           { label: 'NOTAM', value: (d as typeof d & { notam_reference?: string }).notam_reference || 'None' },
           { label: 'Days Open', value: `${daysOpen}` },
+          { label: 'ECD', value: (() => {
+            const ecd = (d as typeof d & { estimated_completion_date?: string | null }).estimated_completion_date
+            if (!ecd) return '—'
+            const dt = new Date(ecd)
+            return isNaN(dt.getTime()) ? '—' : dt.toISOString().slice(0, 10)
+          })() },
           { label: 'Photos', value: `${d.photo_count}` },
         ]} />
 

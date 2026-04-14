@@ -69,6 +69,7 @@ export default function NewDiscrepancyPage() {
     description: '',
     current_status: 'submitted_to_afm',
     facility_number: '',
+    estimated_completion_date: '',
     latitude: null as number | null,
     longitude: null as number | null,
   })
@@ -179,6 +180,7 @@ export default function NewDiscrepancyPage() {
       latitude: formData.latitude,
       longitude: formData.longitude,
       facility_number: formData.facility_number || undefined,
+      estimated_completion_date: formData.estimated_completion_date || undefined,
       base_id: installationId,
       assigned_shop: assignedShop || undefined,
       infrastructure_feature_id: selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : undefined,
@@ -356,6 +358,19 @@ export default function NewDiscrepancyPage() {
           ) : (
             <input type="text" className="input-dark" placeholder="e.g., 06010 — Runway" value={formData.facility_number} onChange={(e) => setFormData((p) => ({ ...p, facility_number: e.target.value }))} />
           )}
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <span className="section-label">Estimated Completion Date (optional)</span>
+          <input
+            type="date"
+            className="input-dark"
+            value={formData.estimated_completion_date}
+            onChange={(e) => setFormData((p) => ({ ...p, estimated_completion_date: e.target.value }))}
+          />
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            DAFMAN 2.3.2.7.3 — expected CES closure date.
+          </div>
         </div>
 
         {/* Location Map */}

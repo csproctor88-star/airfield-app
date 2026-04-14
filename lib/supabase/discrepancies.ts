@@ -23,6 +23,7 @@ export type DiscrepancyRow = {
   inspection_id: string | null
   resolution_notes: string | null
   resolution_date: string | null
+  estimated_completion_date: string | null
   facility_number: string | null
   infrastructure_feature_id: string | null
   lighting_system_id: string | null
@@ -86,6 +87,7 @@ export async function createDiscrepancy(input: {
   infrastructure_feature_id?: string | null
   lighting_system_id?: string | null
   assigned_shop?: string | null
+  estimated_completion_date?: string | null
 }): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -122,6 +124,7 @@ export async function createDiscrepancy(input: {
     lighting_system_id: input.lighting_system_id ?? null,
   }
   if (input.assigned_shop) row.assigned_shop = input.assigned_shop
+  if (input.estimated_completion_date) row.estimated_completion_date = input.estimated_completion_date
   if (reported_by) row.reported_by = reported_by
   if (input.base_id) row.base_id = input.base_id
 
@@ -154,6 +157,7 @@ export async function updateDiscrepancy(
     assigned_shop?: string | null
     work_order_number?: string | null
     resolution_notes?: string | null
+    estimated_completion_date?: string | null
     latitude?: number | null
     longitude?: number | null
     infrastructure_feature_id?: string | null

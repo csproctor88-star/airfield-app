@@ -23,7 +23,7 @@ type DashboardState = {
   // Multi-runway support
   runwayStatuses: RunwayStatuses
   setRunwayActiveEnd: (runwayLabel: string, activeEnd: string) => void
-  setRunwayStatusForRunway: (runwayLabel: string, status: 'open' | 'suspended' | 'closed', remarks?: string | null) => void
+  setRunwayStatusForRunway: (runwayLabel: string, status: 'open' | 'suspended' | 'closed', remarks?: string | null, estimatedResumeAt?: string | null) => void
   // ARFF
   arffCat: number | null
   setArffCat: (cat: number | null) => Promise<void>
@@ -267,8 +267,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [runwayStatuses, runwayLabels, persistRunwayStatuses])
 
   // Multi-runway: set status for a specific runway
-  const setRunwayStatusForRunway = useCallback(async (runwayLabel: string, status: 'open' | 'suspended' | 'closed', remarks?: string | null) => {
-    const entry = { ...runwayStatuses[runwayLabel], status, remarks: (status === 'open') ? null : (remarks || null) }
+  const setRunwayStatusForRunway = useCallback(async (runwayLabel: string, status: 'open' | 'suspended' | 'closed', remarks?: string | null, estimatedResumeAt?: string | null) => {
+    const entry = {
+      ...runwayStatuses[runwayLabel],
+      status,
+      remarks: (status === 'open') ? null : (remarks || null),
+      estimated_resume_at: (status === 'open') ? null : (estimatedResumeAt || null),
+    }
     const updated = { ...runwayStatuses, [runwayLabel]: entry }
     setRunwayStatusesLocal(updated)
     // Sync legacy if first runway

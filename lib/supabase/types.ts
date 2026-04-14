@@ -1199,6 +1199,7 @@ export type Database = {
           current_status: string
           description: string
           display_id: string
+          estimated_completion_date: string | null
           facility_number: string | null
           id: string
           infrastructure_feature_id: string | null
@@ -1228,6 +1229,7 @@ export type Database = {
           current_status?: string
           description: string
           display_id: string
+          estimated_completion_date?: string | null
           facility_number?: string | null
           id?: string
           infrastructure_feature_id?: string | null
@@ -1257,6 +1259,7 @@ export type Database = {
           current_status?: string
           description?: string
           display_id?: string
+          estimated_completion_date?: string | null
           facility_number?: string | null
           id?: string
           infrastructure_feature_id?: string | null

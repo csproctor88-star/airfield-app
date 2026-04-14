@@ -4,6 +4,9 @@ export interface RunwayStatusEntry {
   status: 'open' | 'suspended' | 'closed'
   active_end: string
   remarks?: string | null
+  // DAFMAN 13-204v1 Para 6.2.2: estimated time runway returns to service (ISO Zulu).
+  // Only meaningful when status ≠ 'open'.
+  estimated_resume_at?: string | null
 }
 
 export type RunwayStatuses = Record<string, RunwayStatusEntry>
