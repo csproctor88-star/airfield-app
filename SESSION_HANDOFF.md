@@ -1,73 +1,92 @@
 # Session Handoff
 
-**Date:** 2026-04-14
-**Branch:** `main` (synced with `origin/main`, 10 commits landed this session)
+**Date:** 2026-04-14 (evening session)
+**Branch:** `tweaks` (11 commits ahead of `origin/main`; pushed to `origin/tweaks`)
 **Build:** ✅ Clean — `npm run build` compiles; `npx tsc --noEmit` exit 0; `npm test` 10 pass / 2 skipped
 
 ---
 
 ## What Landed This Session
 
-Ten commits pushed to `origin/main`:
+Eleven commits pushed to `origin/tweaks`:
 
 | Commit | Summary |
 |---|---|
-| `1fdac4a` | Commit formal docs, retire v2.27 capabilities, ignore `docs/references/` |
-| `43479a8` | Add Vitest scaffold + 5 critical-path tests |
-| `d18342f` | Remove stale docs — rely on git history for recovery |
-| `83badf2` | Type activity-queries row shapes, drop 7 `any` casts |
-| `030a009` | Add ECD on discrepancies + estimated resume time on runway status |
-| `46d0e88` | Add Daily Review + shift sign-off module |
-| `53b121f` | Fix RLS helper signatures in daily_reviews migration |
-| `ec7784a` | Dashboard pending-reviews widget + Events Log amendment badge |
-| `c7e2436` | Add ARFF status logging (Task 9) |
+| `437a377` | Fix daily review modal on mobile + rename Certified to Reviewed |
+| `41039a7` | Contact Support dialog + shrink sidebar nav font |
+| `c87ba05` | Fix inspection failed-item photos not reaching auto-created discrepancy |
+| `560378c` | Roll unified Upload/Capture photo picker across app |
+| `fc5bf2e` | Surface signer details + Download on daily review modal and PDF |
+| `4c4990f` | Include Notes History in discrepancy PDF export |
+| `27cb4c3` | Add Review Shift card to dashboard with inline sign dialog |
+| `a68d4f1` | Clear Supabase linter errors and warnings |
+| `a8c534a` | Move cross-PDF search to Regulations page; PDF Library is admin tool |
+| `6464ea7` | Align daily review roll-over to base local reset time |
+| `3a69ed5` | Move Matches in Content card below the reference list |
+
+(`tweaks` branch was created/fast-forwarded from `main` mid-session; everything since then has landed there for safety.)
 
 ### Highlights
 
-1. **Vitest scaffold.** `npm test` runs 10 tests across 5 files: parking clearance math, outage tier calc, discrepancy PDF smoke, middleware auth gate (mocked `@supabase/ssr`), RLS smoke (env-gated — skipped without live Supabase). Adds `vitest` + `jsdom` + `@testing-library/react` + `@vitejs/plugin-react` dev deps. `vitest.config.ts` with `@` alias + jsdom env.
+1. **Daily review modal fixes (Task 7 follow-on).** PDF preview now provides an "Open Daily Ops PDF" link on mobile (iframe blob doesn't render on iOS Safari), the stray "Events hash" debug line is gone, and "Certified/Sign & Certify" copy renamed to "Reviewed/Sign Review" across the modal, list page, and Events Log AMENDED tooltip. DB columns + helper names unchanged.
 
-2. **`any` cleanup in activity-queries.ts.** 6 `as any[]` + 1 `(r: any)` replaced with typed local row aliases (LogRow, DiscRow, CheckRow, InspRow, QrcRow, SightingRow, StrikeRow) sharing a `ProfileFragment`. 3 `(supabase as any)` casts remain on qrc/wildlife queries — underlying issue is missing FK declaration in the generated types.
+2. **Contact Support dialog (`components/ui/contact-support.tsx`).** Replaces the four bare `mailto:` anchors. Opens a small dialog showing the address, a Copy button, and Open-in-mail-app / Gmail / Outlook-Web links. Fixes the Windows-without-default-mailer dead-click. Sidebar nav font shrunk ~1px (`fs-lg` → `fs-md`, `fs-base` → `fs-sm`).
 
-3. **Discrepancy ECD + runway estimated resume.** DAFMAN 2.3.2.7.3 and 6.2.2 compliance. `discrepancies.estimated_completion_date DATE` column (migration `2026041301`). `RunwayStatusEntry.estimated_resume_at` lives in existing `airfield_status.runway_statuses` JSONB — no migration needed. Create/edit forms and detail views updated; discrepancy PDF info box gains an ECD row; runway status card shows "Est. resume: …" when closed/suspended.
+3. **Inspection failed-item photo regression + Android camera + unified picker.**
+   - Photos uploaded immediately during the inspection draft (with `inspection_id + issue_index`) are now re-linked to the auto-created discrepancy on file via the new `linkPhotosToDiscrepancy()` helper, instead of re-uploading from the in-memory blob (which is empty after a draft resume).
+   - Android camera capture: added `<input capture="environment">` alongside the upload input; new `PhotoPickerButton` popover offers Take Photo / Upload from Library when both callbacks are wired.
+   - `PhotoPickerInput` shared component bundles the two hidden inputs + popover button. Rolled across 8 sites: checks (main + per-issue), discrepancies/new, inspections/[id] (3 spots), construction-new, joint-monthly-new, obstructions, waivers/new, ACSI discrepancy panel. Skipped: discrepancies/[id] (intentional dual emoji buttons), waivers/[id] attachments, settings avatar, feedback (no photo input).
 
-4. **Daily Review + shift sign-off module (Task 7).** Replaces the T-3 waiver for DAFMAN 13-204v1 Para 2.5.2.10.3 / 10.4 with a 4- or 5-role digital sign-off (day AMSL → swing AMSL → [mid AMSL] → NAMO → AFM). Per-base `bases.shift_count` (2 or 3). New `daily_reviews` table with per-slot `signed_by/at/notes/events_hash` columns + `fully_certified_at`. Role gates in `lib/supabase/daily-reviews.ts`; AMSL slots accept `amops` + admins; NAMO + AFM gated to their respective roles + admins. Events hash = SHA-256 of sorted entity IDs in the day's rollup. `/daily-reviews` page with 14-day queue. `DailyReviewSignModal` with side-by-side Daily Ops PDF preview (iframe blob URL) + signature panel; on full certification prompts `EmailPdfModal` for filing. Base Setup → Shift Checklist step gains a "Shifts per Day" selector. Sidebar: "Daily Reviews" under Operations.
+4. **Daily review signer details + Download PDF.** Sign modal now resolves each signed slot to a profile (rank + name + operating initials) via new `fetchDailyReviewSigners()` and shows it on the slot row. After full certification a "Download Reviewed PDF" button appears alongside the existing email action. Daily Ops PDF gains a "DAILY REVIEW SIGN-OFF" section on single-day reports listing role, signer, signed-at (Z), notes, plus a green "FULLY REVIEWED — <Z>" line. PDF preview is regenerated after every signature so downstream actions stay in sync.
 
-5. **Deferred bits of Task 7.** Dashboard "Daily Reviews Pending" banner surfaces any of the last 7 days not fully certified; links to `/daily-reviews`. Events Log "AMENDED" pill on activity_log rows whose `created_at` is newer than the fully_certified_at for their date — flags retroactive edits to certified windows.
+5. **Discrepancy PDF Notes History.** `lib/discrepancy-pdf.ts` accepts an optional `notesHistory` array; renders a "NOTES HISTORY (n)" section between Resolution Notes and Location/Map. Newest first, with signer, Zulu datetime, optional status transition, and wrapped note body. Aggregate open-discrepancies PDF already had a condensed version; this matches parity for the single-discrepancy export.
 
-6. **ARFF status logging (Task 9).** `arff_status_log` table modeled on `runway_status_log` — records every CAT change and per-aircraft readiness change with `changed_by` and optional `reason`. Dashboard ARFF CAT confirm dialog and aircraft readiness dialog both write log rows. Daily Ops PDF gains an "ARFF STATUS CHANGES" section with color-coded readiness cells.
+6. **Review Shift dashboard card.** AMSL-eligible users (amops / airfield_manager / namo / admins) finishing their shift now see a "Review Shift" card whenever today's row has any unsigned AMSL slot. Click opens the sign modal inline for today — no navigation. Card shows `n/m AMSL signatures captured for today` and disappears once full. Pending Reviews card still routes to `/daily-reviews` for NAMO/AFM to pick a specific day.
+
+7. **Supabase linter cleanup (3 migrations).**
+   - `2026041400` — fixes 8 errors (RLS enabled on `pdf_extraction_status`, `pdf_text_pages`, `custom_status_boards`, `custom_status_items`, `ppr_columns`, `ppr_entries`; standard base-scoped policies on the latter four).
+   - `2026041401` — pins `search_path` on 12 SECURITY-DEFINER / STABLE functions, tightens `customer_feedback` INSERT from `WITH CHECK (true)` to require a valid `base_id`, drops the broad SELECT policy on the `photos` storage bucket.
+   - `2026041402` — replaces dashboard-added permissive Anon/Authenticated write policies on the PDF text tables with admin-only (`user_is_admin`). PDFLibrary hides the Extract All button for non-admins to avoid confusing RLS errors.
+   - **All three already applied to Supabase** — user confirmed all errors and most warnings cleared. Remaining warning: `auth_leaked_password_protection` (Pro plan only; settled to wait until upgrade).
+
+8. **Cross-PDF search moved to /regulations.** Added a content-search layer to the existing References page that queries `search_all_pdfs()` (debounced 300ms, IDB fallback when server returns empty). Renders a "Matches in Content (n)" card **beneath** the reference list, showing each hit with `{reg_id} — {title}`, page number, snippet. Clicking opens the PDF at that page via a new `initialPage` prop on `RegulationPDFViewer`. `PDFLibrary` (`/library`) is now purely an admin extract/cache utility — search box is "Filter by filename…" only.
+
+9. **PDFLibrary `extractAll` sync fix.** Previously skipped any file already in IDB, so after policies were tightened the local cache and server tables drifted. Now fetches `pdf_extraction_status` to detect what the server is missing, skips PDF.js re-parsing for IDB-cached files but still uploads them.
+
+10. **Daily review local-time alignment.** Daily reviews were rolling over at Zulu midnight. Now use `bases.timezone` + `bases.checklist_reset_time` (same fields shift checklists / inspections already use). Two new helpers: `getEffectiveReviewDate()` and `getReviewWindowUtc()`. Sign modal's PDF preview filters events to the local-day window. `todayIso` on dashboard + 14-day list both anchor to local "today".
 
 ---
 
 ## Migrations Queued for Out-of-Band Apply
 
-⚠️ **All three must be applied to Supabase before their features work in prod:**
+✅ **All applied this session** (user confirmed via Supabase linter):
+- `2026041400_rls_cleanup_missing_tables.sql`
+- `2026041401_supabase_linter_warnings.sql`
+- `2026041402_pdf_text_policies_tighten.sql`
 
-- `supabase/migrations/2026041301_discrepancy_ecd.sql`
-- `supabase/migrations/2026041302_daily_reviews.sql`
-- `supabase/migrations/2026041303_arff_status_log.sql`
-
-(User applied ARFF migration from last session `2026041300_arff_config.sql` + `2026041301` and `2026041302` this session. Confirm `2026041303` once applied.)
+Next session has nothing pending unless new tables land.
 
 ---
 
 ## Incomplete / In-Progress Work
 
-### Uncommitted on `main`
-
+### Uncommitted on `tweaks`
 | Item | What | Status |
 |---|---|---|
 | `.env.local` modified | Local secrets | Leave untracked |
+| `docs/SESSION_HANDOFF_v2.32.0.md` deleted | Stale; from prior cleanup | Will tidy when ready |
 
-Working tree is otherwise clean (down from 7 files at session start).
+Working tree is otherwise clean.
 
-### Verification items from this session's work
+### Verification items from this session
 
 | Item | Next-session action |
 |---|---|
-| Daily Review flow end-to-end | Walk through: apply `2026041302`, set shift_count in Base Setup, sign as AMSL → AMSL → NAMO → AFM, confirm modal prompts email on full certification, confirm dashboard pill disappears, confirm "AMENDED" badge appears on a backdated Events Log entry. |
-| ARFF status logging | Apply `2026041303`, toggle CAT and an aircraft on dashboard, generate a Daily Ops Report for today, confirm "ARFF STATUS CHANGES" section populates. |
-| Discrepancy ECD persistence | Apply `2026041301`, create a new discrepancy with ECD set, confirm it round-trips in detail view + edit modal + PDF. |
-| Runway estimated resume | Close a runway, set est resume time, confirm it appears on the card and persists through refresh (no migration needed). |
+| Photo picker rollout | Touch each converted site on Android: failed-inspection-item add photo, check issue add photo, discrepancy new, inspection [id] three spots, construction/joint-monthly forms, obstructions, waivers/new, ACSI failed-item. Confirm Take Photo opens the camera and Upload opens the library. |
+| Inspection→discrepancy photo re-link | Create a draft inspection on Device A with a failed-item photo, resume + file from Device B, confirm the auto-created discrepancy carries the photo. (The blob path was the regression — re-link path is the new fix.) |
+| Daily review local-time roll-over | Pick a base in EST and confirm the 14-day list, dashboard cards, and sign-modal PDF window all roll at the configured `checklist_reset_time` (e.g. 0600L). |
+| Cross-PDF content search | On `/regulations` search a known phrase from any reg; confirm the "Matches in Content" card appears beneath the references and clicking jumps to the right page in the viewer. |
+| Review Shift card | Sign in as `amops`, confirm card visible on dashboard, click → modal opens for today. As `airfield_manager`, confirm both "Review Shift" and "Daily Reviews Pending" cards behave correctly. |
 
 ---
 
@@ -75,43 +94,41 @@ Working tree is otherwise clean (down from 7 files at session start).
 
 | Item | Location | Severity | Change from last handoff |
 |---|---|---|---|
-| **`any` casts** | ~124 project-wide; ~20 in `lib/supabase/*` | Low → Low | Down ~7 this session (activity-queries) |
-| **Largest source files** | `settings/base-setup/page.tsx` 4,698 LOC; `parking/page.tsx` 4,334 LOC; `infrastructure/page.tsx` 4,150 LOC | Medium | Base Setup +~34 for shift_count; others unchanged |
-| **No automated test suite** | 5 test files now (10 pass, 2 RLS skipped) | Medium | ✅ Scaffolded this session |
-| **Supabase type ambiguity** | 3 `(supabase as any)` in activity-queries + new daily_reviews + arff_status_log casts | Low | Follow-ups: declare FKs in DB and regen types |
-| **Storage RLS not row-scoped** | `photos` bucket | Low | Unchanged |
+| **`auth_leaked_password_protection`** | Supabase dashboard → Auth → Email | Low | New finding — Pro plan only; defer until upgrade |
+| **`any` casts** | ~124 project-wide; ~20 in `lib/supabase/*` | Low | Unchanged |
+| **Largest source files** | `settings/base-setup/page.tsx` 4,698 LOC; `parking/page.tsx` 4,334 LOC; `infrastructure/page.tsx` 4,150 LOC; `dashboard/page.tsx` ~2,080 LOC | Medium | Dashboard grew slightly with Review Shift card + sign modal embed |
+| **No automated test suite for new code** | 5 test files (10 pass, 2 RLS skipped) | Medium | Daily-reviews helpers + photo-picker still uncovered |
+| **`daily_reviews` / `arff_status_log` not in types.ts** | Both still cast via `(supabase as any)` | Low | Same — regen types when next migration lands |
 | **PDF boilerplate duplication** | 12+ generators share header/footer/photo patterns | Low | Unchanged |
-| **daily_reviews / arff_status_log not in types.ts** | Both tables cast via `(supabase as any)`; regen types after Supabase migrations land to close this | Low | New this session |
+| **`PDFLibrary.tsx` dead styles** | `globalResults` / `gBadge` / `gSnippet` styles unused after search move | Trivial | New — leave for next simplify pass |
+| **DST edge cases in `zonedWallClockToUtc`** | `lib/supabase/daily-reviews.ts` | Trivial | New — review windows around the 2 AM DST switch may be off by an hour. Acceptable for 06:00L windows, but worth a unit test |
 
 ---
 
 ## Next Session Tasks (Prioritized)
 
 ### P0 — Operational
-
-1. **Verify all three new migrations applied to Supabase**, then exercise the flows above.
-2. **Regenerate `lib/supabase/types.ts`** after migrations land to pick up `daily_reviews`, `arff_status_log`, `bases.shift_count`, `discrepancies.estimated_completion_date`. Removes several `(supabase as any)` casts.
+1. **Manually verify each Phase 2 photo picker site on Android** (see verification items above). The picker change touched 8 sites; want hands-on confirmation before declaring done.
+2. **Field-test the inspection→discrepancy photo re-link** across two devices to confirm the regression really is fixed in the resumed-draft case.
 
 ### P1 — Quality
-
-3. **Extend Vitest coverage** — 5 tests is a start, not a finish. Add tests for: daily review slot gating (`canUserSignSlot`), `isFullyCertified`, `requiredSlotsForShifts`, `computeEventsHash` determinism, obstruction evaluation geometry. Goal: ~15 tests covering every pure-logic module.
-4. **Fix the 3 ambiguous-FK `as any[]` casts** that ARE now `(supabase as any)` casts in activity-queries after this session's cleanup — use the `profiles!fk_name` syntax once FKs are declared in DB. Low-risk follow-up.
+3. **Vitest expansion** — still ~5 files / 10 tests. Worth adding:
+   - `getEffectiveReviewDate` / `getReviewWindowUtc` (DST + reset-time edge cases)
+   - `requiredSlotsForShifts` / `canUserSignSlot` (already deferred from last session)
+   - `linkPhotosToDiscrepancy` smoke test (mocked supabase)
+4. **Regenerate `lib/supabase/types.ts`** to pick up `daily_reviews` and `arff_status_log`. Will remove a handful of `(supabase as any)` casts.
 
 ### P2 — Roadmap
-
-5. **Daily Review UX polish** — after real use: (a) allow "sign on behalf of" for AFM when NAMO is on leave (already possible via role check, but signal better in UI); (b) show signer name+rank on each signed slot on the /daily-reviews list view (currently only on the modal); (c) weekend/holiday handling — skip the Dashboard pill on non-duty days per base calendar.
-6. **ARFF logging UX polish** — sidebar card showing CAT history for the day; trend arrow showing last 7 days of CAT changes.
-7. **Estimated resume → auto-clear on runway reopen** — when a runway goes back to 'open', clear `estimated_resume_at`. Low-priority cleanup.
-
-### Removed from roadmap
-
-- ~~**NOTAM coordination workflow**~~ — intentionally dropped. FAA NOTAM Manager already handles the external coordination + auto-email. An in-app layer would only add audit linkage to local events, which isn't worth the build.
+5. **Tidy unused styles in `PDFLibrary.tsx`** (`globalResults`, `gBadge`, `gSnippet` etc.) — small simplify pass after the search migration.
+6. **Reorder lighting on the Review Shift card** if real-world use shows AMSL ambiguity ("which slot am I?") — could pre-select based on local time-of-day to nudge them to the right shift.
+7. **Daily review UX polish** — show signer name+rank on each signed slot in the `/daily-reviews` list itself (currently only inside the modal), weekend/holiday handling on the Dashboard pending pill.
+8. **Dashboard Review Shift card** — preselect the AMSL slot whose window most likely matches the current local time, so a swing-shift AMSL doesn't have to scroll the dropdown.
+9. **Storage RLS not row-scoped** — `photos` bucket relies on app-level checks, not path-based RLS. Long-standing.
 
 ### P3 — Future (weeks of work, defer indefinitely)
-
-- **Platform One Party Bus onboarding.** Containerize, Iron Bank submission, IL4/IL5 ATO. ~6–8 weeks.
-- **CAC/PIV authentication.** Replaces password re-auth on sign-offs with real CAC signatures. Blocked on P1 onboarding.
-- **Component extraction** for the three 4K+ LOC page files (base-setup, parking, infrastructure). Pure refactor — break each page's self-contained `*Tab` functions / panels / modal bodies into separate files under `components/<feature>/`. No behavior change. Improves TypeScript check speed and reviewability. Deferred because it's high-risk (threading state through props) and current files work.
+- Platform One Party Bus onboarding (~6–8 weeks)
+- CAC/PIV authentication (blocked on P1)
+- Component extraction for the 4K+ LOC pages (high-risk pure refactor)
 
 ---
 
@@ -127,30 +144,29 @@ Working tree is otherwise clean (down from 7 files at session start).
     /wildlife          785 kB
     /parking           396 kB
     /reports/aging     328 kB
-    /daily-reviews     316 kB  ← new this session
     /reports/daily     319 kB
-    /dashboard         217 kB
+    /library           293 kB
+    /dashboard         222 kB
+    /regulations       182 kB  ← new content-search layer adds <1 kB
   Middleware           74.6 kB
 ```
 
 ---
 
-## Commit Graph (last 15)
+## Commit Graph (this session, oldest first)
 
 ```
-c7e2436  Add ARFF status logging (Task 9)
-ec7784a  Dashboard pending-reviews widget + Events Log amendment badge
-53b121f  Fix RLS helper signatures in daily_reviews migration
-46d0e88  Add Daily Review + shift sign-off module
-030a009  Add ECD on discrepancies + estimated resume time on runway status
-83badf2  Type activity-queries row shapes, drop 7 `any` casts
-d18342f  Remove stale docs — rely on git history for recovery
-43479a8  Add Vitest scaffold + 5 critical-path tests
-1fdac4a  Commit formal docs, retire v2.27 capabilities, ignore references/
-b87cefc  Update SESSION_HANDOFF for 2026-04-13 evening session   ← prev session boundary
-1a3cd24  Add v2.33 Capabilities doc for CMSgt/AFM audience
-5c62be1  Make Chièvres seed idempotent and ignore working files
-7087774  Regenerate Supabase types and clean up `as any` casts
-c92e388  Remove unused wildlife image manifest plumbing
-84093be  Remove orphaned Mapbox/Google page variants from v2.31 migration
+437a377  Fix daily review modal on mobile + rename Certified to Reviewed
+41039a7  Contact Support dialog + shrink sidebar nav font
+c87ba05  Fix inspection failed-item photos not reaching auto-created discrepancy
+560378c  Roll unified Upload/Capture photo picker across app
+fc5bf2e  Surface signer details + Download on daily review modal and PDF
+4c4990f  Include Notes History in discrepancy PDF export
+27cb4c3  Add Review Shift card to dashboard with inline sign dialog
+a68d4f1  Clear Supabase linter errors and warnings
+a8c534a  Move cross-PDF search to Regulations page; PDF Library is admin tool
+6464ea7  Align daily review roll-over to base local reset time
+3a69ed5  Move Matches in Content card below the reference list
 ```
+
+`tweaks` ahead of `main` by all 11 commits (plus the ARFF-migration `2026041303` from the prior session). Merge to `main` when verification items above clear.
