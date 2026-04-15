@@ -714,51 +714,6 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
         )}
       </div>
 
-      {/* Matches in Content — full-text hits inside PDF bodies */}
-      {search.trim().length >= 2 && (contentSearching || contentResults.length > 0) && (
-        <div style={{
-          background: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          padding: 12,
-          marginBottom: 10,
-        }}>
-          <div style={{
-            fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
-            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}>
-            <span>Matches in Content{contentResults.length > 0 ? ` (${contentResults.length})` : ''}</span>
-            {contentSearching && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>Searching…</span>}
-          </div>
-          {contentResults.map((m, i) => {
-            const reg = regulations.find((r) => `${sanitizeFileName(r.reg_id)}.pdf` === m.fileName)
-            const label = reg ? `${reg.reg_id} — ${reg.title}` : m.fileName
-            return (
-              <button
-                key={`${m.fileName}-${m.page}-${i}`}
-                onClick={() => openContentMatch(m)}
-                disabled={!reg}
-                style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '8px 10px', marginBottom: 4, borderRadius: 'var(--radius-sm)',
-                  background: 'var(--color-bg-inset)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-1)', fontFamily: 'inherit',
-                  cursor: reg ? 'pointer' : 'not-allowed', opacity: reg ? 1 : 0.5,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>{label}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, whiteSpace: 'nowrap' }}>p. {m.page}</span>
-                </div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>{m.snippet}</div>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
       {/* Results count + Add button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>
@@ -1026,6 +981,52 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
             </div>
           )
         })
+      )}
+
+      {/* Matches in Content — full-text hits inside PDF bodies (rendered
+          beneath the reference list so reference matches stay primary). */}
+      {search.trim().length >= 2 && (contentSearching || contentResults.length > 0) && (
+        <div style={{
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: 12,
+          marginTop: 12,
+        }}>
+          <div style={{
+            fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span>Matches in Content{contentResults.length > 0 ? ` (${contentResults.length})` : ''}</span>
+            {contentSearching && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>Searching…</span>}
+          </div>
+          {contentResults.map((m, i) => {
+            const reg = regulations.find((r) => `${sanitizeFileName(r.reg_id)}.pdf` === m.fileName)
+            const label = reg ? `${reg.reg_id} — ${reg.title}` : m.fileName
+            return (
+              <button
+                key={`${m.fileName}-${m.page}-${i}`}
+                onClick={() => openContentMatch(m)}
+                disabled={!reg}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '8px 10px', marginBottom: 4, borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-1)', fontFamily: 'inherit',
+                  cursor: reg ? 'pointer' : 'not-allowed', opacity: reg ? 1 : 0.5,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>{label}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, whiteSpace: 'nowrap' }}>p. {m.page}</span>
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>{m.snippet}</div>
+              </button>
+            )
+          })}
+        </div>
       )}
 
       {/* Add Reference Modal */}
