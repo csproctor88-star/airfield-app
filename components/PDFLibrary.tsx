@@ -71,14 +71,6 @@ interface CachedTextData {
   cachedAt: number;
 }
 
-/** A search result from cross-PDF search */
-interface GlobalSearchResult {
-  fileName: string;
-  page: number;
-  snippet: string;
-  rank?: number;
-}
-
 /** An in-document search match */
 interface DocMatch {
   page: number;
@@ -436,11 +428,6 @@ export default function PDFLibrary() {
   const [extracting, setExtracting] = useState<boolean>(false);
   const [extractProgress, setExtractProgress] = useState<ExtractProgress>({ current: 0, total: 0, fileName: "" });
 
-  // Cross-PDF search
-  const [globalSearch, setGlobalSearch] = useState<string>("");
-  const [globalResults, setGlobalResults] = useState<GlobalSearchResult[]>([]);
-  const [globalSearching, setGlobalSearching] = useState<boolean>(false);
-
   // Viewer
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [masterBuffer, setMasterBuffer] = useState<ArrayBuffer | null>(null);
@@ -571,7 +558,24 @@ export default function PDFLibrary() {
   const extractAll = useCallback(async () => {
     if (extracting) return;
     setExtracting(true);
-    const toProcess = files.filter((f) => !extractedKeys.has(f.name));
+
+    // Figure out which files still need to be uploaded to Supabase. The local
+    // IDB text cache and the server table can drift (e.g. if a prior admin
+    // extracted on a different machine, or policies blocked the upload). We
+    // re-parse only files missing from IDB, but we always (re-)sync every file
+    // to Supabase so the cross-PDF search is authoritative.
+    let serverHave = new Set<string>();
+    if (navigator.onLine) {
+      const { data } = await supabase
+        .from("pdf_extraction_status")
+        .select("file_name")
+        .eq("status", "complete");
+      if (data) serverHave = new Set((data as { file_name: string }[]).map((r) => r.file_name));
+    }
+
+    const toProcess = files.filter(
+      (f) => !extractedKeys.has(f.name) || !serverHave.has(f.name),
+    );
     setExtractProgress({ current: 0, total: toProcess.length, fileName: "" });
 
     for (let i = 0; i < toProcess.length; i++) {
@@ -579,28 +583,34 @@ export default function PDFLibrary() {
       setExtractProgress({ current: i + 1, total: toProcess.length, fileName });
 
       try {
-        // Get PDF data (from cache or download)
-        let arrayBuffer = await idbGet<ArrayBuffer>(STORE_BLOBS, fileName);
-        if (!arrayBuffer && navigator.onLine) {
-          const { data: blob, error: e } = await supabase.storage.from(BUCKET_NAME).download(fileName);
-          if (e) throw e;
-          arrayBuffer = await (blob as Blob).arrayBuffer();
-          await idbSet(STORE_BLOBS, fileName, arrayBuffer);
+        let pages: ExtractedPage[] | null = null;
+
+        if (extractedKeys.has(fileName)) {
+          // IDB already has the text — skip the expensive PDF.js parse, just
+          // re-upload to Supabase.
+          const cached = await idbGet<CachedTextData>(STORE_TEXT, fileName);
+          if (cached?.pages?.length) pages = cached.pages;
         }
-        if (!arrayBuffer) { console.warn("Skip (no data):", fileName); continue; }
 
-        // Extract text with PDF.js
-        const pages = await extractTextFromBuffer(arrayBuffer);
+        if (!pages) {
+          // Fresh extraction path
+          let arrayBuffer = await idbGet<ArrayBuffer>(STORE_BLOBS, fileName);
+          if (!arrayBuffer && navigator.onLine) {
+            const { data: blob, error: e } = await supabase.storage.from(BUCKET_NAME).download(fileName);
+            if (e) throw e;
+            arrayBuffer = await (blob as Blob).arrayBuffer();
+            await idbSet(STORE_BLOBS, fileName, arrayBuffer);
+          }
+          if (!arrayBuffer) { console.warn("Skip (no data):", fileName); continue; }
 
-        // Store in IndexedDB
-        await idbSet(STORE_TEXT, fileName, { pages, source: "client", cachedAt: Date.now() });
+          pages = await extractTextFromBuffer(arrayBuffer);
+          await idbSet(STORE_TEXT, fileName, { pages, source: "client", cachedAt: Date.now() });
+        }
 
         // Upload to Supabase if online
-        if (navigator.onLine) {
-          // Delete existing rows
+        if (navigator.onLine && pages) {
           await supabase.from("pdf_text_pages").delete().eq("file_name", fileName);
 
-          // Insert in batches of 50
           for (let j = 0; j < pages.length; j += 50) {
             const batch = pages.slice(j, j + 50).map((p) => ({
               file_name: fileName,
@@ -610,7 +620,6 @@ export default function PDFLibrary() {
             await supabase.from("pdf_text_pages").insert(batch);
           }
 
-          // Update extraction status
           await supabase.from("pdf_extraction_status").upsert({
             file_name: fileName,
             total_pages: pages.length,
@@ -627,67 +636,6 @@ export default function PDFLibrary() {
     setExtracting(false);
     setExtractProgress({ current: 0, total: 0, fileName: "" });
   }, [files, extractedKeys, extracting, refreshCache]);
-
-  // ═══════════════════════════════════════════════════════════
-  // CROSS-PDF SEARCH
-  // ═══════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (!globalSearch || globalSearch.length < 2) { setGlobalResults([]); return; }
-
-    const timer = setTimeout(async () => {
-      setGlobalSearching(true);
-      try {
-        if (navigator.onLine) {
-          // Use Postgres full-text search
-          const { data, error: e } = await supabase.rpc("search_all_pdfs", {
-            search_query: globalSearch,
-            max_results: 50,
-          });
-          if (!e && data) {
-            setGlobalResults((data as Array<{ file_name: string; page_number: number; headline?: string; rank: number }>).map((r) => ({
-              fileName: r.file_name,
-              page: r.page_number,
-              snippet: r.headline?.replace(/<b>/g, "").replace(/<\/b>/g, "") || "",
-              rank: r.rank,
-            })));
-          } else {
-            // Fallback to offline
-            await searchOffline();
-          }
-        } else {
-          await searchOffline();
-        }
-      } catch (e) { console.warn("Search:", e); await searchOffline(); }
-      finally { setGlobalSearching(false); }
-
-      async function searchOffline() {
-        const allData = await idbGetAll<CachedTextData>(STORE_TEXT);
-        const allKeys = await idbGetAllKeys(STORE_TEXT);
-        const term = globalSearch.toLowerCase();
-        const results: GlobalSearchResult[] = [];
-        for (let i = 0; i < allKeys.length && results.length < 50; i++) {
-          const d = allData[i];
-          if (!d || !d.pages) continue;
-          for (const pg of d.pages) {
-            if (results.length >= 50) break;
-            const lower = pg.text.toLowerCase();
-            const pos = lower.indexOf(term);
-            if (pos === -1) continue;
-            const s = Math.max(0, pos - 40);
-            const e = Math.min(pg.text.length, pos + term.length + 40);
-            results.push({
-              fileName: allKeys[i] as string,
-              page: pg.page,
-              snippet: (s > 0 ? "\u2026" : "") + pg.text.slice(s, e) + (e < pg.text.length ? "\u2026" : ""),
-            });
-          }
-        }
-        setGlobalResults(results);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [globalSearch]);
 
   // ═══════════════════════════════════════════════════════════
   // OPEN PDF VIEWER
@@ -882,14 +830,9 @@ export default function PDFLibrary() {
           <div style={S.toolbar}>
             <div style={S.sWrap}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-3)" strokeWidth="2" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-              <input type="text" placeholder="Search across all regulations..." value={globalSearch || listSearch}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const v = e.target.value;
-                  setListSearch(v);
-                  setGlobalSearch(extractedCount > 0 ? v : "");
-                }}
+              <input type="text" placeholder="Filter by filename..." value={listSearch}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setListSearch(e.target.value)}
                 style={S.sInput} />
-              {globalSearching && <span style={Object.assign({}, S.miniSpin, { position: "absolute" as const, right: 10, top: "50%", transform: "translateY(-50%)" })} />}
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
               <button onClick={fetchFileList} disabled={!isOnline || loading} style={Object.assign({}, S.btn, S.btnG, (!isOnline || loading) ? S.off : {})}>&#8635; Refresh</button>
@@ -911,29 +854,6 @@ export default function PDFLibrary() {
             </div>
           )}
 
-          {/* Global search results */}
-          {globalResults.length > 0 && globalSearch.length >= 2 && (
-            <div style={S.globalResults}>
-              <div style={S.globalHeader}>
-                <span style={{ fontWeight: 700, color: "var(--color-text-1)", fontSize: 'var(--fs-md)' }}>Search Results</span>
-                <span style={{ color: "var(--color-text-3)", fontSize: 'var(--fs-base)' }}>{globalResults.length} match{globalResults.length !== 1 ? "es" : ""} across regulations</span>
-              </div>
-              <div style={S.globalList}>
-                {globalResults.slice(0, 30).map((r, i) => (
-                  <button key={i} onClick={() => viewPdf(r.fileName)}
-                    style={S.globalItem}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                      <span style={S.gBadge}>p.{r.page}</span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: "var(--color-text-1)", marginBottom: 2 }}>{r.fileName}</div>
-                        <div style={S.gSnippet}>{renderSnippet(r.snippet, globalSearch)}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
 
@@ -1067,14 +987,14 @@ export default function PDFLibrary() {
           </div>
         ) : loading ? (
           <div style={S.ctr}><span style={S.spin} /><span style={{ color: "var(--color-text-3)", marginLeft: 8 }}>Loading&hellip;</span></div>
-        ) : filtered.length === 0 && !globalResults.length ? (
+        ) : filtered.length === 0 ? (
           <div style={Object.assign({}, S.ctr, { flexDirection: "column" as const, padding: 80 })}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-4)" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             <p style={{ color: "var(--color-text-2)", marginTop: 12, fontWeight: 600 }}>{listSearch ? "No matching files" : "No PDFs found"}</p>
           </div>
         ) : (
           // ═══════════════════ FILE LIST ═══════════════════
-          !globalResults.length && (
+          (
             <div style={S.list}>
               {filtered.map(function(file: StorageFileObject) {
                 const cached = cachedKeys.has(file.name);

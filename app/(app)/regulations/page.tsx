@@ -63,7 +63,7 @@ export default function RegulationsPage() {
   const [tab, setTab] = useState<Tab>('regulations')
 
   // ── PDF viewer state (shared by both tabs) ─────────────────
-  const [viewingReg, setViewingReg] = useState<RegulationEntry | null>(null)
+  const [viewingReg, setViewingReg] = useState<{ reg: RegulationEntry; page?: number } | null>(null)
   const [viewingUserDoc, setViewingUserDoc] = useState<{ doc: UserDocument; userId: string } | null>(null)
   const closeViewer = useCallback(() => { setViewingReg(null); setViewingUserDoc(null) }, [])
 
@@ -71,10 +71,11 @@ export default function RegulationsPage() {
   if (viewingReg) {
     return (
       <RegulationPDFViewer
-        regId={viewingReg.reg_id}
-        title={viewingReg.title}
-        url={viewingReg.url}
+        regId={viewingReg.reg.reg_id}
+        title={viewingReg.reg.title}
+        url={viewingReg.reg.url}
         onClose={closeViewer}
+        initialPage={viewingReg.page}
       />
     )
   }
@@ -133,7 +134,7 @@ export default function RegulationsPage() {
 
       {tab === 'regulations' && (
         <RegulationsTab
-          onViewReg={setViewingReg}
+          onViewReg={(reg, page) => setViewingReg({ reg, page })}
         />
       )}
 
@@ -150,8 +151,16 @@ export default function RegulationsPage() {
 // Regulations Tab (existing functionality, extracted)
 // ═══════════════════════════════════════════════════════════════
 
-function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => void }) {
+interface ContentMatch {
+  fileName: string
+  page: number
+  snippet: string
+}
+
+function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?: number) => void }) {
   const [search, setSearch] = useState('')
+  const [contentResults, setContentResults] = useState<ContentMatch[]>([])
+  const [contentSearching, setContentSearching] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [pubTypeFilter, setPubTypeFilter] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -204,6 +213,72 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
     if (dbRegs !== null) return dbRegs
     return ALL_REGULATIONS
   }, [dbRegs])
+
+  // Cross-PDF content search via the Postgres full-text function.
+  // Falls back to an IDB scan when the server returns no rows (covers the
+  // case where pdf_text_pages is empty but the local cache is populated).
+  useEffect(() => {
+    if (search.trim().length < 2) { setContentResults([]); return }
+
+    const timer = setTimeout(async () => {
+      setContentSearching(true)
+      try {
+        const supabase = createClient()
+        if (supabase && navigator.onLine) {
+          const { data, error } = await supabase.rpc('search_all_pdfs', {
+            search_query: search,
+            max_results: 30,
+          })
+          if (!error && data && (data as unknown[]).length > 0) {
+            setContentResults((data as Array<{ file_name: string; page_number: number; headline?: string }>).map((r) => ({
+              fileName: r.file_name,
+              page: r.page_number,
+              snippet: (r.headline || '').replace(/<\/?b>/g, ''),
+            })))
+            return
+          }
+        }
+
+        // Offline / empty-server fallback: scan IDB STORE_TEXT
+        const { idbGetAll, idbGetAllKeys, STORE_TEXT } = await import('@/lib/idb')
+        type CachedPage = { page: number; text: string }
+        type CachedText = { pages: CachedPage[] }
+        const allKeys = await idbGetAllKeys(STORE_TEXT)
+        const allData = await idbGetAll<CachedText>(STORE_TEXT)
+        const term = search.toLowerCase()
+        const hits: ContentMatch[] = []
+        for (let i = 0; i < allKeys.length && hits.length < 30; i++) {
+          const d = allData[i]
+          if (!d?.pages) continue
+          for (const pg of d.pages) {
+            if (hits.length >= 30) break
+            const pos = pg.text.toLowerCase().indexOf(term)
+            if (pos === -1) continue
+            const s = Math.max(0, pos - 40)
+            const e = Math.min(pg.text.length, pos + term.length + 40)
+            hits.push({
+              fileName: allKeys[i] as string,
+              page: pg.page,
+              snippet: (s > 0 ? '…' : '') + pg.text.slice(s, e) + (e < pg.text.length ? '…' : ''),
+            })
+          }
+        }
+        setContentResults(hits)
+      } catch (e) {
+        console.warn('Content search failed:', e)
+        setContentResults([])
+      } finally {
+        setContentSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const openContentMatch = useCallback((m: ContentMatch) => {
+    const reg = regulations.find((r) => `${sanitizeFileName(r.reg_id)}.pdf` === m.fileName)
+    if (reg) onViewReg(reg, m.page)
+  }, [regulations, onViewReg])
 
   const toggleFavorite = useCallback((regId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -638,6 +713,51 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry) => vo
           </div>
         )}
       </div>
+
+      {/* Matches in Content — full-text hits inside PDF bodies */}
+      {search.trim().length >= 2 && (contentSearching || contentResults.length > 0) && (
+        <div style={{
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: 12,
+          marginBottom: 10,
+        }}>
+          <div style={{
+            fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span>Matches in Content{contentResults.length > 0 ? ` (${contentResults.length})` : ''}</span>
+            {contentSearching && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>Searching…</span>}
+          </div>
+          {contentResults.map((m, i) => {
+            const reg = regulations.find((r) => `${sanitizeFileName(r.reg_id)}.pdf` === m.fileName)
+            const label = reg ? `${reg.reg_id} — ${reg.title}` : m.fileName
+            return (
+              <button
+                key={`${m.fileName}-${m.page}-${i}`}
+                onClick={() => openContentMatch(m)}
+                disabled={!reg}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '8px 10px', marginBottom: 4, borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-1)', fontFamily: 'inherit',
+                  cursor: reg ? 'pointer' : 'not-allowed', opacity: reg ? 1 : 0.5,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
+                  <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>{label}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, whiteSpace: 'nowrap' }}>p. {m.page}</span>
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>{m.snippet}</div>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Results count + Add button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

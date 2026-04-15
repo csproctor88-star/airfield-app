@@ -173,9 +173,11 @@ interface RegulationPDFViewerProps {
   userId?: string
   /** For user documents: pre-sanitized fileName to use instead of deriving from regId */
   storedFileName?: string
+  /** Optional page to jump to after the PDF loads (1-indexed). */
+  initialPage?: number
 }
 
-export default function RegulationPDFViewer({ regId, title, url, onClose, source = 'regulation', userId, storedFileName }: RegulationPDFViewerProps) {
+export default function RegulationPDFViewer({ regId, title, url, onClose, source = 'regulation', userId, storedFileName, initialPage }: RegulationPDFViewerProps) {
   const supabase = createClient()
   const viewerRef = useRef<HTMLDivElement>(null)
 
@@ -184,6 +186,23 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
   const blobUrlRef = useRef<string | null>(null)
   const [masterBuffer, setMasterBuffer] = useState<ArrayBuffer | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
+  const jumpedToInitialRef = useRef(false)
+
+  // Seek to `initialPage` once the PDF has laid out. Run every time numPages
+  // changes, but only fire the jump once per viewer instance.
+  useEffect(() => {
+    if (!initialPage || jumpedToInitialRef.current || !numPages || viewMode !== 'react-pdf') return
+    const target = Math.max(1, Math.min(initialPage, numPages))
+    // Give react-pdf a tick to mount the page wrappers with their DOM ids.
+    const t = setTimeout(() => {
+      const el = document.getElementById(`pdf-page-${target}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        jumpedToInitialRef.current = true
+      }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [initialPage, numPages, viewMode])
   const [scale, setScale] = useState(isMobileDevice() ? 0.8 : 1.0)
   const transformRef = useRef<any>(null)
   const [touchScale, setTouchScale] = useState(1)
