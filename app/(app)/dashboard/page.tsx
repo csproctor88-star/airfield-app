@@ -190,14 +190,15 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
+  const OOO_DEFAULT_MESSAGE = 'Airfield Management is Out of the Office. Contact via cell phone  at (586) 396-4046 or via Tower Net Callsign: Airfield3'
   const [showOooDialog, setShowOooDialog] = useState(false)
   const [showOooDeactivateDialog, setShowOooDeactivateDialog] = useState(false)
-  const [oooMessage, setOooMessage] = useState('Airfield Management Out of Office - Contact Command Post at 586-239-6528 or Airfield 3 via Tower Net')
-  const [oooCpInitials, setOooCpInitials] = useState('')
+  const [oooMessage, setOooMessage] = useState(OOO_DEFAULT_MESSAGE)
+  const [savingOooDefault, setSavingOooDefault] = useState(false)
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
   useEffect(() => {
@@ -615,11 +616,9 @@ export default function AMDashboardPage() {
         {canToggleOoo && (
           <button onClick={() => {
             if (afmOutOfOffice) {
-              setOooCpInitials('')
               setShowOooDeactivateDialog(true)
             } else {
-              setOooMessage(afmOooMessage || 'Airfield Management Out of Office - Contact Command Post at 586-239-6528 or Airfield 3 via Tower Net')
-              setOooCpInitials('')
+              setOooMessage(afmOooMessage || defaultOooMessage || OOO_DEFAULT_MESSAGE)
               setShowOooDialog(true)
             }
           }} style={{
@@ -659,32 +658,43 @@ export default function AMDashboardPage() {
                 width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
                 background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                 color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
-                fontFamily: 'inherit', resize: 'vertical', minHeight: 60, marginBottom: 14,
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 60, marginBottom: 8,
               }}
             />
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
-            <input
-              value={oooCpInitials}
-              onChange={e => setOooCpInitials(e.target.value.toUpperCase())}
-              placeholder="CP Initials (e.g. JD)"
-              maxLength={4}
-              style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
-                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
-                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
-              }}
-            />
+            <div style={{ marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  const msg = oooMessage.trim()
+                  if (!msg) return
+                  setSavingOooDefault(true)
+                  try {
+                    await updateDefaultOooMessage(msg)
+                    toast.success('Default message saved for this base')
+                  } catch {
+                    toast.error('Could not save default message')
+                  } finally {
+                    setSavingOooDefault(false)
+                  }
+                }}
+                disabled={savingOooDefault || !oooMessage.trim() || oooMessage.trim() === (defaultOooMessage || '').trim()}
+                style={{
+                  padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                  cursor: savingOooDefault ? 'default' : 'pointer',
+                  border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-2)',
+                  opacity: (!oooMessage.trim() || oooMessage.trim() === (defaultOooMessage || '').trim()) ? 0.5 : 1,
+                }}
+              >{savingOooDefault ? 'Saving…' : 'Set as Default'}</button>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={async () => {
                   await setAfmOutOfOffice(true, oooMessage)
-                  const cpText = oooCpInitials.trim() ? `/${oooCpInitials.trim()}` : ''
-                  await logManualEntry(`AMOPS OUT OF OFFICE INITIATED, COMMAND POST${cpText} NOTIFIED`, installationId)
+                  await logManualEntry('Command Post notified', installationId)
                   setShowOooDialog(false)
                   toast.success('Out of Office activated')
                 }}
-                disabled={!oooCpInitials.trim()}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid rgba(239,68,68,0.4)',
@@ -714,35 +724,21 @@ export default function AMDashboardPage() {
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
               End Out of Office
             </div>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
-            <input
-              autoFocus
-              value={oooCpInitials}
-              onChange={e => setOooCpInitials(e.target.value.toUpperCase())}
-              placeholder="CP Initials (e.g. JD)"
-              maxLength={4}
-              style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
-                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
-                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
-              }}
-            />
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+              This will clear the Out of Office overlay and log a Command Post notification in the events log.
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={async () => {
                   await setAfmOutOfOffice(false)
-                  const cpText = oooCpInitials.trim() ? `/${oooCpInitials.trim()}` : ''
-                  await logManualEntry(`AMOPS BACK IN THE OFFICE, COMMAND POST${cpText} NOTIFIED`, installationId)
+                  await logManualEntry('Command Post notified', installationId)
                   setShowOooDeactivateDialog(false)
                   toast.success('Out of Office deactivated')
                 }}
-                disabled={!oooCpInitials.trim()}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: oooCpInitials.trim() ? 'pointer' : 'default', border: '1px solid var(--color-success)',
+                  cursor: 'pointer', border: '1px solid var(--color-success)',
                   background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
-                  opacity: oooCpInitials.trim() ? 1 : 0.4,
                 }}
               >Deactivate</button>
               <button

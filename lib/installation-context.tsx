@@ -37,6 +37,10 @@ export interface InstallationContextValue {
   defaultPdfEmail: string | null
   /** Update default PDF email */
   updateDefaultPdfEmail: (email: string | null) => Promise<void>
+  /** Per-base default Out of Office message */
+  defaultOooMessage: string | null
+  /** Save a new per-base default Out of Office message */
+  updateDefaultOooMessage: (message: string) => Promise<void>
   /** Whether the context has finished initial loading */
   loaded: boolean
 }
@@ -135,6 +139,22 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const defaultOooMessage =
+    (currentInstallation as unknown as { default_ooo_message?: string | null } | null)?.default_ooo_message ?? null
+
+  const updateDefaultOooMessage = useCallback(async (message: string) => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    await supabase
+      .from('bases')
+      .update({ default_ooo_message: message } as Record<string, unknown>)
+      .eq('id', installationId)
+    setCurrentInstallation(prev =>
+      prev ? ({ ...prev, default_ooo_message: message } as typeof prev) : prev
+    )
+  }, [installationId])
+
   const updateDefaultPdfEmail = useCallback(async (email: string | null) => {
     setDefaultPdfEmail(email)
     const supabase = createClient()
@@ -206,7 +226,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, loaded }}
     >
       {children}
     </InstallationContext.Provider>
