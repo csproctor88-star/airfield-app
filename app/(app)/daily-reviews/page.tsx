@@ -7,6 +7,7 @@ import {
   fetchRecentReviews,
   requiredSlotsForShifts,
   isFullyCertified,
+  getEffectiveReviewDate,
   SLOT_LABELS,
   type DailyReviewRow,
   type DailyReviewSlot,
@@ -20,6 +21,8 @@ export default function DailyReviewsPage() {
   const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
   const baseName = currentInstallation?.name || ''
   const baseIcao = (currentInstallation as { icao?: string | null } | null)?.icao || null
+  const baseTimezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || null
+  const baseResetTime = (currentInstallation as { checklist_reset_time?: string | null } | null)?.checklist_reset_time || null
 
   const [loaded, setLoaded] = useState(false)
   const [rows, setRows] = useState<DailyReviewRow[]>([])
@@ -47,14 +50,16 @@ export default function DailyReviewsPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Build list: every date from today back 14 days (surfaces days with no row yet)
+  // Build list: every date from today back 14 days (surfaces days with no
+  // row yet). "Today" honors the base's local reset time, not Zulu midnight.
   const visibleDates: string[] = (() => {
-    const today = new Date()
+    const todayIso = getEffectiveReviewDate(baseTimezone, baseResetTime)
+    const [y, m, d] = todayIso.split('-').map(Number)
     const dates: string[] = []
     for (let i = 0; i < 14; i++) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
-      dates.push(d.toISOString().slice(0, 10))
+      const day = new Date(Date.UTC(y, m - 1, d))
+      day.setUTCDate(day.getUTCDate() - i)
+      dates.push(day.toISOString().slice(0, 10))
     }
     return dates
   })()
@@ -133,6 +138,8 @@ export default function DailyReviewsPage() {
           baseIcao={baseIcao}
           shiftCount={shiftCount}
           reviewDate={selectedDate}
+          timezone={baseTimezone}
+          resetTime={baseResetTime}
           userId={userId}
           userRole={userRole}
           userName={userName}

@@ -17,7 +17,7 @@ import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-featu
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { useDashboard } from '@/lib/dashboard-context'
-import { fetchRecentReviews, isFullyCertified, canUserSignSlot, requiredSlotsForShifts, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import { fetchRecentReviews, isFullyCertified, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 // --- Quick Actions (KPI badges) ---
@@ -254,14 +254,16 @@ export default function AMDashboardPage() {
   }, [])
 
   const [shiftReviewOpen, setShiftReviewOpen] = useState(false)
+  const todayIso = getEffectiveReviewDate(baseTimezone, baseResetTime)
+
   const pendingReviewDates: string[] = (() => {
     const reviewed = new Map(recentReviews.map(r => [r.review_date, r] as const))
     const dates: string[] = []
-    const today = new Date()
+    const [y, m, d] = todayIso.split('-').map(Number)
     for (let i = 1; i <= 7; i++) {
-      const d = new Date(today)
-      d.setDate(d.getDate() - i)
-      const iso = d.toISOString().slice(0, 10)
+      const day = new Date(Date.UTC(y, m - 1, d))
+      day.setUTCDate(day.getUTCDate() - i)
+      const iso = day.toISOString().slice(0, 10)
       const row = reviewed.get(iso)
       if (!row || !isFullyCertified(row, shiftCount)) dates.push(iso)
     }
@@ -275,7 +277,6 @@ export default function AMDashboardPage() {
     const canSignAny = amslSlots.some((s) => canUserSignSlot(userRole, s))
     if (!canSignAny) return null
 
-    const todayIso = new Date().toISOString().slice(0, 10)
     const todayRow = recentReviews.find((r) => r.review_date === todayIso) || null
     const signedCount = amslSlots.filter((s) => todayRow?.[`${s}_signed_at` as keyof DailyReviewRow]).length
     if (signedCount >= amslSlots.length) return null
@@ -1202,7 +1203,9 @@ export default function AMDashboardPage() {
           baseName={currentInstallation?.name || ''}
           baseIcao={(currentInstallation as { icao?: string | null } | null)?.icao || null}
           shiftCount={shiftCount}
-          reviewDate={new Date().toISOString().slice(0, 10)}
+          reviewDate={todayIso}
+          timezone={baseTimezone}
+          resetTime={baseResetTime}
           userId={currentUserId}
           userRole={userRole}
           userName={currentUserName}

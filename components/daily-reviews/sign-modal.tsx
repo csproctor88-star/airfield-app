@@ -10,6 +10,7 @@ import {
   canUserSignSlot,
   SLOT_LABELS,
   requiredSlotsForShifts,
+  getReviewWindowUtc,
   type DailyReviewRow,
   type DailyReviewSlot,
   type SignerInfo,
@@ -29,6 +30,10 @@ interface SignModalProps {
   baseIcao: string | null
   shiftCount: number
   reviewDate: string // YYYY-MM-DD
+  /** Base timezone + reset time so the day window matches shift-checklist/
+   *  inspection local-time behavior instead of UTC midnight. */
+  timezone?: string | null
+  resetTime?: string | null
   userId: string
   userRole: string | null
   userName: string
@@ -38,7 +43,7 @@ interface SignModalProps {
 
 export default function DailyReviewSignModal({
   open, onClose, baseId, baseName, baseIcao, shiftCount, reviewDate,
-  userId, userRole, userName, defaultPdfEmail, onSigned,
+  timezone, resetTime, userId, userRole, userName, defaultPdfEmail, onSigned,
 }: SignModalProps) {
   const [loading, setLoading] = useState(false)
   const [row, setRow] = useState<DailyReviewRow | null>(null)
@@ -104,12 +109,12 @@ export default function DailyReviewSignModal({
     const load = async () => {
       setLoading(true)
       try {
-        // Day window in UTC — use local midnight
-        const start = new Date(`${reviewDate}T00:00:00`)
-        const end = new Date(`${reviewDate}T23:59:59.999`)
+        // Day window matches the base's local reset time (e.g. 0600L), not
+        // Zulu midnight — parity with shift-checklist / inspection behavior.
+        const { startIso, endIso } = getReviewWindowUtc(reviewDate, timezone, resetTime)
         const [existing, data] = await Promise.all([
           fetchDailyReview(baseId, reviewDate),
-          fetchDailyReportData(start.toISOString(), end.toISOString(), baseId),
+          fetchDailyReportData(startIso, endIso, baseId),
         ])
         if (cancelled) return
         setRow(existing)

@@ -38,6 +38,60 @@ export interface DailyReviewRow {
   updated_at: string
 }
 
+/**
+ * Returns the effective review date for a base right now, honoring its
+ * timezone + daily reset time. Before the reset hour the "today" review
+ * is still yesterday's — matches the shift-checklist / inspection behavior.
+ */
+export function getEffectiveReviewDate(timezone?: string | null, resetTime?: string | null): string {
+  const tz = timezone || 'UTC'
+  const rt = resetTime || '06:00'
+  const now = new Date()
+  // Wall-clock now in the base timezone
+  const local = new Date(now.toLocaleString('en-US', { timeZone: tz }))
+  const [rh, rm] = rt.split(':').map(Number)
+  const resetMinutes = (rh || 6) * 60 + (rm || 0)
+  const currentMinutes = local.getHours() * 60 + local.getMinutes()
+  if (currentMinutes < resetMinutes) local.setDate(local.getDate() - 1)
+  const y = local.getFullYear()
+  const m = String(local.getMonth() + 1).padStart(2, '0')
+  const d = String(local.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/**
+ * Convert a wall-clock (year/month/day/hour/minute) in the given IANA timezone
+ * to a UTC Date. Approximates DST transitions (rare edge cases near the 2 AM
+ * switch may be off by an hour; acceptable for review windows that use 06:00L).
+ */
+function zonedWallClockToUtc(
+  y: number, m: number, d: number, hour: number, minute: number, timezone: string,
+): Date {
+  const guess = new Date(Date.UTC(y, m - 1, d, hour, minute))
+  const shownInTz = new Date(guess.toLocaleString('en-US', { timeZone: timezone }))
+  const offsetMs = guess.getTime() - shownInTz.getTime()
+  return new Date(guess.getTime() + offsetMs)
+}
+
+/**
+ * Compute the UTC time window for a review_date given the base's timezone
+ * and reset time. Window is [reviewDate + resetTime localtime, next day +
+ * resetTime localtime).
+ */
+export function getReviewWindowUtc(
+  reviewDate: string,
+  timezone?: string | null,
+  resetTime?: string | null,
+): { startIso: string; endIso: string } {
+  const tz = timezone || 'UTC'
+  const rt = resetTime || '06:00'
+  const [y, m, d] = reviewDate.split('-').map(Number)
+  const [rh, rmin] = rt.split(':').map(Number)
+  const start = zonedWallClockToUtc(y, m, d, rh ?? 6, rmin ?? 0, tz)
+  const end = zonedWallClockToUtc(y, m, d + 1, rh ?? 6, rmin ?? 0, tz)
+  return { startIso: start.toISOString(), endIso: end.toISOString() }
+}
+
 export function requiredSlotsForShifts(shiftCount: number): DailyReviewSlot[] {
   const amsls: DailyReviewSlot[] = shiftCount === 3
     ? ['day_amsl', 'swing_amsl', 'mid_amsl']
