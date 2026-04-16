@@ -31,9 +31,11 @@ export function AcsiDiscrepancyPanelGroup({
   inspectionId,
 }: AcsiDiscrepancyPanelGroupProps) {
   const [showPicker, setShowPicker] = useState(false)
-  const pins = discrepancies[0]?.pins || []
+  const pins = discrepancies.flatMap(d => d.pins || [])
 
   const handlePinsChange = useCallback((newPins: { lat: number; lng: number }[]) => {
+    // Distribute pins back: first disc owns them all (other discs keep
+    // their own for persistence, but the shared map edits disc[0]).
     const first = discrepancies[0]
     if (first) {
       onChange(itemId, 0, { ...first, pins: newPins })
