@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
-import { formatZuluDateTime } from '@/lib/utils'
+import { formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
 import type { AcsiInspection, AcsiItem } from '@/lib/supabase/types'
@@ -12,18 +12,19 @@ interface AcsiPdfOptions {
   baseId?: string | null
 }
 
-/** Fetch an image URL as a data URL for PDF embedding */
+/** Fetch an image URL, downscale for PDF thumbnails, and return as JPEG data URL */
 async function fetchImageAsDataUrl(imageUrl: string): Promise<string | null> {
   try {
     const res = await fetch(imageUrl)
     if (!res.ok) return null
     const blob = await res.blob()
-    return await new Promise<string>((resolve, reject) => {
+    const raw = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
       reader.onloadend = () => resolve(reader.result as string)
       reader.onerror = reject
       reader.readAsDataURL(blob)
     })
+    return await compressImageForPdf(raw, 600, 0.7)
   } catch {
     return null
   }
