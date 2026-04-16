@@ -85,6 +85,7 @@ export function acsiDraftToItems(
       latitude: d.latitude ?? null,
       longitude: d.longitude ?? null,
       pins: d.pins || [],
+      linked_discrepancy_id: d.linked_discrepancy_id ?? null,
     }
   }
 

@@ -4,32 +4,13 @@ import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import { formatZuluDateTime } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
+import { fetchDiscrepancyPhotos } from '@/lib/supabase/discrepancies'
 import type { AcsiInspection, AcsiItem } from '@/lib/supabase/types'
 
 interface AcsiPdfOptions {
   baseName?: string | null
   baseIcao?: string | null
   baseId?: string | null
-}
-
-/** Fetch a Mapbox static map as data URL — no logos/attribution */
-async function fetchCleanMapDataUrl(lat: number, lng: number): Promise<string | null> {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-  if (!token || token === 'your-mapbox-token-here') return null
-  try {
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/pin-l+ef4444(${lng},${lat})/${lng},${lat},16,0/600x300@2x?access_token=${token}&logo=false&attribution=false`
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
 }
 
 /** Fetch an image URL as a data URL for PDF embedding */
@@ -49,22 +30,21 @@ async function fetchImageAsDataUrl(imageUrl: string): Promise<string | null> {
   }
 }
 
-// Photo/map thumbnail constants
-const THUMB_W = 30
-const THUMB_H = 22.5
-const THUMB_GAP = 2
+// Photo thumbnail constants (enlarged now that per-pin map tiles are gone)
+const THUMB_W = 45
+const THUMB_H = 34
+const THUMB_GAP = 2.5
 const THUMB_PAD = 2
 
 /** Pre-fetched images for a single discrepancy */
 interface DiscImages {
   photos: (string | null)[]    // data URLs
-  maps: (string | null)[]      // data URLs
 }
 
 /** Calculate cell height needed for a discrepancy detail row */
 function detailRowHeight(textLineCount: number, images: DiscImages, cellWidth: number): number {
   const textH = Math.max(0, textLineCount * 3.5) + 4 // text + padding
-  const totalImages = images.photos.filter(Boolean).length + images.maps.filter(Boolean).length
+  const totalImages = images.photos.filter(Boolean).length
   if (totalImages === 0) return textH + 4
 
   const availW = cellWidth - THUMB_PAD * 2
@@ -140,26 +120,26 @@ export async function generateAcsiPdf(
     doc.setFont('helvetica', 'normal')
   }
 
-  // ── Pre-fetch photos grouped by item_id ──
-  const photosByItem: Record<string, { url: string; name: string }[]> = {}
+  // ── Pre-fetch ACSI photos + build a lookup by photo id ──
+  // Discrepancies carry photo_ids — they may resolve against ACSI photos
+  // (uploaded directly on the inspection) or against photos on a linked
+  // discrepancy record. We index both sources by id so each disc row can
+  // resolve its exact photos regardless of origin.
+  const supabase = createClient()
+  const photoUrlById: Record<string, string> = {}
+  const resolveStoragePath = (path: string): string => {
+    if (path.startsWith('data:')) return path
+    if (!supabase) return path
+    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    return data?.publicUrl || path
+  }
+
   if (inspection.id) {
     try {
-      const photos = await fetchAcsiPhotos(inspection.id)
-      const supabase = createClient()
-      for (const photo of photos) {
-        const itemKey = photo.acsi_item_id || '_general'
-        if (!photosByItem[itemKey]) photosByItem[itemKey] = []
-        let url = ''
-        if (photo.storage_path.startsWith('data:')) {
-          url = photo.storage_path
-        } else if (supabase) {
-          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(photo.storage_path)
-          if (urlData?.publicUrl) url = urlData.publicUrl
-        }
-        if (url) photosByItem[itemKey].push({ url, name: photo.file_name })
-      }
+      const acsiPhotos = await fetchAcsiPhotos(inspection.id)
+      for (const p of acsiPhotos) photoUrlById[p.id] = resolveStoragePath(p.storage_path)
     } catch {
-      // Continue without photos
+      // Continue without ACSI photos
     }
   }
 
@@ -292,28 +272,49 @@ export async function generateAcsiPdf(
         if (disc.estimated_cost) lines.push(`Cost: ${disc.estimated_cost}`)
         if (disc.estimated_completion) lines.push(`ECD: ${disc.estimated_completion}`)
         if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
+
+        const pins = disc.pins && disc.pins.length > 0
+          ? disc.pins
+          : (disc.latitude != null && disc.longitude != null ? [{ lat: disc.latitude, lng: disc.longitude }] : [])
+        if (pins.length === 1) {
+          lines.push(`Location: ${pins[0].lat.toFixed(5)}, ${pins[0].lng.toFixed(5)}`)
+        } else if (pins.length > 1) {
+          lines.push(`Locations: ${pins.map(p => `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`).join(' | ')}`)
+        }
         discTextMap[detailKey] = lines
 
-        // Fetch photo data URLs — check both keyed and legacy format
-        const keyedPhotos = photosByItem[detailKey] || []
-        const legacyPhotos = di === 0 ? (photosByItem[item.id] || []) : []
-        const allPhotos = [...keyedPhotos, ...legacyPhotos]
+        // Resolve photos via id: ACSI photos first, then linked-discrepancy
+        // photos for any remaining ids. Mirrors the in-app edit panel.
+        const photoIds: string[] = Array.isArray((disc as { photo_ids?: string[] }).photo_ids)
+          ? ((disc as { photo_ids?: string[] }).photo_ids as string[])
+          : []
+        const missing = photoIds.filter(id => !(id in photoUrlById))
+        const linkedRaw = (disc as { linked_discrepancy_id?: string | null }).linked_discrepancy_id
+        if (missing.length > 0 && linkedRaw) {
+          const linkedIds = linkedRaw.split(',').map(s => s.trim()).filter(Boolean)
+          for (const discId of linkedIds) {
+            if (missing.length === 0) break
+            try {
+              const linkedPhotos = await fetchDiscrepancyPhotos(discId)
+              for (const p of linkedPhotos) {
+                if (!(p.id in photoUrlById)) {
+                  photoUrlById[p.id] = resolveStoragePath(p.storage_path)
+                }
+              }
+            } catch {
+              // Continue; missing photos will simply be skipped below
+            }
+          }
+        }
+
         const photoDataUrls: (string | null)[] = []
-        for (const p of allPhotos) {
-          photoDataUrls.push(await fetchImageAsDataUrl(p.url))
+        for (const pid of photoIds) {
+          const url = photoUrlById[pid]
+          if (!url) continue
+          photoDataUrls.push(await fetchImageAsDataUrl(url))
         }
 
-        // Fetch map data URLs for each discrepancy's own pins
-        const mapDataUrls: (string | null)[] = []
-        const pins = disc.pins || []
-        if (pins.length === 0 && disc.latitude != null && disc.longitude != null) {
-          pins.push({ lat: disc.latitude, lng: disc.longitude })
-        }
-        for (const pin of pins) {
-          mapDataUrls.push(await fetchCleanMapDataUrl(pin.lat, pin.lng))
-        }
-
-        discImagesMap[detailKey] = { photos: photoDataUrls, maps: mapDataUrls }
+        discImagesMap[detailKey] = { photos: photoDataUrls }
       }
     }
 
@@ -474,13 +475,9 @@ export async function generateAcsiPdf(
           textY += (Array.isArray(wrapped) ? wrapped.length : 1) * 3
         }
 
-        // Draw photos + maps
+        // Draw photos
         if (images) {
-          const allImages = [
-            ...images.photos.filter(Boolean),
-            ...images.maps.filter(Boolean),
-          ] as string[]
-
+          const allImages = images.photos.filter(Boolean) as string[]
           if (allImages.length > 0) {
             textY += 2
             drawImagesInCell(doc, allImages, cellX, textY, cellW)

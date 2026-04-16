@@ -27,7 +27,8 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [linking, setLinking] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [submitting, setSubmitting] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
@@ -67,26 +68,21 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
 
   const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (typeFilter !== 'all' ? 1 : 0)
 
-  const handleSelect = async (disc: DiscrepancyRow) => {
-    setLinking(disc.id)
+  const toggleSelection = (disc: DiscrepancyRow) => {
+    if (submitting) return
+    if (alreadyLinkedIds?.has(disc.id)) return
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(disc.id)) next.delete(disc.id)
+      else next.add(disc.id)
+      return next
+    })
+  }
 
-    // Fetch photos for this discrepancy
-    let photoIds: string[] = []
-    try {
-      const photos = await fetchDiscrepancyPhotos(disc.id)
-      photoIds = photos.map(p => p.id)
-    } catch {
-      // Photos are optional — continue without them
-    }
-
-    // Build pins from coordinates
+  const buildDetail = (disc: DiscrepancyRow, photoIds: string[]): AcsiDiscrepancyDetail => {
     const pins: { lat: number; lng: number }[] = []
-    if (disc.latitude && disc.longitude) {
-      pins.push({ lat: disc.latitude, lng: disc.longitude })
-    }
-
-    // Map discrepancy fields → ACSI discrepancy detail
-    const detail: AcsiDiscrepancyDetail = {
+    if (disc.latitude && disc.longitude) pins.push({ lat: disc.latitude, lng: disc.longitude })
+    return {
       comment: disc.location_text
         ? `[${disc.location_text}] ${disc.title}${disc.description ? ' — ' + disc.description : ''}`
         : `${disc.title}${disc.description ? ' — ' + disc.description : ''}`,
@@ -101,9 +97,31 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
       pins,
       linked_discrepancy_id: disc.id,
     }
+  }
 
-    toast.success(`Linked ${disc.display_id} with ${photoIds.length} photo(s)`)
-    onSelect(detail)
+  const handleConfirm = async () => {
+    if (selected.size === 0 || submitting) return
+    setSubmitting(true)
+    const rows = discrepancies.filter(d => selected.has(d.id))
+    const resolved = await Promise.all(rows.map(async (disc) => {
+      let photoIds: string[] = []
+      try {
+        const photos = await fetchDiscrepancyPhotos(disc.id)
+        photoIds = photos.map(p => p.id)
+      } catch { /* photos are optional */ }
+      return { disc, photoIds }
+    }))
+
+    let totalPhotos = 0
+    for (const { disc, photoIds } of resolved) {
+      totalPhotos += photoIds.length
+      onSelect(buildDetail(disc, photoIds))
+    }
+
+    const count = resolved.length
+    const photoText = totalPhotos > 0 ? ` with ${totalPhotos} photo${totalPhotos === 1 ? '' : 's'}` : ''
+    toast.success(`Linked ${count} discrepanc${count === 1 ? 'y' : 'ies'}${photoText}`)
+    onClose()
   }
 
   const statusColor = (d: DiscrepancyRow) => {
@@ -248,81 +266,144 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
 
           {filtered.map(d => {
             const linked = isLinked(d)
+            const isSelected = selected.has(d.id)
+            const disabled = linked || submitting
             return (
               <button
                 key={d.id}
                 type="button"
-                disabled={linking === d.id}
-                onClick={() => handleSelect(d)}
+                disabled={disabled}
+                onClick={() => toggleSelection(d)}
                 style={{
                   width: '100%',
                   textAlign: 'left',
                   padding: '10px 14px',
                   marginBottom: 4,
                   borderRadius: 8,
-                  border: linked
-                    ? '1px solid rgba(16, 185, 129, 0.4)'
-                    : '1px solid var(--color-border)',
-                  background: linking === d.id
-                    ? 'rgba(56, 189, 248, 0.08)'
+                  border: isSelected
+                    ? '1px solid var(--color-cyan)'
+                    : linked
+                      ? '1px solid rgba(16, 185, 129, 0.4)'
+                      : '1px solid var(--color-border)',
+                  background: isSelected
+                    ? 'rgba(56, 189, 248, 0.10)'
                     : linked
                       ? 'rgba(16, 185, 129, 0.06)'
                       : 'var(--color-bg-elevated)',
-                  cursor: linking ? 'default' : 'pointer',
-                  opacity: linking && linking !== d.id ? 0.5 : 1,
-                  display: 'block',
+                  cursor: disabled ? 'default' : 'pointer',
+                  opacity: linked ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{
-                      fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
-                    }}>
-                      {d.display_id}
-                    </span>
-                    {linked && (
+                {/* Checkbox indicator */}
+                <span style={{
+                  flex: '0 0 auto',
+                  width: 18, height: 18, marginTop: 2,
+                  borderRadius: 4,
+                  border: isSelected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                  background: isSelected ? 'var(--color-cyan)' : 'transparent',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isSelected && <Check size={12} strokeWidth={3} color="#0b1117" />}
+                </span>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 3,
-                        padding: '2px 6px', borderRadius: 4,
-                        background: 'rgba(16, 185, 129, 0.15)',
-                        color: '#10B981',
-                        fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em',
+                        fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
                       }}>
-                        <Check size={10} />
-                        LINKED
+                        {d.display_id}
                       </span>
-                    )}
+                      {linked && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          padding: '2px 6px', borderRadius: 4,
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: '#10B981',
+                          fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em',
+                        }}>
+                          <Check size={10} />
+                          LINKED
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {d.photo_count > 0 && (
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                          {d.photo_count} photo{d.photo_count !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      <Badge label={d.status} color={statusColor(d)} />
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {d.photo_count > 0 && (
-                      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                        {d.photo_count} photo{d.photo_count !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    <Badge label={d.status} color={statusColor(d)} />
+                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>
+                    {d.title}
                   </div>
+                  {d.location_text && (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                      {d.location_text}
+                    </div>
+                  )}
+                  {d.work_order_number && (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 600, marginTop: 2 }}>
+                      WO# {d.work_order_number}
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>
-                  {d.title}
-                </div>
-                {d.location_text && (
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                    {d.location_text}
-                  </div>
-                )}
-                {d.work_order_number && (
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 600, marginTop: 2 }}>
-                    WO# {d.work_order_number}
-                  </div>
-                )}
-                {linking === d.id && (
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', marginTop: 4 }}>
-                    Fetching photos...
-                  </div>
-                )}
               </button>
             )
           })}
+        </div>
+
+        {/* Sticky footer — actions */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '12px 18px', borderTop: '1px solid var(--color-border)',
+          background: 'var(--color-bg-surface)',
+        }}>
+          <span style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+            {selected.size === 0
+              ? 'Select one or more discrepancies to link'
+              : `${selected.size} selected`}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            style={{
+              padding: '8px 14px', borderRadius: 8,
+              border: '1px solid var(--color-border)',
+              background: 'transparent',
+              color: 'var(--color-text-2)',
+              fontSize: 'var(--fs-sm)', fontWeight: 600,
+              cursor: submitting ? 'default' : 'pointer',
+            }}
+          >Cancel</button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={selected.size === 0 || submitting}
+            style={{
+              padding: '8px 16px', borderRadius: 8,
+              border: '1px solid var(--color-cyan)',
+              background: selected.size === 0 ? 'rgba(56, 189, 248, 0.15)' : 'var(--color-cyan)',
+              color: selected.size === 0 ? 'var(--color-cyan)' : '#0b1117',
+              fontSize: 'var(--fs-sm)', fontWeight: 700,
+              cursor: (selected.size === 0 || submitting) ? 'default' : 'pointer',
+              opacity: selected.size === 0 ? 0.5 : 1,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Link2 size={14} />
+            {submitting
+              ? 'Linking…'
+              : selected.size <= 1
+                ? 'Link'
+                : `Link ${selected.size} discrepancies`}
+          </button>
         </div>
       </div>
     </div>
