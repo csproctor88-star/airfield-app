@@ -256,24 +256,10 @@ export default function AcsiFormPage() {
       const current = [...(prev.discrepancies[itemId] || [])]
       const existing = current[0]
 
-      // If first entry is empty, just replace it
+      // If the first entry is still blank, use it; otherwise append so each
+      // linked discrepancy stays as its own row (and its own PDF cell).
       if (existing && !existing.comment && !existing.work_order && existing.photo_ids.length === 0) {
         current[0] = detail
-      } else if (existing) {
-        // Merge — linked comments already carry "[WO# xxx]" as a prefix,
-        // so concatenation alone keeps each WO paired with its description.
-        const separator = existing.comment ? '\n\n---\n\n' : ''
-        current[0] = {
-          ...existing,
-          comment: existing.comment + separator + detail.comment,
-          work_order: existing.work_order || detail.work_order || '',
-          photo_ids: [...existing.photo_ids, ...detail.photo_ids],
-          pins: [...(existing.pins || []), ...(detail.pins || [])],
-          areas: Array.from(new Set([...(existing.areas || []), ...(detail.areas || [])])),
-          linked_discrepancy_id: existing.linked_discrepancy_id && detail.linked_discrepancy_id
-            ? `${existing.linked_discrepancy_id},${detail.linked_discrepancy_id}`
-            : existing.linked_discrepancy_id || detail.linked_discrepancy_id,
-        }
       } else {
         current.push(detail)
       }

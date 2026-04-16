@@ -4,7 +4,6 @@ import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import { formatZuluDateTime } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
-import { fetchDiscrepancyPhotos } from '@/lib/supabase/discrepancies'
 import type { AcsiInspection, AcsiItem } from '@/lib/supabase/types'
 
 interface AcsiPdfOptions {
@@ -120,11 +119,11 @@ export async function generateAcsiPdf(
     doc.setFont('helvetica', 'normal')
   }
 
-  // ── Pre-fetch ACSI photos + build a lookup by photo id ──
-  // Discrepancies carry photo_ids — they may resolve against ACSI photos
-  // (uploaded directly on the inspection) or against photos on a linked
-  // discrepancy record. We index both sources by id so each disc row can
-  // resolve its exact photos regardless of origin.
+  // ── Resolve every photo referenced by any discrepancy ──
+  // Each ACSI discrepancy stores photo_ids (UUIDs of rows in the photos
+  // table). The photos may live under acsi_inspection_id, discrepancy_id,
+  // or anywhere else, so we query by id directly — one round trip for the
+  // whole PDF, regardless of origin.
   const supabase = createClient()
   const photoUrlById: Record<string, string> = {}
   const resolveStoragePath = (path: string): string => {
@@ -134,10 +133,38 @@ export async function generateAcsiPdf(
     return data?.publicUrl || path
   }
 
+  const collectedPhotoIds = new Set<string>()
+  for (const item of inspection.items || []) {
+    if (item.response !== 'fail') continue
+    const discs = item.discrepancies?.length ? item.discrepancies : item.discrepancy ? [item.discrepancy] : []
+    for (const disc of discs) {
+      const ids = (disc as { photo_ids?: string[] }).photo_ids
+      if (Array.isArray(ids)) for (const id of ids) if (id) collectedPhotoIds.add(id)
+    }
+  }
+
+  if (supabase && collectedPhotoIds.size > 0) {
+    try {
+      const { data: photoRows } = await supabase
+        .from('photos')
+        .select('id, storage_path')
+        .in('id', Array.from(collectedPhotoIds))
+      for (const p of (photoRows ?? []) as { id: string; storage_path: string }[]) {
+        photoUrlById[p.id] = resolveStoragePath(p.storage_path)
+      }
+    } catch {
+      // Continue; unresolved photos will be skipped
+    }
+  }
+
+  // Also index ACSI photos in case any disc points at photos without having
+  // ids populated (defensive — shouldn't matter once the pdf reads photo_ids).
   if (inspection.id) {
     try {
       const acsiPhotos = await fetchAcsiPhotos(inspection.id)
-      for (const p of acsiPhotos) photoUrlById[p.id] = resolveStoragePath(p.storage_path)
+      for (const p of acsiPhotos) {
+        if (!(p.id in photoUrlById)) photoUrlById[p.id] = resolveStoragePath(p.storage_path)
+      }
     } catch {
       // Continue without ACSI photos
     }
@@ -274,30 +301,9 @@ export async function generateAcsiPdf(
         if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
         discTextMap[detailKey] = lines
 
-        // Resolve photos via id: ACSI photos first, then linked-discrepancy
-        // photos for any remaining ids. Mirrors the in-app edit panel.
         const photoIds: string[] = Array.isArray((disc as { photo_ids?: string[] }).photo_ids)
           ? ((disc as { photo_ids?: string[] }).photo_ids as string[])
           : []
-        const missing = photoIds.filter(id => !(id in photoUrlById))
-        const linkedRaw = (disc as { linked_discrepancy_id?: string | null }).linked_discrepancy_id
-        if (missing.length > 0 && linkedRaw) {
-          const linkedIds = linkedRaw.split(',').map(s => s.trim()).filter(Boolean)
-          for (const discId of linkedIds) {
-            if (missing.length === 0) break
-            try {
-              const linkedPhotos = await fetchDiscrepancyPhotos(discId)
-              for (const p of linkedPhotos) {
-                if (!(p.id in photoUrlById)) {
-                  photoUrlById[p.id] = resolveStoragePath(p.storage_path)
-                }
-              }
-            } catch {
-              // Continue; missing photos will simply be skipped below
-            }
-          }
-        }
-
         const photoDataUrls: (string | null)[] = []
         for (const pid of photoIds) {
           const url = photoUrlById[pid]
