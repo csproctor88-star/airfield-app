@@ -420,6 +420,17 @@ export default function InspectionsPage() {
       }
       window.scrollTo(0, 0)
     }
+    if (params.get('action') === 'resume') {
+      autoBeginHandled.current = true
+      const typeParam = (params.get('type') || 'airfield') as FormType
+      const draft = typeParam === 'airfield' ? airfieldDraft : lightingDraft
+      if (draft) {
+        logResumeOnAirfield(typeParam)
+        setActiveForm(typeParam)
+        setShowHistory(false)
+        window.scrollTo(0, 0)
+      }
+    }
     if (params.get('action') === 'reopen') {
       autoBeginHandled.current = true
       const groupId = params.get('groupId')
@@ -963,6 +974,20 @@ export default function InspectionsPage() {
     await loadHistory()
   }
 
+  // ── Log ON AIRFIELD when resuming via any entry point ──
+  const logResumeOnAirfield = (type: FormType) => {
+    const oiStr = userOI ? `/${userOI}` : ''
+    const label = type === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
+    logActivity(
+      'noted',
+      'inspection',
+      installationId || crypto.randomUUID(),
+      undefined,
+      { details: `AFLD3${oiStr} ON AIRFIELD — Resuming ${label}` },
+      installationId,
+    )
+  }
+
   // ── Pause inspection (save + log off-airfield + close form) ──
   const handlePause = async (reason: string) => {
     if (!activeForm || !currentDraft || !currentHalf) return
@@ -1059,16 +1084,7 @@ export default function InspectionsPage() {
     const resumeType = report.type === 'daily'
       ? (report.airfield ? 'airfield' : 'lighting')
       : report.type as FormType
-    const oiStr = userOI ? `/${userOI}` : ''
-    const resumeLabel = resumeType === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
-    logActivity(
-      'noted',
-      'inspection',
-      report.id,
-      undefined,
-      { details: `AFLD3${oiStr} ON AIRFIELD — Resuming ${resumeLabel}` },
-      installationId,
-    )
+    logResumeOnAirfield(resumeType)
     toast.success('Inspection resumed')
   }
 
@@ -2238,6 +2254,7 @@ export default function InspectionsPage() {
         <button
           onClick={() => {
             if (airfieldDraft) {
+              logResumeOnAirfield('airfield')
               setActiveForm('airfield')
               setShowHistory(false)
               window.scrollTo(0, 0)
@@ -2300,6 +2317,7 @@ export default function InspectionsPage() {
         <button
           onClick={() => {
             if (lightingDraft) {
+              logResumeOnAirfield('lighting')
               setActiveForm('lighting')
               setShowHistory(false)
               window.scrollTo(0, 0)
