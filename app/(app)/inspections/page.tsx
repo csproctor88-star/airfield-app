@@ -33,6 +33,7 @@ import {
   type SingleInspectionDraft,
   type InspectionHalfDraft,
 } from '@/lib/inspection-draft'
+import { consumePauseFlag, markInspectionPaused } from '@/lib/inspection-pause'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { getAirfieldDiagram } from '@/lib/airfield-diagram'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
@@ -963,12 +964,8 @@ export default function InspectionsPage() {
     await loadHistory()
   }
 
-  const PAUSE_KEY = (type: FormType) => `glidepath_inspection_paused_${type}_${installationId}`
-
   const resumeIfPaused = (type: FormType) => {
-    if (typeof window === 'undefined') return
-    if (localStorage.getItem(PAUSE_KEY(type)) !== 'true') return
-    localStorage.removeItem(PAUSE_KEY(type))
+    if (!consumePauseFlag(type, installationId)) return
     const oiStr = userOI ? `/${userOI}` : ''
     const label = type === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
     logActivity(
@@ -986,7 +983,7 @@ export default function InspectionsPage() {
     if (!activeForm || !currentDraft || !currentHalf) return
     setSaving(true)
     await handleSave()
-    localStorage.setItem(PAUSE_KEY(activeForm), 'true')
+    markInspectionPaused(activeForm, installationId)
     const oiStr = userOI ? `/${userOI}` : ''
     const label = activeForm === 'airfield' ? 'Daily Airfield Inspection' : 'Daily Lighting Inspection'
     const reasonSuffix = reason.trim() ? `: ${reason.trim()}` : ''
