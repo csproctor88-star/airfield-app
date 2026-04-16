@@ -1067,13 +1067,6 @@ const S: Record<string, React.CSSProperties> = {
   progressFill: { height: 3, background: "linear-gradient(90deg, var(--color-accent), #818CF8)", borderRadius: 2, transition: "width 0.3s" },
   progressText: { fontSize: 'var(--fs-sm)', color: "var(--color-text-3)", marginTop: 4, display: "block", fontFamily: "'JetBrains Mono', monospace" },
 
-  globalResults: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px", boxSizing: "border-box" },
-  globalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--color-bg-elevated)" },
-  globalList: { maxHeight: 400, overflowY: "auto" },
-  globalItem: { display: "flex", padding: "10px 0", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "inherit", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "inherit" },
-  gBadge: { flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 2 },
-  gSnippet: { fontSize: 'var(--fs-base)', lineHeight: 1.5, color: "var(--color-text-2)" },
-
   err: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "10px 24px", boxSizing: "border-box", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#F87171", fontSize: 'var(--fs-md)', display: "flex", alignItems: "center", justifyContent: "space-between" },
   errX: { background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 'var(--fs-2xl)', padding: 4 },
 

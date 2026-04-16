@@ -8,6 +8,8 @@ import {
   signDailyReview,
   computeEventsHash,
   canUserSignSlot,
+  currentAmslSlot,
+  formatSigner,
   SLOT_LABELS,
   requiredSlotsForShifts,
   getReviewWindowUtc,
@@ -139,9 +141,15 @@ export default function DailyReviewSignModal({
 
         regeneratePdf(data, existing, signerMap)
 
-        // Pre-select first slot the user is eligible to sign and isn't already signed
+        // Preselect the AMSL slot matching the base's current local time if the
+        // user can sign it and it's unsigned; otherwise fall back to the first
+        // eligible unsigned slot (NAMO/AFM will usually be reviewing after-hours).
         const required = requiredSlotsForShifts(shiftCount)
-        const openSlot = required.find((s) => canUserSignSlot(userRole, s) && !(existing as DailyReviewRow | null)?.[`${s}_signed_at` as keyof DailyReviewRow])
+        const isOpen = (s: DailyReviewSlot) =>
+          canUserSignSlot(userRole, s)
+          && !(existing as DailyReviewRow | null)?.[`${s}_signed_at` as keyof DailyReviewRow]
+        const currentShift = currentAmslSlot(timezone, shiftCount)
+        const openSlot = (isOpen(currentShift) ? currentShift : undefined) ?? required.find(isOpen)
         if (openSlot) setSelectedSlot(openSlot)
       } catch (e) {
         console.error('sign-modal load:', e)
@@ -392,8 +400,3 @@ export default function DailyReviewSignModal({
   )
 }
 
-function formatSigner(s: SignerInfo): string {
-  const parts = [s.rank, s.name].filter(Boolean)
-  const primary = parts.length > 0 ? parts.join(' ') : 'Unknown'
-  return s.operating_initials ? `${primary} (${s.operating_initials})` : primary
-}

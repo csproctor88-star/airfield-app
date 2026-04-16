@@ -5,12 +5,15 @@ import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import {
   fetchRecentReviews,
+  fetchSignersForRows,
+  formatSigner,
   requiredSlotsForShifts,
   isFullyCertified,
   getEffectiveReviewDate,
   SLOT_LABELS,
   type DailyReviewRow,
   type DailyReviewSlot,
+  type SignerInfo,
 } from '@/lib/supabase/daily-reviews'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -26,6 +29,7 @@ export default function DailyReviewsPage() {
 
   const [loaded, setLoaded] = useState(false)
   const [rows, setRows] = useState<DailyReviewRow[]>([])
+  const [signerMap, setSignerMap] = useState<Map<string, SignerInfo>>(new Map())
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState('')
   const [signOpen, setSignOpen] = useState(false)
@@ -45,6 +49,7 @@ export default function DailyReviewsPage() {
     }
     const reviews = await fetchRecentReviews(installationId, 30)
     setRows(reviews)
+    setSignerMap(await fetchSignersForRows(reviews))
     setLoaded(true)
   }, [installationId])
 
@@ -111,6 +116,8 @@ export default function DailyReviewsPage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {required.map((slot) => {
                     const signedAt = row?.[`${slot}_signed_at` as keyof DailyReviewRow] as string | null
+                    const signedById = row?.[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
+                    const signer = signedById ? signerMap.get(signedById) : null
                     return (
                       <div key={slot} style={{
                         fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 999,
@@ -119,6 +126,7 @@ export default function DailyReviewsPage() {
                         border: `1px solid ${signedAt ? 'rgba(52,211,153,0.3)' : 'var(--color-border)'}`,
                       }}>
                         {signedAt ? '✓ ' : ''}{SLOT_LABELS[slot as DailyReviewSlot]}
+                        {signer ? ` — ${formatSigner(signer)}` : ''}
                       </div>
                     )
                   })}
