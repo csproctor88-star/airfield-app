@@ -260,18 +260,13 @@ export default function AcsiFormPage() {
       if (existing && !existing.comment && !existing.work_order && existing.photo_ids.length === 0) {
         current[0] = detail
       } else if (existing) {
-        // Merge — embed each discrepancy's WO# inline with its own comment
-        // so the merged blob keeps them paired (vs. an aggregated list
-        // detached at the bottom of the PDF row).
-        const embedWo = (comment: string, wo: string) =>
-          !wo || comment.includes(`WO# ${wo}`) ? comment : `${comment} (WO# ${wo})`
-        const existingComment = embedWo(existing.comment, existing.work_order)
-        const detailComment = embedWo(detail.comment, detail.work_order)
-        const separator = existingComment ? '\n\n---\n\n' : ''
+        // Merge — linked comments already carry "[WO# xxx]" as a prefix,
+        // so concatenation alone keeps each WO paired with its description.
+        const separator = existing.comment ? '\n\n---\n\n' : ''
         current[0] = {
           ...existing,
-          comment: existingComment + separator + detailComment,
-          work_order: '',
+          comment: existing.comment + separator + detail.comment,
+          work_order: existing.work_order || detail.work_order || '',
           photo_ids: [...existing.photo_ids, ...detail.photo_ids],
           pins: [...(existing.pins || []), ...(detail.pins || [])],
           areas: Array.from(new Set([...(existing.areas || []), ...(detail.areas || [])])),
