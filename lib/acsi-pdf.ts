@@ -272,15 +272,6 @@ export async function generateAcsiPdf(
         if (disc.estimated_cost) lines.push(`Cost: ${disc.estimated_cost}`)
         if (disc.estimated_completion) lines.push(`ECD: ${disc.estimated_completion}`)
         if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
-
-        const pins = disc.pins && disc.pins.length > 0
-          ? disc.pins
-          : (disc.latitude != null && disc.longitude != null ? [{ lat: disc.latitude, lng: disc.longitude }] : [])
-        if (pins.length === 1) {
-          lines.push(`Location: ${pins[0].lat.toFixed(5)}, ${pins[0].lng.toFixed(5)}`)
-        } else if (pins.length > 1) {
-          lines.push(`Locations: ${pins.map(p => `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`).join(' | ')}`)
-        }
         discTextMap[detailKey] = lines
 
         // Resolve photos via id: ACSI photos first, then linked-discrepancy
