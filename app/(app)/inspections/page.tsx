@@ -420,17 +420,6 @@ export default function InspectionsPage() {
       }
       window.scrollTo(0, 0)
     }
-    if (params.get('action') === 'resume') {
-      autoBeginHandled.current = true
-      const typeParam = (params.get('type') || 'airfield') as FormType
-      const draft = typeParam === 'airfield' ? airfieldDraft : lightingDraft
-      if (draft) {
-        logResumeOnAirfield(typeParam)
-        setActiveForm(typeParam)
-        setShowHistory(false)
-        window.scrollTo(0, 0)
-      }
-    }
     if (params.get('action') === 'reopen') {
       autoBeginHandled.current = true
       const groupId = params.get('groupId')
@@ -2254,7 +2243,6 @@ export default function InspectionsPage() {
         <button
           onClick={() => {
             if (airfieldDraft) {
-              logResumeOnAirfield('airfield')
               setActiveForm('airfield')
               setShowHistory(false)
               window.scrollTo(0, 0)
@@ -2317,7 +2305,6 @@ export default function InspectionsPage() {
         <button
           onClick={() => {
             if (lightingDraft) {
-              logResumeOnAirfield('lighting')
               setActiveForm('lighting')
               setShowHistory(false)
               window.scrollTo(0, 0)

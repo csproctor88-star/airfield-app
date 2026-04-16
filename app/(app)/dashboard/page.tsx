@@ -532,7 +532,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Inspection Status Strip ===== */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <Link href={todayAirfieldStatus.status === 'in_progress' ? '/inspections?action=resume&type=airfield' : '/inspections'} style={{
+        <Link href="/inspections" style={{
           flex: '1 1 200px', maxWidth: 360, display: 'flex', alignItems: 'center', gap: 8,
           padding: '8px 14px', borderRadius: 'var(--radius-md)', textDecoration: 'none',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
@@ -550,7 +550,7 @@ export default function AMDashboardPage() {
             </div>
           </div>
         </Link>
-        <Link href={todayLightingStatus.status === 'in_progress' ? '/inspections?action=resume&type=lighting' : '/inspections'} style={{
+        <Link href="/inspections" style={{
           flex: '1 1 200px', maxWidth: 360, display: 'flex', alignItems: 'center', gap: 8,
           padding: '8px 14px', borderRadius: 'var(--radius-md)', textDecoration: 'none',
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
