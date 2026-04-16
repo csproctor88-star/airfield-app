@@ -963,8 +963,12 @@ export default function InspectionsPage() {
     await loadHistory()
   }
 
-  // ── Log ON AIRFIELD when resuming via any entry point ──
-  const logResumeOnAirfield = (type: FormType) => {
+  const PAUSE_KEY = (type: FormType) => `glidepath_inspection_paused_${type}_${installationId}`
+
+  const resumeIfPaused = (type: FormType) => {
+    if (typeof window === 'undefined') return
+    if (localStorage.getItem(PAUSE_KEY(type)) !== 'true') return
+    localStorage.removeItem(PAUSE_KEY(type))
     const oiStr = userOI ? `/${userOI}` : ''
     const label = type === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
     logActivity(
@@ -982,6 +986,7 @@ export default function InspectionsPage() {
     if (!activeForm || !currentDraft || !currentHalf) return
     setSaving(true)
     await handleSave()
+    localStorage.setItem(PAUSE_KEY(activeForm), 'true')
     const oiStr = userOI ? `/${userOI}` : ''
     const label = activeForm === 'airfield' ? 'Daily Airfield Inspection' : 'Daily Lighting Inspection'
     const reasonSuffix = reason.trim() ? `: ${reason.trim()}` : ''
@@ -1073,7 +1078,7 @@ export default function InspectionsPage() {
     const resumeType = report.type === 'daily'
       ? (report.airfield ? 'airfield' : 'lighting')
       : report.type as FormType
-    logResumeOnAirfield(resumeType)
+    resumeIfPaused(resumeType)
     toast.success('Inspection resumed')
   }
 
@@ -2243,6 +2248,7 @@ export default function InspectionsPage() {
         <button
           onClick={() => {
             if (airfieldDraft) {
+              resumeIfPaused('airfield')
               setActiveForm('airfield')
               setShowHistory(false)
               window.scrollTo(0, 0)
@@ -2305,6 +2311,7 @@ export default function InspectionsPage() {
         <button
           onClick={() => {
             if (lightingDraft) {
+              resumeIfPaused('lighting')
               setActiveForm('lighting')
               setShowHistory(false)
               window.scrollTo(0, 0)
