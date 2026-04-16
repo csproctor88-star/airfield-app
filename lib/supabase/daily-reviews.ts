@@ -61,16 +61,24 @@ export function getEffectiveReviewDate(timezone?: string | null, resetTime?: str
 
 /**
  * Convert a wall-clock (year/month/day/hour/minute) in the given IANA timezone
- * to a UTC Date. Approximates DST transitions (rare edge cases near the 2 AM
- * switch may be off by an hour; acceptable for review windows that use 06:00L).
+ * to a UTC Date. Uses Intl.DateTimeFormat so the result is independent of the
+ * host machine's local timezone (matters on Vercel/UTC vs developer machines).
  */
 function zonedWallClockToUtc(
   y: number, m: number, d: number, hour: number, minute: number, timezone: string,
 ): Date {
-  const guess = new Date(Date.UTC(y, m - 1, d, hour, minute))
-  const shownInTz = new Date(guess.toLocaleString('en-US', { timeZone: timezone }))
-  const offsetMs = guess.getTime() - shownInTz.getTime()
-  return new Date(guess.getTime() + offsetMs)
+  const candidate = new Date(Date.UTC(y, m - 1, d, hour, minute))
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  })
+  const parts = dtf.formatToParts(candidate)
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value)
+  const shownAsUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'))
+  const offsetMs = shownAsUtc - candidate.getTime()
+  return new Date(candidate.getTime() - offsetMs)
 }
 
 /**
@@ -125,6 +133,28 @@ export function canUserSignSlot(userRole: string | null, slot: DailyReviewSlot):
   return SLOT_ALLOWED_ROLES[slot].includes(userRole)
 }
 
+/**
+ * Which AMSL shift owns the given wall-clock hour in the base timezone.
+ * - 3-shift bases: day 0600-1359, swing 1400-2159, mid 2200-0559
+ * - 2-shift bases: day 0600-1759, swing 1800-0559
+ */
+export function currentAmslSlot(
+  timezone: string | null | undefined,
+  shiftCount: number,
+  now: Date = new Date(),
+): DailyReviewSlot {
+  const tz = timezone || 'UTC'
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' })
+  const hour = Number(dtf.formatToParts(now).find((p) => p.type === 'hour')?.value ?? 0)
+  if (shiftCount === 3) {
+    if (hour >= 6 && hour < 14) return 'day_amsl'
+    if (hour >= 14 && hour < 22) return 'swing_amsl'
+    return 'mid_amsl'
+  }
+  if (hour >= 6 && hour < 18) return 'day_amsl'
+  return 'swing_amsl'
+}
+
 /** Short deterministic hash of the entity IDs visible in the review. */
 export async function computeEventsHash(ids: string[]): Promise<string> {
   const payload = [...ids].sort().join('|')
@@ -137,15 +167,12 @@ export async function computeEventsHash(ids: string[]): Promise<string> {
   return (h >>> 0).toString(16).padStart(8, '0')
 }
 
-// daily_reviews is not (yet) in the generated Supabase types, so cast the builder.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const dr = (client: ReturnType<typeof createClient>) => (client as any).from('daily_reviews')
-
 export async function fetchDailyReview(baseId: string, date: string): Promise<DailyReviewRow | null> {
   const supabase = createClient()
   if (!supabase) return null
 
-  const { data, error } = await dr(supabase)
+  const { data, error } = await supabase
+    .from('daily_reviews')
     .select('*')
     .eq('base_id', baseId)
     .eq('review_date', date)
@@ -163,6 +190,38 @@ export interface SignerInfo {
   name: string | null
   rank: string | null
   operating_initials: string | null
+}
+
+export function formatSigner(s: SignerInfo): string {
+  const parts = [s.rank, s.name].filter(Boolean)
+  const primary = parts.length > 0 ? parts.join(' ') : 'Unknown'
+  return s.operating_initials ? `${primary} (${s.operating_initials})` : primary
+}
+
+/** Batch-resolve signer profiles across multiple review rows — one Supabase round trip. */
+export async function fetchSignersForRows(rows: DailyReviewRow[]): Promise<Map<string, SignerInfo>> {
+  const out = new Map<string, SignerInfo>()
+  const supabase = createClient()
+  if (!supabase || rows.length === 0) return out
+
+  const slots: DailyReviewSlot[] = ['day_amsl', 'swing_amsl', 'mid_amsl', 'namo', 'afm']
+  const ids = new Set<string>()
+  for (const row of rows) {
+    for (const slot of slots) {
+      const id = row[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
+      if (id) ids.add(id)
+    }
+  }
+  if (ids.size === 0) return out
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, rank, operating_initials')
+    .in('id', Array.from(ids))
+
+  if (error || !data) return out
+  for (const p of data as unknown as SignerInfo[]) out.set(p.id, p)
+  return out
 }
 
 /**
@@ -204,7 +263,8 @@ export async function fetchRecentReviews(baseId: string, days = 14): Promise<Dai
   if (!supabase) return []
 
   const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
-  const { data, error } = await dr(supabase)
+  const { data, error } = await supabase
+    .from('daily_reviews')
     .select('*')
     .eq('base_id', baseId)
     .gte('review_date', cutoff)
@@ -242,7 +302,8 @@ export async function signDailyReview(input: {
   let row: DailyReviewRow | null = null
 
   if (existing) {
-    const { data, error } = await dr(supabase)
+    const { data, error } = await supabase
+      .from('daily_reviews')
       .update(slotCols)
       .eq('id', existing.id)
       .select()
@@ -250,7 +311,8 @@ export async function signDailyReview(input: {
     if (error) return { data: null, error: friendlyError(error.message) }
     row = data as DailyReviewRow
   } else {
-    const { data, error } = await dr(supabase)
+    const { data, error } = await supabase
+      .from('daily_reviews')
       .insert({ base_id: input.baseId, review_date: input.date, ...slotCols })
       .select()
       .single()
@@ -260,7 +322,8 @@ export async function signDailyReview(input: {
 
   // Fire fully_certified_at once all required slots are filled
   if (row && !row.fully_certified_at && isFullyCertified(row, input.shiftCount)) {
-    const { data: certified } = await dr(supabase)
+    const { data: certified } = await supabase
+      .from('daily_reviews')
       .update({ fully_certified_at: new Date().toISOString() })
       .eq('id', row.id)
       .select()

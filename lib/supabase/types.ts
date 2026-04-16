@@ -416,6 +416,60 @@ export type Database = {
           },
         ]
       }
+      arff_status_log: {
+        Row: {
+          aircraft_name: string | null
+          base_id: string | null
+          changed_by: string | null
+          created_at: string
+          id: string
+          new_cat: number | null
+          new_readiness: string | null
+          old_cat: number | null
+          old_readiness: string | null
+          reason: string | null
+        }
+        Insert: {
+          aircraft_name?: string | null
+          base_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_cat?: number | null
+          new_readiness?: string | null
+          old_cat?: number | null
+          old_readiness?: string | null
+          reason?: string | null
+        }
+        Update: {
+          aircraft_name?: string | null
+          base_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          new_cat?: number | null
+          new_readiness?: string | null
+          old_cat?: number | null
+          old_readiness?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "arff_status_log_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "arff_status_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       base_areas: {
         Row: {
           area_name: string
@@ -890,6 +944,7 @@ export type Database = {
           checklist_reset_time: string
           contractor_templates: Json | null
           created_at: string
+          default_ooo_message: string | null
           discrepancy_type_shop_map: Json | null
           elevation_msl: number | null
           feedback_form_config: Json
@@ -900,6 +955,7 @@ export type Database = {
           location: string | null
           majcom: string | null
           name: string
+          shift_count: number
           status_labels: Json
           timezone: string
           unit: string | null
@@ -912,6 +968,7 @@ export type Database = {
           checklist_reset_time?: string
           contractor_templates?: Json | null
           created_at?: string
+          default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
           feedback_form_config?: Json
@@ -922,6 +979,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name: string
+          shift_count?: number
           status_labels?: Json
           timezone?: string
           unit?: string | null
@@ -934,6 +992,7 @@ export type Database = {
           checklist_reset_time?: string
           contractor_templates?: Json | null
           created_at?: string
+          default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
           feedback_form_config?: Json
@@ -944,6 +1003,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name?: string
+          shift_count?: number
           status_labels?: Json
           timezone?: string
           unit?: string | null
@@ -1186,6 +1246,136 @@ export type Database = {
             columns: ["base_id"]
             isOneToOne: false
             referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_reviews: {
+        Row: {
+          afm_events_hash: string | null
+          afm_notes: string | null
+          afm_signed_at: string | null
+          afm_signed_by: string | null
+          base_id: string
+          created_at: string
+          day_amsl_events_hash: string | null
+          day_amsl_notes: string | null
+          day_amsl_signed_at: string | null
+          day_amsl_signed_by: string | null
+          fully_certified_at: string | null
+          id: string
+          mid_amsl_events_hash: string | null
+          mid_amsl_notes: string | null
+          mid_amsl_signed_at: string | null
+          mid_amsl_signed_by: string | null
+          namo_events_hash: string | null
+          namo_notes: string | null
+          namo_signed_at: string | null
+          namo_signed_by: string | null
+          review_date: string
+          swing_amsl_events_hash: string | null
+          swing_amsl_notes: string | null
+          swing_amsl_signed_at: string | null
+          swing_amsl_signed_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          afm_events_hash?: string | null
+          afm_notes?: string | null
+          afm_signed_at?: string | null
+          afm_signed_by?: string | null
+          base_id: string
+          created_at?: string
+          day_amsl_events_hash?: string | null
+          day_amsl_notes?: string | null
+          day_amsl_signed_at?: string | null
+          day_amsl_signed_by?: string | null
+          fully_certified_at?: string | null
+          id?: string
+          mid_amsl_events_hash?: string | null
+          mid_amsl_notes?: string | null
+          mid_amsl_signed_at?: string | null
+          mid_amsl_signed_by?: string | null
+          namo_events_hash?: string | null
+          namo_notes?: string | null
+          namo_signed_at?: string | null
+          namo_signed_by?: string | null
+          review_date: string
+          swing_amsl_events_hash?: string | null
+          swing_amsl_notes?: string | null
+          swing_amsl_signed_at?: string | null
+          swing_amsl_signed_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          afm_events_hash?: string | null
+          afm_notes?: string | null
+          afm_signed_at?: string | null
+          afm_signed_by?: string | null
+          base_id?: string
+          created_at?: string
+          day_amsl_events_hash?: string | null
+          day_amsl_notes?: string | null
+          day_amsl_signed_at?: string | null
+          day_amsl_signed_by?: string | null
+          fully_certified_at?: string | null
+          id?: string
+          mid_amsl_events_hash?: string | null
+          mid_amsl_notes?: string | null
+          mid_amsl_signed_at?: string | null
+          mid_amsl_signed_by?: string | null
+          namo_events_hash?: string | null
+          namo_notes?: string | null
+          namo_signed_at?: string | null
+          namo_signed_by?: string | null
+          review_date?: string
+          swing_amsl_events_hash?: string | null
+          swing_amsl_notes?: string | null
+          swing_amsl_signed_at?: string | null
+          swing_amsl_signed_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_reviews_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reviews_day_amsl_signed_by_fkey"
+            columns: ["day_amsl_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reviews_swing_amsl_signed_by_fkey"
+            columns: ["swing_amsl_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reviews_mid_amsl_signed_by_fkey"
+            columns: ["mid_amsl_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reviews_namo_signed_by_fkey"
+            columns: ["namo_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_reviews_afm_signed_by_fkey"
+            columns: ["afm_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

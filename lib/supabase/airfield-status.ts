@@ -159,8 +159,7 @@ export async function logArffStatusChange(
   const supabase = createClient()
   if (!supabase) return
   const { data: { user } } = await supabase.auth.getUser()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('arff_status_log').insert({
+  await supabase.from('arff_status_log').insert({
     base_id: baseId ?? null,
     old_cat: params.oldCat ?? null,
     new_cat: params.newCat ?? null,
@@ -180,8 +179,7 @@ export async function fetchArffStatusLog(
 ): Promise<ArffStatusLogRow[]> {
   const supabase = createClient()
   if (!supabase) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
+  let query = supabase
     .from('arff_status_log')
     .select('*, profiles:changed_by(name, rank)')
     .gte('created_at', startUTC)
