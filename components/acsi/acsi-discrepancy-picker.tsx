@@ -82,17 +82,13 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
   const buildDetail = (disc: DiscrepancyRow, photoIds: string[]): AcsiDiscrepancyDetail => {
     const pins: { lat: number; lng: number }[] = []
     if (disc.latitude && disc.longitude) pins.push({ lat: disc.latitude, lng: disc.longitude })
-    // Compose: "[WO# xxx] <location> — <title> — <description>"
-    // WO# in brackets keeps WOs paired with their discrepancy on merge;
-    // location flows inline so the sentence reads naturally.
     const title = (disc.title || '').trim()
     const description = (disc.description || '').trim()
     const desc = description && description !== title ? description : ''
     const body = [disc.location_text, title, desc].filter(Boolean).join(' — ')
-    const prefix = disc.work_order_number ? `[WO# ${disc.work_order_number}] ` : ''
     return {
-      comment: prefix + body,
-      work_order: '',
+      comment: body,
+      work_order: disc.work_order_number || '',
       project_number: '',
       estimated_cost: '',
       estimated_completion: '',
