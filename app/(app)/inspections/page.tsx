@@ -165,6 +165,8 @@ export default function InspectionsPage() {
   // ── Action state ──
   const [saving, setSaving] = useState(false)
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
+  const [showPauseDialog, setShowPauseDialog] = useState(false)
+  const [pauseReason, setPauseReason] = useState('')
 
   // ── Photo state for fail items ──
   const [itemPhotos, setItemPhotos] = useState<Record<string, { file: File; url: string; name: string }[]>>({})
@@ -961,6 +963,29 @@ export default function InspectionsPage() {
     await loadHistory()
   }
 
+  // ── Pause inspection (save + log off-airfield + close form) ──
+  const handlePause = async (reason: string) => {
+    if (!activeForm || !currentDraft || !currentHalf) return
+    setSaving(true)
+    await handleSave()
+    const oiStr = userOI ? `/${userOI}` : ''
+    const label = activeForm === 'airfield' ? 'Daily Airfield Inspection' : 'Daily Lighting Inspection'
+    const reasonSuffix = reason.trim() ? `: ${reason.trim()}` : ''
+    logActivity(
+      'noted',
+      'inspection',
+      currentHalf.dbRowId || installationId || crypto.randomUUID(),
+      undefined,
+      { details: `AFLD3${oiStr} OFF AIRFIELD — ${label} paused${reasonSuffix}` },
+      installationId,
+    )
+    setActiveForm(null)
+    setShowPauseDialog(false)
+    setPauseReason('')
+    setSaving(false)
+    toast.success('Inspection paused')
+  }
+
   // ── Resume an in-progress inspection from DB ──
   const handleResume = async (report: { id: string; type: string; airfield?: { daily_group_id?: string } | null; lighting?: { daily_group_id?: string } | null }) => {
     const groupId = report.type === 'daily'
@@ -1030,6 +1055,20 @@ export default function InspectionsPage() {
 
     setShowHistory(false)
     window.scrollTo(0, 0)
+
+    const resumeType = report.type === 'daily'
+      ? (report.airfield ? 'airfield' : 'lighting')
+      : report.type as FormType
+    const oiStr = userOI ? `/${userOI}` : ''
+    const resumeLabel = resumeType === 'lighting' ? 'Daily Lighting Inspection' : 'Daily Airfield Inspection'
+    logActivity(
+      'noted',
+      'inspection',
+      report.id,
+      undefined,
+      { details: `AFLD3${oiStr} ON AIRFIELD — Resuming ${resumeLabel}` },
+      installationId,
+    )
     toast.success('Inspection resumed')
   }
 
@@ -2003,6 +2042,18 @@ export default function InspectionsPage() {
               {saving ? 'Saving...' : 'Save Draft'}
             </button>
           )}
+          <button
+            onClick={() => { setPauseReason(''); setShowPauseDialog(true) }}
+            disabled={saving}
+            style={{
+              padding: '14px 20px', borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-warning)',
+              background: 'rgba(245, 158, 11, 0.1)',
+              color: 'var(--color-warning)', fontSize: 'var(--fs-md)', fontWeight: 700,
+              cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: saving ? 0.7 : 1,
+            }}
+          >Pause</button>
         </div>
 
         {/* Discard button */}
@@ -2071,6 +2122,61 @@ export default function InspectionsPage() {
                     background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
                   }}
                 >Go Back</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Pause Inspection Dialog ── */}
+        {showPauseDialog && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowPauseDialog(false)}
+            style={{ padding: 24 }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--color-bg-surface-solid)', borderRadius: 14, padding: 20, width: '100%', maxWidth: 400,
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+              }}
+            >
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8 }}>Pause Inspection</div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5, marginBottom: 14 }}>
+                Your draft will be saved and you will be logged off the airfield. You can resume from the inspections page.
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 4 }}>Reason (optional)</div>
+              <textarea
+                value={pauseReason}
+                onChange={(e) => setPauseReason(e.target.value)}
+                placeholder="e.g. Weather hold, emergency response, lunch break..."
+                rows={2}
+                autoFocus
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                  resize: 'vertical', minHeight: 50, marginBottom: 14, outline: 'none',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => handlePause(pauseReason)}
+                  disabled={saving}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                    cursor: saving ? 'default' : 'pointer', border: '1px solid var(--color-warning)',
+                    background: 'rgba(245, 158, 11, 0.15)', color: 'var(--color-warning)', fontFamily: 'inherit',
+                  }}
+                >{saving ? 'Saving…' : 'Pause & Go Off Airfield'}</button>
+                <button
+                  onClick={() => setShowPauseDialog(false)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                    cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                    background: 'var(--color-bg)', color: 'var(--color-text-2)', fontFamily: 'inherit',
+                  }}
+                >Cancel</button>
               </div>
             </div>
           </div>
