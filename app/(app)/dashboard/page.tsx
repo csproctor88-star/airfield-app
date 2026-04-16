@@ -691,7 +691,7 @@ export default function AMDashboardPage() {
               <button
                 onClick={async () => {
                   await setAfmOutOfOffice(true, oooMessage)
-                  await logManualEntry('Command Post notified', installationId)
+                  await logManualEntry('AMOPS out of office, Command Post notified', installationId)
                   setShowOooDialog(false)
                   toast.success('Out of Office activated')
                 }}
@@ -731,7 +731,7 @@ export default function AMDashboardPage() {
               <button
                 onClick={async () => {
                   await setAfmOutOfOffice(false)
-                  await logManualEntry('Command Post notified', installationId)
+                  await logManualEntry('AMOPS back in office, Command Post notified', installationId)
                   setShowOooDeactivateDialog(false)
                   toast.success('Out of Office deactivated')
                 }}
