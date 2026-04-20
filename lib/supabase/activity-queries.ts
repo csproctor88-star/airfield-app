@@ -218,12 +218,37 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     .order('updated_at', { ascending: false })
     .limit(20)
 
+  const discIds = (discData || []).map(d => d.id)
+  type StatusUpdateRow = {
+    discrepancy_id: string
+    created_at: string
+    profiles: ProfileFragment
+  }
+  const latestStatusUpdateByDisc = new Map<string, StatusUpdateRow>()
+  if (discIds.length > 0) {
+    const { data: suData } = await supabase
+      .from('status_updates')
+      .select('discrepancy_id, created_at, profiles:updated_by(name, rank, operating_initials)')
+      .in('discrepancy_id', discIds)
+      .order('created_at', { ascending: false })
+    for (const su of (suData || []) as unknown as StatusUpdateRow[]) {
+      if (!latestStatusUpdateByDisc.has(su.discrepancy_id)) {
+        latestStatusUpdateByDisc.set(su.discrepancy_id, su)
+      }
+    }
+  }
+
   for (const d of (discData || []) as unknown as DiscRow[]) {
     const key = `discrepancy-${d.id}-updated`
     if (usedIds.has(key)) continue
     usedIds.add(key)
     const isNew = new Date(d.created_at).getTime() > Date.now() - 7 * 86400000 &&
       Math.abs(new Date(d.created_at).getTime() - new Date(d.updated_at).getTime()) < 60000
+    const latestSu = latestStatusUpdateByDisc.get(d.id)
+    const suFresh = latestSu
+      ? Math.abs(new Date(latestSu.created_at).getTime() - new Date(d.updated_at).getTime()) < 5 * 60 * 1000
+      : false
+    const attribution = isNew ? d.profiles : (suFresh ? latestSu!.profiles : d.profiles)
     entries.push({
       id: `disc-${d.id}`,
       action: isNew ? 'created' : d.status === 'completed' ? 'completed' : 'updated',
@@ -232,11 +257,11 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
       entity_display_id: d.display_id,
       metadata: { details: `${d.title || d.type?.toUpperCase() || 'DISCREPANCY'}${d.location_text ? ' — ' + d.location_text : ''}${d.current_status ? ' [' + d.current_status.replace(/_/g, ' ').toUpperCase() + ']' : ''}` },
       created_at: isNew ? d.created_at : d.updated_at,
-      user_name: d.profiles?.name || 'Unknown',
-      user_rank: d.profiles?.rank || null,
+      user_name: attribution?.name || 'Unknown',
+      user_rank: attribution?.rank || null,
       user_role: null,
       user_edipi: null,
-      user_operating_initials: d.profiles?.operating_initials || null,
+      user_operating_initials: attribution?.operating_initials || null,
     })
   }
 

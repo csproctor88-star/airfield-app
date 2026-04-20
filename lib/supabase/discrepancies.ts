@@ -166,6 +166,17 @@ export async function updateDiscrepancy(
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
+  // Snapshot prior current_status so we can log an audit row if it changes
+  let priorCurrentStatus: string | null = null
+  if (fields.current_status !== undefined) {
+    const { data: prior } = await supabase
+      .from('discrepancies')
+      .select('current_status')
+      .eq('id', id)
+      .single()
+    priorCurrentStatus = (prior as { current_status?: string } | null)?.current_status || null
+  }
+
   const { data, error } = await supabase
     .from('discrepancies')
     .update({ ...fields, updated_at: new Date().toISOString() })
@@ -179,6 +190,26 @@ export async function updateDiscrepancy(
   }
 
   const updated = data as DiscrepancyRow
+
+  // Audit: log current_status transitions so the Events Log attributes to the actor
+  if (fields.current_status !== undefined && fields.current_status !== priorCurrentStatus) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const auditRow: Record<string, unknown> = {
+          discrepancy_id: id,
+          old_status: null,
+          new_status: null,
+          notes: `CURRENT_STATUS: ${fields.current_status}`,
+          updated_by: user.id,
+        }
+        if (updated?.base_id) auditRow.base_id = updated.base_id
+        await supabase.from('status_updates').insert(auditRow as never)
+      }
+    } catch (e) {
+      console.error('Current-status audit insert failed:', e)
+    }
+  }
 
   return { data: updated, error: null }
 }
