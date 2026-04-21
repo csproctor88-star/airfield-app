@@ -584,7 +584,7 @@ export default function AMDashboardPage() {
             textAlign: 'center', lineHeight: 1.2,
           }}>
             <span style={{ fontSize: 22, lineHeight: 1 }}>🏗️</span>
-            <span>Log Personnel</span>
+            <span>Personnel on Airfield</span>
           </button>
         )}
         {isModuleEnabled('/shift-checklist', enabledModules) && (
@@ -608,7 +608,7 @@ export default function AMDashboardPage() {
             textAlign: 'center', lineHeight: 1.2,
           }}>
             <span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span>
-            <span>Emergency QRC</span>
+            <span>QRCs</span>
           </button>
         )}
         {isModuleEnabled('/scn', enabledModules) && (
@@ -620,7 +620,7 @@ export default function AMDashboardPage() {
             textAlign: 'center', lineHeight: 1.2,
           }}>
             <span style={{ fontSize: 22, lineHeight: 1 }}>📻</span>
-            <span>Secondary Crash Net</span>
+            <span>SCN</span>
           </Link>
         )}
         {canToggleOoo && (
