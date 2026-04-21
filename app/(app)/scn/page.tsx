@@ -157,13 +157,13 @@ export default function ScnPage() {
       toast.error(res.error)
       return
     }
-    toast.success(modal.type === 'backup' ? 'Backup SCN logged' : 'SCN daily check logged')
+    toast.success(modal.type === 'backup' ? 'Monthly SCN check logged' : 'Daily SCN check logged')
     setModal(null)
     load()
   }
 
   async function handleDelete(check: ScnCheckWithResults) {
-    if (!confirm(`Delete the ${check.check_type === 'backup' ? 'backup' : 'primary'} SCN check for ${check.check_date}Z?`)) return
+    if (!confirm(`Delete the ${check.check_type === 'backup' ? 'monthly' : 'daily'} SCN check for ${check.check_date}Z?`)) return
     const { error } = await deleteCheck(check.id)
     if (error) { toast.error(error); return }
     toast.success('Check deleted')
@@ -235,7 +235,7 @@ export default function ScnPage() {
       {/* Today's primary check card */}
       <div style={{ marginTop: 14, display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
         <TodayCheckCard
-          label="Primary SCN"
+          label="Daily SCN Check"
           check={primaryToday}
           onStart={() => openModal('primary')}
           onEdit={(c) => openModal('primary', c)}
@@ -244,7 +244,7 @@ export default function ScnPage() {
           hasAgencies={agencies.length > 0}
         />
         <TodayCheckCard
-          label="Backup SCN"
+          label="Monthly SCN Check"
           check={backupToday}
           onStart={() => openModal('backup')}
           onEdit={(c) => openModal('backup', c)}
@@ -307,11 +307,20 @@ export default function ScnPage() {
       {modal && (
         <ModalOverlay onClose={() => setModal(null)}>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
-            {modal.type === 'backup' ? 'Backup SCN Check' : 'Daily SCN Check'}
+            {modal.type === 'backup' ? 'Monthly SCN Check' : 'Daily SCN Check'}
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
             {formatZuluDate(todayZuluDate())} · attribution: {operatingInitials || '—'}
           </div>
+
+          {/* Opening script — daily check only */}
+          {modal.type === 'primary' && (
+            <ScriptBlock title="Opening call">
+              All agencies stand-by <em>(3X)</em>. This is Airfield Management with the daily Secondary
+              Crash Phone check. All agencies respond with line clarity and initials when your agency
+              is called.
+            </ScriptBlock>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
             {modal.draft.map((d, i) => (
@@ -323,6 +332,14 @@ export default function ScnPage() {
               />
             ))}
           </div>
+
+          {/* Closing script — daily check only */}
+          {modal.type === 'primary' && (
+            <ScriptBlock title="Closing call">
+              All agencies are loud and clear <em>(with the exception of if necessary)</em>. Please
+              secure the net.
+            </ScriptBlock>
+          )}
 
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -587,7 +604,7 @@ function AgencyRow({ draft, onChange, onOpenOosNotes }: {
 
 function SummaryPreview({ draft, type }: { draft: AgencyDraft[]; type: ScnCheckType }) {
   const exceptions = draft.filter(d => d.status !== 'loud_clear')
-  const label = type === 'backup' ? 'Backup SCN complete' : 'SCN daily check complete'
+  const label = type === 'backup' ? 'Monthly SCN check complete' : 'Daily SCN check complete'
   const text = exceptions.length === 0
     ? `${label} — all agencies loud & clear`
     : `${label} — all loud & clear except ${exceptions.map(e => `${e.agency_name} (${SCN_STATUS_LABELS[e.status]}${e.notes ? `: ${e.notes}` : ''})`).join(', ')}`
@@ -608,7 +625,7 @@ function SummaryPreview({ draft, type }: { draft: AgencyDraft[]; type: ScnCheckT
 function HistoryRow({ check, onEdit, onDelete }: { check: ScnCheckWithResults; onEdit?: (c: ScnCheckWithResults) => void; onDelete?: (c: ScnCheckWithResults) => void }) {
   const [expanded, setExpanded] = useState(false)
   const exceptions = check.results.filter(r => r.status !== 'loud_clear')
-  const label = check.check_type === 'backup' ? 'Backup' : 'Primary'
+  const label = check.check_type === 'backup' ? 'Monthly' : 'Daily'
   const allClear = exceptions.length === 0
 
   return (
@@ -705,6 +722,25 @@ function DisplayRow({ name, status, notes }: { name: string; status: ScnAgencySt
         </span>
       </div>
     </>
+  )
+}
+
+function ScriptBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      marginBottom: 14, padding: '10px 12px', borderRadius: 'var(--radius-md)',
+      background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)',
+    }}>
+      <div style={{
+        fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-cyan)',
+        textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4,
+      }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', lineHeight: 1.55 }}>
+        &ldquo;{children}&rdquo;
+      </div>
+    </div>
   )
 }
 

@@ -101,7 +101,7 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
   const totalPrimary = primaryByDay.size
   const totalBackup = backupDays.size
   doc.text(
-    `${totalPrimary} primary check${totalPrimary === 1 ? '' : 's'} logged · ${totalBackup} backup check${totalBackup === 1 ? '' : 's'} logged · ${agencies.length} agency list`,
+    `${totalPrimary} daily check${totalPrimary === 1 ? '' : 's'} logged · ${totalBackup} monthly check${totalBackup === 1 ? '' : 's'} logged · ${agencies.length} agency list`,
     margin, y,
   )
   y += 6
@@ -145,8 +145,8 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     return row
   })
 
-  // Backup SCN row appended at the bottom with ✓ marks on days it was completed
-  const backupRow: (string | { content: string; meta?: 'backup' })[] = ['Backup SCN']
+  // Monthly SCN row appended at the bottom with B marks on days it was completed
+  const backupRow: (string | { content: string; meta?: 'backup' })[] = ['Monthly SCN']
   for (let d = 1; d <= dayCount; d++) {
     backupRow.push(backupDays.has(d) ? { content: 'B', meta: 'backup' } : { content: '·' })
   }
@@ -223,12 +223,12 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     y = ((doc as any).lastAutoTable?.finalY ?? y) + 8
   }
 
-  // ── Backup SCN completion log ──
+  // ── Monthly SCN completion log ──
   if (backupDays.size > 0) {
     if (y > pageBreakThreshold) { doc.addPage(); y = margin }
     doc.setFontSize(11)
     doc.setTextColor(20)
-    doc.text('Backup SCN Completion Log', margin, y)
+    doc.text('Monthly SCN Completion Log', margin, y)
     y += 4
     const sortedBackup = Array.from(backupDays.keys()).sort((a, b) => a - b)
     autoTable(doc, {
