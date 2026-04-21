@@ -608,72 +608,76 @@ export default function AMDashboardPage() {
         )
       })()}
 
-      {/* ===== Quick Actions — big tap-friendly tile grid ===== */}
+      {/* ===== Quick Actions — compact tile grid ===== */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-        gap: 12,
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: 8,
         marginBottom: 20,
       }}>
         {[
-          { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
-          { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
+          { label: 'Airfield Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
+          { label: 'New Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
         ]
           .filter(q => isModuleEnabled(q.href, enabledModules))
           .map(q => (
           <Link key={q.label} href={q.href} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)',
-            transition: 'transform 0.12s, border-color 0.12s',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>{q.icon}</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{q.icon}</span>
             <span>{q.label}</span>
           </Link>
         ))}
         {isModuleEnabled('/contractors', enabledModules) && (
           <button onClick={() => setShowContractorForm(true)} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>🏗️</span>
-            <span>Personnel</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🏗️</span>
+            <span>Log Personnel</span>
           </button>
         )}
         {isModuleEnabled('/shift-checklist', enabledModules) && (
           <button onClick={() => setShowShiftChecklist(true)} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>☑️</span>
-            <span>Checklist</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>☑️</span>
+            <span>Shift Checklist</span>
           </button>
         )}
         {isModuleEnabled('/qrc', enabledModules) && (
           <button onClick={() => setShowQrc(true)} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>⚡</span>
-            <span>QRC</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span>
+            <span>Emergency QRC</span>
           </button>
         )}
         {isModuleEnabled('/scn', enabledModules) && (
           <Link href="/scn" style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>📻</span>
-            <span>SCN</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>📻</span>
+            <span>Secondary Crash Net</span>
           </Link>
         )}
         {canToggleOoo && (
@@ -685,16 +689,17 @@ export default function AMDashboardPage() {
               setShowOooDialog(true)
             }
           }} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: afmOutOfOffice ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-surface)',
             border: afmOutOfOffice ? '2px solid rgba(239,68,68,0.55)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-md)', fontWeight: 700,
+            fontSize: 'var(--fs-sm)', fontWeight: 700,
             color: afmOutOfOffice ? 'var(--color-danger)' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>{afmOutOfOffice ? '🔴' : '🚪'}</span>
-            <span>{afmOutOfOffice ? 'End OOO' : 'Out of Office'}</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{afmOutOfOffice ? '🔴' : '🚪'}</span>
+            <span>{afmOutOfOffice ? 'End Out of Office' : 'Out of Office'}</span>
           </button>
         )}
         {canToggleOoo && (
@@ -706,16 +711,17 @@ export default function AMDashboardPage() {
               setShowClosedDialog(true)
             }
           }} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: afmClosed ? 'rgba(100,116,139,0.25)' : 'var(--color-bg-surface)',
             border: afmClosed ? '2px solid rgba(100,116,139,0.65)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-md)', fontWeight: 700,
+            fontSize: 'var(--fs-sm)', fontWeight: 700,
             color: afmClosed ? '#CBD5E1' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 44, lineHeight: 1 }}>🌙</span>
-            <span>{afmClosed ? 'End Closed' : 'Close for Day'}</span>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🌙</span>
+            <span>{afmClosed ? 'Reopen Airfield' : 'Close Airfield'}</span>
           </button>
         )}
       </div>
