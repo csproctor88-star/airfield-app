@@ -9,7 +9,8 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
-import { fetchRecentReviews } from '@/lib/supabase/daily-reviews'
+import { fetchRecentReviews, isFullyCertified, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -249,9 +250,64 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
 
 export default function ActivityPage() {
   const router = useRouter()
-  const { installationId, userRole, currentInstallation } = useInstallation()
+  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
+
+  // ── Daily reviews bar state ──
+  const baseTimezone = currentInstallation?.timezone || 'America/New_York'
+  const baseResetTime = (currentInstallation as Record<string, unknown>)?.checklist_reset_time as string | undefined || '06:00'
+  const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
+  const reviewTodayIso = getEffectiveReviewDate(baseTimezone, baseResetTime)
+  const [recentReviews, setRecentReviews] = useState<DailyReviewRow[]>([])
+  const [shiftReviewOpen, setShiftReviewOpen] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('')
+
+  const refreshReviews = useCallback(() => {
+    if (!installationId) return
+    fetchRecentReviews(installationId, 14).then(setRecentReviews)
+  }, [installationId])
+  useEffect(() => { refreshReviews() }, [refreshReviews])
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled || !user) return
+      setCurrentUserId(user.id)
+      const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).single()
+      if (cancelled) return
+      setCurrentUserName((profile as { name?: string } | null)?.name || '')
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const pendingReviewDates: string[] = (() => {
+    const reviewed = new Map(recentReviews.map(r => [r.review_date, r] as const))
+    const dates: string[] = []
+    const [y, m, d] = reviewTodayIso.split('-').map(Number)
+    for (let i = 1; i <= 7; i++) {
+      const day = new Date(Date.UTC(y, m - 1, d))
+      day.setUTCDate(day.getUTCDate() - i)
+      const iso = day.toISOString().slice(0, 10)
+      const row = reviewed.get(iso)
+      if (!row || !isFullyCertified(row, shiftCount)) dates.push(iso)
+    }
+    return dates
+  })()
+
+  const todayShiftReview = (() => {
+    const amslSlots = requiredSlotsForShifts(shiftCount).filter((s) => s.endsWith('_amsl'))
+    const canSignAny = amslSlots.some((s) => canUserSignSlot(userRole, s))
+    if (!canSignAny) return null
+    const todayRow = recentReviews.find((r) => r.review_date === reviewTodayIso) || null
+    const signedCount = amslSlots.filter((s) => todayRow?.[`${s}_signed_at` as keyof DailyReviewRow]).length
+    if (signedCount >= amslSlots.length) return null
+    return { signedCount, total: amslSlots.length }
+  })()
 
   useEffect(() => {
     if (!installationId) return
@@ -517,6 +573,50 @@ export default function ActivityPage() {
       </div>
 
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Events Log</div>
+
+      {/* ===== Today's Shift Review ===== */}
+      {todayShiftReview && (
+        <div
+          onClick={() => setShiftReviewOpen(true)}
+          style={{
+            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
+            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+              Review Shift
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL signatures captured for today
+            </div>
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Sign →</div>
+        </div>
+      )}
+
+      {/* ===== Daily Reviews Pending ===== */}
+      {pendingReviewDates.length > 0 && (
+        <div
+          onClick={() => router.push('/daily-reviews')}
+          style={{
+            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
+            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-warning)' }}>
+              {pendingReviewDates.length} Daily Review{pendingReviewDates.length === 1 ? '' : 's'} Pending
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              Oldest: {pendingReviewDates[pendingReviewDates.length - 1]} — DAFMAN 13-204v1 Para 2.5.2.10
+            </div>
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Review →</div>
+        </div>
+      )}
 
       {/* Manual Entry Section */}
       <div className="card" style={{ marginBottom: 16, padding: '14px', border: '1px solid rgba(34,211,238,0.2)', background: 'rgba(34,211,238,0.04)' }}>
@@ -962,6 +1062,26 @@ export default function ActivityPage() {
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
           icao={currentInstallation?.icao}
+        />
+      )}
+
+      {/* Daily Shift Review Sign Modal */}
+      {installationId && currentUserId && (
+        <DailyReviewSignModal
+          open={shiftReviewOpen}
+          onClose={() => setShiftReviewOpen(false)}
+          baseId={installationId}
+          baseName={currentInstallation?.name || ''}
+          baseIcao={(currentInstallation as { icao?: string | null } | null)?.icao || null}
+          shiftCount={shiftCount}
+          reviewDate={reviewTodayIso}
+          timezone={baseTimezone}
+          resetTime={baseResetTime}
+          userId={currentUserId}
+          userRole={userRole}
+          userName={currentUserName}
+          defaultPdfEmail={defaultPdfEmail}
+          onSigned={() => { refreshReviews(); loadEntries() }}
         />
       )}
     </div>
