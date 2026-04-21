@@ -348,7 +348,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setAfmOooLocal(active)
     setAfmOooMsgLocal(message ?? null)
     markLocalUpdate()
-    await updateAirfieldStatus({ afm_out_of_office: active, afm_ooo_message: message ?? null } as any, installationId)
+    await updateAirfieldStatus({ afm_out_of_office: active, afm_ooo_message: message ?? null }, installationId)
   }, [installationId])
 
   // Activate / deactivate "closed for the day". On activate, clear per-runway
@@ -360,8 +360,10 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setAfmClosedMsgLocal(message ?? null)
     markLocalUpdate()
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const patch: Record<string, any> = { afm_closed: active, afm_closed_message: message ?? null }
+    const patch: Partial<AirfieldStatus> = {
+      afm_closed: active,
+      afm_closed_message: message ?? null,
+    }
 
     if (active) {
       // Clear runway statuses (each runway set to "open" with no remarks / no resume time)

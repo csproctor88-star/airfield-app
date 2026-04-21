@@ -1,10 +1,12 @@
 import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
 import { logActivity } from './activity'
+import type { Database } from './types'
+
+type ScnCheckInsert = Database['public']['Tables']['scn_checks']['Insert']
 
 function db() {
-  const supabase = createClient()
-  return supabase ? (supabase as any) : null
+  return createClient()
 }
 
 export type ScnCheckType = 'primary' | 'backup'
@@ -187,7 +189,7 @@ export async function saveCheck(input: {
     .maybeSingle()
 
   const completedAt = new Date().toISOString()
-  const checkPayload: Record<string, unknown> = {
+  const checkPayload: ScnCheckInsert = {
     base_id: input.baseId,
     check_date: input.checkDate,
     check_type: input.checkType,

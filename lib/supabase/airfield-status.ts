@@ -45,6 +45,8 @@ export interface AirfieldStatus {
   misc_remarks: string | null
   afm_out_of_office: boolean
   afm_ooo_message: string | null
+  afm_closed: boolean
+  afm_closed_message: string | null
   updated_by: string | null
   updated_at: string
 }
@@ -90,7 +92,7 @@ export async function fetchAirfieldStatus(baseId?: string | null): Promise<Airfi
 }
 
 export async function updateAirfieldStatus(
-  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'advisories' | 'active_runway' | 'runway_status' | 'runway_statuses' | 'arff_cat' | 'arff_statuses' | 'rsc_condition' | 'rsc_updated_at' | 'rcr_touchdown' | 'rcr_midpoint' | 'rcr_rollout' | 'rcr_condition' | 'rcr_updated_at' | 'bwc_value' | 'bwc_updated_at' | 'construction_remarks' | 'misc_remarks'>>,
+  updates: Partial<Pick<AirfieldStatus, 'advisory_type' | 'advisory_text' | 'advisories' | 'active_runway' | 'runway_status' | 'runway_statuses' | 'arff_cat' | 'arff_statuses' | 'rsc_condition' | 'rsc_updated_at' | 'rcr_touchdown' | 'rcr_midpoint' | 'rcr_rollout' | 'rcr_condition' | 'rcr_updated_at' | 'bwc_value' | 'bwc_updated_at' | 'construction_remarks' | 'misc_remarks' | 'afm_out_of_office' | 'afm_ooo_message' | 'afm_closed' | 'afm_closed_message'>>,
   baseId?: string | null,
 ): Promise<boolean> {
   const supabase = createClient()

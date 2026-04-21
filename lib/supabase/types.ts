@@ -1352,6 +1352,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "daily_reviews_afm_signed_by_fkey"
+            columns: ["afm_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "daily_reviews_base_id_fkey"
             columns: ["base_id"]
             isOneToOne: false
@@ -1361,13 +1368,6 @@ export type Database = {
           {
             foreignKeyName: "daily_reviews_day_amsl_signed_by_fkey"
             columns: ["day_amsl_signed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "daily_reviews_swing_amsl_signed_by_fkey"
-            columns: ["swing_amsl_signed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1387,8 +1387,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "daily_reviews_afm_signed_by_fkey"
-            columns: ["afm_signed_by"]
+            foreignKeyName: "daily_reviews_swing_amsl_signed_by_fkey"
+            columns: ["swing_amsl_signed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3279,6 +3279,143 @@ export type Database = {
           {
             foreignKeyName: "runway_status_log_changed_by_fkey"
             columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scn_agencies: {
+        Row: {
+          agency_name: string
+          base_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+        }
+        Insert: {
+          agency_name: string
+          base_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+        }
+        Update: {
+          agency_name?: string
+          base_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scn_agencies_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scn_check_results: {
+        Row: {
+          agency_id: string | null
+          agency_name: string
+          check_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          sort_order: number
+          status: string
+        }
+        Insert: {
+          agency_id?: string | null
+          agency_name: string
+          check_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sort_order?: number
+          status: string
+        }
+        Update: {
+          agency_id?: string | null
+          agency_name?: string
+          check_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scn_check_results_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "scn_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scn_check_results_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "scn_checks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scn_checks: {
+        Row: {
+          base_id: string
+          check_date: string
+          check_type: string
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_oi: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          started_at: string
+        }
+        Insert: {
+          base_id: string
+          check_date: string
+          check_type: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+        }
+        Update: {
+          base_id?: string
+          check_date?: string
+          check_type?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scn_checks_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scn_checks_completed_by_fkey"
+            columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
