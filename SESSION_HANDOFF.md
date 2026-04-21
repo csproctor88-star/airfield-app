@@ -1,108 +1,118 @@
 # Session Handoff
 
-**Date:** 2026-04-16
-**Branch:** `main` (uncommitted — P1/P2 polish pass, no prior commits this session)
-**Build:** ✅ Clean — `npm run build` compiles; `npx tsc --noEmit` exit 0; `npm test` 41 pass / 2 skipped (up from 10/2)
+**Date:** 2026-04-17 → 2026-04-21 (multi-day run)
+**Branch:** `mobile-tweaks` (19 commits ahead of `origin/main`, all pushed to `origin/mobile-tweaks`)
+**Build:** ✅ Clean — `npm run build` compiles; `npx tsc --noEmit` exit 0; `npx vitest run` 60 pass / 2 skipped
 
 ---
 
 ## What Landed This Session
 
-P1 + most of P2 from the previous handoff, still uncommitted. Test count went 10 → 41, two real bugs caught along the way.
+Big session. Three brand-new modules, a foundational per-base feature-flag system, the dashboard reimagined as a quick-action launcher, a login-time release-notes modal, and a slate of smaller UX refinements. 19 commits, 4 new Supabase migrations, and a modular-onboarding plan file on `~/.claude/plans/`.
 
-### P1 — Test expansion + types regen
+### Bug fixes first
 
-1. **Vitest expansion (+31 tests across 2 new files).**
-   - `tests/daily-reviews.test.ts` — 27 tests: `requiredSlotsForShifts`, `canUserSignSlot` role matrix, `isFullyCertified` with 2/3-shift bases, `getReviewWindowUtc` (EST/EDT/UTC anchoring + 24-hour span), `getEffectiveReviewDate` with fake timers straddling the reset boundary, `currentAmslSlot` (3-shift and 2-shift windows + 06:00 boundary), `computeEventsHash` (deterministic + order-invariant).
-   - `tests/link-photos.test.ts` — 4 tests on `linkPhotosToDiscrepancy`: early return for empty input, photo update + `photo_count` bump, friendly error surfacing on RLS denial, graceful skip when discrepancy row missing.
+1. **Discrepancy status change attribution in Events Log.**
+   - `lib/supabase/activity-queries.ts` was joining profiles via `discrepancies.reported_by` for *every* event including updates — so completing a CES-work-order logged under the original reporter's OI, not the person who closed it.
+   - `updateDiscrepancy` now writes a `status_updates` audit row whenever `current_status` changes (previously only top-level `status` transitions wrote one).
+   - Events Log attribution pulls from the latest `status_updates` row within 5 min of `discrepancies.updated_at`, falling back to `reported_by` only for creation events or when no fresh audit row exists.
 
-2. **Bug caught by tests: `zonedWallClockToUtc` was host-timezone dependent.**
-   - Original implementation used `new Date(d.toLocaleString('en-US', { timeZone }))`, which re-parses the string in the host's **local** timezone — so on Vercel (UTC) the daily review window was computed hours off for any non-UTC base. Masquerading as a "DST edge case" in the tech-debt list; actually broken in prod for every non-UTC base.
-   - Rewritten with `Intl.DateTimeFormat.formatToParts` to extract a zone-stable offset. `sign-modal.tsx` and `/daily-reviews` both benefit silently.
+2. **Volk Field (KVOK) missing from signup dropdown.**
+   - DB seeded via `seed-kvok-volk-field.sql` but the hardcoded `BASE_DIRECTORY` in `lib/base-directory.ts` never got the entry. Added it between Vandenberg and Warfield. No DB risk — `/api/installations` is find-or-create.
+   - Also noticed **KBCV Chièvres** has the same issue (seeded but not in `BASE_DIRECTORY`). Flagged, not yet added.
 
-3. **Types regen.**
-   - Added `daily_reviews` (with all 5 slot columns × 4 attrs + `fully_certified_at`, FKs to `profiles`), `arff_status_log`, and `bases.{default_ooo_message, shift_count}` to `lib/supabase/types.ts`.
-   - Removed 3 `(supabase as any)` casts — the `dr()` builder helper in `daily-reviews.ts` and both `arff_status_log` calls in `airfield-status.ts`. Migration numbers (`2026041302`, `2026041303`, `2026041500`) now fully reflected in types.
+3. **Runway import "re-enables all modules" regression.**
+   - `installation-context.tsx` fallback-to-ALL fired when `enabled_modules` was an empty array (not just null/undefined). A user who cleared their selection would see the value flip back to everything on the next context read.
+   - Fixed to trust any explicit array. Also bubble the Supabase error up so a missing-column situation surfaces as a toast instead of silently rolling back.
 
-### P2 — Polish
+### Feature #1 — Modular Onboarding (v2.32 headline)
 
-4. **PDFLibrary dead styles.**
-   - Removed 6 unused keys (`globalResults`, `globalHeader`, `globalList`, `globalItem`, `gBadge`, `gSnippet`) left over from the cross-PDF-search move to `/regulations`.
+Five-phase build per the `~/.claude/plans/i-want-to-look-cozy-whisper.md` plan. Admins can now pick which Glidepath modules their base uses; downstream navigation, wizard steps, and dashboard tiles all filter automatically.
 
-5. **Dashboard AMSL slot preselection.**
-   - Added `currentAmslSlot(timezone, shiftCount, now)` to `lib/supabase/daily-reviews.ts`. Shift windows:
-     - 3-shift: day 0600–1359, swing 1400–2159, mid 2200–0559
-     - 2-shift: day 0600–1759, swing 1800–0559
-   - `sign-modal.tsx` now preselects the current-time AMSL slot if the user can sign it and it's unsigned; falls back to first eligible unsigned slot (matches prior behavior for NAMO/AFM reviewing after-hours).
+- **Migration 2026042000** — `bases.enabled_modules TEXT[]` (default all 16 toggleables) + `bases.setup_progress JSONB`. Backfill restores full enablement for existing rows.
+- **`lib/modules-config.ts`** — single source of truth for module key, category, description, hrefs, setupSteps, defaults. Helpers: `isModuleEnabled`, `isWizardStepEnabled`, `isStepDone`, `isModuleSetupComplete`, `TYPICAL_BASE_PRESET`, category-grouped views.
+- **Module Selector page** — new `/settings/base-setup/modules` with grouped cards (Core Ops / Emergency / Compliance / Optional), Recommended / Enable Everything / Clear All presets. Saves to `bases.enabled_modules`.
+- **Wizard filtering** — `WIZARD_STEPS` filter through `isWizardStepEnabled`. Core steps (runways, taxiways, areas, ARFF, facilities) are always shown. Pill navigation + Next / Skip / Back all account for the filtered step list.
+- **Setup progress** — Next/Skip writes `complete`/`skipped` to `setup_progress` with completed_by attribution. Green ticks on step pills. Dashboard banner "Finish setting up X, Y, Z" nudges admins when enabled modules have incomplete steps.
+- **Nav filtering** — sidebar, bottom nav, more page, and dashboard quick actions all respect `enabled_modules` (stacked on top of the CES role filter, not a replacement).
+- **Public feedback short-circuit** — `fetchFeedbackConfig` reads `enabled_modules` and returns null if `feedback` is off, so public QR codes show "form closed" instead of 200ing into a live form.
 
-6. **Signer name+rank on `/daily-reviews` list.**
-   - Added `fetchSignersForRows(rows[])` — single-query batch lookup returning `Map<userId, SignerInfo>`.
-   - Moved `formatSigner()` out of `sign-modal.tsx` into `lib/supabase/daily-reviews.ts` so both views share it.
-   - List chip now reads `✓ Day Shift AMSL — TSgt Smith (JS)` instead of the bare `✓ Day Shift AMSL`.
+### Feature #2 — Secondary Crash Net (SCN) daily check log
 
-7. **Storage RLS path-scoping — migration drafted, NOT APPLIED.**
-   - New file: `supabase/migrations/2026041600_photos_storage_rls_path_scoped.sql`.
-   - Problem: current policies (migrations `2026022702` + `2026041401`) let any authenticated user `INSERT`/`UPDATE`/`DELETE` any object in the `photos` bucket. A user at Base A can delete Base B's photos from storage by guessing the path.
-   - New model:
-     - **INSERT**: authenticated + prefix must match `{discrepancy,check,inspection,acsi,obstruction}-photos/`, `airfield-diagrams/`, or `email-temp/`. For `airfield-diagrams/{baseId}/…`, user must have write access to that base.
-     - **UPDATE** / **DELETE**: either (a) an `EXISTS` match against a `photos` row the user can see — photos table RLS chains through the parent entity's `base_id`, or (b) base-scoped for `airfield-diagrams/`, or (c) authenticated for `email-temp/`.
-   - Also adds supporting indexes on `photos.storage_path` and `photos.thumbnail_path` so the `EXISTS` predicate uses an index rather than seq-scanning.
-   - **Delete ordering confirmed safe**: every `storage.remove()` in `lib/supabase/*.ts` runs BEFORE the `photos` table row delete, so the `EXISTS` check passes at the moment the storage object is being deleted.
+- **Migration 2026042001** — `scn_agencies`, `scn_checks`, `scn_check_results` with full RLS. `agency_name` is denormalized on results so historical checks survive agency renames/deletes.
+- **`/scn` page** — Daily + Monthly check cards, 30-day history, month picker for PDF export. Each agency row is a 3-button grid (Loud & Clear / No Response / Out of Service) with 60px-min tap targets; default is Loud & Clear so only exceptions get touched. OOS selection opens a required-notes dialog.
+- **Daily check modal** ships with the controller's **Opening** and **Closing call scripts** in cyan callouts surrounding the agency grid ("All agencies stand-by (3X)…" / "All agencies are loud and clear… please secure the net."). Monthly check omits them.
+- **Events Log integration** — each completed check writes a summary row to `activity_log` with `entity_type` `scn` or `scn_backup`: "DAILY SCN CHECK COMPLETE — ALL LOUD & CLEAR EXCEPT FIRE DEPT (NO RESPONSE), ATC (OUT OF SERVICE: radio fault)".
+- **Monthly PDF** (`lib/scn-pdf.ts`) — agency-by-day matrix with color-coded L/N/X cells, Monthly SCN row, OOS footnote table, No Response roster, Monthly SCN completion log.
+- **Base Setup step 11** added "SCN Agencies" (SimpleListTab wrapper). Wildlife / Lighting renumbered.
+- **Rename** late in session: Primary → **Daily SCN Check**, Backup → **Monthly SCN Check**. DB `check_type` values stay `primary`/`backup` so history is stable; only UI/PDF/Events Log labels flipped.
+
+### Feature #3 — Close for the Day overlay
+
+- **Migration 2026042002** — `airfield_status.afm_closed` + `afm_closed_message`, `bases.default_closed_message`.
+- **Dashboard tile** "🌙 Close Airfield" / "🌙 Reopen Airfield" with its own message dialog, Set-as-Default button, and reopen confirmation.
+- **Key behavior** — activating Closed clears runway_statuses, RSC, RCR (touchdown/midpoint/rollout/condition + updated_at), and BWC in a single `airfield_status` patch so the next opening check starts from a clean slate. Deactivating just clears the flag; the next opening check sets live values.
+- **Status-page banner** in slate color (distinct from the red OOO banner) with minimize + reopen affordances. Both states can coexist.
+- **CP initials dropped** from both the OOO and Closed reopen dialogs. Events Log text: "AMOPS Closed. Command Post notified." / "AMOPS Open. Command Post notified." (matching user-stated AMOPS terminology).
+
+### Dashboard as a quick-action launcher
+
+- Removed the inline recent-activity feed (and its loader, edit modal, and the `Review Shift` / `Daily Reviews Pending` bars, which moved to `/activity`).
+- Tiles: **Airfield Checks**, **New Discrepancy**, **Personnel on Airfield**, **Shift Checklist**, **QRCs**, **SCN**, **PPR Log**, **BASH**, **Out of Office**, **Close Airfield**. All gated by module enablement.
+- Sizing: compact 68px-min tiles with 22px emoji + bold label, auto-fill 140px grid. Half the previous size after user feedback.
+
+### Nav / More reorganization
+
+- New **Admin** group (shield icon) between Reference and Settings, containing: Activity Log (`/recent-activity`), Daily Reviews, Waivers, Reports & Analytics, Training, PDF Library, User Management.
+- Events Log (`/activity`) stayed in **Operations** per user clarification — it's the operator-facing log.
+- Activity Log (`/recent-activity`) surfaces in Admin for admin-level app-wide review.
+- Settings group narrowed to just `/settings`.
+- SCN dropped from sidebar — dashboard tile is the entry point; More menu still lists it.
+
+### Review Shift bar moved to /activity
+
+Both the "Review Shift" and "N Daily Reviews Pending" bars plus the DailyReviewSignModal migrated off the dashboard onto the Events Log page. Daily Reviews Pending bar was then deleted per user (too noisy for every-day AMOPS personnel — they only need the Review Shift bar).
+
+### Events Log mobile polish
+
+- Table drops the dedicated Action column when viewport ≤ 640px. Action label (color-coded, with link arrow and AMENDED badge) inlines before the Details text instead.
+- `minWidth` relaxes to 0 on mobile so columns fit the viewport.
+- `colSpan` on date header rows shrinks from 5 to 4.
+
+### Training page refresh
+
+- New global **search bar** that matches across Quick Start steps, Module cards, and Base Setup steps with in-result highlighting and "jump to tab" links.
+- New Module cards: **Modules** (feature selector), **Daily Reviews**, **PPR**, **Feedback**, **Secondary Crash Net**.
+- New Base Setup step 11 in the guide: **SCN Agencies**.
+- Content fixes: QRC step-type count 6 → 8, Visual NAVAIDs feature-type count 22 → 23 and Google Maps (not Mapbox), Settings module now describes the Modules selector.
+- Base Setup tab opens with a "Before Step 1 — Pick Your Modules" callout.
+
+### Feature #4 — What's New modal on login (release notes)
+
+- **Migration 2026042100** — `profiles.last_seen_release_version TEXT`.
+- **`lib/release-notes.ts`** — structured `RELEASE_NOTES` array with v2.32 and v2.31 seeded. Helper `unseenReleaseNotes(lastSeen)` + `compareVersions()` do semver-ish comparison.
+- **`components/whats-new-modal.tsx`** — scrollable grouped card per release with "Got it" CTA and a link out to the GitHub CHANGELOG. Dismissing writes the latest version to the profile so the modal only pops once per user per release.
+- **`components/whats-new-gate.tsx`** — mounted in `(app)/layout.tsx` inside DashboardProvider. Reads profile on mount; fails silently in demo mode or when the migration hasn't been applied.
+- Future releases: bump `package.json` + prepend a new `RELEASE_NOTES` entry; the modal handles the rest.
+
+### Smaller changes
+
+- `activity_log` entity labels for `scn` → **SCN**, `scn_backup` → **Monthly SCN** (previously lowercase).
+- Dashboard tile labels lengthened for clarity after the scale-down pass.
+- Events Log + More page mirror every nav change.
 
 ---
 
-## Migrations Pending
+## Migrations to Apply (unfired)
 
-| Migration | Status | Notes |
-|---|---|---|
-| `2026041600_photos_storage_rls_path_scoped.sql` | **Draft only — needs careful staging** | See "Storage RLS apply checklist" below |
+Stage against Demo AFB first, smoke-test, then promote.
 
----
+1. **`2026042000_enabled_modules.sql`** — `bases.enabled_modules` + `bases.setup_progress` + backfill. Safe. Idempotent (`cardinality()` guard).
+2. **`2026042001_scn_daily_check.sql`** — new SCN tables + RLS. Safe.
+3. **`2026042002_afm_closed.sql`** — `airfield_status.afm_closed` / `afm_closed_message` + `bases.default_closed_message`. Safe.
+4. **`2026042100_whats_new_tracking.sql`** — `profiles.last_seen_release_version`. Safe.
 
-## Storage RLS apply checklist (before running `2026041600`)
-
-1. **Verify airfield-diagrams paths.** All existing objects under `airfield-diagrams/` must have a valid UUID as their 2nd path segment — otherwise the `(split_part(name, '/', 2))::uuid` cast throws and updates/deletes will fail on those rows.
-   ```sql
-   SELECT name FROM storage.objects
-   WHERE bucket_id = 'photos' AND name LIKE 'airfield-diagrams/%'
-     AND split_part(name, '/', 2) !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
-   ```
-   Expect zero rows.
-
-2. **Stage on Demo AFB first.**
-   - Upload a discrepancy photo → verify photo renders in list + PDF.
-   - Delete a discrepancy photo → verify storage object is gone.
-   - Upload + replace an airfield diagram (tests the `remove()` before `upload()` dance).
-   - Send a PDF via email (tests the `email-temp/{uuid}-{filename}` upload + post-send cleanup).
-
-3. **Orphan cleanup.** After apply, any storage object without a matching `photos` row becomes un-deletable by regular users. Plan for a service-role cleanup script if orphans accumulate (not urgent — storage cost is small, and current orphans are a pre-existing condition).
-
-4. **Have a rollback ready.** To revert, re-apply `2026022702_photos_storage_policies.sql`'s INSERT/UPDATE/DELETE policies and drop the three new `photos_{insert,update,delete}_path_scoped` policies.
-
----
-
-## Incomplete / In-Progress Work
-
-### Uncommitted on `main`
-| Item | What | Status |
-|---|---|---|
-| P1/P2 changes | All of this session's work | **Ready to commit** — tsc clean, 41 tests, build clean |
-| `.env.local` modified | Local secrets | Leave untracked |
-| `docs/SESSION_HANDOFF_v2.32.0.md` deleted | Stale cleanup from prior session | Leave |
-
-Suggested commit split (6 commits) if you want fine granularity:
-1. Regenerate types.ts for daily_reviews, arff_status_log, bases columns
-2. Fix host-timezone bug in zonedWallClockToUtc (+ Vitest DST tests)
-3. Add link-photos smoke tests
-4. Tidy unused styles in PDFLibrary.tsx
-5. Preselect current-time AMSL slot + show signers on daily-reviews list
-6. Draft storage RLS path-scoping migration (not applied)
-
-Or one squash commit ("P1/P2 polish pass").
-
-### Not tackled (deferred with reasoning)
-
-- **Weekend/holiday handling on Dashboard pending pill** — needs product call. Airfields are 24/7; DAFMAN 13-204 requires daily review. Silently skipping weekends risks missing real compliance gaps. Revisit if/when per-base "operating days" config is planned.
+All four are pure additive schema changes; no data transforms. The WhatsNewGate, Modules page, SCN page, and Closed button all handle "column not applied yet" gracefully.
 
 ---
 
@@ -110,40 +120,47 @@ Or one squash commit ("P1/P2 polish pass").
 
 | Item | Location | Severity | Change from last handoff |
 |---|---|---|---|
-| **`auth_leaked_password_protection`** | Supabase dashboard → Auth → Email | Low | Unchanged — Pro plan only |
-| **`any` casts** | ~121 project-wide; ~17 in `lib/supabase/*` | Low | Down 3 (arff_status_log + daily_reviews builder cast) |
-| **Largest source files** | `settings/base-setup/page.tsx` 4,698 LOC; `parking/page.tsx` 4,334 LOC; `infrastructure/page.tsx` 4,150 LOC | Medium | Unchanged |
-| **Automated test coverage** | 7 files (41 pass, 2 skipped) | Medium | Up from 5 files / 10 pass — daily-reviews + link-photos covered; ACSI photo resolution + Pause/Resume still uncovered |
-| **DST edge cases in `zonedWallClockToUtc`** | `lib/supabase/daily-reviews.ts` | **Resolved** | Fixed to use `Intl.DateTimeFormat` instead of host-local parse |
-| **`daily_reviews` / `arff_status_log` not in types.ts** | | **Resolved** | Regenerated |
-| **PDF boilerplate duplication** | 12+ generators share header/footer/photo patterns | Low | Unchanged |
-| **`PDFLibrary.tsx` dead styles** | `globalResults` / `gBadge` / `gSnippet` | **Resolved** | Removed |
-| **Old ACSI inspections missing `linked_discrepancy_id`** | Saved before `5f4b0f2` | Low | Unchanged |
-| **Pause flag is localStorage-only** | `glidepath_inspection_paused_{type}_{baseId}` | Trivial | Unchanged |
-| **Storage RLS not row-scoped** | `photos` bucket, `storage.objects` policies | **Draft migration ready** | Needs apply checklist above |
+| **4 migrations pending apply** | Listed above | Medium | **New — ready to stage** |
+| **`.env.local` modified** | Root | Trivial | Still dirty locally; skipping commits as usual |
+| **KBCV Chièvres missing from BASE_DIRECTORY** | `lib/base-directory.ts` | Low | Flagged but not fixed — parallel to the KVOK bug |
+| **Dashboard `activity` state unused** | `app/(app)/dashboard/page.tsx` | Trivial | `loadActivity` still runs as a no-op side effect; cleaning it would cascade through many save handlers. Leave for later |
+| **Recent Activity page (`/recent-activity`)** | Surfaces in Admin now but wasn't rebuilt this session | Low | Should do a UI review next session to confirm it fits "Activity Log" admin-audit framing |
+| **`auth_leaked_password_protection`** | Supabase dashboard | Low | Unchanged — Pro plan only |
+| **`any` casts** | Growing as new tables land; still ~124 project-wide | Low | ~3 new in dashboard-context + SCN code (guarded with explicit type narrowing). Budget for a sweep after types regen |
+| **Dashboard pending-setup banner double-surface** | New banner + finish-setup link in settings | Trivial | Both point to the same place; fine |
+| **Public feedback "form closed" copy hardcoded** | `app/feedback/[baseId]/page.tsx` | Trivial | Shows generic closed state when `feedback` module is off |
+| **SCN backup check scripts** | Only daily has scripts | Low | User asked for daily only — if monthly needs a different net call, add later |
+| **Largest source files** | `base-setup/page.tsx` 4,748 LOC (+50 from SCN agencies tab), `parking/page.tsx` 4,334, `infrastructure/page.tsx` 4,150, new `dashboard/page.tsx` ~1,300 | Medium | Unchanged priority |
+| **Automated test coverage** | 8 files / 60 pass, 2 skipped | Medium | Same as last handoff — **nothing new for SCN, Modular Onboarding, What's New, Close-for-day.** Top risk area next session |
+| **Role-restricted modules force-enable** | Not implemented in MODULES registry | Low | Plan has it; SCN/CES didn't need it yet |
 
 ---
 
 ## Next Session Tasks (Prioritized)
 
-### P0 — Operational
-1. **Commit this session's P1/P2 work** (6 commits or one squash — see split above). Build is clean; ready to go.
-2. **Stage + apply `2026041600` on Demo AFB**, walk the checklist above, then promote to prod Supabase.
+### P0 — Release gate
+1. **Apply the 4 new migrations** against Demo AFB, walk through: module selector, wizard filtering, SCN check flow (daily + monthly), Close for Day, What's New modal first-appearance. Then promote to prod Supabase.
+2. **Merge `mobile-tweaks` → `main`** and cut **v2.32.0**. Version string lives in `package.json`, `app/login/page.tsx`, `app/(app)/settings/page.tsx`, `app/(app)/training/page.tsx`, `CHANGELOG.md`, and `README.md`. The `RELEASE_NOTES[0]` entry in `lib/release-notes.ts` is already authored.
+3. **Smoke-test after release** — confirm What's New pops for the first existing user who logs in post-merge, confirm their `last_seen_release_version` gets written.
 
 ### P1 — Quality
-3. **Test coverage for ACSI photo-resolution + inspection Pause/Resume** — both are recent, real, un-covered. Good candidates:
-   - `buildDiscrepancy()` preserving `linked_discrepancy_id` (regression protection for the 2026-04-15 fix).
-   - Inspection resume log gating (only fires when the paused flag is set).
-4. **Weekend/holiday handling on Dashboard pending pill** — once product decides the rule (skip weekends? base-configurable operating days?), wire it into `pendingReviewDates` in `app/(app)/dashboard/page.tsx`.
+4. **Test coverage for the new modules.** Priority order:
+   - `lib/modules-config.ts` — `isModuleEnabled`, `isWizardStepEnabled`, `isModuleSetupComplete`, `compareVersions`/`isNewerVersion` (pure functions, fast wins).
+   - `lib/supabase/scn.ts` — `summarizeCheck` (exceptions joined correctly, all-clear vs mixed, notes passthrough).
+   - `lib/release-notes.ts` — `unseenReleaseNotes` edge cases (null, equal, leading-zero versions).
+5. **Regenerate Supabase types** — pick up `scn_agencies`, `scn_checks`, `scn_check_results` + the two new `bases` columns + `airfield_status.afm_closed*`. Will remove most of the `as any` introduced in this session.
+6. **Review `/recent-activity`** to make sure it earns its Admin slot (admin-level app-wide activity review). May need date range / entity-type filters it doesn't currently have.
 
-### P2 — Roadmap
-5. **Orphan storage cleanup script** — service-role task to reconcile `photos` bucket against the `photos` table, safe now that the storage RLS migration won't let regular users clean orphans.
-6. **Further `any` sweep** — 17 remaining in `lib/supabase/*` (activity-queries, custom-status, feedback, parking, ppr, a couple in base-setup/page.tsx).
+### P2 — Polish
+7. **Add KBCV Chièvres to BASE_DIRECTORY** (trivial mirror of the KVOK fix).
+8. **Role-restricted force-enable** for CES and NAMO modules — if the base has users with those roles, prevent admins from disabling the modules that serve them. Plan section already covers the UX; unblocks for bases hitting edge cases.
+9. **Dashboard `activity` state cleanup** — remove the orphaned `loadActivity`/state now that the inline feed is gone. Ripples through ~15 save handlers but they're one-line changes.
 
-### P3 — Future (weeks of work, defer indefinitely)
+### P3 — Future
 - Platform One Party Bus onboarding (~6–8 weeks)
 - CAC/PIV authentication (blocked on P1)
-- Component extraction for the 4K+ LOC pages (high-risk pure refactor)
+- Component extraction for 4K+ LOC pages
+- PDF boilerplate shared utility
 
 ---
 
@@ -152,34 +169,71 @@ Or one squash commit ("P1/P2 polish pass").
 ```
 ✓ Compiled successfully
   TypeScript clean (`npx tsc --noEmit` exit 0)
-  Tests: 41 pass / 2 skipped (RLS env-gated)
-  All routes generate cleanly
+  Tests: 60 pass / 2 skipped (RLS env-gated)
+  All routes generate cleanly (new: /scn, /settings/base-setup/modules)
 
-  Notable routes (First Load JS) — unchanged from last session:
-    /wildlife          785 kB
-    /parking           396 kB
-    /reports/aging     328 kB
-    /reports/daily     319 kB
-    /library           293 kB
-    /dashboard         222 kB
-    /regulations       182 kB
-  Middleware           74.6 kB
+  Notable First Load JS sizes:
+    /wildlife                788 kB  (unchanged — heatmap)
+    /parking                 398 kB  (unchanged)
+    /reports/aging           331 kB
+    /obstructions/[id]       326 kB
+    /reports/daily           322 kB
+    /library                 295 kB
+    /reports/lighting        317 kB
+    /inspections             229 kB  (unchanged)
+    /discrepancies           223 kB  (unchanged)
+    /settings/base-setup     231 kB  (+ ~8 kB from SCN agencies tab)
+    /dashboard               217 kB  (−5 kB from activity feed removal)
+    /regulations             182 kB
+    /scn                     179 kB  NEW
+    /settings/base-setup/modules 173 kB  NEW
+
+  Middleware                 74.6 kB  (unchanged)
 ```
 
 ---
 
 ## Files Touched This Session
 
+### Created
 ```
-M  app/(app)/daily-reviews/page.tsx            # signer names on chips
-M  components/PDFLibrary.tsx                   # dead style removal
-M  components/daily-reviews/sign-modal.tsx     # preselect current AMSL slot + use shared formatSigner
-M  lib/supabase/airfield-status.ts             # drop (supabase as any) on arff_status_log
-M  lib/supabase/daily-reviews.ts               # Intl-based tz conversion, currentAmslSlot, fetchSignersForRows, formatSigner
-M  lib/supabase/types.ts                       # daily_reviews + arff_status_log + bases cols
-A  supabase/migrations/2026041600_photos_storage_rls_path_scoped.sql   # DRAFT, not applied
-A  tests/daily-reviews.test.ts                 # 27 tests
-A  tests/link-photos.test.ts                   # 4 tests
+A  lib/modules-config.ts                                       # source of truth for module definitions
+A  lib/release-notes.ts                                        # What's New data + compareVersions
+A  lib/scn-pdf.ts                                              # monthly SCN PDF
+A  lib/supabase/scn.ts                                         # SCN check CRUD + summarizeCheck
+A  lib/supabase/scn-agencies.ts                                # per-base agency list CRUD
+A  app/(app)/scn/page.tsx                                      # daily/monthly check page + modal + scripts
+A  app/(app)/settings/base-setup/modules/page.tsx              # module selector
+A  components/whats-new-modal.tsx                              # release-notes modal UI
+A  components/whats-new-gate.tsx                               # mount + profile read + latest-seen write
+A  supabase/migrations/2026042000_enabled_modules.sql
+A  supabase/migrations/2026042001_scn_daily_check.sql
+A  supabase/migrations/2026042002_afm_closed.sql
+A  supabase/migrations/2026042100_whats_new_tracking.sql
 ```
 
-No commits yet — all changes uncommitted on `main`.
+### Modified
+```
+M  app/(app)/activity/page.tsx                                 # mobile column collapse, review shift bar, SCN casing
+M  app/(app)/dashboard/page.tsx                                # quick-action tiles, closed button, feed removal
+M  app/(app)/layout.tsx                                        # WhatsNewGate mount
+M  app/(app)/more/page.tsx                                     # nav reorg (Admin group), SCN tile, module filtering
+M  app/(app)/page.tsx                                          # closed banner, OOO dialog simplification
+M  app/(app)/settings/base-setup/page.tsx                      # wizard filtering + SCN agencies step 11
+M  app/(app)/settings/page.tsx                                 # "Manage Modules" card
+M  app/(app)/training/page.tsx                                 # search bar, 5 new module cards, step 11 SCN
+M  app/api/installations/route.ts                              # seed TYPICAL_BASE_PRESET on base create
+M  app/feedback/[baseId]/page.tsx                              # handle null from disabled-module short-circuit
+M  components/layout/bottom-nav.tsx                            # module filtering
+M  components/layout/sidebar-nav.tsx                           # module filtering + new icons + Admin group
+M  lib/base-directory.ts                                       # + Volk Field KVOK
+M  lib/dashboard-context.tsx                                   # afmClosed + setAfmClosed (clears runway/RSC/BWC)
+M  lib/installation-context.tsx                                # enabledModules, setupProgress, defaultClosedMessage
+M  lib/sidebar-config.ts                                       # Admin group, Activity Log entry, SCN removed
+M  lib/supabase/activity-queries.ts                            # discrepancy attribution via status_updates
+M  lib/supabase/discrepancies.ts                               # audit row on current_status change
+M  lib/supabase/feedback.ts                                    # enabled_modules short-circuit
+M  lib/supabase/types.ts                                       # bases new cols, airfield_status closed cols, profiles cols
+```
+
+Everything committed on `mobile-tweaks` and pushed to `origin/mobile-tweaks`. 19 commits ahead of main.
