@@ -1396,7 +1396,7 @@ export default function TrainingPage() {
           textAlign: 'center', padding: '24px 0 12px',
           fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)',
         }}>
-          Glidepath v2.31.0 — Airfield Operations Management Platform
+          Glidepath v2.32.0 — Airfield Operations Management Platform
         </div>
       </div>
     </div>

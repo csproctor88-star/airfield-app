@@ -6,7 +6,7 @@ All notable changes to Glidepath.
 
 ### Planned
 - METAR weather API integration (aviationweather.gov)
-- Unit and integration testing
+- Expand test coverage onto new modules (`modules-config`, SCN summaries, release-notes)
 - Regenerate Supabase types to eliminate remaining `as any` casts
 - Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
 - Training Management Module (DAF training records)
@@ -14,6 +14,34 @@ All notable changes to Glidepath.
 - Part 139 civilian airport template support
 - CAC/PIV authentication (pending Platform One onboarding)
 - BowMonk Conversion Tool (feature parity with legacy Grotefend app)
+
+---
+
+## [2.32.0] — 2026-04-21
+
+### Added
+- **Modular Onboarding** — admins pick which Glidepath modules apply to their base (`bases.enabled_modules`). Sidebar, bottom nav, More menu, dashboard tiles, and Base Setup wizard all filter automatically. Module Selector lives at `/settings/base-setup/modules` with Recommended / Enable Everything / Clear All presets. Setup-progress tracking surfaces a "Finish setting up…" banner on the dashboard until enabled modules are complete.
+- **Secondary Crash Net (SCN) Daily Check Log** — per-base agency roster, three-state status grid (Loud & Clear / No Response / Out of Service) with required OOS notes, inline call scripts for the Daily check, monthly check workflow, 30-day history, and monthly PDF matrix. New `/scn` route and Base Setup step 11 "SCN Agencies".
+- **Close for the Day overlay** — dashboard tile and status banner. Activating clears runway statuses, RSC/RCR, and BWC atomically so the next opening check starts clean. Deactivation just unsets the flag; default closed message configurable per base.
+- **"What's New" release-notes modal** — pops once per release on sign-in, driven by `lib/release-notes.ts` and `profiles.last_seen_release_version`. Seeded with v2.31 and v2.32 entries.
+- **Volk Field ANG Base (KVOK)** added to signup installation dropdown.
+
+### Changed
+- **Dashboard** rebuilt as a quick-action launcher with 10 compact tiles (Checks, New Discrepancy, Personnel, Shift Checklist, QRCs, SCN, PPR, BASH, Out of Office, Close Airfield). Inline recent-activity feed and Daily Reviews Pending bar removed from the dashboard.
+- **Navigation** reorganized — new Admin group (Activity Log, Daily Reviews, Waivers, Reports & Analytics, Training, PDF Library, User Management). Events Log remains in Operations. Review Shift bar moved to the Events Log page.
+- **Events Log** collapses its Action column on viewports ≤ 640px, inlining the action label before the details text.
+- **Training page** gains a global search bar spanning Quick Start, Modules, and Base Setup guides. New module cards for Modules, Daily Reviews, PPR, Feedback, and Secondary Crash Net. Base Setup step 11 (SCN Agencies) and a "Before Step 1 — Pick Your Modules" callout.
+- **Daily & Monthly SCN** rename — UI, PDF, and Events Log now say "Daily SCN Check" / "Monthly SCN Check" (DB `check_type` values stay `primary`/`backup` for history continuity).
+
+### Fixed
+- **Discrepancy status attribution in the Events Log** — status changes (e.g., CES closing a work order) now log against the actor instead of the original reporter. Driven by a new `status_updates` audit row on every `current_status` transition.
+- **Runway import "re-enables all modules" regression** — empty `enabled_modules` array is now trusted instead of falling back to ALL. Supabase errors bubble up as toasts.
+
+### Schema
+- `2026042000` — `bases.enabled_modules` (TEXT[] with default) + `bases.setup_progress` (JSONB). Backfill restores full enablement for existing rows.
+- `2026042001` — `scn_agencies`, `scn_checks`, `scn_check_results` with full RLS. Agency name denormalized on results.
+- `2026042002` — `airfield_status.afm_closed` / `afm_closed_message` + `bases.default_closed_message`.
+- `2026042100` — `profiles.last_seen_release_version` for What's New modal tracking.
 
 ---
 
