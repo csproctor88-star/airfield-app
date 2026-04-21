@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { BASE_DIRECTORY } from '@/lib/base-directory'
+import { TYPICAL_BASE_PRESET } from '@/lib/modules-config'
 
 function getAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
@@ -103,6 +104,8 @@ export async function POST(request: Request) {
           elevation_msl: null,
           timezone: 'America/New_York',
           ce_shops: [],
+          enabled_modules: TYPICAL_BASE_PRESET,
+          setup_progress: {},
         })
         .select()
         .single()

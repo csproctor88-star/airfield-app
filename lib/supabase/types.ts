@@ -947,6 +947,7 @@ export type Database = {
           default_ooo_message: string | null
           discrepancy_type_shop_map: Json | null
           elevation_msl: number | null
+          enabled_modules: string[]
           feedback_form_config: Json
           icao: string | null
           id: string
@@ -955,6 +956,7 @@ export type Database = {
           location: string | null
           majcom: string | null
           name: string
+          setup_progress: Json
           shift_count: number
           status_labels: Json
           timezone: string
@@ -971,6 +973,7 @@ export type Database = {
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
+          enabled_modules?: string[]
           feedback_form_config?: Json
           icao?: string | null
           id?: string
@@ -979,6 +982,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name: string
+          setup_progress?: Json
           shift_count?: number
           status_labels?: Json
           timezone?: string
@@ -995,6 +999,7 @@ export type Database = {
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
+          enabled_modules?: string[]
           feedback_form_config?: Json
           icao?: string | null
           id?: string
@@ -1003,6 +1008,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name?: string
+          setup_progress?: Json
           shift_count?: number
           status_labels?: Json
           timezone?: string

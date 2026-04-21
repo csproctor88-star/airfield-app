@@ -5,6 +5,8 @@ import type { Installation, InstallationRunway, UserRole } from '@/lib/supabase/
 import { fetchInstallation, fetchInstallationRunways, fetchInstallationAreas, fetchInstallationArffAircraft, getUserPrimaryInstallationId, fetchInstallations, fetchUserInstallations } from '@/lib/supabase/installations'
 import { fetchFacilities, type FacilityRow } from '@/lib/supabase/facilities'
 import { createClient } from '@/lib/supabase/client'
+import type { ModuleKey, SetupProgress, SetupStepStatus, WizardStepKey } from '@/lib/modules-config'
+import { ALL_TOGGLEABLE_MODULES } from '@/lib/modules-config'
 
 export interface InstallationContextValue {
   /** Current active installation (null while loading) */
@@ -41,6 +43,14 @@ export interface InstallationContextValue {
   defaultOooMessage: string | null
   /** Save a new per-base default Out of Office message */
   updateDefaultOooMessage: (message: string) => Promise<void>
+  /** Module keys enabled for the current installation */
+  enabledModules: ModuleKey[]
+  /** Per-step setup completion state for the current installation */
+  setupProgress: SetupProgress
+  /** Persist a new enabled-modules list for the current installation */
+  updateEnabledModules: (keys: ModuleKey[]) => Promise<void>
+  /** Mark a setup step as complete or skipped, attributing to the current user */
+  markSetupStep: (step: WizardStepKey, status: SetupStepStatus) => Promise<void>
   /** Whether the context has finished initial loading */
   loaded: boolean
 }
@@ -155,6 +165,59 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     )
   }, [installationId])
 
+  // Derived from currentInstallation. Default to all toggleables so demo/legacy
+  // bases without the column populated still show every module.
+  const enabledModules: ModuleKey[] = (() => {
+    const raw = (currentInstallation as unknown as { enabled_modules?: string[] } | null)?.enabled_modules
+    if (raw && raw.length > 0) return raw as ModuleKey[]
+    return ALL_TOGGLEABLE_MODULES
+  })()
+
+  const setupProgress: SetupProgress =
+    ((currentInstallation as unknown as { setup_progress?: SetupProgress } | null)?.setup_progress) ?? {}
+
+  const updateEnabledModules = useCallback(async (keys: ModuleKey[]) => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    const unique = Array.from(new Set(keys))
+    await supabase
+      .from('bases')
+      .update({ enabled_modules: unique } as Record<string, unknown>)
+      .eq('id', installationId)
+    setCurrentInstallation(prev =>
+      prev ? ({ ...prev, enabled_modules: unique } as typeof prev) : prev
+    )
+  }, [installationId])
+
+  const markSetupStep = useCallback(async (step: WizardStepKey, status: SetupStepStatus) => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    let userId: string | undefined
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id
+    } catch { /* anonymous — skip attribution */ }
+    const prior: SetupProgress =
+      ((currentInstallation as unknown as { setup_progress?: SetupProgress } | null)?.setup_progress) ?? {}
+    const next: SetupProgress = {
+      ...prior,
+      [step]: {
+        status,
+        completed_at: new Date().toISOString(),
+        ...(userId ? { completed_by: userId } : {}),
+      },
+    }
+    await supabase
+      .from('bases')
+      .update({ setup_progress: next } as Record<string, unknown>)
+      .eq('id', installationId)
+    setCurrentInstallation(prev =>
+      prev ? ({ ...prev, setup_progress: next } as typeof prev) : prev
+    )
+  }, [installationId, currentInstallation])
+
   const updateDefaultPdfEmail = useCallback(async (email: string | null) => {
     setDefaultPdfEmail(email)
     const supabase = createClient()
@@ -226,7 +289,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, enabledModules, setupProgress, updateEnabledModules, markSetupStep, loaded }}
     >
       {children}
     </InstallationContext.Provider>
