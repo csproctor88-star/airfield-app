@@ -118,6 +118,8 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     ppr_entry: 'PPR',
     waiver: 'Waiver',
     waiver_review: 'Waiver Review',
+    scn: 'SCN',
+    scn_backup: 'Backup SCN',
   }
   const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
@@ -606,8 +608,13 @@ export default function AMDashboardPage() {
         )
       })()}
 
-      {/* ===== Quick Actions — centered, responsive grid ===== */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
+      {/* ===== Quick Actions — big tap-friendly tile grid ===== */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+        gap: 12,
+        marginBottom: 20,
+      }}>
         {[
           { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
           { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
@@ -615,47 +622,59 @@ export default function AMDashboardPage() {
           .filter(q => isModuleEnabled(q.href, enabledModules))
           .map(q => (
           <Link key={q.label} href={q.href} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)',
+            textDecoration: 'none', fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)',
+            transition: 'transform 0.12s, border-color 0.12s',
           }}>
-            <span style={{ fontSize: 'var(--fs-lg)' }}>{q.icon}</span> {q.label}
+            <span style={{ fontSize: 44, lineHeight: 1 }}>{q.icon}</span>
+            <span>{q.label}</span>
           </Link>
         ))}
         {isModuleEnabled('/contractors', enabledModules) && (
           <button onClick={() => setShowContractorForm(true)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            <span style={{ fontSize: 'var(--fs-lg)' }}>🏗️</span> Personnel
+            <span style={{ fontSize: 44, lineHeight: 1 }}>🏗️</span>
+            <span>Personnel</span>
           </button>
         )}
         {isModuleEnabled('/shift-checklist', enabledModules) && (
           <button onClick={() => setShowShiftChecklist(true)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            <span style={{ fontSize: 'var(--fs-lg)' }}>☑️</span> Checklist
+            <span style={{ fontSize: 44, lineHeight: 1 }}>☑️</span>
+            <span>Checklist</span>
           </button>
         )}
         {isModuleEnabled('/qrc', enabledModules) && (
           <button onClick={() => setShowQrc(true)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
+            <span style={{ fontSize: 44, lineHeight: 1 }}>⚡</span>
+            <span>QRC</span>
           </button>
+        )}
+        {isModuleEnabled('/scn', enabledModules) && (
+          <Link href="/scn" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+          }}>
+            <span style={{ fontSize: 44, lineHeight: 1 }}>📻</span>
+            <span>SCN</span>
+          </Link>
         )}
         {canToggleOoo && (
           <button onClick={() => {
@@ -666,16 +685,16 @@ export default function AMDashboardPage() {
               setShowOooDialog(true)
             }
           }} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
             background: afmOutOfOffice ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-surface)',
-            border: afmOutOfOffice ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-base)', fontWeight: 600,
+            border: afmOutOfOffice ? '2px solid rgba(239,68,68,0.55)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-md)', fontWeight: 700,
             color: afmOutOfOffice ? 'var(--color-danger)' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            {afmOutOfOffice ? '🔴 End OOO' : '🚪 Out of Office'}
+            <span style={{ fontSize: 44, lineHeight: 1 }}>{afmOutOfOffice ? '🔴' : '🚪'}</span>
+            <span>{afmOutOfOffice ? 'End OOO' : 'Out of Office'}</span>
           </button>
         )}
         {canToggleOoo && (
@@ -687,16 +706,16 @@ export default function AMDashboardPage() {
               setShowClosedDialog(true)
             }
           }} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10,
+            padding: '20px 12px', borderRadius: 'var(--radius-lg)', minHeight: 120,
             background: afmClosed ? 'rgba(100,116,139,0.25)' : 'var(--color-bg-surface)',
-            border: afmClosed ? '1px solid rgba(100,116,139,0.55)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-base)', fontWeight: 600,
+            border: afmClosed ? '2px solid rgba(100,116,139,0.65)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-md)', fontWeight: 700,
             color: afmClosed ? '#CBD5E1' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            {afmClosed ? '🌙 End Closed' : '🌙 Close for Day'}
+            <span style={{ fontSize: 44, lineHeight: 1 }}>🌙</span>
+            <span>{afmClosed ? 'End Closed' : 'Close for Day'}</span>
           </button>
         )}
       </div>
@@ -876,7 +895,7 @@ export default function AMDashboardPage() {
               <button
                 onClick={async () => {
                   await setAfmClosed(true, closedMessage)
-                  await logManualEntry('Airfield Management CLOSED for the day — runway status, RSC, RCR, and BWC reset for next opening check', installationId)
+                  await logManualEntry('AMOPS Closed. Command Post notified.', installationId)
                   setShowClosedDialog(false)
                   toast.success('Airfield management closed')
                 }}
@@ -917,7 +936,7 @@ export default function AMDashboardPage() {
               <button
                 onClick={async () => {
                   await setAfmClosed(false)
-                  await logManualEntry('Airfield Management reopened — opening check will set current runway, RSC, and BWC', installationId)
+                  await logManualEntry('AMOPS Open. Command Post notified.', installationId)
                   setShowClosedDeactivateDialog(false)
                   toast.success('Closed status ended')
                 }}
@@ -1087,120 +1106,7 @@ export default function AMDashboardPage() {
         </div>
       )}
 
-      {/* ===== Recent Activity ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Recent Activity</span>
-        <button
-          onClick={() => router.push('/recent-activity')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-        >
-          View All Recent Activity →
-        </button>
-      </div>
-      {activity.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No activity recorded yet</div>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 52 }}>Time (Z)</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 140 }}>Action</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Details</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)', width: 50 }}>OI</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'right', borderBottom: '2px solid var(--color-border)', width: 60 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {activity.slice(0, 10).map((a) => {
-                const d = new Date(a.created_at)
-                const timeStr = d.toISOString().slice(11, 16)
-                const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-                const link = getEntityLink(a.entity_type, a.entity_id)
-                let detailsText = ''
-                if (a.metadata) {
-                  // If metadata was replaced by a user edit, show the flat string
-                  if (typeof a.metadata.details === 'string') {
-                    detailsText = a.metadata.details.toUpperCase()
-                  } else {
-                    const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
-                    const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
-                    const capVal = (s: string) => {
-                      if (!s) return s
-                      if (s === s.toUpperCase() && s.length <= 6) return s
-                      if (acronyms.has(s.toLowerCase())) return s.toUpperCase()
-                      return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-                    }
-                    const detailParts: string[] = []
-                    for (const [k, v] of Object.entries(a.metadata)) {
-                      if (v == null || v === '' || k === 'fields' || k === 'field') continue
-                      const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-                      const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
-                      detailParts.push(val)
-                    }
-                    detailsText = detailParts.join(' | ')
-                  }
-                }
-
-                const initials = a.user_operating_initials || null
-
-                return (
-                  <tr key={a.id}>
-                    <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                      {timeStr}
-                    </td>
-                    <td
-                      onClick={link ? () => router.push(link) : undefined}
-                      style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: link ? getActionColor(a.action, a.entity_type) : getActionColor(a.action, a.entity_type), fontWeight: 600, verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
-                    >
-                      {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
-                      {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
-                    </td>
-                    <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', maxWidth: 300 }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                        {detailsText || '\u2014'}
-                      </span>
-                    </td>
-                    <td
-                      onClick={(e) => {
-                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                        setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
-                      }}
-                      style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', textAlign: 'center', letterSpacing: '0.04em' }}
-                      title={userName}
-                    >
-                      {initials || '—'}
-                    </td>
-                    <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {/* Admins: edit/delete any entry. Others: only real activity_log entries (their manual entries) */}
-                      {(isAdmin || (!a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-'))) && (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
-                            title="Edit entry"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
-                            title="Delete entry"
-                          >
-                            Del
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Recent Activity feed moved to Events Log at /activity (Reference nav). */}
 
       {/* User Info Popover */}
       {userPopover && (

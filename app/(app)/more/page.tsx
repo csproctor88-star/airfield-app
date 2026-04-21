@@ -17,11 +17,11 @@ type ModuleItem = { name: string; icon: string; color: string; href: string; adm
 const pinnedItems: ModuleItem[] = [
   { name: 'Airfield Status', icon: '📡', color: '#38BDF8', href: '/' },
   { name: 'Dashboard', icon: '📊', color: '#38BDF8', href: '/dashboard' },
-  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
 ]
 
 // Operations
 const opsItems: ModuleItem[] = [
+  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
   { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
   { name: 'Secondary Crash Net', icon: '📻', color: '#EAB308', href: '/scn' },
   { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },

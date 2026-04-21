@@ -80,10 +80,8 @@ export default function HomePage() {
   const canEditLabels = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
   const [oooMinimized, setOooMinimized] = useState(false)
   const [showOooDeactivate, setShowOooDeactivate] = useState(false)
-  const [oooCpInitials, setOooCpInitials] = useState('')
   const [closedMinimized, setClosedMinimized] = useState(false)
   const [showClosedDeactivate, setShowClosedDeactivate] = useState(false)
-  const [closedCpInitials, setClosedCpInitials] = useState('')
   const [customItemDialog, setCustomItemDialog] = useState<{
     item: CustomStatusItem
     boardName: string
@@ -479,7 +477,7 @@ export default function HomePage() {
             >Minimize</button>
             {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
               <button
-                onClick={() => { setOooCpInitials(''); setShowOooDeactivate(true) }}
+                onClick={() => setShowOooDeactivate(true)}
                 style={{
                   padding: '6px 16px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
@@ -512,7 +510,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* OOO Deactivation dialog — CP initials required */}
+      {/* OOO deactivation dialog */}
       {showOooDeactivate && (
         <div className="modal-overlay" onClick={() => setShowOooDeactivate(false)} style={{ padding: 24, zIndex: 10000 }}>
           <div onClick={e => e.stopPropagation()} style={{
@@ -522,35 +520,21 @@ export default function HomePage() {
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
               End Out of Office
             </div>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
-            <input
-              autoFocus
-              value={oooCpInitials}
-              onChange={e => setOooCpInitials(e.target.value.toUpperCase())}
-              placeholder="CP Initials (e.g. JD)"
-              maxLength={4}
-              style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
-                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
-                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
-              }}
-            />
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
+              Clear the Out of Office overlay and log Command Post notification.
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={async () => {
                   await setAfmOutOfOffice(false)
-                  const cpText = oooCpInitials.trim() ? `/${oooCpInitials.trim()}` : ''
-                  await logManualEntry(`AMOPS BACK IN THE OFFICE, COMMAND POST${cpText} NOTIFIED`, installationId)
+                  await logManualEntry('AMOPS back in office, Command Post notified.', installationId)
                   setShowOooDeactivate(false)
                   toast.success('Out of Office deactivated')
                 }}
-                disabled={!oooCpInitials.trim()}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: oooCpInitials.trim() ? 'pointer' : 'default', border: '1px solid var(--color-success)',
+                  cursor: 'pointer', border: '1px solid var(--color-success)',
                   background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
-                  opacity: oooCpInitials.trim() ? 1 : 0.4,
                 }}
               >Deactivate</button>
               <button
@@ -605,7 +589,7 @@ export default function HomePage() {
             >Minimize</button>
             {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
               <button
-                onClick={() => { setClosedCpInitials(''); setShowClosedDeactivate(true) }}
+                onClick={() => setShowClosedDeactivate(true)}
                 style={{
                   padding: '6px 16px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
@@ -638,7 +622,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Closed deactivation dialog — CP initials required */}
+      {/* Closed deactivation dialog */}
       {showClosedDeactivate && (
         <div className="modal-overlay" onClick={() => setShowClosedDeactivate(false)} style={{ padding: 24, zIndex: 10000 }}>
           <div onClick={e => e.stopPropagation()} style={{
@@ -648,38 +632,21 @@ export default function HomePage() {
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
               Reopen Airfield
             </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.55 }}>
-              The opening check will capture fresh runway, RSC, and BWC status. Enter CP initials to log the reopen.
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16, lineHeight: 1.55 }}>
+              The opening check will capture fresh runway, RSC, and BWC status.
             </div>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
-            <input
-              autoFocus
-              value={closedCpInitials}
-              onChange={e => setClosedCpInitials(e.target.value.toUpperCase())}
-              placeholder="CP Initials (e.g. JD)"
-              maxLength={4}
-              style={{
-                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
-                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
-                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
-              }}
-            />
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={async () => {
                   await setAfmClosed(false)
-                  const cpText = closedCpInitials.trim() ? `/${closedCpInitials.trim()}` : ''
-                  await logManualEntry(`AIRFIELD MANAGEMENT REOPENED, COMMAND POST${cpText} NOTIFIED — OPENING CHECK WILL SET CURRENT RUNWAY, RSC, AND BWC`, installationId)
+                  await logManualEntry('AMOPS Open. Command Post notified.', installationId)
                   setShowClosedDeactivate(false)
                   toast.success('Airfield reopened')
                 }}
-                disabled={!closedCpInitials.trim()}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: closedCpInitials.trim() ? 'pointer' : 'default', border: '1px solid var(--color-success)',
+                  cursor: 'pointer', border: '1px solid var(--color-success)',
                   background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
-                  opacity: closedCpInitials.trim() ? 1 : 0.4,
                 }}
               >Reopen</button>
               <button

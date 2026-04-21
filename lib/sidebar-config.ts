@@ -56,11 +56,11 @@ export const NAV_ITEM_MAP = new Map(ALL_NAV_ITEMS.map(i => [i.href, i]))
 // ── Default config ──
 
 export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
-  pinned: ['/', '/dashboard', '/activity'],
+  pinned: ['/', '/dashboard'],
   sections: [
     {
       label: 'Operations',
-      items: ['/qrc', '/scn', '/shift-checklist', '/daily-reviews', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
+      items: ['/activity', '/qrc', '/scn', '/shift-checklist', '/daily-reviews', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
     },
     {
       label: 'Airfield Management',

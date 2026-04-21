@@ -96,6 +96,8 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     acsi_inspection: 'ACSI Inspection',
     waiver: 'Waiver',
     waiver_review: 'Waiver Review',
+    scn: 'SCN',
+    scn_backup: 'Backup SCN',
   }
   const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
