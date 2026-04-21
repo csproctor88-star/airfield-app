@@ -56,8 +56,9 @@ import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
+import { isWizardStepEnabled, type WizardStepKey } from '@/lib/modules-config'
 
-type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife' | 'statusboards' | 'pprcolumns' | 'feedback'
+type SetupTab = WizardStepKey
 
 type WizardStep = {
   key: SetupTab
@@ -86,13 +87,15 @@ const WIZARD_STEPS: WizardStep[] = [
 ]
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole, enabledModules } = useInstallation()
   const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const [editingBaseName, setEditingBaseName] = useState(false)
   const [baseNameDraft, setBaseNameDraft] = useState('')
 
   const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
+
+  const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
 
   if (!canEdit) {
     return (
@@ -108,28 +111,34 @@ export default function BaseSetupPage() {
     )
   }
 
-  const step = WIZARD_STEPS[currentStep]
-  const isLastStep = currentStep === WIZARD_STEPS.length - 1
-  const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100
+  const safeStepIndex = Math.min(currentStep, Math.max(0, visibleSteps.length - 1))
+  const step = visibleSteps[safeStepIndex] ?? visibleSteps[0]
+  const isLastStep = safeStepIndex === visibleSteps.length - 1
+  const progress = visibleSteps.length > 0 ? ((safeStepIndex + 1) / visibleSteps.length) * 100 : 100
 
   const goNext = () => {
     if (!isLastStep) {
-      setCurrentStep(s => s + 1)
+      setCurrentStep(safeStepIndex + 1)
       window.scrollTo(0, 0)
     }
   }
   const goBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(s => s - 1)
+    if (safeStepIndex > 0) {
+      setCurrentStep(safeStepIndex - 1)
       window.scrollTo(0, 0)
     }
   }
 
   return (
     <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
-      <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
-        &larr; Settings
-      </Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
+          &larr; Settings
+        </Link>
+        <Link href="/settings/base-setup/modules" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', textDecoration: 'none', fontWeight: 600 }}>
+          Modules &rarr;
+        </Link>
+      </div>
 
       {/* Header */}
       <div style={{ marginTop: 12, marginBottom: 8 }}>
@@ -176,7 +185,7 @@ export default function BaseSetupPage() {
       <div style={{ marginBottom: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-            Step {step.number} of {WIZARD_STEPS.length}
+            Step {safeStepIndex + 1} of {visibleSteps.length}
           </span>
           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
             {Math.round(progress)}% complete
@@ -198,7 +207,7 @@ export default function BaseSetupPage() {
       <div style={{
         display: 'flex', gap: 3, marginBottom: 16, flexWrap: 'wrap',
       }}>
-        {WIZARD_STEPS.map((s, i) => (
+        {visibleSteps.map((s, i) => (
           <button
             key={s.key}
             onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
@@ -207,14 +216,14 @@ export default function BaseSetupPage() {
               width: 28, height: 28, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--fs-2xs)', fontWeight: 700,
-              border: i === currentStep ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
-              background: i === currentStep ? 'rgba(34,211,238,0.15)' : i < currentStep ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
-              color: i === currentStep ? 'var(--color-cyan)' : i < currentStep ? 'var(--color-success)' : 'var(--color-text-3)',
+              border: i === safeStepIndex ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
+              background: i === safeStepIndex ? 'rgba(34,211,238,0.15)' : i < safeStepIndex ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
+              color: i === safeStepIndex ? 'var(--color-cyan)' : i < safeStepIndex ? 'var(--color-success)' : 'var(--color-text-3)',
               cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
               transition: 'all 0.15s',
             }}
           >
-            {i < currentStep ? '✓' : s.number}
+            {i < safeStepIndex ? '✓' : i + 1}
           </button>
         ))}
       </div>
@@ -232,7 +241,7 @@ export default function BaseSetupPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 'var(--fs-md)', fontWeight: 800,
           }}>
-            {step.number}
+            {safeStepIndex + 1}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -277,7 +286,7 @@ export default function BaseSetupPage() {
 
       {/* Navigation buttons */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        {currentStep > 0 && (
+        {safeStepIndex > 0 && (
           <button
             onClick={goBack}
             style={{
@@ -328,7 +337,7 @@ export default function BaseSetupPage() {
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
-            Next: {WIZARD_STEPS[currentStep + 1]?.label} →
+            Next: {visibleSteps[safeStepIndex + 1]?.label} →
           </button>
         )}
       </div>
