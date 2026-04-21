@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronDown, ChevronRight, ExternalLink, Rocket, BookOpen, LayoutDashboard, Radio, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, Bird, HardHat, PlaneLanding, AlertTriangle, MapPin, Database, Shield, Lightbulb, Plane, FileText, BarChart3, Settings, Users, Download } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, ExternalLink, Rocket, BookOpen, LayoutDashboard, Radio, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, Bird, HardHat, PlaneLanding, AlertTriangle, MapPin, Database, Shield, Lightbulb, Plane, FileText, BarChart3, Settings, Users, Download, Search, X, ClipboardSignature, MessageSquare, CheckSquare, Siren } from 'lucide-react'
 import { toast } from 'sonner'
 
 // ── Training content data ──
@@ -137,7 +137,7 @@ const MODULES: ModuleRef[] = [
     overview: 'Execute 25 digitized Quick Reaction Checklists for airfield emergencies and operational events. QRCs include IFE response, aircraft mishap, bird strike, tornado warning, and many more. Each checklist features step-by-step execution with checkboxes, agency notification tracking, time logging, and SCN (Secondary Crash Net) data entry for applicable emergencies.',
     keyFeatures: [
       'Three tabs — Available (start new), Active (in progress), History (completed/cancelled)',
-      '6 step types — checkbox, checkbox with note, agency notification, fill-in, time field, conditional cross-reference',
+      '8 step types — checkbox, checkbox with note, agency notification, fill-in, time field, conditional cross-reference, text, textarea',
       'SCN form — data entry fields for emergencies requiring Secondary Crash Net activation',
       'Open → Close lifecycle with initials and Zulu timestamp on completion',
       'Cancel option for accidental openings — permanently removes the execution',
@@ -148,6 +148,26 @@ const MODULES: ModuleRef[] = [
       { src: '/training/qrc-available_1.png', caption: 'QRC Available tab — select a checklist to begin execution' },
       { src: '/training/qrc-active_1.png', caption: 'Active QRC execution with step-by-step checklist' },
     ],
+  },
+  {
+    id: 'scn',
+    name: 'Secondary Crash Net',
+    icon: Siren,
+    color: '#EAB308',
+    path: '/scn',
+    tagline: 'Daily SCN communication check log',
+    overview: 'Document the daily Secondary Crash Net check with a toggleable badge per agency (Loud & Clear, No Response, Out of Service with notes). Each completed check writes a summarized entry to the Events Log — "all agencies loud & clear except X (No Response), Y (Out of Service: reason)." A separate monthly SCN check is tracked alongside the daily check, and both card views show the opening and closing call scripts the controller reads over the net. Monthly PDF export produces an agency-by-day matrix plus Out-of-Service notes and a monthly-completion log.',
+    keyFeatures: [
+      'Per-agency badges default to Loud & Clear for fast sign-off — only touch the exceptions',
+      'Out of Service requires a notes dialog explaining the fault; the reason flows into the Events Log and PDF',
+      'Daily and Monthly SCN checks tracked as separate rows with independent completion status',
+      'Events Log integration — each completed check writes a summary entry with the controller\'s operating initials',
+      'Monthly PDF export — agency-by-day matrix (L/N/X cells), Out-of-Service notes, No Response roster, Monthly SCN log',
+      '30-day history panel with drill-down for every past check',
+      'Re-run / Edit lets a controller correct a check without creating a duplicate',
+      'Per-base agency list — admins configure which agencies the base contacts on the SCN',
+    ],
+    howToAccess: 'Navigate to Operations > Secondary Crash Net in the sidebar. Admins configure the agency list in Base Setup → SCN Agencies.',
   },
   {
     id: 'shift-checklist',
@@ -370,9 +390,9 @@ const MODULES: ModuleRef[] = [
     color: '#FBBF24',
     path: '/infrastructure',
     tagline: 'Airfield lighting and signage management',
-    overview: 'Digitize and manage all airfield lighting, signage, and infrastructure features on an interactive Mapbox satellite map. 22 feature types across 4 groups with custom canvas-rendered icons. The DAFMAN 13-204v2 outage compliance engine tracks system health with 4-tier alerts and automatic discrepancy creation.',
+    overview: 'Digitize and manage all airfield lighting, signage, and infrastructure features on an interactive Google Maps satellite map. 23 feature types across 4 groups with custom canvas-rendered icons. The DAFMAN 13-204v2 outage compliance engine tracks system health with 4-tier alerts and automatic discrepancy creation. Reporting an outage auto-creates a linked discrepancy; marking operational prompts to close it.',
     keyFeatures: [
-      '22 feature types — signs, taxiway lights, runway lights, and miscellaneous features',
+      '23 feature types — signs, taxiway lights, runway lights, and miscellaneous features',
       'Click-to-place pins with rotation, drag-to-move, and inline label editing',
       'Bar placement mode — approach lighting bars with geodesic offset calculations',
       'DAFMAN 13-204v2 outage tracking — 23 system types with configurable thresholds',
@@ -488,22 +508,92 @@ const MODULES: ModuleRef[] = [
     color: '#64748B',
     path: '/settings',
     tagline: 'Profile, base configuration, and user management',
-    overview: 'Manage your profile settings, operating initials, and default PDF email. Base administrators can configure installation details, CE shops, type-to-shop mapping, areas, taxiways, NAVAIDs, ARFF vehicles, facilities, inspection templates, lighting systems, and shift checklist items. System administrators can manage all users and installations.',
+    overview: 'Manage your profile settings, operating initials, and default PDF email. Base administrators can pick which Glidepath modules their base uses (Modules), run the setup wizard to configure runways, CE shops, NAVAIDs, ARFF vehicles, facilities, inspection templates, lighting systems, and shift checklist items, and manage users. System administrators can manage all users and installations.',
     keyFeatures: [
       'Profile settings — display name, operating initials, default PDF email, theme preference',
-      'Base Configuration — installation details, runways, areas, taxiways, facilities, CE shops',
+      'Modules — toggle which Glidepath modules this base uses; disabled modules hide from navigation but keep their data',
+      'Base Setup wizard — step-by-step configuration that filters to match your enabled modules',
       'Inspection Templates — configure airfield and lighting checklist sections and items',
       'Lighting Systems — define systems and components with DAFMAN outage thresholds',
       'Shift Checklist Items — add/edit/toggle items per shift with daily/weekly/monthly frequency',
       'User Management — invite users, assign roles, manage base membership (admin only)',
       'Installation switcher — available in the header for multi-base users',
     ],
-    howToAccess: 'Navigate to Settings in the sidebar. Base Setup and User Management are under the Settings section.',
+    howToAccess: 'Navigate to Settings in the sidebar. From there you can reach Modules, Base Setup, and User Management.',
     screenshots: [
       { src: '/training/settings_profile_1.png', caption: 'Profile settings — name, role, operating initials, and default PDF email' },
       { src: '/training/settings_1.png', caption: 'Settings overview with collapsible sections' },
       { src: '/training/settings-base-config_1.png', caption: 'Base Configuration — Base Setup, Inspection Templates, and Airfield Diagram' },
     ],
+  },
+  {
+    id: 'modules',
+    name: 'Modules (Feature Selector)',
+    icon: CheckSquare,
+    color: '#22D3EE',
+    path: '/settings/base-setup/modules',
+    tagline: 'Pick which Glidepath features this base uses',
+    overview: 'Rather than forcing every base to see every feature, the Modules page lets an admin decide which Glidepath modules are active for this installation. Turning a module off hides it from the sidebar, bottom nav, dashboard, and the Base Setup wizard — but the underlying data is preserved, so re-enabling a module brings everything back untouched. New modules added in future releases default OFF for existing bases, so your UI stays stable as the app grows.',
+    keyFeatures: [
+      'Grouped by category — Core Airfield Operations, Emergency Response, Compliance & Reporting, Optional Tools',
+      'Plain-English description and use-case per module so non-technical admins can pick intelligently',
+      'Three preset buttons — Use Recommended Setup, Enable Everything, Clear All',
+      'Save persists to bases.enabled_modules; downstream nav and wizard filter to match immediately',
+      'Always-on modules (Status, Dashboard, Reports, Reference Library, Aircraft DB, Regulations) cannot be turned off',
+      'Disable behavior is non-destructive — historical data stays in Reports and Activity Log',
+    ],
+    howToAccess: 'Navigate to Settings > Manage Modules, or use the "Modules →" link at the top of Base Setup.',
+  },
+  {
+    id: 'daily-reviews',
+    name: 'Daily Reviews',
+    icon: ClipboardSignature,
+    color: '#A78BFA',
+    path: '/daily-reviews',
+    tagline: 'Per-shift sign-off of the daily operations record',
+    overview: 'Daily Reviews implement the DAFMAN 13-204v2 para 2.5.2.10.3/10.4 sign-off requirement as a web-based substitute for AF Form 3616 CAC signatures (T-3 waiver on file). Each base\'s configured shift pattern (2-shift or 3-shift) produces a per-slot review with an inline PDF preview of that day\'s Daily Ops Report. AMSL, NAMO, and AFM slots are signed by role-authorized users and the day is fully certified when the final required slot is signed — which optionally emails the completed PDF.',
+    keyFeatures: [
+      '14-day queue of pending reviews with per-slot status chips',
+      'Inline PDF preview of the day\'s Daily Ops Report when signing',
+      'Events-hash integrity check — any entries added after full certification are marked AMENDED in the Events Log',
+      'Role-gated slots — AMSL (amops / airfield_manager / namo / admins), NAMO (namo / airfield_manager / admins), AFM (airfield_manager / admins)',
+      'Dashboard pending-count card surfaces when the last 7 days has any un-certified day',
+      'Full certification optionally emails the Daily Ops PDF for filing',
+    ],
+    howToAccess: 'Navigate to Operations > Daily Reviews in the sidebar, or tap the pending-count card on the Dashboard.',
+  },
+  {
+    id: 'ppr',
+    name: 'Prior Permission Required',
+    icon: FileText,
+    color: '#F59E0B',
+    path: '/ppr',
+    tagline: 'Transient aircraft PPR log and PDF',
+    overview: 'Maintain a digital log of Prior Permission Required requests from transient aircraft. Each base configures its own column set (Aircraft Type, Tail #, Unit, POC, Purpose, arrival/departure times, etc.) so the log matches your local PPR process. Entries can be exported to PDF for filing or hand-off.',
+    keyFeatures: [
+      'Configurable column set per base — add, rename, reorder columns in Base Setup',
+      'Required-vs-optional flag per column',
+      'PDF export of the PPR log',
+      'Per-base isolation — each installation sees only its own PPR entries',
+    ],
+    howToAccess: 'Navigate to Airfield Management > PPR in the sidebar (visible when the PPR module is enabled for your base).',
+  },
+  {
+    id: 'feedback',
+    name: 'Customer Feedback',
+    icon: MessageSquare,
+    color: '#10B981',
+    path: '/feedback',
+    tagline: 'Public QR-scannable feedback form',
+    overview: 'Collect structured feedback from transient aircrew, contractors, and visitors via a public-facing form reachable by QR code. Each base configures its own form fields, star rating prompt, and thank-you message. Submissions are rate-limited per device and land in the staff Feedback inbox for review.',
+    keyFeatures: [
+      'Configurable form — enable/disable name, email, organization, star rating, custom questions',
+      'QR code generation — post at Base Ops or on the ramp for easy access',
+      'Staff inbox at /feedback to review submissions',
+      'Rate-limited (5-minute cooldown per device) to prevent abuse',
+      'If the Feedback module is disabled on the base, the public URL returns a closed message instead of the live form',
+    ],
+    howToAccess: 'Staff view: Operations > Feedback. Public form: scan the base-specific QR code or visit /feedback/[baseId].',
   },
 ]
 
@@ -520,8 +610,9 @@ const SETUP_STEPS = [
   { number: 8, title: 'Inspection Templates', description: 'Inspection templates define the checklist sections and items that inspectors evaluate during daily airfield and lighting inspections. Each base customizes these to match their specific airfield configuration.', instructions: ['Click "Manage Templates" to open the template editor.', 'Configure sections for both Airfield and Lighting inspection types.', 'Add checklist items under each section — these become the pass/fail/NA toggles during inspections.', 'Item numbers and text should match your local inspection procedures.'], tips: ['If no templates are configured, inspectors will not be able to start daily inspections.', 'You can link inspection items to lighting systems so that failed items automatically update NAVAID status.'], screenshots: [{ src: '/training/base-setup_inspection_templates.png', caption: 'Inspection template configuration — sections and checklist items for daily inspections' }] },
   { number: 9, title: 'Shift Checklist', description: 'Shift checklist items define the tasks tracked per shift (Day, Swing, Mid). These appear on the Shift Checklist page and can be completed from the Dashboard KPI badge.', instructions: ['Add items for each shift with the appropriate frequency (daily, weekly, or monthly).', 'Items can be toggled active/inactive without deleting them.', 'Configure the daily reset time in Settings if your shifts don\'t reset at 0600 local.'], screenshots: [{ src: '/training/base-setup_shift_checklist.png', caption: 'Shift checklist items — define tasks per shift with daily/weekly/monthly frequency' }] },
   { number: 10, title: 'QRC Templates', description: 'Quick Reaction Checklists are pre-built emergency response procedures. Seed from the default library to get started, then customize for your installation.', instructions: ['Click "Seed from Library" to import the standard 25 QRC templates.', 'Review and edit each template to match your local procedures.', 'Each QRC has numbered steps with different step types (checkbox, notification, fill-in, time entry).', 'Mark QRCs as active/inactive to control which ones appear in the Available tab.'], screenshots: [{ src: '/training/base-setup_qrcs.png', caption: 'QRC template management — seed from library or create custom checklists' }] },
-  { number: 11, title: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms.', instructions: ['Search the species database and add species common to your area.', 'Mark frequently observed species as favorites — they appear at the top of the picker.', 'Species can be added or removed at any time without affecting existing records.'], screenshots: [{ src: '/training/base-setup_wildlife.png', caption: 'Wildlife species selection for sighting and strike report forms' }] },
-  { number: 12, title: 'Lighting Systems (Optional)', description: 'Lighting systems define your airfield\'s lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup.', instructions: ['Create a lighting system for each major system (e.g., RWY 01/19 Edge Lights, TWY A Edge Lights, RWY 01 Approach).', 'Set the system type from the DAFMAN 13-204v2 categories.', 'Add components under each system with total count and allowable outage thresholds.', 'Outage thresholds can be percentage-based, count-based, or consecutive-based.', 'This step integrates with the Visual NAVAIDs module — components are linked to individual light features on the map.'], tips: ['This step is optional during initial setup. You can complete it later from Base Setup.', 'The Visual NAVAIDs module requires lighting systems to be configured for outage tracking to function.', 'Clone components from DAFMAN templates to pre-fill outage thresholds.'], screenshots: [{ src: '/training/base-setup_lighting_systems.png', caption: 'Lighting system and component configuration with DAFMAN outage thresholds' }] },
+  { number: 11, title: 'SCN Agencies', description: 'List every agency that the controller contacts on the Secondary Crash Net. Each agency becomes a toggleable badge on the daily SCN check page and appears as a row in the monthly PDF export.', instructions: ['Add one entry per agency (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital, Command Post).', 'Use the exact name the controller announces over the net — it becomes the label on the daily check badges.', 'Re-order by deleting and re-adding; the controller sees the same top-to-bottom order.', 'Add or remove agencies any time — existing historical checks retain their original agency snapshot.'], tips: ['Start with the agencies on your local SCN roster. Most bases include Tower, Fire, Ambulance, Security Forces, and Command Post at minimum.', 'Each base configures its own list — there is no shared default.'] },
+  { number: 12, title: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms.', instructions: ['Search the species database and add species common to your area.', 'Mark frequently observed species as favorites — they appear at the top of the picker.', 'Species can be added or removed at any time without affecting existing records.'], screenshots: [{ src: '/training/base-setup_wildlife.png', caption: 'Wildlife species selection for sighting and strike report forms' }] },
+  { number: 13, title: 'Lighting Systems (Optional)', description: 'Lighting systems define your airfield\'s lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup.', instructions: ['Create a lighting system for each major system (e.g., RWY 01/19 Edge Lights, TWY A Edge Lights, RWY 01 Approach).', 'Set the system type from the DAFMAN 13-204v2 categories.', 'Add components under each system with total count and allowable outage thresholds.', 'Outage thresholds can be percentage-based, count-based, or consecutive-based.', 'This step integrates with the Visual NAVAIDs module — components are linked to individual light features on the map.'], tips: ['This step is optional during initial setup. You can complete it later from Base Setup.', 'The Visual NAVAIDs module requires lighting systems to be configured for outage tracking to function.', 'Clone components from DAFMAN templates to pre-fill outage thresholds.'], screenshots: [{ src: '/training/base-setup_lighting_systems.png', caption: 'Lighting system and component configuration with DAFMAN outage thresholds' }] },
 ]
 
 // ── Components ──
@@ -666,6 +757,43 @@ export default function TrainingPage() {
   const [activeTab, setActiveTab] = useState<'quickstart' | 'modules' | 'basesetup'>('quickstart')
   const [expandAll, setExpandAll] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const trimmedQuery = searchQuery.trim()
+  const searching = trimmedQuery.length >= 2
+
+  type SearchHit =
+    | { kind: 'quickstart'; step: typeof QUICK_START_STEPS[number] }
+    | { kind: 'module'; module: typeof MODULES[number] }
+    | { kind: 'setup'; step: typeof SETUP_STEPS[number] }
+
+  const searchResults: SearchHit[] = useMemo(() => {
+    if (!searching) return []
+    const q = trimmedQuery.toLowerCase()
+    const hits: SearchHit[] = []
+    for (const s of QUICK_START_STEPS) {
+      if (`${s.title} ${s.description}`.toLowerCase().includes(q)) {
+        hits.push({ kind: 'quickstart', step: s })
+      }
+    }
+    for (const m of MODULES) {
+      const haystack = [
+        m.name, m.tagline, m.overview, m.howToAccess,
+        ...m.keyFeatures,
+        ...(m.tips ?? []),
+      ].join(' \n ').toLowerCase()
+      if (haystack.includes(q)) hits.push({ kind: 'module', module: m })
+    }
+    for (const s of SETUP_STEPS) {
+      const haystack = [
+        s.title, s.description,
+        ...s.instructions,
+        ...(s.tips ?? []),
+      ].join(' \n ').toLowerCase()
+      if (haystack.includes(q)) hits.push({ kind: 'setup', step: s })
+    }
+    return hits
+  }, [searching, trimmedQuery])
 
   const handleDownloadModulePdf = async () => {
     setGenerating(true)
@@ -762,36 +890,106 @@ export default function TrainingPage() {
           </div>
         </div>
 
-        {/* Tab bar */}
+        {/* Search bar */}
         <div style={{
-          display: 'flex', gap: 4, marginBottom: 20, padding: 3,
-          background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)',
+          position: 'relative', marginBottom: 12,
         }}>
-          {([
-            { key: 'quickstart' as const, label: 'Quick Start' },
-            { key: 'modules' as const, label: 'Modules' },
-            { key: 'basesetup' as const, label: 'Base Setup' },
-          ]).map(tab => (
+          <Search
+            size={16}
+            color="var(--color-text-3)"
+            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search training — e.g. 'import runway', 'email PDF', 'shop mapping'"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '10px 36px 10px 36px', borderRadius: 10,
+              background: 'var(--color-bg-inset)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+              fontFamily: 'inherit', outline: 'none',
+            }}
+          />
+          {searchQuery && (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => setSearchQuery('')}
+              title="Clear"
               style={{
-                flex: 1, padding: '10px 16px', borderRadius: 8,
-                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
-                border: 'none', fontFamily: 'inherit',
-                background: activeTab === tab.key ? 'var(--color-bg-surface)' : 'transparent',
-                color: activeTab === tab.key ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
-                transition: 'all 0.15s',
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                width: 24, height: 24, borderRadius: 6,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: 'var(--color-text-3)',
               }}
             >
-              {tab.label}
+              <X size={14} />
             </button>
-          ))}
+          )}
         </div>
 
+        {/* Tab bar (hidden while searching) */}
+        {!searching && (
+          <div style={{
+            display: 'flex', gap: 4, marginBottom: 20, padding: 3,
+            background: 'var(--color-bg-inset)', borderRadius: 10, border: '1px solid var(--color-border)',
+          }}>
+            {([
+              { key: 'quickstart' as const, label: 'Quick Start' },
+              { key: 'modules' as const, label: 'Modules' },
+              { key: 'basesetup' as const, label: 'Base Setup' },
+            ]).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 8,
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                  border: 'none', fontFamily: 'inherit',
+                  background: activeTab === tab.key ? 'var(--color-bg-surface)' : 'transparent',
+                  color: activeTab === tab.key ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                  boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Search results */}
+        {searching && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{
+              fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
+              marginBottom: 12,
+            }}>
+              {searchResults.length === 0
+                ? <>No results for <strong style={{ color: 'var(--color-text-2)' }}>&ldquo;{trimmedQuery}&rdquo;</strong>. Try a different keyword or clear the search to browse the tabs.</>
+                : <>{searchResults.length} {searchResults.length === 1 ? 'result' : 'results'} for <strong style={{ color: 'var(--color-text-2)' }}>&ldquo;{trimmedQuery}&rdquo;</strong></>
+              }
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {searchResults.map((hit, i) => (
+                <SearchResultCard
+                  key={`${hit.kind}-${i}`}
+                  hit={hit}
+                  query={trimmedQuery}
+                  onJumpToModules={() => { setSearchQuery(''); setActiveTab('modules') }}
+                  onJumpToSetup={() => { setSearchQuery(''); setActiveTab('basesetup') }}
+                  onJumpToQuickStart={() => { setSearchQuery(''); setActiveTab('quickstart') }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ════ Quick Start Tab ════ */}
-        {activeTab === 'quickstart' && (
+        {!searching && activeTab === 'quickstart' && (
           <div>
             {/* Intro card */}
             <div style={{
@@ -875,7 +1073,7 @@ export default function TrainingPage() {
         )}
 
         {/* ════ Module Reference Tab ════ */}
-        {activeTab === 'modules' && (
+        {!searching && activeTab === 'modules' && (
           <div>
             {/* Controls */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -904,7 +1102,7 @@ export default function TrainingPage() {
         )}
 
         {/* ════ Base Setup Guide Tab ════ */}
-        {activeTab === 'basesetup' && (
+        {!searching && activeTab === 'basesetup' && (
           <div>
             {/* Intro */}
             <div style={{
@@ -916,12 +1114,43 @@ export default function TrainingPage() {
                 Base Setup Guide
               </div>
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.7 }}>
-                This guide walks you through the 12-step Base Setup wizard. Each step configures a component of your
-                installation that other modules depend on. Complete these steps in order to ensure the app functions
-                correctly for your base. Only Airfield Managers, Base Admins, and System Admins can access Base Setup.
+                This guide walks you through the Base Setup wizard. Each step configures a component of your
+                installation that other modules depend on. The wizard only shows steps tied to modules you have
+                enabled, so your first stop is <strong style={{ color: 'var(--color-text-1)' }}>Settings &rarr; Manage Modules</strong>.
+                Only Airfield Managers, Base Admins, and System Admins can access Base Setup.
               </div>
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.7, marginTop: 10 }}>
-                To access Base Setup, navigate to <strong style={{ color: 'var(--color-text-1)' }}>Settings &rarr; Base Configuration &rarr; Base Setup</strong>.
+                To access Base Setup, navigate to <strong style={{ color: 'var(--color-text-1)' }}>Settings &rarr; Base Setup</strong>.
+                The "Modules &rarr;" link at the top of Base Setup returns you to the Module Selector any time.
+              </div>
+            </div>
+
+            {/* Step 0: Modules callout */}
+            <div style={{
+              padding: '16px 18px', borderRadius: 12, marginBottom: 20,
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
+              borderLeftWidth: 3, borderLeftColor: '#22D3EE',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{
+                  width: 40, height: 40, minWidth: 40, borderRadius: 10,
+                  background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.33)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <CheckSquare size={18} color="#22D3EE" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+                    Before Step 1 — Pick Your Modules
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.6 }}>
+                    Open <strong style={{ color: 'var(--color-text-1)' }}>Settings &rarr; Manage Modules</strong> and
+                    choose which Glidepath features your base will use. The wizard below only asks about steps tied to
+                    modules you turn on — disabling a module also removes its setup step. Use "Use Recommended Setup"
+                    to accept sensible defaults, then fine-tune.
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1104,9 +1333,26 @@ export default function TrainingPage() {
                 ]}
               />
 
-              {/* Step 11: Wildlife Species */}
+              {/* Step 11: SCN Agencies */}
               <BaseSetupStep
                 number={11}
+                title="SCN Agencies"
+                description="List every agency that the controller contacts on the Secondary Crash Net. Each agency becomes a toggleable badge on the daily SCN check page and appears as a row in the monthly PDF export."
+                instructions={[
+                  'Add one entry per agency (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital, Command Post).',
+                  'Use the exact name the controller announces over the net — it becomes the label on the daily check badges.',
+                  'Re-order by deleting and re-adding; the controller sees the same top-to-bottom order.',
+                  'Add or remove agencies any time — existing historical checks retain their original agency snapshot.',
+                ]}
+                tips={[
+                  'Start with the agencies on your local SCN roster. Most bases include Tower, Fire, Ambulance, Security Forces, and Command Post at minimum.',
+                  'Each base configures its own list — there is no shared default.',
+                ]}
+              />
+
+              {/* Step 12: Wildlife Species */}
+              <BaseSetupStep
+                number={12}
                 title="Wildlife Species"
                 description="Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms."
                 instructions={[
@@ -1119,9 +1365,9 @@ export default function TrainingPage() {
                 ]}
               />
 
-              {/* Step 12: Lighting Systems */}
+              {/* Step 13: Lighting Systems */}
               <BaseSetupStep
-                number={12}
+                number={13}
                 title="Lighting Systems (Optional)"
                 description="Lighting systems define your airfield's lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup."
                 instructions={[
@@ -1150,7 +1396,7 @@ export default function TrainingPage() {
           textAlign: 'center', padding: '24px 0 12px',
           fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)',
         }}>
-          Glidepath v2.31.0 — Airfield Operations Management Platform
+          Glidepath v2.32.0 — Airfield Operations Management Platform
         </div>
       </div>
     </div>
@@ -1327,7 +1573,7 @@ function BaseSetupStep({ number, title, description, instructions, screenshots, 
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
             {title}
-            {number === 12 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>(Optional)</span>}
+            {number === 13 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>(Optional)</span>}
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
             {description.slice(0, 80)}{description.length > 80 ? '...' : ''}
@@ -1390,6 +1636,152 @@ function BaseSetupStep({ number, title, description, instructions, screenshots, 
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Highlight occurrences of `query` inside a text block. */
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query) return text
+  const lower = text.toLowerCase()
+  const q = query.toLowerCase()
+  const parts: React.ReactNode[] = []
+  let i = 0
+  while (i < text.length) {
+    const idx = lower.indexOf(q, i)
+    if (idx === -1) { parts.push(text.slice(i)); break }
+    if (idx > i) parts.push(text.slice(i, idx))
+    parts.push(
+      <mark key={idx} style={{ background: 'rgba(34,211,238,0.22)', color: 'var(--color-text-1)', padding: '0 2px', borderRadius: 3 }}>
+        {text.slice(idx, idx + q.length)}
+      </mark>
+    )
+    i = idx + q.length
+  }
+  return <>{parts}</>
+}
+
+function SearchResultCard({
+  hit, query, onJumpToQuickStart, onJumpToModules, onJumpToSetup,
+}: {
+  hit:
+    | { kind: 'quickstart'; step: typeof QUICK_START_STEPS[number] }
+    | { kind: 'module'; module: typeof MODULES[number] }
+    | { kind: 'setup'; step: typeof SETUP_STEPS[number] }
+  query: string
+  onJumpToQuickStart: () => void
+  onJumpToModules: () => void
+  onJumpToSetup: () => void
+}) {
+  const badgeStyle: React.CSSProperties = {
+    fontSize: 'var(--fs-2xs)', fontWeight: 700, textTransform: 'uppercase',
+    letterSpacing: '0.08em', padding: '3px 8px', borderRadius: 4,
+  }
+
+  if (hit.kind === 'quickstart') {
+    const s = hit.step
+    return (
+      <div style={{
+        background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+        borderRadius: 10, padding: 14, borderLeft: '3px solid #38BDF8',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <span style={{ ...badgeStyle, background: 'rgba(56,189,248,0.12)', color: '#38BDF8' }}>Quick Start · Step {s.number}</span>
+        </div>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+          {highlightText(s.title, query)}
+        </div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 8 }}>
+          {highlightText(s.description, query)}
+        </div>
+        <button onClick={onJumpToQuickStart} style={{
+          fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-cyan)',
+          background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+        }}>
+          Open Quick Start →
+        </button>
+      </div>
+    )
+  }
+
+  if (hit.kind === 'module') {
+    const m = hit.module
+    const matchedFeatures = m.keyFeatures.filter(f => f.toLowerCase().includes(query.toLowerCase())).slice(0, 3)
+    const Icon = m.icon
+    return (
+      <div style={{
+        background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+        borderRadius: 10, padding: 14, borderLeft: `3px solid ${m.color}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <Icon size={16} color={m.color} />
+          <span style={{ ...badgeStyle, background: `${m.color}1F`, color: m.color }}>Module</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{m.path}</span>
+        </div>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 2 }}>
+          {highlightText(m.name, query)}
+        </div>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginBottom: 8 }}>
+          {highlightText(m.tagline, query)}
+        </div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 8 }}>
+          {highlightText(m.overview, query)}
+        </div>
+        {matchedFeatures.length > 0 && (
+          <ul style={{ margin: '0 0 8px 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {matchedFeatures.map((f, i) => (
+              <li key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.45 }}>
+                {highlightText(f, query)}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button onClick={onJumpToModules} style={{
+            fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-cyan)',
+            background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+          }}>
+            See full card →
+          </button>
+          <Link href={m.path} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            Open module <ExternalLink size={11} />
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const s = hit.step
+  const matchedInstructions = s.instructions.filter(inst => inst.toLowerCase().includes(query.toLowerCase())).slice(0, 3)
+  return (
+    <div style={{
+      background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+      borderRadius: 10, padding: 14, borderLeft: '3px solid #A78BFA',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{ ...badgeStyle, background: 'rgba(167,139,250,0.15)', color: '#A78BFA' }}>Base Setup · Step {s.number}</span>
+      </div>
+      <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>
+        {highlightText(s.title, query)}
+      </div>
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 8 }}>
+        {highlightText(s.description, query)}
+      </div>
+      {matchedInstructions.length > 0 && (
+        <ol style={{ margin: '0 0 8px 0', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {matchedInstructions.map((inst, i) => (
+            <li key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.45 }}>
+              {highlightText(inst, query)}
+            </li>
+          ))}
+        </ol>
+      )}
+      <button onClick={onJumpToSetup} style={{
+        fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-cyan)',
+        background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+      }}>
+        Open Base Setup Guide →
+      </button>
     </div>
   )
 }

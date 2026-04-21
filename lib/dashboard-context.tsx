@@ -45,6 +45,12 @@ type DashboardState = {
   afmOutOfOffice: boolean
   afmOooMessage: string | null
   setAfmOutOfOffice: (active: boolean, message?: string | null) => Promise<void>
+  afmClosed: boolean
+  afmClosedMessage: string | null
+  /** Activate the "closed for the day" overlay. When `active` is true this
+   *  also clears runway_statuses, RSC, RCR, and BWC so the next opening check
+   *  starts from a clean slate. */
+  setAfmClosed: (active: boolean, message?: string | null) => Promise<void>
   refreshStatus: () => Promise<void>
 }
 
@@ -68,6 +74,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [miscRemarks, setMiscRemarksLocal] = useState<string | null>(null)
   const [afmOutOfOffice, setAfmOooLocal] = useState(false)
   const [afmOooMessage, setAfmOooMsgLocal] = useState<string | null>(null)
+  const [afmClosed, setAfmClosedLocal] = useState(false)
+  const [afmClosedMessage, setAfmClosedMsgLocal] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const lastLocalUpdate = useRef(0)
 
@@ -121,6 +129,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setMiscRemarksLocal(status.misc_remarks ?? null)
         setAfmOooLocal(status.afm_out_of_office ?? false)
         setAfmOooMsgLocal(status.afm_ooo_message ?? null)
+        setAfmClosedLocal((status as unknown as { afm_closed?: boolean }).afm_closed ?? false)
+        setAfmClosedMsgLocal((status as unknown as { afm_closed_message?: string | null }).afm_closed_message ?? null)
       }
       setLoaded(true)
     }
@@ -159,6 +169,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           // AFM out of office realtime
           setAfmOooLocal(row.afm_out_of_office ?? false)
           setAfmOooMsgLocal(row.afm_ooo_message ?? null)
+          // AFM closed realtime
+          setAfmClosedLocal((row as unknown as { afm_closed?: boolean }).afm_closed ?? false)
+          setAfmClosedMsgLocal((row as unknown as { afm_closed_message?: string | null }).afm_closed_message ?? null)
           // RSC / RCR / BWC realtime
           setRscConditionLocal(row.rsc_condition ?? null)
           setRscUpdatedAtLocal(row.rsc_updated_at ?? null)
@@ -338,6 +351,55 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await updateAirfieldStatus({ afm_out_of_office: active, afm_ooo_message: message ?? null } as any, installationId)
   }, [installationId])
 
+  // Activate / deactivate "closed for the day". On activate, clear per-runway
+  // statuses, RSC, RCR, and BWC so the next opening check starts from a clean
+  // slate. On deactivate, only the flag and message are cleared — operators
+  // set live values during the opening check itself.
+  const setAfmClosed = useCallback(async (active: boolean, message?: string | null) => {
+    setAfmClosedLocal(active)
+    setAfmClosedMsgLocal(message ?? null)
+    markLocalUpdate()
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const patch: Record<string, any> = { afm_closed: active, afm_closed_message: message ?? null }
+
+    if (active) {
+      // Clear runway statuses (each runway set to "open" with no remarks / no resume time)
+      const clearedRunways: RunwayStatuses = {}
+      for (const label of runwayLabels) {
+        const existing = runwayStatuses[label]
+        clearedRunways[label] = {
+          active_end: existing?.active_end ?? label.split('/')[0] ?? '',
+          status: 'open',
+          remarks: null,
+          estimated_resume_at: null,
+        }
+      }
+      setRunwayStatusesLocal(clearedRunways)
+      setRunwayStatusLocal('open')
+      setRscConditionLocal(null)
+      setRscUpdatedAtLocal(null)
+      setRcrValueLocal(null)
+      setRcrConditionLocal(null)
+      setBwcValueLocal(null)
+      setBwcUpdatedAtLocal(null)
+
+      patch.runway_statuses = clearedRunways
+      patch.runway_status = 'open'
+      patch.rsc_condition = null
+      patch.rsc_updated_at = null
+      patch.rcr_touchdown = null
+      patch.rcr_midpoint = null
+      patch.rcr_rollout = null
+      patch.rcr_condition = null
+      patch.rcr_updated_at = null
+      patch.bwc_value = null
+      patch.bwc_updated_at = null
+    }
+
+    await updateAirfieldStatus(patch, installationId)
+  }, [installationId, runwayLabels, runwayStatuses])
+
   // Re-fetch airfield_status (called on mount, by dashboard realtime, and by polling fallback)
   const refreshStatus = useCallback(async () => {
     // Skip polling refresh if a local update was made within the last 15 seconds
@@ -371,6 +433,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       setMiscRemarksLocal(status.misc_remarks ?? null)
       setAfmOooLocal(status.afm_out_of_office ?? false)
       setAfmOooMsgLocal(status.afm_ooo_message ?? null)
+      setAfmClosedLocal((status as unknown as { afm_closed?: boolean }).afm_closed ?? false)
+      setAfmClosedMsgLocal((status as unknown as { afm_closed_message?: string | null }).afm_closed_message ?? null)
     }
   }, [installationId])
 
@@ -399,6 +463,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         constructionRemarks, setConstructionRemarks,
         miscRemarks, setMiscRemarks,
         afmOutOfOffice, afmOooMessage, setAfmOutOfOffice,
+        afmClosed, afmClosedMessage, setAfmClosed,
         refreshStatus,
       }}
     >

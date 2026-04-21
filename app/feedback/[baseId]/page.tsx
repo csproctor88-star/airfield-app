@@ -8,7 +8,7 @@ const STAR_LABELS = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
 
 export default function FeedbackFormPage() {
   const { baseId } = useParams<{ baseId: string }>()
-  const [config, setConfig] = useState<FeedbackFormConfig>(DEFAULT_FEEDBACK_CONFIG)
+  const [config, setConfig] = useState<FeedbackFormConfig | null>(DEFAULT_FEEDBACK_CONFIG)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -80,7 +80,7 @@ export default function FeedbackFormPage() {
     )
   }
 
-  if (!config.enabled) {
+  if (!config || !config.enabled) {
     return (
       <div style={{ minHeight: '100vh', background: '#0B1120', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>

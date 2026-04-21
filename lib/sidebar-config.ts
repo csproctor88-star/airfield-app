@@ -25,7 +25,9 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Airfield Status', href: '/', iconName: 'Home' },
   { name: 'Dashboard', href: '/dashboard', iconName: 'LayoutDashboard' },
   { name: 'Events Log', href: '/activity', iconName: 'Activity' },
+  { name: 'Activity Log', href: '/recent-activity', iconName: 'History' },
   { name: 'QRC', href: '/qrc', iconName: 'Zap' },
+  { name: 'Secondary Crash Net', href: '/scn', iconName: 'Radio' },
   { name: 'Shift Checklist', href: '/shift-checklist', iconName: 'ListChecks' },
   { name: 'Daily Reviews', href: '/daily-reviews', iconName: 'ClipboardPen' },
   { name: 'Airfield Checks', href: '/checks', iconName: 'ClipboardCheck' },
@@ -55,23 +57,27 @@ export const NAV_ITEM_MAP = new Map(ALL_NAV_ITEMS.map(i => [i.href, i]))
 // ── Default config ──
 
 export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
-  pinned: ['/', '/dashboard', '/activity'],
+  pinned: ['/', '/dashboard'],
   sections: [
     {
       label: 'Operations',
-      items: ['/qrc', '/shift-checklist', '/daily-reviews', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
+      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
     },
     {
       label: 'Airfield Management',
-      items: ['/discrepancies', '/obstructions', '/waivers', '/infrastructure'],
+      items: ['/discrepancies', '/obstructions', '/infrastructure'],
     },
     {
       label: 'Reference',
-      items: ['/aircraft', '/regulations', '/notams', '/reports', '/training'],
+      items: ['/aircraft', '/regulations', '/notams'],
+    },
+    {
+      label: 'Admin',
+      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/training', '/library', '/users'],
     },
     {
       label: 'Settings',
-      items: ['/settings', '/library', '/users'],
+      items: ['/settings'],
     },
   ],
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { isModuleEnabled, isModuleSetupComplete, MODULES, type ModuleKey } from '@/lib/modules-config'
 import { fetchActivityLog, fetchDashboardActivity } from '@/lib/supabase/activity-queries'
 import { fetchInspections } from '@/lib/supabase/inspections'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
@@ -17,8 +18,6 @@ import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-featu
 import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { useDashboard } from '@/lib/dashboard-context'
-import { fetchRecentReviews, isFullyCertified, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
-import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 // --- Quick Actions (KPI badges) ---
 const QUICK_ACTIONS = [
@@ -117,6 +116,8 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     ppr_entry: 'PPR',
     waiver: 'Waiver',
     waiver_review: 'Waiver Review',
+    scn: 'SCN',
+    scn_backup: 'Monthly SCN',
   }
   const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
@@ -190,15 +191,20 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage } = useInstallation()
-  const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
+  const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
   const OOO_DEFAULT_MESSAGE = 'Airfield Management is Out of the Office. Contact via cell phone  at (586) 396-4046 or via Tower Net Callsign: Airfield3'
+  const CLOSED_DEFAULT_MESSAGE = 'Airfield Management is CLOSED for the day. Runway, RSC, and BWC status will be refreshed during the next opening check.'
   const [showOooDialog, setShowOooDialog] = useState(false)
   const [showOooDeactivateDialog, setShowOooDeactivateDialog] = useState(false)
   const [oooMessage, setOooMessage] = useState(OOO_DEFAULT_MESSAGE)
   const [savingOooDefault, setSavingOooDefault] = useState(false)
+  const [showClosedDialog, setShowClosedDialog] = useState(false)
+  const [showClosedDeactivateDialog, setShowClosedDeactivateDialog] = useState(false)
+  const [closedMessage, setClosedMessage] = useState(CLOSED_DEFAULT_MESSAGE)
+  const [savingClosedDefault, setSavingClosedDefault] = useState(false)
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
   useEffect(() => {
@@ -227,62 +233,7 @@ export default function AMDashboardPage() {
   const [lastCheckType, setLastCheckType] = useState<string | null>(null)
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
 
-  // ── Daily reviews summary ──
-  const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
-  const [recentReviews, setRecentReviews] = useState<DailyReviewRow[]>([])
-  const refreshReviews = useCallback(() => {
-    if (!installationId) return
-    fetchRecentReviews(installationId, 14).then(setRecentReviews)
-  }, [installationId])
-  useEffect(() => { refreshReviews() }, [refreshReviews])
-
-  // Current user (for the sign modal)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [currentUserName, setCurrentUserName] = useState<string>('')
-  useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) return
-    let cancelled = false
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (cancelled || !user) return
-      setCurrentUserId(user.id)
-      const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).single()
-      if (cancelled) return
-      setCurrentUserName((profile as { name?: string } | null)?.name || '')
-    })()
-    return () => { cancelled = true }
-  }, [])
-
-  const [shiftReviewOpen, setShiftReviewOpen] = useState(false)
-  const todayIso = getEffectiveReviewDate(baseTimezone, baseResetTime)
-
-  const pendingReviewDates: string[] = (() => {
-    const reviewed = new Map(recentReviews.map(r => [r.review_date, r] as const))
-    const dates: string[] = []
-    const [y, m, d] = todayIso.split('-').map(Number)
-    for (let i = 1; i <= 7; i++) {
-      const day = new Date(Date.UTC(y, m - 1, d))
-      day.setUTCDate(day.getUTCDate() - i)
-      const iso = day.toISOString().slice(0, 10)
-      const row = reviewed.get(iso)
-      if (!row || !isFullyCertified(row, shiftCount)) dates.push(iso)
-    }
-    return dates
-  })()
-
-  // ── Today's shift review — visible only when the current user can sign an
-  //    AMSL slot and at least one AMSL slot for today is still unsigned. ──
-  const todayShiftReview = (() => {
-    const amslSlots = requiredSlotsForShifts(shiftCount).filter((s) => s.endsWith('_amsl'))
-    const canSignAny = amslSlots.some((s) => canUserSignSlot(userRole, s))
-    if (!canSignAny) return null
-
-    const todayRow = recentReviews.find((r) => r.review_date === todayIso) || null
-    const signedCount = amslSlots.filter((s) => todayRow?.[`${s}_signed_at` as keyof DailyReviewRow]).length
-    if (signedCount >= amslSlots.length) return null
-    return { signedCount, total: amslSlots.length }
-  })()
+  // Daily review bars (shift review, pending reviews) moved to /activity.
 
   // ── Today's inspection status ──
   const [todayAirfieldStatus, setTodayAirfieldStatus] = useState<{ status: 'none' | 'in_progress' | 'completed'; inspector?: string }>({ status: 'none' })
@@ -570,49 +521,132 @@ export default function AMDashboardPage() {
         </Link>
       </div>
 
-      {/* ===== Quick Actions — centered, responsive grid ===== */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {[
-          { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
-          { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
-        ].map(q => (
-          <Link key={q.label} href={q.href} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
-            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)',
+      {/* ===== Setup finish banner ===== */}
+      {(() => {
+        const canEditSetup =
+          userRole === 'airfield_manager' || userRole === 'sys_admin' ||
+          userRole === 'base_admin' || userRole === 'namo'
+        if (!canEditSetup) return null
+        const incomplete = MODULES.filter(m =>
+          (enabledModules as ModuleKey[]).includes(m.key) &&
+          m.setupSteps.length > 0 &&
+          !isModuleSetupComplete(m.key, setupProgress)
+        )
+        if (incomplete.length === 0) return null
+        const labels = incomplete.slice(0, 3).map(m => m.label).join(', ')
+        const extra = incomplete.length > 3 ? ` and ${incomplete.length - 3} more` : ''
+        return (
+          <Link href="/settings/base-setup" style={{
+            display: 'block', marginBottom: 12, padding: '10px 14px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.35)',
+            color: 'var(--color-text-1)', textDecoration: 'none',
+            fontSize: 'var(--fs-sm)',
           }}>
-            <span style={{ fontSize: 'var(--fs-lg)' }}>{q.icon}</span> {q.label}
+            <span style={{ fontWeight: 700, color: 'var(--color-warning)' }}>Finish base setup →</span>{' '}
+            <span style={{ color: 'var(--color-text-2)' }}>
+              Still need to configure: {labels}{extra}.
+            </span>
+          </Link>
+        )
+      })()}
+
+      {/* ===== Quick Actions — compact tile grid ===== */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: 8,
+        marginBottom: 20,
+      }}>
+        {[
+          { label: 'Airfield Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
+          { label: 'New Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
+        ]
+          .filter(q => isModuleEnabled(q.href, enabledModules))
+          .map(q => (
+          <Link key={q.label} href={q.href} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{q.icon}</span>
+            <span>{q.label}</span>
           </Link>
         ))}
-        <button onClick={() => setShowContractorForm(true)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-          flex: '1 1 140px',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>🏗️</span> Personnel
-        </button>
-        <button onClick={() => setShowShiftChecklist(true)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-          flex: '1 1 140px',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>☑️</span> Checklist
-        </button>
-        <button onClick={() => setShowQrc(true)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-          flex: '1 1 140px',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
-        </button>
+        {isModuleEnabled('/contractors', enabledModules) && (
+          <button onClick={() => setShowContractorForm(true)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🏗️</span>
+            <span>Personnel on Airfield</span>
+          </button>
+        )}
+        {isModuleEnabled('/shift-checklist', enabledModules) && (
+          <button onClick={() => setShowShiftChecklist(true)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>☑️</span>
+            <span>Shift Checklist</span>
+          </button>
+        )}
+        {isModuleEnabled('/qrc', enabledModules) && (
+          <button onClick={() => setShowQrc(true)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span>
+            <span>QRCs</span>
+          </button>
+        )}
+        {isModuleEnabled('/scn', enabledModules) && (
+          <Link href="/scn" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>📻</span>
+            <span>SCN</span>
+          </Link>
+        )}
+        {isModuleEnabled('/ppr', enabledModules) && (
+          <Link href="/ppr" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>📝</span>
+            <span>PPR Log</span>
+          </Link>
+        )}
+        {isModuleEnabled('/wildlife', enabledModules) && (
+          <Link href="/wildlife" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🦅</span>
+            <span>BASH</span>
+          </Link>
+        )}
         {canToggleOoo && (
           <button onClick={() => {
             if (afmOutOfOffice) {
@@ -622,16 +656,39 @@ export default function AMDashboardPage() {
               setShowOooDialog(true)
             }
           }} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-            flex: '1 1 140px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: afmOutOfOffice ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-surface)',
-            border: afmOutOfOffice ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-base)', fontWeight: 600,
+            border: afmOutOfOffice ? '2px solid rgba(239,68,68,0.55)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 700,
             color: afmOutOfOffice ? 'var(--color-danger)' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
           }}>
-            {afmOutOfOffice ? '🔴 End OOO' : '🚪 Out of Office'}
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{afmOutOfOffice ? '🔴' : '🚪'}</span>
+            <span>{afmOutOfOffice ? 'End Out of Office' : 'Out of Office'}</span>
+          </button>
+        )}
+        {canToggleOoo && (
+          <button onClick={() => {
+            if (afmClosed) {
+              setShowClosedDeactivateDialog(true)
+            } else {
+              setClosedMessage(afmClosedMessage || defaultClosedMessage || CLOSED_DEFAULT_MESSAGE)
+              setShowClosedDialog(true)
+            }
+          }} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: afmClosed ? 'rgba(100,116,139,0.25)' : 'var(--color-bg-surface)',
+            border: afmClosed ? '2px solid rgba(100,116,139,0.65)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 700,
+            color: afmClosed ? '#CBD5E1' : 'var(--color-text-1)',
+            cursor: 'pointer', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🌙</span>
+            <span>{afmClosed ? 'Reopen Airfield' : 'Close Airfield'}</span>
           </button>
         )}
       </div>
@@ -754,6 +811,127 @@ export default function AMDashboardPage() {
         </div>
       )}
 
+      {/* ===== Close for Day dialog ===== */}
+      {showClosedDialog && (
+        <div className="modal-overlay" onClick={() => setShowClosedDialog(false)} style={{ padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 460, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 6 }}>
+              Close Airfield Management
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.55 }}>
+              Displays a CLOSED banner on the Airfield Status page and{' '}
+              <strong style={{ color: 'var(--color-text-2)' }}>resets runway status, RSC, RCR, and BWC</strong> so tomorrow&rsquo;s opening check can enter fresh values.
+              Historical entries in the Events Log are not affected.
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Display Message</div>
+            <textarea
+              value={closedMessage}
+              onChange={e => setClosedMessage(e.target.value)}
+              rows={3}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 60, marginBottom: 8,
+              }}
+            />
+            <div style={{ marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  const msg = closedMessage.trim()
+                  if (!msg) return
+                  setSavingClosedDefault(true)
+                  try {
+                    await updateDefaultClosedMessage(msg)
+                    toast.success('Default message saved for this base')
+                  } catch {
+                    toast.error('Could not save default message')
+                  } finally {
+                    setSavingClosedDefault(false)
+                  }
+                }}
+                disabled={savingClosedDefault || !closedMessage.trim() || closedMessage.trim() === (defaultClosedMessage || '').trim()}
+                style={{
+                  padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                  cursor: savingClosedDefault ? 'default' : 'pointer',
+                  border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-2)',
+                  opacity: (!closedMessage.trim() || closedMessage.trim() === (defaultClosedMessage || '').trim()) ? 0.5 : 1,
+                }}
+              >{savingClosedDefault ? 'Saving…' : 'Set as Default'}</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmClosed(true, closedMessage)
+                  await logManualEntry('AMOPS Closed. Command Post notified.', installationId)
+                  setShowClosedDialog(false)
+                  toast.success('Airfield management closed')
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid rgba(100,116,139,0.6)',
+                  background: 'rgba(100,116,139,0.25)', color: '#CBD5E1',
+                }}
+              >Activate</button>
+              <button
+                onClick={() => setShowClosedDialog(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== End Closed dialog ===== */}
+      {showClosedDeactivateDialog && (
+        <div className="modal-overlay" onClick={() => setShowClosedDeactivateDialog(false)} style={{ padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              End Closed Status
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16, lineHeight: 1.55 }}>
+              This will clear the CLOSED banner. Runway, RSC, and BWC values remain blank — enter fresh values
+              during the opening check.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmClosed(false)
+                  await logManualEntry('AMOPS Open. Command Post notified.', installationId)
+                  setShowClosedDeactivateDialog(false)
+                  toast.success('Closed status ended')
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-success)',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
+                }}
+              >Deactivate</button>
+              <button
+                onClick={() => setShowClosedDeactivateDialog(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== Contractor Form Dialog ===== */}
       {showContractorForm && (
         <PersonnelFormDialog
@@ -857,164 +1035,7 @@ export default function AMDashboardPage() {
         />
       )}
 
-      {/* ===== Today's Shift Review ===== */}
-      {todayShiftReview && (
-        <div
-          onClick={() => setShiftReviewOpen(true)}
-          style={{
-            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
-            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-              Review Shift
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL signatures captured for today
-            </div>
-          </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Sign →</div>
-        </div>
-      )}
-
-      {/* ===== Daily Reviews ===== */}
-      {pendingReviewDates.length > 0 && (
-        <div
-          onClick={() => router.push('/daily-reviews')}
-          style={{
-            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
-            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-warning)' }}>
-              {pendingReviewDates.length} Daily Review{pendingReviewDates.length === 1 ? '' : 's'} Pending
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              Oldest: {pendingReviewDates[pendingReviewDates.length - 1]} — DAFMAN 13-204v1 Para 2.5.2.10
-            </div>
-          </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Review →</div>
-        </div>
-      )}
-
-      {/* ===== Recent Activity ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Recent Activity</span>
-        <button
-          onClick={() => router.push('/recent-activity')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-        >
-          View All Recent Activity →
-        </button>
-      </div>
-      {activity.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 16 }}>
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>No activity recorded yet</div>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-            <thead>
-              <tr>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 52 }}>Time (Z)</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--color-border)', width: 140 }}>Action</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Details</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'left', borderBottom: '2px solid var(--color-border)', width: 50 }}>OI</th>
-                <th style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'right', borderBottom: '2px solid var(--color-border)', width: 60 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {activity.slice(0, 10).map((a) => {
-                const d = new Date(a.created_at)
-                const timeStr = d.toISOString().slice(11, 16)
-                const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-                const link = getEntityLink(a.entity_type, a.entity_id)
-                let detailsText = ''
-                if (a.metadata) {
-                  // If metadata was replaced by a user edit, show the flat string
-                  if (typeof a.metadata.details === 'string') {
-                    detailsText = a.metadata.details.toUpperCase()
-                  } else {
-                    const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
-                    const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
-                    const capVal = (s: string) => {
-                      if (!s) return s
-                      if (s === s.toUpperCase() && s.length <= 6) return s
-                      if (acronyms.has(s.toLowerCase())) return s.toUpperCase()
-                      return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-                    }
-                    const detailParts: string[] = []
-                    for (const [k, v] of Object.entries(a.metadata)) {
-                      if (v == null || v === '' || k === 'fields' || k === 'field') continue
-                      const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-                      const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
-                      detailParts.push(val)
-                    }
-                    detailsText = detailParts.join(' | ')
-                  }
-                }
-
-                const initials = a.user_operating_initials || null
-
-                return (
-                  <tr key={a.id}>
-                    <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                      {timeStr}
-                    </td>
-                    <td
-                      onClick={link ? () => router.push(link) : undefined}
-                      style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: link ? getActionColor(a.action, a.entity_type) : getActionColor(a.action, a.entity_type), fontWeight: 600, verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
-                    >
-                      {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
-                      {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
-                    </td>
-                    <td style={{ padding: '6px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', maxWidth: 300 }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                        {detailsText || '\u2014'}
-                      </span>
-                    </td>
-                    <td
-                      onClick={(e) => {
-                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                        setUserPopover({ id: a.id, x: rect.left, y: rect.bottom + 4, name: userName, role: a.user_role, edipi: a.user_edipi })
-                      }}
-                      style={{ padding: '6px 8px', fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', textAlign: 'center', letterSpacing: '0.04em' }}
-                      title={userName}
-                    >
-                      {initials || '—'}
-                    </td>
-                    <td style={{ padding: '6px 8px', verticalAlign: 'top', borderBottom: '1px solid var(--color-border)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {/* Admins: edit/delete any entry. Others: only real activity_log entries (their manual entries) */}
-                      {(isAdmin || (!a.id.startsWith('disc-') && !a.id.startsWith('chk-') && !a.id.startsWith('insp-') && !a.id.startsWith('qrc-') && !a.id.startsWith('ws-') && !a.id.startsWith('wk-'))) && (
-                        <>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleEdit(a) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-status-inwork)' }}
-                            title="Edit entry"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(a) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600, color: 'var(--color-danger)', marginLeft: 2 }}
-                            title="Delete entry"
-                          >
-                            Del
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Shift Review and Daily Reviews bars moved to Events Log (/activity). */}
 
       {/* User Info Popover */}
       {userPopover && (
@@ -1190,25 +1211,6 @@ export default function AMDashboardPage() {
         />
       )}
 
-      {/* ===== Daily Shift Review Sign Modal ===== */}
-      {installationId && currentUserId && (
-        <DailyReviewSignModal
-          open={shiftReviewOpen}
-          onClose={() => setShiftReviewOpen(false)}
-          baseId={installationId}
-          baseName={currentInstallation?.name || ''}
-          baseIcao={(currentInstallation as { icao?: string | null } | null)?.icao || null}
-          shiftCount={shiftCount}
-          reviewDate={todayIso}
-          timezone={baseTimezone}
-          resetTime={baseResetTime}
-          userId={currentUserId}
-          userRole={userRole}
-          userName={currentUserName}
-          defaultPdfEmail={defaultPdfEmail}
-          onSigned={refreshReviews}
-        />
-      )}
     </div>
   )
 }

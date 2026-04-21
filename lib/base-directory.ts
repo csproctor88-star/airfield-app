@@ -156,6 +156,7 @@ export const BASE_DIRECTORY: readonly BaseDirectoryEntry[] = [
   { name: 'Tyndall Air Force Base', icao: 'KPAM' },
   { name: 'Vance Air Force Base', icao: 'KEND' },
   { name: 'Vandenberg Space Force Base', icao: 'KVBG' },
+  { name: 'Volk Field ANG Base', icao: 'KVOK' },
   { name: 'Warfield ANG Base (Martin State)', icao: 'KMTN' },
   { name: 'Westover Air Reserve Base', icao: 'KCEF' },
   { name: 'Whiteman Air Force Base', icao: 'KNKX' },

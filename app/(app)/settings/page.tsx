@@ -753,6 +753,25 @@ function BaseConfigSectionContent() {
   return (
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
+          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Modules</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Pick which Glidepath features this base uses. Hidden modules keep their data.</div>
+        </div>
+        <a
+          href="/settings/base-setup/modules"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '10px 16px', borderRadius: 'var(--radius-base)',
+            background: 'linear-gradient(135deg, var(--color-cyan), var(--color-accent))',
+            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          Manage Modules
+        </a>
+
+        <div style={{ borderTop: '1px solid var(--color-border)' }} />
+
+        <div>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Runways, Areas & NAVAIDs</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure base infrastructure and CE shops</div>
         </div>
@@ -1372,7 +1391,7 @@ function AboutSectionContent() {
       <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Version</span>
-          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.31.0</span>
+          <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', fontWeight: 600 }}>2.32.0</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Environment</span>

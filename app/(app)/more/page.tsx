@@ -8,6 +8,8 @@ import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
 import { LogOut } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
+import { useInstallation } from '@/lib/installation-context'
+import { isModuleEnabled } from '@/lib/modules-config'
 
 type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
@@ -15,12 +17,13 @@ type ModuleItem = { name: string; icon: string; color: string; href: string; adm
 const pinnedItems: ModuleItem[] = [
   { name: 'Airfield Status', icon: '📡', color: '#38BDF8', href: '/' },
   { name: 'Dashboard', icon: '📊', color: '#38BDF8', href: '/dashboard' },
-  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
 ]
 
 // Operations
 const opsItems: ModuleItem[] = [
+  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
   { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
+  { name: 'Secondary Crash Net', icon: '📻', color: '#EAB308', href: '/scn' },
   { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
   { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
   { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
@@ -34,7 +37,6 @@ const opsItems: ModuleItem[] = [
 const mgmtItems: ModuleItem[] = [
   { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
-  { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
 ]
 
@@ -43,15 +45,22 @@ const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: '✈️', color: '#38BDF8', href: '/aircraft' },
   { name: 'Reference Library', icon: '📚', color: '#22D3EE', href: '/regulations' },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
-  { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
-  { name: 'Training', icon: '🎓', color: '#38BDF8', href: '/training' },
 ]
 
-// Settings / Admin
-const settingsItems: ModuleItem[] = [
-  { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
+// Admin
+const adminItems: ModuleItem[] = [
+  { name: 'Activity Log', icon: '🕘', color: '#34D399', href: '/recent-activity' },
+  { name: 'Daily Reviews', icon: '🗓️', color: '#A78BFA', href: '/daily-reviews' },
+  { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
+  { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
+  { name: 'Training', icon: '🎓', color: '#38BDF8', href: '/training' },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
   { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
+]
+
+// Settings
+const settingsItems: ModuleItem[] = [
+  { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
 ]
 
 function NavItem({ item }: { item: ModuleItem }) {
@@ -178,6 +187,7 @@ export default function MorePage() {
   const [isSysAdmin, setIsSysAdmin] = useState(false)
   const [isCes, setIsCes] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const { enabledModules } = useInstallation()
 
   useEffect(() => {
     async function checkRole() {
@@ -223,13 +233,16 @@ export default function MorePage() {
       if (m.adminOnly && !canManageUsers) return false
       if (m.sysAdminOnly && !isSysAdmin) return false
       if (isCes && !CES_ALLOWED.has(m.href)) return false
+      if (!isModuleEnabled(m.href, enabledModules)) return false
       return true
     })
   }
 
   // CES users get a simplified More page
   if (isCes) {
-    const cesItems = [...mgmtItems, ...settingsItems].filter(m => CES_ALLOWED.has(m.href))
+    const cesItems = [...mgmtItems, ...settingsItems]
+      .filter(m => CES_ALLOWED.has(m.href))
+      .filter(m => isModuleEnabled(m.href, enabledModules))
     return (
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
@@ -281,7 +294,10 @@ export default function MorePage() {
         {/* Reference */}
         <CollapsibleGroup label="Reference" icon="📚" items={filterItems(refItems)} />
 
-        {/* Settings / Admin */}
+        {/* Admin */}
+        <CollapsibleGroup label="Admin" icon="🛡️" items={filterItems(adminItems)} />
+
+        {/* Settings */}
         <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
       </div>
 

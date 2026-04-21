@@ -56,8 +56,9 @@ import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
+import { isWizardStepEnabled, isStepDone, type WizardStepKey } from '@/lib/modules-config'
 
-type SetupTab = 'runways' | 'taxiways' | 'navaids' | 'areas' | 'arff' | 'shops' | 'facilities' | 'templates' | 'shiftchecklist' | 'qrc' | 'lighting' | 'wildlife' | 'statusboards' | 'pprcolumns' | 'feedback'
+type SetupTab = WizardStepKey
 
 type WizardStep = {
   key: SetupTab
@@ -78,21 +79,24 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'templates', number: 8, label: 'Inspection Templates', description: 'Configure the checklist sections and items for daily airfield and lighting inspections. These define what inspectors evaluate during each inspection.', required: true },
   { key: 'shiftchecklist', number: 9, label: 'Shift Checklist', description: 'Define the tasks tracked per shift (Day/Swing/Mid) with daily, weekly, or monthly frequency. These appear on the Shift Checklist page and Dashboard.', required: true },
   { key: 'qrc', number: 10, label: 'QRC Templates', description: 'Configure Quick Reaction Checklists for emergency response. Seed from the default library or customize for your installation.', required: true },
-  { key: 'wildlife', number: 11, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
-  { key: 'lighting', number: 12, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
-  { key: 'statusboards', number: 13, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
-  { key: 'pprcolumns', number: 14, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
-  { key: 'feedback', number: 15, label: 'Customer Feedback', description: 'Configure a public feedback form and generate a QR code. Anyone who scans the code can submit feedback that is stored in your installation\'s database.', required: false },
+  { key: 'scnagencies', number: 11, label: 'SCN Agencies', description: 'List the agencies checked on the Secondary Crash Net. Each appears as a toggleable badge on the daily SCN check page (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital).', required: true },
+  { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
+  { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
+  { key: 'statusboards', number: 14, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
+  { key: 'pprcolumns', number: 15, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
+  { key: 'feedback', number: 16, label: 'Customer Feedback', description: 'Configure a public feedback form and generate a QR code. Anyone who scans the code can submit feedback that is stored in your installation\'s database.', required: false },
 ]
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole, enabledModules, setupProgress, markSetupStep } = useInstallation()
   const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const [editingBaseName, setEditingBaseName] = useState(false)
   const [baseNameDraft, setBaseNameDraft] = useState('')
 
   const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
+
+  const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
 
   if (!canEdit) {
     return (
@@ -108,28 +112,42 @@ export default function BaseSetupPage() {
     )
   }
 
-  const step = WIZARD_STEPS[currentStep]
-  const isLastStep = currentStep === WIZARD_STEPS.length - 1
-  const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100
+  const safeStepIndex = Math.min(currentStep, Math.max(0, visibleSteps.length - 1))
+  const step = visibleSteps[safeStepIndex] ?? visibleSteps[0]
+  const isLastStep = safeStepIndex === visibleSteps.length - 1
+  const progress = visibleSteps.length > 0 ? ((safeStepIndex + 1) / visibleSteps.length) * 100 : 100
 
   const goNext = () => {
+    if (step) markSetupStep(step.key, 'complete').catch(() => {})
     if (!isLastStep) {
-      setCurrentStep(s => s + 1)
+      setCurrentStep(safeStepIndex + 1)
+      window.scrollTo(0, 0)
+    }
+  }
+  const goSkip = () => {
+    if (step) markSetupStep(step.key, 'skipped').catch(() => {})
+    if (!isLastStep) {
+      setCurrentStep(safeStepIndex + 1)
       window.scrollTo(0, 0)
     }
   }
   const goBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(s => s - 1)
+    if (safeStepIndex > 0) {
+      setCurrentStep(safeStepIndex - 1)
       window.scrollTo(0, 0)
     }
   }
 
   return (
     <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
-      <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
-        &larr; Settings
-      </Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link href="/settings" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
+          &larr; Settings
+        </Link>
+        <Link href="/settings/base-setup/modules" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', textDecoration: 'none', fontWeight: 600 }}>
+          Modules &rarr;
+        </Link>
+      </div>
 
       {/* Header */}
       <div style={{ marginTop: 12, marginBottom: 8 }}>
@@ -176,7 +194,7 @@ export default function BaseSetupPage() {
       <div style={{ marginBottom: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-            Step {step.number} of {WIZARD_STEPS.length}
+            Step {safeStepIndex + 1} of {visibleSteps.length}
           </span>
           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
             {Math.round(progress)}% complete
@@ -198,25 +216,29 @@ export default function BaseSetupPage() {
       <div style={{
         display: 'flex', gap: 3, marginBottom: 16, flexWrap: 'wrap',
       }}>
-        {WIZARD_STEPS.map((s, i) => (
-          <button
-            key={s.key}
-            onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
-            title={s.label}
-            style={{
-              width: 28, height: 28, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--fs-2xs)', fontWeight: 700,
-              border: i === currentStep ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
-              background: i === currentStep ? 'rgba(34,211,238,0.15)' : i < currentStep ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
-              color: i === currentStep ? 'var(--color-cyan)' : i < currentStep ? 'var(--color-success)' : 'var(--color-text-3)',
-              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-              transition: 'all 0.15s',
-            }}
-          >
-            {i < currentStep ? '✓' : s.number}
-          </button>
-        ))}
+        {visibleSteps.map((s, i) => {
+          const done = isStepDone(s.key, setupProgress)
+          const isCurrent = i === safeStepIndex
+          return (
+            <button
+              key={s.key}
+              onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
+              title={s.label}
+              style={{
+                width: 28, height: 28, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                border: isCurrent ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                background: isCurrent ? 'rgba(34,211,238,0.15)' : done ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
+                color: isCurrent ? 'var(--color-cyan)' : done ? 'var(--color-success)' : 'var(--color-text-3)',
+                cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                transition: 'all 0.15s',
+              }}
+            >
+              {done && !isCurrent ? '✓' : i + 1}
+            </button>
+          )
+        })}
       </div>
 
       {/* Step header */}
@@ -232,7 +254,7 @@ export default function BaseSetupPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 'var(--fs-md)', fontWeight: 800,
           }}>
-            {step.number}
+            {safeStepIndex + 1}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -268,6 +290,7 @@ export default function BaseSetupPage() {
         {step.key === 'templates' && <TemplatesTab installationId={installationId} />}
         {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
         {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
+        {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} />}
         {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} />}
         {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
         {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} />}
@@ -277,7 +300,7 @@ export default function BaseSetupPage() {
 
       {/* Navigation buttons */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        {currentStep > 0 && (
+        {safeStepIndex > 0 && (
           <button
             onClick={goBack}
             style={{
@@ -292,7 +315,7 @@ export default function BaseSetupPage() {
         )}
         {!step.required && (
           <button
-            onClick={goNext}
+            onClick={goSkip}
             style={{
               flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-base)',
               border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
@@ -306,6 +329,7 @@ export default function BaseSetupPage() {
         {isLastStep ? (
           <Link
             href="/settings"
+            onClick={() => { if (step) markSetupStep(step.key, 'complete').catch(() => {}) }}
             style={{
               flex: 2, padding: '12px 16px', borderRadius: 'var(--radius-base)',
               border: 'none',
@@ -328,7 +352,7 @@ export default function BaseSetupPage() {
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
-            Next: {WIZARD_STEPS[currentStep + 1]?.label} →
+            Next: {visibleSteps[safeStepIndex + 1]?.label} →
           </button>
         )}
       </div>
@@ -1747,6 +1771,49 @@ function SimpleListTab({
           Save
         </button>
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCN Agencies tab
+// ═══════════════════════════════════════════════════════════════
+
+function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
+  const [loaded, setLoaded] = useState(false)
+  const [agencies, setAgencies] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!installationId) { setLoaded(true); return }
+      const { fetchScnAgencies } = await import('@/lib/supabase/scn-agencies')
+      const rows = await fetchScnAgencies(installationId)
+      if (!cancelled) {
+        setAgencies(rows.map(r => r.agency_name))
+        setLoaded(true)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [installationId])
+
+  if (!loaded) return null
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 14, lineHeight: 1.6 }}>
+        Add every agency contacted on the Secondary Crash Net. Each appears as a toggleable
+        badge on the daily SCN check page where the controller marks it Loud &amp; Clear, No Response,
+        or Out of Service.
+      </p>
+      <SimpleListTab
+        title="SCN Agencies"
+        items={agencies}
+        tableName="scn_agencies"
+        fieldName="agency_name"
+        installationId={installationId}
+      />
     </div>
   )
 }

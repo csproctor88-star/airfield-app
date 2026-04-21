@@ -2,7 +2,7 @@
 
 Mobile-first, responsive web application for managing airfield operations across U.S. military installations. Covers discrepancy tracking, airfield checks, daily inspections, ACSI (annual compliance), NOTAMs, obstruction evaluations, operational reporting, a regulatory reference library, an aircraft database, waivers, and a real-time operational dashboard. Built for multi-base deployment with per-installation data isolation.
 
-**Version:** 2.31.0 | **Build:** Clean | **55 routes** | **225 source files** | **130 migrations**
+**Version:** 2.32.0 | **Build:** Clean | **74 routes** | **249 source files** | **147 migrations**
 
 ## Tech Stack
 
@@ -397,4 +397,4 @@ See [CHANGELOG.md](./CHANGELOG.md) for detailed version history.
 
 - [`docs/Glidepath_SRS_v6.0_Leadership.docx`](./docs/Glidepath_SRS_v6.0_Leadership.docx) — Software Requirements Specification (Leadership Edition)
 - [`docs/Glidepath_SRS_v6.0_Developer.docx`](./docs/Glidepath_SRS_v6.0_Developer.docx) — Software Requirements Specification (Developer Edition)
-- [`docs/SESSION_HANDOFF_v2.31.0.md`](./docs/SESSION_HANDOFF_v2.31.0.md) — Latest session handoff
+- [`SESSION_HANDOFF.md`](./SESSION_HANDOFF.md) — Latest session handoff

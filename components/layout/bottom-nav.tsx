@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useInstallation } from '@/lib/installation-context'
+import { isModuleEnabled } from '@/lib/modules-config'
 import {
   Radio,
   LayoutDashboard,
@@ -31,8 +32,9 @@ const cesTabs: { href: string; label: string; icon: LucideIcon }[] = [
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { userRole } = useInstallation()
-  const tabs = userRole === 'ces' ? cesTabs : defaultTabs
+  const { userRole, enabledModules } = useInstallation()
+  const base = userRole === 'ces' ? cesTabs : defaultTabs
+  const tabs = base.filter(t => isModuleEnabled(t.href, enabledModules))
 
   return (
     <nav

@@ -9,7 +9,8 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
-import { fetchRecentReviews } from '@/lib/supabase/daily-reviews'
+import { fetchRecentReviews, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -96,6 +97,8 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     acsi_inspection: 'ACSI Inspection',
     waiver: 'Waiver',
     waiver_review: 'Waiver Review',
+    scn: 'SCN',
+    scn_backup: 'Monthly SCN',
   }
   const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
@@ -247,9 +250,50 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
 
 export default function ActivityPage() {
   const router = useRouter()
-  const { installationId, userRole, currentInstallation } = useInstallation()
+  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
+
+  // ── Daily reviews bar state ──
+  const baseTimezone = currentInstallation?.timezone || 'America/New_York'
+  const baseResetTime = (currentInstallation as Record<string, unknown>)?.checklist_reset_time as string | undefined || '06:00'
+  const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
+  const reviewTodayIso = getEffectiveReviewDate(baseTimezone, baseResetTime)
+  const [recentReviews, setRecentReviews] = useState<DailyReviewRow[]>([])
+  const [shiftReviewOpen, setShiftReviewOpen] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('')
+
+  const refreshReviews = useCallback(() => {
+    if (!installationId) return
+    fetchRecentReviews(installationId, 14).then(setRecentReviews)
+  }, [installationId])
+  useEffect(() => { refreshReviews() }, [refreshReviews])
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled || !user) return
+      setCurrentUserId(user.id)
+      const { data: profile } = await supabase.from('profiles').select('name').eq('id', user.id).single()
+      if (cancelled) return
+      setCurrentUserName((profile as { name?: string } | null)?.name || '')
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const todayShiftReview = (() => {
+    const amslSlots = requiredSlotsForShifts(shiftCount).filter((s) => s.endsWith('_amsl'))
+    const canSignAny = amslSlots.some((s) => canUserSignSlot(userRole, s))
+    if (!canSignAny) return null
+    const todayRow = recentReviews.find((r) => r.review_date === reviewTodayIso) || null
+    const signedCount = amslSlots.filter((s) => todayRow?.[`${s}_signed_at` as keyof DailyReviewRow]).length
+    if (signedCount >= amslSlots.length) return null
+    return { signedCount, total: amslSlots.length }
+  })()
 
   useEffect(() => {
     if (!installationId) return
@@ -277,6 +321,18 @@ export default function ActivityPage() {
   const [saving, setSaving] = useState(false)
   const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
   const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
+  // Collapse the Action column on narrow screens so the table doesn't overflow.
+  // The Events Log details + OI are what mobile operators need at a glance.
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(max-width: 640px)')
+    const update = () => setNarrow(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
   const [filterUser, setFilterUser] = useState('')
   const [filterAction, setFilterAction] = useState('')
   const [filterDetails, setFilterDetails] = useState('')
@@ -516,6 +572,28 @@ export default function ActivityPage() {
 
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Events Log</div>
 
+      {/* ===== Today's Shift Review ===== */}
+      {todayShiftReview && (
+        <div
+          onClick={() => setShiftReviewOpen(true)}
+          style={{
+            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
+            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+              Review Shift
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+              {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL signatures captured for today
+            </div>
+          </div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Sign →</div>
+        </div>
+      )}
+
       {/* Manual Entry Section */}
       <div className="card" style={{ marginBottom: 16, padding: '14px', border: '1px solid rgba(34,211,238,0.2)', background: 'rgba(34,211,238,0.04)' }}>
         <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -645,27 +723,29 @@ export default function ActivityPage() {
 
           {/* Columnar Table */}
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: narrow ? 0 : 600 }}>
               <thead>
                 <tr>
                   <th style={{ ...thStyle, width: 52 }}>Time (Z)</th>
-                  <th style={{ ...thStyle, width: 140 }}>Action</th>
+                  {!narrow && <th style={{ ...thStyle, width: 140 }}>Action</th>}
                   <th style={thStyle}>Details</th>
                   <th style={{ ...thStyle, width: 50 }}>OI</th>
                   <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
                 </tr>
                 <tr>
                   <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
-                    <input
-                      type="text"
-                      className="input-dark"
-                      placeholder="Search actions..."
-                      value={filterAction}
-                      onChange={(e) => setFilterAction(e.target.value)}
-                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
-                    />
-                  </th>
+                  {!narrow && (
+                    <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                      <input
+                        type="text"
+                        className="input-dark"
+                        placeholder="Search actions..."
+                        value={filterAction}
+                        onChange={(e) => setFilterAction(e.target.value)}
+                        style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
+                      />
+                    </th>
+                  )}
                   <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
                     <input
                       type="text"
@@ -695,7 +775,7 @@ export default function ActivityPage() {
                     {/* Date header row */}
                     <tr key={`date-${group.date}`}>
                       <td
-                        colSpan={5}
+                        colSpan={narrow ? 4 : 5}
                         style={{
                           padding: '10px 8px 4px',
                           fontSize: 'var(--fs-sm)',
@@ -728,13 +808,45 @@ export default function ActivityPage() {
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                             {timeStr}
                           </td>
+                          {!narrow && (
+                            <td
+                              onClick={link ? () => router.push(link) : undefined}
+                              style={{ ...tdStyle, color: getActionColor(a.action, a.entity_type), fontWeight: 600, whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                            >
+                              {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
+                              {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
+                              {amended && (
+                                <span
+                                  title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was signed.`}
+                                  style={{
+                                    marginLeft: 6, padding: '1px 6px', borderRadius: 999,
+                                    fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.04em',
+                                    background: 'rgba(251,191,36,0.15)', color: 'var(--color-warning)',
+                                    border: '1px solid rgba(251,191,36,0.35)', textTransform: 'uppercase',
+                                  }}
+                                >Amended</span>
+                              )}
+                            </td>
+                          )}
                           <td
-                            onClick={link ? () => router.push(link) : undefined}
-                            style={{ ...tdStyle, color: getActionColor(a.action, a.entity_type), fontWeight: 600, whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                            onClick={narrow && link ? () => router.push(link) : undefined}
+                            style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300, cursor: narrow && link ? 'pointer' : 'default' }}
                           >
-                            {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
-                            {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
-                            {amended && (
+                            {narrow && (
+                              <span style={{
+                                display: 'inline-block',
+                                color: getActionColor(a.action, a.entity_type),
+                                fontWeight: 700,
+                                marginRight: 6,
+                              }}>
+                                {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
+                                {link && <span style={{ marginLeft: 3, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
+                              </span>
+                            )}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: narrow ? 'inline' : 'block' }}>
+                              {detailsText || '\u2014'}
+                            </span>
+                            {narrow && amended && (
                               <span
                                 title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was signed.`}
                                 style={{
@@ -745,11 +857,6 @@ export default function ActivityPage() {
                                 }}
                               >Amended</span>
                             )}
-                          </td>
-                          <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300 }}>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                              {detailsText || '\u2014'}
-                            </span>
                           </td>
                           <td
                             onClick={(e) => {
@@ -960,6 +1067,26 @@ export default function ActivityPage() {
           customTemplates={customTemplates}
           onTemplatesSaved={setCustomTemplates}
           icao={currentInstallation?.icao}
+        />
+      )}
+
+      {/* Daily Shift Review Sign Modal */}
+      {installationId && currentUserId && (
+        <DailyReviewSignModal
+          open={shiftReviewOpen}
+          onClose={() => setShiftReviewOpen(false)}
+          baseId={installationId}
+          baseName={currentInstallation?.name || ''}
+          baseIcao={(currentInstallation as { icao?: string | null } | null)?.icao || null}
+          shiftCount={shiftCount}
+          reviewDate={reviewTodayIso}
+          timezone={baseTimezone}
+          resetTime={baseResetTime}
+          userId={currentUserId}
+          userRole={userRole}
+          userName={currentUserName}
+          defaultPdfEmail={defaultPdfEmail}
+          onSigned={() => { refreshReviews(); loadEntries() }}
         />
       )}
     </div>

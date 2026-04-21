@@ -323,6 +323,8 @@ export type Database = {
           advisories: Json
           advisory_text: string | null
           advisory_type: string | null
+          afm_closed: boolean
+          afm_closed_message: string | null
           afm_ooo_message: string | null
           afm_out_of_office: boolean
           arff_cat: number | null
@@ -350,6 +352,8 @@ export type Database = {
           advisories?: Json
           advisory_text?: string | null
           advisory_type?: string | null
+          afm_closed?: boolean
+          afm_closed_message?: string | null
           afm_ooo_message?: string | null
           afm_out_of_office?: boolean
           arff_cat?: number | null
@@ -377,6 +381,8 @@ export type Database = {
           advisories?: Json
           advisory_text?: string | null
           advisory_type?: string | null
+          afm_closed?: boolean
+          afm_closed_message?: string | null
           afm_ooo_message?: string | null
           afm_out_of_office?: boolean
           arff_cat?: number | null
@@ -944,9 +950,11 @@ export type Database = {
           checklist_reset_time: string
           contractor_templates: Json | null
           created_at: string
+          default_closed_message: string | null
           default_ooo_message: string | null
           discrepancy_type_shop_map: Json | null
           elevation_msl: number | null
+          enabled_modules: string[]
           feedback_form_config: Json
           icao: string | null
           id: string
@@ -955,6 +963,7 @@ export type Database = {
           location: string | null
           majcom: string | null
           name: string
+          setup_progress: Json
           shift_count: number
           status_labels: Json
           timezone: string
@@ -968,9 +977,11 @@ export type Database = {
           checklist_reset_time?: string
           contractor_templates?: Json | null
           created_at?: string
+          default_closed_message?: string | null
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
+          enabled_modules?: string[]
           feedback_form_config?: Json
           icao?: string | null
           id?: string
@@ -979,6 +990,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name: string
+          setup_progress?: Json
           shift_count?: number
           status_labels?: Json
           timezone?: string
@@ -992,9 +1004,11 @@ export type Database = {
           checklist_reset_time?: string
           contractor_templates?: Json | null
           created_at?: string
+          default_closed_message?: string | null
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
+          enabled_modules?: string[]
           feedback_form_config?: Json
           icao?: string | null
           id?: string
@@ -1003,6 +1017,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name?: string
+          setup_progress?: Json
           shift_count?: number
           status_labels?: Json
           timezone?: string
@@ -2935,6 +2950,7 @@ export type Database = {
           is_active: boolean
           last_name: string | null
           last_seen_at: string | null
+          last_seen_release_version: string | null
           name: string
           operating_initials: string | null
           organization: string | null
@@ -2957,6 +2973,7 @@ export type Database = {
           is_active?: boolean
           last_name?: string | null
           last_seen_at?: string | null
+          last_seen_release_version?: string | null
           name: string
           operating_initials?: string | null
           organization?: string | null
@@ -2979,6 +2996,7 @@ export type Database = {
           is_active?: boolean
           last_name?: string | null
           last_seen_at?: string | null
+          last_seen_release_version?: string | null
           name?: string
           operating_initials?: string | null
           organization?: string | null
