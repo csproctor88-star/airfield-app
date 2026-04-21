@@ -116,17 +116,22 @@ export async function deleteFeedback(id: string): Promise<boolean> {
 
 // ── Fetch form config from bases table ──
 
-export async function fetchFeedbackConfig(baseId: string): Promise<FeedbackFormConfig> {
+export async function fetchFeedbackConfig(baseId: string): Promise<FeedbackFormConfig | null> {
   const supabase = createClient()
   if (!supabase) return DEFAULT_FEEDBACK_CONFIG
 
   const { data } = await supabase
     .from('bases')
-    .select('feedback_form_config')
+    .select('feedback_form_config, enabled_modules')
     .eq('id', baseId)
     .single()
 
   const row = data as Record<string, unknown> | null
+  // If the base has disabled the feedback module, short-circuit so the public
+  // form shows a closed message instead of 200ing into a live form.
+  const enabled = Array.isArray(row?.enabled_modules) ? (row?.enabled_modules as string[]) : null
+  if (enabled && !enabled.includes('feedback')) return null
+
   if (row?.feedback_form_config && typeof row.feedback_form_config === 'object') {
     return { ...DEFAULT_FEEDBACK_CONFIG, ...(row.feedback_form_config as Partial<FeedbackFormConfig>) }
   }

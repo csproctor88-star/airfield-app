@@ -9,6 +9,8 @@ import { useSidebar } from '@/lib/sidebar-context'
 import { useTheme } from '@/lib/theme-context'
 import type { UserRole } from '@/lib/supabase/types'
 import { useExpiringNotamCount } from '@/lib/use-expiring-notams'
+import { useInstallation } from '@/lib/installation-context'
+import { isModuleEnabled } from '@/lib/modules-config'
 import ContactSupport from '@/components/ui/contact-support'
 import {
   DEFAULT_SIDEBAR_CONFIG,
@@ -93,6 +95,7 @@ export function SidebarNav() {
   const { isOpen, toggle } = useSidebar()
   const { resolvedTheme } = useTheme()
   const expiringNotamCount = useExpiringNotamCount()
+  const { enabledModules } = useInstallation()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isCesRole, setIsCesRole] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -171,6 +174,7 @@ export function SidebarNav() {
   function isItemVisible(href: string) {
     if (ADMIN_ITEMS.has(href)) return loaded && canManageUsers
     if (isCesRole && !CES_ALLOWED_ITEMS.has(href)) return false
+    if (!isModuleEnabled(href, enabledModules)) return false
     return true
   }
 

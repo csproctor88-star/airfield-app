@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { isModuleEnabled } from '@/lib/modules-config'
 import { fetchActivityLog, fetchDashboardActivity } from '@/lib/supabase/activity-queries'
 import { fetchInspections } from '@/lib/supabase/inspections'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
@@ -190,7 +191,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage } = useInstallation()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, enabledModules } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
@@ -575,7 +576,9 @@ export default function AMDashboardPage() {
         {[
           { label: 'Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
           { label: 'Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
-        ].map(q => (
+        ]
+          .filter(q => isModuleEnabled(q.href, enabledModules))
+          .map(q => (
           <Link key={q.label} href={q.href} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
@@ -586,33 +589,39 @@ export default function AMDashboardPage() {
             <span style={{ fontSize: 'var(--fs-lg)' }}>{q.icon}</span> {q.label}
           </Link>
         ))}
-        <button onClick={() => setShowContractorForm(true)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-          flex: '1 1 140px',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>🏗️</span> Personnel
-        </button>
-        <button onClick={() => setShowShiftChecklist(true)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-          flex: '1 1 140px',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>☑️</span> Checklist
-        </button>
-        <button onClick={() => setShowQrc(true)} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
-          flex: '1 1 140px',
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
-        </button>
+        {isModuleEnabled('/contractors', enabledModules) && (
+          <button onClick={() => setShowContractorForm(true)} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+            flex: '1 1 140px',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <span style={{ fontSize: 'var(--fs-lg)' }}>🏗️</span> Personnel
+          </button>
+        )}
+        {isModuleEnabled('/shift-checklist', enabledModules) && (
+          <button onClick={() => setShowShiftChecklist(true)} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+            flex: '1 1 140px',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <span style={{ fontSize: 'var(--fs-lg)' }}>☑️</span> Checklist
+          </button>
+        )}
+        {isModuleEnabled('/qrc', enabledModules) && (
+          <button onClick={() => setShowQrc(true)} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+            flex: '1 1 140px',
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            <span style={{ fontSize: 'var(--fs-lg)' }}>⚡</span> QRC
+          </button>
+        )}
         {canToggleOoo && (
           <button onClick={() => {
             if (afmOutOfOffice) {

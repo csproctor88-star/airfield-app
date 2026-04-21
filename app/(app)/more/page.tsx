@@ -8,6 +8,8 @@ import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
 import { LogOut } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
+import { useInstallation } from '@/lib/installation-context'
+import { isModuleEnabled } from '@/lib/modules-config'
 
 type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
@@ -178,6 +180,7 @@ export default function MorePage() {
   const [isSysAdmin, setIsSysAdmin] = useState(false)
   const [isCes, setIsCes] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const { enabledModules } = useInstallation()
 
   useEffect(() => {
     async function checkRole() {
@@ -223,13 +226,16 @@ export default function MorePage() {
       if (m.adminOnly && !canManageUsers) return false
       if (m.sysAdminOnly && !isSysAdmin) return false
       if (isCes && !CES_ALLOWED.has(m.href)) return false
+      if (!isModuleEnabled(m.href, enabledModules)) return false
       return true
     })
   }
 
   // CES users get a simplified More page
   if (isCes) {
-    const cesItems = [...mgmtItems, ...settingsItems].filter(m => CES_ALLOWED.has(m.href))
+    const cesItems = [...mgmtItems, ...settingsItems]
+      .filter(m => CES_ALLOWED.has(m.href))
+      .filter(m => isModuleEnabled(m.href, enabledModules))
     return (
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>
