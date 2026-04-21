@@ -165,11 +165,13 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     )
   }, [installationId])
 
-  // Derived from currentInstallation. Default to all toggleables so demo/legacy
-  // bases without the column populated still show every module.
+  // Derived from currentInstallation. If the column is missing (migration not
+  // applied yet, or fetch returned undefined), fall back to all toggleables so
+  // the UI is functional. But ALWAYS trust an explicit array — including an
+  // empty one — because that represents a deliberate admin choice.
   const enabledModules: ModuleKey[] = (() => {
     const raw = (currentInstallation as unknown as { enabled_modules?: string[] } | null)?.enabled_modules
-    if (raw && raw.length > 0) return raw as ModuleKey[]
+    if (Array.isArray(raw)) return raw as ModuleKey[]
     return ALL_TOGGLEABLE_MODULES
   })()
 
@@ -181,10 +183,14 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     const supabase = createClient()
     if (!supabase) return
     const unique = Array.from(new Set(keys))
-    await supabase
+    const { error } = await supabase
       .from('bases')
       .update({ enabled_modules: unique } as Record<string, unknown>)
       .eq('id', installationId)
+    if (error) {
+      console.error('[installation-context] failed to save enabled_modules:', error.message)
+      throw new Error(error.message)
+    }
     setCurrentInstallation(prev =>
       prev ? ({ ...prev, enabled_modules: unique } as typeof prev) : prev
     )
