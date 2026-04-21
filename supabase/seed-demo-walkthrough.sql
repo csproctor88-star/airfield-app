@@ -23,6 +23,9 @@
 -- Prereqs:
 --   1. seed-demo-base.sql already run (creates Demo AFB + demo user)
 --   2. (optional) seed-demo-analytics.sql already run
+--   3. Migration 2026042103_discrepancy_waiting_for_project.sql applied
+--      (adds `waiting_for_project` to the discrepancies CHECK constraint
+--      — two of the seeded discrepancies use that status).
 --
 -- Run in Supabase SQL Editor.
 -- ============================================================
