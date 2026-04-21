@@ -297,8 +297,21 @@ export default function DiscrepancyDetailPage() {
             const dt = new Date(ecd)
             return isNaN(dt.getTime()) ? '—' : dt.toISOString().slice(0, 10)
           })() },
+          { label: 'Project #', value: (d as typeof d & { project_number?: string | null }).project_number || '—' },
+          { label: 'Estimated Cost', value: (d as typeof d & { estimated_cost?: string | null }).estimated_cost || '—' },
           { label: 'Photos', value: `${d.photo_count}` },
         ]} />
+
+        {(() => {
+          const rcm = (d as typeof d & { risk_control_measure?: string | null }).risk_control_measure
+          if (!rcm) return null
+          return (
+            <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-amber) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-amber) 20%, transparent)', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-amber)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Risk Control Measure</div>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>{rcm}</div>
+            </div>
+          )
+        })()}
 
         {'resolution_notes' in d && d.resolution_notes && (
           <div style={{ marginTop: 12, padding: '8px 10px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 'var(--radius-md)' }}>

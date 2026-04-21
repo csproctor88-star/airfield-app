@@ -223,6 +223,37 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
         </div>
       </div>
 
+      {/* Risk Control Measure — required on N items */}
+      <div style={{ marginBottom: 12 }}>
+        <label style={labelStyle}>
+          Risk Control Measure <span style={{ color: '#EF4444' }}>*</span>
+        </label>
+        <textarea
+          value={detail.risk_control_measure || ''}
+          onChange={(e) => {
+            update('risk_control_measure', e.target.value)
+            e.target.style.height = 'auto'
+            e.target.style.height = e.target.scrollHeight + 'px'
+          }}
+          ref={(el) => {
+            if (el && detail.risk_control_measure) {
+              el.style.height = 'auto'
+              el.style.height = el.scrollHeight + 'px'
+            }
+          }}
+          placeholder="Mitigation or interim control in place while the finding is open (required)"
+          rows={2}
+          style={{
+            ...inputStyle,
+            resize: 'vertical',
+            overflow: 'hidden',
+            borderColor: (detail.risk_control_measure || '').trim()
+              ? 'var(--color-border)'
+              : 'rgba(239, 68, 68, 0.6)',
+          }}
+        />
+      </div>
+
       {/* Area chips */}
       {installationAreas.length > 0 && (
         <div style={{ marginBottom: 10 }}>

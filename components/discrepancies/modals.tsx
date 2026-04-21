@@ -83,6 +83,9 @@ export function EditDiscrepancyModal({
     work_order_number: discrepancy.work_order_number || '',
     assigned_shop: (discrepancy as DiscrepancyRow & { assigned_shop?: string | null }).assigned_shop || '',
     estimated_completion_date: (discrepancy as DiscrepancyRow & { estimated_completion_date?: string | null }).estimated_completion_date || '',
+    project_number: (discrepancy as DiscrepancyRow & { project_number?: string | null }).project_number || '',
+    estimated_cost: (discrepancy as DiscrepancyRow & { estimated_cost?: string | null }).estimated_cost || '',
+    risk_control_measure: (discrepancy as DiscrepancyRow & { risk_control_measure?: string | null }).risk_control_measure || '',
     latitude: discrepancy.latitude,
     longitude: discrepancy.longitude,
   })
@@ -166,6 +169,9 @@ export function EditDiscrepancyModal({
       work_order_number: form.work_order_number || null,
       assigned_shop: form.assigned_shop || null,
       estimated_completion_date: form.estimated_completion_date || null,
+      project_number: form.project_number || null,
+      estimated_cost: form.estimated_cost || null,
+      risk_control_measure: form.risk_control_measure || null,
       latitude: form.latitude,
       longitude: form.longitude,
       infrastructure_feature_id: newFeatureId,
@@ -293,6 +299,29 @@ export function EditDiscrepancyModal({
           value={form.estimated_completion_date}
           onChange={(e) => setForm(p => ({ ...p, estimated_completion_date: e.target.value }))}
         />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Project # <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></FieldLabel>
+        <input className="input-dark" placeholder="e.g., MP-2026-ILS-01"
+          value={form.project_number}
+          onChange={(e) => setForm(p => ({ ...p, project_number: e.target.value }))} />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Estimated Cost <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></FieldLabel>
+        <input className="input-dark" placeholder="e.g., $25,000 or TBD"
+          value={form.estimated_cost}
+          onChange={(e) => setForm(p => ({ ...p, estimated_cost: e.target.value }))} />
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <FieldLabel>Risk Control Measure <span style={{ color: 'var(--color-text-3)', fontWeight: 400 }}>(optional)</span></FieldLabel>
+        <textarea className="input-dark" rows={3}
+          placeholder="Mitigation or interim control in place while the discrepancy is open"
+          value={form.risk_control_measure}
+          onChange={(e) => setForm(p => ({ ...p, risk_control_measure: e.target.value }))}
+          style={{ resize: 'vertical' }} />
       </div>
 
       {/* Link to Visual NAVAID */}

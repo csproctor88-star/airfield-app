@@ -80,6 +80,7 @@ export function acsiDraftToItems(
       project_number: d.project_number || '',
       estimated_cost: d.estimated_cost || '',
       estimated_completion: d.estimated_completion || '',
+      risk_control_measure: d.risk_control_measure || '',
       photo_ids: d.photo_ids || [],
       areas: d.areas || [],
       latitude: d.latitude ?? null,

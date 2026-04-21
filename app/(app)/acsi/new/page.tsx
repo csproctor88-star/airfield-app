@@ -31,8 +31,8 @@ import { ArrowLeft, Plus, Save, CheckCircle } from 'lucide-react'
 
 const EMPTY_DISCREPANCY: AcsiDiscrepancyDetail = {
   comment: '', work_order: '', project_number: '',
-  estimated_cost: '', estimated_completion: '', photo_ids: [],
-  areas: [], latitude: null, longitude: null, pins: [],
+  estimated_cost: '', estimated_completion: '', risk_control_measure: '',
+  photo_ids: [], areas: [], latitude: null, longitude: null, pins: [],
 }
 
 export default function AcsiFormPage() {
@@ -351,6 +351,28 @@ export default function AcsiFormPage() {
     const unanswered = total - passed - failed - na
     if (unanswered > 0) {
       if (!confirm(`${unanswered} items are unanswered. File anyway?`)) return
+    }
+
+    // Risk Control Measure is required on every discrepancy under N items.
+    const missingRcmItems: string[] = []
+    for (const it of items) {
+      if (it.response !== 'fail') continue
+      const discs = it.discrepancies && it.discrepancies.length > 0
+        ? it.discrepancies
+        : (it.discrepancy ? [it.discrepancy] : [])
+      if (discs.length === 0) {
+        missingRcmItems.push(it.item_number)
+        continue
+      }
+      if (discs.some(d => !(d.risk_control_measure || '').trim())) {
+        missingRcmItems.push(it.item_number)
+      }
+    }
+    if (missingRcmItems.length > 0) {
+      toast.error(
+        `Risk Control Measure is required on N items: ${missingRcmItems.slice(0, 5).join(', ')}${missingRcmItems.length > 5 ? `, +${missingRcmItems.length - 5} more` : ''}`
+      )
+      return
     }
 
     setFiling(true)

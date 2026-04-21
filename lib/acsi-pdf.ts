@@ -292,14 +292,15 @@ export async function generateAcsiPdf(
         const disc = discs[di]
         const detailKey = `${item.id}:${di}`
 
-        // Build text lines
+        // Build text lines — Areas, Comment, WO, Project, Cost, ECD, Risk Control
         const lines: string[] = []
+        if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
         if (disc.comment) lines.push(`Comment: ${disc.comment}`)
         if (disc.work_order) lines.push(`WO: ${disc.work_order}`)
         if (disc.project_number) lines.push(`Project: ${disc.project_number}`)
         if (disc.estimated_cost) lines.push(`Cost: ${disc.estimated_cost}`)
         if (disc.estimated_completion) lines.push(`ECD: ${disc.estimated_completion}`)
-        if (disc.areas && disc.areas.length > 0) lines.push(`Areas: ${disc.areas.join(', ')}`)
+        if (disc.risk_control_measure) lines.push(`Risk Control: ${disc.risk_control_measure}`)
         discTextMap[detailKey] = lines
 
         const photoIds: string[] = Array.isArray((disc as { photo_ids?: string[] }).photo_ids)

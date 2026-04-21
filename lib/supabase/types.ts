@@ -1405,6 +1405,7 @@ export type Database = {
           description: string
           display_id: string
           estimated_completion_date: string | null
+          estimated_cost: string | null
           facility_number: string | null
           id: string
           infrastructure_feature_id: string | null
@@ -1416,9 +1417,11 @@ export type Database = {
           longitude: number | null
           notam_reference: string | null
           photo_count: number
+          project_number: string | null
           reported_by: string | null
           resolution_date: string | null
           resolution_notes: string | null
+          risk_control_measure: string | null
           severity: string
           status: string
           title: string
@@ -1435,6 +1438,7 @@ export type Database = {
           description: string
           display_id: string
           estimated_completion_date?: string | null
+          estimated_cost?: string | null
           facility_number?: string | null
           id?: string
           infrastructure_feature_id?: string | null
@@ -1446,9 +1450,11 @@ export type Database = {
           longitude?: number | null
           notam_reference?: string | null
           photo_count?: number
+          project_number?: string | null
           reported_by?: string | null
           resolution_date?: string | null
           resolution_notes?: string | null
+          risk_control_measure?: string | null
           severity?: string
           status?: string
           title: string
@@ -1465,6 +1471,7 @@ export type Database = {
           description?: string
           display_id?: string
           estimated_completion_date?: string | null
+          estimated_cost?: string | null
           facility_number?: string | null
           id?: string
           infrastructure_feature_id?: string | null
@@ -1476,9 +1483,11 @@ export type Database = {
           longitude?: number | null
           notam_reference?: string | null
           photo_count?: number
+          project_number?: string | null
           reported_by?: string | null
           resolution_date?: string | null
           resolution_notes?: string | null
+          risk_control_measure?: string | null
           severity?: string
           status?: string
           title?: string
@@ -4688,6 +4697,8 @@ export type AcsiDiscrepancyDetail = {
   project_number: string
   estimated_cost: string
   estimated_completion: string
+  /** Required on N items — the mitigation or interim control for the finding. */
+  risk_control_measure: string
   photo_ids: string[]
   areas: string[]
   /** @deprecated Use `pins` instead */

@@ -86,12 +86,19 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
     const description = (disc.description || '').trim()
     const desc = description && description !== title ? description : ''
     const body = [disc.location_text, title, desc].filter(Boolean).join(' — ')
+    const d = disc as typeof disc & {
+      project_number?: string | null
+      estimated_cost?: string | null
+      risk_control_measure?: string | null
+      estimated_completion_date?: string | null
+    }
     return {
       comment: body,
       work_order: disc.work_order_number || '',
-      project_number: '',
-      estimated_cost: '',
-      estimated_completion: '',
+      project_number: d.project_number || '',
+      estimated_cost: d.estimated_cost || '',
+      estimated_completion: d.estimated_completion_date || '',
+      risk_control_measure: d.risk_control_measure || '',
       photo_ids: photoIds,
       areas: [],
       latitude: disc.latitude,

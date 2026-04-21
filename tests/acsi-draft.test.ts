@@ -9,6 +9,7 @@ function emptyDiscrepancy(overrides: Partial<AcsiDiscrepancyDetail> = {}): AcsiD
     project_number: '',
     estimated_cost: '',
     estimated_completion: '',
+    risk_control_measure: '',
     photo_ids: [],
     areas: [],
     latitude: null,
