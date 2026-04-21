@@ -79,11 +79,12 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'templates', number: 8, label: 'Inspection Templates', description: 'Configure the checklist sections and items for daily airfield and lighting inspections. These define what inspectors evaluate during each inspection.', required: true },
   { key: 'shiftchecklist', number: 9, label: 'Shift Checklist', description: 'Define the tasks tracked per shift (Day/Swing/Mid) with daily, weekly, or monthly frequency. These appear on the Shift Checklist page and Dashboard.', required: true },
   { key: 'qrc', number: 10, label: 'QRC Templates', description: 'Configure Quick Reaction Checklists for emergency response. Seed from the default library or customize for your installation.', required: true },
-  { key: 'wildlife', number: 11, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
-  { key: 'lighting', number: 12, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
-  { key: 'statusboards', number: 13, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
-  { key: 'pprcolumns', number: 14, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
-  { key: 'feedback', number: 15, label: 'Customer Feedback', description: 'Configure a public feedback form and generate a QR code. Anyone who scans the code can submit feedback that is stored in your installation\'s database.', required: false },
+  { key: 'scnagencies', number: 11, label: 'SCN Agencies', description: 'List the agencies checked on the Secondary Crash Net. Each appears as a toggleable badge on the daily SCN check page (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital).', required: true },
+  { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
+  { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
+  { key: 'statusboards', number: 14, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
+  { key: 'pprcolumns', number: 15, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
+  { key: 'feedback', number: 16, label: 'Customer Feedback', description: 'Configure a public feedback form and generate a QR code. Anyone who scans the code can submit feedback that is stored in your installation\'s database.', required: false },
 ]
 
 export default function BaseSetupPage() {
@@ -289,6 +290,7 @@ export default function BaseSetupPage() {
         {step.key === 'templates' && <TemplatesTab installationId={installationId} />}
         {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
         {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
+        {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} />}
         {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} />}
         {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
         {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} />}
@@ -1769,6 +1771,49 @@ function SimpleListTab({
           Save
         </button>
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCN Agencies tab
+// ═══════════════════════════════════════════════════════════════
+
+function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
+  const [loaded, setLoaded] = useState(false)
+  const [agencies, setAgencies] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!installationId) { setLoaded(true); return }
+      const { fetchScnAgencies } = await import('@/lib/supabase/scn-agencies')
+      const rows = await fetchScnAgencies(installationId)
+      if (!cancelled) {
+        setAgencies(rows.map(r => r.agency_name))
+        setLoaded(true)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [installationId])
+
+  if (!loaded) return null
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 14, lineHeight: 1.6 }}>
+        Add every agency contacted on the Secondary Crash Net. Each appears as a toggleable
+        badge on the daily SCN check page where the controller marks it Loud &amp; Clear, No Response,
+        or Out of Service.
+      </p>
+      <SimpleListTab
+        title="SCN Agencies"
+        items={agencies}
+        tableName="scn_agencies"
+        fieldName="agency_name"
+        installationId={installationId}
+      />
     </div>
   )
 }

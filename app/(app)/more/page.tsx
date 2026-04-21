@@ -23,6 +23,7 @@ const pinnedItems: ModuleItem[] = [
 // Operations
 const opsItems: ModuleItem[] = [
   { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
+  { name: 'Secondary Crash Net', icon: '📻', color: '#EAB308', href: '/scn' },
   { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
   { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
   { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },

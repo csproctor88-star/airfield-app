@@ -26,6 +26,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Dashboard', href: '/dashboard', iconName: 'LayoutDashboard' },
   { name: 'Events Log', href: '/activity', iconName: 'Activity' },
   { name: 'QRC', href: '/qrc', iconName: 'Zap' },
+  { name: 'Secondary Crash Net', href: '/scn', iconName: 'Radio' },
   { name: 'Shift Checklist', href: '/shift-checklist', iconName: 'ListChecks' },
   { name: 'Daily Reviews', href: '/daily-reviews', iconName: 'ClipboardPen' },
   { name: 'Airfield Checks', href: '/checks', iconName: 'ClipboardCheck' },
@@ -59,7 +60,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/qrc', '/shift-checklist', '/daily-reviews', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
+      items: ['/qrc', '/scn', '/shift-checklist', '/daily-reviews', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
     },
     {
       label: 'Airfield Management',

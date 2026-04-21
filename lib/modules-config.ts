@@ -11,6 +11,7 @@ export type ModuleKey =
   | 'obstructions'
   | 'qrc'
   | 'shift-checklist'
+  | 'scn'
   | 'wildlife'
   | 'waivers'
   | 'notams'
@@ -31,6 +32,7 @@ export type WizardStepKey =
   | 'templates'
   | 'shiftchecklist'
   | 'qrc'
+  | 'scnagencies'
   | 'lighting'
   | 'wildlife'
   | 'statusboards'
@@ -139,6 +141,16 @@ export const MODULES: ModuleDef[] = [
     useCase: 'Aircraft mishap, hung ordnance, fuel spill, severe weather, and other AFMAN 91-203 scenarios.',
     hrefs: ['/qrc'],
     setupSteps: ['qrc'],
+    defaultEnabled: true,
+  },
+  {
+    key: 'scn',
+    label: 'Secondary Crash Net',
+    category: 'emergency',
+    description: 'Daily SCN communication check log with per-agency status tracking and backup SCN verification.',
+    useCase: 'Document the daily SCN check required for emergency coordination with fire, medical, ATC, and other response agencies.',
+    hrefs: ['/scn'],
+    setupSteps: ['scnagencies'],
     defaultEnabled: true,
   },
   {

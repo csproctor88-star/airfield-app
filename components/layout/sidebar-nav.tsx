@@ -52,6 +52,8 @@ import {
   Wrench,
   FolderOpen,
   GraduationCap,
+  Radio,
+  MessageSquare,
   GripVertical,
   Pencil,
   RotateCcw,
@@ -68,7 +70,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Home, LayoutDashboard, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, ClipboardPen,
   Bird, HardHat, AlertTriangle, MapPin, Database, Shield, Lightbulb,
   PlaneLanding, Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
-  Wrench, FolderOpen, GraduationCap,
+  Wrench, FolderOpen, GraduationCap, Radio, MessageSquare,
 }
 
 // Group icons

@@ -25,6 +25,7 @@ ALTER TABLE bases
     'obstructions',
     'qrc',
     'shift-checklist',
+    'scn',
     'wildlife',
     'waivers',
     'notams',

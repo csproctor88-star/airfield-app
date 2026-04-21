@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronDown, ChevronRight, ExternalLink, Rocket, BookOpen, LayoutDashboard, Radio, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, Bird, HardHat, PlaneLanding, AlertTriangle, MapPin, Database, Shield, Lightbulb, Plane, FileText, BarChart3, Settings, Users, Download, Search, X, ClipboardSignature, MessageSquare, CheckSquare } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, ExternalLink, Rocket, BookOpen, LayoutDashboard, Radio, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, Bird, HardHat, PlaneLanding, AlertTriangle, MapPin, Database, Shield, Lightbulb, Plane, FileText, BarChart3, Settings, Users, Download, Search, X, ClipboardSignature, MessageSquare, CheckSquare, Siren } from 'lucide-react'
 import { toast } from 'sonner'
 
 // ── Training content data ──
@@ -148,6 +148,26 @@ const MODULES: ModuleRef[] = [
       { src: '/training/qrc-available_1.png', caption: 'QRC Available tab — select a checklist to begin execution' },
       { src: '/training/qrc-active_1.png', caption: 'Active QRC execution with step-by-step checklist' },
     ],
+  },
+  {
+    id: 'scn',
+    name: 'Secondary Crash Net',
+    icon: Siren,
+    color: '#EAB308',
+    path: '/scn',
+    tagline: 'Daily SCN communication check log',
+    overview: 'Document the daily Secondary Crash Net check with a toggleable badge per agency (Loud & Clear, No Response, Out of Service with notes). Each completed check writes a summarized entry to the Events Log — "all agencies loud & clear except X (No Response), Y (Out of Service: reason)." A separate backup SCN check is tracked alongside the primary. Monthly PDF export produces an agency-by-day matrix plus Out-of-Service notes and a backup-completion log.',
+    keyFeatures: [
+      'Per-agency badges default to Loud & Clear for fast sign-off — only touch the exceptions',
+      'Out of Service requires a notes dialog explaining the fault; the reason flows into the Events Log and PDF',
+      'Primary and Backup SCN checks tracked as separate rows with independent completion status',
+      'Events Log integration — each completed check writes a summary entry with the controller\'s operating initials',
+      'Monthly PDF export — agency-by-day matrix (L/N/X cells), Out-of-Service notes, No Response roster, Backup SCN log',
+      '30-day history panel with drill-down for every past check',
+      'Re-run / Edit lets a controller correct a check without creating a duplicate',
+      'Per-base agency list — admins configure which agencies the base contacts on the SCN',
+    ],
+    howToAccess: 'Navigate to Operations > Secondary Crash Net in the sidebar. Admins configure the agency list in Base Setup → SCN Agencies.',
   },
   {
     id: 'shift-checklist',
@@ -590,8 +610,9 @@ const SETUP_STEPS = [
   { number: 8, title: 'Inspection Templates', description: 'Inspection templates define the checklist sections and items that inspectors evaluate during daily airfield and lighting inspections. Each base customizes these to match their specific airfield configuration.', instructions: ['Click "Manage Templates" to open the template editor.', 'Configure sections for both Airfield and Lighting inspection types.', 'Add checklist items under each section — these become the pass/fail/NA toggles during inspections.', 'Item numbers and text should match your local inspection procedures.'], tips: ['If no templates are configured, inspectors will not be able to start daily inspections.', 'You can link inspection items to lighting systems so that failed items automatically update NAVAID status.'], screenshots: [{ src: '/training/base-setup_inspection_templates.png', caption: 'Inspection template configuration — sections and checklist items for daily inspections' }] },
   { number: 9, title: 'Shift Checklist', description: 'Shift checklist items define the tasks tracked per shift (Day, Swing, Mid). These appear on the Shift Checklist page and can be completed from the Dashboard KPI badge.', instructions: ['Add items for each shift with the appropriate frequency (daily, weekly, or monthly).', 'Items can be toggled active/inactive without deleting them.', 'Configure the daily reset time in Settings if your shifts don\'t reset at 0600 local.'], screenshots: [{ src: '/training/base-setup_shift_checklist.png', caption: 'Shift checklist items — define tasks per shift with daily/weekly/monthly frequency' }] },
   { number: 10, title: 'QRC Templates', description: 'Quick Reaction Checklists are pre-built emergency response procedures. Seed from the default library to get started, then customize for your installation.', instructions: ['Click "Seed from Library" to import the standard 25 QRC templates.', 'Review and edit each template to match your local procedures.', 'Each QRC has numbered steps with different step types (checkbox, notification, fill-in, time entry).', 'Mark QRCs as active/inactive to control which ones appear in the Available tab.'], screenshots: [{ src: '/training/base-setup_qrcs.png', caption: 'QRC template management — seed from library or create custom checklists' }] },
-  { number: 11, title: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms.', instructions: ['Search the species database and add species common to your area.', 'Mark frequently observed species as favorites — they appear at the top of the picker.', 'Species can be added or removed at any time without affecting existing records.'], screenshots: [{ src: '/training/base-setup_wildlife.png', caption: 'Wildlife species selection for sighting and strike report forms' }] },
-  { number: 12, title: 'Lighting Systems (Optional)', description: 'Lighting systems define your airfield\'s lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup.', instructions: ['Create a lighting system for each major system (e.g., RWY 01/19 Edge Lights, TWY A Edge Lights, RWY 01 Approach).', 'Set the system type from the DAFMAN 13-204v2 categories.', 'Add components under each system with total count and allowable outage thresholds.', 'Outage thresholds can be percentage-based, count-based, or consecutive-based.', 'This step integrates with the Visual NAVAIDs module — components are linked to individual light features on the map.'], tips: ['This step is optional during initial setup. You can complete it later from Base Setup.', 'The Visual NAVAIDs module requires lighting systems to be configured for outage tracking to function.', 'Clone components from DAFMAN templates to pre-fill outage thresholds.'], screenshots: [{ src: '/training/base-setup_lighting_systems.png', caption: 'Lighting system and component configuration with DAFMAN outage thresholds' }] },
+  { number: 11, title: 'SCN Agencies', description: 'List every agency that the controller contacts on the Secondary Crash Net. Each agency becomes a toggleable badge on the daily SCN check page and appears as a row in the monthly PDF export.', instructions: ['Add one entry per agency (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital, Command Post).', 'Use the exact name the controller announces over the net — it becomes the label on the daily check badges.', 'Re-order by deleting and re-adding; the controller sees the same top-to-bottom order.', 'Add or remove agencies any time — existing historical checks retain their original agency snapshot.'], tips: ['Start with the agencies on your local SCN roster. Most bases include Tower, Fire, Ambulance, Security Forces, and Command Post at minimum.', 'Each base configures its own list — there is no shared default.'] },
+  { number: 12, title: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms.', instructions: ['Search the species database and add species common to your area.', 'Mark frequently observed species as favorites — they appear at the top of the picker.', 'Species can be added or removed at any time without affecting existing records.'], screenshots: [{ src: '/training/base-setup_wildlife.png', caption: 'Wildlife species selection for sighting and strike report forms' }] },
+  { number: 13, title: 'Lighting Systems (Optional)', description: 'Lighting systems define your airfield\'s lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup.', instructions: ['Create a lighting system for each major system (e.g., RWY 01/19 Edge Lights, TWY A Edge Lights, RWY 01 Approach).', 'Set the system type from the DAFMAN 13-204v2 categories.', 'Add components under each system with total count and allowable outage thresholds.', 'Outage thresholds can be percentage-based, count-based, or consecutive-based.', 'This step integrates with the Visual NAVAIDs module — components are linked to individual light features on the map.'], tips: ['This step is optional during initial setup. You can complete it later from Base Setup.', 'The Visual NAVAIDs module requires lighting systems to be configured for outage tracking to function.', 'Clone components from DAFMAN templates to pre-fill outage thresholds.'], screenshots: [{ src: '/training/base-setup_lighting_systems.png', caption: 'Lighting system and component configuration with DAFMAN outage thresholds' }] },
 ]
 
 // ── Components ──
@@ -1312,9 +1333,26 @@ export default function TrainingPage() {
                 ]}
               />
 
-              {/* Step 11: Wildlife Species */}
+              {/* Step 11: SCN Agencies */}
               <BaseSetupStep
                 number={11}
+                title="SCN Agencies"
+                description="List every agency that the controller contacts on the Secondary Crash Net. Each agency becomes a toggleable badge on the daily SCN check page and appears as a row in the monthly PDF export."
+                instructions={[
+                  'Add one entry per agency (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital, Command Post).',
+                  'Use the exact name the controller announces over the net — it becomes the label on the daily check badges.',
+                  'Re-order by deleting and re-adding; the controller sees the same top-to-bottom order.',
+                  'Add or remove agencies any time — existing historical checks retain their original agency snapshot.',
+                ]}
+                tips={[
+                  'Start with the agencies on your local SCN roster. Most bases include Tower, Fire, Ambulance, Security Forces, and Command Post at minimum.',
+                  'Each base configures its own list — there is no shared default.',
+                ]}
+              />
+
+              {/* Step 12: Wildlife Species */}
+              <BaseSetupStep
+                number={12}
                 title="Wildlife Species"
                 description="Select the wildlife species commonly observed at your installation. These populate the species picker in wildlife sighting and strike report forms."
                 instructions={[
@@ -1327,9 +1365,9 @@ export default function TrainingPage() {
                 ]}
               />
 
-              {/* Step 12: Lighting Systems */}
+              {/* Step 13: Lighting Systems */}
               <BaseSetupStep
-                number={12}
+                number={13}
                 title="Lighting Systems (Optional)"
                 description="Lighting systems define your airfield's lighting infrastructure for DAFMAN 13-204v2 outage compliance tracking. This is the most complex step and can be completed separately from the initial setup."
                 instructions={[
@@ -1535,7 +1573,7 @@ function BaseSetupStep({ number, title, description, instructions, screenshots, 
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
             {title}
-            {number === 12 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>(Optional)</span>}
+            {number === 13 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>(Optional)</span>}
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
             {description.slice(0, 80)}{description.length > 80 ? '...' : ''}
