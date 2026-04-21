@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchFeedback, fetchFeedbackStats, deleteFeedback, type CustomerFeedback } from '@/lib/supabase/feedback'
+import { fetchFeedback, fetchFeedbackStats, fetchFeedbackConfig, deleteFeedback, type CustomerFeedback, type FeedbackFormField } from '@/lib/supabase/feedback'
 import { formatZuluDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -11,14 +12,23 @@ import type jsPDF from 'jspdf'
 
 const STAR = '\u2605'
 const STAR_EMPTY = '\u2606'
+const ALLOWED_ROLES = ['airfield_manager', 'sys_admin', 'base_admin', 'namo']
 
 export default function FeedbackPage() {
+  const router = useRouter()
   const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
-  const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
+  const isAdmin = ALLOWED_ROLES.includes(userRole || '')
   const [feedback, setFeedback] = useState<CustomerFeedback[]>([])
   const [stats, setStats] = useState<{ total: number; avgRating: number | null; ratingCounts: Record<number, number>; recentCount: number }>({ total: 0, avgRating: null, ratingCounts: {}, recentCount: 0 })
+  const [fieldLabelMap, setFieldLabelMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | '30d' | '7d'>('30d')
+
+  // Access control: only admin-level roles see feedback submissions.
+  useEffect(() => {
+    if (!userRole) return
+    if (!ALLOWED_ROLES.includes(userRole)) router.replace('/')
+  }, [userRole, router])
 
   // PDF export
   const [generatingPdf, setGeneratingPdf] = useState(false)
@@ -35,6 +45,7 @@ export default function FeedbackPage() {
       windowLabel,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao || undefined,
+      fieldLabelMap,
     })
   }
 
@@ -87,12 +98,16 @@ export default function FeedbackPage() {
     setLoading(true)
     const days = filter === '7d' ? 7 : filter === '30d' ? 30 : 365
     const startDate = filter !== 'all' ? new Date(Date.now() - days * 86400000).toISOString() : undefined
-    const [fb, st] = await Promise.all([
+    const [fb, st, cfg] = await Promise.all([
       fetchFeedback(installationId, { startDate }),
       fetchFeedbackStats(installationId, days),
+      fetchFeedbackConfig(installationId),
     ])
     setFeedback(fb)
     setStats(st)
+    const map: Record<string, string> = {}
+    for (const f of (cfg?.fields ?? []) as FeedbackFormField[]) map[f.id] = f.label
+    setFieldLabelMap(map)
     setLoading(false)
   }, [installationId, filter])
 
@@ -233,7 +248,7 @@ export default function FeedbackPage() {
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
                       {Object.entries(fb.responses).map(([key, val]) => (
                         <span key={key} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                          <strong>{key}:</strong> {String(val)}
+                          <strong>{fieldLabelMap[key] || key}:</strong> {String(val)}
                         </span>
                       ))}
                     </div>

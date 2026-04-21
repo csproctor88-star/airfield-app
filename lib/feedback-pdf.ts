@@ -15,10 +15,11 @@ interface FeedbackPdfInput {
   windowLabel: string
   baseName?: string | null
   baseIcao?: string | null
+  fieldLabelMap?: Record<string, string>
 }
 
 export async function generateFeedbackPdf(input: FeedbackPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const { feedback, stats, windowLabel, baseName, baseIcao } = input
+  const { feedback, stats, windowLabel, baseName, baseIcao, fieldLabelMap = {} } = input
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -120,7 +121,7 @@ export async function generateFeedbackPdf(input: FeedbackPdfInput): Promise<{ do
       head: [['Submitted', 'Name', 'Org', 'Rating', 'Comments']],
       body: feedback.map(fb => {
         const responseSummary = Object.entries(fb.responses || {})
-          .map(([k, v]) => `${k}: ${String(v)}`)
+          .map(([k, v]) => `${fieldLabelMap[k] || k}: ${String(v)}`)
           .join(' · ')
         const comments = [fb.comments, responseSummary].filter(Boolean).join('\n')
         return [

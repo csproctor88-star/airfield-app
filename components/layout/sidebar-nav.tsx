@@ -84,7 +84,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
 }
 
 // Admin-only items
-const ADMIN_ITEMS = new Set(['/library', '/users'])
+const ADMIN_ITEMS = new Set(['/library', '/users', '/feedback'])
 
 // CES role — limited navigation
 const CES_ALLOWED_ITEMS = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])

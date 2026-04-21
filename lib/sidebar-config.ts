@@ -73,7 +73,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Admin',
-      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/training', '/library', '/users'],
+      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/training', '/library', '/users', '/feedback'],
     },
     {
       label: 'Settings',
