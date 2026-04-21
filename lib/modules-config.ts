@@ -229,6 +229,7 @@ export const ALWAYS_ON_HREFS: ReadonlySet<string> = new Set([
   '/',
   '/dashboard',
   '/activity',
+  '/recent-activity',
   '/more',
   '/training',
   '/settings',

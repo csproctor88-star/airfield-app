@@ -21,6 +21,7 @@ const pinnedItems: ModuleItem[] = [
 
 // Operations
 const opsItems: ModuleItem[] = [
+  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
   { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
   { name: 'Secondary Crash Net', icon: '📻', color: '#EAB308', href: '/scn' },
   { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
@@ -48,7 +49,7 @@ const refItems: ModuleItem[] = [
 
 // Admin
 const adminItems: ModuleItem[] = [
-  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
+  { name: 'Activity Log', icon: '🕘', color: '#34D399', href: '/recent-activity' },
   { name: 'Daily Reviews', icon: '🗓️', color: '#A78BFA', href: '/daily-reviews' },
   { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },

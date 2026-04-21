@@ -25,6 +25,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Airfield Status', href: '/', iconName: 'Home' },
   { name: 'Dashboard', href: '/dashboard', iconName: 'LayoutDashboard' },
   { name: 'Events Log', href: '/activity', iconName: 'Activity' },
+  { name: 'Activity Log', href: '/recent-activity', iconName: 'History' },
   { name: 'QRC', href: '/qrc', iconName: 'Zap' },
   { name: 'Secondary Crash Net', href: '/scn', iconName: 'Radio' },
   { name: 'Shift Checklist', href: '/shift-checklist', iconName: 'ListChecks' },
@@ -60,7 +61,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/qrc', '/scn', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
+      items: ['/activity', '/qrc', '/scn', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
     },
     {
       label: 'Airfield Management',
@@ -72,7 +73,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Admin',
-      items: ['/activity', '/daily-reviews', '/waivers', '/reports', '/training', '/library', '/users'],
+      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/training', '/library', '/users'],
     },
     {
       label: 'Settings',
