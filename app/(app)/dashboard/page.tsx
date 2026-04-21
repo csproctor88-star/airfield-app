@@ -372,7 +372,7 @@ export default function AMDashboardPage() {
 
       {/* Out of Office dialog */}
       {showOooDialog && (
-        <div className="modal-overlay" onClick={() => setShowOooDialog(false)} style={{ padding: 24 }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowOooDialog(false) }} style={{ padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)',
@@ -450,7 +450,7 @@ export default function AMDashboardPage() {
 
       {/* Out of Office deactivation dialog */}
       {showOooDeactivateDialog && (
-        <div className="modal-overlay" onClick={() => setShowOooDeactivateDialog(false)} style={{ padding: 24 }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowOooDeactivateDialog(false) }} style={{ padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
@@ -490,7 +490,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Close for Day dialog ===== */}
       {showClosedDialog && (
-        <div className="modal-overlay" onClick={() => setShowClosedDialog(false)} style={{ padding: 24 }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowClosedDialog(false) }} style={{ padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 460, border: '1px solid var(--color-border-mid)',
@@ -570,7 +570,7 @@ export default function AMDashboardPage() {
 
       {/* ===== End Closed dialog ===== */}
       {showClosedDeactivateDialog && (
-        <div className="modal-overlay" onClick={() => setShowClosedDeactivateDialog(false)} style={{ padding: 24 }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowClosedDeactivateDialog(false) }} style={{ padding: 24 }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
@@ -703,7 +703,7 @@ function PersonnelFormDialog({ installationId, onClose, onSaved }: { installatio
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="card"
@@ -974,7 +974,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="card"
@@ -1314,7 +1314,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="card"

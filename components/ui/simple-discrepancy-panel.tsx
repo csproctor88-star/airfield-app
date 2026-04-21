@@ -411,7 +411,7 @@ export function SimpleDiscrepancyPanel({
             flexDirection: 'column',
             background: 'rgba(0,0,0,0.9)',
           }}
-          onClick={(e) => { if (e.target === e.currentTarget) setViewerIndex(null) }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setViewerIndex(null) }}
         >
           <button type="button" onClick={() => setViewerIndex(null)} style={{
             position: 'absolute', top: 12, right: 16, background: 'none',

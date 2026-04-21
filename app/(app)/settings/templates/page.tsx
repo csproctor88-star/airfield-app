@@ -786,7 +786,7 @@ export default function TemplateManagementPage() {
         <div
           className="modal-overlay"
           style={{ background: 'rgba(0,0,0,0.7)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setLinkingItemId(null) }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setLinkingItemId(null) }}
         >
           <div style={{
             background: 'var(--color-bg-elevated)',

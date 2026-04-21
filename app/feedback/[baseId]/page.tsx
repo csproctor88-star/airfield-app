@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { fetchFeedbackConfig, submitFeedback, type FeedbackFormConfig, type FeedbackFormField, DEFAULT_FEEDBACK_CONFIG } from '@/lib/supabase/feedback'
+import { fetchPublicFeedbackConfig, submitFeedback, type FeedbackFormConfig, type FeedbackFormField, DEFAULT_FEEDBACK_CONFIG } from '@/lib/supabase/feedback'
 
 const STAR_LABELS = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
 
 export default function FeedbackFormPage() {
   const { baseId } = useParams<{ baseId: string }>()
   const [config, setConfig] = useState<FeedbackFormConfig | null>(DEFAULT_FEEDBACK_CONFIG)
+  const [baseName, setBaseName] = useState('')
+  const [moduleEnabled, setModuleEnabled] = useState(true)
+  const [baseFound, setBaseFound] = useState(true)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -32,8 +35,15 @@ export default function FeedbackFormPage() {
     if (lastSubmit && Date.now() - parseInt(lastSubmit) < 300000) { // 5 min cooldown
       setRateLimited(true)
     }
-    fetchFeedbackConfig(baseId).then(cfg => {
-      setConfig(cfg)
+    fetchPublicFeedbackConfig(baseId).then(result => {
+      if (!result) {
+        setBaseFound(false)
+        setConfig(null)
+      } else {
+        setBaseName(result.baseName)
+        setModuleEnabled(result.moduleEnabled)
+        setConfig(result.config)
+      }
       setLoading(false)
     })
   }, [baseId])
@@ -80,13 +90,27 @@ export default function FeedbackFormPage() {
     )
   }
 
-  if (!config || !config.enabled) {
+  if (!baseFound || !config || !moduleEnabled || !config.enabled) {
+    const heading = !baseFound
+      ? 'Feedback Form Not Found'
+      : baseName
+        ? `${baseName} is not collecting feedback`
+        : 'Feedback Form Closed'
+    const body = !baseFound
+      ? 'This link does not match an active base. Check the QR code and try again.'
+      : !moduleEnabled
+        ? `${baseName || 'This base'} does not currently use the Glidepath feedback module. Please reach out to airfield management directly.`
+        : baseName
+          ? `The feedback form for ${baseName} is not active right now. Please check back later or contact airfield management.`
+          : 'This feedback form is not active right now. Please check back later.'
     return (
       <div style={{ minHeight: '100vh', background: '#0B1120', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>-</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 8 }}>Feedback Form Not Available</div>
-          <div style={{ fontSize: 14, color: '#64748B' }}>This feedback form has not been activated yet.</div>
+        <div style={{ textAlign: 'center', maxWidth: 420 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+            GLIDEPATH
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 10 }}>{heading}</div>
+          <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>{body}</div>
         </div>
       </div>
     )

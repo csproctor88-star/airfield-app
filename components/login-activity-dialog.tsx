@@ -208,7 +208,7 @@ export default function LoginActivityDialog() {
   return (
     <div
       className="modal-overlay"
-      onClick={() => setOpen(false)}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
     >
       <div
         className="card"

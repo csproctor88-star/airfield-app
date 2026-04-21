@@ -389,7 +389,7 @@ export default function PprPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
           <div onClick={e => e.stopPropagation()} style={{
             width: 480, maxHeight: '85vh', overflow: 'auto',
             background: 'var(--color-bg-surface)', borderRadius: 8,

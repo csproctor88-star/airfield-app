@@ -3032,7 +3032,7 @@ function SeedPickerDialog({
   }
 
   return (
-    <div className="modal-overlay" style={{ padding: 16 }} onClick={onClose}>
+    <div className="modal-overlay" style={{ padding: 16 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Add QRC Templates</div>
@@ -3167,7 +3167,7 @@ function EditQrcDialog({
   }
 
   return (
-    <div className="modal-overlay" style={{ padding: 16 }} onClick={onClose}>
+    <div className="modal-overlay" style={{ padding: 16 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="card" style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>

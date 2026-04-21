@@ -102,7 +102,7 @@ export default function PdfExportDialog({ open, mode, onClose, onExport, exporti
     <div
       className="modal-overlay"
       style={{ zIndex: 'var(--z-modal)' }}
-      onClick={(e) => { if (e.target === e.currentTarget && !exporting) onClose() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget && !exporting) onClose() }}
     >
       <div style={{
         background: 'var(--color-bg-surface)',

@@ -303,7 +303,7 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="card"

@@ -561,7 +561,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       <div
         className="modal-overlay"
         style={{ alignItems: 'flex-end', padding: 0 }}
-        onClick={e => { if (e.target === e.currentTarget && !required) onClose() }}
+        onMouseDown={e => { if (e.target === e.currentTarget && !required) onClose() }}
       >
         <div style={{
           width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',

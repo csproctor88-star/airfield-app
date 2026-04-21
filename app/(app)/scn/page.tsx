@@ -157,7 +157,7 @@ export default function ScnPage() {
       toast.error(res.error)
       return
     }
-    toast.success(modal.type === 'backup' ? 'Monthly SCN check logged' : 'Daily SCN check logged')
+    toast.success(modal.type === 'backup' ? 'Monthly Back-up SCN check logged' : 'Daily SCN check logged')
     setModal(null)
     load()
   }
@@ -186,7 +186,7 @@ export default function ScnPage() {
         agencies: allAgencies.map(a => a.agency_name),
       })
       doc.save(filename)
-      toast.success('Monthly SCN PDF downloaded')
+      toast.success('Monthly Back-up SCN PDF downloaded')
     } catch (e) {
       console.error(e)
       toast.error('Failed to generate PDF')
@@ -244,7 +244,7 @@ export default function ScnPage() {
           hasAgencies={agencies.length > 0}
         />
         <TodayCheckCard
-          label="Monthly SCN Check"
+          label="Monthly Back-up SCN Check"
           check={backupToday}
           onStart={() => openModal('backup')}
           onEdit={(c) => openModal('backup', c)}
@@ -307,7 +307,7 @@ export default function ScnPage() {
       {modal && (
         <ModalOverlay onClose={() => setModal(null)}>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
-            {modal.type === 'backup' ? 'Monthly SCN Check' : 'Daily SCN Check'}
+            {modal.type === 'backup' ? 'Monthly Back-up SCN Check' : 'Daily SCN Check'}
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
             {formatZuluDate(todayZuluDate())} · attribution: {operatingInitials || '—'}
@@ -521,7 +521,7 @@ function TodayCheckCard({
       ) : (
         <>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>
-            Not yet completed today.
+            {label.toLowerCase().includes('monthly') ? 'Not yet completed this month.' : 'Not yet completed today.'}
           </div>
           {canWrite && hasAgencies && (
             <button
@@ -604,7 +604,7 @@ function AgencyRow({ draft, onChange, onOpenOosNotes }: {
 
 function SummaryPreview({ draft, type }: { draft: AgencyDraft[]; type: ScnCheckType }) {
   const exceptions = draft.filter(d => d.status !== 'loud_clear')
-  const label = type === 'backup' ? 'Monthly SCN check complete' : 'Daily SCN check complete'
+  const label = type === 'backup' ? 'Monthly Back-up SCN check complete' : 'Daily SCN check complete'
   const text = exceptions.length === 0
     ? `${label} — all agencies loud & clear`
     : `${label} — all loud & clear except ${exceptions.map(e => `${e.agency_name} (${SCN_STATUS_LABELS[e.status]}${e.notes ? `: ${e.notes}` : ''})`).join(', ')}`
@@ -748,7 +748,7 @@ function ModalOverlay({ children, onClose, tightZ }: { children: React.ReactNode
   return (
     <div
       className="modal-overlay"
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
       style={{ padding: 24, zIndex: tightZ ? 1100 : undefined }}
     >
       <div

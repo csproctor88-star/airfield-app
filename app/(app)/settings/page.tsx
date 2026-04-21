@@ -1497,7 +1497,7 @@ function ConfirmDialog({
     <div
       className="modal-overlay"
       style={{ backdropFilter: 'blur(4px)' }}
-      onClick={onCancel}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
     >
       <div
         className="card"

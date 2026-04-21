@@ -665,7 +665,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     <div
       className="modal-overlay"
       style={{ alignItems: 'flex-end', padding: 0 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',

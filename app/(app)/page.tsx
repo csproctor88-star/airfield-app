@@ -512,7 +512,7 @@ export default function HomePage() {
 
       {/* OOO deactivation dialog */}
       {showOooDeactivate && (
-        <div className="modal-overlay" onClick={() => setShowOooDeactivate(false)} style={{ padding: 24, zIndex: 10000 }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowOooDeactivate(false) }} style={{ padding: 24, zIndex: 10000 }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: 'var(--color-bg-surface-solid, #1E293B)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
@@ -624,7 +624,7 @@ export default function HomePage() {
 
       {/* Closed deactivation dialog */}
       {showClosedDeactivate && (
-        <div className="modal-overlay" onClick={() => setShowClosedDeactivate(false)} style={{ padding: 24, zIndex: 10000 }}>
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowClosedDeactivate(false) }} style={{ padding: 24, zIndex: 10000 }}>
           <div onClick={e => e.stopPropagation()} style={{
             background: 'var(--color-bg-surface-solid, #1E293B)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
@@ -843,7 +843,7 @@ export default function HomePage() {
       {advisoryDialogOpen && (
         <div
           className="modal-overlay"
-          onClick={() => setAdvisoryDialogOpen(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setAdvisoryDialogOpen(false) }}
           style={{ padding: 24 }}
         >
           <div
@@ -1082,7 +1082,7 @@ export default function HomePage() {
       {navaidDialog && (
         <div
           className="modal-overlay"
-          onClick={() => setNavaidDialog(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setNavaidDialog(null) }}
           style={{ padding: 24 }}
         >
           <div
@@ -1180,7 +1180,7 @@ export default function HomePage() {
       {customItemDialog && (
         <div
           className="modal-overlay"
-          onClick={() => setCustomItemDialog(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setCustomItemDialog(null) }}
           style={{ padding: 24 }}
         >
           <div
@@ -1277,7 +1277,7 @@ export default function HomePage() {
       {confirmDialog && (
         <div
           className="modal-overlay"
-          onClick={() => setConfirmDialog(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirmDialog(null) }}
           style={{ padding: 24 }}
         >
           <div
@@ -1352,7 +1352,7 @@ export default function HomePage() {
       {rscDialogOpen && (
         <div
           className="modal-overlay"
-          onClick={() => setRscDialogOpen(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setRscDialogOpen(false) }}
           style={{ padding: 24 }}
         >
           <div
@@ -1427,7 +1427,7 @@ export default function HomePage() {
       {bwcDialogOpen && (
         <div
           className="modal-overlay"
-          onClick={() => setBwcDialogOpen(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setBwcDialogOpen(false) }}
           style={{ padding: 24 }}
         >
           <div
@@ -1838,7 +1838,7 @@ export default function HomePage() {
       {arffDialog && (
         <div
           className="modal-overlay"
-          onClick={() => setArffDialog(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setArffDialog(null) }}
           style={{ padding: 24 }}
         >
           <div
@@ -2365,7 +2365,7 @@ export default function HomePage() {
       {editingConstruction && (
         <div
           className="modal-overlay"
-          onClick={() => setEditingConstruction(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setEditingConstruction(false) }}
           style={{ padding: 24 }}
         >
           <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>
@@ -2401,7 +2401,7 @@ export default function HomePage() {
       {editingMisc && (
         <div
           className="modal-overlay"
-          onClick={() => setEditingMisc(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setEditingMisc(false) }}
           style={{ padding: 24 }}
         >
           <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)' }}>

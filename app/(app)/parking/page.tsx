@@ -3976,7 +3976,7 @@ export default function ParkingPage() {
       {/* Aircraft Picker Modal */}
       {showAircraftPicker && (
         <div
-          onClick={() => setShowAircraftPicker(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowAircraftPicker(false) }}
           className="modal-overlay"
         >
           <div
@@ -4135,7 +4135,7 @@ export default function ParkingPage() {
       {/* New Plan Modal */}
       {showNewPlan && (
         <div
-          onClick={() => setShowNewPlan(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowNewPlan(false) }}
           className="modal-overlay"
         >
           <div
@@ -4218,7 +4218,7 @@ export default function ParkingPage() {
       {/* Duplicate Plan Modal */}
       {showDuplicateModal && selectedPlan && (
         <div
-          onClick={() => setShowDuplicateModal(false)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowDuplicateModal(false) }}
           className="modal-overlay"
         >
           <div

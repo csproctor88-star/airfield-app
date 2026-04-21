@@ -33,7 +33,7 @@ export function DeleteConfirmationDialog({
         padding: 16,
         background: 'rgba(0,0,0,0.6)',
       }}
-      onClick={onCancel}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
     >
       <div
         className="card"

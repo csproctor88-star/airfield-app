@@ -106,7 +106,7 @@ export function InviteUserModal({
         padding: 16,
         background: 'rgba(0,0,0,0.6)',
       }}
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="card"

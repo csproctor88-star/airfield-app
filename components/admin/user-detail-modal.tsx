@@ -229,7 +229,7 @@ export function UserDetailModal({
         justifyContent: 'center',
         background: 'rgba(0,0,0,0.6)',
       }}
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className="card"

@@ -1188,7 +1188,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
         padding: '40px 16px', overflowY: 'auto',
         backdropFilter: 'blur(4px)',
       }}
-      onClick={onClose}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         onClick={e => e.stopPropagation()}

@@ -43,7 +43,7 @@ export default function ContactSupport({ className, style, children }: ContactSu
         <div
           className="modal-overlay"
           style={{ zIndex: 'var(--z-modal)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
         >
           <div style={{
             background: 'var(--color-bg-surface-solid, #1a1a2e)',

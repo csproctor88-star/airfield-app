@@ -458,7 +458,7 @@ export default function UserManagementPage() {
         const btnMap = { approved: 'Send Approval Email', info_needed: 'Send Info Request', rejected: 'Send Rejection Email' }
         const t = emailDialog.template
         return (
-          <div className="modal-overlay" onClick={() => setEmailDialog(null)} style={{ padding: 24, zIndex: 10000 }}>
+          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setEmailDialog(null) }} style={{ padding: 24, zIndex: 10000 }}>
             <div onClick={e => e.stopPropagation()} style={{
               background: 'var(--color-bg-surface-solid, #1E293B)', borderRadius: 'var(--radius-lg)', padding: 24,
               width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)',

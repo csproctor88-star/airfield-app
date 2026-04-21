@@ -232,7 +232,7 @@ export default function DailyReviewSignModal({
     <div
       className="modal-overlay"
       style={{ zIndex: 'var(--z-modal)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         background: 'var(--color-bg-surface-solid, #1a1a2e)',

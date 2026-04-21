@@ -26,7 +26,7 @@ function ModalOverlay({ title, onClose, children }: { title: string; onClose: ()
         alignItems: 'flex-end', justifyContent: 'center',
         background: 'var(--color-overlay)', padding: 0,
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0', width: '100%', maxWidth: 480,
@@ -758,7 +758,7 @@ export function PhotoViewerModal({
         flexDirection: 'column',
         background: 'rgba(0,0,0,0.9)',
       }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <button type="button" onClick={onClose} className="btn-ghost" style={{
         position: 'absolute', top: 12, right: 16,

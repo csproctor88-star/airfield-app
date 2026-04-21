@@ -4014,7 +4014,7 @@ export default function InfrastructureMapPage() {
         <div
           className="modal-overlay"
           style={{ zIndex: 9999 }}
-          onClick={() => setOutageAlert(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setOutageAlert(null) }}
         >
           <div
             style={{

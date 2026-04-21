@@ -98,7 +98,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     waiver: 'Waiver',
     waiver_review: 'Waiver Review',
     scn: 'SCN',
-    scn_backup: 'Monthly SCN',
+    scn_backup: 'Monthly Back-up SCN',
   }
   const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
@@ -938,7 +938,7 @@ export default function ActivityPage() {
         <div
           className="modal-overlay"
           style={{ padding: 16 }}
-          onClick={() => setEditingId(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setEditingId(null) }}
         >
           <div
             className="card"

@@ -160,9 +160,9 @@ const MODULES: ModuleRef[] = [
     keyFeatures: [
       'Per-agency badges default to Loud & Clear for fast sign-off — only touch the exceptions',
       'Out of Service requires a notes dialog explaining the fault; the reason flows into the Events Log and PDF',
-      'Daily and Monthly SCN checks tracked as separate rows with independent completion status',
+      'Daily and Monthly Back-up SCN checks tracked as separate rows with independent completion status',
       'Events Log integration — each completed check writes a summary entry with the controller\'s operating initials',
-      'Monthly PDF export — agency-by-day matrix (L/N/X cells), Out-of-Service notes, No Response roster, Monthly SCN log',
+      'Monthly PDF export — agency-by-day matrix (L/N/X cells), Out-of-Service notes, No Response roster, Monthly Back-up SCN log',
       '30-day history panel with drill-down for every past check',
       'Re-run / Edit lets a controller correct a check without creating a duplicate',
       'Per-base agency list — admins configure which agencies the base contacts on the SCN',

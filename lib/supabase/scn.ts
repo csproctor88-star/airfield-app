@@ -146,10 +146,10 @@ export async function fetchChecksInRange(baseId: string, startDate: string, endD
 /** Summarize a check for the Events Log. Returns e.g.
  *   "Daily SCN check complete — all agencies loud & clear"
  *   "Daily SCN check complete — all loud & clear except Fire Dept (No Response), ATC (Out of Service: radio fault)"
- *   "Monthly SCN check complete — all agencies loud & clear"
+ *   "Monthly Back-up SCN check complete — all agencies loud & clear"
  */
 export function summarizeCheck(check: ScnCheckWithResults): string {
-  const label = check.check_type === 'backup' ? 'Monthly SCN check complete' : 'Daily SCN check complete'
+  const label = check.check_type === 'backup' ? 'Monthly Back-up SCN check complete' : 'Daily SCN check complete'
   const exceptions = check.results.filter(r => r.status !== 'loud_clear')
   if (exceptions.length === 0) {
     return `${label} — all agencies loud & clear`

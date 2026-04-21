@@ -2088,7 +2088,7 @@ export default function InspectionsPage() {
         {showCompleteConfirm && (
           <div
             className="modal-overlay"
-            onClick={() => setShowCompleteConfirm(false)}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setShowCompleteConfirm(false) }}
             style={{ padding: 24 }}
           >
             <div
@@ -2138,7 +2138,7 @@ export default function InspectionsPage() {
         {showPauseDialog && (
           <div
             className="modal-overlay"
-            onClick={() => setShowPauseDialog(false)}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setShowPauseDialog(false) }}
             style={{ padding: 24 }}
           >
             <div
@@ -2629,7 +2629,7 @@ export default function InspectionsPage() {
         return (
           <div
             className="modal-overlay"
-            onClick={() => setBlockedInfo(null)}
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setBlockedInfo(null) }}
           >
             <div
               onClick={e => e.stopPropagation()}
@@ -2716,7 +2716,7 @@ export default function InspectionsPage() {
       {confirmStart && (
         <div
           className="modal-overlay"
-          onClick={() => setConfirmStart(null)}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirmStart(null) }}
         >
           <div
             onClick={e => e.stopPropagation()}

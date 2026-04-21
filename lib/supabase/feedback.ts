@@ -138,6 +138,34 @@ export async function fetchFeedbackConfig(baseId: string): Promise<FeedbackFormC
   return DEFAULT_FEEDBACK_CONFIG
 }
 
+// ── Public fetch (anon-callable via SECURITY DEFINER RPC) ──
+// bases has authenticated-only RLS, so the QR-scan visitor can't
+// SELECT it directly. get_public_feedback_config() returns just
+// what the public form needs — base name, module-on flag, config.
+
+export type PublicFeedbackResult = {
+  baseName: string
+  moduleEnabled: boolean
+  config: FeedbackFormConfig
+}
+
+export async function fetchPublicFeedbackConfig(baseId: string): Promise<PublicFeedbackResult | null> {
+  const supabase = createClient()
+  if (!supabase) return { baseName: '', moduleEnabled: true, config: DEFAULT_FEEDBACK_CONFIG }
+
+  const { data, error } = await (supabase as any).rpc('get_public_feedback_config', { p_base_id: baseId })
+  if (error || !data || !Array.isArray(data) || data.length === 0) return null
+
+  const row = data[0] as { base_name: string | null; module_enabled: boolean; config: unknown }
+  const rawConfig = row.config && typeof row.config === 'object' ? (row.config as Partial<FeedbackFormConfig>) : {}
+
+  return {
+    baseName: row.base_name || '',
+    moduleEnabled: row.module_enabled !== false,
+    config: { ...DEFAULT_FEEDBACK_CONFIG, ...rawConfig },
+  }
+}
+
 // ── Save form config ──
 
 export async function saveFeedbackConfig(baseId: string, config: FeedbackFormConfig): Promise<boolean> {

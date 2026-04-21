@@ -95,7 +95,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
   }
 
   return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="modal-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
       {/* Responsive inline style tag for grid columns */}
       <style>{`
         .species-grid {

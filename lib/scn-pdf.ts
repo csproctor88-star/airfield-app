@@ -145,8 +145,8 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     return row
   })
 
-  // Monthly SCN row appended at the bottom with B marks on days it was completed
-  const backupRow: (string | { content: string; meta?: 'backup' })[] = ['Monthly SCN']
+  // Monthly Back-up SCN row appended at the bottom with B marks on days it was completed
+  const backupRow: (string | { content: string; meta?: 'backup' })[] = ['Monthly Back-up SCN']
   for (let d = 1; d <= dayCount; d++) {
     backupRow.push(backupDays.has(d) ? { content: 'B', meta: 'backup' } : { content: '·' })
   }
@@ -223,12 +223,12 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     y = ((doc as any).lastAutoTable?.finalY ?? y) + 8
   }
 
-  // ── Monthly SCN completion log ──
+  // ── Monthly Back-up SCN completion log ──
   if (backupDays.size > 0) {
     if (y > pageBreakThreshold) { doc.addPage(); y = margin }
     doc.setFontSize(11)
     doc.setTextColor(20)
-    doc.text('Monthly SCN Completion Log', margin, y)
+    doc.text('Monthly Back-up SCN Completion Log', margin, y)
     y += 4
     const sortedBackup = Array.from(backupDays.keys()).sort((a, b) => a - b)
     autoTable(doc, {

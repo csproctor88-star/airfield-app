@@ -50,7 +50,7 @@ describe('summarizeCheck', () => {
     const check = makeCheck('backup', [
       makeResult({ agency_name: 'Fire Dept', status: 'loud_clear' }),
     ])
-    expect(summarizeCheck(check)).toBe('Monthly SCN check complete — all agencies loud & clear')
+    expect(summarizeCheck(check)).toBe('Monthly Back-up SCN check complete — all agencies loud & clear')
   })
 
   it('lists a single no_response exception without notes', () => {

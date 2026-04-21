@@ -41,7 +41,7 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
     <div
       className="modal-overlay"
       style={{ zIndex: 'var(--z-modal)' }}
-      onClick={(e) => { if (e.target === e.currentTarget && !sending) onClose() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget && !sending) onClose() }}
     >
       <div
         style={{

@@ -47,7 +47,7 @@ export function WhatsNewModal({ notes, onDismiss }: WhatsNewModalProps) {
   return (
     <div
       className="modal-overlay"
-      onClick={handleDismiss}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) handleDismiss() }}
       style={{ padding: 24, zIndex: 10000 }}
     >
       <div

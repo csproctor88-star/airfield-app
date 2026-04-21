@@ -149,7 +149,7 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
     <div
       className="modal-overlay"
       style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
         width: '100%',

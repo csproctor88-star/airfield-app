@@ -41,7 +41,7 @@ const ENTITY_LABELS: Record<string, string> = {
   weather_info: 'Weather Info', arff_status: 'ARFF', contractor: 'Personnel', qrc: 'QRC',
   wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike', manual: 'Manual Entry',
   parking_plan: 'Parking Plan', ppr_entry: 'PPR', acsi_inspection: 'ACSI Inspection',
-  waiver: 'Waiver', waiver_review: 'Waiver Review', scn: 'SCN', scn_backup: 'Monthly SCN',
+  waiver: 'Waiver', waiver_review: 'Waiver Review', scn: 'SCN', scn_backup: 'Monthly Back-up SCN',
 }
 
 const ACTION_LABELS: Record<string, string> = {
