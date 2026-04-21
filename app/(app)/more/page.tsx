@@ -37,7 +37,6 @@ const opsItems: ModuleItem[] = [
 const mgmtItems: ModuleItem[] = [
   { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
-  { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
 ]
 
@@ -46,11 +45,17 @@ const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: '✈️', color: '#38BDF8', href: '/aircraft' },
   { name: 'Reference Library', icon: '📚', color: '#22D3EE', href: '/regulations' },
   { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
+]
+
+// Admin
+const adminItems: ModuleItem[] = [
+  { name: 'Daily Reviews', icon: '🗓️', color: '#A78BFA', href: '/daily-reviews' },
+  { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
   { name: 'Training', icon: '🎓', color: '#38BDF8', href: '/training' },
 ]
 
-// Settings / Admin
+// Settings
 const settingsItems: ModuleItem[] = [
   { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
@@ -288,7 +293,10 @@ export default function MorePage() {
         {/* Reference */}
         <CollapsibleGroup label="Reference" icon="📚" items={filterItems(refItems)} />
 
-        {/* Settings / Admin */}
+        {/* Admin */}
+        <CollapsibleGroup label="Admin" icon="🛡️" items={filterItems(adminItems)} />
+
+        {/* Settings */}
         <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
       </div>
 

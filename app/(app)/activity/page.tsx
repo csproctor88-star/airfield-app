@@ -9,7 +9,7 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
-import { fetchRecentReviews, isFullyCertified, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import { fetchRecentReviews, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
@@ -284,20 +284,6 @@ export default function ActivityPage() {
     })()
     return () => { cancelled = true }
   }, [])
-
-  const pendingReviewDates: string[] = (() => {
-    const reviewed = new Map(recentReviews.map(r => [r.review_date, r] as const))
-    const dates: string[] = []
-    const [y, m, d] = reviewTodayIso.split('-').map(Number)
-    for (let i = 1; i <= 7; i++) {
-      const day = new Date(Date.UTC(y, m - 1, d))
-      day.setUTCDate(day.getUTCDate() - i)
-      const iso = day.toISOString().slice(0, 10)
-      const row = reviewed.get(iso)
-      if (!row || !isFullyCertified(row, shiftCount)) dates.push(iso)
-    }
-    return dates
-  })()
 
   const todayShiftReview = (() => {
     const amslSlots = requiredSlotsForShifts(shiftCount).filter((s) => s.endsWith('_amsl'))
@@ -593,28 +579,6 @@ export default function ActivityPage() {
             </div>
           </div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Sign →</div>
-        </div>
-      )}
-
-      {/* ===== Daily Reviews Pending ===== */}
-      {pendingReviewDates.length > 0 && (
-        <div
-          onClick={() => router.push('/daily-reviews')}
-          style={{
-            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
-            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-warning)' }}>
-              {pendingReviewDates.length} Daily Review{pendingReviewDates.length === 1 ? '' : 's'} Pending
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              Oldest: {pendingReviewDates[pendingReviewDates.length - 1]} — DAFMAN 13-204v1 Para 2.5.2.10
-            </div>
-          </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Review →</div>
         </div>
       )}
 

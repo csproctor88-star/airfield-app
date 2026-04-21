@@ -78,6 +78,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   'Operations': Wrench,
   'Airfield Management': FolderOpen,
   'Reference': BookOpen,
+  'Admin': Shield,
   'Settings': Settings,
 }
 
