@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import { isModuleEnabled } from '@/lib/modules-config'
+import { isModuleEnabled, isModuleSetupComplete, MODULES, type ModuleKey } from '@/lib/modules-config'
 import { fetchActivityLog, fetchDashboardActivity } from '@/lib/supabase/activity-queries'
 import { fetchInspections } from '@/lib/supabase/inspections'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
@@ -191,7 +191,7 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, enabledModules } = useInstallation()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, enabledModules, setupProgress } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
@@ -570,6 +570,36 @@ export default function AMDashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* ===== Setup finish banner ===== */}
+      {(() => {
+        const canEditSetup =
+          userRole === 'airfield_manager' || userRole === 'sys_admin' ||
+          userRole === 'base_admin' || userRole === 'namo'
+        if (!canEditSetup) return null
+        const incomplete = MODULES.filter(m =>
+          (enabledModules as ModuleKey[]).includes(m.key) &&
+          m.setupSteps.length > 0 &&
+          !isModuleSetupComplete(m.key, setupProgress)
+        )
+        if (incomplete.length === 0) return null
+        const labels = incomplete.slice(0, 3).map(m => m.label).join(', ')
+        const extra = incomplete.length > 3 ? ` and ${incomplete.length - 3} more` : ''
+        return (
+          <Link href="/settings/base-setup" style={{
+            display: 'block', marginBottom: 12, padding: '10px 14px',
+            borderRadius: 'var(--radius-md)',
+            background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.35)',
+            color: 'var(--color-text-1)', textDecoration: 'none',
+            fontSize: 'var(--fs-sm)',
+          }}>
+            <span style={{ fontWeight: 700, color: 'var(--color-warning)' }}>Finish base setup →</span>{' '}
+            <span style={{ color: 'var(--color-text-2)' }}>
+              Still need to configure: {labels}{extra}.
+            </span>
+          </Link>
+        )
+      })()}
 
       {/* ===== Quick Actions — centered, responsive grid ===== */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'center' }}>

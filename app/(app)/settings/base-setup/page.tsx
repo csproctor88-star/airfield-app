@@ -56,7 +56,7 @@ import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
-import { isWizardStepEnabled, type WizardStepKey } from '@/lib/modules-config'
+import { isWizardStepEnabled, isStepDone, type WizardStepKey } from '@/lib/modules-config'
 
 type SetupTab = WizardStepKey
 
@@ -87,7 +87,7 @@ const WIZARD_STEPS: WizardStep[] = [
 ]
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole, enabledModules } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole, enabledModules, setupProgress, markSetupStep } = useInstallation()
   const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const [editingBaseName, setEditingBaseName] = useState(false)
@@ -117,6 +117,14 @@ export default function BaseSetupPage() {
   const progress = visibleSteps.length > 0 ? ((safeStepIndex + 1) / visibleSteps.length) * 100 : 100
 
   const goNext = () => {
+    if (step) markSetupStep(step.key, 'complete').catch(() => {})
+    if (!isLastStep) {
+      setCurrentStep(safeStepIndex + 1)
+      window.scrollTo(0, 0)
+    }
+  }
+  const goSkip = () => {
+    if (step) markSetupStep(step.key, 'skipped').catch(() => {})
     if (!isLastStep) {
       setCurrentStep(safeStepIndex + 1)
       window.scrollTo(0, 0)
@@ -207,25 +215,29 @@ export default function BaseSetupPage() {
       <div style={{
         display: 'flex', gap: 3, marginBottom: 16, flexWrap: 'wrap',
       }}>
-        {visibleSteps.map((s, i) => (
-          <button
-            key={s.key}
-            onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
-            title={s.label}
-            style={{
-              width: 28, height: 28, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--fs-2xs)', fontWeight: 700,
-              border: i === safeStepIndex ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
-              background: i === safeStepIndex ? 'rgba(34,211,238,0.15)' : i < safeStepIndex ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
-              color: i === safeStepIndex ? 'var(--color-cyan)' : i < safeStepIndex ? 'var(--color-success)' : 'var(--color-text-3)',
-              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-              transition: 'all 0.15s',
-            }}
-          >
-            {i < safeStepIndex ? '✓' : i + 1}
-          </button>
-        ))}
+        {visibleSteps.map((s, i) => {
+          const done = isStepDone(s.key, setupProgress)
+          const isCurrent = i === safeStepIndex
+          return (
+            <button
+              key={s.key}
+              onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
+              title={s.label}
+              style={{
+                width: 28, height: 28, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                border: isCurrent ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                background: isCurrent ? 'rgba(34,211,238,0.15)' : done ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
+                color: isCurrent ? 'var(--color-cyan)' : done ? 'var(--color-success)' : 'var(--color-text-3)',
+                cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                transition: 'all 0.15s',
+              }}
+            >
+              {done && !isCurrent ? '✓' : i + 1}
+            </button>
+          )
+        })}
       </div>
 
       {/* Step header */}
@@ -301,7 +313,7 @@ export default function BaseSetupPage() {
         )}
         {!step.required && (
           <button
-            onClick={goNext}
+            onClick={goSkip}
             style={{
               flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-base)',
               border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
@@ -315,6 +327,7 @@ export default function BaseSetupPage() {
         {isLastStep ? (
           <Link
             href="/settings"
+            onClick={() => { if (step) markSetupStep(step.key, 'complete').catch(() => {}) }}
             style={{
               flex: 2, padding: '12px 16px', borderRadius: 'var(--radius-base)',
               border: 'none',
