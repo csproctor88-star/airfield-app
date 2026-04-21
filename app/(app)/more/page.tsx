@@ -21,7 +21,6 @@ const pinnedItems: ModuleItem[] = [
 
 // Operations
 const opsItems: ModuleItem[] = [
-  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
   { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
   { name: 'Secondary Crash Net', icon: '📻', color: '#EAB308', href: '/scn' },
   { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
@@ -49,17 +48,18 @@ const refItems: ModuleItem[] = [
 
 // Admin
 const adminItems: ModuleItem[] = [
+  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
   { name: 'Daily Reviews', icon: '🗓️', color: '#A78BFA', href: '/daily-reviews' },
   { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
   { name: 'Training', icon: '🎓', color: '#38BDF8', href: '/training' },
+  { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
+  { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
 ]
 
 // Settings
 const settingsItems: ModuleItem[] = [
   { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
-  { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
-  { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
 ]
 
 function NavItem({ item }: { item: ModuleItem }) {
