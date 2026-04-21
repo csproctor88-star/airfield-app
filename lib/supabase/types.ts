@@ -323,6 +323,8 @@ export type Database = {
           advisories: Json
           advisory_text: string | null
           advisory_type: string | null
+          afm_closed: boolean
+          afm_closed_message: string | null
           afm_ooo_message: string | null
           afm_out_of_office: boolean
           arff_cat: number | null
@@ -350,6 +352,8 @@ export type Database = {
           advisories?: Json
           advisory_text?: string | null
           advisory_type?: string | null
+          afm_closed?: boolean
+          afm_closed_message?: string | null
           afm_ooo_message?: string | null
           afm_out_of_office?: boolean
           arff_cat?: number | null
@@ -377,6 +381,8 @@ export type Database = {
           advisories?: Json
           advisory_text?: string | null
           advisory_type?: string | null
+          afm_closed?: boolean
+          afm_closed_message?: string | null
           afm_ooo_message?: string | null
           afm_out_of_office?: boolean
           arff_cat?: number | null
@@ -944,6 +950,7 @@ export type Database = {
           checklist_reset_time: string
           contractor_templates: Json | null
           created_at: string
+          default_closed_message: string | null
           default_ooo_message: string | null
           discrepancy_type_shop_map: Json | null
           elevation_msl: number | null
@@ -970,6 +977,7 @@ export type Database = {
           checklist_reset_time?: string
           contractor_templates?: Json | null
           created_at?: string
+          default_closed_message?: string | null
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
@@ -996,6 +1004,7 @@ export type Database = {
           checklist_reset_time?: string
           contractor_templates?: Json | null
           created_at?: string
+          default_closed_message?: string | null
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null

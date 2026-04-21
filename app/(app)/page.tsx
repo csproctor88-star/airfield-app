@@ -59,7 +59,7 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 
 export default function HomePage() {
   const router = useRouter()
-  const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, refreshStatus } = useDashboard()
+  const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft, userRole, currentInstallation } = useInstallation()
   const showArffCat = (() => {
     const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
@@ -81,6 +81,9 @@ export default function HomePage() {
   const [oooMinimized, setOooMinimized] = useState(false)
   const [showOooDeactivate, setShowOooDeactivate] = useState(false)
   const [oooCpInitials, setOooCpInitials] = useState('')
+  const [closedMinimized, setClosedMinimized] = useState(false)
+  const [showClosedDeactivate, setShowClosedDeactivate] = useState(false)
+  const [closedCpInitials, setClosedCpInitials] = useState('')
   const [customItemDialog, setCustomItemDialog] = useState<{
     item: CustomStatusItem
     boardName: string
@@ -552,6 +555,135 @@ export default function HomePage() {
               >Deactivate</button>
               <button
                 onClick={() => setShowOooDeactivate(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AFM Closed banner */}
+      {afmClosed && !closedMinimized && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 100,
+          background: 'rgba(15, 23, 42, 0.94)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(100, 116, 139, 0.5)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: 12,
+          textAlign: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 24 }}>🌙</span>
+            <span style={{
+              fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#E2E8F0',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
+            }}>
+              Airfield Management Closed
+            </span>
+          </div>
+          <div style={{
+            fontSize: 'var(--fs-md)', color: '#CBD5E1', lineHeight: 1.5,
+            marginTop: 8, whiteSpace: 'pre-wrap',
+          }}>
+            {afmClosedMessage || 'Airfield Management is closed for the day.'}
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+            <button
+              onClick={() => setClosedMinimized(true)}
+              style={{
+                padding: '6px 16px', borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(203,213,225,0.3)', background: 'rgba(0,0,0,0.3)',
+                color: '#E2E8F0', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >Minimize</button>
+            {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
+              <button
+                onClick={() => { setClosedCpInitials(''); setShowClosedDeactivate(true) }}
+                style={{
+                  padding: '6px 16px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
+                  color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >Reopen</button>
+            )}
+          </div>
+        </div>
+      )}
+      {afmClosed && closedMinimized && (
+        <div
+          onClick={() => setClosedMinimized(false)}
+          style={{
+            position: 'sticky', top: 0, zIndex: 100,
+            background: 'rgba(15, 23, 42, 0.9)',
+            borderRadius: 'var(--radius-md)',
+            padding: '6px 14px',
+            marginBottom: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 14 }}>🌙</span>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: '#E2E8F0', textTransform: 'uppercase' }}>
+            Airfield Closed
+          </span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: '#94A3B8' }}>— tap to expand</span>
+        </div>
+      )}
+
+      {/* Closed deactivation dialog — CP initials required */}
+      {showClosedDeactivate && (
+        <div className="modal-overlay" onClick={() => setShowClosedDeactivate(false)} style={{ padding: 24, zIndex: 10000 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid, #1E293B)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              Reopen Airfield
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.55 }}>
+              The opening check will capture fresh runway, RSC, and BWC status. Enter CP initials to log the reopen.
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Command Post Notified</div>
+            <input
+              autoFocus
+              value={closedCpInitials}
+              onChange={e => setClosedCpInitials(e.target.value.toUpperCase())}
+              placeholder="CP Initials (e.g. JD)"
+              maxLength={4}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: 14,
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmClosed(false)
+                  const cpText = closedCpInitials.trim() ? `/${closedCpInitials.trim()}` : ''
+                  await logManualEntry(`AIRFIELD MANAGEMENT REOPENED, COMMAND POST${cpText} NOTIFIED — OPENING CHECK WILL SET CURRENT RUNWAY, RSC, AND BWC`, installationId)
+                  setShowClosedDeactivate(false)
+                  toast.success('Airfield reopened')
+                }}
+                disabled={!closedCpInitials.trim()}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: closedCpInitials.trim() ? 'pointer' : 'default', border: '1px solid var(--color-success)',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
+                  opacity: closedCpInitials.trim() ? 1 : 0.4,
+                }}
+              >Reopen</button>
+              <button
+                onClick={() => setShowClosedDeactivate(false)}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',

@@ -43,6 +43,10 @@ export interface InstallationContextValue {
   defaultOooMessage: string | null
   /** Save a new per-base default Out of Office message */
   updateDefaultOooMessage: (message: string) => Promise<void>
+  /** Per-base default "closed for the day" message */
+  defaultClosedMessage: string | null
+  /** Save a new per-base default closed message */
+  updateDefaultClosedMessage: (message: string) => Promise<void>
   /** Module keys enabled for the current installation */
   enabledModules: ModuleKey[]
   /** Per-step setup completion state for the current installation */
@@ -162,6 +166,22 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
       .eq('id', installationId)
     setCurrentInstallation(prev =>
       prev ? ({ ...prev, default_ooo_message: message } as typeof prev) : prev
+    )
+  }, [installationId])
+
+  const defaultClosedMessage =
+    (currentInstallation as unknown as { default_closed_message?: string | null } | null)?.default_closed_message ?? null
+
+  const updateDefaultClosedMessage = useCallback(async (message: string) => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    await supabase
+      .from('bases')
+      .update({ default_closed_message: message } as Record<string, unknown>)
+      .eq('id', installationId)
+    setCurrentInstallation(prev =>
+      prev ? ({ ...prev, default_closed_message: message } as typeof prev) : prev
     )
   }, [installationId])
 
@@ -295,7 +315,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, enabledModules, setupProgress, updateEnabledModules, markSetupStep, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress, updateEnabledModules, markSetupStep, loaded }}
     >
       {children}
     </InstallationContext.Provider>

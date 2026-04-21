@@ -191,15 +191,20 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, enabledModules, setupProgress } = useInstallation()
-  const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice } = useDashboard()
+  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
+  const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed } = useDashboard()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
   const OOO_DEFAULT_MESSAGE = 'Airfield Management is Out of the Office. Contact via cell phone  at (586) 396-4046 or via Tower Net Callsign: Airfield3'
+  const CLOSED_DEFAULT_MESSAGE = 'Airfield Management is CLOSED for the day. Runway, RSC, and BWC status will be refreshed during the next opening check.'
   const [showOooDialog, setShowOooDialog] = useState(false)
   const [showOooDeactivateDialog, setShowOooDeactivateDialog] = useState(false)
   const [oooMessage, setOooMessage] = useState(OOO_DEFAULT_MESSAGE)
   const [savingOooDefault, setSavingOooDefault] = useState(false)
+  const [showClosedDialog, setShowClosedDialog] = useState(false)
+  const [showClosedDeactivateDialog, setShowClosedDeactivateDialog] = useState(false)
+  const [closedMessage, setClosedMessage] = useState(CLOSED_DEFAULT_MESSAGE)
+  const [savingClosedDefault, setSavingClosedDefault] = useState(false)
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
   useEffect(() => {
@@ -673,6 +678,27 @@ export default function AMDashboardPage() {
             {afmOutOfOffice ? '🔴 End OOO' : '🚪 Out of Office'}
           </button>
         )}
+        {canToggleOoo && (
+          <button onClick={() => {
+            if (afmClosed) {
+              setShowClosedDeactivateDialog(true)
+            } else {
+              setClosedMessage(afmClosedMessage || defaultClosedMessage || CLOSED_DEFAULT_MESSAGE)
+              setShowClosedDialog(true)
+            }
+          }} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '14px 20px', borderRadius: 'var(--radius-md)', minHeight: 52,
+            flex: '1 1 140px',
+            background: afmClosed ? 'rgba(100,116,139,0.25)' : 'var(--color-bg-surface)',
+            border: afmClosed ? '1px solid rgba(100,116,139,0.55)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-base)', fontWeight: 600,
+            color: afmClosed ? '#CBD5E1' : 'var(--color-text-1)',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            {afmClosed ? '🌙 End Closed' : '🌙 Close for Day'}
+          </button>
+        )}
       </div>
 
       {/* Out of Office dialog */}
@@ -782,6 +808,127 @@ export default function AMDashboardPage() {
               >Deactivate</button>
               <button
                 onClick={() => setShowOooDeactivateDialog(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Close for Day dialog ===== */}
+      {showClosedDialog && (
+        <div className="modal-overlay" onClick={() => setShowClosedDialog(false)} style={{ padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 460, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 6 }}>
+              Close Airfield Management
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.55 }}>
+              Displays a CLOSED banner on the Airfield Status page and{' '}
+              <strong style={{ color: 'var(--color-text-2)' }}>resets runway status, RSC, RCR, and BWC</strong> so tomorrow&rsquo;s opening check can enter fresh values.
+              Historical entries in the Events Log are not affected.
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 4 }}>Display Message</div>
+            <textarea
+              value={closedMessage}
+              onChange={e => setClosedMessage(e.target.value)}
+              rows={3}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
+                fontFamily: 'inherit', resize: 'vertical', minHeight: 60, marginBottom: 8,
+              }}
+            />
+            <div style={{ marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  const msg = closedMessage.trim()
+                  if (!msg) return
+                  setSavingClosedDefault(true)
+                  try {
+                    await updateDefaultClosedMessage(msg)
+                    toast.success('Default message saved for this base')
+                  } catch {
+                    toast.error('Could not save default message')
+                  } finally {
+                    setSavingClosedDefault(false)
+                  }
+                }}
+                disabled={savingClosedDefault || !closedMessage.trim() || closedMessage.trim() === (defaultClosedMessage || '').trim()}
+                style={{
+                  padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                  cursor: savingClosedDefault ? 'default' : 'pointer',
+                  border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-2)',
+                  opacity: (!closedMessage.trim() || closedMessage.trim() === (defaultClosedMessage || '').trim()) ? 0.5 : 1,
+                }}
+              >{savingClosedDefault ? 'Saving…' : 'Set as Default'}</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmClosed(true, closedMessage)
+                  await logManualEntry('Airfield Management CLOSED for the day — runway status, RSC, RCR, and BWC reset for next opening check', installationId)
+                  setShowClosedDialog(false)
+                  toast.success('Airfield management closed')
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid rgba(100,116,139,0.6)',
+                  background: 'rgba(100,116,139,0.25)', color: '#CBD5E1',
+                }}
+              >Activate</button>
+              <button
+                onClick={() => setShowClosedDialog(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-border-mid)',
+                  background: 'var(--color-bg-inset)', color: 'var(--color-text-3)',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== End Closed dialog ===== */}
+      {showClosedDeactivateDialog && (
+        <div className="modal-overlay" onClick={() => setShowClosedDeactivateDialog(false)} style={{ padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
+            width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
+          }}>
+            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
+              End Closed Status
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16, lineHeight: 1.55 }}>
+              This will clear the CLOSED banner. Runway, RSC, and BWC values remain blank — enter fresh values
+              during the opening check.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={async () => {
+                  await setAfmClosed(false)
+                  await logManualEntry('Airfield Management reopened — opening check will set current runway, RSC, and BWC', installationId)
+                  setShowClosedDeactivateDialog(false)
+                  toast.success('Closed status ended')
+                }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  cursor: 'pointer', border: '1px solid var(--color-success)',
+                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)',
+                }}
+              >Deactivate</button>
+              <button
+                onClick={() => setShowClosedDeactivateDialog(false)}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-border-mid)',
