@@ -6,12 +6,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled, isModuleSetupComplete, MODULES, type ModuleKey } from '@/lib/modules-config'
-import { fetchActivityLog, fetchDashboardActivity } from '@/lib/supabase/activity-queries'
 import { fetchInspections } from '@/lib/supabase/inspections'
-import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
+import { logManualEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
-import { TemplatePicker } from '@/components/ui/template-picker'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
@@ -25,175 +23,10 @@ const QUICK_ACTIONS = [
   { label: 'New Discrepancy', icon: '\uD83D\uDEA8', color: 'var(--color-danger)', href: '/discrepancies/new' },
 ]
 
-function maskEdipi(edipi: string): string {
-  if (edipi.length <= 4) return '*'.repeat(edipi.length)
-  return '*'.repeat(edipi.length - 4) + edipi.slice(-4)
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Administrator',
-  airfield_manager: 'Airfield Manager',
-  inspector: 'Inspector',
-  viewer: 'Viewer',
-  operator: 'Operator',
-}
-
-// --- Activity action formatting ---
-const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
-  'Inspections/Checks': 'Logged Inspection/Check',
-  'AMOPS Reporting': 'Logged AMOPS Report',
-  'Tower Reporting': 'Logged Tower Report',
-  'Shift Changes': 'Logged Shift Change',
-  'Daily Tasks': 'Logged Daily Task',
-  'QRC': 'Logged QRC Entry',
-  'PCAS/SCN Tests & Activations': 'Logged PCAS/SCN',
-  'Personnel on Airfield': 'Logged Personnel',
-  'NOTAMs': 'Logged NOTAM',
-  'ARFF': 'Logged ARFF',
-  'IFE/GE': 'Logged IFE/GE',
-  'CMA Violations': 'Logged CMA Violation',
-  'BWC Declarations': 'Logged BWC Change',
-  'Miscellaneous': 'Logged Entry',
-}
-
-/** Infer action label from free-typed manual entry text */
-function inferActionFromText(details: string): string | null {
-  const d = (details || '').toUpperCase()
-  if (d.includes('SHIFT CHANGE')) return 'Shift Change'
-  if (d.includes('AMOPS OPEN')) return 'AMOPS Open'
-  if (d.includes('AMOPS CLOSED') || d.includes('AMOPS CLSD')) return 'AMOPS Closed'
-  if (d.includes('NOTAM CANCEL') || d.includes('NOTAMC')) return 'NOTAM Canceled'
-  if (d.includes('NOTAM ISSUED') || d.includes('NOTAMN')) return 'NOTAM Issued'
-  if (d.includes('NOTAM REPLACED') || d.includes('NOTAMR')) return 'NOTAM Replaced'
-  if (d.includes('NOTAM EXTENDED')) return 'NOTAM Extended'
-  if (d.includes('SCN CHECK')) return 'SCN Check Complete'
-  if (d.includes('SCN ACTIVATED')) return 'SCN Activated'
-  if (d.includes('PCAS TESTED') || d.includes('PCAS TEST')) return 'PCAS Tested'
-  if (d.includes('PCAS ACTIVATED')) return 'PCAS Activated'
-  if (d.includes('PTD CK') || d.includes('PTD CHECK')) return 'PTD Check'
-  if (d.includes('TOWER IS NOW OPEN') || d.includes('TOWER OPEN')) return 'Tower Open'
-  if (d.includes('TOWER CLOSED') || d.includes('TOWER CLSD')) return 'Tower Closed'
-  if (d.includes('BWC CHANGE') || d.includes('BWC/')) return 'BWC Change'
-  if (d.includes('ARFF') && d.includes('STATUS')) return 'ARFF Status'
-  if (d.includes('RUNWAY') && d.includes('IN USE')) return 'Runway In Use'
-  if (d.includes('OPS RESUMED')) return 'Ops Resumed'
-  if (d.includes('CHECKLIST COMPLETE') || d.includes('CHECKLIST CMPLT')) return 'Checklist Complete'
-  if (d.includes('UNAUTHORIZED VEHICLE') || d.includes('CMAV')) return 'CMA Violation'
-  return null
-}
-
-function formatAction(action: string, entityType: string, displayId?: string, metadata?: Record<string, unknown> | null): string {
-  // Template-based manual entries — use template label for specific action
-  if (entityType === 'manual' && metadata?.template_label) {
-    return metadata.template_label as string
-  }
-  if (entityType === 'manual' && metadata?.template_category) {
-    return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Entry'
-  }
-  // Infer action from free-typed text when no template metadata exists
-  if (entityType === 'manual' && metadata?.details) {
-    const inferred = inferActionFromText(metadata.details as string)
-    if (inferred) return inferred
-  }
-
-  const typeLabel: Record<string, string> = {
-    discrepancy: 'Discrepancy',
-    check: 'Check',
-    airfield_check: 'Check',
-    inspection: 'Inspection',
-    acsi_inspection: 'ACSI Inspection',
-    obstruction_evaluation: 'Obstruction Eval',
-    navaid_status: 'NAVAID',
-    airfield_status: 'Runway',
-    weather_info: 'Weather Info',
-    arff_status: 'ARFF',
-    contractor: 'Personnel',
-    qrc: 'QRC',
-    wildlife_sighting: 'Wildlife Sighting',
-    wildlife_strike: 'Wildlife Strike',
-    manual: 'Logged Entry',
-    parking_plan: 'Parking Plan',
-    ppr_entry: 'PPR',
-    waiver: 'Waiver',
-    waiver_review: 'Waiver Review',
-    scn: 'SCN',
-    scn_backup: 'Monthly SCN',
-  }
-  const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-  const id = displayId ? ` ${displayId}` : ''
-  const actionLabel: Record<string, string> = {
-    created: 'Created',
-    updated: 'Updated',
-    deleted: 'Deleted',
-    completed: 'Completed',
-    opened: 'Opened',
-    closed: 'Closed',
-    status_updated: 'Status changed on',
-    saved: 'Saved',
-    filed: 'Filed',
-    resumed: 'Resumed',
-    reviewed: 'Reviewed',
-    noted: 'Logged',
-    logged_personnel: 'Logged',
-    personnel_off_airfield: 'Personnel Off Airfield',
-    cancelled: 'Cancelled',
-    waiver_review_deleted: 'Deleted review for',
-  }
-  const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
-  if (action === 'personnel_off_airfield') return `${label}${id}`
-  if (entityType === 'manual') return entity
-  return `${label} ${entity}${id}`
-}
-
-type ActivityEntry = {
-  id: string
-  action: string
-  entity_type: string
-  entity_id: string | null
-  entity_display_id: string | null
-  metadata: Record<string, unknown> | null
-  created_at: string
-  user_name: string
-  user_rank: string | null
-  user_role: string | null
-  user_edipi: string | null
-  user_operating_initials: string | null
-}
-
-function getActionColor(action: string, entityType: string): string {
-  if (entityType === 'manual') return 'var(--color-text-2)'
-  if (action === 'completed' || action === 'filed') return 'var(--color-green)'
-  if (action === 'deleted' || action === 'cancelled') return 'var(--color-red)'
-  switch (entityType) {
-    case 'check': case 'airfield_check': return 'var(--color-cyan)'
-    case 'inspection': case 'acsi_inspection': return 'var(--color-cyan)'
-    case 'discrepancy': return 'var(--color-warning)'
-    case 'qrc': return 'var(--color-purple)'
-    case 'wildlife_sighting': case 'wildlife_strike': return 'var(--color-orange)'
-    case 'airfield_status': case 'navaid_status': return 'var(--color-blue)'
-    case 'contractor': return 'var(--color-text-2)'
-    default: return 'var(--color-text-2)'
-  }
-}
-
-function getEntityLink(entityType: string, entityId: string | null): string | null {
-  if (!entityId) return null
-  switch (entityType) {
-    case 'discrepancy': return `/discrepancies/${entityId}`
-    case 'check': return `/checks/${entityId}`
-    case 'airfield_check': return `/checks/${entityId}`
-    case 'inspection': return `/inspections/${entityId}`
-    case 'obstruction_evaluation': return `/obstructions`
-    case 'qrc': return `/qrc?exec=${entityId}`
-    default: return null
-  }
-}
-
 export default function AMDashboardPage() {
   const router = useRouter()
   const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed } = useDashboard()
-  const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
   const OOO_DEFAULT_MESSAGE = 'Airfield Management is Out of the Office. Contact via cell phone  at (586) 396-4046 or via Tower Net Callsign: Airfield3'
   const CLOSED_DEFAULT_MESSAGE = 'Airfield Management is CLOSED for the day. Runway, RSC, and BWC status will be refreshed during the next opening check.'
@@ -205,31 +38,11 @@ export default function AMDashboardPage() {
   const [showClosedDeactivateDialog, setShowClosedDeactivateDialog] = useState(false)
   const [closedMessage, setClosedMessage] = useState(CLOSED_DEFAULT_MESSAGE)
   const [savingClosedDefault, setSavingClosedDefault] = useState(false)
-  const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
-
-  useEffect(() => {
-    if (!installationId) return
-    import('@/lib/supabase/activity-templates').then(({ loadCustomActivityTemplates }) =>
-      loadCustomActivityTemplates(installationId).then(setCustomTemplates)
-    )
-  }, [installationId])
   const baseTimezone = currentInstallation?.timezone || 'America/New_York'
   const baseResetTime = (currentInstallation as Record<string, any>)?.checklist_reset_time || '06:00'
-  const [activity, setActivity] = useState<ActivityEntry[]>([])
-  const [manualText, setManualText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [showContractorForm, setShowContractorForm] = useState(false)
   const [showShiftChecklist, setShowShiftChecklist] = useState(false)
   const [showQrc, setShowQrc] = useState(false)
-  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
-  const [logEntryExpanded, setLogEntryExpanded] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editText, setEditText] = useState('')
-  const [editDate, setEditDate] = useState('')
-  const [editTime, setEditTime] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
-  const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
   const [lastCheckType, setLastCheckType] = useState<string | null>(null)
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null)
 
@@ -268,14 +81,6 @@ export default function AMDashboardPage() {
     }
     loadHealth()
   }, [installationId])
-
-  // --- Load Activity Feed ---
-  const loadActivity = useCallback(async () => {
-    const data = await fetchDashboardActivity(installationId, 30)
-    setActivity(data as ActivityEntry[])
-  }, [installationId])
-
-  useEffect(() => { loadActivity() }, [loadActivity])
 
   // --- Load Last Check Completed ---
   const loadLastCheck = useCallback(async () => {
@@ -317,150 +122,22 @@ export default function AMDashboardPage() {
     })
   }, [installationId, currentInstallation?.timezone])
 
-  // Realtime: auto-refresh activity feed on new entries
+  // Realtime: refresh "last check" tile when a new check lands
   useEffect(() => {
     const supabase = createClient()
     if (!supabase || !installationId) return
 
     const channel = supabase
-      .channel(`am_dashboard_activity:${installationId}`)
+      .channel(`am_dashboard_last_check:${installationId}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'activity_log', filter: `base_id=eq.${installationId}` },
-        () => { loadActivity(); loadLastCheck() }
+        { event: 'INSERT', schema: 'public', table: 'airfield_checks', filter: `base_id=eq.${installationId}` },
+        () => { loadLastCheck() }
       )
     subscribeWithErrorHandling(channel)
 
     return () => { supabase.removeChannel(channel) }
-  }, [installationId, loadActivity, loadLastCheck])
-
-  // --- Manual Entry ---
-  const handleManualSubmit = async () => {
-    if (!manualText.trim()) return
-    setSubmitting(true)
-    const supabase = createClient()
-    if (!supabase) {
-      toast.success('Entry logged (demo mode)')
-      setManualText('')
-      setSubmitting(false)
-      return
-    }
-    const { error } = await logManualEntry(manualText.trim().toUpperCase(), installationId)
-    if (error) {
-      toast.error(error)
-    } else {
-      toast.success('Entry logged')
-      setManualText('')
-      await loadActivity()
-    }
-    setSubmitting(false)
-  }
-
-  // --- Edit / Delete handlers ---
-  const handleEdit = (a: ActivityEntry) => {
-    // Build the current details text to pre-populate
-    let currentDetails = ''
-    if (a.metadata) {
-      if (typeof a.metadata.details === 'string') {
-        currentDetails = a.metadata.details.toUpperCase()
-      } else {
-        const acronyms = new Set(['fod','ife','rsc','rcr','bwc','bash','qrc','notam','notams','arff','pcas','scn','lmr','tacan','vor','ils','dme','ndb','papi','vasi','malsr','gps','rnav','rwy','twy','amops','na','id'])
-        const capWord = (w: string) => acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)
-        const capVal = (s: string) => {
-          if (!s) return s
-          if (s === s.toUpperCase() && s.length <= 6) return s
-          if (acronyms.has(s.toLowerCase())) return s.toUpperCase()
-          return s.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-        }
-        const parts: string[] = []
-        for (const [k, v] of Object.entries(a.metadata)) {
-          if (v == null || v === '' || k === 'fields' || k === 'field') continue
-          const label = k.replace(/_/g, ' ').split(' ').map(capWord).join(' ')
-          const val = typeof v === 'boolean' ? (v ? 'Yes' : 'No') : Array.isArray(v) ? v.map(i => typeof i === 'string' ? capVal(i) : String(i)).join(', ') : capVal(String(v))
-          parts.push(val)
-        }
-        currentDetails = parts.join(' | ')
-      }
-    }
-    const d = new Date(a.created_at)
-    setEditingId(a.id)
-    setEditText(currentDetails)
-    setEditDate(d.toISOString().slice(0, 10))
-    setEditTime(d.toISOString().slice(11, 16))
-  }
-
-  const handleEditSave = async () => {
-    if (!editingId) return
-    setSaving(true)
-    const supabase = createClient()
-    if (!supabase) {
-      toast.success('Entry updated (demo mode)')
-      setEditingId(null)
-      setSaving(false)
-      return
-    }
-    const newTimestamp = editDate && editTime ? `${editDate}T${editTime}:00.000Z` : undefined
-    const { error } = await updateActivityEntry(editingId, editText.trim(), newTimestamp)
-    if (error) {
-      toast.error(error)
-    } else {
-      toast.success('Entry updated')
-      setEditingId(null)
-      await loadActivity()
-    }
-    setSaving(false)
-  }
-
-  const handleDelete = async (a: ActivityEntry) => {
-    const supabase = createClient()
-    if (!supabase) {
-      toast.success('Entry deleted (demo mode)')
-      return
-    }
-    if (!confirm('Delete this entry? This cannot be undone.')) return
-
-    // Synthetic entries — delete from their source table
-    if (a.id.startsWith('disc-')) {
-      const realId = a.id.slice(5)
-      const { error } = await supabase.from('discrepancies').delete().eq('id', realId)
-      if (error) { toast.error(error.message) } else { toast.success('Discrepancy deleted'); await loadActivity() }
-      return
-    }
-    if (a.id.startsWith('chk-')) {
-      const realId = a.id.slice(4)
-      const { error } = await supabase.from('airfield_checks').delete().eq('id', realId)
-      if (error) { toast.error(error.message) } else { toast.success('Check deleted'); await loadActivity() }
-      return
-    }
-    if (a.id.startsWith('insp-')) {
-      const realId = a.id.slice(5)
-      const { error } = await supabase.from('inspections').delete().eq('id', realId)
-      if (error) { toast.error(error.message) } else { toast.success('Inspection deleted'); await loadActivity() }
-      return
-    }
-    if (a.id.startsWith('qrc-')) {
-      const realId = a.id.slice(4)
-      const { error } = await supabase.from('qrc_executions').delete().eq('id', realId)
-      if (error) { toast.error(error.message) } else { toast.success('QRC deleted'); await loadActivity() }
-      return
-    }
-    if (a.id.startsWith('ws-') || a.id.startsWith('wk-')) {
-      const table = a.id.startsWith('ws-') ? 'wildlife_sightings' : 'wildlife_strikes'
-      const realId = a.id.slice(3)
-      const { error } = await supabase.from(table).delete().eq('id', realId)
-      if (error) { toast.error(error.message) } else { toast.success('Entry deleted'); await loadActivity() }
-      return
-    }
-
-    // Real activity_log entry
-    const { error } = await deleteActivityEntry(a.id)
-    if (error) {
-      toast.error(error)
-    } else {
-      toast.success('Entry deleted')
-      await loadActivity()
-    }
-  }
+  }, [installationId, loadLastCheck])
 
   return (
     <div className="page-container">
@@ -937,7 +614,6 @@ export default function AMDashboardPage() {
         <PersonnelFormDialog
           installationId={installationId}
           onClose={() => setShowContractorForm(false)}
-          onSaved={loadActivity}
         />
       )}
 
@@ -956,258 +632,6 @@ export default function AMDashboardPage() {
         <QrcDialog
           installationId={installationId}
           onClose={() => setShowQrc(false)}
-          onActivity={loadActivity}
-        />
-      )}
-
-      {/* ===== Manual Entry ===== */}
-      {logEntryExpanded && (
-        <div className="card" style={{ marginBottom: 12, padding: '12px', border: '1px solid var(--color-border-active)' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <textarea
-              className="input-dark"
-              placeholder="What happened? e.g. FOD walk completed, runway sweep performed..."
-              value={manualText}
-              onChange={(e) => setManualText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleManualSubmit()
-                }
-              }}
-              rows={2}
-              style={{ flex: 1, resize: 'vertical', fontSize: 'var(--fs-base)' }}
-              autoFocus
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <button
-                onClick={handleManualSubmit}
-                disabled={!manualText.trim() || submitting}
-                style={{
-                  padding: '0 16px', borderRadius: 'var(--radius-md)', border: 'none', height: 32,
-                  background: manualText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
-                  color: manualText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: manualText.trim() ? 'pointer' : 'default',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {submitting ? '...' : 'Log'}
-              </button>
-              <button
-                onClick={() => { setLogEntryExpanded(false); setManualText('') }}
-                style={{
-                  padding: '0 16px', borderRadius: 'var(--radius-md)', border: 'none', height: 32,
-                  background: 'transparent', color: 'var(--color-text-3)',
-                  fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showTemplatePicker && (
-        <TemplatePicker
-          onSubmit={async (text, category, templateLabel) => {
-            const supabase = createClient()
-            if (!supabase) {
-              toast.success('Entry logged (demo mode)')
-              setShowTemplatePicker(false)
-              return
-            }
-            const { error } = await logManualEntry(text, installationId, category, templateLabel)
-            if (error) {
-              toast.error(error)
-            } else {
-              toast.success('Entry logged')
-              setShowTemplatePicker(false)
-              await loadActivity()
-            }
-          }}
-          onClose={() => setShowTemplatePicker(false)}
-          isAdmin={isAdmin}
-          installationId={installationId}
-          customTemplates={customTemplates}
-          onTemplatesSaved={setCustomTemplates}
-          icao={currentInstallation?.icao}
-        />
-      )}
-
-      {/* Shift Review and Daily Reviews bars moved to Events Log (/activity). */}
-
-      {/* User Info Popover */}
-      {userPopover && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-modal)' }}
-          onClick={() => setUserPopover(null)}
-        >
-          <div
-            style={{
-              position: 'fixed',
-              left: Math.min(userPopover.x, typeof window !== 'undefined' ? window.innerWidth - 240 : 400),
-              top: userPopover.y,
-              background: 'var(--color-bg-elevated)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '12px 16px',
-              minWidth: 200,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              zIndex: 'var(--z-modal)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
-              {userPopover.name}
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 4 }}>
-              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>Role:</span>{' '}
-              {ROLE_LABELS[userPopover.role || ''] || userPopover.role || 'N/A'}
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>EDIPI:</span>{' '}
-              <span style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                {userPopover.edipi ? maskEdipi(userPopover.edipi) : 'Not on file'}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ===== Edit Entry Modal ===== */}
-      {editingId && (
-        <div
-          className="modal-overlay"
-          onClick={() => setEditingId(null)}
-        >
-          <div
-            className="card"
-            style={{ width: '100%', maxWidth: 420, padding: 20 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 16 }}>
-              Edit Entry
-            </div>
-
-            {/* Date & Time */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, marginBottom: 12 }}>
-              <div style={{ minWidth: 0 }}>
-                <span className="section-label">Date (Z)</span>
-                <input
-                  type="date"
-                  className="input-dark"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                  style={{ width: '100%', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <span className="section-label">Time (Z)</span>
-                <input
-                  type="text"
-                  className="input-dark"
-                  value={editTime}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9:]/g, '')
-                    if (v.length <= 5) setEditTime(v)
-                  }}
-                  onBlur={() => {
-                    let v = editTime.replace(/[^0-9]/g, '')
-                    if (v.length <= 2) v = v.padStart(2, '0') + '00'
-                    else if (v.length === 3) v = '0' + v
-                    const hh = Math.min(23, parseInt(v.slice(0, 2))).toString().padStart(2, '0')
-                    const mm = Math.min(59, parseInt(v.slice(2, 4))).toString().padStart(2, '0')
-                    setEditTime(`${hh}:${mm}`)
-                  }}
-                  placeholder="HH:MM"
-                  maxLength={5}
-                  style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace' }}
-                />
-              </div>
-            </div>
-
-            {/* Details */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span className="section-label" style={{ marginBottom: 0 }}>Details</span>
-                <button
-                  onClick={() => setShowEditTemplatePicker(true)}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-                >
-                  Use Template
-                </button>
-              </div>
-              <textarea
-                className="input-dark"
-                rows={4}
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSave() }
-                }}
-                style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-base)', resize: 'vertical' }}
-                autoFocus
-              />
-            </div>
-
-            {/* Buttons */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button
-                onClick={handleEditSave}
-                disabled={saving}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                  background: saving ? 'rgba(6,182,212,0.5)' : '#06B6D4',
-                  color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-              <button
-                onClick={() => setEditingId(null)}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border)', background: 'transparent',
-                  color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-            <button
-              onClick={() => {
-                const entry = activity.find((e) => e.id === editingId)
-                if (entry) { setEditingId(null); handleDelete(entry) }
-              }}
-              style={{
-                width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
-                color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Delete Entry
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Template Picker — populates editText instead of submitting */}
-      {showEditTemplatePicker && (
-        <TemplatePicker
-          onSubmit={async (text) => {
-            setEditText(text)
-            setShowEditTemplatePicker(false)
-          }}
-          onClose={() => setShowEditTemplatePicker(false)}
-          isAdmin={isAdmin}
-          installationId={installationId}
-          customTemplates={customTemplates}
-          onTemplatesSaved={setCustomTemplates}
-          icao={currentInstallation?.icao}
         />
       )}
 
@@ -1628,7 +1052,7 @@ function ShiftChecklistDialog({ installationId, timezone, resetTime, onClose }: 
 
 // ===== QRC Dialog =====
 
-function QrcDialog({ installationId, onClose, onActivity }: { installationId: string | null; onClose: () => void; onActivity: () => Promise<void> }) {
+function QrcDialog({ installationId, onClose, onActivity }: { installationId: string | null; onClose: () => void; onActivity?: () => void | Promise<void> }) {
   type QrcStep = import('@/lib/supabase/types').QrcStep
   type QrcStepResponse = import('@/lib/supabase/types').QrcStepResponse
   type QrcTemplate = import('@/lib/supabase/types').QrcTemplate
@@ -1681,7 +1105,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
       toast.success(`QRC-${tmpl.qrc_number} opened`)
       setActiveExecId(data.id)
       await load()
-      await onActivity()
+      await onActivity?.()
     }
     setStarting(null)
   }
@@ -1748,7 +1172,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
       setShowCloseConfirm(false)
       setCloseInitials('')
       await load()
-      await onActivity()
+      await onActivity?.()
     }
     setClosing(false)
   }
@@ -1762,7 +1186,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     if (error) toast.error(error)
     else {
       toast.success(`QRC-${exec?.qrc_number} cancelled`)
-      await onActivity()
+      await onActivity?.()
       onClose()
     }
   }

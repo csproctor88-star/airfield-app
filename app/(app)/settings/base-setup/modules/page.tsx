@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Lock } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
+import { createClient } from '@/lib/supabase/client'
+import type { UserRole } from '@/lib/supabase/types'
 import {
   MODULES,
   TYPICAL_BASE_PRESET,
@@ -17,8 +20,16 @@ import {
 
 const CATEGORY_ORDER: ModuleCategory[] = ['core-ops', 'emergency', 'compliance', 'optional']
 
+const ROLE_LABEL_FOR_LOCK: Partial<Record<UserRole, string>> = {
+  ces: 'CES',
+  namo: 'NAMO',
+  amops: 'AMOPS',
+  atc: 'ATC',
+  safety: 'Safety',
+}
+
 export default function ModuleSelectorPage() {
-  const { userRole, currentInstallation, enabledModules, updateEnabledModules } = useInstallation()
+  const { userRole, currentInstallation, installationId, enabledModules, updateEnabledModules } = useInstallation()
   const router = useRouter()
 
   const canEdit =
@@ -27,8 +38,52 @@ export default function ModuleSelectorPage() {
 
   const [selected, setSelected] = useState<Set<ModuleKey>>(() => new Set(enabledModules))
   const [saving, setSaving] = useState(false)
+  const [baseRoles, setBaseRoles] = useState<Set<UserRole>>(new Set())
+
+  useEffect(() => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    supabase
+      .from('profiles')
+      .select('role')
+      .eq('primary_base_id', installationId)
+      .not('role', 'is', null)
+      .then(({ data }) => {
+        const roles = new Set<UserRole>()
+        for (const r of (data as { role: UserRole | null }[] | null) ?? []) {
+          if (r.role) roles.add(r.role)
+        }
+        setBaseRoles(roles)
+      })
+  }, [installationId])
 
   const grouped = useMemo(() => getModulesByCategory(), [])
+
+  const lockInfo = useMemo(() => {
+    const map = new Map<ModuleKey, string[]>()
+    for (const m of MODULES) {
+      if (!m.roleRestrictions) continue
+      const present = m.roleRestrictions.filter(r => baseRoles.has(r))
+      if (present.length > 0) {
+        map.set(m.key, present.map(r => ROLE_LABEL_FOR_LOCK[r] || r))
+      }
+    }
+    return map
+  }, [baseRoles])
+
+  // Ensure locked modules are always in the selection set (applies after baseRoles load)
+  useEffect(() => {
+    if (lockInfo.size === 0) return
+    setSelected(prev => {
+      let changed = false
+      const next = new Set(prev)
+      lockInfo.forEach((_, key) => {
+        if (!next.has(key)) { next.add(key); changed = true }
+      })
+      return changed ? next : prev
+    })
+  }, [lockInfo])
 
   if (!canEdit) {
     return (
@@ -47,6 +102,11 @@ export default function ModuleSelectorPage() {
   }
 
   const toggle = (key: ModuleKey) => {
+    if (lockInfo.has(key)) {
+      const roles = lockInfo.get(key)!.join(', ')
+      toast.error(`${roles} users depend on this module — can't disable it while they're on the base.`)
+      return
+    }
     setSelected(prev => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
@@ -55,7 +115,11 @@ export default function ModuleSelectorPage() {
     })
   }
 
-  const applyPreset = (keys: ModuleKey[]) => setSelected(new Set(keys))
+  const applyPreset = (keys: ModuleKey[]) => {
+    const next = new Set(keys)
+    lockInfo.forEach((_, locked) => next.add(locked))
+    setSelected(next)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -157,6 +221,8 @@ export default function ModuleSelectorPage() {
             }}>
               {mods.map(m => {
                 const on = selected.has(m.key)
+                const lockedRoles = lockInfo.get(m.key)
+                const locked = !!lockedRoles
                 return (
                   <label
                     key={m.key}
@@ -166,19 +232,22 @@ export default function ModuleSelectorPage() {
                       borderRadius: 'var(--radius-lg)',
                       border: on ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
                       background: on ? 'rgba(34,211,238,0.06)' : 'var(--color-surface-1)',
-                      cursor: 'pointer',
+                      cursor: locked ? 'not-allowed' : 'pointer',
                       transition: 'border 0.12s, background 0.12s',
+                      opacity: locked ? 0.95 : 1,
                     }}
+                    title={locked ? `${lockedRoles!.join(', ')} users depend on this module` : undefined}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <input
                         type="checkbox"
                         checked={on}
+                        disabled={locked}
                         onChange={() => toggle(m.key)}
-                        style={{ marginTop: 3, cursor: 'pointer', accentColor: 'var(--color-cyan)' }}
+                        style={{ marginTop: 3, cursor: locked ? 'not-allowed' : 'pointer', accentColor: 'var(--color-cyan)' }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
                             {m.label}
                           </div>
@@ -192,6 +261,17 @@ export default function ModuleSelectorPage() {
                               RECOMMENDED
                             </span>
                           )}
+                          {locked && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                              color: 'var(--color-warning)',
+                              background: 'rgba(251,191,36,0.12)',
+                              padding: '2px 6px', borderRadius: 4,
+                            }}>
+                              <Lock size={10} /> REQUIRED FOR {lockedRoles!.join(', ')}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.45, marginBottom: 4 }}>
                           {m.description}
@@ -199,6 +279,11 @@ export default function ModuleSelectorPage() {
                         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.45, fontStyle: 'italic' }}>
                           {m.useCase}
                         </div>
+                        {locked && (
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', marginTop: 6 }}>
+                            Can&apos;t disable — {lockedRoles!.join(', ')} users on this base rely on it.
+                          </div>
+                        )}
                       </div>
                     </div>
                   </label>

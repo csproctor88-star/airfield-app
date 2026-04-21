@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchDashboardActivity, type ActivityEntry } from '@/lib/supabase/activity-queries'
+import { fetchActivityLog, type ActivityEntry } from '@/lib/supabase/activity-queries'
 import { formatZuluDate } from '@/lib/utils'
+import { Download } from 'lucide-react'
+
+type PeriodPreset = 'today' | '7d' | '30d' | '90d' | 'custom'
 
 const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   'Inspections/Checks': 'Logged Inspection/Check', 'AMOPS Reporting': 'Logged AMOPS Report',
@@ -32,6 +35,23 @@ function inferActionFromText(details: string): string | null {
   return null
 }
 
+const ENTITY_LABELS: Record<string, string> = {
+  discrepancy: 'Discrepancy', check: 'Check', airfield_check: 'Check', inspection: 'Inspection',
+  obstruction_evaluation: 'Obstruction Eval', navaid_status: 'NAVAID', airfield_status: 'Runway',
+  weather_info: 'Weather Info', arff_status: 'ARFF', contractor: 'Personnel', qrc: 'QRC',
+  wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike', manual: 'Manual Entry',
+  parking_plan: 'Parking Plan', ppr_entry: 'PPR', acsi_inspection: 'ACSI Inspection',
+  waiver: 'Waiver', waiver_review: 'Waiver Review', scn: 'SCN', scn_backup: 'Monthly SCN',
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  created: 'Created', updated: 'Updated', deleted: 'Deleted', completed: 'Completed',
+  opened: 'Opened', closed: 'Closed', status_updated: 'Status changed on',
+  saved: 'Saved', filed: 'Filed', resumed: 'Resumed', reviewed: 'Reviewed',
+  noted: 'Logged', logged_personnel: 'Logged', personnel_off_airfield: 'Personnel Off Airfield',
+  cancelled: 'Cancelled',
+}
+
 function formatAction(action: string, entityType: string, displayId?: string, metadata?: Record<string, unknown> | null): string {
   if (entityType === 'manual' && metadata?.template_label) return metadata.template_label as string
   if (entityType === 'manual' && metadata?.template_category) return TEMPLATE_CATEGORY_LABELS[metadata.template_category as string] || 'Logged Entry'
@@ -39,23 +59,9 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     const inferred = inferActionFromText(metadata.details as string)
     if (inferred) return inferred
   }
-  const typeLabel: Record<string, string> = {
-    discrepancy: 'Discrepancy', check: 'Check', airfield_check: 'Check', inspection: 'Inspection',
-    obstruction_evaluation: 'Obstruction Eval', navaid_status: 'NAVAID', airfield_status: 'Runway',
-    weather_info: 'Weather Info', arff_status: 'ARFF', contractor: 'Personnel', qrc: 'QRC',
-    wildlife_sighting: 'Wildlife Sighting', wildlife_strike: 'Wildlife Strike', manual: 'Logged Entry',
-    parking_plan: 'Parking Plan', ppr_entry: 'PPR', acsi_inspection: 'ACSI Inspection', waiver: 'Waiver', waiver_review: 'Waiver Review',
-  }
-  const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const entity = ENTITY_LABELS[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const id = displayId ? ` ${displayId}` : ''
-  const actionLabel: Record<string, string> = {
-    created: 'Created', updated: 'Updated', deleted: 'Deleted', completed: 'Completed',
-    opened: 'Opened', closed: 'Closed', status_updated: 'Status changed on',
-    saved: 'Saved', filed: 'Filed', resumed: 'Resumed', reviewed: 'Reviewed',
-    noted: 'Logged', logged_personnel: 'Logged', personnel_off_airfield: 'Personnel Off Airfield',
-    cancelled: 'Cancelled',
-  }
-  const label = actionLabel[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
+  const label = ACTION_LABELS[action] || (action.charAt(0).toUpperCase() + action.slice(1).replace(/_/g, ' '))
   if (action === 'personnel_off_airfield') return `${label}${id}`
   if (entityType === 'manual') return entity
   return `${label} ${entity}${id}`
@@ -81,54 +87,273 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
   return null
 }
 
+const FETCH_LIMIT = 1000
+
 export default function RecentActivityPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
-  const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const { installationId, currentInstallation } = useInstallation()
+  const [allEntries, setAllEntries] = useState<ActivityEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [reachedLimit, setReachedLimit] = useState(false)
 
-  const loadActivity = useCallback(async () => {
+  const today = new Date().toISOString().slice(0, 10)
+  const [period, setPeriod] = useState<PeriodPreset>('7d')
+  const [customStart, setCustomStart] = useState(today)
+  const [customEnd, setCustomEnd] = useState(today)
+
+  const [entityFilter, setEntityFilter] = useState<string>('all')
+  const [actionFilter, setActionFilter] = useState<string>('all')
+  const [userQuery, setUserQuery] = useState<string>('')
+  const [detailsQuery, setDetailsQuery] = useState<string>('')
+
+  const getDateRange = useCallback((): { start: string; end: string } => {
+    const now = new Date()
+    const endISO = new Date(`${today}T23:59:59.999`).toISOString()
+    if (period === 'today') return { start: new Date(`${today}T00:00:00`).toISOString(), end: endISO }
+    if (period === '7d') {
+      const d = new Date(now); d.setDate(d.getDate() - 7)
+      return { start: d.toISOString(), end: endISO }
+    }
+    if (period === '30d') {
+      const d = new Date(now); d.setDate(d.getDate() - 30)
+      return { start: d.toISOString(), end: endISO }
+    }
+    if (period === '90d') {
+      const d = new Date(now); d.setDate(d.getDate() - 90)
+      return { start: d.toISOString(), end: endISO }
+    }
+    return {
+      start: new Date(`${customStart}T00:00:00`).toISOString(),
+      end: new Date(`${customEnd}T23:59:59.999`).toISOString(),
+    }
+  }, [period, today, customStart, customEnd])
+
+  const loadEntries = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
-    const data = await fetchDashboardActivity(installationId, 100)
-    setActivity(data)
+    const { start, end } = getDateRange()
+    const { data } = await fetchActivityLog({ baseId: installationId, startDate: start, endDate: end, limit: FETCH_LIMIT })
+    setAllEntries(data)
+    setReachedLimit(data.length >= FETCH_LIMIT)
     setLoading(false)
-  }, [installationId])
+  }, [installationId, getDateRange])
 
-  useEffect(() => { loadActivity() }, [loadActivity])
+  useEffect(() => { loadEntries() }, [loadEntries])
 
-  // Group by date
-  const grouped = activity.reduce<Record<string, ActivityEntry[]>>((acc, a) => {
-    const date = a.created_at.slice(0, 10)
-    if (!acc[date]) acc[date] = []
-    acc[date].push(a)
-    return acc
-  }, {})
+  const entityTypes = useMemo(() => {
+    const s = new Set<string>()
+    for (const e of allEntries) s.add(e.entity_type)
+    return Array.from(s).sort()
+  }, [allEntries])
+
+  const actionTypes = useMemo(() => {
+    const s = new Set<string>()
+    for (const e of allEntries) s.add(e.action)
+    return Array.from(s).sort()
+  }, [allEntries])
+
+  const visibleEntries = useMemo(() => {
+    let out = allEntries
+    if (entityFilter !== 'all') out = out.filter(e => e.entity_type === entityFilter)
+    if (actionFilter !== 'all') out = out.filter(e => e.action === actionFilter)
+    if (userQuery.trim()) {
+      const q = userQuery.toLowerCase()
+      out = out.filter(e =>
+        e.user_name.toLowerCase().includes(q) ||
+        (e.user_operating_initials || '').toLowerCase().includes(q) ||
+        (e.user_rank || '').toLowerCase().includes(q),
+      )
+    }
+    if (detailsQuery.trim()) {
+      const q = detailsQuery.toLowerCase()
+      out = out.filter(e => {
+        const d = typeof e.metadata?.details === 'string' ? (e.metadata.details as string).toLowerCase() : ''
+        return d.includes(q) || (e.entity_display_id || '').toLowerCase().includes(q)
+      })
+    }
+    return out
+  }, [allEntries, entityFilter, actionFilter, userQuery, detailsQuery])
+
+  const grouped = useMemo(() => {
+    return visibleEntries.reduce<Record<string, ActivityEntry[]>>((acc, a) => {
+      const date = a.created_at.slice(0, 10)
+      if (!acc[date]) acc[date] = []
+      acc[date].push(a)
+      return acc
+    }, {})
+  }, [visibleEntries])
+
+  const resetFilters = () => {
+    setEntityFilter('all')
+    setActionFilter('all')
+    setUserQuery('')
+    setDetailsQuery('')
+  }
+
+  const filtersActive =
+    entityFilter !== 'all' || actionFilter !== 'all' || userQuery.trim() !== '' || detailsQuery.trim() !== ''
+
+  const exportCsv = () => {
+    const headers = ['Timestamp (Zulu)', 'Action', 'Entity Type', 'Entity ID', 'Details', 'User', 'Rank', 'Role', 'OI']
+    const csvEscape = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const lines = [headers.map(csvEscape).join(',')]
+    for (const e of visibleEntries) {
+      const details = typeof e.metadata?.details === 'string' ? e.metadata.details : ''
+      lines.push([
+        e.created_at,
+        e.action,
+        e.entity_type,
+        e.entity_display_id ?? '',
+        details,
+        e.user_name,
+        e.user_rank ?? '',
+        e.user_role ?? '',
+        e.user_operating_initials ?? '',
+      ].map(csvEscape).join(','))
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const baseSlug = (currentInstallation?.name || 'base').replace(/\s+/g, '-').toLowerCase()
+    a.href = url
+    a.download = `activity-log-${baseSlug}-${today}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const PRESETS: { value: PeriodPreset; label: string }[] = [
+    { value: 'today', label: 'Today' },
+    { value: '7d', label: '7 Days' },
+    { value: '30d', label: '30 Days' },
+    { value: '90d', label: '90 Days' },
+    { value: 'custom', label: 'Custom' },
+  ]
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, margin: 0 }}>Recent Activity</h2>
+          <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, margin: 0 }}>Activity Log</h2>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-            All activity across the installation — last 7 days
+            Every recorded action across the installation — admin audit view
           </div>
         </div>
-        <button
-          onClick={() => router.back()}
-          style={{
-            padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-            border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-            color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
-          }}
-        >Back</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={exportCsv}
+            disabled={visibleEntries.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+              color: visibleEntries.length === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+              cursor: visibleEntries.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            }}
+          ><Download size={14} /> Export CSV</button>
+          <button
+            onClick={() => router.back()}
+            style={{
+              padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+              color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >Back</button>
+        </div>
+      </div>
+
+      {/* Period presets */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {PRESETS.map(p => (
+          <button
+            key={p.value}
+            onClick={() => setPeriod(p.value)}
+            style={{
+              padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+              border: `1px solid ${period === p.value ? 'var(--color-cyan)' : 'var(--color-border)'}`,
+              background: period === p.value ? 'var(--color-cyan-btn-bg)' : 'transparent',
+              color: period === p.value ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >{p.label}</button>
+        ))}
+      </div>
+
+      {period === 'custom' && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+          <input
+            type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+            style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontFamily: 'inherit' }}
+          />
+          <span style={{ alignSelf: 'center', color: 'var(--color-text-3)' }}>→</span>
+          <input
+            type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+            style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontFamily: 'inherit' }}
+          />
+        </div>
+      )}
+
+      {/* Field filters */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginBottom: 10 }}>
+        <select
+          value={entityFilter}
+          onChange={e => setEntityFilter(e.target.value)}
+          style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontFamily: 'inherit' }}
+        >
+          <option value="all">All entities</option>
+          {entityTypes.map(t => (
+            <option key={t} value={t}>{ENTITY_LABELS[t] || t}</option>
+          ))}
+        </select>
+        <select
+          value={actionFilter}
+          onChange={e => setActionFilter(e.target.value)}
+          style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontFamily: 'inherit' }}
+        >
+          <option value="all">All actions</option>
+          {actionTypes.map(a => (
+            <option key={a} value={a}>{ACTION_LABELS[a] || a}</option>
+          ))}
+        </select>
+        <input
+          type="text" placeholder="Filter by user (name, OI, rank)" value={userQuery}
+          onChange={e => setUserQuery(e.target.value)}
+          style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontFamily: 'inherit' }}
+        />
+        <input
+          type="text" placeholder="Search details / display ID" value={detailsQuery}
+          onChange={e => setDetailsQuery(e.target.value)}
+          style={{ padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-1)', fontFamily: 'inherit' }}
+        />
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+          {loading ? 'Loading…' : `${visibleEntries.length.toLocaleString()} of ${allEntries.length.toLocaleString()} entries`}
+          {reachedLimit && !loading && (
+            <span style={{ color: 'var(--color-warning)', marginLeft: 8 }}>
+              · capped at {FETCH_LIMIT.toLocaleString()} — narrow the date range for the full set
+            </span>
+          )}
+        </div>
+        {filtersActive && (
+          <button
+            onClick={resetFilters}
+            style={{
+              padding: '4px 10px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: '1px solid var(--color-border)', background: 'transparent',
+              color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >Reset filters</button>
+        )}
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
-      ) : activity.length === 0 ? (
+      ) : visibleEntries.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)' }}>No recent activity</div>
+          <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)' }}>
+            {allEntries.length === 0 ? 'No activity in the selected date range' : 'No entries match the current filters'}
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -141,10 +366,7 @@ export default function RecentActivityPage() {
                 {entries.map(a => {
                   const time = new Date(a.created_at).toISOString().slice(11, 16)
                   const link = getEntityLink(a.entity_type, a.entity_id)
-                  let details = ''
-                  if (a.metadata?.details && typeof a.metadata.details === 'string') {
-                    details = a.metadata.details.toUpperCase()
-                  }
+                  const details = a.metadata?.details && typeof a.metadata.details === 'string' ? a.metadata.details.toUpperCase() : ''
                   const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
 
                   return (

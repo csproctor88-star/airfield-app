@@ -29,6 +29,7 @@ export const BASE_DIRECTORY: readonly BaseDirectoryEntry[] = [
   { name: 'Charlotte Douglas ANG Base', icao: 'KCLT' },
   { name: 'Cheyenne ANG Base', icao: 'KCYS' },
   { name: 'Cheyenne Mountain SFS', icao: '' },
+  { name: 'Chièvres Air Base', icao: 'EBCV' },
   { name: 'Clear Space Force Station', icao: 'PACL' },
   { name: 'Columbus Air Force Base', icao: 'KCBM' },
   { name: 'Creech Air Force Base', icao: 'KINS' },
