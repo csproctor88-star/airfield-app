@@ -623,6 +623,30 @@ export default function AMDashboardPage() {
             <span>SCN</span>
           </Link>
         )}
+        {isModuleEnabled('/ppr', enabledModules) && (
+          <Link href="/ppr" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>📝</span>
+            <span>PPR Log</span>
+          </Link>
+        )}
+        {isModuleEnabled('/wildlife', enabledModules) && (
+          <Link href="/wildlife" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+            padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
+            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textAlign: 'center', lineHeight: 1.2,
+          }}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🦅</span>
+            <span>BASH</span>
+          </Link>
+        )}
         {canToggleOoo && (
           <button onClick={() => {
             if (afmOutOfOffice) {
