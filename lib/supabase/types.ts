@@ -2950,6 +2950,7 @@ export type Database = {
           is_active: boolean
           last_name: string | null
           last_seen_at: string | null
+          last_seen_release_version: string | null
           name: string
           operating_initials: string | null
           organization: string | null
@@ -2972,6 +2973,7 @@ export type Database = {
           is_active?: boolean
           last_name?: string | null
           last_seen_at?: string | null
+          last_seen_release_version?: string | null
           name: string
           operating_initials?: string | null
           organization?: string | null
@@ -2994,6 +2996,7 @@ export type Database = {
           is_active?: boolean
           last_name?: string | null
           last_seen_at?: string | null
+          last_seen_release_version?: string | null
           name?: string
           operating_initials?: string | null
           organization?: string | null
