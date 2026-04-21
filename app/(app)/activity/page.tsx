@@ -321,6 +321,18 @@ export default function ActivityPage() {
   const [saving, setSaving] = useState(false)
   const [showEditTemplatePicker, setShowEditTemplatePicker] = useState(false)
   const [userPopover, setUserPopover] = useState<{ id: string; x: number; y: number; name: string; role: string | null; edipi: string | null } | null>(null)
+  // Collapse the Action column on narrow screens so the table doesn't overflow.
+  // The Events Log details + OI are what mobile operators need at a glance.
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(max-width: 640px)')
+    const update = () => setNarrow(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
   const [filterUser, setFilterUser] = useState('')
   const [filterAction, setFilterAction] = useState('')
   const [filterDetails, setFilterDetails] = useState('')
@@ -711,27 +723,29 @@ export default function ActivityPage() {
 
           {/* Columnar Table */}
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: narrow ? 0 : 600 }}>
               <thead>
                 <tr>
                   <th style={{ ...thStyle, width: 52 }}>Time (Z)</th>
-                  <th style={{ ...thStyle, width: 140 }}>Action</th>
+                  {!narrow && <th style={{ ...thStyle, width: 140 }}>Action</th>}
                   <th style={thStyle}>Details</th>
                   <th style={{ ...thStyle, width: 50 }}>OI</th>
                   <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
                 </tr>
                 <tr>
                   <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
-                    <input
-                      type="text"
-                      className="input-dark"
-                      placeholder="Search actions..."
-                      value={filterAction}
-                      onChange={(e) => setFilterAction(e.target.value)}
-                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
-                    />
-                  </th>
+                  {!narrow && (
+                    <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                      <input
+                        type="text"
+                        className="input-dark"
+                        placeholder="Search actions..."
+                        value={filterAction}
+                        onChange={(e) => setFilterAction(e.target.value)}
+                        style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
+                      />
+                    </th>
+                  )}
                   <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
                     <input
                       type="text"
@@ -761,7 +775,7 @@ export default function ActivityPage() {
                     {/* Date header row */}
                     <tr key={`date-${group.date}`}>
                       <td
-                        colSpan={5}
+                        colSpan={narrow ? 4 : 5}
                         style={{
                           padding: '10px 8px 4px',
                           fontSize: 'var(--fs-sm)',
@@ -794,13 +808,45 @@ export default function ActivityPage() {
                           <td style={{ ...tdStyle, fontFamily: 'monospace', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                             {timeStr}
                           </td>
+                          {!narrow && (
+                            <td
+                              onClick={link ? () => router.push(link) : undefined}
+                              style={{ ...tdStyle, color: getActionColor(a.action, a.entity_type), fontWeight: 600, whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                            >
+                              {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
+                              {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
+                              {amended && (
+                                <span
+                                  title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was signed.`}
+                                  style={{
+                                    marginLeft: 6, padding: '1px 6px', borderRadius: 999,
+                                    fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.04em',
+                                    background: 'rgba(251,191,36,0.15)', color: 'var(--color-warning)',
+                                    border: '1px solid rgba(251,191,36,0.35)', textTransform: 'uppercase',
+                                  }}
+                                >Amended</span>
+                              )}
+                            </td>
+                          )}
                           <td
-                            onClick={link ? () => router.push(link) : undefined}
-                            style={{ ...tdStyle, color: getActionColor(a.action, a.entity_type), fontWeight: 600, whiteSpace: 'nowrap', cursor: link ? 'pointer' : 'default' }}
+                            onClick={narrow && link ? () => router.push(link) : undefined}
+                            style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300, cursor: narrow && link ? 'pointer' : 'default' }}
                           >
-                            {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
-                            {link && <span style={{ marginLeft: 4, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
-                            {amended && (
+                            {narrow && (
+                              <span style={{
+                                display: 'inline-block',
+                                color: getActionColor(a.action, a.entity_type),
+                                fontWeight: 700,
+                                marginRight: 6,
+                              }}>
+                                {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
+                                {link && <span style={{ marginLeft: 3, fontSize: 'var(--fs-2xs)', opacity: 0.6 }}>&rarr;</span>}
+                              </span>
+                            )}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: narrow ? 'inline' : 'block' }}>
+                              {detailsText || '\u2014'}
+                            </span>
+                            {narrow && amended && (
                               <span
                                 title={`This entry was logged after the daily review for ${d.toISOString().slice(0, 10)} was signed.`}
                                 style={{
@@ -811,11 +857,6 @@ export default function ActivityPage() {
                                 }}
                               >Amended</span>
                             )}
-                          </td>
-                          <td style={{ ...tdStyle, color: 'var(--color-text-3)', maxWidth: 300 }}>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
-                              {detailsText || '\u2014'}
-                            </span>
                           </td>
                           <td
                             onClick={(e) => {
