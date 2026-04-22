@@ -1,48 +1,45 @@
 # Session Handoff
 
-**Date:** 2026-04-21 (release day, multi-pass)
-**Branch:** `main` — tagged `v2.32.0` and pushed. `mobile-tweaks` deleted local + remote.
-**Build:** ✅ Clean — `npm run build` compiles; `npx tsc --noEmit` exit 0; `npx vitest run` 101 pass / 2 skipped
+**Date:** 2026-04-22
+**Branch:** `main`
+**Build:** ✅ Clean — `npx tsc --noEmit` exit 0; `npx vitest run` 101 pass / 2 skipped
 
 ---
 
-## Release State
+## State
 
-**v2.32.0 shipped to prod on 2026-04-21.**
+Permission-matrix auth rollout complete. Every feature gate — DB RLS, React hook, server route handler — now resolves through `user_has_permission(uid, key)` + the per-role preset map.
 
-- All 4 migrations applied (`2026042000_enabled_modules`, `2026042001_scn_daily_check`, `2026042002_afm_closed`, `2026042100_whats_new_tracking`).
-- Merge was `--no-ff`, tag `v2.32.0` pushed, `mobile-tweaks` branch deleted.
-- Smoke tests passed post-deploy.
+### What's live
 
-Post-release quality pass (`7f1864d`) landed test coverage + Supabase types regen.
-Post-release carryover cleanup (this commit) landed the remaining P1/P2 items.
+- **9 role presets** seeded in `role_permissions`: sys_admin, airfield_manager, namo, base_admin, amops, ces, safety, atc, read_only — plus 3 new ones: **airfield_status** (kiosk, per-base view-only login), **ppr** (PPR writer + airfield status view), **majcom_rfm** (multi-base read-only via `base_members`).
+- **77 permission keys** in the `permissions` catalogue.
+- **3 SECURITY DEFINER RPCs** for narrow writes that RLS can't express column-by-column: `ces_update_discrepancy`, `safety_update_rsc_bwc`, `get_public_feedback_config` (+ `base_exists` helper for the public feedback INSERT policy).
+- **Every operational table's RLS** swapped to the matrix. `user_can_write`, `user_is_admin`, `user_is_base_admin_at` helpers **dropped**. `user_has_base_access` + `user_is_sys_admin` retained.
+- **Client**: `lib/permissions.ts` — `usePermissions()` hook + `PERM` constants + `getPermissionsFor()` server helper. 15 pages swapped off `userRole === 'x'` strings onto `has(PERM.X)`.
+- **Kiosk mode**: `components/layout/kiosk-guard.tsx` redirects `airfield_status` / `atc` off any non-root route. Sidebar, bottom-nav, and header installation switcher all hidden for them.
+- **Bulk base assignment UX** in `UserDetailModal` — checkbox list of every installation with Select All / Clear, for MAJCOM/RFM setup.
 
-### What shipped in v2.32.0
+### Migrations applied (in order)
 
-See `CHANGELOG.md` for the authoritative list. Headlines:
+```
+2026042100  what's new tracking (pre-existing)
+2026042101  feedback public access RPC (fixes anon QR scans)
+2026042102  discrepancy optional fields (project_number, estimated_cost, risk_control_measure)
+2026042103  discrepancy current_status adds 'waiting_for_project'
 
-1. **Modular Onboarding** — per-base `enabled_modules` drives sidebar, bottom nav, More menu, dashboard tiles, and Base Setup wizard visibility.
-2. **Secondary Crash Net** — new `/scn` route; Daily + Monthly check log with three-state agency grid, call scripts, 30-day history, monthly PDF matrix.
-3. **Close for the Day overlay** — dashboard tile + status banner. Clears runway statuses, RSC/RCR, BWC atomically.
-4. **What's New modal** — pops once per release on sign-in.
-5. **Dashboard as quick-action launcher** — 10 compact tiles.
-6. **Nav reorg** — new Admin group. Events Log stays in Operations.
-7. **Events Log mobile polish** — Action column collapses ≤ 640px.
-8. **Training page** — global search bar; new module cards.
-9. **Discrepancy attribution fix**.
-10. **Volk Field (KVOK)** added to signup dropdown.
+2026042200  permission matrix scaffold + user_has_permission()
+2026042201  ces_update_discrepancy RPC
+2026042202  new role presets + safety_update_rsc_bwc RPC
+2026042203  wildlife + PPR RLS → matrix
+2026042204  7 ops tables RLS → matrix
+2026042205  airfield_status + shift + SCN + QRC + feedback DELETE → matrix
+2026042206  parking + infra + daily reviews + audit + photos → matrix + photos:write / :delete keys
+2026042207  base_setup + profiles + pdf library → matrix, grants base_setup:write to amops
+2026042208  orphan cleanup + drop legacy helpers
+```
 
-### Post-release quality passes
-
-- **Test coverage (+41 tests)** — `modules-config`, `release-notes`, `scn.summarizeCheck`. Now 101 pass / 2 skipped.
-- **Supabase types regenerated** — `scn_*` tables, `afm_closed*`, `enabled_modules`, `setup_progress`, `default_closed_message`, `last_seen_release_version`. Custom tail preserved.
-- **3 `as any` casts dropped** — `dashboard-context` OOO + closed patch, `scn.ts` db() helper. `AirfieldStatus` type + `updateAirfieldStatus` pick extended for the new cols.
-- **KBCV Chièvres** added to `BASE_DIRECTORY` (ICAO **EBCV**).
-- **`/recent-activity` rebuilt** as admin audit log: period presets (Today/7d/30d/90d/Custom), entity/action/user/details filters, CSV export, 1,000-entry window with reached-limit warning. Naming convention solidified:
-  - **`/activity`** → Events Log (operator-facing, curated manual entries + key events).
-  - **`/recent-activity`** → Activity Log (admin audit; every recorded action).
-- **Dashboard cleanup** — removed ~568 LOC of orphaned activity-feed state (manualText, handleEdit, handleDelete, loadActivity, userPopover, edit modal, template pickers, ActivityEntry type, formatAction/getActionColor/getEntityLink/inferActionFromText helpers, dead JSX blocks). Dashboard first-load JS: 217 → 206 kB (−11 kB).
-- **Role-restricted module lock** — `/settings/base-setup/modules` now fetches distinct `profiles.role` for the base and locks modules whose `roleRestrictions` overlap with active users. CES is the live case (disabling it with CES users on the base is blocked). Future modules can opt in via `ModuleDef.roleRestrictions`.
+All applied cleanly on prod.
 
 ---
 
@@ -50,67 +47,37 @@ See `CHANGELOG.md` for the authoritative list. Headlines:
 
 | Item | Location | Severity | Notes |
 |---|---|---|---|
-| **`.env.local` modified** | Root | Trivial | Still dirty locally; skipping commits as usual |
-| **`auth_leaked_password_protection`** | Supabase dashboard | Low | Pro plan only — can't toggle |
-| **`any` casts** | ~121 project-wide (down from ~124) | Low | Ongoing sweep; next batch after another types regen |
-| **Public feedback "form closed" copy hardcoded** | `app/feedback/[baseId]/page.tsx` | Trivial | Generic closed state when `feedback` module is off |
-| **SCN backup check scripts** | Only Daily has scripts | Low | Add Monthly script if net call differs |
-| **Largest source files** | `base-setup/page.tsx` 4,748 LOC, `parking/page.tsx` 4,334, `infrastructure/page.tsx` 4,150, `dashboard/page.tsx` 1,499 (↓ from ~2,067) | Medium | Component extraction is still the lever |
-| **Automated test coverage** | 101 pass, 2 skipped across 12 files / ~249 source files | Medium | Coverage is thin; add to pure-logic modules as they land |
-| **NAMO module role lock** | `MODULES` registry | Low | No NAMO-dedicated module yet — plumbing ready via `roleRestrictions` when one lands |
+| **`.env.local` modified** | Root | Trivial | Local-only; skip on commits |
+| **`canCreate` / `canManageUsers` flags** | `lib/constants.ts` USER_ROLES | Trivial | No longer read by any app gate. Safe to remove in a polish commit. |
+| **Legacy sidebar fallbacks** | `ADMIN_ITEMS`, `CES_ALLOWED_ITEMS` in `sidebar-nav.tsx` | Trivial | Unreachable with the current `HREF_TO_VIEW_PERM` map, kept as safety net. |
+| **`any` casts** | ~121 project-wide | Low | Ongoing sweep when types regen |
+| **`role_permissions` / `user_permission_overrides` not in typed schema** | `lib/supabase/types.ts` | Low | Accessed via `(supabase as any)` until types regen |
+| **Largest source files** | `base-setup/page.tsx` 4,750+ LOC, `parking/page.tsx` 4,334, `infrastructure/page.tsx` 4,150, `dashboard/page.tsx` 1,499 | Medium | Component extraction remains the lever |
+| **Test coverage** | 101 pass / 2 skipped, ~249 source files | Medium | No coverage on the new permission hook / RPCs yet |
 
 ---
 
-## Next Session Tasks (Prioritized)
+## Next Session Tasks
 
-### P1 — No items queued
-All prior P1 items cleared in this session's quality + carryover passes.
+### P1
+- **Test coverage for the permission matrix** — unit tests for `usePermissions()` + the CES / Safety RPC round-trips.
+- **Regen Supabase types** — pulls `role_permissions`, `user_permission_overrides`, `scn_*`, `arff_status_log`, `daily_reviews` into the typed schema so ~30 `as any` casts drop.
 
-### P2 — Polish (remaining small items)
-1. **Tighten public feedback "form closed" copy** — swap the generic message for a base-named version when the `feedback` module is off.
-2. **Add Monthly SCN call script** — if the net call differs from the Daily script.
-3. **Another `as any` sweep** — target modules that missed the last pass (e.g. activity-queries `qrc_executions` / `wildlife_*` casts).
+### P2
+- **Role walkthrough demo accounts** — seed one demo user per new role on Demo AFB for video walkthroughs.
+- **Remove `canCreate` / `canManageUsers` flags** from `USER_ROLES` + final sweep of any unused `UserRole` imports.
+- **Drop `ADMIN_ITEMS` / `CES_ALLOWED_ITEMS` / `isCesRole` state** from `sidebar-nav.tsx` once we're confident no saved sidebar configs still need the fallback.
 
-### P3 — Future (multi-session)
-- **Platform One Party Bus onboarding** (~6–8 weeks) — scaffold at `C:/Users/cspro/Downloads/glidepath/glidepath-local-dev/`; plan in `.claude/plans/`
-- **CAC/PIV authentication** — blocked on P1 platform
-- **Component extraction for 4K+ LOC pages** (`base-setup`, `parking`, `infrastructure`)
-- **Shared PDF boilerplate utility** (`lib/pdf-utils.ts` — consolidate 16 generators)
-- **METAR weather API integration** (aviationweather.gov)
-- **Outage analytics** (frequency/duration tracking for lighting systems)
-- **Training Management Module** (DAF training records)
-- **Part 139 civilian airport template support**
-- **BowMonk Conversion Tool** (feature parity with legacy Grotefend app)
-
----
-
-## Build Snapshot
-
-```
-✓ Compiled successfully
-  TypeScript clean (`npx tsc --noEmit` exit 0)
-  Tests: 101 pass / 2 skipped (RLS env-gated)
-  All routes generate cleanly
-
-  Notable First Load JS sizes:
-    /wildlife                788 kB  (unchanged — heatmap)
-    /parking                 398 kB
-    /reports/aging           331 kB
-    /obstructions/[id]       326 kB
-    /reports/daily           322 kB
-    /reports/lighting        317 kB
-    /library                 295 kB
-    /inspections             229 kB
-    /discrepancies           223 kB
-    /settings/base-setup     231 kB
-    /dashboard               206 kB  (−11 kB from cleanup)
-    /regulations             182 kB
-    /scn                     179 kB
-    /settings/base-setup/modules 175 kB
-    /recent-activity         160 kB  (admin audit view)
-
-  Middleware                 74.6 kB
-```
+### P3 (multi-session)
+- Platform One Party Bus onboarding (~6–8 weeks) — scaffold at `C:/Users/cspro/Downloads/glidepath/glidepath-local-dev/`
+- CAC/PIV authentication — blocked on P1 platform
+- Component extraction for 4K+ LOC pages
+- Shared PDF utility (`lib/pdf-utils.ts`)
+- METAR integration
+- Outage analytics
+- Training Management Module
+- Part 139 civilian template support
+- BowMonk conversion tool
 
 ---
 
@@ -118,10 +85,10 @@ All prior P1 items cleared in this session's quality + carryover passes.
 
 | Version | Date | Headline |
 |---|---|---|
-| **v2.32.0** | 2026-04-21 | Modular Onboarding, SCN, Close-for-Day, What's New modal |
+| **Unreleased** | 2026-04-22 | Permission matrix auth rollout, 3 new roles, CES write fix, Risk Control Measure |
+| v2.32.0 | 2026-04-21 | Modular Onboarding, SCN, Close-for-Day, What's New modal |
 | v2.31.0 | 2026-04-07 | Full Google Maps migration, Custom Status Boards, PPR Log |
 | v2.30.0 | 2026-04-14 | Daily Reviews + shift sign-off, ARFF status log, Vitest scaffold |
 | v2.29.0 | 2026-04-02 | Training system, 12-step base setup wizard, dark mode readability |
-| v2.28.0 | 2026-03-31 | Dashboard UI revamp, realtime silent tracking, competitive analysis |
 
 See `CHANGELOG.md` for full history.

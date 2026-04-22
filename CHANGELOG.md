@@ -4,6 +4,35 @@ All notable changes to Glidepath.
 
 ## [Unreleased]
 
+### Added
+- **Permission matrix auth** — replaces ad-hoc role-string checks with a canonical `permissions` catalogue (77 keys), `role_permissions` preset map, `user_permission_overrides` per-user grants/revokes, and a `user_has_permission(uid, key)` SECURITY DEFINER helper. Client code uses `usePermissions().has(PERM.X)` (React) or `getPermissionsFor()` (server routes). Scales to outside-agency roles without new code per feature.
+- **Three new roles** — `airfield_status` (kiosk — per-base view-only login, sidebar/bottom-nav/switcher hidden, `KioskGuard` redirects off any non-root route), `ppr` (PPR entries + airfield status view, edits via `ppr:write`), `majcom_rfm` (multi-base read-only — uses `base_members` rows + header installation switcher). Safety expanded with `wildlife:write` + narrow `safety_update_rsc_bwc` RPC. ATC matches airfield_status until an ATC-specific module lands.
+- **Bulk base assignment** — UserDetailModal has a new "Bulk" button that opens a checkbox list of every installation, pre-checks current memberships, and saves all adds/removes in one pass. Primary base stays locked. Designed for MAJCOM/RFM setup.
+- **CES write path** — `ces_update_discrepancy(...)` SECURITY DEFINER RPC lets CES change discrepancy status (In Work / Project / Work Completed), edit resolution notes, and add audit notes atomically. CES was silently blocked by RLS before; `StatusUpdateModal` now routes every CES save through the RPC.
+- **Risk Control Measure** — optional field on airfield discrepancies (alongside Project # and Estimated Cost) and a required field on every ACSI N-item discrepancy. ACSI filing blocks with a toast listing any N items missing an RCM. Linking an airfield discrepancy to an N item imports all three fields.
+
+### Changed
+- **Sidebar / More / page gates** — 15 pages swapped from hardcoded `userRole === 'x'` lists to `usePermissions().has()`. `HREF_TO_VIEW_PERM` map in the sidebar self-gates every nav item from the user's permission bundle; the legacy `CES_ALLOWED_ITEMS` / `canManageUsers` gates remain as fallbacks only for hrefs not in the map.
+- **CES / AMOPS / Safety / kiosk role scoping** refined — see `project_permission_matrix.md` in memory for the full role × permission table.
+
+### Schema
+- `2026042200` — permission matrix scaffold (`permissions`, `role_permissions`, `user_permission_overrides` + `user_has_permission()` helper). Seeds match today's effective behavior for all 9 existing roles.
+- `2026042201` — `ces_update_discrepancy(...)` RPC + grants CES the three new discrepancy permission keys.
+- `2026042202` — seeds `airfield_status` / `ppr` / `majcom_rfm` role presets, re-seeds `safety` / `atc`, adds `safety_update_rsc_bwc(...)` RPC.
+- `2026042203` — swaps `wildlife_sightings`, `wildlife_strikes`, `bwc_history`, `ppr_entries` RLS to the matrix.
+- `2026042204` — swaps inspections, checks, ACSI, obstructions, NOTAMs, waivers, contractors (7 tables) to the matrix; fixes `read_only` view-key overseed.
+- `2026042205` — swaps airfield_status, shift checklist (+ responses, items), SCN (checks, results, agencies), QRC (templates, executions), customer_feedback DELETE.
+- `2026042206` — swaps parking (5 tables), infrastructure_features, lighting_systems + components, daily_reviews, activity_log, status_updates, runway/arff logs, photos. Adds `photos:write` / `photos:delete` permission keys.
+- `2026042207` — swaps profiles, base_members, bases UPDATE, all `base_*` config tables, `base_inspection_*` chain, `inspection_item_system_links`, `navaid_statuses`, `pdf_extraction_status` / `pdf_text_pages`. Grants `base_setup:write` to `amops`.
+- `2026042208` — comprehensive cleanup of orphan-named policies (sci_*, scr_*, sc_*, iisl_*, qrc_tmpl_*, qrc_exec_*, profiles_insert/update_base_admin, base_facilities_write, Admins-can-manage-base-species, check_comments, waiver_criteria/_attachments/_reviews/_coordination, outage_events, bwc_history UPDATE/DELETE, custom_status_boards + items, ppr_columns, storage.objects photos path-scoped). Drops the three legacy helpers (`user_can_write`, `user_is_admin`, `user_is_base_admin_at`).
+
+### Discrepancy schema
+- `2026042102` — adds `project_number TEXT`, `estimated_cost TEXT`, `risk_control_measure TEXT` to `discrepancies` (all optional).
+- `2026042103` — adds `waiting_for_project` to the `discrepancies.current_status` CHECK constraint (the app already used the value but the DB rejected it).
+
+### Other
+- `2026042101` — `get_public_feedback_config(p_base_id)` + `base_exists(p_base_id)` SECURITY DEFINER RPCs so the QR-scan flow works for anonymous visitors (the public feedback form was silently rejected by `bases_select` RLS before).
+
 ### Planned
 - METAR weather API integration (aviationweather.gov)
 - Expand test coverage onto new modules (`modules-config`, SCN summaries, release-notes)
