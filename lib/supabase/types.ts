@@ -4565,6 +4565,9 @@ export type UserRole =
   | 'read_only'
   | 'base_admin'
   | 'sys_admin'
+  | 'ppr'
+  | 'airfield_status'
+  | 'majcom_rfm'
 
 export type ProfileStatus = 'active' | 'deactivated' | 'pending'
 

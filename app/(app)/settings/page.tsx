@@ -6,6 +6,7 @@ import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { useTheme, type ThemePreference } from '@/lib/theme-context'
 import { USER_ROLES } from '@/lib/constants'
 import { createInstallation } from '@/lib/supabase/installations'
@@ -393,7 +394,8 @@ function ThemeSectionContent() {
 // ═══════════════════════════════════════════════════════════════
 
 function InstallationSectionContent() {
-  const { currentInstallation, allInstallations, switchInstallation, removeInstallation, userRole } = useInstallation()
+  const { currentInstallation, allInstallations, switchInstallation, removeInstallation } = useInstallation()
+  const { has } = usePermissions()
   const [showDropdown, setShowDropdown] = useState(false)
   const [search, setSearch] = useState('')
   const [addingNew, setAddingNew] = useState(false)
@@ -404,7 +406,7 @@ function InstallationSectionContent() {
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
   const [userId, setUserId] = useState<string | undefined>()
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const canManageInstallations = (userRole === 'sys_admin' || userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo') && allInstallations.length > 1
+  const canManageInstallations = has(PERM.INSTALLATIONS_SWITCH) && allInstallations.length > 1
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -472,8 +474,9 @@ function InstallationSectionContent() {
           </div>
         </div>
 
-        {/* Switch/manage installations — sys_admin only */}
-        {userRole === 'sys_admin' && (<>
+        {/* Switch/manage installations — sys_admin only (users:manage
+            restricted path; full user management privilege required). */}
+        {has(PERM.USERS_MANAGE) && (<>
         <div style={{ borderTop: '1px solid var(--color-border)' }} />
 
         {/* Switch installation dropdown */}
@@ -710,8 +713,9 @@ function InstallationSectionContent() {
 // ═══════════════════════════════════════════════════════════════
 
 function BaseConfigSectionContent() {
-  const { userRole, installationId } = useInstallation()
-  const canManage = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
+  const { installationId } = useInstallation()
+  const { has } = usePermissions()
+  const canManage = has(PERM.BASE_SETUP_WRITE)
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
   const [diagramLoaded, setDiagramLoaded] = useState(false)
   const [uploading, setUploading] = useState(false)

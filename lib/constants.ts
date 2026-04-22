@@ -553,6 +553,13 @@ export const USER_ROLES = {
   read_only:        { label: 'Read Only', canCreate: false, canManageUsers: false },
   base_admin:       { label: 'Base Admin', canCreate: true, canManageUsers: true },
   sys_admin:        { label: 'System Admin', canCreate: true, canManageUsers: true },
+  // Phase C roles — real authorization lives in role_permissions /
+  // user_has_permission(). canCreate / canManageUsers stay FALSE for
+  // these; any legacy gate still reading those flags treats them as
+  // non-privileged, which is correct for the new roles.
+  ppr:              { label: 'PPR', canCreate: false, canManageUsers: false },
+  airfield_status:  { label: 'Airfield Status', canCreate: false, canManageUsers: false },
+  majcom_rfm:       { label: 'MAJCOM / RFM', canCreate: false, canManageUsers: false },
 } as const
 
 // Rank options for user management

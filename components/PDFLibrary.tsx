@@ -262,7 +262,7 @@ function createSupabaseClient(url: string | undefined, key: string | undefined):
 const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ─── IndexedDB (shared with lib/idb.ts — single source of truth) ───
 import { idbSet, idbGet, idbGetAllKeys, idbGetAll, idbDelete, STORE_BLOBS, STORE_META, STORE_TEXT, STORE_TEXT_META } from '@/lib/idb';
-import { useInstallation } from '@/lib/installation-context';
+import { usePermissions, PERM } from '@/lib/permissions';
 
 // ─── Text extraction with PDF.js ─────────────────────────────
 async function extractTextFromBuffer(arrayBuffer: ArrayBuffer): Promise<ExtractedPage[]> {
@@ -409,10 +409,10 @@ function LazyPage({ pageNumber, scale, searchTerm }: LazyPageProps) {
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════
 export default function PDFLibrary() {
-  // Only admin roles may extract (RLS on pdf_extraction_status / pdf_text_pages
-  // is gated via user_is_admin — hide the Extract All button for everyone else).
-  const { userRole } = useInstallation();
-  const canExtract = userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'airfield_manager' || userRole === 'namo';
+  // Extract All button gated on library:manage — matches the RLS on
+  // pdf_extraction_status / pdf_text_pages (Phase D2c migration).
+  const { has } = usePermissions();
+  const canExtract = has(PERM.LIBRARY_MANAGE);
 
   // File list
   const [files, setFiles] = useState<StorageFileObject[]>([]);

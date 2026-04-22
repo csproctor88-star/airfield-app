@@ -531,6 +531,38 @@ export function StatusUpdateModal({
     }
     const autoAdvanced = effectiveCurrentStatus !== currentStatus
 
+    // CES users are blocked by RLS from writing discrepancies /
+    // status_updates directly — route every CES save through the
+    // SECURITY DEFINER RPC, which handles the update, the audit row,
+    // and the optional note atomically. CES never reaches the
+    // status-transition or assigned_shop branches further down.
+    if (isCes) {
+      const anyChange =
+        currentStatusChanged || autoAdvanced || resolutionChanged || notes.trim().length > 0
+      if (!anyChange) {
+        setSaving(false)
+        onClose()
+        return
+      }
+      const { cesUpdateDiscrepancy } = await import('@/lib/supabase/discrepancies')
+      const { error } = await cesUpdateDiscrepancy(discrepancy.id, {
+        current_status: currentStatusChanged || autoAdvanced ? effectiveCurrentStatus : null,
+        resolution_notes: resolutionChanged ? (resolutionNotes || null) : null,
+        note: notes.trim() ? notes.trim() : null,
+      })
+      setSaving(false)
+      if (error) {
+        const { toast } = await import('sonner')
+        toast.error(error)
+        return
+      }
+      const { fetchDiscrepancy } = await import('@/lib/supabase/discrepancies')
+      const fresh = await fetchDiscrepancy(discrepancy.id)
+      if (fresh) onSaved(fresh)
+      onClose()
+      return
+    }
+
     if (shopChanged || currentStatusChanged || autoAdvanced || resolutionChanged) {
       const { updateDiscrepancy } = await import('@/lib/supabase/discrepancies')
       const fields: Record<string, unknown> = {}

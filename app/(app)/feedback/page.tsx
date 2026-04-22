@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { fetchFeedback, fetchFeedbackStats, fetchFeedbackConfig, deleteFeedback, type CustomerFeedback, type FeedbackFormField } from '@/lib/supabase/feedback'
 import { formatZuluDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -12,23 +13,25 @@ import type jsPDF from 'jspdf'
 
 const STAR = '\u2605'
 const STAR_EMPTY = '\u2606'
-const ALLOWED_ROLES = ['airfield_manager', 'sys_admin', 'base_admin', 'namo']
 
 export default function FeedbackPage() {
   const router = useRouter()
-  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
-  const isAdmin = ALLOWED_ROLES.includes(userRole || '')
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { has, loaded: permsLoaded } = usePermissions()
+  // View access = has feedback:view; delete gated separately.
+  const canView = has(PERM.FEEDBACK_VIEW)
+  const canDelete = has(PERM.FEEDBACK_DELETE)
   const [feedback, setFeedback] = useState<CustomerFeedback[]>([])
   const [stats, setStats] = useState<{ total: number; avgRating: number | null; ratingCounts: Record<number, number>; recentCount: number }>({ total: 0, avgRating: null, ratingCounts: {}, recentCount: 0 })
   const [fieldLabelMap, setFieldLabelMap] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | '30d' | '7d'>('30d')
 
-  // Access control: only admin-level roles see feedback submissions.
+  // Access control: only users with feedback:view see the dashboard.
   useEffect(() => {
-    if (!userRole) return
-    if (!ALLOWED_ROLES.includes(userRole)) router.replace('/')
-  }, [userRole, router])
+    if (!permsLoaded) return
+    if (!canView) router.replace('/')
+  }, [permsLoaded, canView, router])
 
   // PDF export
   const [generatingPdf, setGeneratingPdf] = useState(false)
@@ -258,7 +261,7 @@ export default function FeedbackPage() {
                     {fb.email && <> &bull; {fb.email}</>}
                   </div>
                 </div>
-                {isAdmin && (
+                {canDelete && (
                   <button onClick={() => handleDelete(fb.id)} style={{
                     background: 'none', border: 'none', color: 'var(--color-danger)',
                     cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: 0, flexShrink: 0,

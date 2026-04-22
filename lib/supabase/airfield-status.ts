@@ -289,3 +289,43 @@ export async function fetchRunwayStatusLog(
     user_name: 'Unknown',
   })) as RunwayStatusLogRow[]
 }
+
+// ── Safety-role narrow writer ──
+// Safety users don't have full `airfield_status:write`. They route
+// their RSC / RCR / BWC edits through the safety_update_rsc_bwc
+// SECURITY DEFINER RPC, which enforces the narrow permission and
+// writes the matching runway_status_log audit row.
+export async function safetyUpdateRscBwc(
+  baseId: string,
+  input: {
+    rsc_condition?: string | null
+    rcr_touchdown?: string | null
+    rcr_midpoint?: string | null
+    rcr_rollout?: string | null
+    rcr_condition?: string | null
+    bwc_value?: string | null
+    reason?: string | null
+  },
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+
+  const { error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>
+  }).rpc('safety_update_rsc_bwc', {
+    p_base_id: baseId,
+    p_rsc_condition: input.rsc_condition ?? null,
+    p_rcr_touchdown: input.rcr_touchdown ?? null,
+    p_rcr_midpoint:  input.rcr_midpoint  ?? null,
+    p_rcr_rollout:   input.rcr_rollout   ?? null,
+    p_rcr_condition: input.rcr_condition ?? null,
+    p_bwc_value:     input.bwc_value     ?? null,
+    p_reason:        input.reason        ?? null,
+  })
+
+  if (error) {
+    console.error('safety_update_rsc_bwc failed:', error.message)
+    return { error: error.message }
+  }
+  return { error: null }
+}

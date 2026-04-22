@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { USER_ROLES } from '@/lib/constants'
+import { getPermissionsFor, PERM } from '@/lib/permissions'
 import { InstallationSelector } from '@/components/admin/installation-selector'
 import { UserFilters } from '@/components/admin/user-filters'
 import { UserList } from '@/components/admin/user-list'
@@ -143,10 +143,11 @@ export default function UserManagementPage() {
       }
 
       const role = profile.role as UserRole
-      const roleConfig = USER_ROLES[role]
 
-      // Access control: redirect non-admin users
-      if (!roleConfig?.canManageUsers && role !== 'sys_admin' && role !== 'base_admin') {
+      // Access control: require users:view to reach the page at all
+      // (users:manage is checked per-action below).
+      const callerPerms = await getPermissionsFor(supabase, user.id)
+      if (!callerPerms.has(PERM.USERS_VIEW)) {
         router.push('/')
         return
       }

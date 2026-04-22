@@ -61,11 +61,11 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/parking'],
+      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors'],
     },
     {
       label: 'Airfield Management',
-      items: ['/discrepancies', '/obstructions', '/infrastructure'],
+      items: ['/discrepancies', '/obstructions', '/infrastructure', '/parking'],
     },
     {
       label: 'Reference',

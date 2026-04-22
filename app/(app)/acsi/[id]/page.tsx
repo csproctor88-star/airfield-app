@@ -9,6 +9,7 @@ import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspection, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
 import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, RotateCcw } from 'lucide-react'
@@ -18,9 +19,10 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 export default function AcsiDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { userRole, currentInstallation, installationId, defaultPdfEmail } = useInstallation()
-  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
-  const canEdit = isAdmin || userRole === 'airfield_manager'
+  const { currentInstallation, installationId, defaultPdfEmail } = useInstallation()
+  const { has } = usePermissions()
+  const canEdit = has(PERM.ACSI_WRITE)
+  const isAdmin = has(PERM.ACSI_DELETE)
 
   const [inspection, setInspection] = useState<AcsiInspection | null>(null)
   const [loading, setLoading] = useState(true)

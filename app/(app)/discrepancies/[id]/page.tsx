@@ -7,6 +7,7 @@ import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, deleteDiscrepancyPhoto, fetchStatusUpdates, deleteDiscrepancy, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
 
@@ -27,7 +28,8 @@ type ModalType = 'edit' | 'status' | 'workorder' | null
 export default function DiscrepancyDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { installationId, userRole, defaultPdfEmail, currentInstallation } = useInstallation()
+  const { installationId, defaultPdfEmail, currentInstallation } = useInstallation()
+  const { has } = usePermissions()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -48,7 +50,7 @@ export default function DiscrepancyDetailPage() {
   const [linkedFeature, setLinkedFeature] = useState<InfrastructureFeature | null>(null)
   const [linkedSystemInfo, setLinkedSystemInfo] = useState<{ systemName: string; componentLabel: string } | null>(null)
   const [systemMapUrl, setSystemMapUrl] = useState<string | null>(null)
-  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
+  const canDeleteDiscrepancy = has(PERM.DISCREPANCIES_DELETE)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -524,7 +526,7 @@ export default function DiscrepancyDetailPage() {
       </div>
 
       {/* Admin: Delete Discrepancy */}
-      {isAdmin && !usingDemo && (
+      {canDeleteDiscrepancy && !usingDemo && (
         <div style={{ marginBottom: 8 }}>
           <ActionButton
             color="#EF4444"

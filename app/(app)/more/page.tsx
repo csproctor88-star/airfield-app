@@ -4,12 +4,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { USER_ROLES } from '@/lib/constants'
-import type { UserRole } from '@/lib/supabase/types'
 import { LogOut } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
+import { usePermissions, PERM } from '@/lib/permissions'
 
 type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
@@ -30,7 +29,6 @@ const opsItems: ModuleItem[] = [
   { name: 'Wildlife / BASH', icon: '🦅', color: '#10B981', href: '/wildlife' },
   { name: 'PPR Log', icon: '📝', color: '#38BDF8', href: '/ppr' },
   { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
-  { name: 'Aircraft Parking', icon: '🛬', color: '#38BDF8', href: '/parking' },
 ]
 
 // Airfield Management
@@ -38,6 +36,7 @@ const mgmtItems: ModuleItem[] = [
   { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
   { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
   { name: 'Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
+  { name: 'Aircraft Parking', icon: '🛬', color: '#38BDF8', href: '/parking' },
 ]
 
 // Reference
@@ -182,66 +181,40 @@ function SignOutButton() {
   )
 }
 
+// Map each admin href to its gating permission so the filter below
+// stays in sync with the sidebar's HREF_TO_VIEW_PERM.
+const HREF_PERMISSION: Partial<Record<string, string>> = {
+  '/library':        PERM.LIBRARY_VIEW,
+  '/users':          PERM.USERS_VIEW,
+  '/feedback':       PERM.FEEDBACK_VIEW,
+}
+
 export default function MorePage() {
-  const [canManageUsers, setCanManageUsers] = useState(false)
-  const [isSysAdmin, setIsSysAdmin] = useState(false)
-  const [isCes, setIsCes] = useState(false)
-  const [loaded, setLoaded] = useState(false)
   const { enabledModules } = useInstallation()
-
-  useEffect(() => {
-    async function checkRole() {
-      const supabase = createClient()
-      if (!supabase) {
-        setCanManageUsers(true)
-        setIsSysAdmin(true)
-        setLoaded(true)
-        return
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        setLoaded(true)
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      const role = (profile?.role ?? 'read_only') as UserRole
-      const config = USER_ROLES[role]
-      setCanManageUsers(config?.canManageUsers ?? false)
-      setIsSysAdmin(role === 'sys_admin')
-      setIsCes(role === 'ces')
-      setLoaded(true)
-    }
-
-    checkRole()
-  }, [])
-
-  const CES_ALLOWED = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
+  const { has, loaded: permsLoaded } = usePermissions()
 
   function filterItems(items: ModuleItem[]) {
-    if (!loaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
+    if (!permsLoaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
     return items.filter(m => {
-      if (m.adminOnly && !canManageUsers) return false
-      if (m.sysAdminOnly && !isSysAdmin) return false
-      if (isCes && !CES_ALLOWED.has(m.href)) return false
+      const perm = HREF_PERMISSION[m.href]
+      if (perm && !has(perm)) return false
+      // Remaining items: module-toggle gate only (permission gate is
+      // subsumed by the sidebar matrix now).
       if (!isModuleEnabled(m.href, enabledModules)) return false
       return true
     })
   }
 
-  // CES users get a simplified More page
-  if (isCes) {
+  // CES users get a simplified flat More page (no collapsible groups).
+  // Identify them by the ces:view permission, which only the CES role
+  // preset grants.
+  if (permsLoaded && has(PERM.CES_VIEW) && !has(PERM.INSPECTIONS_VIEW)) {
     const cesItems = [...mgmtItems, ...settingsItems]
-      .filter(m => CES_ALLOWED.has(m.href))
+      .filter(m => {
+        const perm = HREF_PERMISSION[m.href]
+        if (perm && !has(perm)) return false
+        return true
+      })
       .filter(m => isModuleEnabled(m.href, enabledModules))
     return (
       <div className="page-container">

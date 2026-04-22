@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, reopenInspection, updateInspectionNotes, updateInspectionItems, uploadInspectionPhoto, deleteInspectionPhoto, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { ActionButton } from '@/components/ui/button'
 import type { PdfBaseInfo, PdfPhotoMap, PdfGeneralPhotos, PdfDiscPhotoMap } from '@/lib/pdf-export'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
@@ -24,8 +25,13 @@ import { DetailGrid } from '@/components/ui/detail-grid'
 export default function InspectionDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { currentInstallation, installationId, userRole, defaultPdfEmail } = useInstallation()
-  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
+  const { currentInstallation, installationId, defaultPdfEmail } = useInstallation()
+  const { has } = usePermissions()
+  // Write permission covers AFM, NAMO, AMOPS, base_admin, sys_admin.
+  // Used for delete-inspection (was gated on isAdmin) and for the
+  // "who can edit/reopen an inspection" check below.
+  const canWriteInspections = has(PERM.INSPECTIONS_WRITE)
+  const canDeleteInspections = has(PERM.INSPECTIONS_DELETE)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [inspections, setInspections] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -182,10 +188,12 @@ export default function InspectionDetailPage() {
   const lightingInsp = allInspections.find((i: { inspection_type: string }) => i.inspection_type === 'lighting')
   const primary = airfieldInsp || allInspections[0]
 
-  // canEdit: user who completed/filed the inspection, or NAMO/Base Admin/Sys Admin
+  // canEdit: anyone with inspections:write OR the user who actually
+  // completed/filed this inspection (so individual inspectors can
+  // correct their own record even when they lack the blanket write
+  // permission — matches the prior rule).
   const canEdit = !usingDemo && (
-    isAdmin ||
-    userRole === 'namo' ||
+    canWriteInspections ||
     (currentUserId != null && (
       primary.completed_by_id === currentUserId ||
       primary.filed_by_id === currentUserId
@@ -1465,7 +1473,7 @@ export default function InspectionDetailPage() {
       </div>
 
       {/* Edit / Admin Actions */}
-      {(canEdit || isAdmin) && (
+      {(canEdit || canDeleteInspections) && (
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
           {canEdit && (
             <ActionButton
@@ -1504,7 +1512,7 @@ export default function InspectionDetailPage() {
               Reopen for Editing
             </ActionButton>
           )}
-          {isAdmin && (
+          {canDeleteInspections && (
             <ActionButton
               color="var(--color-red)"
               onClick={async () => {

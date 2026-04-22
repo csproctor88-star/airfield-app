@@ -57,7 +57,7 @@ type DashboardState = {
 const DashboardContext = createContext<DashboardState | null>(null)
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const { installationId, runways } = useInstallation()
+  const { installationId, runways, userRole } = useInstallation()
   const [advisories, setAdvisoriesLocal] = useState<AdvisoryItem[]>([])
   const [activeRunway, setActiveRunwayLocal] = useState('01')
   const [runwayStatus, setRunwayStatusLocal] = useState<'open' | 'suspended' | 'closed'>('open')
@@ -310,25 +310,37 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   }, [arffStatuses, installationId])
 
   // RSC: set runway surface condition
+  // Safety users don't have full airfield_status:write — they route
+  // through the safety_update_rsc_bwc SECURITY DEFINER RPC.
   const setRscCondition = useCallback(async (val: string | null) => {
     const now = new Date().toISOString()
     setRscConditionLocal(val)
     setRscUpdatedAtLocal(now)
     markLocalUpdate()
-    await updateAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
-  }, [installationId])
+    if (userRole === 'safety' && installationId) {
+      const { safetyUpdateRscBwc } = await import('@/lib/supabase/airfield-status')
+      await safetyUpdateRscBwc(installationId, { rsc_condition: val })
+    } else {
+      await updateAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
+    }
+  }, [installationId, userRole])
 
-  // BWC: set bird watch condition
+  // BWC: set bird watch condition (Safety routes through RPC, same reason)
   const setBwcValue = useCallback(async (val: string | null) => {
     const now = new Date().toISOString()
     setBwcValueLocal(val)
     setBwcUpdatedAtLocal(now)
     markLocalUpdate()
-    await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
+    if (userRole === 'safety' && installationId) {
+      const { safetyUpdateRscBwc } = await import('@/lib/supabase/airfield-status')
+      await safetyUpdateRscBwc(installationId, { bwc_value: val })
+    } else {
+      await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
+    }
     if (val) {
       logBwcChange(installationId, val, 'dashboard', null, null, null)
     }
-  }, [installationId])
+  }, [installationId, userRole])
 
   // Construction remarks
   const setConstructionRemarks = useCallback(async (val: string | null) => {

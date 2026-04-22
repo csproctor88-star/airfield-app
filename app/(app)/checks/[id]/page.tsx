@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, deleteCheck, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { ActionButton } from '@/components/ui/button'
 import { DetailGrid } from '@/components/ui/detail-grid'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -46,8 +47,10 @@ export default function CheckDetailPage() {
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const issueFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
   const issueCaptureInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
-  const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
-  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { has } = usePermissions()
+  const canWriteChecks = has(PERM.CHECKS_WRITE)
+  const canDeleteChecks = has(PERM.CHECKS_DELETE)
 
   useEffect(() => {
     const supabase = createClient()
@@ -196,11 +199,11 @@ export default function CheckDetailPage() {
     ? [...DEMO_CHECK_COMMENTS.filter((c) => c.check_id === params.id), ...comments.filter(c => c.id.startsWith('demo-'))]
     : comments
 
-  // canEdit: base_admin, sys_admin, namo, airfield_manager, or the user who completed the check
+  // canEdit: anyone with checks:write OR the user who actually saved
+  // this check (so an individual inspector can correct their own entry
+  // even if they don't hold the blanket write permission).
   const canEdit = !usingDemo && (
-    isAdmin ||
-    userRole === 'namo' ||
-    userRole === 'airfield_manager' ||
+    canWriteChecks ||
     (currentUserId != null && check?.saved_by_id === currentUserId)
   )
 
@@ -775,7 +778,7 @@ export default function CheckDetailPage() {
       </div>
 
       {/* Admin Actions */}
-      {isAdmin && (
+      {canDeleteChecks && (
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
           <ActionButton
             color="#EF4444"

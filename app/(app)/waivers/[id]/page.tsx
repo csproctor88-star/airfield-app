@@ -19,6 +19,7 @@ import {
   WAIVER_COORDINATION_OFFICES, WAIVER_REVIEW_RECOMMENDATIONS, WAIVER_CRITERIA_SOURCES,
 } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
 import type { WaiverStatus, WaiverCoordinationOffice, WaiverCoordinationStatus, WaiverAttachmentType, WaiverReviewRecommendation } from '@/lib/supabase/types'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -39,7 +40,8 @@ const STATUS_CHANGE_CONFIG: Record<string, { title: string; description: string;
 export default function WaiverDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { userRole, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { currentInstallation, defaultPdfEmail } = useInstallation()
+  const { has, loaded: permsLoaded } = usePermissions()
   const [waiver, setWaiver] = useState<WaiverRow | null>(null)
   const [criteria, setCriteria] = useState<WaiverCriteriaRow[]>([])
   const [attachments, setAttachments] = useState<WaiverAttachmentRow[]>([])
@@ -142,8 +144,10 @@ export default function WaiverDetailPage() {
     })
   }, [attachments])
 
-  const isManager = !userRole || userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
-  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
+  // isManager: can transition waiver status (approve/cancel/close). Pre-auth
+  // the buttons during initial permission load so the UI doesn't flicker.
+  const isManager = !permsLoaded || has(PERM.WAIVERS_WRITE)
+  const canDeleteWaiver = has(PERM.WAIVERS_DELETE)
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }))
@@ -1058,7 +1062,7 @@ export default function WaiverDetailPage() {
       </div>
 
       {/* Admin Actions */}
-      {isAdmin && (
+      {canDeleteWaiver && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
           <ActionButton color="var(--color-blue)" onClick={() => router.push(`/waivers/${params.id}/edit`)} disabled={actionLoading}>
             Edit Waiver

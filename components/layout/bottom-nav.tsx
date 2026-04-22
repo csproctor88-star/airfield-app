@@ -33,6 +33,9 @@ const cesTabs: { href: string; label: string; icon: LucideIcon }[] = [
 export function BottomNav() {
   const pathname = usePathname()
   const { userRole, enabledModules } = useInstallation()
+  // Kiosk roles (airfield_status, atc) — no bottom nav. Users can
+  // only view the Airfield Status page; there is nowhere else to go.
+  if (userRole === 'airfield_status' || userRole === 'atc') return null
   const base = userRole === 'ces' ? cesTabs : defaultTabs
   const tabs = base.filter(t => isModuleEnabled(t.href, enabledModules))
 

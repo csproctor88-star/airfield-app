@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { isModuleEnabled, isModuleSetupComplete, MODULES, type ModuleKey } from '@/lib/modules-config'
 import { fetchInspections } from '@/lib/supabase/inspections'
 import { logManualEntry } from '@/lib/supabase/activity'
@@ -25,9 +26,12 @@ const QUICK_ACTIONS = [
 
 export default function AMDashboardPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, userRole, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed } = useDashboard()
-  const canToggleOoo = ['airfield_manager', 'sys_admin', 'base_admin', 'namo', 'amops'].includes(userRole || '')
+  const { has } = usePermissions()
+  // Out-of-office + closed-for-day toggles share the airfield_status:write
+  // permission (they change the airfield_status row).
+  const canToggleOoo = has(PERM.AIRFIELD_STATUS_WRITE)
   const OOO_DEFAULT_MESSAGE = 'Airfield Management is Out of the Office. Contact via cell phone  at (586) 396-4046 or via Tower Net Callsign: Airfield3'
   const CLOSED_DEFAULT_MESSAGE = 'Airfield Management is CLOSED for the day. Runway, RSC, and BWC status will be refreshed during the next opening check.'
   const [showOooDialog, setShowOooDialog] = useState(false)
@@ -200,10 +204,7 @@ export default function AMDashboardPage() {
 
       {/* ===== Setup finish banner ===== */}
       {(() => {
-        const canEditSetup =
-          userRole === 'airfield_manager' || userRole === 'sys_admin' ||
-          userRole === 'base_admin' || userRole === 'namo'
-        if (!canEditSetup) return null
+        if (!has(PERM.BASE_SETUP_WRITE)) return null
         const incomplete = MODULES.filter(m =>
           (enabledModules as ModuleKey[]).includes(m.key) &&
           m.setupSteps.length > 0 &&

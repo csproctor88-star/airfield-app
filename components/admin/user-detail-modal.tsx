@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff, Plus, Building2 } from 'lucide-react'
+import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff, Plus, Building2, ListChecks } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
@@ -56,6 +56,11 @@ export function UserDetailModal({
   const [showAddBase, setShowAddBase] = useState(false)
   const [addBaseSearch, setAddBaseSearch] = useState('')
   const addBaseRef = useRef<HTMLDivElement>(null)
+  // Bulk-edit state — for MAJCOM/RFM and any user with lots of bases
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set())
+  const [bulkSearch, setBulkSearch] = useState('')
+  const [bulkSaving, setBulkSaving] = useState(false)
   const instDropdownRef = useRef<HTMLDivElement>(null)
 
   // Close installation dropdown on outside click
@@ -138,6 +143,72 @@ export function UserDetailModal({
     }
     setBaseMemberships(prev => prev.filter(m => m.base_id !== baseId))
     showMessage('Base access removed')
+  }
+
+  const openBulkEdit = () => {
+    setBulkSelected(new Set(baseMemberships.map(m => m.base_id)))
+    setBulkSearch('')
+    setShowBulkEdit(true)
+  }
+
+  const toggleBulk = (baseId: string) => {
+    // Primary base stays checked — it's locked in like the per-row remove.
+    if (baseId === user.primary_base_id) return
+    setBulkSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(baseId)) next.delete(baseId)
+      else next.add(baseId)
+      return next
+    })
+  }
+
+  const handleBulkSave = async () => {
+    const supabase = createClient()
+    if (!supabase) return
+    setBulkSaving(true)
+    const current = new Set(baseMemberships.map(m => m.base_id))
+    const desired = new Set(bulkSelected)
+    // Always keep primary base in desired — defensive.
+    if (user.primary_base_id) desired.add(user.primary_base_id)
+
+    const toAdd: string[] = []
+    const toRemove: string[] = []
+    desired.forEach(id => { if (!current.has(id)) toAdd.push(id) })
+    current.forEach(id => { if (!desired.has(id)) toRemove.push(id) })
+
+    try {
+      if (toAdd.length > 0) {
+        const rows = toAdd.map(base_id => ({ base_id, user_id: user.id, role: 'read_only' }))
+        const { error } = await supabase.from('base_members').upsert(rows, { onConflict: 'base_id,user_id' })
+        if (error) throw new Error(error.message)
+      }
+      if (toRemove.length > 0) {
+        const { error } = await supabase
+          .from('base_members')
+          .delete()
+          .eq('user_id', user.id)
+          .in('base_id', toRemove)
+        if (error) throw new Error(error.message)
+      }
+      // Rebuild memberships from the desired set
+      setBaseMemberships(() => {
+        const rows: { base_id: string; role: string; name: string; icao: string }[] = []
+        desired.forEach(base_id => {
+          const existing = baseMemberships.find(m => m.base_id === base_id)
+          if (existing) { rows.push(existing); return }
+          const inst = installations.find(i => i.id === base_id)
+          rows.push({ base_id, role: 'read_only', name: inst?.name || '', icao: inst?.icao || '' })
+        })
+        return rows
+      })
+      const n = toAdd.length + toRemove.length
+      showMessage(n === 0 ? 'No changes' : `Saved — ${toAdd.length} added, ${toRemove.length} removed`)
+      setShowBulkEdit(false)
+    } catch (err) {
+      showMessage(err instanceof Error ? err.message : 'Bulk save failed', true)
+    } finally {
+      setBulkSaving(false)
+    }
   }
 
   const isDeactivated = user.status === 'deactivated'
@@ -503,6 +574,22 @@ export function UserDetailModal({
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <span className="section-label" style={{ marginBottom: 0 }}>Base Access</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={openBulkEdit}
+                    disabled={anyLoading}
+                    title="Select multiple bases at once (useful for MAJCOM / RFM)"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      padding: '4px 8px', borderRadius: 6,
+                      border: '1px solid var(--color-border)',
+                      background: 'transparent', color: 'var(--color-cyan)',
+                      fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <ListChecks size={12} /> Bulk
+                  </button>
                 <div ref={addBaseRef} style={{ position: 'relative' }}>
                   <button
                     type="button"
@@ -558,6 +645,7 @@ export function UserDetailModal({
                         ))}
                     </div>
                   )}
+                </div>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -889,6 +977,144 @@ export function UserDetailModal({
           )}
         </div>
       </div>
+
+      {/* Bulk base assignment — optimized for MAJCOM/RFM with many bases */}
+      {showBulkEdit && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 300, display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.65)', padding: 16,
+          }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget && !bulkSaving) setShowBulkEdit(false) }}
+        >
+          <div
+            style={{
+              width: '100%', maxWidth: 460, maxHeight: '85vh',
+              background: 'var(--color-bg-surface-solid)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 12, display: 'flex', flexDirection: 'column',
+            }}
+          >
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                Bulk Base Assignment
+              </div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                Check every base this user should have access to. Primary base stays locked.
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 18px' }}>
+              <input
+                type="text"
+                placeholder="Filter bases..."
+                value={bulkSearch}
+                onChange={(e) => setBulkSearch(e.target.value)}
+                className="input-dark"
+                style={{ width: '100%', boxSizing: 'border-box', fontSize: 'var(--fs-sm)' }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                <button
+                  type="button"
+                  onClick={() => setBulkSelected(new Set(installations.map(i => i.id)))}
+                  style={{
+                    padding: '3px 8px', borderRadius: 4, border: '1px solid var(--color-border)',
+                    background: 'transparent', color: 'var(--color-text-3)',
+                    fontSize: 'var(--fs-2xs)', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >Select all</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = new Set<string>()
+                    if (user.primary_base_id) next.add(user.primary_base_id)
+                    setBulkSelected(next)
+                  }}
+                  style={{
+                    padding: '3px 8px', borderRadius: 4, border: '1px solid var(--color-border)',
+                    background: 'transparent', color: 'var(--color-text-3)',
+                    fontSize: 'var(--fs-2xs)', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >Clear</button>
+                <div style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', alignSelf: 'center' }}>
+                  {bulkSelected.size} selected
+                </div>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 18px 12px' }}>
+              {installations
+                .filter(inst => !bulkSearch || `${inst.name} ${inst.icao ?? ''}`.toLowerCase().includes(bulkSearch.toLowerCase()))
+                .map(inst => {
+                  const checked = bulkSelected.has(inst.id)
+                  const isPrimary = inst.id === user.primary_base_id
+                  return (
+                    <label
+                      key={inst.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 6px', borderRadius: 4,
+                        borderBottom: '1px solid var(--color-border)',
+                        cursor: isPrimary ? 'default' : 'pointer',
+                        opacity: isPrimary ? 0.8 : 1,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={isPrimary}
+                        onChange={() => toggleBulk(inst.id)}
+                        style={{ cursor: isPrimary ? 'default' : 'pointer' }}
+                      />
+                      <Building2 size={12} style={{ color: 'var(--color-text-4)' }} />
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 500 }}>
+                        {inst.name}
+                      </span>
+                      {inst.icao && (
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>{inst.icao}</span>
+                      )}
+                      {isPrimary && (
+                        <span style={{
+                          marginLeft: 'auto', fontSize: '9px', fontWeight: 700,
+                          color: 'var(--color-cyan)', padding: '1px 4px', borderRadius: 3,
+                          background: 'rgba(56,189,248,0.1)',
+                        }}>PRIMARY</span>
+                      )}
+                    </label>
+                  )
+                })}
+            </div>
+
+            <div style={{
+              display: 'flex', gap: 8, padding: '12px 18px',
+              borderTop: '1px solid var(--color-border)', justifyContent: 'flex-end',
+            }}>
+              <button
+                type="button"
+                onClick={() => setShowBulkEdit(false)}
+                disabled={bulkSaving}
+                style={{
+                  padding: '8px 16px', borderRadius: 6, border: '1px solid var(--color-border)',
+                  background: 'transparent', color: 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: bulkSaving ? 'not-allowed' : 'pointer',
+                }}
+              >Cancel</button>
+              <button
+                type="button"
+                onClick={handleBulkSave}
+                disabled={bulkSaving}
+                style={{
+                  padding: '8px 16px', borderRadius: 6, border: 'none',
+                  background: bulkSaving ? 'rgba(56,189,248,0.4)' : 'var(--color-cyan)',
+                  color: '#000', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: bulkSaving ? 'not-allowed' : 'pointer',
+                }}
+              >{bulkSaving ? 'Saving…' : 'Save assignments'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

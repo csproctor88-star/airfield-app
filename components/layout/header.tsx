@@ -35,8 +35,13 @@ export function Header() {
   const [lastSeen, setLastSeen] = useState<string | null>(null)
   const [showInstSwitcher, setShowInstSwitcher] = useState(false)
 
+  // Visibility still driven from the user's role via the permission
+  // matrix — matches the Phase C seed (`installations:switch` is on
+  // AFM, NAMO, base_admin, sys_admin, majcom_rfm, safety/atc/read_only,
+  // and allInstallations is only populated for MULTI_INSTALL_ROLES, so
+  // it already self-gates to the roles that actually have > 1 base).
   const canSwitchInstallation = allInstallations.length > 1
-    && (userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo')
+    && (userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'majcom_rfm')
 
   useEffect(() => {
     async function loadProfile(updatePresence: boolean) {

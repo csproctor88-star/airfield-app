@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspections, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus } from '@/lib/supabase/types'
 import { Plus, ShieldCheck, Edit, RotateCcw, Trash2 } from 'lucide-react'
@@ -24,7 +25,8 @@ const FILTER_LABELS: Record<string, string> = {
 
 export default function AcsiListPage() {
   const router = useRouter()
-  const { installationId, userRole } = useInstallation()
+  const { installationId } = useInstallation()
+  const { has } = usePermissions()
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [inspections, setInspections] = useState<AcsiInspection[]>([])
@@ -33,8 +35,9 @@ export default function AcsiListPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  const isAdmin = userRole === 'base_admin' || userRole === 'sys_admin'
-  const canEdit = isAdmin || userRole === 'airfield_manager'
+  // ACSI edit/delete gates driven by the permission matrix.
+  const canEdit = has(PERM.ACSI_WRITE)
+  const isAdmin = has(PERM.ACSI_DELETE)
 
   useEffect(() => {
     async function load() {

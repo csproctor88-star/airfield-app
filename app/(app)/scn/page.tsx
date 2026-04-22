@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ArrowLeft, Download, Mail, Radio, Plus, CheckCircle2 } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import {
   fetchTodayChecks,
@@ -27,7 +28,8 @@ import { EmptyState } from '@/components/ui/empty-state'
 type AgencyDraft = { agency_id: string | null; agency_name: string; sort_order: number; status: ScnAgencyStatus; notes: string }
 
 export default function ScnPage() {
-  const { installationId, userRole } = useInstallation()
+  const { installationId } = useInstallation()
+  const { has } = usePermissions()
   const [loaded, setLoaded] = useState(false)
   const [agencies, setAgencies] = useState<ScnAgency[]>([])
   const [todayChecks, setTodayChecks] = useState<ScnCheckWithResults[]>([])
@@ -41,7 +43,7 @@ export default function ScnPage() {
   // Monthly PDF range (default: this calendar month in Zulu)
   const [pdfMonth, setPdfMonth] = useState<string>(() => todayZuluDate().slice(0, 7)) // YYYY-MM
 
-  const canWrite = userRole !== 'read_only'
+  const canWrite = has(PERM.SCN_WRITE)
 
   const load = useCallback(async () => {
     if (!installationId) return

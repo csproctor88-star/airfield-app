@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Lock } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/supabase/types'
 import {
@@ -29,12 +30,11 @@ const ROLE_LABEL_FOR_LOCK: Partial<Record<UserRole, string>> = {
 }
 
 export default function ModuleSelectorPage() {
-  const { userRole, currentInstallation, installationId, enabledModules, updateEnabledModules } = useInstallation()
+  const { currentInstallation, installationId, enabledModules, updateEnabledModules } = useInstallation()
+  const { has } = usePermissions()
   const router = useRouter()
 
-  const canEdit =
-    userRole === 'airfield_manager' || userRole === 'sys_admin' ||
-    userRole === 'base_admin' || userRole === 'namo'
+  const canEdit = has(PERM.BASE_SETUP_WRITE)
 
   const [selected, setSelected] = useState<Set<ModuleKey>>(() => new Set(enabledModules))
   const [saving, setSaving] = useState(false)

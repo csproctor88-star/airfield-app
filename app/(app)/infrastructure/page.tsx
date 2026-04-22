@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { formatZuluDateTime } from '@/lib/utils'
 import {
   initGoogleMaps,
@@ -402,7 +403,8 @@ export default function InfrastructureMapPage() {
     () => Object.fromEntries(LAYERS.map(l => [l.key, false]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
-  const { runways, installationId, userRole, facilities } = useInstallation()
+  const { runways, installationId, facilities } = useInstallation()
+  const { has } = usePermissions()
 
   // Fullscreen
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -629,8 +631,10 @@ export default function InfrastructureMapPage() {
     initGoogleMaps().then(() => setGoogleReady(true))
   }, [hasGoogleMaps])
 
-  const isAdmin = userRole === 'sys_admin' || userRole === 'base_admin'
-    || userRole === 'airfield_manager' || userRole === 'namo'
+  // Infrastructure "admin" actions — manage components, edit system
+  // mappings, bulk-delete, etc. Gate on infrastructure:write (held by
+  // sys_admin / base_admin / AFM / NAMO / AMOPS today).
+  const isAdmin = has(PERM.INFRASTRUCTURE_WRITE)
 
   // Keep refs in sync
   useEffect(() => { editModeRef.current = editMode }, [editMode])

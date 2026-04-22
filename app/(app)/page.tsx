@@ -10,6 +10,7 @@ import { fetchPprEntriesForDate, fetchPprColumns, type PprEntry, type PprColumn 
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { logActivity, logManualEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
 import { logRunwayStatusChange, logArffStatusChange } from '@/lib/supabase/airfield-status'
@@ -60,7 +61,11 @@ const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string
 export default function HomePage() {
   const router = useRouter()
   const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed, refreshStatus } = useDashboard()
-  const { installationId, runways, arffAircraft, userRole, currentInstallation } = useInstallation()
+  const { installationId, runways, arffAircraft, currentInstallation } = useInstallation()
+  const { has } = usePermissions()
+  // airfield_status:write covers AFM, NAMO, AMOPS, base_admin, sys_admin.
+  // Label rename + runway/BWC/ARFF controls on this page all gate on it.
+  const canWriteAirfieldStatus = has(PERM.AIRFIELD_STATUS_WRITE)
   const showArffCat = (() => {
     const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
     return cfg?.show_cat_dropdown !== false  // default true
@@ -77,7 +82,7 @@ export default function HomePage() {
   const [statusLabels, setStatusLabels] = useState<Record<string, string>>({})
   const [editingLabel, setEditingLabel] = useState<string | null>(null)
   const [editingLabelValue, setEditingLabelValue] = useState('')
-  const canEditLabels = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
+  const canEditLabels = canWriteAirfieldStatus
   const [oooMinimized, setOooMinimized] = useState(false)
   const [showOooDeactivate, setShowOooDeactivate] = useState(false)
   const [closedMinimized, setClosedMinimized] = useState(false)
@@ -475,7 +480,7 @@ export default function HomePage() {
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >Minimize</button>
-            {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
+            {canWriteAirfieldStatus && (
               <button
                 onClick={() => setShowOooDeactivate(true)}
                 style={{
@@ -587,7 +592,7 @@ export default function HomePage() {
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >Minimize</button>
-            {(userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'amops') && (
+            {canWriteAirfieldStatus && (
               <button
                 onClick={() => setShowClosedDeactivate(true)}
                 style={{

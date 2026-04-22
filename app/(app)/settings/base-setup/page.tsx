@@ -5,6 +5,7 @@ import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/li
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
@@ -88,13 +89,14 @@ const WIZARD_STEPS: WizardStep[] = [
 ]
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, userRole, enabledModules, setupProgress, markSetupStep } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, enabledModules, setupProgress, markSetupStep } = useInstallation()
+  const { has } = usePermissions()
   const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const [editingBaseName, setEditingBaseName] = useState(false)
   const [baseNameDraft, setBaseNameDraft] = useState('')
 
-  const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
+  const canEdit = has(PERM.BASE_SETUP_WRITE)
 
   const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
 

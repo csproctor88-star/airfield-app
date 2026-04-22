@@ -11,6 +11,7 @@ import type { UserRole } from '@/lib/supabase/types'
 import { useExpiringNotamCount } from '@/lib/use-expiring-notams'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
+import { usePermissions } from '@/lib/permissions'
 import ContactSupport from '@/components/ui/contact-support'
 import {
   DEFAULT_SIDEBAR_CONFIG,
@@ -83,11 +84,51 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   'Settings': Settings,
 }
 
-// Admin-only items
+// Legacy admin-only items. Kept so older saved sidebar configs that
+// list these still render correctly for users with canManageUsers,
+// but the permission matrix below is now the source of truth.
 const ADMIN_ITEMS = new Set(['/library', '/users', '/feedback'])
 
-// CES role — limited navigation
+// Legacy CES nav — no longer used for gating (the permission matrix
+// naturally filters to just the hrefs CES has `*:view` for). Kept as
+// the flat list when a CES user's saved config hasn't been rebuilt.
 const CES_ALLOWED_ITEMS = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
+
+// Map each sidebar href to the `:view` permission that controls it.
+// If an href isn't listed here, visibility falls back to the legacy
+// gate (ADMIN_ITEMS + canManageUsers + CES carve-out) so nothing that
+// used to be visible suddenly disappears.
+const HREF_TO_VIEW_PERM: Record<string, string> = {
+  '/':                  'airfield_status:view',
+  '/dashboard':         'airfield_status:view',
+  '/activity':          'activity_log:view',
+  '/recent-activity':   'recent_activity:view',
+  '/qrc':               'qrc:view',
+  '/scn':               'scn:view',
+  '/shift-checklist':   'shift_checklist:view',
+  '/daily-reviews':     'daily_reviews:view',
+  '/checks':            'checks:view',
+  '/inspections/all':   'inspections:view',
+  '/inspections':       'inspections:view',
+  '/wildlife':          'wildlife:view',
+  '/ppr':               'ppr:view',
+  '/feedback':          'feedback:view',
+  '/contractors':       'contractors:view',
+  '/ces':               'ces:view',
+  '/discrepancies':     'discrepancies:view',
+  '/obstructions':      'obstructions:view',
+  '/waivers':           'waivers:view',
+  '/infrastructure':    'infrastructure:view',
+  '/parking':           'parking:view',
+  '/aircraft':          'aircraft:view',
+  '/regulations':       'regulations:view',
+  '/notams':            'notams:view',
+  '/reports':           'reports:view',
+  '/settings':          'settings:view',
+  '/library':           'library:view',
+  '/users':             'users:view',
+  '/training':          'training:view',
+}
 
 function getIcon(iconName: string): LucideIcon {
   return ICON_MAP[iconName] || Home
@@ -100,8 +141,10 @@ export function SidebarNav() {
   const { resolvedTheme } = useTheme()
   const expiringNotamCount = useExpiringNotamCount()
   const { enabledModules } = useInstallation()
+  const { has, loaded: permsLoaded } = usePermissions()
   const [canManageUsers, setCanManageUsers] = useState(false)
   const [isCesRole, setIsCesRole] = useState(false)
+  const [isKioskRole, setIsKioskRole] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [config, setConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG)
@@ -138,6 +181,7 @@ export function SidebarNav() {
         const roleConfig = USER_ROLES[role]
         setCanManageUsers(roleConfig?.canManageUsers ?? false)
         setIsCesRole(role === 'ces')
+        setIsKioskRole(role === 'airfield_status' || role === 'atc')
       } catch {
         // No auth
       }
@@ -176,8 +220,18 @@ export function SidebarNav() {
   }
 
   function isItemVisible(href: string) {
-    if (ADMIN_ITEMS.has(href)) return loaded && canManageUsers
-    if (isCesRole && !CES_ALLOWED_ITEMS.has(href)) return false
+    // Permission matrix is the primary gate. Every nav item in the
+    // app has a corresponding `*:view` key in HREF_TO_VIEW_PERM;
+    // hide the item if the user doesn't hold that key.
+    const requiredPerm = HREF_TO_VIEW_PERM[href]
+    if (requiredPerm && permsLoaded && !has(requiredPerm)) return false
+
+    // Fall back to legacy gates for anything not yet in the matrix
+    // (and for the brief window before permissions load).
+    if (ADMIN_ITEMS.has(href) && !requiredPerm) return loaded && canManageUsers
+    if (isCesRole && !CES_ALLOWED_ITEMS.has(href) && !requiredPerm) return false
+
+    // Base-level module-on-off toggle (independent of role).
     if (!isModuleEnabled(href, enabledModules)) return false
     return true
   }
@@ -486,6 +540,9 @@ export function SidebarNav() {
       </div>
     )
   }
+
+  // Kiosk roles (airfield_status, atc) — hide the sidebar entirely.
+  if (loaded && isKioskRole) return null
 
   // ── Edit mode UI ──
   if (editMode && isOpen) {

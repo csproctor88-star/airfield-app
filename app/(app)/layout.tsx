@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/header'
 
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SidebarNav } from '@/components/layout/sidebar-nav'
+import { KioskGuard } from '@/components/layout/kiosk-guard'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { RealtimeAlertBanner } from '@/components/realtime-alert-banner'
 import { WhatsNewGate } from '@/components/whats-new-gate'
@@ -31,6 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <ScrollToTop />
             <DashboardProvider>
+              <KioskGuard />
               <RealtimeAlertBanner />
               <WhatsNewGate />
               <main className="app-content">

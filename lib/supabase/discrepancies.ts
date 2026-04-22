@@ -226,6 +226,44 @@ export async function updateDiscrepancy(
   return { data: updated, error: null }
 }
 
+/**
+ * CES write path — calls the SECURITY DEFINER RPC so `ces` users
+ * (who are blocked by the RLS `user_can_write` gate) can update
+ * the narrow set of fields the CES workflow allows:
+ *   - current_status (must be one of awaiting_action_by_ces,
+ *     waiting_for_project, work_completed_awaiting_verification)
+ *   - resolution_notes
+ *   - an optional free-form note that lands in status_updates
+ *
+ * Other roles can keep using updateDiscrepancy / addStatusNote.
+ */
+export async function cesUpdateDiscrepancy(
+  id: string,
+  input: {
+    current_status?: string | null
+    resolution_notes?: string | null
+    note?: string | null
+  },
+): Promise<{ data: DiscrepancyRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  const { data, error } = await (supabase as unknown as {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
+  }).rpc('ces_update_discrepancy', {
+    p_id: id,
+    p_current_status: input.current_status ?? null,
+    p_resolution_notes: input.resolution_notes ?? null,
+    p_note: input.note ?? null,
+  })
+
+  if (error) {
+    console.error('ces_update_discrepancy failed:', error.message)
+    return { data: null, error: friendlyError(error.message) }
+  }
+  return { data: data as DiscrepancyRow | null, error: null }
+}
+
 export async function updateDiscrepancyStatus(
   id: string,
   oldStatus: string,

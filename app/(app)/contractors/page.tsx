@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { friendlyError } from '@/lib/utils'
 import { fetchContractors, createContractor, updateContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { CONTRACTOR_STATUS_CONFIG } from '@/lib/constants'
@@ -17,9 +18,10 @@ import type jsPDF from 'jspdf'
 type FilterTab = 'active' | 'all' | 'completed'
 
 export default function ContractorsPage() {
-  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
-  const canManageTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin' || userRole === 'amops'
-  const canDeleteTemplates = userRole === 'airfield_manager' || userRole === 'base_admin' || userRole === 'namo' || userRole === 'sys_admin'
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { has } = usePermissions()
+  const canManageTemplates = has(PERM.CONTRACTORS_WRITE)
+  const canDeleteTemplates = has(PERM.CONTRACTORS_DELETE)
   const [contractors, setContractors] = useState<ContractorRow[]>([])
   const [filter, setFilter] = useState<FilterTab>('active')
   const [search, setSearch] = useState('')

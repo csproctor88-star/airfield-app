@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchInspectionTemplate,
   createDefaultTemplate,
@@ -26,7 +27,8 @@ import { Link2 } from 'lucide-react'
 type TemplateType = 'airfield' | 'lighting'
 
 export default function TemplateManagementPage() {
-  const { installationId, currentInstallation, userRole } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
+  const { has } = usePermissions()
   const [activeType, setActiveType] = useState<TemplateType>('airfield')
   const [sections, setSections] = useState<TemplateSection[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,7 +49,7 @@ export default function TemplateManagementPage() {
   const [linkingItemId, setLinkingItemId] = useState<string | null>(null)
   const [linkDraft, setLinkDraft] = useState<ItemLink[]>([])
 
-  const canEdit = userRole === 'airfield_manager' || userRole === 'sys_admin' || userRole === 'base_admin' || userRole === 'namo'
+  const canEdit = has(PERM.BASE_SETUP_WRITE)
 
   const isInitialLoad = useRef(true)
 
