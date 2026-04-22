@@ -69,15 +69,11 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Reference',
-      items: ['/aircraft', '/regulations', '/notams'],
+      items: ['/aircraft', '/regulations', '/notams', '/training'],
     },
     {
       label: 'Admin',
-      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/training', '/library', '/users', '/feedback'],
-    },
-    {
-      label: 'Settings',
-      items: ['/settings'],
+      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/library', '/users', '/feedback'],
     },
   ],
 }

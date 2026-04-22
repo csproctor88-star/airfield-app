@@ -449,7 +449,10 @@ export function SidebarNav() {
   function renderEditSection(section: SidebarSection, sectionIdx: number) {
     const dropId = `section-${sectionIdx}`
     const isOver = dragOverTarget === dropId
-    const visibleItems = section.items.filter(href => isItemVisible(href))
+    // /settings is locked at the bottom of the nav — hide from edit/drag UI.
+    const visibleItems = section.items
+      .filter(href => href !== '/settings')
+      .filter(href => isItemVisible(href))
 
     return (
       <div
@@ -486,7 +489,9 @@ export function SidebarNav() {
 
   // ── Edit mode UI ──
   if (editMode && isOpen) {
-    const pinnedVisible = editConfig.pinned.filter(href => isItemVisible(href))
+    const pinnedVisible = editConfig.pinned
+      .filter(href => href !== '/settings')
+      .filter(href => isItemVisible(href))
     const pinnedDropId = 'section-pinned'
     const isPinnedOver = dragOverTarget === pinnedDropId
 
@@ -652,15 +657,21 @@ export function SidebarNav() {
 
       {/* Navigation items */}
       <div style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-        {/* Pinned items */}
-        {activeConfig.pinned.filter(href => isItemVisible(href)).map(href => renderNavItem(href))}
+        {/* Pinned items — /settings is always rendered flat at the bottom
+            of the nav list instead, so exclude it here even if a saved
+            config still has it pinned at the top. */}
+        {activeConfig.pinned.filter(href => href !== '/settings').filter(href => isItemVisible(href)).map(href => renderNavItem(href))}
 
         {/* Divider */}
         <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
 
-        {/* Grouped sections */}
+        {/* Grouped sections. /settings always renders flat at the bottom,
+            so we filter it out of any sections carried over from older
+            saved configs to avoid rendering it twice. */}
         {activeConfig.sections.map((section) => {
-          const visibleItems = section.items.filter(href => isItemVisible(href))
+          const visibleItems = section.items
+            .filter(href => href !== '/settings')
+            .filter(href => isItemVisible(href))
           if (visibleItems.length === 0) return null
 
           return (
@@ -670,6 +681,10 @@ export function SidebarNav() {
             </div>
           )
         })}
+
+        {/* Settings — always pinned at the bottom of the nav list, flat (no group). */}
+        <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
+        {renderNavItem('/settings')}
       </div>
 
       {/* Edit button + Sign Out at bottom */}

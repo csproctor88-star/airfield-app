@@ -297,8 +297,10 @@ export default function MorePage() {
         {/* Admin */}
         <CollapsibleGroup label="Admin" icon="🛡️" items={filterItems(adminItems)} />
 
-        {/* Settings */}
-        <CollapsibleGroup label="Settings" icon="⚙️" items={filterItems(settingsItems)} />
+        {/* Settings — flat at the bottom, no collapsible wrapper */}
+        {filterItems(settingsItems).map(item => (
+          <NavItem key={item.href} item={item} />
+        ))}
       </div>
 
       <ContactSupport
