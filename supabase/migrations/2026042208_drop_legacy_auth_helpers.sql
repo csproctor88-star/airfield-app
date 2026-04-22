@@ -154,6 +154,16 @@ DROP POLICY IF EXISTS "sc_update" ON shift_checklists;
 DROP POLICY IF EXISTS "scr_insert" ON shift_checklist_responses;
 DROP POLICY IF EXISTS "scr_update" ON shift_checklist_responses;
 
+-- ── shift_checklist_items (sci_* orphan names) ───────────
+DROP POLICY IF EXISTS "sci_insert" ON shift_checklist_items;
+DROP POLICY IF EXISTS "sci_update" ON shift_checklist_items;
+DROP POLICY IF EXISTS "sci_delete" ON shift_checklist_items;
+
+-- ── qrc_templates (qrc_tmpl_* orphan names) ──────────────
+DROP POLICY IF EXISTS "qrc_tmpl_insert" ON qrc_templates;
+DROP POLICY IF EXISTS "qrc_tmpl_update" ON qrc_templates;
+DROP POLICY IF EXISTS "qrc_tmpl_delete" ON qrc_templates;
+
 -- ── custom_status_boards (configurable dashboard panels) ─
 DROP POLICY IF EXISTS "custom_status_boards_insert" ON custom_status_boards;
 CREATE POLICY "custom_status_boards_insert" ON custom_status_boards
