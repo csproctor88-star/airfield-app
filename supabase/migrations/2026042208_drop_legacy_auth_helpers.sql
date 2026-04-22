@@ -164,6 +164,18 @@ DROP POLICY IF EXISTS "qrc_tmpl_insert" ON qrc_templates;
 DROP POLICY IF EXISTS "qrc_tmpl_update" ON qrc_templates;
 DROP POLICY IF EXISTS "qrc_tmpl_delete" ON qrc_templates;
 
+-- ── profiles (base_admin orphan policies) ────────────────
+-- 2026022600 created separate profiles_insert_base_admin /
+-- profiles_update_base_admin policies on top of the main
+-- profiles_insert / profiles_update. My 2026042207 replaced the
+-- main pair with a matrix version (users:manage + self-write),
+-- but the base_admin-specific orphans survived. The matrix
+-- equivalents now cover both paths — base admins at the caller's
+-- primary base already hold users:manage — so we can safely drop
+-- the orphans.
+DROP POLICY IF EXISTS "profiles_insert_base_admin" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_base_admin" ON profiles;
+
 -- ── custom_status_boards (configurable dashboard panels) ─
 DROP POLICY IF EXISTS "custom_status_boards_insert" ON custom_status_boards;
 CREATE POLICY "custom_status_boards_insert" ON custom_status_boards
