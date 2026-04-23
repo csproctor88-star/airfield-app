@@ -67,20 +67,20 @@ export async function getAirfieldDiagram(baseId: string): Promise<string | null>
     return idbGet<string>(STORE_USER_BLOBS, idbKey(baseId))
   }
 
-  // Live mode — get public URL from Supabase Storage
-  const path = storagePath(baseId)
-
-  const { data } = supabase.storage
-    .from('photos')
-    .getPublicUrl(path)
-
-  if (!data?.publicUrl) return null
-
-  // Verify the file actually exists by fetching headers
+  // Live mode — go through the admin endpoint for authoritative existence
+  // + an updated_at cache-buster. The storage path is fixed per base, so
+  // without a cache-buster the browser / CDN keep serving the old diagram
+  // after a replace.
   try {
-    const res = await fetch(data.publicUrl, { method: 'HEAD' })
+    const res = await fetch(
+      `/api/admin/airfield-diagram?baseId=${encodeURIComponent(baseId)}`,
+      { cache: 'no-store' },
+    )
     if (!res.ok) return null
-    return data.publicUrl
+    const body = await res.json() as { publicUrl: string | null; updatedAt?: string | null }
+    if (!body.publicUrl) return null
+    const version = body.updatedAt ? encodeURIComponent(body.updatedAt) : Date.now().toString()
+    return `${body.publicUrl}?v=${version}`
   } catch {
     return null
   }

@@ -133,6 +133,68 @@ export async function POST(request: Request) {
   }
 }
 
+// GET /api/admin/airfield-diagram?baseId=…
+// Authoritative existence + cache-busting metadata for the client. Returns
+// { publicUrl, updatedAt } or { publicUrl: null } if no diagram exists. The
+// service-role list() sidesteps CDN cache and any storage.objects SELECT
+// policy gaps. Requires auth — doesn't leak which bases have diagrams to
+// anonymous probes, but doesn't require base_setup:write since any
+// authenticated user at any base may legitimately view a diagram.
+export async function GET(request: Request) {
+  try {
+    const baseId = new URL(request.url).searchParams.get('baseId')
+    if (!baseId) {
+      return NextResponse.json({ error: 'baseId is required' }, { status: 400 })
+    }
+
+    const admin = getAdminClient()
+    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!admin || !envUrl || !envKey) {
+      return NextResponse.json({ error: 'Service not configured' }, { status: 500 })
+    }
+
+    const cookieStore = cookies()
+    const supabase = createServerClient(envUrl, envKey, {
+      cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
+    })
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const folder = `${STORAGE_FOLDER}/${baseId}`
+    const { data: files, error: listErr } = await admin.storage
+      .from('photos')
+      .list(folder)
+
+    if (listErr) {
+      console.error('[airfield-diagram] list failed:', listErr)
+      return NextResponse.json({ error: listErr.message }, { status: 500 })
+    }
+
+    const entry = files?.find(f => f.name === 'diagram')
+    if (!entry) return NextResponse.json({ publicUrl: null })
+
+    const { data: pub } = admin.storage
+      .from('photos')
+      .getPublicUrl(storagePath(baseId))
+
+    // updated_at isn't always populated on newly-created objects; fall back
+    // to created_at, then to 'now' so the URL still cache-busts on first
+    // fetch.
+    const version = entry.updated_at || entry.created_at || new Date().toISOString()
+    return NextResponse.json({
+      publicUrl: pub?.publicUrl ?? null,
+      updatedAt: version,
+    })
+  } catch (err) {
+    console.error('[airfield-diagram] GET error:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unexpected server error' },
+      { status: 500 },
+    )
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const baseId = new URL(request.url).searchParams.get('baseId')
