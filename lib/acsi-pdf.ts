@@ -300,7 +300,7 @@ export async function generateAcsiPdf(
         if (disc.project_number) lines.push(`Project: ${disc.project_number}`)
         if (disc.estimated_cost) lines.push(`Cost: ${disc.estimated_cost}`)
         if (disc.estimated_completion) lines.push(`ECD: ${disc.estimated_completion}`)
-        if (disc.risk_control_measure) lines.push(`Risk Control: ${disc.risk_control_measure}`)
+        if (disc.risk_control_measure) lines.push(`Risk Control Measure: ${disc.risk_control_measure}`)
         discTextMap[detailKey] = lines
 
         const photoIds: string[] = Array.isArray((disc as { photo_ids?: string[] }).photo_ids)
