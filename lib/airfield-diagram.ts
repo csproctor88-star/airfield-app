@@ -38,15 +38,20 @@ export async function saveAirfieldDiagram(baseId: string, file: File): Promise<v
     return
   }
 
-  // Live mode — upload to Supabase Storage (photos bucket)
+  // Live mode — upload to Supabase Storage (photos bucket).
+  // `upsert: true` atomically overwrites the existing object. A prior
+  // implementation called remove() then upload(), but storage RLS on the
+  // delete path could silently fail, leaving the old file in place — the
+  // subsequent upload then hit "resource already exists".
   const path = storagePath(baseId)
-
-  // Remove existing diagram first, then upload fresh
-  await supabase.storage.from('photos').remove([path])
 
   const { error } = await supabase.storage
     .from('photos')
-    .upload(path, file, { contentType: file.type || 'image/jpeg' })
+    .upload(path, file, {
+      contentType: file.type || 'image/jpeg',
+      upsert: true,
+      cacheControl: '0',
+    })
 
   if (error) {
     throw new Error(`Failed to upload diagram: ${error.message}`)
