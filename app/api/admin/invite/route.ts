@@ -8,6 +8,7 @@ import {
   isAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
+import { getSiteUrl } from '@/lib/site-url'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -85,22 +86,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create user + generate invite link, then send branded email via Resend
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
-    const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+    // generateLink with type:'invite' creates the user AND returns a magic
+    // link without sending Supabase's default email. We then embed that link
+    // in ONE branded Resend email — the user clicks it, verifies their email,
+    // and lands on /setup-account in a single step.
+    const siteUrl = getSiteUrl()
+    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    const { data: inviteData, error: inviteError } = await admin.auth.admin.generateLink({
+      type: 'invite',
       email,
-      {
+      options: {
         redirectTo: `${siteUrl}/auth/confirm?next=/setup-account`,
         data: {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          name: `${firstName.trim()} ${lastName.trim()}`,
+          name: fullName,
           rank: rank,
           role: role || 'read_only',
           primary_base_id: installationId,
         },
       },
-    )
+    })
 
     if (inviteError) {
       return NextResponse.json(
@@ -109,19 +115,33 @@ export async function POST(request: Request) {
       )
     }
 
-    // Send branded invite email via Resend (overrides Supabase's default)
+    const actionLink = inviteData?.properties?.action_link
+    if (!actionLink) {
+      return NextResponse.json(
+        { error: 'Failed to generate invite link' },
+        { status: 500 },
+      )
+    }
+
+    // Send ONE branded invite email via Resend. The magic link handles email
+    // verification + redirect to /setup-account on click — no separate
+    // Supabase-default email.
     const resendKey = process.env.RESEND_API_KEY
-    if (resendKey && inviteData?.user) {
-      try {
-        const resend = new Resend(resendKey)
-        const setupUrl = `${siteUrl}/setup-account`
-        const fullName = `${firstName.trim()} ${lastName.trim()}`
-        await resend.emails.send({
-          from: 'Glidepath <noreply@glidepathops.com>',
-          replyTo: 'info@glidepathops.com',
-          to: email,
-          subject: 'You\'ve Been Invited to Glidepath',
-          html: `<!DOCTYPE html>
+    if (!resendKey) {
+      return NextResponse.json(
+        { error: 'RESEND_API_KEY missing — invite created but email not sent' },
+        { status: 500 },
+      )
+    }
+
+    try {
+      const resend = new Resend(resendKey)
+      await resend.emails.send({
+        from: 'Glidepath <noreply@glidepathops.com>',
+        replyTo: 'info@glidepathops.com',
+        to: email,
+        subject: 'You\'ve Been Invited to Glidepath',
+        html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#0B1120;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -134,12 +154,12 @@ export async function POST(request: Request) {
         </td></tr>
         <tr><td style="padding:28px 32px;color:#E2E8F0;font-size:15px;line-height:1.6;">
           <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
-          <p style="margin:0 0 16px;">You have been invited to join <strong>Glidepath</strong> — the airfield operations management platform. Your account has been created and is ready for setup.</p>
-          <p style="margin:0 0 20px;">Click the button below to set your password and complete your account setup:</p>
+          <p style="margin:0 0 16px;">You have been invited to join <strong>Glidepath</strong> — the airfield operations management platform.</p>
+          <p style="margin:0 0 20px;">Click the button below to verify your email and set your password:</p>
           <div style="text-align:center;margin:0 0 20px;">
-            <a href="${escapeHtml(setupUrl)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Set Up Your Account</a>
+            <a href="${escapeHtml(actionLink)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Set Up Your Account</a>
           </div>
-          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">You will also receive a separate email from Supabase with a confirmation link. Please click that link first to verify your email address, then use the button above to set your password.</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">This link will expire in 24 hours.</p>
           <div style="font-size:13px;color:#94A3B8;border-top:1px solid #334155;padding-top:14px;margin-top:14px;">
             <strong>What is Glidepath?</strong>
             <ul style="margin:8px 0 0;padding-left:20px;">
@@ -160,10 +180,13 @@ export async function POST(request: Request) {
   </table>
 </body>
 </html>`,
-        })
-      } catch (emailErr) {
-        console.warn('[admin/invite] Branded email failed, Supabase default was sent:', emailErr)
-      }
+      })
+    } catch (emailErr) {
+      console.error('[admin/invite] Resend email failed:', emailErr)
+      return NextResponse.json(
+        { error: 'Invite created but email delivery failed. Contact the user manually.' },
+        { status: 500 },
+      )
     }
 
     // Create profile record

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
+import { getSiteUrl } from '@/lib/site-url'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -176,7 +177,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'template, toEmail, and toName are required' }, { status: 400 })
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://glidepathops.com'
+    const siteUrl = getSiteUrl()
     const loginUrl = `${siteUrl}/login`
     const resend = getResend()
 

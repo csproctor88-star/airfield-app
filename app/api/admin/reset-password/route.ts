@@ -8,6 +8,7 @@ import {
   isSysAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
+import { getSiteUrl } from '@/lib/site-url'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // Generate password reset link
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''
+    const siteUrl = getSiteUrl()
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'recovery',
       email,

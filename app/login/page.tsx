@@ -81,6 +81,20 @@ function LoginContent() {
     })()
   }, [searchParams, router])
 
+  // After self-signup verification, Supabase puts the user in an authed
+  // session and redirects to /login?signup_verified=1. Sign them out (they
+  // can't actually use the app yet — status is 'pending') and show the
+  // pending-approval message so they know what to expect.
+  useEffect(() => {
+    if (searchParams.get('signup_verified') !== '1') return
+    ;(async () => {
+      const supabase = createClient()
+      if (!supabase) return
+      await supabase.auth.signOut()
+      setSuccess('Email verified! Your account is pending approval by your base administrator. You\'ll receive an email once you\'re approved.')
+    })()
+  }, [searchParams])
+
   // Load remembered email on mount
   useEffect(() => {
     try {
@@ -172,39 +186,33 @@ function LoginContent() {
           return
         }
 
-        const inst = await createInstallation(
-          installationName,
-          installationIcao,
-        )
+        const inst = await createInstallation(installationName, installationIcao)
 
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              first_name: firstName.trim(),
-              last_name: lastName.trim(),
-              name: `${firstName.trim()} ${lastName.trim()}`,
-              rank: rank || undefined,
-              role: role,
-              primary_base_id: inst.id,
-            },
-          },
+        // Server-side signup: creates the auth user (trigger auto-creates the
+        // profile + base_members rows with status='pending'), generates a
+        // magic verification link, and sends ONE branded email via Resend.
+        // Avoids Supabase's default SMTP rate limits and the previous
+        // double-email UX.
+        const signupRes = await fetch('/api/signup-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            rank: rank || undefined,
+            role,
+            primaryBaseId: inst.id,
+          }),
         })
-
-        if (signUpError) {
-          setError(signUpError.message)
+        const signupJson = await signupRes.json().catch(() => null)
+        if (!signupRes.ok) {
+          setError(signupJson?.error || `Signup failed (${signupRes.status})`)
           return
         }
 
-        // Send branded pending approval email (non-blocking)
-        fetch('/api/signup-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, name: `${firstName.trim()} ${lastName.trim()}` }),
-        }).catch(() => {}) // don't fail signup if email fails
-
-        setSuccess('Account created! Check your email for next steps. Your account will be available once approved by your base administrator.')
+        setSuccess('Account created — check your email for a verification link. After verifying, your account will be pending approval by your base administrator.')
         setMode('signin')
         setPassword('')
         return
