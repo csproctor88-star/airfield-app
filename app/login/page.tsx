@@ -95,6 +95,20 @@ function LoginContent() {
     })()
   }, [searchParams])
 
+  // Surface error codes bounced here from the kiosk auto-login route.
+  useEffect(() => {
+    const err = searchParams.get('error')
+    if (!err) return
+    const messages: Record<string, string> = {
+      kiosk_invalid_icao: 'Invalid ICAO in kiosk URL — check the airfield code.',
+      kiosk_not_configured: 'Kiosk mode is not configured on this deployment. Contact your administrator.',
+      kiosk_base_not_found: 'No base matches that ICAO. Verify the kiosk URL or ask your administrator.',
+      kiosk_auth_failed: 'Kiosk sign-in failed. The kiosk account may need a password reset — contact your administrator.',
+    }
+    const msg = messages[err]
+    if (msg) setError(msg)
+  }, [searchParams])
+
   // Load remembered email on mount
   useEffect(() => {
     try {

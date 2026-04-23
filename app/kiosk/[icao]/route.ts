@@ -1,0 +1,130 @@
+import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { getAdminClient } from '@/lib/admin/role-checks'
+import { getSupabaseConfig } from '@/lib/utils'
+
+// Kiosk auto-login.
+//
+// URL pattern: /kiosk/<ICAO>  (e.g. /kiosk/KBCV)
+// On hit:
+//   1. Look up the base by ICAO.
+//   2. Sign in as the per-base kiosk account (email = kiosk-<icao>@glidepathops.com,
+//      password = process.env.KIOSK_PASSWORD).
+//   3. If the account doesn't exist yet, auto-provision it (the
+//      handle_new_user() trigger creates the profile + base_members row;
+//      we flip status to 'active' since the account is system-managed).
+//   4. Redirect to `/`. Session cookie is set on the redirect response so
+//      the next request is authenticated.
+//
+// The password is never sent to the browser — it only lives in the
+// Vercel env var and in auth.users (hashed). The URL itself is the
+// practical secret: treat it like a share link.
+
+const EMAIL_DOMAIN = 'glidepathops.com'
+
+function redirectToLogin(request: NextRequest, errorCode: string): NextResponse {
+  const url = new URL('/login', request.url)
+  url.searchParams.set('error', errorCode)
+  return NextResponse.redirect(url)
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { icao: string } },
+) {
+  const icao = (params.icao || '').toUpperCase()
+  if (!/^[A-Z0-9]{3,4}$/.test(icao)) {
+    return redirectToLogin(request, 'kiosk_invalid_icao')
+  }
+
+  const kioskPassword = process.env.KIOSK_PASSWORD
+  if (!kioskPassword) {
+    return redirectToLogin(request, 'kiosk_not_configured')
+  }
+
+  const admin = getAdminClient()
+  const config = getSupabaseConfig()
+  if (!admin || !config) {
+    return redirectToLogin(request, 'kiosk_not_configured')
+  }
+
+  // Look up the base. ICAO comparison is case-insensitive.
+  const { data: base } = await admin
+    .from('bases')
+    .select('id, name, icao')
+    .ilike('icao', icao)
+    .maybeSingle()
+
+  if (!base) {
+    return redirectToLogin(request, 'kiosk_base_not_found')
+  }
+
+  const kioskEmail = `kiosk-${icao.toLowerCase()}@${EMAIL_DOMAIN}`
+
+  // Create the redirect response up front — Supabase cookies are written
+  // into its cookie store, which is wired to set them on this response.
+  const response = NextResponse.redirect(new URL('/', request.url))
+  const cookieStore = cookies()
+
+  const supabase = createServerClient(config.url, config.key, {
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        )
+      },
+    },
+  })
+
+  // Happy path — account already exists.
+  let signInError = (await supabase.auth.signInWithPassword({
+    email: kioskEmail,
+    password: kioskPassword,
+  })).error
+
+  if (signInError) {
+    // Account probably missing — provision it. The handle_new_user() trigger
+    // fires on INSERT and upserts the profile + base_members rows using
+    // user_metadata, so we only need the createUser call here.
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email: kioskEmail,
+      password: kioskPassword,
+      email_confirm: true,
+      user_metadata: {
+        name: `Kiosk (${base.icao || icao})`,
+        first_name: 'Kiosk',
+        last_name: base.icao || icao,
+        role: 'airfield_status',
+        primary_base_id: base.id,
+      },
+    })
+
+    if (createErr || !created?.user) {
+      // createUser failed — most likely the user exists with a different
+      // password (KIOSK_PASSWORD rotated). Operator needs to update the
+      // password in the Supabase dashboard to match.
+      return redirectToLogin(request, 'kiosk_auth_failed')
+    }
+
+    // Flip status to 'active' — trigger defaults to 'pending' for
+    // self-registrations, but system-provisioned kiosks are always active.
+    await admin
+      .from('profiles')
+      .update({ status: 'active' })
+      .eq('id', created.user.id)
+
+    // Retry sign-in now that the account exists.
+    signInError = (await supabase.auth.signInWithPassword({
+      email: kioskEmail,
+      password: kioskPassword,
+    })).error
+
+    if (signInError) {
+      return redirectToLogin(request, 'kiosk_auth_failed')
+    }
+  }
+
+  return response
+}
