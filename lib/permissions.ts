@@ -83,6 +83,7 @@ export const PERM = {
   DAILY_REVIEWS_SIGN_AFM:               'daily_reviews:sign:afm',
 
   // Reporting / activity
+  DASHBOARD_VIEW:                       'dashboard:view',
   REPORTS_VIEW:                         'reports:view',
   REPORTS_EXPORT:                       'reports:export',
   ACTIVITY_LOG_VIEW:                    'activity_log:view',

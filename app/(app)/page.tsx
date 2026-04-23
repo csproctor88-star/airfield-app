@@ -63,9 +63,13 @@ export default function HomePage() {
   const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft, currentInstallation } = useInstallation()
   const { has } = usePermissions()
-  // airfield_status:write covers AFM, NAMO, AMOPS, base_admin, sys_admin.
-  // Label rename + runway/BWC/ARFF controls on this page all gate on it.
+  // Full airfield-status write — runway / ARFF / advisory / remarks / labels.
+  // Held by AFM, NAMO, amops, base_admin, sys_admin.
   const canWriteAirfieldStatus = has(PERM.AIRFIELD_STATUS_WRITE)
+  // Narrow RSC + BWC write — safety role holds `airfield_status:write:rsc_bwc_only`
+  // without the full key. Full-write holders trivially also qualify.
+  const canEditRscBwc =
+    canWriteAirfieldStatus || has(PERM.AIRFIELD_STATUS_WRITE_RSC_BWC_ONLY)
   const showArffCat = (() => {
     const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
     return cfg?.show_cat_dropdown !== false  // default true
@@ -695,13 +699,13 @@ export default function HomePage() {
                 </div>
               </div>
               <div
-                onClick={() => {
+                onClick={canWriteAirfieldStatus ? () => {
                   setEditingAdvisoryId(null)
                   setAdvisoryDraftType('ADVISORY')
                   setAdvisoryDraftText('')
                   setAdvisoryDialogOpen(true)
-                }}
-                style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
+                } : undefined}
+                style={{ textAlign: 'right', cursor: canWriteAirfieldStatus ? 'pointer' : 'default', minWidth: 60 }}
               >
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
                 {advisories.length > 0 ? (
@@ -723,13 +727,13 @@ export default function HomePage() {
                 </div>
               </div>
               <div
-                onClick={() => {
+                onClick={canWriteAirfieldStatus ? () => {
                   setEditingAdvisoryId(null)
                   setAdvisoryDraftType('ADVISORY')
                   setAdvisoryDraftText('')
                   setAdvisoryDialogOpen(true)
-                }}
-                style={{ textAlign: 'right', cursor: 'pointer', minWidth: 60 }}
+                } : undefined}
+                style={{ textAlign: 'right', cursor: canWriteAirfieldStatus ? 'pointer' : 'default', minWidth: 60 }}
               >
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
                 {advisories.length > 0 ? (
@@ -1683,7 +1687,9 @@ export default function HomePage() {
                 }}>
                   <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
                   <button
+                    disabled={!canWriteAirfieldStatus}
                     onClick={() => {
+                      if (!canWriteAirfieldStatus) return
                       const newEnd = rwy.active_end === rwy.end1 ? rwy.end2 : rwy.end1
                       setConfirmDialog({
                         title: 'Change Active Runway',
@@ -1742,7 +1748,9 @@ export default function HomePage() {
                   )}
                   <select
                     value={runways.length > 0 ? rwy.status : runwayStatus}
+                    disabled={!canWriteAirfieldStatus}
                     onChange={(e) => {
+                      if (!canWriteAirfieldStatus) return
                       const val = e.target.value as 'open' | 'suspended' | 'closed'
                       const currentVal = runways.length > 0 ? rwy.status : runwayStatus
                       if (val === currentVal) return
@@ -1804,11 +1812,11 @@ export default function HomePage() {
               )}
             </div>
           ) : (
-            <div className="card" onClick={() => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) }}
+            <div className="card" onClick={canEditRscBwc ? () => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) } : undefined}
               style={{
                 padding: '8px 10px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', textAlign: 'center',
+                cursor: canEditRscBwc ? 'pointer' : 'default', textAlign: 'center',
               }}>
               <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>RSC</div>
               <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, color: 'var(--color-accent)' }}>
@@ -1817,11 +1825,11 @@ export default function HomePage() {
             </div>
           )}
           {/* BWC card */}
-          <div className="card" onClick={() => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) }}
+          <div className="card" onClick={canEditRscBwc ? () => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) } : undefined}
             style={{
               padding: '8px 10px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', textAlign: 'center',
+              cursor: canEditRscBwc ? 'pointer' : 'default', textAlign: 'center',
             }}>
             <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>BWC</div>
             <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
@@ -2053,7 +2061,9 @@ export default function HomePage() {
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>CAT</div>
             <select
               value={arffCat ?? ''}
+              disabled={!canWriteAirfieldStatus}
               onChange={(e) => {
+                if (!canWriteAirfieldStatus) return
                 const val = e.target.value ? parseInt(e.target.value) : null
                 const current = arffCat
                 if (val === current) return
@@ -2103,11 +2113,11 @@ export default function HomePage() {
               <div
                 key={aircraft}
                 className="card"
-                onClick={() => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' })}
+                onClick={canWriteAirfieldStatus ? () => setArffDialog({ aircraft, selectedStatus: readiness, notes: '' }) : undefined}
                 style={{
                   padding: '8px 12px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  cursor: 'pointer',
+                  cursor: canWriteAirfieldStatus ? 'pointer' : 'default',
                   background: c.bg, border: `1px solid ${c.border}`,
                 }}
               >
@@ -2270,12 +2280,14 @@ export default function HomePage() {
       {/* ===== Construction / Closures ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
-        <button
-          onClick={() => { setConstructionDraft(constructionRemarks || ''); setEditingConstruction(true) }}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-        >
-          {constructionRemarks ? 'Edit' : 'Add'}
-        </button>
+        {canWriteAirfieldStatus && (
+          <button
+            onClick={() => { setConstructionDraft(constructionRemarks || ''); setEditingConstruction(true) }}
+            style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+          >
+            {constructionRemarks ? 'Edit' : 'Add'}
+          </button>
+        )}
       </div>
       <div className="card" style={{ padding: constructionRemarks ? '10px 14px' : 16, textAlign: constructionRemarks ? 'left' : 'center', marginBottom: 12 }}>
         {constructionRemarks ? (
@@ -2291,12 +2303,14 @@ export default function HomePage() {
       {/* ===== Miscellaneous Info ===== */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
-        <button
-          onClick={() => { setMiscDraft(miscRemarks || ''); setEditingMisc(true) }}
-          style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-        >
-          {miscRemarks ? 'Edit' : 'Add'}
-        </button>
+        {canWriteAirfieldStatus && (
+          <button
+            onClick={() => { setMiscDraft(miscRemarks || ''); setEditingMisc(true) }}
+            style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+          >
+            {miscRemarks ? 'Edit' : 'Add'}
+          </button>
+        )}
       </div>
       <div className="card" style={{ padding: miscRemarks ? '10px 14px' : 16, textAlign: miscRemarks ? 'left' : 'center', marginBottom: 12 }}>
         {miscRemarks ? (

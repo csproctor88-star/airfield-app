@@ -87,7 +87,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
 // added in saved sidebar configs before the matrix is updated).
 const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/':                  'airfield_status:view',
-  '/dashboard':         'airfield_status:view',
+  '/dashboard':         'dashboard:view',
   '/activity':          'activity_log:view',
   '/recent-activity':   'recent_activity:view',
   '/qrc':               'qrc:view',
