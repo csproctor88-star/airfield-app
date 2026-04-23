@@ -22,6 +22,7 @@ import { generateDailyOpsPdf, type DailyReviewSignoff } from '@/lib/reports/dail
 import { formatZuluDateTime } from '@/lib/utils'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { usePermissions } from '@/lib/permissions'
 import type jsPDF from 'jspdf'
 
 interface SignModalProps {
@@ -37,7 +38,6 @@ interface SignModalProps {
   timezone?: string | null
   resetTime?: string | null
   userId: string
-  userRole: string | null
   userName: string
   defaultPdfEmail: string | null
   onSigned: () => void
@@ -45,8 +45,9 @@ interface SignModalProps {
 
 export default function DailyReviewSignModal({
   open, onClose, baseId, baseName, baseIcao, shiftCount, reviewDate,
-  timezone, resetTime, userId, userRole, userName, defaultPdfEmail, onSigned,
+  timezone, resetTime, userId, userName, defaultPdfEmail, onSigned,
 }: SignModalProps) {
+  const { has } = usePermissions()
   const [loading, setLoading] = useState(false)
   const [row, setRow] = useState<DailyReviewRow | null>(null)
   const [signers, setSigners] = useState<Partial<Record<DailyReviewSlot, SignerInfo>>>({})
@@ -146,7 +147,7 @@ export default function DailyReviewSignModal({
         // eligible unsigned slot (NAMO/AFM will usually be reviewing after-hours).
         const required = requiredSlotsForShifts(shiftCount)
         const isOpen = (s: DailyReviewSlot) =>
-          canUserSignSlot(userRole, s)
+          canUserSignSlot(has, s)
           && !(existing as DailyReviewRow | null)?.[`${s}_signed_at` as keyof DailyReviewRow]
         const currentShift = currentAmslSlot(timezone, shiftCount)
         const openSlot = (isOpen(currentShift) ? currentShift : undefined) ?? required.find(isOpen)
@@ -336,7 +337,7 @@ export default function DailyReviewSignModal({
                 disabled={loading || signing}
               >
                 <option value="">— Select —</option>
-                {required.filter((s) => canUserSignSlot(userRole, s)).map((s) => {
+                {required.filter((s) => canUserSignSlot(has, s)).map((s) => {
                   const already = !!(row?.[`${s}_signed_at` as keyof DailyReviewRow])
                   return <option key={s} value={s} disabled={already}>{SLOT_LABELS[s]}{already ? ' (signed)' : ''}</option>
                 })}

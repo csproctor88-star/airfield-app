@@ -1,10 +1,8 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
 
-// Helper: cast supabase to bypass strict table typing for new tables not yet in generated types
 function db() {
-  const supabase = createClient()
-  return supabase ? (supabase as any) : null
+  return createClient()
 }
 
 // ── Types ──

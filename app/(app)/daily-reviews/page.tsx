@@ -20,7 +20,7 @@ import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 
 export default function DailyReviewsPage() {
-  const { installationId, currentInstallation, userRole, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
   const baseName = currentInstallation?.name || ''
   const baseIcao = (currentInstallation as { icao?: string | null } | null)?.icao || null
@@ -149,7 +149,6 @@ export default function DailyReviewsPage() {
           timezone={baseTimezone}
           resetTime={baseResetTime}
           userId={userId}
-          userRole={userRole}
           userName={userName}
           defaultPdfEmail={defaultPdfEmail}
           onSigned={load}

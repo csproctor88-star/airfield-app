@@ -65,7 +65,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Airfield Management',
-      items: ['/discrepancies', '/obstructions', '/infrastructure', '/parking'],
+      items: ['/discrepancies', '/ces', '/obstructions', '/infrastructure', '/parking'],
     },
     {
       label: 'Reference',

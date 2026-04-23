@@ -2717,6 +2717,27 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          category: string
+          description: string | null
+          key: string
+          label: string
+        }
+        Insert: {
+          category: string
+          description?: string | null
+          key: string
+          label: string
+        }
+        Update: {
+          category?: string
+          description?: string | null
+          key?: string
+          label?: string
+        }
+        Relationships: []
+      }
       photos: {
         Row: {
           acsi_inspection_id: string | null
@@ -3231,6 +3252,29 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          permission_key: string
+          role: string
+        }
+        Insert: {
+          permission_key: string
+          role: string
+        }
+        Update: {
+          permission_key?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       runway_status_log: {
         Row: {
           base_id: string | null
@@ -3710,6 +3754,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_permission_overrides: {
+        Row: {
+          created_at: string
+          granted: boolean
+          permission_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted: boolean
+          permission_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted?: boolean
+          permission_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permission_overrides_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       user_regulation_pdfs: {
         Row: {
@@ -4368,9 +4441,112 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      base_exists: { Args: { p_base_id: string }; Returns: boolean }
+      ces_update_discrepancy: {
+        Args: {
+          p_current_status?: string
+          p_id: string
+          p_note?: string
+          p_resolution_notes?: string
+        }
+        Returns: {
+          assigned_shop: string | null
+          assigned_to: string | null
+          base_id: string | null
+          created_at: string
+          current_status: string
+          description: string
+          display_id: string
+          estimated_completion_date: string | null
+          estimated_cost: string | null
+          facility_number: string | null
+          id: string
+          infrastructure_feature_id: string | null
+          inspection_id: string | null
+          latitude: number | null
+          lighting_system_id: string | null
+          linked_notam_id: string | null
+          location_text: string
+          longitude: number | null
+          notam_reference: string | null
+          photo_count: number
+          project_number: string | null
+          reported_by: string | null
+          resolution_date: string | null
+          resolution_notes: string | null
+          risk_control_measure: string | null
+          severity: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          work_order_number: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "discrepancies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_display_id: {
         Args: { prefix: string; seq_name: string }
         Returns: string
+      }
+      get_public_feedback_config: {
+        Args: { p_base_id: string }
+        Returns: {
+          base_name: string
+          config: Json
+          module_enabled: boolean
+        }[]
+      }
+      safety_update_rsc_bwc: {
+        Args: {
+          p_base_id: string
+          p_bwc_value?: string
+          p_rcr_condition?: string
+          p_rcr_midpoint?: string
+          p_rcr_rollout?: string
+          p_rcr_touchdown?: string
+          p_reason?: string
+          p_rsc_condition?: string
+        }
+        Returns: {
+          active_runway: string
+          advisories: Json
+          advisory_text: string | null
+          advisory_type: string | null
+          afm_closed: boolean
+          afm_closed_message: string | null
+          afm_ooo_message: string | null
+          afm_out_of_office: boolean
+          arff_cat: number | null
+          arff_statuses: Json | null
+          base_id: string | null
+          bwc_updated_at: string | null
+          bwc_value: string | null
+          construction_remarks: string | null
+          id: string
+          misc_remarks: string | null
+          rcr_condition: string | null
+          rcr_midpoint: string | null
+          rcr_rollout: string | null
+          rcr_touchdown: string | null
+          rcr_updated_at: string | null
+          rsc_condition: string | null
+          rsc_updated_at: string | null
+          runway_status: string
+          runway_statuses: Json | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "airfield_status"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_all_pdfs: {
         Args: { max_results?: number; search_query: string }
@@ -4408,14 +4584,12 @@ export type Database = {
             Args: { p_base_id?: string; p_updated_by?: string; p_updates: Json }
             Returns: undefined
           }
-      user_can_write: { Args: { p_user_id: string }; Returns: boolean }
       user_has_base_access: {
         Args: { p_base_id: string; p_user_id: string }
         Returns: boolean
       }
-      user_is_admin: { Args: { p_user_id: string }; Returns: boolean }
-      user_is_base_admin_at: {
-        Args: { p_base_id: string; p_user_id: string }
+      user_has_permission: {
+        Args: { p_key: string; p_user_id: string }
         Returns: boolean
       }
       user_is_sys_admin: { Args: { p_user_id: string }; Returns: boolean }
@@ -4551,9 +4725,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-
-
 // Convenience type aliases
 export type UserRole =
   | 'airfield_manager'

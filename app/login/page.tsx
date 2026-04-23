@@ -41,16 +41,31 @@ function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Auto-login for demo mode via ?demo=true link
+  // Auto-login for demo mode via ?demo=<role> link.
+  //   ?demo=true            → default AFM-role demo account
+  //   ?demo=safety          → safety role demo account
+  //   ?demo=ppr             → PPR role demo account
+  //   ?demo=majcom_rfm      → MAJCOM / RFM role demo account
+  //   ?demo=airfield_status → kiosk role demo account
   useEffect(() => {
-    if (searchParams.get('demo') !== 'true') return
+    const demoParam = searchParams.get('demo')
+    if (!demoParam) return
+    const roleMap: Record<string, string> = {
+      true: 'demo@glidepathops.com',
+      safety: 'safety@demo.glidepathops.com',
+      ppr: 'ppr@demo.glidepathops.com',
+      majcom_rfm: 'majcom@demo.glidepathops.com',
+      airfield_status: 'kiosk@demo.glidepathops.com',
+    }
+    const demoEmail = roleMap[demoParam]
+    if (!demoEmail) return
     setLoading(true)
     ;(async () => {
       try {
         const supabase = createClient()
         if (!supabase) { router.push('/'); return }
         const { data, error: authErr } = await supabase.auth.signInWithPassword({
-          email: 'demo@glidepathops.com',
+          email: demoEmail,
           password: 'DemoGlidepath2026!',
         })
         if (authErr) { setError('Demo login unavailable. Please try again later.'); setLoading(false); return }

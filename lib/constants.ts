@@ -543,23 +543,21 @@ export const WAIVER_REVIEW_RECOMMENDATIONS = [
 
 // === User Roles (SRS Section 2.1) ===
 
+// Display labels only. Authorization lives in the permission matrix
+// (role_permissions + user_has_permission); do not add capability flags here.
 export const USER_ROLES = {
-  airfield_manager: { label: 'Airfield Manager', canCreate: true, canManageUsers: true },
-  namo:             { label: 'NAMO', canCreate: true, canManageUsers: true },
-  amops:            { label: 'AMOPS', canCreate: true, canManageUsers: false },
-  ces:              { label: 'CES', canCreate: false, canManageUsers: false },
-  safety:           { label: 'Safety', canCreate: false, canManageUsers: false },
-  atc:              { label: 'ATC', canCreate: false, canManageUsers: false },
-  read_only:        { label: 'Read Only', canCreate: false, canManageUsers: false },
-  base_admin:       { label: 'Base Admin', canCreate: true, canManageUsers: true },
-  sys_admin:        { label: 'System Admin', canCreate: true, canManageUsers: true },
-  // Phase C roles — real authorization lives in role_permissions /
-  // user_has_permission(). canCreate / canManageUsers stay FALSE for
-  // these; any legacy gate still reading those flags treats them as
-  // non-privileged, which is correct for the new roles.
-  ppr:              { label: 'PPR', canCreate: false, canManageUsers: false },
-  airfield_status:  { label: 'Airfield Status', canCreate: false, canManageUsers: false },
-  majcom_rfm:       { label: 'MAJCOM / RFM', canCreate: false, canManageUsers: false },
+  airfield_manager: { label: 'Airfield Manager' },
+  namo:             { label: 'NAMO' },
+  amops:            { label: 'AMOPS' },
+  ces:              { label: 'CES' },
+  safety:           { label: 'Safety' },
+  atc:              { label: 'ATC' },
+  read_only:        { label: 'Read Only' },
+  base_admin:       { label: 'Base Admin' },
+  sys_admin:        { label: 'System Admin' },
+  ppr:              { label: 'PPR' },
+  airfield_status:  { label: 'Airfield Status' },
+  majcom_rfm:       { label: 'MAJCOM / RFM' },
 } as const
 
 // Rank options for user management

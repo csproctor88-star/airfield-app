@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import type { Json } from './types'
 
 // ── Types ──
 
@@ -56,7 +57,7 @@ export async function fetchFeedback(baseId: string, options?: {
   const supabase = createClient()
   if (!supabase) return []
 
-  let query = (supabase as any)
+  let query = supabase
     .from('customer_feedback')
     .select('*')
     .eq('base_id', baseId)
@@ -67,7 +68,7 @@ export async function fetchFeedback(baseId: string, options?: {
   if (options?.endDate) query = query.lte('submitted_at', options.endDate)
 
   const { data } = await query
-  return (data || []) as CustomerFeedback[]
+  return (data || []) as unknown as CustomerFeedback[]
 }
 
 // ── Submit feedback (public — uses anon key) ──
@@ -84,7 +85,7 @@ export async function submitFeedback(input: {
   const supabase = createClient()
   if (!supabase) return { success: false, error: 'Not configured' }
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('customer_feedback')
     .insert({
       base_id: input.base_id,
@@ -93,7 +94,7 @@ export async function submitFeedback(input: {
       organization: input.organization || null,
       overall_rating: input.overall_rating || null,
       comments: input.comments || null,
-      responses: input.responses || {},
+      responses: (input.responses || {}) as Json,
     })
 
   if (error) return { success: false, error: error.message }
@@ -106,7 +107,7 @@ export async function deleteFeedback(id: string): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('customer_feedback')
     .delete()
     .eq('id', id)
@@ -153,7 +154,7 @@ export async function fetchPublicFeedbackConfig(baseId: string): Promise<PublicF
   const supabase = createClient()
   if (!supabase) return { baseName: '', moduleEnabled: true, config: DEFAULT_FEEDBACK_CONFIG }
 
-  const { data, error } = await (supabase as any).rpc('get_public_feedback_config', { p_base_id: baseId })
+  const { data, error } = await supabase.rpc('get_public_feedback_config', { p_base_id: baseId })
   if (error || !data || !Array.isArray(data) || data.length === 0) return null
 
   const row = data[0] as { base_name: string | null; module_enabled: boolean; config: unknown }
@@ -193,7 +194,7 @@ export async function fetchFeedbackStats(baseId: string, days: number = 30): Pro
 
   const since = new Date(Date.now() - days * 86400000).toISOString()
 
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('customer_feedback')
     .select('overall_rating, submitted_at')
     .eq('base_id', baseId)

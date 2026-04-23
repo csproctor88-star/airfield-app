@@ -2,8 +2,7 @@ import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
 
 function db() {
-  const supabase = createClient()
-  return supabase ? (supabase as any) : null
+  return createClient()
 }
 
 export type ScnAgency = {

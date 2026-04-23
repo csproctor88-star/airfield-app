@@ -329,7 +329,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
   }
 
   // 5. QRC executions
-  const { data: qrcData } = await (supabase as any)
+  const { data: qrcData } = await supabase
     .from('qrc_executions')
     .select('id, qrc_number, title, status, opened_at, closed_at, opened_by, profiles:opened_by(name, rank, operating_initials)')
     .eq('base_id', baseId)
@@ -358,7 +358,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
   }
 
   // 6. Wildlife sightings
-  const { data: sightingData } = await (supabase as any)
+  const { data: sightingData } = await supabase
     .from('wildlife_sightings')
     .select('id, display_id, species_common, count_observed, location_text, created_at, observed_by, profiles:observed_by(name, rank, operating_initials)')
     .eq('base_id', baseId)
@@ -387,7 +387,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
   }
 
   // 7. Wildlife strikes
-  const { data: strikeData } = await (supabase as any)
+  const { data: strikeData } = await supabase
     .from('wildlife_strikes')
     .select('id, display_id, species_common, created_at, reported_by, profiles:reported_by(name, rank, operating_initials)')
     .eq('base_id', baseId)

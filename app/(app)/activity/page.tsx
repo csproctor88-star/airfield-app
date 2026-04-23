@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
 import { fetchRecentReviews, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
+import { usePermissions } from '@/lib/permissions'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
@@ -251,6 +252,7 @@ function buildDetailsString(a: ActivityEntry, detailsMap: Map<string, EntityDeta
 export default function ActivityPage() {
   const router = useRouter()
   const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { has } = usePermissions()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
 
@@ -287,7 +289,7 @@ export default function ActivityPage() {
 
   const todayShiftReview = (() => {
     const amslSlots = requiredSlotsForShifts(shiftCount).filter((s) => s.endsWith('_amsl'))
-    const canSignAny = amslSlots.some((s) => canUserSignSlot(userRole, s))
+    const canSignAny = amslSlots.some((s) => canUserSignSlot(has, s))
     if (!canSignAny) return null
     const todayRow = recentReviews.find((r) => r.review_date === reviewTodayIso) || null
     const signedCount = amslSlots.filter((s) => todayRow?.[`${s}_signed_at` as keyof DailyReviewRow]).length
@@ -1083,7 +1085,6 @@ export default function ActivityPage() {
           timezone={baseTimezone}
           resetTime={baseResetTime}
           userId={currentUserId}
-          userRole={userRole}
           userName={currentUserName}
           defaultPdfEmail={defaultPdfEmail}
           onSigned={() => { refreshReviews(); loadEntries() }}

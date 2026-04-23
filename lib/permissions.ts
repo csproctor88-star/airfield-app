@@ -113,6 +113,24 @@ export const PERM = {
 
 export type PermissionKey = typeof PERM[keyof typeof PERM]
 
+// ── Pure resolver (role preset + per-user overrides → effective set) ──
+// `granted=FALSE` revokes even if the role preset grants it (override wins).
+// `granted=TRUE` grants even if the role preset omits it.
+// Kept pure + exported so the logic is directly testable.
+export function resolveEffectivePermissions(
+  rolePresetKeys: Iterable<string>,
+  overrides: Iterable<{ permission_key: string; granted: boolean }>,
+): Set<string> {
+  const set = new Set<string>()
+  Array.from(rolePresetKeys).forEach((k) => set.add(k))
+  Array.from(overrides).forEach((o) => {
+    if (!o.permission_key) return
+    if (o.granted) set.add(o.permission_key)
+    else set.delete(o.permission_key)
+  })
+  return set
+}
+
 // ── Client-side fetch + cache ──────────────────────────────
 // One read per session: union the caller's role-preset permissions
 // with their per-user overrides. Grants win when no override; override
@@ -131,37 +149,21 @@ async function fetchPermissionsForCurrentUser(): Promise<Set<string>> {
     .eq('id', user.id)
     .single()
 
-  const role = (profile as { role?: string } | null)?.role
+  const role = profile?.role
   if (!role) return new Set()
 
-  // `role_permissions` and `user_permission_overrides` aren't in the
-  // generated Database types yet — cast the client until types regen.
-  const anySupa = supabase as unknown as {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (col: string, val: string) => Promise<{ data: Array<Record<string, unknown>> | null }>
-      }
-    }
-  }
-
   const [{ data: rolePerms }, { data: overrides }] = await Promise.all([
-    anySupa.from('role_permissions').select('permission_key').eq('role', role),
-    anySupa.from('user_permission_overrides').select('permission_key, granted').eq('user_id', user.id),
+    supabase.from('role_permissions').select('permission_key').eq('role', role),
+    supabase
+      .from('user_permission_overrides')
+      .select('permission_key, granted')
+      .eq('user_id', user.id),
   ])
 
-  const set = new Set<string>()
-  for (const row of (rolePerms ?? [])) {
-    const key = (row as { permission_key?: string }).permission_key
-    if (key) set.add(key)
-  }
-  // Overrides: granted=true adds, granted=false removes (wins over role preset)
-  for (const row of (overrides ?? [])) {
-    const r = row as { permission_key?: string; granted?: boolean }
-    if (!r.permission_key) continue
-    if (r.granted) set.add(r.permission_key)
-    else set.delete(r.permission_key)
-  }
-  return set
+  const roleKeys = (rolePerms ?? [])
+    .map((row) => row.permission_key)
+    .filter((k): k is string => typeof k === 'string')
+  return resolveEffectivePermissions(roleKeys, overrides ?? [])
 }
 
 // ── React hook ─────────────────────────────────────────────
@@ -212,32 +214,19 @@ export async function getPermissionsFor(
     .select('role')
     .eq('id', userId)
     .single()
-  const role = (profile as { role?: string } | null)?.role
+  const role = profile?.role
   if (!role) return new Set()
 
-  const anySupa = supabase as unknown as {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (col: string, val: string) => Promise<{ data: Array<Record<string, unknown>> | null }>
-      }
-    }
-  }
-
   const [{ data: rolePerms }, { data: overrides }] = await Promise.all([
-    anySupa.from('role_permissions').select('permission_key').eq('role', role),
-    anySupa.from('user_permission_overrides').select('permission_key, granted').eq('user_id', userId),
+    supabase.from('role_permissions').select('permission_key').eq('role', role),
+    supabase
+      .from('user_permission_overrides')
+      .select('permission_key, granted')
+      .eq('user_id', userId),
   ])
 
-  const set = new Set<string>()
-  for (const row of (rolePerms ?? [])) {
-    const key = (row as { permission_key?: string }).permission_key
-    if (key) set.add(key)
-  }
-  for (const row of (overrides ?? [])) {
-    const r = row as { permission_key?: string; granted?: boolean }
-    if (!r.permission_key) continue
-    if (r.granted) set.add(r.permission_key)
-    else set.delete(r.permission_key)
-  }
-  return set
+  const roleKeys = (rolePerms ?? [])
+    .map((row) => row.permission_key)
+    .filter((k): k is string => typeof k === 'string')
+  return resolveEffectivePermissions(roleKeys, overrides ?? [])
 }

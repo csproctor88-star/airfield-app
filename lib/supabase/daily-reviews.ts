@@ -119,18 +119,20 @@ export const SLOT_LABELS: Record<DailyReviewSlot, string> = {
   afm: 'Airfield Manager',
 }
 
-/** Which roles can sign which slots. */
-export const SLOT_ALLOWED_ROLES: Record<DailyReviewSlot, string[]> = {
-  day_amsl: ['amops', 'airfield_manager', 'namo', 'base_admin', 'sys_admin'],
-  swing_amsl: ['amops', 'airfield_manager', 'namo', 'base_admin', 'sys_admin'],
-  mid_amsl: ['amops', 'airfield_manager', 'namo', 'base_admin', 'sys_admin'],
-  namo: ['namo', 'airfield_manager', 'base_admin', 'sys_admin'],
-  afm: ['airfield_manager', 'base_admin', 'sys_admin'],
+/** Maps each signing slot to the permission key that gates it. */
+export const SLOT_PERMISSION: Record<DailyReviewSlot, string> = {
+  day_amsl: 'daily_reviews:sign:amsl',
+  swing_amsl: 'daily_reviews:sign:amsl',
+  mid_amsl: 'daily_reviews:sign:amsl',
+  namo: 'daily_reviews:sign:namo',
+  afm: 'daily_reviews:sign:afm',
 }
 
-export function canUserSignSlot(userRole: string | null, slot: DailyReviewSlot): boolean {
-  if (!userRole) return false
-  return SLOT_ALLOWED_ROLES[slot].includes(userRole)
+export function canUserSignSlot(
+  has: (key: string) => boolean,
+  slot: DailyReviewSlot,
+): boolean {
+  return has(SLOT_PERMISSION[slot])
 }
 
 /**

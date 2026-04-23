@@ -103,11 +103,9 @@ All applied cleanly in prod.
 - CAC/PIV authentication — blocked on P1 platform
 - Component extraction for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`)
 - Shared PDF utility (`lib/pdf-utils.ts`) consolidating the 16 generators
-- METAR weather integration (aviationweather.gov)
 - Outage analytics (frequency/duration tracking for lighting systems)
 - Training Management Module (DAF training records)
 - Part 139 civilian template support
-- BowMonk conversion tool
 
 ---
 

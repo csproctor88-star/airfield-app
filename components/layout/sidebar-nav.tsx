@@ -4,10 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { USER_ROLES } from '@/lib/constants'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useTheme } from '@/lib/theme-context'
-import type { UserRole } from '@/lib/supabase/types'
 import { useExpiringNotamCount } from '@/lib/use-expiring-notams'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
@@ -84,20 +82,9 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   'Settings': Settings,
 }
 
-// Legacy admin-only items. Kept so older saved sidebar configs that
-// list these still render correctly for users with canManageUsers,
-// but the permission matrix below is now the source of truth.
-const ADMIN_ITEMS = new Set(['/library', '/users', '/feedback'])
-
-// Legacy CES nav — no longer used for gating (the permission matrix
-// naturally filters to just the hrefs CES has `*:view` for). Kept as
-// the flat list when a CES user's saved config hasn't been rebuilt.
-const CES_ALLOWED_ITEMS = new Set(['/ces', '/discrepancies', '/infrastructure', '/settings'])
-
 // Map each sidebar href to the `:view` permission that controls it.
-// If an href isn't listed here, visibility falls back to the legacy
-// gate (ADMIN_ITEMS + canManageUsers + CES carve-out) so nothing that
-// used to be visible suddenly disappears.
+// Items not listed here stay visible to everyone (e.g. future hrefs
+// added in saved sidebar configs before the matrix is updated).
 const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/':                  'airfield_status:view',
   '/dashboard':         'airfield_status:view',
@@ -142,8 +129,6 @@ export function SidebarNav() {
   const expiringNotamCount = useExpiringNotamCount()
   const { enabledModules } = useInstallation()
   const { has, loaded: permsLoaded } = usePermissions()
-  const [canManageUsers, setCanManageUsers] = useState(false)
-  const [isCesRole, setIsCesRole] = useState(false)
   const [isKioskRole, setIsKioskRole] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -162,7 +147,6 @@ export function SidebarNav() {
     async function init() {
       const supabase = createClient()
       if (!supabase) {
-        setCanManageUsers(true)
         setLoaded(true)
         return
       }
@@ -177,10 +161,9 @@ export function SidebarNav() {
           .eq('id', user.id)
           .single()
 
-        const role = (profile?.role ?? 'read_only') as UserRole
-        const roleConfig = USER_ROLES[role]
-        setCanManageUsers(roleConfig?.canManageUsers ?? false)
-        setIsCesRole(role === 'ces')
+        const role = profile?.role ?? 'read_only'
+        // Kiosk roles get a flattened nav with the installation switcher
+        // and all collapsible groups hidden — handled elsewhere via this flag.
         setIsKioskRole(role === 'airfield_status' || role === 'atc')
       } catch {
         // No auth
@@ -225,11 +208,6 @@ export function SidebarNav() {
     // hide the item if the user doesn't hold that key.
     const requiredPerm = HREF_TO_VIEW_PERM[href]
     if (requiredPerm && permsLoaded && !has(requiredPerm)) return false
-
-    // Fall back to legacy gates for anything not yet in the matrix
-    // (and for the brief window before permissions load).
-    if (ADMIN_ITEMS.has(href) && !requiredPerm) return loaded && canManageUsers
-    if (isCesRole && !CES_ALLOWED_ITEMS.has(href) && !requiredPerm) return false
 
     // Base-level module-on-off toggle (independent of role).
     if (!isModuleEnabled(href, enabledModules)) return false
@@ -651,11 +629,9 @@ export function SidebarNav() {
   }
 
   // ── Normal sidebar ──
-
-  // CES users get a flat list — no collapsible sections
-  const activeConfig = isCesRole
-    ? { pinned: ['/ces', '/discrepancies', '/infrastructure', '/settings'], sections: [] } as SidebarConfig
-    : config
+  // CES / safety / ppr / majcom_rfm users see the default structure
+  // with the matrix naturally filtering to just their :view hrefs.
+  const activeConfig = config
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>

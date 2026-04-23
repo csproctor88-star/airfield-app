@@ -2,8 +2,7 @@ import { createClient } from './client'
 import { logActivity } from './activity'
 
 function db() {
-  const supabase = createClient()
-  return supabase ? (supabase as any) : null
+  return createClient()
 }
 
 // ── Types ──

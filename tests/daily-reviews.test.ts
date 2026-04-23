@@ -55,41 +55,50 @@ describe('requiredSlotsForShifts', () => {
 })
 
 describe('canUserSignSlot', () => {
-  it('returns false for a null role', () => {
-    expect(canUserSignSlot(null, 'day_amsl')).toBe(false)
+  // Build a `has` function from a permission-key fixture set.
+  const hasOf = (keys: string[]) => {
+    const set = new Set(keys)
+    return (k: string) => set.has(k)
+  }
+
+  // Role → permission-preset fixtures, mirroring the effective matrix
+  // seeded by 2026042200 / 2026042202. Keep in sync with role_permissions.
+  const AMOPS = hasOf(['daily_reviews:sign:amsl'])
+  const NAMO = hasOf(['daily_reviews:sign:amsl', 'daily_reviews:sign:namo'])
+  const AFM = hasOf([
+    'daily_reviews:sign:amsl',
+    'daily_reviews:sign:namo',
+    'daily_reviews:sign:afm',
+  ])
+  const NONE = hasOf([])
+
+  it('returns false when the caller holds no permissions', () => {
+    expect(canUserSignSlot(NONE, 'day_amsl')).toBe(false)
   })
 
-  it('allows amops to sign AMSL slots but not NAMO or AFM', () => {
-    expect(canUserSignSlot('amops', 'day_amsl')).toBe(true)
-    expect(canUserSignSlot('amops', 'swing_amsl')).toBe(true)
-    expect(canUserSignSlot('amops', 'mid_amsl')).toBe(true)
-    expect(canUserSignSlot('amops', 'namo')).toBe(false)
-    expect(canUserSignSlot('amops', 'afm')).toBe(false)
+  it('amops can sign AMSL slots but not NAMO or AFM', () => {
+    expect(canUserSignSlot(AMOPS, 'day_amsl')).toBe(true)
+    expect(canUserSignSlot(AMOPS, 'swing_amsl')).toBe(true)
+    expect(canUserSignSlot(AMOPS, 'mid_amsl')).toBe(true)
+    expect(canUserSignSlot(AMOPS, 'namo')).toBe(false)
+    expect(canUserSignSlot(AMOPS, 'afm')).toBe(false)
   })
 
-  it('allows namo to sign NAMO + AMSL but not AFM', () => {
-    expect(canUserSignSlot('namo', 'namo')).toBe(true)
-    expect(canUserSignSlot('namo', 'day_amsl')).toBe(true)
-    expect(canUserSignSlot('namo', 'afm')).toBe(false)
+  it('namo can sign NAMO + AMSL but not AFM', () => {
+    expect(canUserSignSlot(NAMO, 'namo')).toBe(true)
+    expect(canUserSignSlot(NAMO, 'day_amsl')).toBe(true)
+    expect(canUserSignSlot(NAMO, 'afm')).toBe(false)
   })
 
-  it('allows airfield_manager to sign every slot', () => {
+  it('AFM-preset can sign every slot', () => {
     for (const slot of ['day_amsl', 'swing_amsl', 'mid_amsl', 'namo', 'afm'] as DailyReviewSlot[]) {
-      expect(canUserSignSlot('airfield_manager', slot)).toBe(true)
+      expect(canUserSignSlot(AFM, slot)).toBe(true)
     }
   })
 
-  it('allows sys_admin and base_admin to sign every slot', () => {
-    for (const role of ['sys_admin', 'base_admin']) {
-      for (const slot of ['day_amsl', 'swing_amsl', 'mid_amsl', 'namo', 'afm'] as DailyReviewSlot[]) {
-        expect(canUserSignSlot(role, slot)).toBe(true)
-      }
-    }
-  })
-
-  it('denies ces and unknown roles', () => {
-    expect(canUserSignSlot('ces', 'day_amsl')).toBe(false)
-    expect(canUserSignSlot('viewer', 'afm')).toBe(false)
+  it('denies callers missing the AMSL sign permission', () => {
+    expect(canUserSignSlot(NONE, 'day_amsl')).toBe(false)
+    expect(canUserSignSlot(NONE, 'afm')).toBe(false)
   })
 })
 
