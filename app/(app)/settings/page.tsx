@@ -835,7 +835,7 @@ function BaseConfigSectionContent() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/png,image/jpeg"
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />

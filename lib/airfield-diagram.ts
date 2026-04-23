@@ -38,23 +38,23 @@ export async function saveAirfieldDiagram(baseId: string, file: File): Promise<v
     return
   }
 
-  // Live mode — upload to Supabase Storage (photos bucket).
-  // `upsert: true` atomically overwrites the existing object. A prior
-  // implementation called remove() then upload(), but storage RLS on the
-  // delete path could silently fail, leaving the old file in place — the
-  // subsequent upload then hit "resource already exists".
-  const path = storagePath(baseId)
+  // Live mode — route through /api/admin/airfield-diagram so the upload
+  // runs under the service-role client. Direct client-side uploads kept
+  // tripping storage.objects RLS even for users with photos:write; the
+  // server-side route uses base_setup:write (the same gate as the Base
+  // Setup UI) as the authorization check.
+  const form = new FormData()
+  form.append('baseId', baseId)
+  form.append('file', file)
 
-  const { error } = await supabase.storage
-    .from('photos')
-    .upload(path, file, {
-      contentType: file.type || 'image/jpeg',
-      upsert: true,
-      cacheControl: '0',
-    })
+  const res = await fetch('/api/admin/airfield-diagram', {
+    method: 'POST',
+    body: form,
+  })
 
-  if (error) {
-    throw new Error(`Failed to upload diagram: ${error.message}`)
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(`Failed to upload diagram: ${msg.error || res.statusText}`)
   }
 }
 
@@ -96,7 +96,15 @@ export async function deleteAirfieldDiagram(baseId: string): Promise<void> {
     return
   }
 
-  // Live mode — remove from Supabase Storage
-  const path = storagePath(baseId)
-  await supabase.storage.from('photos').remove([path])
+  // Live mode — route through the service-role admin endpoint so the
+  // delete is gated on base_setup:write rather than photos:delete.
+  const res = await fetch(
+    `/api/admin/airfield-diagram?baseId=${encodeURIComponent(baseId)}`,
+    { method: 'DELETE' },
+  )
+
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(`Failed to delete diagram: ${msg.error || res.statusText}`)
+  }
 }
