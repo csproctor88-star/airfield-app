@@ -63,49 +63,70 @@ async function authorize(request: Request, baseId: string) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => ({})) as { baseId?: string }
-  const baseId = body.baseId
-  if (!baseId) {
-    return NextResponse.json({ error: 'baseId is required' }, { status: 400 })
+  try {
+    const body = await request.json().catch(() => ({})) as { baseId?: string }
+    const baseId = body.baseId
+    if (!baseId) {
+      return NextResponse.json({ error: 'baseId is required' }, { status: 400 })
+    }
+
+    const auth = await authorize(request, baseId)
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const token = newToken()
+    const { error } = await auth.admin
+      .from('bases')
+      .update({ kiosk_token: token } as never)
+      .eq('id', baseId)
+
+    if (error) {
+      console.error('[kiosk-token] UPDATE failed:', error)
+      const hint = /column.*kiosk_token.*does not exist/i.test(error.message)
+        ? 'Database migration 2026042301_kiosk_token not applied yet — run `npx supabase db push`.'
+        : error.message
+      return NextResponse.json({ error: hint }, { status: 500 })
+    }
+
+    return NextResponse.json({ token })
+  } catch (err) {
+    console.error('[kiosk-token] POST error:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unexpected server error' },
+      { status: 500 },
+    )
   }
-
-  const auth = await authorize(request, baseId)
-  if ('error' in auth) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status })
-  }
-
-  const token = newToken()
-  const { error } = await auth.admin
-    .from('bases')
-    .update({ kiosk_token: token } as never)
-    .eq('id', baseId)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ token })
 }
 
 export async function DELETE(request: Request) {
-  const baseId = new URL(request.url).searchParams.get('baseId')
-  if (!baseId) {
-    return NextResponse.json({ error: 'baseId is required' }, { status: 400 })
+  try {
+    const baseId = new URL(request.url).searchParams.get('baseId')
+    if (!baseId) {
+      return NextResponse.json({ error: 'baseId is required' }, { status: 400 })
+    }
+
+    const auth = await authorize(request, baseId)
+    if ('error' in auth) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const { error } = await auth.admin
+      .from('bases')
+      .update({ kiosk_token: null } as never)
+      .eq('id', baseId)
+
+    if (error) {
+      console.error('[kiosk-token] DELETE failed:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('[kiosk-token] DELETE error:', err)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Unexpected server error' },
+      { status: 500 },
+    )
   }
-
-  const auth = await authorize(request, baseId)
-  if ('error' in auth) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status })
-  }
-
-  const { error } = await auth.admin
-    .from('bases')
-    .update({ kiosk_token: null } as never)
-    .eq('id', baseId)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
 }
