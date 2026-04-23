@@ -103,6 +103,9 @@ function LoginContent() {
       kiosk_invalid_icao: 'Invalid ICAO in kiosk URL — check the airfield code.',
       kiosk_not_configured: 'Kiosk mode is not configured on this deployment. Contact your administrator.',
       kiosk_base_not_found: 'No base matches that ICAO. Verify the kiosk URL or ask your administrator.',
+      kiosk_token_required: 'Kiosk URL is missing its access token. Use the full URL provided by your administrator.',
+      kiosk_token_mismatch: 'Kiosk URL token is invalid. The token may have been rotated — ask your administrator for an updated URL.',
+      kiosk_disabled: 'Kiosk mode is not enabled for this base. Contact your base administrator to generate a kiosk URL.',
       kiosk_auth_failed: 'Kiosk sign-in failed. The kiosk account may need a password reset — contact your administrator.',
     }
     const msg = messages[err]

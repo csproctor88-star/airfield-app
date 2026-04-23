@@ -1,25 +1,28 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { timingSafeEqual } from 'node:crypto'
 import { getAdminClient } from '@/lib/admin/role-checks'
 import { getSupabaseConfig } from '@/lib/utils'
 
 // Kiosk auto-login.
 //
-// URL pattern: /kiosk/<ICAO>  (e.g. /kiosk/KBCV)
+// URL pattern: /kiosk/<ICAO>?token=<per-base-random-token>
 // On hit:
 //   1. Look up the base by ICAO.
-//   2. Sign in as the per-base kiosk account (email = kiosk-<icao>@glidepathops.com,
+//   2. Constant-time compare the query `token` against bases.kiosk_token.
+//      Bases with NULL kiosk_token are opt-out and reject outright.
+//   3. Sign in as the per-base kiosk account (email = kiosk-<icao>@glidepathops.com,
 //      password = process.env.KIOSK_PASSWORD).
-//   3. If the account doesn't exist yet, auto-provision it (the
+//   4. If the account doesn't exist yet, auto-provision it (the
 //      handle_new_user() trigger creates the profile + base_members row;
 //      we flip status to 'active' since the account is system-managed).
-//   4. Redirect to `/`. Session cookie is set on the redirect response so
-//      the next request is authenticated.
+//   5. Redirect to `/`. Session cookie is set on the redirect response.
 //
-// The password is never sent to the browser — it only lives in the
-// Vercel env var and in auth.users (hashed). The URL itself is the
-// practical secret: treat it like a share link.
+// Two secrets defend this route:
+//   • KIOSK_PASSWORD (server-only env var) — never leaves the server.
+//   • bases.kiosk_token (per-base) — lives in the URL. Treat the full
+//     URL like a share link; anyone with it can view that base's board.
 
 const EMAIL_DOMAIN = 'glidepathops.com'
 
@@ -27,6 +30,14 @@ function redirectToLogin(request: NextRequest, errorCode: string): NextResponse 
   const url = new URL('/login', request.url)
   url.searchParams.set('error', errorCode)
   return NextResponse.redirect(url)
+}
+
+/** Constant-time string compare that short-circuits mismatched lengths. */
+function tokensMatch(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided, 'utf8')
+  const b = Buffer.from(expected, 'utf8')
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
 }
 
 export async function GET(
@@ -49,15 +60,30 @@ export async function GET(
     return redirectToLogin(request, 'kiosk_not_configured')
   }
 
+  const providedToken = request.nextUrl.searchParams.get('token')
+  if (!providedToken) {
+    return redirectToLogin(request, 'kiosk_token_required')
+  }
+
   // Look up the base. ICAO comparison is case-insensitive.
   const { data: base } = await admin
     .from('bases')
-    .select('id, name, icao')
+    .select('id, name, icao, kiosk_token')
     .ilike('icao', icao)
     .maybeSingle()
 
   if (!base) {
     return redirectToLogin(request, 'kiosk_base_not_found')
+  }
+
+  const expectedToken = (base as { kiosk_token?: string | null }).kiosk_token
+  if (!expectedToken) {
+    // Base has explicitly opted out of kiosk URLs (or hasn't set one yet).
+    return redirectToLogin(request, 'kiosk_disabled')
+  }
+
+  if (!tokensMatch(providedToken, expectedToken)) {
+    return redirectToLogin(request, 'kiosk_token_mismatch')
   }
 
   const kioskEmail = `kiosk-${icao.toLowerCase()}@${EMAIL_DOMAIN}`
