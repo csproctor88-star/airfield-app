@@ -49,6 +49,7 @@ function brandedEmail(title: string, body: string): string {
 // ── Template builders ──
 
 function approvedEmail(userName: string, loginUrl: string, customMessage?: string): string {
+  const resetUrl = `${loginUrl.replace(/\/login$/, '')}/reset-password`
   return brandedEmail('Account Approved', `
     <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(userName)}</strong>,</p>
     <p style="margin:0 0 16px;">Your Glidepath account has been <span style="color:#22C55E;font-weight:700;">approved</span> and is ready to use.</p>
@@ -57,9 +58,12 @@ function approvedEmail(userName: string, loginUrl: string, customMessage?: strin
       <div style="color:#E2E8F0;">${escapeHtml(customMessage)}</div>
     </div>` : ''}
     <p style="margin:0 0 20px;">You can log in now and start using the platform:</p>
-    <div style="text-align:center;margin:0 0 20px;">
+    <div style="text-align:center;margin:0 0 12px;">
       <a href="${escapeHtml(loginUrl)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Log In to Glidepath</a>
     </div>
+    <p style="text-align:center;margin:0 0 20px;font-size:13px;color:#94A3B8;">
+      Forgot your password? <a href="${escapeHtml(resetUrl)}" style="color:#22D3EE;text-decoration:none;">Reset it here</a>.
+    </p>
     <div style="font-size:13px;color:#94A3B8;border-top:1px solid #334155;padding-top:14px;">
       <strong>Getting Started:</strong>
       <ul style="margin:8px 0 0;padding-left:20px;">
