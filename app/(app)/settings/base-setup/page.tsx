@@ -89,14 +89,73 @@ const WIZARD_STEPS: WizardStep[] = [
 ]
 
 export default function BaseSetupPage() {
-  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, enabledModules, setupProgress, markSetupStep } = useInstallation()
+  const { installationId, currentInstallation, runways, areas, ceShops, typeShopMap, arffAircraft, enabledModules, setupProgress, markSetupStep, refreshCurrentInstallation } = useInstallation()
   const { has } = usePermissions()
   const [currentStep, setCurrentStep] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
   const [editingBaseName, setEditingBaseName] = useState(false)
   const [baseNameDraft, setBaseNameDraft] = useState('')
+  const [kioskBusy, setKioskBusy] = useState(false)
+  const [kioskTokenReveal, setKioskTokenReveal] = useState<string | null>(null)
 
   const canEdit = has(PERM.BASE_SETUP_WRITE)
+  const baseIcao = (currentInstallation as unknown as { icao?: string | null } | null)?.icao ?? null
+  const kioskTokenSet = !!((currentInstallation as unknown as { kiosk_token?: string | null } | null)?.kiosk_token)
+
+  const handleGenerateKioskToken = async () => {
+    if (!installationId || kioskBusy) return
+    setKioskBusy(true)
+    try {
+      const res = await fetch('/api/admin/kiosk-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseId: installationId }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(json?.error || 'Failed to generate kiosk URL')
+        return
+      }
+      setKioskTokenReveal(json.token as string)
+      await refreshCurrentInstallation()
+      toast.success('Kiosk URL generated — copy it now')
+    } finally {
+      setKioskBusy(false)
+    }
+  }
+
+  const handleDisableKioskToken = async () => {
+    if (!installationId || kioskBusy) return
+    if (!confirm('Disable the kiosk URL for this base? Any bookmarked kiosk URLs will stop working.')) return
+    setKioskBusy(true)
+    try {
+      const res = await fetch(`/api/admin/kiosk-token?baseId=${encodeURIComponent(installationId)}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(json?.error || 'Failed to disable kiosk URL')
+        return
+      }
+      setKioskTokenReveal(null)
+      await refreshCurrentInstallation()
+      toast.success('Kiosk URL disabled')
+    } finally {
+      setKioskBusy(false)
+    }
+  }
+
+  const copyKioskUrl = async () => {
+    if (!kioskTokenReveal || !baseIcao) return
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const url = `${origin}/kiosk/${baseIcao.toUpperCase()}?token=${kioskTokenReveal}`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Kiosk URL copied to clipboard')
+    } catch {
+      toast.error('Copy failed — select and copy manually')
+    }
+  }
 
   const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
 
@@ -190,6 +249,99 @@ export default function BaseSetupPage() {
           )}
           <span>({currentInstallation?.icao ?? '—'})</span>
         </p>
+      </div>
+
+      {/* ── Kiosk URL ── */}
+      <div style={{
+        marginBottom: 16,
+        padding: 14,
+        background: 'var(--color-bg-surface)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 8,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 2 }}>
+              Kiosk Display URL
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+              Auto-login URL for a read-only status board. Bookmark on a lobby display or kiosk — no credentials needed.
+              {' '}
+              {!baseIcao && <span style={{ color: 'var(--color-warning)' }}>Set the base ICAO first.</span>}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {kioskTokenSet ? (
+              <>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)', fontWeight: 600 }}>
+                  ● ACTIVE
+                </span>
+                <button
+                  onClick={handleGenerateKioskToken}
+                  disabled={kioskBusy || !baseIcao}
+                  style={{
+                    padding: '6px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                    cursor: kioskBusy ? 'wait' : 'pointer', border: '1px solid var(--color-border-mid)',
+                    background: 'var(--color-bg-inset)', color: 'var(--color-text-2)',
+                  }}
+                >Regenerate</button>
+                <button
+                  onClick={handleDisableKioskToken}
+                  disabled={kioskBusy}
+                  style={{
+                    padding: '6px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                    cursor: kioskBusy ? 'wait' : 'pointer', border: '1px solid rgba(239,68,68,0.3)',
+                    background: 'rgba(239,68,68,0.08)', color: 'var(--color-danger)',
+                  }}
+                >Disable</button>
+              </>
+            ) : (
+              <button
+                onClick={handleGenerateKioskToken}
+                disabled={kioskBusy || !baseIcao}
+                style={{
+                  padding: '8px 16px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: kioskBusy || !baseIcao ? 'not-allowed' : 'pointer',
+                  border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.1)',
+                  color: 'var(--color-cyan)', opacity: !baseIcao ? 0.5 : 1,
+                }}
+              >Generate Kiosk URL</button>
+            )}
+          </div>
+        </div>
+
+        {kioskTokenReveal && baseIcao && (
+          <div style={{
+            marginTop: 12, padding: 10,
+            background: 'var(--color-bg-inset)', border: '1px dashed var(--color-cyan)',
+            borderRadius: 6,
+          }}>
+            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 4 }}>
+              COPY THIS URL NOW — it won&apos;t be shown again
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <code style={{
+                flex: 1, padding: '6px 10px', background: 'var(--color-bg-surface-solid)',
+                border: '1px solid var(--color-border)', borderRadius: 4,
+                fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)',
+                wordBreak: 'break-all', fontFamily: 'monospace',
+              }}>
+                {typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/{baseIcao.toUpperCase()}?token={kioskTokenReveal}
+              </code>
+              <button
+                onClick={copyKioskUrl}
+                style={{
+                  padding: '6px 12px', borderRadius: 4, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                  cursor: 'pointer', border: '1px solid var(--color-cyan)',
+                  background: 'var(--color-cyan)', color: 'var(--color-bg-surface-solid)',
+                }}
+              >Copy</button>
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 6 }}>
+              Regenerating replaces this token — any bookmarks with the old token stop working.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Progress bar */}
