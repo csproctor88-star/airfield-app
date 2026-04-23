@@ -4,8 +4,6 @@ import { sanitizePdfText } from '@/lib/pdf-config'
 import { SCN_STATUS_LABELS, type ScnCheckWithResults, type ScnAgencyStatus } from '@/lib/supabase/scn'
 
 interface ScnPdfInput {
-  baseName: string
-  baseIcao?: string | null
   monthYyyyMm: string     // "2026-04"
   checks: ScnCheckWithResults[]
   agencies: string[]      // display order from scn_agencies
@@ -78,23 +76,19 @@ function buildMatrix(
 }
 
 export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filename: string } {
-  const { baseName, baseIcao, monthYyyyMm, checks, agencies } = input
+  const { monthYyyyMm, checks, agencies } = input
   const dayCount = daysInMonth(monthYyyyMm)
   const { primary, backupDays, primaryByDay, oosFootnotes, noResponseFootnotes } = buildMatrix(checks, monthYyyyMm)
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 10
-  let y = margin
+  let y = margin + 4
 
   // ── Header ──
-  doc.setFontSize(9)
-  doc.setTextColor(90)
-  doc.text(sanitizePdfText(baseName.toUpperCase() + (baseIcao ? ` (${baseIcao})` : '')), margin, y)
-  y += 4
   doc.setFontSize(16)
   doc.setTextColor(20)
-  doc.text(`Secondary Crash Net Daily Check Log — ${monthLabel(monthYyyyMm)}`, margin, y)
+  doc.text(sanitizePdfText(`Secondary Crash Net Daily Check Log — ${monthLabel(monthYyyyMm)}`), margin, y)
   y += 7
   doc.setFontSize(9)
   doc.setTextColor(90)

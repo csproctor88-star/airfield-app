@@ -182,7 +182,6 @@ export default function ScnPage() {
       const checks = await fetchChecksInRange(installationId, start, end)
       const allAgencies = await fetchScnAgencies(installationId)
       const { doc, filename } = generateScnMonthlyPdf({
-        baseName: 'SCN Daily Check Log',
         monthYyyyMm: pdfMonth,
         checks,
         agencies: allAgencies.map(a => a.agency_name),
