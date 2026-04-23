@@ -3,7 +3,6 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { randomBytes } from 'node:crypto'
 import { getAdminClient } from '@/lib/admin/role-checks'
-import { getPermissionsFor } from '@/lib/permissions'
 
 // Generate / clear the kiosk_token for a base.
 //
@@ -33,28 +32,37 @@ async function authorize(request: Request, baseId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized', status: 401 as const }
 
-  const perms = await getPermissionsFor(supabase, user.id)
-  if (!perms.has('base_setup:write')) {
+  // Permission gate — call the SECURITY DEFINER helper directly. Avoids
+  // importing from lib/permissions.ts (which is marked 'use client' and
+  // would throw in this server-only bundle).
+  const { data: hasPerm, error: permErr } = await admin.rpc(
+    'user_has_permission',
+    { p_user_id: user.id, p_key: 'base_setup:write' },
+  )
+  if (permErr) {
+    return { error: `Permission check failed: ${permErr.message}`, status: 500 as const }
+  }
+  if (!hasPerm) {
     return { error: 'Forbidden — base_setup:write required', status: 403 as const }
   }
 
   // Verify the caller has access to this specific base (prevents an admin at
-  // base A from rotating base B's token).
-  const { data: membership } = await admin
-    .from('base_members')
-    .select('base_id')
-    .eq('user_id', user.id)
-    .eq('base_id', baseId)
-    .maybeSingle()
+  // base A from rotating base B's token). Sys admins skip this check.
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-  if (!membership) {
-    // Sys admins can rotate any base's token.
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    if (profile?.role !== 'sys_admin') {
+  if (profile?.role !== 'sys_admin') {
+    const { data: membership } = await admin
+      .from('base_members')
+      .select('base_id')
+      .eq('user_id', user.id)
+      .eq('base_id', baseId)
+      .maybeSingle()
+
+    if (!membership) {
       return { error: 'Forbidden — not a member of this base', status: 403 as const }
     }
   }

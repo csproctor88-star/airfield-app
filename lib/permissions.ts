@@ -203,31 +203,9 @@ export function usePermissions() {
   }), [has, hasAny, hasAll, perms])
 }
 
-// ── Server-side helper (route handlers) ────────────────────
-// For API routes that need to authorize without a React context.
-export async function getPermissionsFor(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-): Promise<Set<string>> {
-  if (!supabase) return new Set()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
-  const role = profile?.role
-  if (!role) return new Set()
-
-  const [{ data: rolePerms }, { data: overrides }] = await Promise.all([
-    supabase.from('role_permissions').select('permission_key').eq('role', role),
-    supabase
-      .from('user_permission_overrides')
-      .select('permission_key, granted')
-      .eq('user_id', userId),
-  ])
-
-  const roleKeys = (rolePerms ?? [])
-    .map((row) => row.permission_key)
-    .filter((k): k is string => typeof k === 'string')
-  return resolveEffectivePermissions(roleKeys, overrides ?? [])
-}
+// `getPermissionsFor` was previously defined here, but this module is
+// marked `'use client'`, so importing it from a server route handler
+// caused Next.js to wrap the export as a client reference stub — the
+// stub then threw `(0, <ref>) is not a function` when the server tried
+// to call it. The helper now lives in `lib/permissions-server.ts`.
+// Server callers: `import { getPermissionsFor } from '@/lib/permissions-server'`.
