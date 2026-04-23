@@ -1981,14 +1981,15 @@ export default function HomePage() {
                     {getNavaidDisplayName(n.navaid_name)}
                   </span>
                   <button
-                    onClick={() => {
+                    disabled={!canWriteAirfieldStatus}
+                    onClick={canWriteAirfieldStatus ? () => {
                       setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
-                    }}
+                    } : undefined}
                     style={{
                       width: 36, height: 28, borderRadius: 'var(--radius-sm)',
                       border: `2px solid ${STATUS_COLORS[n.status]}`,
                       background: `${STATUS_HEX[n.status]}20`,
-                      cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
+                      cursor: canWriteAirfieldStatus ? 'pointer' : 'default', fontSize: 'var(--fs-base)', fontWeight: 700,
                       color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
                     }}
                   >
