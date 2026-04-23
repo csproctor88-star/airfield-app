@@ -256,6 +256,47 @@ html, body {
   overscroll-behavior: none;
 }
 
+/*
+ * iOS PWA fix — prevent Safari's auto-zoom-on-focus behavior.
+ * Any text input with font-size < 16px causes iOS to zoom in when it
+ * receives focus, which in a standalone PWA manifests as the layout
+ * scrolling to the bottom and the user losing sight of the input.
+ * Forcing 16px on mobile viewports only keeps the desktop type scale
+ * intact while making mobile text entry usable.
+ */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input[type="week"],
+  input:not([type]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/*
+ * iOS PWA fix — the bottom nav uses position: fixed, which on iOS
+ * anchors to the layout viewport rather than the visual viewport.
+ * When the soft keyboard opens, fixed elements drift into the middle
+ * of the UI. We toggle this class from JS (see components/layout/
+ * bottom-nav.tsx) when VisualViewport shrinks — hiding the nav while
+ * the keyboard is up keeps the layout stable and keeps inputs at the
+ * bottom of the page reachable.
+ */
+.bottom-nav.bottom-nav-keyboard-open {
+  display: none !important;
+}
+
 /* Extend bottom-nav background behind the Android gesture bar / safe area */
 .bottom-nav::after {
   content: '';

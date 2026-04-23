@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useInstallation } from '@/lib/installation-context'
@@ -15,6 +16,35 @@ import {
   Lightbulb,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+
+/**
+ * Detect whether the soft keyboard is currently open on iOS / iPadOS / Android
+ * by watching VisualViewport. When the visual viewport is noticeably shorter
+ * than the layout viewport, the on-screen keyboard is covering the lower part
+ * of the screen — hide the bottom nav so iOS's position: fixed quirk doesn't
+ * drop it into the middle of the UI.
+ */
+function useKeyboardOpen(): boolean {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    if (!vv) return
+    const check = () => {
+      // 150px threshold: keyboards are ~260–380px tall; browser chrome
+      // collapse on scroll is usually <100px. 150px cleanly separates them.
+      const hidden = window.innerHeight - vv.height
+      setOpen(hidden > 150)
+    }
+    check()
+    vv.addEventListener('resize', check)
+    vv.addEventListener('scroll', check)
+    return () => {
+      vv.removeEventListener('resize', check)
+      vv.removeEventListener('scroll', check)
+    }
+  }, [])
+  return open
+}
 
 const defaultTabs: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/', label: 'STATUS', icon: Radio },
@@ -33,6 +63,7 @@ const cesTabs: { href: string; label: string; icon: LucideIcon }[] = [
 export function BottomNav() {
   const pathname = usePathname()
   const { userRole, enabledModules } = useInstallation()
+  const keyboardOpen = useKeyboardOpen()
   // Kiosk roles (airfield_status, atc) — no bottom nav. Users can
   // only view the Airfield Status page; there is nowhere else to go.
   if (userRole === 'airfield_status' || userRole === 'atc') return null
@@ -41,7 +72,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="bottom-nav"
+      className={`bottom-nav${keyboardOpen ? ' bottom-nav-keyboard-open' : ''}`}
       style={{
         position: 'fixed',
         bottom: 0,
