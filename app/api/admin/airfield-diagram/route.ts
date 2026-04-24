@@ -21,7 +21,9 @@ const STORAGE_FOLDER = 'airfield-diagrams'
 // reports etc.), so disallow at the API layer to keep uploads from
 // silently ending up in a broken state.
 const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/jpg'])
-const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+// 4 MB — Vercel's serverless body limit is 4.5 MB and the client resizes
+// to ~1 MB first, so this mostly just serves as a defensive upper bound.
+const MAX_BYTES = 4 * 1024 * 1024
 
 function storagePath(baseId: string): string {
   return `${STORAGE_FOLDER}/${baseId}/diagram`
@@ -96,7 +98,7 @@ export async function POST(request: Request) {
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json(
-        { error: `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 10 MB.` },
+        { error: `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max 4 MB.` },
         { status: 400 },
       )
     }

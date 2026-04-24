@@ -5,6 +5,7 @@
 
 import { createClient } from './supabase/client'
 import { idbSet, idbGet, idbDelete, STORE_USER_BLOBS } from './idb'
+import { resizeImageForUpload } from './utils'
 
 const IDB_KEY_PREFIX = 'airfield-diagram-'
 const STORAGE_FOLDER = 'airfield-diagrams'
@@ -29,11 +30,18 @@ async function fileToDataUrl(file: File): Promise<string> {
 
 /** Save an airfield diagram for a base */
 export async function saveAirfieldDiagram(baseId: string, file: File): Promise<void> {
+  // Resize + re-encode to JPEG client-side before upload. Airfield diagrams
+  // from phone cameras / scans can be 5–15 MB, which trips Vercel's 4.5 MB
+  // serverless body limit (→ 413 at the edge before our route ever runs).
+  // 2400px max dimension keeps runway numbers / notations legible while
+  // squeezing a typical diagram to 500 KB – 1.5 MB.
+  const prepared = await resizeImageForUpload(file, 2400, 0.85)
+
   const supabase = createClient()
 
   if (!supabase) {
     // Demo mode — save to IndexedDB
-    const dataUrl = await fileToDataUrl(file)
+    const dataUrl = await fileToDataUrl(prepared)
     await idbSet(STORE_USER_BLOBS, idbKey(baseId), dataUrl)
     return
   }
@@ -45,7 +53,7 @@ export async function saveAirfieldDiagram(baseId: string, file: File): Promise<v
   // Setup UI) as the authorization check.
   const form = new FormData()
   form.append('baseId', baseId)
-  form.append('file', file)
+  form.append('file', prepared)
 
   const res = await fetch('/api/admin/airfield-diagram', {
     method: 'POST',
