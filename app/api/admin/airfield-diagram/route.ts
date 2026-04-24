@@ -109,16 +109,36 @@ export async function POST(request: Request) {
     const path = storagePath(baseId)
     const bytes = new Uint8Array(await file.arrayBuffer())
 
+    // Explicit delete-then-upload instead of upsert: true. Service role
+    // bypasses RLS on both, and this avoids upsert edge cases where the
+    // existing object's owner metadata (set to the user who first uploaded)
+    // conflicts with a subsequent service-role update. remove() returns
+    // successfully even when the object doesn't exist, so this is safe
+    // for the first-ever upload too.
+    const { error: removeErr } = await auth.admin.storage
+      .from('photos')
+      .remove([path])
+    if (removeErr) {
+      // Log but don't fail — on a first-time upload the object genuinely
+      // doesn't exist, and some SDK versions surface that as an error.
+      console.warn('[airfield-diagram] pre-upload remove non-fatal:', removeErr.message)
+    }
+
     const { error } = await auth.admin.storage
       .from('photos')
       .upload(path, bytes, {
         contentType: file.type,
-        upsert: true,
         cacheControl: '0',
       })
 
     if (error) {
-      console.error('[airfield-diagram] upload failed:', error)
+      console.error('[airfield-diagram] upload failed:', {
+        message: error.message,
+        name: (error as { name?: string }).name,
+        baseId,
+        fileType: file.type,
+        fileSize: file.size,
+      })
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
