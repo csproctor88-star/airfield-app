@@ -14,6 +14,7 @@ import {
   type PendingPhoto,
 } from '@/lib/sync/pending-photos'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
+import { uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 
 interface QueueInspectorProps {
   open: boolean
@@ -72,7 +73,16 @@ async function uploadPendingPhoto(photo: PendingPhoto): Promise<{ ok: boolean; e
     if (error || !data) return { ok: false, error: error ?? 'Upload failed' }
     return { ok: true }
   }
-  // Other entityTypes will land later (check / acsi / discrepancy / wildlife / parking).
+  if (photo.entityType === 'discrepancy') {
+    const { data, error } = await uploadDiscrepancyPhoto(
+      photo.entityId,
+      file,
+      photo.baseId ?? null,
+    )
+    if (error || !data) return { ok: false, error: error ?? 'Upload failed' }
+    return { ok: true }
+  }
+  // Other entityTypes will land later (check / acsi / wildlife / parking).
   return { ok: false, error: `Upload not yet wired for ${photo.entityType}` }
 }
 

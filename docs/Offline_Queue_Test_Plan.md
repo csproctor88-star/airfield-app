@@ -54,17 +54,23 @@ Run this for:
 
 ## Phase 3 — full offline
 
-**Inspections** still have a hard gate:
+**Inspections** can now be filed fully offline as long as they were *started* online (the dbRowId was created at Begin time). The full fan-out — file write, discrepancy creates with pre-allocated UUIDs, NAVAID inop, outage events, activity log entry — all queue together and drain in one shot when the network returns.
 
-1. Start an inspection (online, normally)
-2. Switch throttle to **Offline**
-3. Tap File
-4. Expect a hard-fail toast: *"You're offline. Your inspection is saved as a draft — re-open and tap File when your connection is restored."*
-5. **Nothing should queue.** No QUEUED pill.
+1. Start an inspection while online (Begin)
+2. Walk the runway, fill out items, mark issues "Log as Discrepancy"
+3. Disconnect WiFi or set DevTools throttle to **Offline**
+4. Tap File
 
-- [ ] Inspection: hard-fail toast, no queue activity
+- [ ] Toast: *"Inspection queued — file write, NAVAID outages, and events log entry will all sync automatically when the network returns. Photos still in memory will need to be re-attached if not already in the upload queue."*
+- [ ] Multiple amber items in the queue: 1× inspection_file, N× discrepancy_create (one per logged disc), 1× infrastructure_feature_status_update (if any NAVAIDs linked), N× outage_event_create, 1× activity_log_insert
+- [ ] Restore network → all drain in createdAt order; FKs resolve cleanly because the disc UUIDs were minted client-side before the file step
+- [ ] Inspection list flips from "In Progress / Resume" to filed automatically once the inspection_file commit fires
+- [ ] Discrepancies show up under /discrepancies with the correct `infrastructure_feature_id` link
+- [ ] NAVAID rings show inop on the infrastructure map
 
-The gate stays for inspections because the post-file flow fans out into discrepancy creates, NAVAID inop writes, and activity log entries that aren't queue-wrapped. The draft is preserved either way.
+There's still one gate left: if the inspection was *started* offline (saveInspectionDraft never set a dbRowId), tapping File shows a toast asking the user to reconnect briefly. Wrapping createInspection with a pre-allocated UUID would close this gap; for now the workflow is "Begin online, walk and File offline."
+
+- [ ] Inspection started offline → File offline → "This inspection wasn't synced when you started it…" toast
 
 **Checks, ACSI, and daily review** all queue cleanly when fully offline:
 

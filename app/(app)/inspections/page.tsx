@@ -1186,16 +1186,18 @@ export default function InspectionsPage() {
       return
     }
 
-    // Hard offline gate. Glidepath has no offline write queue today
-    // (next.config.js maps Supabase to NetworkOnly), so a File tap while
-    // offline writes nothing and silently fails partway. Bail out early
-    // with a clear message — the draft is already auto-saved to
-    // localStorage, so re-opening when reconnected resumes from where
-    // the user left off.
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    // Narrow offline gate. Inspections that have a dbRowId (started while
+    // online) can be filed fully offline — the queue handles the file
+    // write, the fan-out side effects (NAVAID inop, outage events,
+    // activity log, discrepancy creates), and pending photos. The only
+    // case we still gate is "started offline, no dbRowId" — the
+    // saveInspectionDraft at Begin failed and there is no row to UPDATE.
+    // Wrapping createInspection through the queue would unblock that
+    // case; for now ask the user to reconnect briefly.
+    if (typeof navigator !== 'undefined' && !navigator.onLine && !currentHalf?.dbRowId) {
       toast.error(
-        "You're offline. Your inspection is saved as a draft — re-open and tap File when your connection is restored.",
-        { duration: 8000 },
+        "This inspection wasn't synced when you started it. Reconnect briefly and try filing again — the draft is preserved locally.",
+        { duration: 10000 },
       )
       return
     }
