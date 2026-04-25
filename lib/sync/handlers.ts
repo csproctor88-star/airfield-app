@@ -30,6 +30,10 @@ import {
   signDailyReview,
   type DailyReviewRow,
 } from '@/lib/supabase/daily-reviews'
+import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
+import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
+import { createOutageEvent } from '@/lib/supabase/outage-events'
+import { logActivity } from '@/lib/supabase/activity'
 import {
   ConflictError,
   NonRetriableError,
@@ -152,6 +156,106 @@ const dailyReviewSignHandler: WriteHandler<
 }
 
 // ---------------------------------------------------------------------------
+// airfield_status_update
+// ---------------------------------------------------------------------------
+
+export interface AirfieldStatusUpdatePayload {
+  updates: Parameters<typeof updateAirfieldStatus>[0]
+  baseId: string | null
+}
+
+const airfieldStatusUpdateHandler: WriteHandler<
+  AirfieldStatusUpdatePayload,
+  boolean
+> = async (payload) => {
+  const ok = await updateAirfieldStatus(payload.updates, payload.baseId)
+  if (!ok) {
+    // updateAirfieldStatus returns false on either no-row-found or a
+    // structured error; treat as transient unless we're online (in which
+    // case it's almost certainly a missing row, which retry won't fix).
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error('airfield_status update failed offline')
+    }
+    throw new NonRetriableError('airfield_status update failed (no row or RLS)')
+  }
+  return true
+}
+
+// ---------------------------------------------------------------------------
+// infrastructure_feature_status_update
+// ---------------------------------------------------------------------------
+
+export interface InfrastructureFeatureStatusUpdatePayload {
+  ids: string[]
+  status: 'operational' | 'inoperative'
+}
+
+const infrastructureFeatureStatusUpdateHandler: WriteHandler<
+  InfrastructureFeatureStatusUpdatePayload,
+  number
+> = async (payload) => {
+  const updated = await bulkUpdateStatus(payload.ids, payload.status)
+  // bulkUpdateStatus returns 0 if all batches errored. Distinguish:
+  //   - empty input → 0 with no error → treat as success (nothing to do)
+  //   - non-empty input but 0 updated → some error path → retry transient
+  if (payload.ids.length > 0 && updated === 0) {
+    throw new Error('bulkUpdateStatus updated 0 rows')
+  }
+  return updated
+}
+
+// ---------------------------------------------------------------------------
+// outage_event_create
+// ---------------------------------------------------------------------------
+
+export type OutageEventCreatePayload = Parameters<typeof createOutageEvent>[0]
+export type OutageEventCreateResult = Awaited<ReturnType<typeof createOutageEvent>>
+
+const outageEventCreateHandler: WriteHandler<
+  OutageEventCreatePayload,
+  OutageEventCreateResult
+> = async (payload) => {
+  const result = await createOutageEvent(payload)
+  if (!result) throw new Error('createOutageEvent returned null')
+  return result
+}
+
+// ---------------------------------------------------------------------------
+// activity_log_insert
+// ---------------------------------------------------------------------------
+
+export interface ActivityLogInsertPayload {
+  action: string
+  entity_type: string
+  entity_id: string
+  entity_display_id?: string
+  metadata?: Record<string, unknown>
+  baseId?: string | null
+  /**
+   * Original wall-clock time of the user action — must be set when this
+   * write was queued offline so the events log shows when the user
+   * *actually* did the thing, not when the queue drained.
+   */
+  createdAt: string
+}
+
+const activityLogInsertHandler: WriteHandler<ActivityLogInsertPayload, null> = async (
+  payload,
+) => {
+  const { error } = await logActivity(
+    payload.action,
+    payload.entity_type,
+    payload.entity_id,
+    payload.entity_display_id,
+    payload.metadata,
+    payload.baseId,
+    payload.createdAt,
+  )
+  if (error) throwForStructuredError(error)
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -168,6 +272,13 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('check_file', checkFileHandler)
   queue.registerHandler('acsi_submit', acsiSubmitHandler)
   queue.registerHandler('daily_review_sign', dailyReviewSignHandler)
+  queue.registerHandler('airfield_status_update', airfieldStatusUpdateHandler)
+  queue.registerHandler(
+    'infrastructure_feature_status_update',
+    infrastructureFeatureStatusUpdateHandler,
+  )
+  queue.registerHandler('outage_event_create', outageEventCreateHandler)
+  queue.registerHandler('activity_log_insert', activityLogInsertHandler)
 }
 
 /**
@@ -179,4 +290,8 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   check_file: checkFileHandler,
   acsi_submit: acsiSubmitHandler,
   daily_review_sign: dailyReviewSignHandler,
+  airfield_status_update: airfieldStatusUpdateHandler,
+  infrastructure_feature_status_update: infrastructureFeatureStatusUpdateHandler,
+  outage_event_create: outageEventCreateHandler,
+  activity_log_insert: activityLogInsertHandler,
 }

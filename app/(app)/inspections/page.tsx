@@ -17,7 +17,13 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
 import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
-import type { InspectionFilePayload, InspectionFileResult } from '@/lib/sync/handlers'
+import type {
+  InspectionFilePayload,
+  InspectionFileResult,
+  ActivityLogInsertPayload,
+  InfrastructureFeatureStatusUpdatePayload,
+  OutageEventCreatePayload,
+} from '@/lib/sync/handlers'
 import { persistPendingPhoto } from '@/lib/sync/pending-photos'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
@@ -1356,15 +1362,121 @@ export default function InspectionsPage() {
           filedDisplayId = fileResult.data.display_id
         }
       } else {
-        // Queued — bail with a clear message instead of falling through.
-        // Downstream photo uploads / NAVAID inop / activity logging all
-        // need an active connection and aren't queue-wrapped yet, so
-        // running them now would either fail silently or paint a
-        // misleading "completed & filed" toast over a still-in-progress
-        // inspection. Local state still gets cleaned up so the user can
-        // move on. The queue drain re-runs the file write on reconnect;
-        // the WriteCommittedEvent listener (mounted at the page) will
-        // re-fetch history once the row flips to 'completed'.
+        // Queued — local cleanup, then enqueue the side effects (NAVAID
+        // inop, outage events, activity log) so they drain alongside the
+        // inspection write rather than getting dropped on the bail path.
+        // Photos taken inline during the inspection are already in the
+        // pending-photos store (or in DB if uploaded before the network
+        // dropped); discrepancy creates already ran online before the
+        // file step, so their ids are real. Photos *captured* but never
+        // uploaded are in pending-photos. Discrepancy creates inside the
+        // inspection flow remain a slot-#3 follow-up.
+        const filedAt = new Date().toISOString()
+        const queue = getWriteQueue()
+        const meta = { baseId: installationId || '', userId: filerId || '' }
+
+        // Build the activity-log details string the same way the
+        // committed path does (mirrored from the "Log completion"
+        // section below).
+        const oiStrQueued = userOI ? `/${userOI}` : ''
+        const inspLabelQueued = activeForm === 'lighting'
+          ? 'Daily Lighting Inspection'
+          : 'Daily Airfield Inspection'
+        const allDiscsQueued: string[] = []
+        for (const [itemId, discs] of Object.entries(completedHalf.discrepancies || {})) {
+          for (const d of discs) {
+            const itemDef = visibleItems.find((vi) => vi.id === itemId)
+            const itemLabel = itemDef?.item?.toUpperCase() || itemId.toUpperCase()
+            allDiscsQueued.push(d.comment ? `${itemLabel} - ${d.comment}` : itemLabel)
+          }
+        }
+        const failedQueued = items.filter((i) => i.response === 'fail')
+        for (const fi of failedQueued) {
+          const already = allDiscsQueued.some((d) => d.startsWith(fi.item.toUpperCase()))
+          if (!already) {
+            allDiscsQueued.push(`${fi.item.toUpperCase()}${fi.notes ? ` - ${fi.notes}` : ''}`)
+          }
+        }
+        const discStrQueued = allDiscsQueued.length > 0
+          ? `DISCREPANCIES FOUND: ${allDiscsQueued.join('; ')}`
+          : 'NO NEW DISCREPANCIES'
+        let condStrQueued = ''
+        if (completedHalf.rscCondition && completedHalf.bwcValue) {
+          condStrQueued = `, RSC/${completedHalf.rscCondition.toUpperCase()}`
+          if (completedHalf.rcrReported && completedHalf.rcrValue) {
+            condStrQueued += ` RCR/${completedHalf.rcrValue}`
+          }
+          condStrQueued += ` & BWC/${completedHalf.bwcValue.toUpperCase()}`
+        } else if (completedHalf.rscCondition) {
+          condStrQueued = `, RSC/${completedHalf.rscCondition.toUpperCase()}`
+          if (completedHalf.rcrReported && completedHalf.rcrValue) {
+            condStrQueued += ` RCR/${completedHalf.rcrValue}`
+          }
+        } else if (completedHalf.bwcValue) {
+          condStrQueued = `, BWC/${completedHalf.bwcValue.toUpperCase()}`
+        }
+        const completeDetailsQueued = `AFLD3${oiStrQueued} off the airfield, ${inspLabelQueued} Complete${condStrQueued}, ${discStrQueued}`
+
+        // Enqueue the activity log entry with the captured timestamp so
+        // the events log shows when the user actually filed, not when
+        // the queue drained.
+        const activityPayload: ActivityLogInsertPayload = {
+          action: 'completed',
+          entity_type: 'inspection',
+          entity_id: completedHalf.dbRowId,
+          entity_display_id: undefined,
+          metadata: { details: completeDetailsQueued },
+          baseId: installationId,
+          createdAt: filedAt,
+        }
+        await queue.enqueueOrExecute('activity_log_insert', activityPayload, meta)
+
+        // NAVAID inop + outage events for any linked features. Linked
+        // feature ids come from the discrepancies the user marked
+        // before tapping File; those discrepancy rows already exist in
+        // DB (createDiscrepancy ran inline above), so the FKs in the
+        // outage event payload are real.
+        const linkedFeatureIds: string[] = []
+        const featureDiscMap: Record<string, { discrepancy_id?: string; comment?: string }> = {}
+        for (const [, discs] of Object.entries(completedHalf.discrepancies || {})) {
+          for (const d of discs) {
+            if (d.linked_feature_ids && d.linked_feature_ids.length > 0) {
+              linkedFeatureIds.push(...d.linked_feature_ids)
+              for (const fid of d.linked_feature_ids) {
+                featureDiscMap[fid] = {
+                  discrepancy_id: d.generated_discrepancy_id ?? undefined,
+                  comment: d.comment,
+                }
+              }
+            }
+          }
+        }
+        if (linkedFeatureIds.length > 0 && installationId) {
+          const uniqueIds = Array.from(new Set(linkedFeatureIds))
+          const navaidPayload: InfrastructureFeatureStatusUpdatePayload = {
+            ids: uniqueIds,
+            status: 'inoperative',
+          }
+          await queue.enqueueOrExecute(
+            'infrastructure_feature_status_update',
+            navaidPayload,
+            meta,
+          )
+          for (const fid of uniqueIds) {
+            const info = featureDiscMap[fid]
+            const outagePayload: OutageEventCreatePayload = {
+              base_id: installationId,
+              feature_id: fid,
+              event_type: 'reported',
+              discrepancy_id: info?.discrepancy_id || null,
+              notes: info?.comment
+                ? `INOP — ${info.comment.slice(0, 200)}`
+                : 'INOP — Reported during lighting inspection',
+            }
+            await queue.enqueueOrExecute('outage_event_create', outagePayload, meta)
+          }
+        }
+
         Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
         Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
         setItemPhotos({})
@@ -1375,8 +1487,8 @@ export default function InspectionsPage() {
         else setLightingDraft(null)
         setSaving(false)
         toast.success(
-          'Inspection queued — will file automatically when the network returns. ' +
-            'Photos, NAVAID outages, and activity log entries will need to be re-applied after sync.',
+          'Inspection queued — file write, NAVAID outages, and events log entry will all sync automatically when the network returns. ' +
+            'Photos still in memory will need to be re-attached if not already in the upload queue.',
           { duration: 10000 },
         )
         setActiveForm(null)

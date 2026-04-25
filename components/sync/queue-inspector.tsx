@@ -32,6 +32,9 @@ const TYPE_LABELS: Record<WriteType, string> = {
   daily_review_sign: 'Daily review sign',
   photo_upload: 'Photo upload',
   airfield_status_update: 'Airfield status update',
+  infrastructure_feature_status_update: 'NAVAID status update',
+  outage_event_create: 'Outage event',
+  activity_log_insert: 'Events log entry',
 }
 
 const STATUS_COLORS: Record<QueueStatus, { bg: string; fg: string; label: string }> = {

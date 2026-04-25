@@ -7,13 +7,14 @@ export async function logActivity(
   entity_id: string,
   entity_display_id?: string,
   metadata?: Record<string, unknown>,
-  baseId?: string | null
-) {
+  baseId?: string | null,
+  createdAt?: string,
+): Promise<{ error: string | null }> {
   const supabase = createClient()
-  if (!supabase) return
+  if (!supabase) return { error: 'Supabase not configured' }
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { error: 'Not authenticated' }
 
   const row: Record<string, unknown> = {
     user_id: user.id,
@@ -24,8 +25,14 @@ export async function logActivity(
     metadata: metadata ?? {},
   }
   if (baseId) row.base_id = baseId
+  // Preserve the originating timestamp when the insert is replayed from
+  // the offline queue. Without it, an "AFLD3 off airfield at 14:32Z"
+  // entry that drains an hour later would carry the drain timestamp
+  // and be misleading on the events log.
+  if (createdAt) row.created_at = createdAt
 
-  await supabase.from('activity_log').insert(row as never)
+  const { error } = await supabase.from('activity_log').insert(row as never)
+  return { error: error ? error.message : null }
 }
 
 export async function logManualEntry(text: string, baseId?: string | null, category?: string, templateLabel?: string): Promise<{ error: string | null }> {

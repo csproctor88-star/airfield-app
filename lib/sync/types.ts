@@ -28,6 +28,9 @@ export type WriteType =
   | 'daily_review_sign'
   | 'photo_upload'
   | 'airfield_status_update'
+  | 'infrastructure_feature_status_update'
+  | 'outage_event_create'
+  | 'activity_log_insert'
 
 /**
  * Lifecycle state of a queued write.

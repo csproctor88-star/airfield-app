@@ -25,6 +25,26 @@ const { state } = vi.hoisted(() => ({
       calls: [] as unknown[],
       existing: null as unknown,
     },
+    airfieldStatus: {
+      next: true as boolean,
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
+    bulkUpdate: {
+      next: 0 as number,
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
+    outageEvent: {
+      next: null as unknown,
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
+    activity: {
+      next: { error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
   },
 }))
 
@@ -61,6 +81,56 @@ vi.mock('@/lib/supabase/daily-reviews', () => ({
   }),
 }))
 
+vi.mock('@/lib/supabase/airfield-status', () => ({
+  updateAirfieldStatus: vi.fn(async (updates: unknown, baseId: unknown) => {
+    state.airfieldStatus.calls.push({ updates, baseId })
+    if (state.airfieldStatus.throw) throw state.airfieldStatus.throw
+    return state.airfieldStatus.next
+  }),
+}))
+
+vi.mock('@/lib/supabase/infrastructure-features', () => ({
+  bulkUpdateStatus: vi.fn(async (ids: unknown, status: unknown) => {
+    state.bulkUpdate.calls.push({ ids, status })
+    if (state.bulkUpdate.throw) throw state.bulkUpdate.throw
+    return state.bulkUpdate.next
+  }),
+}))
+
+vi.mock('@/lib/supabase/outage-events', () => ({
+  createOutageEvent: vi.fn(async (payload: unknown) => {
+    state.outageEvent.calls.push(payload)
+    if (state.outageEvent.throw) throw state.outageEvent.throw
+    return state.outageEvent.next
+  }),
+}))
+
+vi.mock('@/lib/supabase/activity', () => ({
+  logActivity: vi.fn(
+    async (
+      action: unknown,
+      entity_type: unknown,
+      entity_id: unknown,
+      entity_display_id?: unknown,
+      metadata?: unknown,
+      baseId?: unknown,
+      createdAt?: unknown,
+    ) => {
+      state.activity.calls.push({
+        action,
+        entity_type,
+        entity_id,
+        entity_display_id,
+        metadata,
+        baseId,
+        createdAt,
+      })
+      if (state.activity.throw) throw state.activity.throw
+      return state.activity.next
+    },
+  ),
+}))
+
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
 import { ConflictError, NonRetriableError } from '@/lib/sync/types'
 import { WriteQueue } from '@/lib/sync/write-queue'
@@ -76,6 +146,10 @@ beforeEach(() => {
     calls: [],
     existing: null,
   }
+  state.airfieldStatus = { next: true, throw: null, calls: [] }
+  state.bulkUpdate = { next: 0, throw: null, calls: [] }
+  state.outageEvent = { next: null, throw: null, calls: [] }
+  state.activity = { next: { error: null }, throw: null, calls: [] }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -280,6 +354,129 @@ describe('daily_review_sign handler', () => {
       expect(err).not.toBeInstanceOf(NonRetriableError)
       expect(err).not.toBeInstanceOf(ConflictError)
     }
+  })
+})
+
+describe('airfield_status_update handler', () => {
+  it('returns true on success', async () => {
+    const handler = HANDLERS.airfield_status_update!
+    state.airfieldStatus.next = true
+    const result = await handler({ updates: { bwc_value: 'MOD' }, baseId: 'base-a' })
+    expect(result).toBe(true)
+    expect(state.airfieldStatus.calls).toHaveLength(1)
+  })
+
+  it('throws NonRetriable when updateAirfieldStatus returns false while online', async () => {
+    const handler = HANDLERS.airfield_status_update!
+    state.airfieldStatus.next = false
+    await expect(
+      handler({ updates: { bwc_value: 'MOD' }, baseId: 'base-a' }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
+  })
+})
+
+describe('infrastructure_feature_status_update handler', () => {
+  it('returns the count of updated rows on success', async () => {
+    const handler = HANDLERS.infrastructure_feature_status_update!
+    state.bulkUpdate.next = 3
+    const result = await handler({ ids: ['a', 'b', 'c'], status: 'inoperative' })
+    expect(result).toBe(3)
+  })
+
+  it('returns 0 cleanly for empty input', async () => {
+    const handler = HANDLERS.infrastructure_feature_status_update!
+    state.bulkUpdate.next = 0
+    const result = await handler({ ids: [], status: 'inoperative' })
+    expect(result).toBe(0)
+  })
+
+  it('throws transient when input is non-empty but bulkUpdateStatus updates 0 rows', async () => {
+    const handler = HANDLERS.infrastructure_feature_status_update!
+    state.bulkUpdate.next = 0
+    let caught: unknown = null
+    try {
+      await handler({ ids: ['a', 'b'], status: 'inoperative' })
+    } catch (err) {
+      caught = err
+    }
+    expect(caught).toBeInstanceOf(Error)
+    expect(caught).not.toBeInstanceOf(NonRetriableError)
+  })
+})
+
+describe('outage_event_create handler', () => {
+  it('returns the created row on success', async () => {
+    const handler = HANDLERS.outage_event_create!
+    state.outageEvent.next = { id: 'oe-1' }
+    const result = await handler({
+      base_id: 'base-a',
+      feature_id: 'feat-1',
+      event_type: 'reported',
+    })
+    expect(result).toMatchObject({ id: 'oe-1' })
+  })
+
+  it('throws transient when createOutageEvent returns null', async () => {
+    const handler = HANDLERS.outage_event_create!
+    state.outageEvent.next = null
+    let caught: unknown = null
+    try {
+      await handler({
+        base_id: 'base-a',
+        feature_id: 'feat-1',
+        event_type: 'reported',
+      })
+    } catch (err) {
+      caught = err
+    }
+    expect(caught).toBeInstanceOf(Error)
+    expect(caught).not.toBeInstanceOf(NonRetriableError)
+  })
+})
+
+describe('activity_log_insert handler', () => {
+  it('passes the captured createdAt through to logActivity', async () => {
+    const handler = HANDLERS.activity_log_insert!
+    state.activity.next = { error: null }
+    await handler({
+      action: 'completed',
+      entity_type: 'inspection',
+      entity_id: 'insp-1',
+      entity_display_id: 'AI-2026-1234',
+      metadata: { details: 'AFLD3 off airfield' },
+      baseId: 'base-a',
+      createdAt: '2026-04-25T14:32:00Z',
+    })
+    expect(state.activity.calls).toHaveLength(1)
+    expect((state.activity.calls[0] as { createdAt?: string }).createdAt).toBe(
+      '2026-04-25T14:32:00Z',
+    )
+  })
+
+  it('throws NonRetriableError on a structured error', async () => {
+    const handler = HANDLERS.activity_log_insert!
+    state.activity.next = { error: 'You do not have permission to perform this action.' }
+    await expect(
+      handler({
+        action: 'completed',
+        entity_type: 'inspection',
+        entity_id: 'insp-1',
+        createdAt: '2026-04-25T14:32:00Z',
+      }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats "Failed to fetch" as transient', async () => {
+    const handler = HANDLERS.activity_log_insert!
+    state.activity.next = { error: 'Failed to fetch' }
+    await expect(
+      handler({
+        action: 'completed',
+        entity_type: 'inspection',
+        entity_id: 'insp-1',
+        createdAt: '2026-04-25T14:32:00Z',
+      }),
+    ).rejects.not.toBeInstanceOf(NonRetriableError)
   })
 })
 
