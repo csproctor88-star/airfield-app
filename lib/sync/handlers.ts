@@ -22,7 +22,7 @@
  * Retry from the inspector.
  */
 
-import { fileInspection } from '@/lib/supabase/inspections'
+import { fileInspection, createInspectionDraftWithId } from '@/lib/supabase/inspections'
 import { createCheck } from '@/lib/supabase/checks'
 import { fileAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import {
@@ -152,6 +152,24 @@ const dailyReviewSignHandler: WriteHandler<
     }
   }
   const { data, error } = await signDailyReview(payload)
+  if (error) throwForStructuredError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
+// inspection_save_draft
+// ---------------------------------------------------------------------------
+
+export type InspectionSaveDraftPayload = Parameters<typeof createInspectionDraftWithId>[0]
+export type InspectionSaveDraftResult = Awaited<
+  ReturnType<typeof createInspectionDraftWithId>
+>['data']
+
+const inspectionSaveDraftHandler: WriteHandler<
+  InspectionSaveDraftPayload,
+  InspectionSaveDraftResult
+> = async (payload) => {
+  const { data, error } = await createInspectionDraftWithId(payload)
   if (error) throwForStructuredError(error)
   return data
 }
@@ -297,6 +315,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('outage_event_create', outageEventCreateHandler)
   queue.registerHandler('activity_log_insert', activityLogInsertHandler)
   queue.registerHandler('discrepancy_create', discrepancyCreateHandler)
+  queue.registerHandler('inspection_save_draft', inspectionSaveDraftHandler)
 }
 
 /**
@@ -313,4 +332,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   outage_event_create: outageEventCreateHandler,
   activity_log_insert: activityLogInsertHandler,
   discrepancy_create: discrepancyCreateHandler,
+  inspection_save_draft: inspectionSaveDraftHandler,
 }

@@ -68,9 +68,17 @@ Run this for:
 - [ ] Discrepancies show up under /discrepancies with the correct `infrastructure_feature_id` link
 - [ ] NAVAID rings show inop on the infrastructure map
 
-There's still one gate left: if the inspection was *started* offline (saveInspectionDraft never set a dbRowId), tapping File shows a toast asking the user to reconnect briefly. Wrapping createInspection with a pre-allocated UUID would close this gap; for now the workflow is "Begin online, walk and File offline."
+**Started fully offline** also works now. Begin tap mints a UUID client-side and queues an `inspection_save_draft` write, so the row gets created on drain in the same batch as the file write. Drain order (createdAt-ascending) processes save_draft → file → discs → fan-outs, so all the FKs resolve cleanly.
 
-- [ ] Inspection started offline → File offline → "This inspection wasn't synced when you started it…" toast
+- [ ] Disconnect WiFi entirely
+- [ ] Tap Begin → toast "Daily Airfield Inspection started"; `glidepath-write-queue` shows one queued `inspection_save_draft` row
+- [ ] Walk through items, mark issues, tap File
+- [ ] Queue grows: `inspection_save_draft` + `inspection_file` + N× `discrepancy_create` + NAVAID + outages + activity log
+- [ ] Reconnect → all drain. `inspection_save_draft` first (creates the row), then everything else updates / FKs against it
+
+The lone residual gate covers *legacy* drafts — inspections that were already in-progress in localStorage at the time this commit deployed. Their dbRowId is null because the pre-fix Begin flow only set it on a successful inline save. Those drafts ask the user to reconnect briefly.
+
+- [ ] Pre-fix in-progress draft loaded after deploy → File offline → "This inspection was started before the offline update…" toast
 
 **Checks, ACSI, and daily review** all queue cleanly when fully offline:
 

@@ -238,6 +238,124 @@ export async function createInspection(input: {
   return { data: created, error: null }
 }
 
+/**
+ * Create an inspection draft row with a client-supplied UUID. Used by the
+ * offline-write-queue's `inspection_save_draft` handler so an inspection
+ * started while offline gets its row INSERTed (with the pre-allocated id)
+ * once the queue drains. The id can then be referenced by every
+ * downstream queued write (inspection_file UPDATE, discrepancy_create,
+ * activity_log_insert, …) which all enqueue *after* this one and so
+ * drain in createdAt order.
+ *
+ * Postgres treats a client-supplied UUID identically to one from
+ * gen_random_uuid(). Subsequent saveInspectionDraft calls UPDATE the
+ * row by id; this function does not change the existing UPDATE path.
+ */
+export async function createInspectionDraftWithId(input: {
+  id: string
+  inspection_type: InspectionType
+  draft_data: InspectionHalfDraft
+  items: InspectionItem[]
+  total_items: number
+  passed_count: number
+  failed_count: number
+  na_count: number
+  bwc_value: string | null
+  rsc_condition?: string | null
+  rcr_value?: string | null
+  rcr_condition?: string | null
+  notes: string | null
+  daily_group_id: string
+  construction_meeting: boolean
+  joint_monthly: boolean
+  base_id?: string | null
+  inspection_date?: string | null
+}): Promise<{ data: InspectionRow | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+
+  let userId: string | undefined
+  let savedByName: string | null = null
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      userId = user.id
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, rank')
+        .eq('id', user.id)
+        .single()
+      if (profile) {
+        savedByName = profile.rank ? `${profile.rank} ${profile.name}` : profile.name
+      } else {
+        savedByName = user.email || null
+      }
+    }
+  } catch {
+    // No authenticated user
+  }
+
+  const now = new Date()
+  const completion_percent = input.total_items > 0
+    ? Math.round(((input.passed_count + input.failed_count + input.na_count) / input.total_items) * 100)
+    : 0
+
+  const year = now.getFullYear()
+  const ts = now.getTime().toString(36).slice(-4).toUpperCase()
+  const prefixMap: Record<string, string> = {
+    airfield: 'AI',
+    lighting: 'LI',
+    construction_meeting: 'CM',
+    joint_monthly: 'JM',
+  }
+  const prefix = prefixMap[input.inspection_type] || 'AI'
+  const display_id = `${prefix}-${year}-${ts}`
+
+  const row: Record<string, unknown> = {
+    id: input.id,
+    display_id,
+    inspection_type: input.inspection_type,
+    inspector_name: savedByName,
+    inspection_date: input.inspection_date || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    status: 'in_progress',
+    items: input.items,
+    total_items: input.total_items,
+    passed_count: input.passed_count,
+    failed_count: input.failed_count,
+    na_count: input.na_count,
+    completion_percent,
+    construction_meeting: input.construction_meeting,
+    joint_monthly: input.joint_monthly,
+    personnel: [],
+    bwc_value: input.bwc_value,
+    rsc_condition: input.rsc_condition || null,
+    rcr_value: input.rcr_value || null,
+    rcr_condition: input.rcr_condition || null,
+    notes: input.notes,
+    daily_group_id: input.daily_group_id,
+    draft_data: input.draft_data,
+    saved_by_name: savedByName,
+    saved_by_id: userId || null,
+    saved_at: now.toISOString(),
+    started_at: now.toISOString(),
+  }
+  if (userId) row.inspector_id = userId
+  if (input.base_id) row.base_id = input.base_id
+
+  const { data, error } = await supabase
+    .from('inspections')
+    .insert(row as never)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Failed to create inspection draft with id:', error.message)
+    return { data: null, error: friendlyError(error.message) }
+  }
+
+  return { data: data as unknown as InspectionRow, error: null }
+}
+
 /** Save (upsert) an inspection draft to the database.
  *  If `id` is provided, updates the existing row; otherwise inserts a new row. */
 export async function saveInspectionDraft(input: {

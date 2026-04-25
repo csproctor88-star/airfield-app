@@ -36,6 +36,7 @@ const TYPE_LABELS: Record<WriteType, string> = {
   infrastructure_feature_status_update: 'NAVAID status update',
   outage_event_create: 'Outage event',
   activity_log_insert: 'Events log entry',
+  inspection_save_draft: 'Inspection draft',
 }
 
 const STATUS_COLORS: Record<QueueStatus, { bg: string; fg: string; label: string }> = {

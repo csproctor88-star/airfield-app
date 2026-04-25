@@ -31,6 +31,7 @@ export type WriteType =
   | 'infrastructure_feature_status_update'
   | 'outage_event_create'
   | 'activity_log_insert'
+  | 'inspection_save_draft'
 
 /**
  * Lifecycle state of a queued write.

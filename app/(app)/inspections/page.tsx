@@ -903,6 +903,13 @@ export default function InspectionsPage() {
     }
 
     const newDraft = createSingleDraft(type)
+    // Mint the inspection's UUID up front so an inspection started while
+    // offline still has a stable id every downstream queued write can FK
+    // against. The queued inspection_save_draft below will INSERT the row
+    // server-side with this id once the network returns; auto-saves and
+    // the eventual fileInspection (UPDATE) all reference it via dbRowId.
+    const draftId = crypto.randomUUID()
+    newDraft.half.dbRowId = draftId
     if (type === 'airfield') {
       setAirfieldDraft(newDraft)
       saveTypeDraft('airfield', newDraft, installationId)
@@ -942,36 +949,43 @@ export default function InspectionsPage() {
       installationId,
     )
 
-    // Save initial draft to DB so it persists across devices
+    // Save initial draft to DB so it persists across devices. Routed
+    // through the offline queue with the pre-allocated id — when offline
+    // the row INSERT queues and drains in createdAt order before any
+    // later writes (auto-save UPDATEs, fileInspection, discrepancies).
     const secs = type === 'airfield'
       ? (dbAirfieldSections ?? AIRFIELD_INSPECTION_SECTIONS).filter(s => !s.conditional)
       : (dbLightingSections ?? LIGHTING_INSPECTION_SECTIONS)
     const { items, passed, failed, na, total } = halfDraftToItems(newDraft.half, secs)
-    const { data: saved } = await saveInspectionDraft({
-      inspection_type: type,
-      draft_data: newDraft.half,
-      items,
-      total_items: total,
-      passed_count: passed,
-      failed_count: failed,
-      na_count: na,
-      bwc_value: newDraft.half.bwcValue,
-      rsc_condition: newDraft.half.rscCondition,
-      notes: null,
-      daily_group_id: newDraft.id,
-      construction_meeting: false,
-      joint_monthly: false,
-      base_id: installationId,
-      inspection_date: todayStr,
+    void getWriteQueue().enqueueOrExecute(
+      'inspection_save_draft',
+      {
+        id: draftId,
+        inspection_type: type,
+        draft_data: newDraft.half,
+        items,
+        total_items: total,
+        passed_count: passed,
+        failed_count: failed,
+        na_count: na,
+        bwc_value: newDraft.half.bwcValue,
+        rsc_condition: newDraft.half.rscCondition,
+        notes: null,
+        daily_group_id: newDraft.id,
+        construction_meeting: false,
+        joint_monthly: false,
+        base_id: installationId,
+        inspection_date: todayStr,
+      },
+      {
+        baseId: installationId || '',
+        userId: '',
+        optimisticEntityId: draftId,
+      },
+    ).catch(() => {
+      // NonRetriable / Conflict thrown — non-blocking: the user can
+      // still work locally. They'll see the failure in the inspector.
     })
-    if (saved) {
-      const updateDraft = (prev: SingleInspectionDraft | null): SingleInspectionDraft | null => {
-        if (!prev) return prev
-        return { ...prev, half: { ...prev.half, dbRowId: saved.id } }
-      }
-      if (type === 'airfield') setAirfieldDraft(updateDraft)
-      else setLightingDraft(updateDraft)
-    }
   }
 
   // ── Discard current draft ──
@@ -1186,17 +1200,22 @@ export default function InspectionsPage() {
       return
     }
 
-    // Narrow offline gate. Inspections that have a dbRowId (started while
-    // online) can be filed fully offline — the queue handles the file
-    // write, the fan-out side effects (NAVAID inop, outage events,
-    // activity log, discrepancy creates), and pending photos. The only
-    // case we still gate is "started offline, no dbRowId" — the
-    // saveInspectionDraft at Begin failed and there is no row to UPDATE.
-    // Wrapping createInspection through the queue would unblock that
-    // case; for now ask the user to reconnect briefly.
+    // No offline gate for new inspections. Every inspection started after
+    // this commit has a client-minted dbRowId by Begin time, the
+    // inspection_save_draft queue write either committed or is queued
+    // ahead of File-time writes, and every fan-out (discrepancy creates,
+    // NAVAID inop, outage events, activity log, file write) is queue-
+    // wrapped with stable client-allocated UUIDs. Drainer's oldest-first
+    // ordering keeps FK chains intact when a chunk drains together.
+    //
+    // The one residual gate covers legacy drafts started before this
+    // commit — they exist in localStorage with dbRowId=null because the
+    // pre-fix Begin flow only set dbRowId on a successful inline save.
+    // Ask those users to reconnect briefly so the existing online File
+    // path can do its INSERT. Affects only existing in-progress drafts.
     if (typeof navigator !== 'undefined' && !navigator.onLine && !currentHalf?.dbRowId) {
       toast.error(
-        "This inspection wasn't synced when you started it. Reconnect briefly and try filing again — the draft is preserved locally.",
+        "This inspection was started before the offline update and isn't fully synced. Reconnect briefly and try filing again — your draft is preserved.",
         { duration: 10000 },
       )
       return

@@ -50,6 +50,11 @@ const { state } = vi.hoisted(() => ({
       throw: null as Error | null,
       calls: [] as unknown[],
     },
+    inspectionDraft: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
   },
 }))
 
@@ -58,6 +63,11 @@ vi.mock('@/lib/supabase/inspections', () => ({
     state.inspection.calls.push(payload)
     if (state.inspection.throw) throw state.inspection.throw
     return state.inspection.next
+  }),
+  createInspectionDraftWithId: vi.fn(async (payload: unknown) => {
+    state.inspectionDraft.calls.push(payload)
+    if (state.inspectionDraft.throw) throw state.inspectionDraft.throw
+    return state.inspectionDraft.next
   }),
 }))
 
@@ -164,6 +174,7 @@ beforeEach(() => {
   state.outageEvent = { next: null, throw: null, calls: [] }
   state.activity = { next: { error: null }, throw: null, calls: [] }
   state.discrepancy = { next: { data: null, error: null }, throw: null, calls: [] }
+  state.inspectionDraft = { next: { data: null, error: null }, throw: null, calls: [] }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -489,6 +500,73 @@ describe('activity_log_insert handler', () => {
         entity_type: 'inspection',
         entity_id: 'insp-1',
         createdAt: '2026-04-25T14:32:00Z',
+      }),
+    ).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+})
+
+describe('inspection_save_draft handler', () => {
+  it('passes the pre-allocated id through to createInspectionDraftWithId', async () => {
+    const handler = HANDLERS.inspection_save_draft!
+    state.inspectionDraft.next = { data: { id: 'preset-uuid' }, error: null }
+    await handler({
+      id: 'preset-uuid',
+      inspection_type: 'airfield',
+      draft_data: {} as unknown,
+      items: [],
+      total_items: 0,
+      passed_count: 0,
+      failed_count: 0,
+      na_count: 0,
+      bwc_value: null,
+      notes: null,
+      daily_group_id: 'g-1',
+      construction_meeting: false,
+      joint_monthly: false,
+    })
+    expect((state.inspectionDraft.calls[0] as { id?: string }).id).toBe('preset-uuid')
+  })
+
+  it('throws NonRetriable on a structured error', async () => {
+    const handler = HANDLERS.inspection_save_draft!
+    state.inspectionDraft.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(
+      handler({
+        id: 'x',
+        inspection_type: 'airfield',
+        draft_data: {} as unknown,
+        items: [],
+        total_items: 0,
+        passed_count: 0,
+        failed_count: 0,
+        na_count: 0,
+        bwc_value: null,
+        notes: null,
+        daily_group_id: 'g-1',
+        construction_meeting: false,
+        joint_monthly: false,
+      }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats "Failed to fetch" as transient', async () => {
+    const handler = HANDLERS.inspection_save_draft!
+    state.inspectionDraft.next = { data: null, error: 'Failed to fetch' }
+    await expect(
+      handler({
+        id: 'x',
+        inspection_type: 'airfield',
+        draft_data: {} as unknown,
+        items: [],
+        total_items: 0,
+        passed_count: 0,
+        failed_count: 0,
+        na_count: 0,
+        bwc_value: null,
+        notes: null,
+        daily_group_id: 'g-1',
+        construction_meeting: false,
+        joint_monthly: false,
       }),
     ).rejects.not.toBeInstanceOf(NonRetriableError)
   })
