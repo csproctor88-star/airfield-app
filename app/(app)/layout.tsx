@@ -7,6 +7,7 @@ import { ScrollToTop } from '@/components/scroll-to-top'
 import { RealtimeAlertBanner } from '@/components/realtime-alert-banner'
 import { WhatsNewGate } from '@/components/whats-new-gate'
 import { WriteQueueProvider } from '@/components/sync/write-queue-provider'
+import { OfflineCacheProvider } from '@/components/sync/offline-cache-provider'
 import { DashboardProvider } from '@/lib/dashboard-context'
 import { InstallationProvider } from '@/lib/installation-context'
 import { SidebarProvider } from '@/lib/sidebar-context'
@@ -37,6 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <RealtimeAlertBanner />
               <WhatsNewGate />
               <WriteQueueProvider />
+              <OfflineCacheProvider />
               <main className="app-content">
                 {children}
               </main>
