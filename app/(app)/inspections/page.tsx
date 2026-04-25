@@ -15,7 +15,9 @@ import {
   type InspectionSection,
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { fetchInspections, createInspection, saveInspectionDraft, fileInspection, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
+import { fetchInspections, createInspection, saveInspectionDraft, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
+import { getWriteQueue } from '@/lib/sync/write-queue'
+import type { InspectionFilePayload, InspectionFileResult } from '@/lib/sync/handlers'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
@@ -1231,7 +1233,13 @@ export default function InspectionsPage() {
     let filedEntityId: string | null = completedHalf.dbRowId || null
     let filedDisplayId: string | null = null
     if (completedHalf.dbRowId) {
-      const { data: filed_data } = await fileInspection({
+      // Route the file write through the offline queue. If the network drops
+      // during the round-trip, the write persists to IndexedDB and drains
+      // automatically once `online` / `visibilitychange` fires. The
+      // hard-offline gate above still blocks fully-disconnected starts —
+      // discrepancy creates / photo uploads / NAVAID inop run inline and
+      // are not yet queue-wrapped (see Offline_Write_Queue_Spec rollout).
+      const filePayload: InspectionFilePayload = {
         id: completedHalf.dbRowId,
         items,
         total_items: total,
@@ -1252,8 +1260,30 @@ export default function InspectionsPage() {
         filed_by_name: filerName,
         filed_by_id: filerId,
         base_id: installationId,
+      }
+      const fileResult = await getWriteQueue().enqueueOrExecute<
+        InspectionFilePayload,
+        InspectionFileResult
+      >('inspection_file', filePayload, {
+        baseId: installationId || '',
+        userId: filerId || '',
+        optimisticEntityId: completedHalf.dbRowId,
       })
-      if (filed_data) { filedEntityId = filed_data.id; filedDisplayId = filed_data.display_id }
+      if (fileResult.status === 'committed') {
+        if (fileResult.data) {
+          filedEntityId = fileResult.data.id
+          filedDisplayId = fileResult.data.display_id
+        }
+      } else {
+        // Queued for retry — keep the optimistic id so downstream photo
+        // / NAVAID logic still references the existing row, and surface
+        // a distinct toast so the user knows the file write is pending.
+        filedEntityId = completedHalf.dbRowId
+        toast.success(
+          'Inspection queued — will file automatically when the network returns.',
+          { duration: 6000 },
+        )
+      }
     } else {
       const { data: created } = await createInspection({
         inspection_type: activeForm,

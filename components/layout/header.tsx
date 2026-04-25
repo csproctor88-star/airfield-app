@@ -5,6 +5,7 @@ import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
+import { getWriteQueue } from '@/lib/sync/write-queue'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -46,6 +47,51 @@ function useOnlineStatus(): boolean {
     }
   }, [])
   return online
+}
+
+/**
+ * Pending writes in the offline queue. Polls every 3s while the tab is
+ * visible (cheap — reads IndexedDB) plus immediate refresh on `online`,
+ * `visibilitychange`, and `focus`. Returns 0 when the queue is empty so
+ * callers can skip rendering.
+ */
+function useQueueDepth(): number {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    const queue = getWriteQueue()
+    const refresh = async () => {
+      try {
+        const n = await queue.pendingCount()
+        if (!cancelled) setCount(n)
+      } catch {
+        // Silent — IDB unavailable, etc. Pill just stays at 0.
+      }
+    }
+    refresh()
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refresh()
+    }, 3000)
+
+    window.addEventListener('online', refresh)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('online', refresh)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
+
+  return count
 }
 
 export function Header() {
@@ -103,6 +149,7 @@ export function Header() {
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || userRole) : null
   const presence = presenceLabel(lastSeen)
   const isOnline = useOnlineStatus()
+  const queueDepth = useQueueDepth()
 
   return (
     <div
@@ -211,6 +258,22 @@ export function Header() {
                   }}
                 >
                   OFFLINE
+                </span>
+              )}
+              {queueDepth > 0 && (
+                <span
+                  title={`${queueDepth} write${queueDepth === 1 ? '' : 's'} queued — will sync automatically when the network returns.`}
+                  style={{
+                    fontSize: 'var(--fs-2xs)',
+                    fontWeight: 700,
+                    color: '#fff',
+                    background: 'var(--color-warning, #D97706)',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  ● {queueDepth} QUEUED
                 </span>
               )}
               <span style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600 }}>

@@ -13,7 +13,9 @@ import {
   EMERGENCY_ACTIONS,
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
-import { createCheck, uploadCheckPhoto, fetchRecentChecks, saveCheckDraftToDb, loadCheckDraftFromDb, deleteCheckDraft, type CheckRow } from '@/lib/supabase/checks'
+import { uploadCheckPhoto, fetchRecentChecks, saveCheckDraftToDb, loadCheckDraftFromDb, deleteCheckDraft, type CheckRow } from '@/lib/supabase/checks'
+import { getWriteQueue } from '@/lib/sync/write-queue'
+import type { CheckFilePayload, CheckFileResult } from '@/lib/sync/handlers'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
@@ -475,6 +477,20 @@ export default function AirfieldChecksPage() {
       toast.error('Complete the wildlife sighting or strike form before submitting')
       return
     }
+
+    // Hard offline gate. Like inspections, the check submit fans out into
+    // photo uploads + discrepancy creates that aren't queue-wrapped yet.
+    // Once those wraps land (Offline_Write_Queue_Spec rollout slots #3 / #6),
+    // this gate can be relaxed. The check_file write itself is already
+    // queue-wrapped below to survive transient mid-call network drops.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error(
+        "You're offline. Check submissions need a connection — try again when reconnected.",
+        { duration: 8000 },
+      )
+      return
+    }
+
     setSaving(true)
 
     // Auto-save any pending remark text
@@ -502,7 +518,14 @@ export default function AirfieldChecksPage() {
     const lat = firstIssueLoc?.lat ?? selectedLat
     const lng = firstIssueLoc?.lon ?? selectedLng
 
-    const { data: created, error } = await createCheck({
+    // Route the check create through the offline queue. Transient
+    // mid-call network failures are queued and drained automatically.
+    // The hard-offline gate above prevents fully-disconnected starts —
+    // queued path here only fires when the connection drops between
+    // tap and round-trip. Photos / discrepancies cannot reference a
+    // not-yet-created row, so the queued branch bails and the user
+    // re-submits when the queue drains.
+    const checkPayload: CheckFilePayload = {
       check_type: checkType,
       areas,
       data,
@@ -512,10 +535,34 @@ export default function AirfieldChecksPage() {
       longitude: lng,
       base_id: installationId,
       started_at: checkStartedAt,
-    })
-
-    if (error || !created) {
-      toast.error(`Failed to save: ${error}`)
+    }
+    let created: CheckFileResult = null
+    try {
+      const result = await getWriteQueue().enqueueOrExecute<
+        CheckFilePayload,
+        CheckFileResult
+      >('check_file', checkPayload, {
+        baseId: installationId || '',
+        userId: currentUser || '',
+      })
+      if (result.status === 'committed') {
+        created = result.data
+      } else {
+        toast.success(
+          'Check queued — will save automatically when the network returns. Re-add any photos or discrepancies once reconnected.',
+          { duration: 8000 },
+        )
+        setSaving(false)
+        return
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      toast.error(`Failed to save: ${message}`)
+      setSaving(false)
+      return
+    }
+    if (!created) {
+      toast.error('Failed to save')
       setSaving(false)
       return
     }

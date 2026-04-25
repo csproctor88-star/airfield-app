@@ -9,10 +9,11 @@ import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import {
   saveAcsiDraft,
-  fileAcsiInspection,
   fetchAcsiInspection,
   loadAcsiDraftFromDb,
 } from '@/lib/supabase/acsi-inspections'
+import { getWriteQueue } from '@/lib/sync/write-queue'
+import type { AcsiSubmitPayload, AcsiSubmitResult } from '@/lib/sync/handlers'
 import {
   createNewAcsiDraft,
   loadAcsiDraft,
@@ -398,7 +399,14 @@ export default function AcsiFormPage() {
       } catch { /* ignore */ }
     }
 
-    const { data, error } = await fileAcsiInspection({
+    // Route the file write through the offline queue so a transient
+    // mid-call network drop persists and drains automatically. ACSI
+    // file is a clean UPDATE on an existing row with no FK-dependent
+    // post-side-effects in the call site, so the queued path can
+    // safely clear the local draft and redirect optimistically — when
+    // the drain succeeds the row is in 'completed' state and the
+    // redirect target page renders normally.
+    const acsiPayload: AcsiSubmitPayload = {
       id: dbRowId,
       items,
       total_items: total,
@@ -415,16 +423,33 @@ export default function AcsiFormPage() {
       completed_by_name: completedByName,
       completed_by_id: completedById,
       base_id: installationId,
-    })
-
-    setFiling(false)
-
-    if (error) {
-      toast.error(`Filing failed: ${error}`)
-    } else if (data) {
-      clearAcsiDraft(installationId)
-      toast.success('ACSI inspection filed successfully')
-      router.push(`/acsi/${data.id}`)
+    }
+    try {
+      const result = await getWriteQueue().enqueueOrExecute<
+        AcsiSubmitPayload,
+        AcsiSubmitResult
+      >('acsi_submit', acsiPayload, {
+        baseId: installationId || '',
+        userId: completedById || '',
+        optimisticEntityId: dbRowId,
+      })
+      setFiling(false)
+      if (result.status === 'committed' && result.data) {
+        clearAcsiDraft(installationId)
+        toast.success('ACSI inspection filed successfully')
+        router.push(`/acsi/${result.data.id}`)
+      } else if (result.status === 'queued') {
+        clearAcsiDraft(installationId)
+        toast.success(
+          'ACSI inspection queued — will file automatically when the network returns.',
+          { duration: 6000 },
+        )
+        router.push(`/acsi/${dbRowId}`)
+      }
+    } catch (err) {
+      setFiling(false)
+      const message = err instanceof Error ? err.message : String(err)
+      toast.error(`Filing failed: ${message}`)
     }
   }
 
