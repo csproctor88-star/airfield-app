@@ -49,7 +49,7 @@ import { WriteQueue } from './write-queue'
  * failed"). Each browser has its own wording; cover the common ones.
  */
 const NETWORK_ERROR_RE =
-  /failed to fetch|networkerror|load failed|connection (refused|reset|timed out|aborted)|the network connection was lost|the operation couldn['']?t be completed|err_internet_disconnected|err_network|aborted/i
+  /failed to fetch|networkerror|network (error|failed|unreachable|request failed)|load failed|connection (refused|reset|timed out|aborted|closed)|the network connection was lost|the operation couldn['']?t be completed|err_(internet_disconnected|network|connection|name_not_resolved|timed_out)|fetch (failed|error|aborted)|aborted|etimedout|econnrefused|econnreset|enotfound|offline/i
 
 function isNetworkErrorMessage(message: string): boolean {
   if (!message) return false

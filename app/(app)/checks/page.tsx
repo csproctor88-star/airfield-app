@@ -569,11 +569,32 @@ export default function AirfieldChecksPage() {
       if (result.status === 'committed') {
         created = result.data
       } else {
+        // Queued — reset the form back to the type selector so the user
+        // doesn't see a stuck "in progress" check after the queue drains.
+        // The drain commits the check directly via the handler; the
+        // recent-checks list refreshes via the WRITE_COMMITTED_EVENT
+        // listener already wired on this page.
+        if (draftDbRowId) {
+          await deleteCheckDraft(draftDbRowId)
+          setDraftDbRowId(null)
+          setDraftSavedAt(null)
+        }
+        clearCheckDraft(installationId)
+        issuePhotos.flat().forEach((p) => URL.revokeObjectURL(p.url))
+        setIssues([])
+        setIssuePhotos([])
+        setIssueFlyTo([])
+        setRemarks([])
+        setRemarkText('')
+        setCheckStarted(false)
+        setCheckStartedAt(null)
+        setCheckType('')
+        resetTypeFields()
+        setSaving(false)
         toast.success(
           'Check queued — will save automatically when the network returns. Re-add any photos or discrepancies once reconnected.',
           { duration: 8000 },
         )
-        setSaving(false)
         return
       }
     } catch (err) {
