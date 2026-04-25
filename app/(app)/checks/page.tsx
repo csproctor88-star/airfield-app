@@ -14,7 +14,7 @@ import {
 } from '@/lib/constants'
 import type { CheckType } from '@/lib/supabase/types'
 import { uploadCheckPhoto, fetchRecentChecks, saveCheckDraftToDb, loadCheckDraftFromDb, deleteCheckDraft, type CheckRow } from '@/lib/supabase/checks'
-import { getWriteQueue } from '@/lib/sync/write-queue'
+import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import type { CheckFilePayload, CheckFileResult } from '@/lib/sync/handlers'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { DEMO_CHECKS } from '@/lib/demo-data'
@@ -68,11 +68,20 @@ export default function AirfieldChecksPage() {
     getAirfieldDiagram(installationId).then(setDiagramUrl).catch(() => setDiagramUrl(null))
   }, [installationId])
 
+  const loadRecent = useCallback(() => {
+    const supabase = createClient()
+    if (!supabase) {
+      setRecentChecks(DEMO_CHECKS.slice(0, 5) as unknown as CheckRow[])
+      return
+    }
+    fetchRecentChecks(installationId, 5).then(setRecentChecks)
+  }, [installationId])
+
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) {
       setCurrentUser('Demo User')
-      setRecentChecks(DEMO_CHECKS.slice(0, 5) as unknown as CheckRow[])
+      loadRecent()
       return
     }
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -90,8 +99,20 @@ export default function AirfieldChecksPage() {
         setCurrentUser(user.email.split('@')[0])
       }
     })
-    fetchRecentChecks(installationId, 5).then(setRecentChecks)
-  }, [installationId])
+    loadRecent()
+  }, [installationId, loadRecent])
+
+  // Re-fetch recent checks when a check_file write drains from the offline
+  // queue (realtime fires on INSERT for airfield_checks, but a queued
+  // CREATE that lands later may still beat realtime on a slow connection).
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (detail?.type === 'check_file') loadRecent()
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+  }, [loadRecent])
 
   // ── Draft persistence ──
   const draftLoaded = useRef(false)

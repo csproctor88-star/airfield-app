@@ -8,6 +8,7 @@ import { ACSI_STATUS_CONFIG, ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspection, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
+import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
@@ -53,6 +54,23 @@ export default function AcsiDetailPage() {
   }, [params.id])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Re-fetch when an acsi_submit drains from the offline queue. Realtime
+  // doesn't catch UPDATEs, so an inspection that was 'draft' at mount
+  // would otherwise stay 'draft' here until a manual refresh.
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (
+        detail?.type === 'acsi_submit' &&
+        (detail.optimisticEntityId === params.id || detail.id === params.id)
+      ) {
+        void loadData()
+      }
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+  }, [loadData, params.id])
 
   const insp = usingDemo
     ? (DEMO_ACSI_INSPECTIONS.find(d => d.id === params.id) as AcsiInspection | undefined) || null

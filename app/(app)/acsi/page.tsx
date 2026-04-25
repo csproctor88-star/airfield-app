@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { ACSI_STATUS_CONFIG } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspections, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
+import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
@@ -39,25 +40,37 @@ export default function AcsiListPage() {
   const canEdit = has(PERM.ACSI_WRITE)
   const isAdmin = has(PERM.ACSI_DELETE)
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      if (!supabase) {
-        setUsingDemo(true)
-        setLoading(false)
-        return
-      }
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) setCurrentUserId(user.id)
-      } catch { /* ignore */ }
-      const data = await fetchAcsiInspections(installationId)
-      setInspections(data)
+  const load = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) {
+      setUsingDemo(true)
       setLoading(false)
+      return
     }
-    load()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setCurrentUserId(user.id)
+    } catch { /* ignore */ }
+    const data = await fetchAcsiInspections(installationId)
+    setInspections(data)
+    setLoading(false)
   }, [installationId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Re-fetch the list when an acsi_submit drains from the offline queue —
+  // realtime doesn't catch UPDATE so the row's status flip would otherwise
+  // stay invisible until manual refresh.
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (detail?.type === 'acsi_submit') void load()
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+  }, [load])
 
   const allItems = (usingDemo ? DEMO_ACSI_INSPECTIONS : inspections) as AcsiInspection[]
   const q = search.toLowerCase()
