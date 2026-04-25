@@ -5,7 +5,11 @@ import {
   NonRetriableError,
   type WriteHandler,
 } from '@/lib/sync/types'
-import { WriteQueue } from '@/lib/sync/write-queue'
+import {
+  WriteQueue,
+  WRITE_COMMITTED_EVENT,
+  type WriteCommittedDetail,
+} from '@/lib/sync/write-queue'
 import { MAX_ATTEMPTS } from '@/lib/sync/backoff'
 
 interface Clock {
@@ -296,6 +300,67 @@ describe('drain', () => {
       conflict: 0,
       skipped: 0,
     })
+  })
+
+  it('dispatches a window event on each successful commit so feature pages can refresh', async () => {
+    const { queue, online, clock } = makeHarness({ online: false })
+    queue.registerHandler('inspection_file', async () => 'ok')
+    queue.registerHandler('check_file', async () => 'ok')
+
+    const events: WriteCommittedDetail[] = []
+    const onCommit = (e: Event) => {
+      events.push((e as CustomEvent<WriteCommittedDetail>).detail)
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+
+    try {
+      await queue.enqueueOrExecute(
+        'inspection_file',
+        { foo: 1 },
+        { ...META, optimisticEntityId: 'opt-insp-1' },
+      )
+      await queue.enqueueOrExecute('check_file', { foo: 2 }, META)
+
+      online.value = true
+      clock.advanceMs(60_000)
+      await queue.drain()
+
+      expect(events).toHaveLength(2)
+      expect(events[0].type).toBe('inspection_file')
+      expect(events[0].optimisticEntityId).toBe('opt-insp-1')
+      expect(events[1].type).toBe('check_file')
+    } finally {
+      window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    }
+  })
+
+  it('does not dispatch the commit event for retried / failed items', async () => {
+    const { queue, online, clock } = makeHarness({ online: false })
+    let attempt = 0
+    queue.registerHandler('inspection_file', async () => {
+      attempt++
+      if (attempt === 1) throw new Error('transient')
+      throw new NonRetriableError('schema')
+    })
+
+    const events: WriteCommittedDetail[] = []
+    const onCommit = (e: Event) => {
+      events.push((e as CustomEvent<WriteCommittedDetail>).detail)
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+
+    try {
+      await queue.enqueueOrExecute('inspection_file', { foo: 1 }, META)
+      online.value = true
+      clock.advanceMs(60_000)
+      await queue.drain() // retry path
+      clock.advanceMs(60_000)
+      await queue.drain() // non-retriable → failed
+
+      expect(events).toHaveLength(0)
+    } finally {
+      window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    }
   })
 
   it('single-flight: concurrent drain calls share one in-flight pass', async () => {

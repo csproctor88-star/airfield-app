@@ -25,6 +25,22 @@ import {
   type WriteType,
 } from './types'
 
+/**
+ * Window event fired after a queued write commits via drain. Feature
+ * pages listen for this to re-fetch their lists when realtime would
+ * otherwise miss the change (e.g., inspection status flipping from
+ * in_progress to completed via UPDATE).
+ *
+ * detail shape: WriteCommittedDetail
+ */
+export const WRITE_COMMITTED_EVENT = 'glidepath:write-committed'
+
+export interface WriteCommittedDetail {
+  type: WriteType
+  id: string
+  optimisticEntityId?: string
+}
+
 export interface DrainSummary {
   attempted: number
   committed: number
@@ -259,12 +275,34 @@ export class WriteQueue {
         await handler(item.payload)
         await this.storage.delete(item.id)
         summary.committed++
+        // Fire a window event so feature pages can re-fetch their lists.
+        // Realtime only fires on INSERT for inspections / checks, so an
+        // UPDATE arriving via a queue drain wouldn't otherwise be visible
+        // until the user manually refreshes.
+        this.dispatchCommitted(item)
       } catch (err) {
         await this.recordFailure(item, err, summary)
       }
     }
 
     return summary
+  }
+
+  private dispatchCommitted(item: QueuedWrite): void {
+    if (typeof window === 'undefined') return
+    try {
+      window.dispatchEvent(
+        new CustomEvent(WRITE_COMMITTED_EVENT, {
+          detail: {
+            type: item.type,
+            id: item.id,
+            optimisticEntityId: item.optimisticEntityId,
+          },
+        }),
+      )
+    } catch {
+      // CustomEvent may not be available in some test runners; safe no-op.
+    }
   }
 
   private async recordFailure(

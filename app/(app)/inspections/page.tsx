@@ -16,7 +16,7 @@ import {
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
-import { getWriteQueue } from '@/lib/sync/write-queue'
+import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import type { InspectionFilePayload, InspectionFileResult } from '@/lib/sync/handlers'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
@@ -448,6 +448,21 @@ export default function InspectionsPage() {
 
   useEffect(() => {
     loadHistory()
+  }, [loadHistory])
+
+  // Re-fetch history when an inspection_file write drains from the offline
+  // queue. Realtime only fires on INSERT for the inspections table, so an
+  // UPDATE arriving from the drainer (status: in_progress → completed)
+  // would otherwise stay invisible until the user refreshes the tab.
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (detail?.type === 'inspection_file') {
+        void loadHistory()
+      }
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
   }, [loadHistory])
 
   // ── Save draft to localStorage whenever it changes ──
@@ -1275,14 +1290,32 @@ export default function InspectionsPage() {
           filedDisplayId = fileResult.data.display_id
         }
       } else {
-        // Queued for retry — keep the optimistic id so downstream photo
-        // / NAVAID logic still references the existing row, and surface
-        // a distinct toast so the user knows the file write is pending.
-        filedEntityId = completedHalf.dbRowId
+        // Queued — bail with a clear message instead of falling through.
+        // Downstream photo uploads / NAVAID inop / activity logging all
+        // need an active connection and aren't queue-wrapped yet, so
+        // running them now would either fail silently or paint a
+        // misleading "completed & filed" toast over a still-in-progress
+        // inspection. Local state still gets cleaned up so the user can
+        // move on. The queue drain re-runs the file write on reconnect;
+        // the WriteCommittedEvent listener (mounted at the page) will
+        // re-fetch history once the row flips to 'completed'.
+        Object.values(itemPhotos).flat().forEach((p) => URL.revokeObjectURL(p.url))
+        Object.values(discPhotos).flat().flat().forEach((p) => URL.revokeObjectURL(p.url))
+        setItemPhotos({})
+        setDiscPhotos({})
+        setItemLocations({})
+        clearTypeDraft(activeForm, installationId)
+        if (activeForm === 'airfield') setAirfieldDraft(null)
+        else setLightingDraft(null)
+        setSaving(false)
         toast.success(
-          'Inspection queued — will file automatically when the network returns.',
-          { duration: 6000 },
+          'Inspection queued — will file automatically when the network returns. ' +
+            'Photos, NAVAID outages, and activity log entries will need to be re-applied after sync.',
+          { duration: 10000 },
         )
+        setActiveForm(null)
+        await loadHistory()
+        return
       }
     } else {
       const { data: created } = await createInspection({
