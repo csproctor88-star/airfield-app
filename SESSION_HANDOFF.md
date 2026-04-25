@@ -1,88 +1,71 @@
 # Session Handoff
 
-**Date:** 2026-04-22 (evening — continuation of the earlier permission-matrix session)
+**Date:** 2026-04-25
 **Branch:** `main`
-**Build:** Clean — `npm run build` compiles; `npx tsc --noEmit` exit 0; `npx vitest run` 152 pass
-**HEAD:** `e8215ac`
+**Build:** Clean — `npm run build` exits 0; `npx tsc --noEmit` exits 0; `npx vitest run` 165 pass
+**HEAD:** `bd18084`
 
 ---
 
 ## What shipped this session (chronological)
 
-### Testing the permission matrix (P1 from last handoff)
+11 commits on `main`, no migrations.
 
-1. **Permission matrix test suite** — 33 new tests across 4 files.
-   - `tests/permission-matrix-roles.test.ts` — parses every migration, replays INSERT/DELETE/SELECT on `role_permissions`, asserts per-role contracts (sys_admin has every key, safety has wildlife writes + narrow RSC/BWC, CES has transition but not full write, airfield_status has ONLY `airfield_status:view`, etc.).
-   - `tests/permission-resolver.test.ts` — pure override-resolution semantics (grant adds, revoke wins).
-   - `tests/permission-keys-drift.test.ts` — bidirectional diff between `PERM` constants and the SQL catalogue across every migration file.
-   - `tests/permission-rpcs.test.ts` — env-gated reachability / rejection for `get_public_feedback_config`, `base_exists`, `ces_update_discrepancy`, `safety_update_rsc_bwc`. Resilient to disabled keys.
-   - `tests/setup-env.ts` — auto-loads `.env.local` so env-gated tests run locally.
-   - Extracted `resolveEffectivePermissions` from `lib/permissions.ts` as a pure export for direct testing.
+### Closing out the previous session's P2 list
 
-2. **Supabase types regen** — pulled in `role_permissions`, `user_permission_overrides`, `scn_*`, `arff_status_log`, `daily_reviews`, etc. Types jumped from 42 to 55+ tables. Dropped 12 `as any` casts across `lib/permissions.ts`, 6 CRUD modules, and `app/api/user-emails`.
+1. **Kiosk route tests** (`tests/kiosk-route.test.ts`, 13 cases) — invalid ICAO, missing `KIOSK_PASSWORD`, no token, base-not-found, ICAO uppercasing, `kiosk_token=NULL` (disabled), token mismatch, length-mismatch short-circuit, happy path, auto-provision success, `createUser` failure (rotated password), retry sign-in failure. Hoisted mock state so each case sets up its own scenario without re-mocking.
 
-### P2 polish
+2. **`'use client'` server-import audit** — greppped `app/api`, `app/**/route.ts`, `middleware.ts`, `app/auth` for imports of all six `'use client'` modules (`permissions`, `dashboard-context`, `installation-context`, `sidebar-context`, `theme-context`, `use-expiring-notams`). Zero hits — the `getPermissionsFor → permissions-server.ts` split during the prior session closed the only real offender.
 
-3. **`SLOT_ALLOWED_ROLES` → `SLOT_PERMISSION`** — Daily Reviews slot gating now resolves through the matrix (`daily_reviews:sign:amsl|namo|afm`) instead of hardcoded role strings. Sign modal reads `usePermissions()` directly; the `userRole` prop was dropped.
+3. **Onboarding email polish** — approval email already had a working "Log In to Glidepath" button (added during the site-url fix). Added a "Forgot your password? Reset it here" link below it for users whose password grew stale between signup and approval. Reset URL is derived from the login URL.
 
-4. **USER_ROLES label-only** — removed `canCreate` / `canManageUsers` flags. The permission matrix is now the sole gate.
+### PDF / export polish
 
-5. **Sidebar legacy fallbacks deleted** — `ADMIN_ITEMS`, `CES_ALLOWED_ITEMS`, `isCesRole`, `canManageUsers` state + fallback branches all gone from `sidebar-nav.tsx`. `/ces` added to the default Airfield Management section so CES users see it naturally via the matrix filter.
+4. **SCN monthly PDF header** — caller was passing `'SCN Daily Check Log'` as the `baseName` parameter, which rendered as a small uppercase line directly above the 16pt title with only 4mm spacing → visible overlap. Dropped the small line entirely (it was redundant with the main title) and removed the unused `baseName` / `baseIcao` fields from `ScnPdfInput`.
 
-6. **Demo role accounts** — `scripts/seed-demo-role-users.ts`, idempotent. Ran live; 4 accounts on Demo AFB. `/login?demo=<role>` now routes to each: `safety`, `ppr`, `majcom_rfm`, `airfield_status`.
+5. **ACSI PDF "Risk Control Measure" label** — `lib/acsi-pdf.ts:303` now reads `Risk Control Measure:` instead of `Risk Control:` to match the form label.
 
-### Shared PDF utility
+### iOS PWA fixes
 
-7. **`lib/pdf-utils.ts`** — 7 helpers covering doc setup, base header ("BASE (ICAO)" + AMS line), title + subtitle, stat box, autoTable house style, page footer, and the standard `YYYY-MM-DD` filename date. 11 tests on the helpers + smoke tests for each migrated generator. Migrated `feedback-pdf`, `ppr-pdf`, `personnel-pdf`, `parking-pdf` (~30% LOC reduction each). Stopped there — user confirmed the remaining generators have too much bespoke body content to justify further migration.
+6. **Text-input scroll jump** — every text-entry element with `font-size < 16px` triggered iOS Safari's auto-zoom-on-focus, which manifested in the PWA as the layout scrolling to the bottom and hiding the input. Added a mobile-only (`@media (max-width: 767px)`) rule in `globals.css` forcing 16px on text/email/password/tel/number/search/url/date/datetime-local/time/month/week/textarea/select/typeless-input. Desktop type scale untouched.
 
-### Email flow fixes
+7. **Bottom nav drifting mid-UI** — iOS anchors `position: fixed` to the layout viewport, not the visual viewport, so when the soft keyboard opens the nav drifts. New `useKeyboardOpen()` hook in `components/layout/bottom-nav.tsx` watches `VisualViewport` resize/scroll events; when `window.innerHeight − vv.height > 150px` (keyboards are 260–380px tall, browser-chrome collapse < 100px) it adds `.bottom-nav-keyboard-open` which hides the nav with `display: none !important`.
 
-8. **Broken email links fixed** — `invite` and `reset-password` routes were falling back to `''` when `NEXT_PUBLIC_SITE_URL` was unset, producing `http:///setup-account` links. New `lib/site-url.ts` with a `SITE_URL → APP_URL → 'https://glidepathops.com'` fallback chain, strips trailing slashes + stray `.env` quotes. Six unit tests.
+### Airfield diagram upload — five-commit saga
 
-9. **Invite flow consolidated to one email** — previously `inviteUserByEmail` auto-sent Supabase's default "confirm your email" AND we sent a separate branded Resend email with a dead `/setup-account` link. Now uses `generateLink({type:'invite'})` to create the user and get a magic action link without sending Supabase's email, then embeds that link in a single branded Resend message. One email, working button.
+The bug surfaced as "Failed to upload diagram: resource already exists" → "new row violates RLS" → 413 Content Too Large. Final architecture:
 
-10. **Self-signup consolidated to one email** — rewrote `/api/signup-email` to do the full server-side signup via `generateLink({type:'signup'})`. Client-side `supabase.auth.signUp()` removed from `/login`. Magic link verifies email + lands on `/login?signup_verified=1`, where a useEffect signs out the auto-created session and shows the pending-approval message.
+8. **Service-role API route** — `/api/admin/airfield-diagram` (POST upload, DELETE remove, GET existence + `updated_at`). Authorizes on `base_setup:write` + base membership (sys_admin bypass). Uses `getAdminClient()` (service role) for the storage write, which bypasses `storage.objects` RLS entirely — sidesteps the photos:write / photos:delete role-gap that surfaced for ces / safety / ppr.
 
-All four user-facing email flows (invite / reset / signup / approved) now go through Resend with absolute links. Supabase's default SMTP is no longer in the path for any of them.
+9. **Explicit remove-then-upload** instead of `upsert: true` — service role bypasses RLS on both, and `remove()` on a non-existent object is a no-op. This avoids upsert edge cases around the existing object's owner metadata (set to whichever user did the original upload) conflicting with a service-role update.
 
-### Safety role gate gaps
+10. **URL cache-busting** — storage path is fixed per base, so without a cache-buster the browser / CDN keep serving the old diagram after replace. New `GET /api/admin/airfield-diagram` uses service-role `list()` for authoritative existence + `updated_at`. `getAirfieldDiagram` now appends `?v={updated_at}` so the URL changes when the file does, but caching still works between changes. Replaced the old HEAD-probe approach (which got false-positives from CDN-cached 200s after delete).
 
-11. **Sidebar leaks closed** (migration `2026042300`) — added new `dashboard:view` permission key (seeded to the 8 operational roles, NOT safety/ppr/atc/airfield_status); dropped `activity_log:view` from safety. `/dashboard` gated on `dashboard:view` instead of `airfield_status:view`. Safety no longer sees Dashboard or Events Log.
+11. **Client-side resize** — `resizeImageForUpload(file, 2400, 0.85)` runs before upload to keep payloads under Vercel's 4.5 MB serverless body limit. Phone photos and high-DPI scans were tripping 413 at the edge before our route ever saw them. 2400px max dimension keeps runway numbers / annotations legible while dropping a typical diagram to 500 KB – 1.5 MB.
 
-12. **Airfield-status edit gaps closed** — only OOO / AfmClosed buttons and label renames were gated. Now `canEditRscBwc` (narrow) gates just the RSC + BWC cards (safety keeps these), and `canWriteAirfieldStatus` gates everything else: Active RWY button, runway status `<select>`, weather/advisory opener, ARFF CAT, ARFF aircraft readiness cards, construction/misc remarks Edit buttons, NAVAID status buttons.
+12. **PDF removed from accept list** — UI preview is `<img>` (can't render PDFs), and jsPDF's `addImage` can't embed them in inspection / check exports. File picker accept tightened to `image/png,image/jpeg`; route MIME allowlist matches.
 
-### Kiosk auto-login
+### Offline behavior — visible failure, spec'd queue
 
-13. **`/kiosk/<ICAO>?token=<per-base>` route** — new `app/kiosk/[icao]/route.ts`. Validates the per-base token with constant-time compare, auto-provisions the `kiosk-<icao>@glidepathops.com` account on first hit (trigger handles profile + base_members), signs in server-side with `KIOSK_PASSWORD` (env-only, never sent to browser), sets session cookie, redirects to `/`. KioskGuard then keeps the user on `/`.
+User reported completing an inspection offline, tapping File, and having nothing sync once reconnected. Glidepath has no offline write queue — every Supabase call is `NetworkOnly` per `next.config.js:11`. Two short-term mitigations and a future-feature spec:
 
-14. **Base Setup UI** — inline "Kiosk Display URL" section at the top of Base Setup with Generate / Regenerate / Disable buttons. Token is revealed once with a Copy button. Backed by `/api/admin/kiosk-token` route gated on `base_setup:write` + base membership (sys_admin bypasses the membership check).
+13. **OFFLINE pill in header** — new `useOnlineStatus()` hook in `components/layout/header.tsx` watches window `online` / `offline` events. Red pill appears next to the existing presence label when `navigator.onLine === false`.
 
-15. **Migration `2026042301`** — `bases.kiosk_token TEXT` nullable + partial index on the non-null path. NULL = kiosk URL disabled for that base (explicit opt-in).
+14. **Inspection File hard-fail when offline** — `handleComplete()` now bails before doing partial work with an 8-second toast: *"You're offline. Your inspection is saved as a draft — re-open and tap File when your connection is restored."* Drafts continue to auto-save to localStorage so the work isn't lost.
 
-### Bug fixes landed during this session
+15. **Spec for the real fix** — `docs/Offline_Write_Queue_Spec.md`. IndexedDB-backed queue, BackgroundSync drain, conflict resolution per write type, optimistic UI, 7-step rollout starting with inspections. Effort estimate 2–3 weeks plus field testing.
 
-16. **`getPermissionsFor` was in a `'use client'` module** — when the new kiosk-token route imported it, Next.js wrapped the export as a client reference stub; calling it threw `(0, <minified ref>) is not a function` at runtime on Vercel. Moved to new `lib/permissions-server.ts` (no `'use client'`). The kiosk-token route now uses the `user_has_permission` SQL RPC directly instead of the helper. `/app/(app)/users/page.tsx` updated to import `getPermissionsFor` from the new module.
+### Onboarding doc
+
+16. **Codebase primer** — `docs/Glidepath_Codebase_Primer.md`. Self-paced 10-phase learning plan for non-dev readers needing to speak fluently to the codebase for sales / fundraising / acquirer conversations. Each phase has concepts, reading list, talking points, quiz questions, and "ask Claude" prompts.
 
 ---
 
 ## Migrations added this session
 
-```
-2026042300  dashboard:view permission + drops safety activity_log:view
-2026042301  bases.kiosk_token column + partial index
-```
+**None.** All work was code-only.
 
-**Neither has been applied to prod yet.** Run `npx supabase db push` before the kiosk URL or new sidebar gates will work.
-
----
-
-## Env vars to set in Vercel
-
-| Var | Where | Purpose |
-|---|---|---|
-| `NEXT_PUBLIC_APP_URL` | Production + Preview | Absolute URL base for email links. Without it, emails fall back to `https://glidepathops.com`. |
-| `KIOSK_PASSWORD` | Production + Preview | Shared password used server-side by the `/kiosk/<ICAO>` route. Pick a long random string (`openssl rand -base64 32`). Never sent to browser. |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | All three | Existing. Make sure they're set for **every** environment (Preview missing these was suspected during the kiosk-token 500 debugging). |
+The migrations from the prior session (`2026042300`, `2026042301`) are reportedly applied to prod (P1 confirmed done by the user).
 
 ---
 
@@ -90,63 +73,65 @@ All four user-facing email flows (invite / reset / signup / approved) now go thr
 
 | Item | Severity | Notes |
 |---|---|---|
-| **`.env.local` modified** | Trivial | Local-only; always skip on commits |
-| **Migrations `2026042300` + `2026042301` not yet applied to prod** | Medium | User action — `npx supabase db push` |
-| **Vercel env vars `NEXT_PUBLIC_APP_URL` + `KIOSK_PASSWORD`** | Medium | User action — add via Vercel dashboard, redeploy |
-| **Supabase types need regen after kiosk migration** | Low | `kiosk_token` not yet in `lib/supabase/types.ts`; route uses `as never` cast until regen |
-| **Shared PDF utility migration stopped at 4 generators** | Low | `check`, `discrepancy`, `acsi`, `waiver`, `training`, `obstruction`, `scn`, `reports/*` have bespoke body content. User explicitly decided not to force it. Utility stays for future new reports. |
-| **`'use client'` module import trap** | Low | `getPermissionsFor` fix in place. Audit other utility exports in `lib/*.ts` that might be imported from server routes and guard them by moving to `-server.ts` modules if needed. |
-| **Kiosk route + Base Setup UI have zero tests** | Medium | No coverage on token gen / validation / constant-time compare / auto-provision fallback |
-| **~117 `as any` casts remain** | Low | Down from 141 at session start. Mostly concentrated in `base-setup/page.tsx`, `infrastructure/page.tsx`, PDF generators, Google Maps / Mapbox component props. |
-| **Largest source files** | Medium | `base-setup/page.tsx` 4,900+ LOC (grew this session), `parking/page.tsx` 4,334, `infrastructure/page.tsx` 4,150 |
+| **`.env.local` modified** | Trivial | Local-only; always skip on commits. |
+| **`docs/DEMO_LOGINS.md` untracked** | Trivial | Untouched this session; left for the user to decide. |
+| **No offline write queue** | Medium | Spec'd in `docs/Offline_Write_Queue_Spec.md`. Today's mitigation makes the failure mode visible (OFFLINE pill + hard-fail toast on inspection File) but the queue itself remains unbuilt. Highest-impact UX gap for field users on intermittent connections. |
+| **Airfield diagram preview can't render PDFs** | Low | Disabled at the file picker. If PDF support is wanted, need an iframe / PDF.js preview + first-page rasterization for downstream embeds. |
+| **Browser extension "message channel closed" errors** | Trivial | Emitted by password managers / Grammarly / Honey. Not from our code; users may ask. |
+| **Supabase types may need regen** | Low | Tightened a couple of files this session via inline `as` casts. Last regen was 2026-04-22. Run when next migration lands. |
+| **`'use client'` import trap** | Low | Audited clean this session. Worth adding to CI as a grep-rule before next major release. |
+| **~117 `as any` casts remain** | Low | Unchanged. |
+| **Largest source files** | Medium | `base-setup/page.tsx` 4,900+ LOC, `parking/page.tsx` 4,334, `infrastructure/page.tsx` 4,150. |
+| **Storage RLS path-scoping rolled back** | Low | Migration `2026042208` swapped the photos storage policies from path-scoped to permission-based (`photos:write` / `photos:delete`). A future hardening could re-introduce the path scoping, especially for `airfield-diagrams/{baseId}/...` and entity photo paths. |
 
 ---
 
 ## Next Session Tasks (Prioritized)
 
-### P1 — deploy + verify this session's work
-1. **Apply pending migrations** — `npx supabase db push` (picks up `2026042300` + `2026042301`).
-2. **Set Vercel env vars** — `KIOSK_PASSWORD` (random long string) + confirm `NEXT_PUBLIC_APP_URL` is set for Production and Preview.
-3. **Regenerate Supabase types** — pulls `kiosk_token` into `bases` row type, drops the `as never` cast in the kiosk-token route:
-   ```
-   npx supabase gen types typescript --project-id vkzpmacdteckgkcveufv --schema public > lib/supabase/types.ts
-   ```
-   Preserve the hand-written convenience aliases at the bottom (same stitch pattern as last regen).
-4. **End-to-end test the kiosk flow** — Base Setup → Generate Kiosk URL → Copy → open in an incognito window → should land on the status board as the kiosk user. Regenerate → old URL must stop working. Disable → URL errors cleanly.
-5. **End-to-end test Safety role** — `/login?demo=safety` → verify Dashboard + Events Log are hidden, RSC + BWC cards are clickable, every other airfield-status control (runway, ARFF, advisory, NAVAID, remarks) is disabled.
+### P1 — verify this session's work
+1. **Verify all 2026-04-25 fixes deployed and working in production.** No migrations, so this is a Vercel deploy-confirm exercise:
+   - SCN monthly PDF header — no overlapping text
+   - ACSI PDF — "Risk Control Measure:" label
+   - iOS PWA — text-input scroll jump fixed; bottom nav stays put when keyboard opens
+   - Airfield diagram replace — uploads PNG/JPG, replaces show new image immediately, large files don't 413
+   - OFFLINE pill appears when network is killed; File button on `/inspections` shows the new toast when offline
+2. **Regen Supabase types** if any new migration is queued. Last regen was 2026-04-22.
 
-### P2
-6. **Add tests for the kiosk route** — token-required / token-mismatch / disabled / auto-provision paths. Mocked `admin` client and Supabase session.
-7. **Audit other `lib/*.ts` files for `'use client'` server-import traps** — grep for `'use client'` modules that export non-hook utility functions used from server routes.
-8. **Onboarding polish** — the current signup email has both the verify-email button and the pending-approval notice. Consider whether a post-approval Resend email should include a "sign in here" link since the app URL may not be obvious to a new user.
+### P2 — keep tightening
+3. **Build the offline write queue** (spec at `docs/Offline_Write_Queue_Spec.md`). Highest-impact UX work. Rollout order suggested in the spec: inspections → checks → discrepancies → ACSI → daily reviews → photo uploads → everything else.
+4. **CI rule for `'use client'` server-import trap.** Simple grep step in pre-deploy: error if any file under `app/api/`, `app/**/route.ts`, or `middleware.ts` imports from a `lib/*.ts(x)` whose first line is `'use client'`.
+5. **Audit remaining iOS PWA quirks** that may surface from real-device usage. The two we fixed were the obvious ones; more are likely lurking (modal dialog scroll inside inputs, file-picker double-tap, etc.).
+6. **Tests for the new airfield-diagram route.** POST happy path, POST oversize, POST unsupported MIME, POST without auth, GET happy path, GET no diagram, DELETE happy path. Follows the pattern of `tests/kiosk-route.test.ts`.
 
 ### P3 (multi-session)
-- Platform One Party Bus onboarding (~6–8 weeks) — scaffold at `C:/Users/cspro/Downloads/glidepath/glidepath-local-dev/`
-- CAC/PIV authentication — blocked on P1 platform
-- Component extraction for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`)
-- Shared PDF utility — remaining Style-B reports + complex generators if / when they come up for maintenance anyway
-- Outage analytics (frequency/duration tracking for lighting systems)
-- Training Management Module (DAF training records)
-- Part 139 civilian template support
+- Platform One Party Bus onboarding — scaffold at `C:/Users/cspro/Downloads/glidepath/glidepath-local-dev/`. ~6–8 weeks.
+- CAC/PIV authentication — blocked on P1.
+- Component extraction for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`).
+- Re-introduce path-scoped storage RLS for `airfield-diagrams` and entity photo paths.
+- Outage analytics (frequency / duration tracking for lighting systems).
+- Training Management Module (DAF training records).
+- Part 139 civilian template support.
+- Trademark resolution — CDW Class 42 conflict on "GLIDEPATH" remains.
 
 ---
 
 ## Commits this session
 
 ```
-96cea05  Permission matrix tests, P2 polish, and shared PDF utility
-97137c7  Migrate parking-pdf to pdf-utils shared helpers
-9bfb8cf  Fix broken email links + consolidate invite/signup to single Resend email
-c6ca876  Close Safety role sidebar + airfield-status edit gaps
-7106bcd  Disable NAVAID status button for Safety role
-5572397  Add per-base kiosk auto-login URL (/kiosk/<ICAO>)
-a9991f4  Gate /kiosk route behind per-base kiosk_token
-5261878  Add Base Setup UI for generating / rotating / disabling kiosk URL
-3eb7537  Surface real error from kiosk-token route
-e8215ac  Move getPermissionsFor out of 'use client' module
+137a285  Add kiosk route tests and password-reset hint in approval email
+3ba73c3  Fix overlapping text in SCN monthly PDF header
+2960758  Label ACSI PDF risk-control field as 'Risk Control Measure'
+2f2b3ac  Fix iOS PWA text-entry scroll jump and bottom-nav drift
+3407e84  Fix airfield diagram replace — use upsert instead of remove+upload
+6869c6e  Route airfield diagram upload through service-role API
+042a97f  Cache-bust airfield diagram URL so replace actually shows new image
+461b170  Switch airfield diagram upload to explicit remove+upload
+56cc838  Resize airfield diagram client-side to dodge Vercel 413
+5754ee6  Add codebase primer for non-dev commercialization prep
+bd18084  Add OFFLINE pill + offline-aware File toast for inspections
 ```
 
-Branches: `main` only. `tweaks` deleted (fully merged). `mobile-tweaks` already gone.
+Branches: `main` only.
 
 ---
 
@@ -155,19 +140,21 @@ Branches: `main` only. `tweaks` deleted (fully merged). `mobile-tweaks` already 
 ```
 Compiled successfully
   TypeScript clean (`npx tsc --noEmit` exit 0)
-  Tests: 152 pass (11 new pdf-utils, 6 site-url, 4 permission-rpcs env-gated, 15 permission-matrix-roles, 8 permission-resolver, 6 permission-keys-drift)
+  Tests: 165 pass (13 new kiosk-route.test.ts; rest unchanged from prior session)
   All routes generate cleanly
 
   Notable First Load JS:
     /wildlife                        788 kB   (heatmap)
-    /parking                         398 kB
+    /parking                         411 kB   (+13 kB this session — no parking changes; bundling drift)
     /reports/aging                   331 kB
+    /reports/discrepancies           330 kB
     /obstructions/[id]               327 kB
     /reports/daily                   322 kB
     /reports/lighting                317 kB
+    /reports/trends                  315 kB
     /library                         292 kB
-    /settings/base-setup             233 kB   (+1 kB this session)
-    /inspections                     229 kB
+    /settings/base-setup             233 kB
+    /inspections                     229 kB   (no change — offline guard is tiny)
     /discrepancies                   224 kB
     /settings                        200 kB
     /regulations                     182 kB
@@ -176,7 +163,7 @@ Compiled successfully
     /settings/base-setup/modules     176 kB
     /recent-activity                 160 kB
 
-  Middleware 74.4 kB
+  Middleware                         74.4 kB  (unchanged)
 ```
 
 ---
@@ -185,6 +172,7 @@ Compiled successfully
 
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-04-25 | iOS PWA fixes, airfield diagram upload rewrite, OFFLINE pill, codebase primer + offline-queue spec, kiosk tests, PDF polish |
 | **Unreleased** | 2026-04-22 | Email flow fixes, Safety role gate closeout, kiosk auto-login, shared PDF utility |
 | v2.32.0 | 2026-04-21 | Modular Onboarding, SCN, Close-for-Day, What's New modal |
 | v2.31.0 | 2026-04-07 | Full Google Maps migration, Custom Status Boards, PPR Log |
