@@ -1,7 +1,89 @@
 # Offline Write Queue — Design Spec
 
-**Status:** Not started. Captured here so the next person to pick this up has a complete brief.
-**Owner:** TBD
+**Status:** Foundation + 4 wraps in production as of 2026-04-25. Inspector UI shipped. ~3 wraps still to go (photos, discrepancies, slot-#7 small ones). Original design doc preserved below; current state and lessons in the section that follows.
+
+---
+
+## Implementation status (2026-04-25)
+
+### Shipped
+
+**Foundation** — `lib/sync/`
+- `types.ts` — `WriteType` discriminated union, `QueuedWrite`, `WriteHandler`, `EnqueueResult`, `NonRetriableError`, `ConflictError`.
+- `backoff.ts` — exponential 1s → 16s, capped at 5 min, max 5 attempts.
+- `queue-storage.ts` — `IndexedDBStorage` (own DB `glidepath-write-queue`, separate from the AOMS PDF cache) and `MemoryStorage` (test harness, no `fake-indexeddb` dep needed).
+- `write-queue.ts` — `WriteQueue` class: handler registry, single-flight `drain()`, oldest-first execution, browser event wiring (`online` + `visibilitychange`), idempotent `attach()`. Dispatches `glidepath:write-committed` window events on every successful drain commit so feature pages can re-fetch.
+- `handlers.ts` — registers handlers per WriteType. Adapts each Supabase CRUD `{ data, error }` to throw-on-failure with NonRetriable / Conflict classification.
+
+**Wraps** — 4 surfaces routed through `enqueueOrExecute`:
+| WriteType | Mutation | Wrap shape |
+|---|---|---|
+| `inspection_file` | UPDATE existing row | optimistic id kept; queued path bails before downstream photo / NAVAID / activity log calls |
+| `check_file` | CREATE new row | queued path bails (no optimistic id possible for inserts) |
+| `acsi_submit` | UPDATE existing row | cleanest wrap — no FK-dependent side effects in the call site |
+| `daily_review_sign` | UPDATE existing row | first real `ConflictError` user — handler fetches the row and refuses to overwrite an already-signed slot |
+
+**UI**
+- `WriteQueueProvider` mounts in the authed layout, registers handlers, attaches listeners, and drains on mount.
+- Header `useQueueDepth()` hook + amber `● N QUEUED` pill (clickable) next to the existing OFFLINE pill.
+- `components/sync/queue-inspector.tsx` modal — opens from the pill, lists items with type / age / status / attempts / last error, per-row Retry and Discard buttons, conflict items show in purple.
+
+**Drain-event wiring** (so realtime UPDATE blind-spot doesn't strand drained rows):
+- `/inspections` listens for `inspection_file` commits → `loadHistory()`
+- `/acsi` and `/acsi/[id]` listen for `acsi_submit` commits → re-fetch
+- `/checks` listens for `check_file` commits → re-fetch recent
+- `/daily-reviews` listens for `daily_review_sign` commits → re-fetch
+
+**Tests:** 218 in CI. Foundation: backoff math, MemoryStorage CRUD/isolation, drain order & retry / failed / conflict transitions, single-flight, dispatch-event behavior, handler error classification per WriteType.
+
+### Not shipped yet
+
+| Slot | Surface | Status / blocker |
+|---|---|---|
+| #3 | discrepancy create + update | 4 update sites in `components/discrepancies/modals.tsx` are tangled with NAVAID feature status changes + outage events. 4 inline `createDiscrepancy` calls inside other flows (inspection, check, infrastructure) all have FK-dependent photo/NAVAID downstream — wrapping the create alone leaves them broken. Needs slot #6 (photos) first to do correctly. |
+| #6 | photo uploads | Photos are the architectural unlock. IDB stores Blobs natively via structured-clone, so no foundation change is strictly needed — `payload: P` can hold a `File`. Open question: how to handle photos that reference a not-yet-created entity (e.g., a check that's still queued). Likely: pre-allocate a UUID client-side, persist with both the create and the photo, drainer rewrites references on commit. Not started. |
+| #7 | NOTAM, waiver, airfield_status | NOTAM new is a stub today (no DB write — read-only feed). Waiver create / update are wrappable but have downstream `upsertWaiverCriteria` and attachment uploads that aren't queued. Airfield status updates fire from many dashboard handlers (BWC / RSC / RCR / runway / ARFF) — wrap is wide-touch, low individual value, not started. |
+
+### The hard-offline gate stays put for now
+
+Inspections and checks both keep a "navigator.onLine === false → toast + return" gate at the top of `handleComplete`. Without it, the queued path would let the user proceed but downstream code (discrepancy creates, NAVAID inop, photo uploads, activity logging) would all fire offline and either fail silently or throw partial-state errors at the user.
+
+The wraps shipped today catch transient mid-call drops, not full-offline starts. Lifting the gate requires slot #3 + slot #6 to be fully wrapped.
+
+ACSI does not have a gate (no FK-dependent side effects in the call site). Daily review sign also does not have a gate.
+
+---
+
+## Lessons learned during the rollout
+
+### Realtime fires on INSERT, not UPDATE
+
+`airfield_checks` and `inspections` realtime channels are configured INSERT-only. A queued UPDATE landing via the drainer would otherwise stay invisible until the user refreshes. **Solution:** WriteQueue dispatches `glidepath:write-committed` on every commit; pages add a tiny `useEffect` listener and call their existing loader.
+
+### Queued path must bail; it can't fall through
+
+First version of the inspection wrap let the queued branch fall through into the rest of `handleComplete`. Result: the page ran offline-failing photo uploads + NAVAID inop + activity log, then painted a "completed & filed" success toast over a still-in-progress inspection. **Solution:** queued branches do their local cleanup (drafts, blob URLs, navigation) and `return`. The drain handler re-runs only the wrapped Supabase call — not the inline side effects. That's a known limitation called out in the toast text.
+
+### CREATE wraps need pre-allocated IDs to chain
+
+For `check_file` (CREATE) the queued path can't return an `id` because the row doesn't exist yet. Photos / discrepancies created in the same flow have nothing to FK against. The wrap therefore bails on queued. Slot #6 (photos) will need a "client-side UUID, write it on both rows, drainer rewrites references" pattern to chain.
+
+### ConflictError is rare but real
+
+`daily_review_sign` is the first surface where ConflictError fires for real — the handler fetches the row first and refuses to overwrite an already-signed slot. The inspector renders these as a distinct purple "CONFLICT" badge; the user resolves with Discard. No automatic conflict-resolution modal yet — the per-row error message and Discard button are sufficient for now.
+
+### Storing Files in IndexedDB just works
+
+We pre-emptively expected to need `fake-indexeddb` and a Blob storage extension. Neither is required: IDB's structured-clone storage handles `Blob` and `File` natively, and `MemoryStorage.put` uses `structuredClone()` which also handles Blobs. The slot #6 work is mostly about ID re-mapping, not storage.
+
+### `'use client'` server-import trap
+
+Don't import `lib/sync/write-queue.ts` from any `app/api/*/route.ts`, `app/**/route.ts`, or `middleware.ts`. The `getDefaultStorage()` path touches `indexedDB`, which doesn't exist in Node. So far we've kept all queue access on the client side. If a server-side enqueue ever becomes desirable, the storage backend needs to be selected up-front, not defaulted.
+
+---
+
+# Original design doc (preserved)
+
 **Effort estimate:** 2–3 weeks one engineer; ~50 tests; ~1 week of careful field testing.
 
 ---
