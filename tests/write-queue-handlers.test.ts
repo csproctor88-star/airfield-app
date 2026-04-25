@@ -570,6 +570,28 @@ describe('inspection_save_draft handler', () => {
       }),
     ).rejects.not.toBeInstanceOf(NonRetriableError)
   })
+
+  it('treats "This record already exists" as success — server already has the row', async () => {
+    const handler = HANDLERS.inspection_save_draft!
+    state.inspectionDraft.next = { data: null, error: 'This record already exists.' }
+    // Should NOT throw. Returns null (no row data, but commit succeeds).
+    const result = await handler({
+      id: 'preset-uuid',
+      inspection_type: 'airfield',
+      draft_data: {} as unknown,
+      items: [],
+      total_items: 0,
+      passed_count: 0,
+      failed_count: 0,
+      na_count: 0,
+      bwc_value: null,
+      notes: null,
+      daily_group_id: 'g-1',
+      construction_meeting: false,
+      joint_monthly: false,
+    })
+    expect(result).toBeNull()
+  })
 })
 
 describe('discrepancy_create handler', () => {

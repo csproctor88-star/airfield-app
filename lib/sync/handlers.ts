@@ -170,7 +170,18 @@ const inspectionSaveDraftHandler: WriteHandler<
   InspectionSaveDraftResult
 > = async (payload) => {
   const { data, error } = await createInspectionDraftWithId(payload)
-  if (error) throwForStructuredError(error)
+  if (error) {
+    // Treat duplicate-key as success. This happens when the inline
+    // INSERT at Begin time actually committed server-side but the
+    // response was lost mid-flight (transient network drop), causing
+    // the catch path to queue a retry. By the time the retry drains,
+    // the row already exists with the same id — exactly the state we
+    // wanted. Don't mark failed on the user's "already-synced" record.
+    // friendlyError() maps "duplicate key" / "unique constraint"
+    // violations to "This record already exists."
+    if (/already exists/i.test(error)) return null
+    throwForStructuredError(error)
+  }
   return data
 }
 

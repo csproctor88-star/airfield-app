@@ -492,6 +492,8 @@ export default function InspectionsPage() {
   // queue. Realtime only fires on INSERT for the inspections table, so an
   // UPDATE arriving from the drainer (status: in_progress → completed)
   // would otherwise stay invisible until the user refreshes the tab.
+  // Also refresh on visibilitychange/focus as a defensive backstop in
+  // case the page was hidden when the commit fired.
   useEffect(() => {
     const onCommit = (e: Event) => {
       const detail = (e as CustomEvent<WriteCommittedDetail>).detail
@@ -499,8 +501,17 @@ export default function InspectionsPage() {
         void loadHistory()
       }
     }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void loadHistory()
+    }
     window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
-    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
   }, [loadHistory])
 
   // ── Save draft to localStorage whenever it changes ──

@@ -115,7 +115,9 @@ function describeChanges(prev: AirfieldStatus | null, row: AirfieldStatus): Chan
     }
   }
 
-  if (parts.length === 0) parts.push({ message: 'updated the Airfield Status', link: '/' })
+  // No fallback alert when only updated_at / updated_by changed —
+  // those are bookkeeping fields and emit a noisy "updated the Airfield
+  // Status" alert without anything meaningful for the user to act on.
   return parts
 }
 
@@ -145,12 +147,28 @@ export function RealtimeAlertBanner() {
   const prevStatus = useRef<AirfieldStatus | null>(null)
   const idCounter = useRef(0)
   const isOwnUpdate = useRef(false)
+  const currentUserId = useRef<string | null>(null)
 
   // Let DashboardProvider mark own updates so we skip showing alerts for them
   useEffect(() => {
     const handler = () => { isOwnUpdate.current = true; setTimeout(() => { isOwnUpdate.current = false }, 2000) }
     window.addEventListener('glidepath:local-status-update', handler)
     return () => window.removeEventListener('glidepath:local-status-update', handler)
+  }, [])
+
+  // Resolve the current user once so we can suppress *any* update
+  // attributed to them — covers paths the page-local
+  // 'glidepath:local-status-update' event doesn't reach (e.g. the
+  // 1–3 updateAirfieldStatus calls inside fileInspection's body
+  // running on this client, including ones replayed from the offline
+  // queue's drain). Without this, the user sees their own File flow
+  // echo back as 1–3 banner alerts.
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data }) => {
+      currentUserId.current = data.user?.id ?? null
+    })
   }, [])
 
   const showAlert = useCallback((message: string, link: string) => {
@@ -181,14 +199,22 @@ export function RealtimeAlertBanner() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'airfield_status', filter: `base_id=eq.${installationId}` },
         async (payload) => {
-          if (isOwnUpdate.current) {
-            prevStatus.current = payload.new as unknown as AirfieldStatus
+          const row = payload.new as unknown as AirfieldStatus
+          // Suppress alerts for the current user's own updates — covers
+          // both the page-local flag (dashboard buttons) and the
+          // user-id match (file flow, queue drains, anything else).
+          if (
+            isOwnUpdate.current ||
+            (currentUserId.current && row.updated_by === currentUserId.current)
+          ) {
+            prevStatus.current = row
             return
           }
-          const row = payload.new as unknown as AirfieldStatus
           const changes = describeChanges(prevStatus.current, row)
           prevStatus.current = row
 
+          // If describeChanges returned nothing meaningful (e.g., only
+          // bookkeeping fields like updated_at moved), skip the alert.
           if (changes.length === 0) return
 
           // Look up who made the change
