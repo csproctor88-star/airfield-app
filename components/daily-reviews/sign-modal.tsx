@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import {
   fetchDailyReview,
   fetchDailyReviewSigners,
-  signDailyReview,
   computeEventsHash,
   canUserSignSlot,
   currentAmslSlot,
@@ -17,6 +16,9 @@ import {
   type DailyReviewSlot,
   type SignerInfo,
 } from '@/lib/supabase/daily-reviews'
+import { getWriteQueue } from '@/lib/sync/write-queue'
+import type { DailyReviewSignPayload, DailyReviewSignResult } from '@/lib/sync/handlers'
+import { ConflictError } from '@/lib/sync/types'
 import { fetchDailyReportData, type DailyReportData } from '@/lib/reports/daily-ops-data'
 import { generateDailyOpsPdf, type DailyReviewSignoff } from '@/lib/reports/daily-ops-pdf'
 import { formatZuluDateTime } from '@/lib/utils'
@@ -173,7 +175,7 @@ export default function DailyReviewSignModal({
       return
     }
     setSigning(true)
-    const { data, error } = await signDailyReview({
+    const payload: DailyReviewSignPayload = {
       baseId,
       date: reviewDate,
       slot: selectedSlot,
@@ -181,10 +183,38 @@ export default function DailyReviewSignModal({
       eventsHash,
       notes: notes.trim() || null,
       shiftCount,
-    })
-    setSigning(false)
-    if (error || !data) {
-      toast.error(error || 'Sign failed')
+    }
+    let data: DailyReviewSignResult = null
+    try {
+      const result = await getWriteQueue().enqueueOrExecute<
+        DailyReviewSignPayload,
+        DailyReviewSignResult
+      >('daily_review_sign', payload, {
+        baseId,
+        userId,
+      })
+      setSigning(false)
+      if (result.status === 'queued') {
+        setNotes('')
+        toast.success(
+          `${SLOT_LABELS[selectedSlot]} sign queued — will commit when the network returns.`,
+          { duration: 6000 },
+        )
+        onSigned()
+        return
+      }
+      data = result.data
+    } catch (err) {
+      setSigning(false)
+      if (err instanceof ConflictError) {
+        toast.error(err.message, { duration: 8000 })
+        return
+      }
+      toast.error(`Sign failed: ${err instanceof Error ? err.message : String(err)}`)
+      return
+    }
+    if (!data) {
+      toast.error('Sign failed')
       return
     }
     setRow(data)

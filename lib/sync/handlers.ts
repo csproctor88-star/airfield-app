@@ -21,6 +21,12 @@ import { fileInspection } from '@/lib/supabase/inspections'
 import { createCheck } from '@/lib/supabase/checks'
 import { fileAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import {
+  fetchDailyReview,
+  signDailyReview,
+  type DailyReviewRow,
+} from '@/lib/supabase/daily-reviews'
+import {
+  ConflictError,
   NonRetriableError,
   type WriteHandler,
   type WriteType,
@@ -74,6 +80,39 @@ const acsiSubmitHandler: WriteHandler<AcsiSubmitPayload, AcsiSubmitResult> = asy
 }
 
 // ---------------------------------------------------------------------------
+// daily_review_sign
+// ---------------------------------------------------------------------------
+
+export type DailyReviewSignPayload = Parameters<typeof signDailyReview>[0]
+export type DailyReviewSignResult = Awaited<ReturnType<typeof signDailyReview>>['data']
+
+const dailyReviewSignHandler: WriteHandler<
+  DailyReviewSignPayload,
+  DailyReviewSignResult
+> = async (payload) => {
+  // Daily review signatures are a regulatory record. Last-write-wins is
+  // the wrong default — if the same slot for the same date was signed
+  // by someone else between when the user queued and when the queue
+  // drained, refuse to overwrite. The inspector surfaces this as a
+  // 'conflict' status; the user can Discard once they verify the slot
+  // is already signed (which the queued sign would have done anyway).
+  const existing = await fetchDailyReview(payload.baseId, payload.date)
+  if (existing) {
+    const signedAt = (existing as DailyReviewRow & Record<string, unknown>)[
+      `${payload.slot}_signed_at`
+    ]
+    if (typeof signedAt === 'string' && signedAt) {
+      throw new ConflictError(
+        `${payload.slot.toUpperCase()} slot for ${payload.date} was already signed at ${signedAt}.`,
+      )
+    }
+  }
+  const { data, error } = await signDailyReview(payload)
+  if (error) throw new NonRetriableError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -89,6 +128,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('inspection_file', inspectionFileHandler)
   queue.registerHandler('check_file', checkFileHandler)
   queue.registerHandler('acsi_submit', acsiSubmitHandler)
+  queue.registerHandler('daily_review_sign', dailyReviewSignHandler)
 }
 
 /**
@@ -99,4 +139,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   inspection_file: inspectionFileHandler,
   check_file: checkFileHandler,
   acsi_submit: acsiSubmitHandler,
+  daily_review_sign: dailyReviewSignHandler,
 }

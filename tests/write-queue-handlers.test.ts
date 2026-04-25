@@ -19,6 +19,12 @@ const { state } = vi.hoisted(() => ({
       throw: null as Error | null,
       calls: [] as unknown[],
     },
+    dailyReview: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+      existing: null as unknown,
+    },
   },
 }))
 
@@ -46,8 +52,17 @@ vi.mock('@/lib/supabase/acsi-inspections', () => ({
   }),
 }))
 
+vi.mock('@/lib/supabase/daily-reviews', () => ({
+  fetchDailyReview: vi.fn(async () => state.dailyReview.existing),
+  signDailyReview: vi.fn(async (payload: unknown) => {
+    state.dailyReview.calls.push(payload)
+    if (state.dailyReview.throw) throw state.dailyReview.throw
+    return state.dailyReview.next
+  }),
+}))
+
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
-import { NonRetriableError } from '@/lib/sync/types'
+import { ConflictError, NonRetriableError } from '@/lib/sync/types'
 import { WriteQueue } from '@/lib/sync/write-queue'
 import { MemoryStorage } from '@/lib/sync/queue-storage'
 
@@ -55,6 +70,12 @@ beforeEach(() => {
   state.inspection = { next: { data: null, error: null }, throw: null, calls: [] }
   state.check = { next: { data: null, error: null }, throw: null, calls: [] }
   state.acsi = { next: { data: null, error: null }, throw: null, calls: [] }
+  state.dailyReview = {
+    next: { data: null, error: null },
+    throw: null,
+    calls: [],
+    existing: null,
+  }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -83,6 +104,16 @@ const CHECK_PAYLOAD = {
   completed_by: 'A',
   comments: [],
   base_id: 'base-a',
+}
+
+const DAILY_REVIEW_PAYLOAD = {
+  baseId: 'base-a',
+  date: '2026-04-25',
+  slot: 'day_amsl' as const,
+  userId: 'user-a',
+  eventsHash: 'abcdef',
+  notes: null,
+  shiftCount: 3,
 }
 
 const ACSI_PAYLOAD = {
@@ -181,6 +212,53 @@ describe('acsi_submit handler', () => {
       await handler(ACSI_PAYLOAD)
     } catch (err) {
       expect(err).not.toBeInstanceOf(NonRetriableError)
+    }
+  })
+})
+
+describe('daily_review_sign handler', () => {
+  it('signs successfully when the slot is unsigned', async () => {
+    const handler = HANDLERS.daily_review_sign!
+    state.dailyReview.existing = { id: 'r1', day_amsl_signed_at: null }
+    state.dailyReview.next = { data: { id: 'r1', day_amsl_signed_at: '2026-04-25T12:00:00Z' }, error: null }
+    const result = await handler(DAILY_REVIEW_PAYLOAD)
+    expect(result).toMatchObject({ id: 'r1' })
+    expect(state.dailyReview.calls).toHaveLength(1)
+  })
+
+  it('signs successfully when no row exists yet (first slot of the day)', async () => {
+    const handler = HANDLERS.daily_review_sign!
+    state.dailyReview.existing = null
+    state.dailyReview.next = { data: { id: 'r-new' }, error: null }
+    const result = await handler(DAILY_REVIEW_PAYLOAD)
+    expect(result).toMatchObject({ id: 'r-new' })
+  })
+
+  it('throws ConflictError when the slot is already signed', async () => {
+    const handler = HANDLERS.daily_review_sign!
+    state.dailyReview.existing = { id: 'r1', day_amsl_signed_at: '2026-04-25T11:00:00Z' }
+    await expect(handler(DAILY_REVIEW_PAYLOAD)).rejects.toBeInstanceOf(ConflictError)
+    // signDailyReview should NOT have been called
+    expect(state.dailyReview.calls).toHaveLength(0)
+  })
+
+  it('throws NonRetriableError on a structured signDailyReview error', async () => {
+    const handler = HANDLERS.daily_review_sign!
+    state.dailyReview.existing = null
+    state.dailyReview.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(handler(DAILY_REVIEW_PAYLOAD)).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('lets thrown fetch errors propagate as transient', async () => {
+    const handler = HANDLERS.daily_review_sign!
+    state.dailyReview.existing = null
+    state.dailyReview.throw = new TypeError('Failed to fetch')
+    await expect(handler(DAILY_REVIEW_PAYLOAD)).rejects.toThrow(/fetch/i)
+    try {
+      await handler(DAILY_REVIEW_PAYLOAD)
+    } catch (err) {
+      expect(err).not.toBeInstanceOf(NonRetriableError)
+      expect(err).not.toBeInstanceOf(ConflictError)
     }
   })
 })

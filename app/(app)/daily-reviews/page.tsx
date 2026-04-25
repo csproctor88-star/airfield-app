@@ -18,6 +18,7 @@ import {
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
+import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 
 export default function DailyReviewsPage() {
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
@@ -54,6 +55,16 @@ export default function DailyReviewsPage() {
   }, [installationId])
 
   useEffect(() => { load() }, [load])
+
+  // Re-fetch when a daily_review_sign drains from the offline queue.
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (detail?.type === 'daily_review_sign') void load()
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+  }, [load])
 
   // Build list: every date from today back 14 days (surfaces days with no
   // row yet). "Today" honors the base's local reset time, not Zulu midnight.
