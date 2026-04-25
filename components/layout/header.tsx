@@ -27,6 +27,27 @@ function presenceLabel(lastSeen: string | null): { label: string; color: string 
   return { label: 'Inactive', color: 'var(--color-text-3)' }
 }
 
+/**
+ * Watch the browser's online/offline state. Glidepath has no offline write
+ * queue today (every Supabase call is NetworkOnly via the service worker),
+ * so users need a visible signal before they tap File / Save / Submit and
+ * lose the action to a silent network error.
+ */
+function useOnlineStatus(): boolean {
+  const [online, setOnline] = useState(true)
+  useEffect(() => {
+    const update = () => setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true)
+    update()
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+  return online
+}
+
 export function Header() {
   const { resolvedTheme } = useTheme()
   const { isOpen, toggle } = useSidebar()
@@ -81,6 +102,7 @@ export function Header() {
   const baseIcao = currentInstallation?.icao || null
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || userRole) : null
   const presence = presenceLabel(lastSeen)
+  const isOnline = useOnlineStatus()
 
   return (
     <div
@@ -174,8 +196,26 @@ export function Header() {
 
           {/* Right: status + user */}
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600, marginBottom: 2 }}>
-              {presence.label}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginBottom: 2 }}>
+              {!isOnline && (
+                <span
+                  title="No network connection — submissions will fail. Your inspection drafts are still saved locally."
+                  style={{
+                    fontSize: 'var(--fs-2xs)',
+                    fontWeight: 700,
+                    color: '#fff',
+                    background: 'var(--color-danger, #DC2626)',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  OFFLINE
+                </span>
+              )}
+              <span style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600 }}>
+                {presence.label}
+              </span>
             </div>
             {userName && <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>{userName}</div>}
           </div>

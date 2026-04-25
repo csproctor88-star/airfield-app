@@ -1095,6 +1095,20 @@ export default function InspectionsPage() {
       return
     }
 
+    // Hard offline gate. Glidepath has no offline write queue today
+    // (next.config.js maps Supabase to NetworkOnly), so a File tap while
+    // offline writes nothing and silently fails partway. Bail out early
+    // with a clear message — the draft is already auto-saved to
+    // localStorage, so re-opening when reconnected resumes from where
+    // the user left off.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error(
+        "You're offline. Your inspection is saved as a draft — re-open and tap File when your connection is restored.",
+        { duration: 8000 },
+      )
+      return
+    }
+
     setSaving(true)
 
     const half = currentHalf
