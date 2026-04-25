@@ -18,6 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
 import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import type { InspectionFilePayload, InspectionFileResult } from '@/lib/sync/handlers'
+import { persistPendingPhoto } from '@/lib/sync/pending-photos'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
@@ -211,20 +212,49 @@ export default function InspectionsPage() {
         [itemId]: [...(prev[itemId] || []), { file, url, name: file.name }],
       }))
 
-      // Upload immediately if we have a DB row ID — so photos persist across navigation
-      if (dbRowId) {
-        const loc = itemLocations[itemId] || null
-        const { data: photoRow } = await uploadInspectionPhoto(dbRowId, file, itemId, loc?.lat, loc?.lon, installationId)
-        if (photoRow) {
-          // Store uploaded photo ID in the draft so it persists in localStorage
-          updateHalf((h) => {
-            const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
-            if (!uploadedPhotos[itemId]) uploadedPhotos[itemId] = []
-            uploadedPhotos[itemId].push(photoRow.id)
-            return { ...h, uploadedPhotos }
+      // Upload immediately if we have a DB row ID and we're online — so
+      // photos persist across navigation. On offline / transient
+      // failure, persist to pending-photos IDB so the user can finish
+      // the upload manually from the queue inspector.
+      const loc = itemLocations[itemId] || null
+      const persistAsPending = async () => {
+        if (!dbRowId) return
+        try {
+          await persistPendingPhoto({
+            entityType: 'inspection',
+            entityId: dbRowId,
+            blob: file,
+            filename: file.name,
+            mime: file.type || 'image/jpeg',
+            itemId,
+            latitude: loc?.lat,
+            longitude: loc?.lon,
+            baseId: installationId,
           })
-          toast.success('Photo uploaded')
+          toast.message('Photo saved locally — upload it from the queue pill when reconnected.')
+        } catch {
+          // IDB unavailable; photo is still in component state for now.
         }
+      }
+      if (dbRowId && (typeof navigator === 'undefined' || navigator.onLine)) {
+        try {
+          const { data: photoRow, error } = await uploadInspectionPhoto(dbRowId, file, itemId, loc?.lat, loc?.lon, installationId)
+          if (photoRow) {
+            updateHalf((h) => {
+              const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
+              if (!uploadedPhotos[itemId]) uploadedPhotos[itemId] = []
+              uploadedPhotos[itemId].push(photoRow.id)
+              return { ...h, uploadedPhotos }
+            })
+            toast.success('Photo uploaded')
+          } else if (error) {
+            await persistAsPending()
+          }
+        } catch {
+          await persistAsPending()
+        }
+      } else if (dbRowId) {
+        await persistAsPending()
       }
     }
   }
@@ -654,6 +684,8 @@ export default function InspectionsPage() {
     const dbRowId = currentHalf?.dbRowId
     const fileArr = Array.from(files)
     const count = fileArr.length
+    let uploaded = 0
+    let pending = 0
     for (const file of fileArr) {
       const url = URL.createObjectURL(file)
       setDiscPhotos((prev) => {
@@ -663,22 +695,56 @@ export default function InspectionsPage() {
         return { ...prev, [itemId]: arr }
       })
 
-      // Upload immediately so photos persist across navigation
-      if (dbRowId) {
-        const loc = currentHalf?.discrepancies[itemId]?.[discIndex]?.location || null
-        const { data: photoRow } = await uploadInspectionPhoto(dbRowId, file, itemId, loc?.lat, loc?.lon, installationId, discIndex)
-        if (photoRow) {
-          updateHalf((h) => {
-            const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
-            const key = `${itemId}:${discIndex}`
-            if (!uploadedPhotos[key]) uploadedPhotos[key] = []
-            uploadedPhotos[key].push(photoRow.id)
-            return { ...h, uploadedPhotos }
+      const loc = currentHalf?.discrepancies[itemId]?.[discIndex]?.location || null
+      const persistAsPending = async () => {
+        if (!dbRowId) return
+        try {
+          await persistPendingPhoto({
+            entityType: 'inspection',
+            entityId: dbRowId,
+            blob: file,
+            filename: file.name,
+            mime: file.type || 'image/jpeg',
+            itemId,
+            issueIndex: discIndex,
+            latitude: loc?.lat,
+            longitude: loc?.lon,
+            baseId: installationId,
           })
+          pending++
+        } catch {
+          // IDB unavailable; photo is still in component state.
         }
       }
+      if (dbRowId && (typeof navigator === 'undefined' || navigator.onLine)) {
+        try {
+          const { data: photoRow, error } = await uploadInspectionPhoto(dbRowId, file, itemId, loc?.lat, loc?.lon, installationId, discIndex)
+          if (photoRow) {
+            updateHalf((h) => {
+              const uploadedPhotos = { ...(h.uploadedPhotos || {}) }
+              const key = `${itemId}:${discIndex}`
+              if (!uploadedPhotos[key]) uploadedPhotos[key] = []
+              uploadedPhotos[key].push(photoRow.id)
+              return { ...h, uploadedPhotos }
+            })
+            uploaded++
+          } else if (error) {
+            await persistAsPending()
+          }
+        } catch {
+          await persistAsPending()
+        }
+      } else if (dbRowId) {
+        await persistAsPending()
+      }
     }
-    toast.success(`${count} photo${count > 1 ? 's' : ''} uploaded`)
+    if (uploaded === count) {
+      toast.success(`${count} photo${count > 1 ? 's' : ''} uploaded`)
+    } else if (uploaded > 0) {
+      toast.success(`${uploaded} of ${count} uploaded; ${pending} saved locally for later upload.`)
+    } else if (pending > 0) {
+      toast.message(`${pending} photo${pending > 1 ? 's' : ''} saved locally — upload from the queue pill when reconnected.`)
+    }
   }
 
   const handleDiscRemovePhoto = (itemId: string, discIndex: number, photoIdx: number) => {
