@@ -23,6 +23,8 @@ import type {
   ActivityLogInsertPayload,
   InfrastructureFeatureStatusUpdatePayload,
   OutageEventCreatePayload,
+  DiscrepancyCreatePayload,
+  DiscrepancyCreateResult,
 } from '@/lib/sync/handlers'
 import { persistPendingPhoto } from '@/lib/sync/pending-photos'
 import { logActivity } from '@/lib/supabase/activity'
@@ -1251,7 +1253,19 @@ export default function InspectionsPage() {
       await updateAirfieldStatus(statusBatch as any, installationId)
     }
 
+    // Resolve the filing user up front so the discrepancy queue writes
+    // below can stamp it on their meta. (Used to live below the disc
+    // loop alongside the file step.)
+    const filer = await getInspectorName()
+    const filerName = filer.name || (usingDemo ? 'Demo Inspector' : 'Unknown')
+    const filerId = filer.id
+
     // ── Create discrepancies for any issues toggled "Log as Discrepancy" ──
+    // Each disc gets a client-allocated UUID up front so that downstream
+    // writes (NAVAID inop, photo links, outage events) can FK against
+    // it whether the create committed inline or queued for later drain.
+    // The committed path uses the same UUID; PostgreSQL treats a
+    // client-supplied id the same as gen_random_uuid().
     let discCreated = 0
     for (const [itemId, discs] of Object.entries(completedHalf.discrepancies || {})) {
       for (let discIdx = 0; discIdx < discs.length; discIdx++) {
@@ -1263,7 +1277,9 @@ export default function InspectionsPage() {
         const discType = hasLinkedFeatures ? 'lighting' : (d.discrepancy_type || 'other')
         const discLocation = d.discrepancy_location_text || d.location_text || 'Unknown'
 
-        const { data: disc, error: discErr } = await createDiscrepancy({
+        const discId = crypto.randomUUID()
+        const discPayload: DiscrepancyCreatePayload = {
+          id: discId,
           title: discTitle,
           description: d.comment,
           location_text: discLocation,
@@ -1273,33 +1289,65 @@ export default function InspectionsPage() {
           longitude: d.location?.lon ?? null,
           base_id: installationId,
           infrastructure_feature_id: hasLinkedFeatures ? d.linked_feature_ids![0] : undefined,
-        })
+        }
 
-        if (discErr || !disc) {
-          toast.error(`Failed to create discrepancy: ${discErr}`)
+        let discResultStatus: 'committed' | 'queued' = 'queued'
+        try {
+          const result = await getWriteQueue().enqueueOrExecute<
+            DiscrepancyCreatePayload,
+            DiscrepancyCreateResult
+          >('discrepancy_create', discPayload, {
+            baseId: installationId || '',
+            userId: filerId || '',
+            optimisticEntityId: discId,
+          })
+          discResultStatus = result.status
+        } catch (err) {
+          // NonRetriable / Conflict thrown — toast and skip; the user
+          // will see the failure in the inspector's NEEDS REVIEW pill.
+          const message = err instanceof Error ? err.message : String(err)
+          toast.error(`Failed to create discrepancy: ${message}`)
           continue
         }
 
-        d.generated_discrepancy_id = disc.id
+        // Either way, the row's id is the pre-allocated UUID. Stash it
+        // on the draft so other code paths reference the right id.
+        d.generated_discrepancy_id = discId
 
-        // Mark linked NAVAID feature as inoperative
-        if (hasLinkedFeatures) {
+        // Mark linked NAVAID feature as inoperative. This same call is
+        // also enqueued in bulk later for queued inspections; keeping
+        // the per-disc inline call here preserves the single-feature
+        // fast path for the committed case. For queued discs we let
+        // the bulk enqueue cover it (the bail block builds the same
+        // list from completedHalf.discrepancies).
+        if (hasLinkedFeatures && discResultStatus === 'committed') {
           await updateFeatureStatus(d.linked_feature_ids![0], 'inoperative')
         }
 
-        // Photos added during the inspection are uploaded immediately to the
-        // `photos` table tagged with inspection_id + issue_index. Re-link those
-        // rows to the new discrepancy so they survive draft resume / cross-device.
+        // Photos: link existing uploaded photo rows to this disc id.
+        // Works whether the disc committed or queued because the id
+        // is the same in both cases. linkPhotosToDiscrepancy is a
+        // standalone Supabase write that will fail offline; if so the
+        // user re-links manually from the photo or relies on the
+        // offline queue once that operation is wrapped in a future
+        // session.
         const key = `${itemId}:${discIdx}`
         const uploadedIds = completedHalf.uploadedPhotos?.[key] || []
         if (uploadedIds.length > 0) {
-          await linkPhotosToDiscrepancy(uploadedIds, disc.id)
-        } else {
-          // Fallback for the case where photos were captured but never uploaded
-          // (e.g. no dbRowId at capture time). Upload directly from the blob.
+          try {
+            await linkPhotosToDiscrepancy(uploadedIds, discId)
+          } catch {
+            // Linking failure is non-critical for the inspection flow.
+          }
+        } else if (discResultStatus === 'committed') {
+          // Inline upload only on the committed path — for the queued
+          // path the disc photos either persisted via the inspection's
+          // photo handler (entityType='inspection') or remain in
+          // memory; lifting the inspection gate elsewhere routes them
+          // to pending-photos with entityType='discrepancy'.
           const photos = discPhotos[itemId]?.[discIdx] || []
           for (const photo of photos) {
-            await uploadDiscrepancyPhoto(disc.id, photo.file, installationId)
+            await uploadDiscrepancyPhoto(discId, photo.file, installationId)
           }
         }
         discCreated++
@@ -1314,9 +1362,6 @@ export default function InspectionsPage() {
     const label = activeForm === 'airfield' ? 'Airfield' : 'Lighting'
 
     // ── File to DB ──
-    const filer = await getInspectorName()
-    const filerName = filer.name || (usingDemo ? 'Demo Inspector' : 'Unknown')
-    const filerId = filer.id
     let filedEntityId: string | null = completedHalf.dbRowId || null
     let filedDisplayId: string | null = null
     if (completedHalf.dbRowId) {

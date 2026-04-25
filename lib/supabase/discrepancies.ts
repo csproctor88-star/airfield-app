@@ -77,6 +77,12 @@ export async function fetchDiscrepancy(id: string): Promise<DiscrepancyRow | nul
 }
 
 export async function createDiscrepancy(input: {
+  /** Optional client-supplied UUID. Lets callers pre-allocate the id
+   *  so other writes (photos, outage events) can FK against the row
+   *  before the queue has actually drained the create. Postgres uses
+   *  the supplied value when present and falls back to gen_random_uuid()
+   *  otherwise. */
+  id?: string
   title: string
   description: string
   location_text: string
@@ -129,6 +135,7 @@ export async function createDiscrepancy(input: {
     infrastructure_feature_id: input.infrastructure_feature_id ?? null,
     lighting_system_id: input.lighting_system_id ?? null,
   }
+  if (input.id) row.id = input.id
   if (input.assigned_shop) row.assigned_shop = input.assigned_shop
   if (input.estimated_completion_date) row.estimated_completion_date = input.estimated_completion_date
   if (input.project_number) row.project_number = input.project_number

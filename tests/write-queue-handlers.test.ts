@@ -45,6 +45,11 @@ const { state } = vi.hoisted(() => ({
       throw: null as Error | null,
       calls: [] as unknown[],
     },
+    discrepancy: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
   },
 }))
 
@@ -105,6 +110,14 @@ vi.mock('@/lib/supabase/outage-events', () => ({
   }),
 }))
 
+vi.mock('@/lib/supabase/discrepancies', () => ({
+  createDiscrepancy: vi.fn(async (payload: unknown) => {
+    state.discrepancy.calls.push(payload)
+    if (state.discrepancy.throw) throw state.discrepancy.throw
+    return state.discrepancy.next
+  }),
+}))
+
 vi.mock('@/lib/supabase/activity', () => ({
   logActivity: vi.fn(
     async (
@@ -150,6 +163,7 @@ beforeEach(() => {
   state.bulkUpdate = { next: 0, throw: null, calls: [] }
   state.outageEvent = { next: null, throw: null, calls: [] }
   state.activity = { next: { error: null }, throw: null, calls: [] }
+  state.discrepancy = { next: { data: null, error: null }, throw: null, calls: [] }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -475,6 +489,52 @@ describe('activity_log_insert handler', () => {
         entity_type: 'inspection',
         entity_id: 'insp-1',
         createdAt: '2026-04-25T14:32:00Z',
+      }),
+    ).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+})
+
+describe('discrepancy_create handler', () => {
+  it('returns the row on success', async () => {
+    const handler = HANDLERS.discrepancy_create!
+    state.discrepancy.next = { data: { id: 'pre-allocated-uuid', display_id: 'D-2026-ABCD' }, error: null }
+    const result = await handler({
+      id: 'pre-allocated-uuid',
+      title: 'BWN runway light out',
+      description: 'TWY K south side bulb 3',
+      location_text: 'TWY K',
+      type: 'lighting',
+      base_id: 'base-a',
+    })
+    expect(result).toMatchObject({ id: 'pre-allocated-uuid' })
+    // The pre-allocated id must be passed through to createDiscrepancy
+    expect((state.discrepancy.calls[0] as { id?: string }).id).toBe('pre-allocated-uuid')
+  })
+
+  it('throws NonRetriableError on a structured error', async () => {
+    const handler = HANDLERS.discrepancy_create!
+    state.discrepancy.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(
+      handler({
+        id: 'x',
+        title: 't',
+        description: 'd',
+        location_text: 'L',
+        type: 'other',
+      }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats "Failed to fetch" as transient', async () => {
+    const handler = HANDLERS.discrepancy_create!
+    state.discrepancy.next = { data: null, error: 'Failed to fetch' }
+    await expect(
+      handler({
+        id: 'x',
+        title: 't',
+        description: 'd',
+        location_text: 'L',
+        type: 'other',
       }),
     ).rejects.not.toBeInstanceOf(NonRetriableError)
   })

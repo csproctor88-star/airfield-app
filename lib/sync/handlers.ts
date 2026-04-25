@@ -34,6 +34,7 @@ import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { logActivity } from '@/lib/supabase/activity'
+import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import {
   ConflictError,
   NonRetriableError,
@@ -151,6 +152,22 @@ const dailyReviewSignHandler: WriteHandler<
     }
   }
   const { data, error } = await signDailyReview(payload)
+  if (error) throwForStructuredError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
+// discrepancy_create
+// ---------------------------------------------------------------------------
+
+export type DiscrepancyCreatePayload = Parameters<typeof createDiscrepancy>[0]
+export type DiscrepancyCreateResult = Awaited<ReturnType<typeof createDiscrepancy>>['data']
+
+const discrepancyCreateHandler: WriteHandler<
+  DiscrepancyCreatePayload,
+  DiscrepancyCreateResult
+> = async (payload) => {
+  const { data, error } = await createDiscrepancy(payload)
   if (error) throwForStructuredError(error)
   return data
 }
@@ -279,6 +296,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   )
   queue.registerHandler('outage_event_create', outageEventCreateHandler)
   queue.registerHandler('activity_log_insert', activityLogInsertHandler)
+  queue.registerHandler('discrepancy_create', discrepancyCreateHandler)
 }
 
 /**
@@ -294,4 +312,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   infrastructure_feature_status_update: infrastructureFeatureStatusUpdateHandler,
   outage_event_create: outageEventCreateHandler,
   activity_log_insert: activityLogInsertHandler,
+  discrepancy_create: discrepancyCreateHandler,
 }
