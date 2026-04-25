@@ -1,12 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
   WRITE_COMMITTED_EVENT,
   getWriteQueue,
 } from '@/lib/sync/write-queue'
 import type { QueuedWrite, QueueStatus, WriteType } from '@/lib/sync/types'
+import {
+  PENDING_PHOTOS_CHANGED_EVENT,
+  deletePendingPhoto,
+  getPendingPhotoStorage,
+  type PendingPhoto,
+} from '@/lib/sync/pending-photos'
+import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
 
 interface QueueInspectorProps {
   open: boolean
@@ -44,19 +51,164 @@ function formatAge(iso: string, now: number = Date.now()): string {
   return `${d} day${d === 1 ? '' : 's'} ago`
 }
 
+/** Dispatch a single PendingPhoto to the right CRUD module by entityType. */
+async function uploadPendingPhoto(photo: PendingPhoto): Promise<{ ok: boolean; error?: string }> {
+  // The Blob came back from IndexedDB; rewrap as a File so existing
+  // CRUD modules that introspect file.name see the original filename.
+  const file = new File([photo.blob], photo.filename, { type: photo.mime })
+  if (photo.entityType === 'inspection') {
+    const { data, error } = await uploadInspectionPhoto(
+      photo.entityId,
+      file,
+      photo.itemId ?? null,
+      photo.latitude ?? null,
+      photo.longitude ?? null,
+      photo.baseId ?? null,
+      photo.issueIndex ?? null,
+    )
+    if (error || !data) return { ok: false, error: error ?? 'Upload failed' }
+    return { ok: true }
+  }
+  // Other entityTypes will land later (check / acsi / discrepancy / wildlife / parking).
+  return { ok: false, error: `Upload not yet wired for ${photo.entityType}` }
+}
+
+interface PhotoRowProps {
+  photo: PendingPhoto
+  busy: boolean
+  onUpload: (photo: PendingPhoto) => void
+  onDiscard: (photo: PendingPhoto) => void
+}
+
+/**
+ * Per-photo row. Manages its own object URL so the parent doesn't have
+ * to track URLs across renders / removals.
+ */
+function PhotoRow({ photo, busy, onUpload, onDiscard }: PhotoRowProps) {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    const url = URL.createObjectURL(photo.blob)
+    setThumbUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [photo.blob])
+
+  const sizeKb = Math.round(photo.blob.size / 1024)
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--color-border-mid, #333)',
+        borderRadius: 'var(--radius-md)',
+        padding: 8,
+        background: 'var(--color-bg-surface, rgba(255,255,255,0.02))',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'center',
+      }}
+    >
+      {thumbUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thumbUrl}
+          alt={photo.filename}
+          style={{
+            width: 56,
+            height: 56,
+            objectFit: 'cover',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border-mid, #333)',
+            flexShrink: 0,
+          }}
+        />
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 'var(--fs-xs, 12px)',
+            color: 'var(--color-text-1, #fff)',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {photo.filename}
+        </div>
+        <div
+          style={{
+            fontSize: 'var(--fs-2xs, 11px)',
+            color: 'var(--color-text-3, #888)',
+            marginTop: 2,
+          }}
+        >
+          {formatAge(photo.createdAt)} · {sizeKb} KB
+          {photo.itemId && ` · ${photo.itemId}`}
+          {typeof photo.issueIndex === 'number' && ` · disc #${photo.issueIndex + 1}`}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+        <button
+          type="button"
+          onClick={() => onUpload(photo)}
+          disabled={busy}
+          style={{
+            padding: '4px 8px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-accent, #38BDF8)',
+            background: 'transparent',
+            color: 'var(--color-accent, #38BDF8)',
+            fontWeight: 600,
+            fontSize: 'var(--fs-2xs, 11px)',
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          Upload
+        </button>
+        <button
+          type="button"
+          onClick={() => onDiscard(photo)}
+          disabled={busy}
+          style={{
+            padding: '4px 8px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-danger, #DC2626)',
+            background: 'transparent',
+            color: 'var(--color-danger, #DC2626)',
+            fontWeight: 600,
+            fontSize: 'var(--fs-2xs, 11px)',
+            cursor: busy ? 'default' : 'pointer',
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          Discard
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function QueueInspector({ open, onClose }: QueueInspectorProps) {
   const [items, setItems] = useState<QueuedWrite[]>([])
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [photos, setPhotos] = useState<PendingPhoto[]>([])
+  const [busyWriteId, setBusyWriteId] = useState<string | null>(null)
+  const [busyPhotoId, setBusyPhotoId] = useState<string | null>(null)
+  const [uploadingAll, setUploadingAll] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
-      const all = await getWriteQueue().list()
-      // Sort newest-first so the just-queued item is at the top.
-      all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      setItems(all)
+      const [allWrites, allPhotos] = await Promise.all([
+        getWriteQueue().list(),
+        getPendingPhotoStorage().list(),
+      ])
+      allWrites.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      allPhotos.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      setItems(allWrites)
+      setPhotos(allPhotos)
     } catch {
-      // IDB may be unavailable — leave list empty.
       setItems([])
+      setPhotos([])
     }
   }, [])
 
@@ -64,24 +216,26 @@ export function QueueInspector({ open, onClose }: QueueInspectorProps) {
     if (!open) return
     refresh()
 
-    const onCommit = () => refresh()
+    const onChange = () => refresh()
     const onVisible = () => {
       if (document.visibilityState === 'visible') refresh()
     }
     const interval = window.setInterval(refresh, 2000)
-    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    window.addEventListener(WRITE_COMMITTED_EVENT, onChange)
+    window.addEventListener(PENDING_PHOTOS_CHANGED_EVENT, onChange)
     document.addEventListener('visibilitychange', onVisible)
 
     return () => {
       window.clearInterval(interval)
-      window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+      window.removeEventListener(WRITE_COMMITTED_EVENT, onChange)
+      window.removeEventListener(PENDING_PHOTOS_CHANGED_EVENT, onChange)
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [open, refresh])
 
   const handleRetry = useCallback(
     async (item: QueuedWrite) => {
-      setBusyId(item.id)
+      setBusyWriteId(item.id)
       try {
         const queue = getWriteQueue()
         await queue.resetForRetry(item.id)
@@ -97,7 +251,7 @@ export function QueueInspector({ open, onClose }: QueueInspectorProps) {
       } catch (err) {
         toast.error(`Retry failed: ${err instanceof Error ? err.message : String(err)}`)
       } finally {
-        setBusyId(null)
+        setBusyWriteId(null)
       }
     },
     [refresh],
@@ -109,16 +263,85 @@ export function QueueInspector({ open, onClose }: QueueInspectorProps) {
         `Discard this ${TYPE_LABELS[item.type] || item.type}? The submission will not be recovered.`,
       )
       if (!ok) return
-      setBusyId(item.id)
+      setBusyWriteId(item.id)
       try {
         await getWriteQueue().discard(item.id)
         await refresh()
       } finally {
-        setBusyId(null)
+        setBusyWriteId(null)
       }
     },
     [refresh],
   )
+
+  const handlePhotoUpload = useCallback(
+    async (photo: PendingPhoto) => {
+      setBusyPhotoId(photo.id)
+      try {
+        const result = await uploadPendingPhoto(photo)
+        if (result.ok) {
+          await deletePendingPhoto(photo.id)
+          toast.success('Photo uploaded.')
+        } else {
+          toast.error(result.error || 'Upload failed')
+        }
+        await refresh()
+      } catch (err) {
+        toast.error(`Upload failed: ${err instanceof Error ? err.message : String(err)}`)
+      } finally {
+        setBusyPhotoId(null)
+      }
+    },
+    [refresh],
+  )
+
+  const handlePhotoDiscard = useCallback(
+    async (photo: PendingPhoto) => {
+      const ok = window.confirm(
+        `Discard ${photo.filename}? The photo will be deleted from this device.`,
+      )
+      if (!ok) return
+      setBusyPhotoId(photo.id)
+      try {
+        await deletePendingPhoto(photo.id)
+        await refresh()
+      } finally {
+        setBusyPhotoId(null)
+      }
+    },
+    [refresh],
+  )
+
+  const handleUploadAll = useCallback(async () => {
+    if (photos.length === 0) return
+    setUploadingAll(true)
+    let ok = 0
+    let failed = 0
+    for (const photo of photos) {
+      const result = await uploadPendingPhoto(photo)
+      if (result.ok) {
+        await deletePendingPhoto(photo.id)
+        ok++
+      } else {
+        failed++
+      }
+    }
+    await refresh()
+    setUploadingAll(false)
+    if (failed === 0) {
+      toast.success(`Uploaded ${ok} photo${ok === 1 ? '' : 's'}.`)
+    } else {
+      toast.error(`Uploaded ${ok} of ${ok + failed}; ${failed} failed.`)
+    }
+  }, [photos, refresh])
+
+  const totalCount = items.length + photos.length
+  const titleSuffix = useMemo(() => {
+    const parts: string[] = []
+    if (items.length > 0) parts.push(`${items.length} write${items.length === 1 ? '' : 's'}`)
+    if (photos.length > 0) parts.push(`${photos.length} photo${photos.length === 1 ? '' : 's'}`)
+    return parts.length > 0 ? ` (${parts.join(', ')})` : ''
+  }, [items.length, photos.length])
 
   if (!open) return null
 
@@ -153,19 +376,17 @@ export function QueueInspector({ open, onClose }: QueueInspectorProps) {
               color: 'var(--color-text-1, #fff)',
             }}
           >
-            Pending writes
-            {items.length > 0 && (
-              <span
-                style={{
-                  marginLeft: 8,
-                  fontSize: 'var(--fs-sm, 13px)',
-                  color: 'var(--color-text-3, #888)',
-                  fontWeight: 500,
-                }}
-              >
-                ({items.length})
-              </span>
-            )}
+            Pending sync
+            <span
+              style={{
+                marginLeft: 8,
+                fontSize: 'var(--fs-sm, 13px)',
+                color: 'var(--color-text-3, #888)',
+                fontWeight: 500,
+              }}
+            >
+              {titleSuffix}
+            </span>
           </span>
           <button
             type="button"
@@ -185,145 +406,219 @@ export function QueueInspector({ open, onClose }: QueueInspectorProps) {
           </button>
         </div>
 
-        {items.length === 0 ? (
-          <div
-            style={{
-              padding: '32px 16px',
-              textAlign: 'center',
-              color: 'var(--color-text-3, #888)',
-              fontSize: 'var(--fs-sm, 13px)',
-            }}
-          >
-            No pending writes. All submissions are synced.
-          </div>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-              overflowY: 'auto',
-              paddingRight: 4,
-            }}
-          >
-            {items.map((item) => {
-              const status = STATUS_COLORS[item.status]
-              const busy = busyId === item.id
-              return (
-                <div
-                  key={item.id}
-                  style={{
-                    border: '1px solid var(--color-border-mid, #333)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 12,
-                    background: 'var(--color-bg-surface, rgba(255,255,255,0.02))',
-                  }}
-                >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+            overflowY: 'auto',
+            paddingRight: 4,
+          }}
+        >
+          {totalCount === 0 ? (
+            <div
+              style={{
+                padding: '32px 16px',
+                textAlign: 'center',
+                color: 'var(--color-text-3, #888)',
+                fontSize: 'var(--fs-sm, 13px)',
+              }}
+            >
+              All caught up. No pending writes or photos.
+            </div>
+          ) : (
+            <>
+              {items.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      fontSize: 'var(--fs-2xs, 11px)',
+                      fontWeight: 700,
+                      color: 'var(--color-text-3, #888)',
+                      letterSpacing: '0.08em',
+                      marginBottom: 6,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Writes ({items.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {items.map((item) => {
+                      const status = STATUS_COLORS[item.status]
+                      const busy = busyWriteId === item.id
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            border: '1px solid var(--color-border-mid, #333)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: 12,
+                            background: 'var(--color-bg-surface, rgba(255,255,255,0.02))',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: 12,
+                              marginBottom: 6,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: 'var(--color-text-1, #fff)',
+                                fontSize: 'var(--fs-sm, 13px)',
+                              }}
+                            >
+                              {TYPE_LABELS[item.type] || item.type}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: 'var(--fs-2xs, 11px)',
+                                fontWeight: 700,
+                                color: status.fg,
+                                background: status.bg,
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                letterSpacing: '0.05em',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {status.label}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: 12,
+                              fontSize: 'var(--fs-2xs, 11px)',
+                              color: 'var(--color-text-3, #888)',
+                              marginBottom: item.lastError ? 6 : 0,
+                            }}
+                          >
+                            <span>{formatAge(item.createdAt)}</span>
+                            {item.attempts > 0 && (
+                              <span>
+                                {item.attempts} attempt{item.attempts === 1 ? '' : 's'}
+                              </span>
+                            )}
+                          </div>
+                          {item.lastError && (
+                            <div
+                              style={{
+                                fontSize: 'var(--fs-xs, 12px)',
+                                color: 'var(--color-text-2, #ccc)',
+                                marginBottom: 8,
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {item.lastError}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRetry(item)}
+                              disabled={busy}
+                              style={{
+                                flex: 1,
+                                padding: '6px 10px',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid var(--color-accent, #38BDF8)',
+                                background: 'transparent',
+                                color: 'var(--color-accent, #38BDF8)',
+                                fontWeight: 600,
+                                fontSize: 'var(--fs-xs, 12px)',
+                                cursor: busy ? 'default' : 'pointer',
+                                opacity: busy ? 0.5 : 1,
+                              }}
+                            >
+                              {busy ? 'Working…' : 'Retry now'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDiscard(item)}
+                              disabled={busy}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid var(--color-danger, #DC2626)',
+                                background: 'transparent',
+                                color: 'var(--color-danger, #DC2626)',
+                                fontWeight: 600,
+                                fontSize: 'var(--fs-xs, 12px)',
+                                cursor: busy ? 'default' : 'pointer',
+                                opacity: busy ? 0.5 : 1,
+                              }}
+                            >
+                              Discard
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {photos.length > 0 && (
+                <div>
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      gap: 12,
                       marginBottom: 6,
                     }}
                   >
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        color: 'var(--color-text-1, #fff)',
-                        fontSize: 'var(--fs-sm, 13px)',
-                      }}
-                    >
-                      {TYPE_LABELS[item.type] || item.type}
-                    </span>
-                    <span
+                    <div
                       style={{
                         fontSize: 'var(--fs-2xs, 11px)',
                         fontWeight: 700,
-                        color: status.fg,
-                        background: status.bg,
-                        padding: '2px 8px',
-                        borderRadius: 4,
-                        letterSpacing: '0.05em',
+                        color: 'var(--color-text-3, #888)',
+                        letterSpacing: '0.08em',
                         textTransform: 'uppercase',
                       }}
                     >
-                      {status.label}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 12,
-                      fontSize: 'var(--fs-2xs, 11px)',
-                      color: 'var(--color-text-3, #888)',
-                      marginBottom: item.lastError ? 6 : 0,
-                    }}
-                  >
-                    <span>{formatAge(item.createdAt)}</span>
-                    {item.attempts > 0 && (
-                      <span>
-                        {item.attempts} attempt{item.attempts === 1 ? '' : 's'}
-                      </span>
-                    )}
-                  </div>
-                  {item.lastError && (
-                    <div
-                      style={{
-                        fontSize: 'var(--fs-xs, 12px)',
-                        color: 'var(--color-text-2, #ccc)',
-                        marginBottom: 8,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {item.lastError}
+                      Photos waiting ({photos.length})
                     </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       type="button"
-                      onClick={() => handleRetry(item)}
-                      disabled={busy}
+                      onClick={handleUploadAll}
+                      disabled={uploadingAll || photos.length === 0}
                       style={{
-                        flex: 1,
-                        padding: '6px 10px',
+                        padding: '4px 10px',
                         borderRadius: 'var(--radius-sm)',
                         border: '1px solid var(--color-accent, #38BDF8)',
                         background: 'transparent',
                         color: 'var(--color-accent, #38BDF8)',
                         fontWeight: 600,
-                        fontSize: 'var(--fs-xs, 12px)',
-                        cursor: busy ? 'default' : 'pointer',
-                        opacity: busy ? 0.5 : 1,
+                        fontSize: 'var(--fs-2xs, 11px)',
+                        cursor: uploadingAll ? 'default' : 'pointer',
+                        opacity: uploadingAll ? 0.5 : 1,
                       }}
                     >
-                      {busy ? 'Working…' : 'Retry now'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDiscard(item)}
-                      disabled={busy}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 'var(--radius-sm)',
-                        border: '1px solid var(--color-danger, #DC2626)',
-                        background: 'transparent',
-                        color: 'var(--color-danger, #DC2626)',
-                        fontWeight: 600,
-                        fontSize: 'var(--fs-xs, 12px)',
-                        cursor: busy ? 'default' : 'pointer',
-                        opacity: busy ? 0.5 : 1,
-                      }}
-                    >
-                      Discard
+                      {uploadingAll ? 'Uploading…' : 'Upload all'}
                     </button>
                   </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {photos.map((photo) => (
+                      <PhotoRow
+                        key={photo.id}
+                        photo={photo}
+                        busy={busyPhotoId === photo.id || uploadingAll}
+                        onUpload={handlePhotoUpload}
+                        onDiscard={handlePhotoDiscard}
+                      />
+                    ))}
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -6,6 +6,10 @@ import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { getWriteQueue } from '@/lib/sync/write-queue'
+import {
+  PENDING_PHOTOS_CHANGED_EVENT,
+  getPendingPhotoStorage,
+} from '@/lib/sync/pending-photos'
 import { QueueInspector } from '@/components/sync/queue-inspector'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
 
@@ -51,27 +55,33 @@ function useOnlineStatus(): boolean {
 }
 
 /**
- * Pending + needs-attention counts from the offline queue. Polls every
- * 3s while visible plus immediate refresh on `online`, `visibilitychange`,
- * `focus`, and on every `glidepath:write-committed` event. Returns
- * { pending, attention } so the header can render two distinct pills.
+ * Pending writes, attention writes, and pending photos counts. Polled
+ * every 3s while visible plus immediate refresh on online /
+ * visibilitychange / focus / write-committed / pending-photos-changed.
  *
- * Pending = retriable items waiting for the next drain.
- * Attention = failed or conflict items the user must resolve manually.
+ * Pending = retriable queued writes waiting for the next drain.
+ * Attention = failed or conflict writes the user must resolve manually.
+ * Photos = blobs persisted to IDB awaiting manual upload.
  */
-function useQueueCounts(): { pending: number; attention: number } {
-  const [counts, setCounts] = useState({ pending: 0, attention: 0 })
+function useQueueCounts(): {
+  pending: number
+  attention: number
+  photos: number
+} {
+  const [counts, setCounts] = useState({ pending: 0, attention: 0, photos: 0 })
 
   useEffect(() => {
     let cancelled = false
     const queue = getWriteQueue()
+    const photoStore = getPendingPhotoStorage()
     const refresh = async () => {
       try {
-        const [pending, attention] = await Promise.all([
+        const [pending, attention, photos] = await Promise.all([
           queue.pendingCount(),
           queue.needsAttentionCount(),
+          photoStore.count(),
         ])
-        if (!cancelled) setCounts({ pending, attention })
+        if (!cancelled) setCounts({ pending, attention, photos })
       } catch {
         // Silent — IDB unavailable, etc.
       }
@@ -89,6 +99,7 @@ function useQueueCounts(): { pending: number; attention: number } {
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('glidepath:write-committed', refresh)
+    window.addEventListener(PENDING_PHOTOS_CHANGED_EVENT, refresh)
 
     return () => {
       cancelled = true
@@ -97,6 +108,7 @@ function useQueueCounts(): { pending: number; attention: number } {
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('glidepath:write-committed', refresh)
+      window.removeEventListener(PENDING_PHOTOS_CHANGED_EVENT, refresh)
     }
   }, [])
 
@@ -161,6 +173,7 @@ export function Header() {
   const queueCounts = useQueueCounts()
   const queueDepth = queueCounts.pending
   const queueAttention = queueCounts.attention
+  const photosWaiting = queueCounts.photos
   const [inspectorOpen, setInspectorOpen] = useState(false)
 
   return (
@@ -312,6 +325,27 @@ export function Header() {
                   }}
                 >
                   ● {queueAttention} NEEDS REVIEW
+                </button>
+              )}
+              {photosWaiting > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen(true)}
+                  title={`${photosWaiting} photo${photosWaiting === 1 ? '' : 's'} saved locally — click to upload now or discard.`}
+                  style={{
+                    fontSize: 'var(--fs-2xs)',
+                    fontWeight: 700,
+                    color: '#fff',
+                    background: 'var(--color-accent, #38BDF8)',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    letterSpacing: '0.05em',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  ● {photosWaiting} PHOTO{photosWaiting === 1 ? '' : 'S'} WAITING
                 </button>
               )}
               <span style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600 }}>
