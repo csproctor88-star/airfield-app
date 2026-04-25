@@ -6,6 +6,7 @@ import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { getWriteQueue } from '@/lib/sync/write-queue'
+import { QueueInspector } from '@/components/sync/queue-inspector'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -150,6 +151,7 @@ export function Header() {
   const presence = presenceLabel(lastSeen)
   const isOnline = useOnlineStatus()
   const queueDepth = useQueueDepth()
+  const [inspectorOpen, setInspectorOpen] = useState(false)
 
   return (
     <div
@@ -261,8 +263,10 @@ export function Header() {
                 </span>
               )}
               {queueDepth > 0 && (
-                <span
-                  title={`${queueDepth} write${queueDepth === 1 ? '' : 's'} queued — will sync automatically when the network returns.`}
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen(true)}
+                  title={`${queueDepth} write${queueDepth === 1 ? '' : 's'} queued — click to inspect, retry, or discard.`}
                   style={{
                     fontSize: 'var(--fs-2xs)',
                     fontWeight: 700,
@@ -271,10 +275,13 @@ export function Header() {
                     padding: '1px 6px',
                     borderRadius: 4,
                     letterSpacing: '0.05em',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
                   }}
                 >
                   ● {queueDepth} QUEUED
-                </span>
+                </button>
               )}
               <span style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600 }}>
                 {presence.label}
@@ -284,6 +291,7 @@ export function Header() {
           </div>
         </div>
       )}
+      <QueueInspector open={inspectorOpen} onClose={() => setInspectorOpen(false)} />
     </div>
   )
 }
