@@ -195,6 +195,16 @@ export class WriteQueue {
     return all.filter((w) => w.status === 'pending').length
   }
 
+  /**
+   * Count of items that have hit a terminal failure ('failed') or are
+   * blocked on user action ('conflict'). These do not count toward the
+   * pending pill — they need a Retry or Discard from the inspector.
+   */
+  async needsAttentionCount(): Promise<number> {
+    const all = await this.storage.list()
+    return all.filter((w) => w.status === 'failed' || w.status === 'conflict').length
+  }
+
   async clear(): Promise<void> {
     await this.storage.clear()
   }

@@ -436,4 +436,30 @@ describe('manual queue management', () => {
 
     expect(await queue.pendingCount()).toBe(1)
   })
+
+  it('needsAttentionCount counts only failed and conflict entries', async () => {
+    const { queue, online, clock } = makeHarness({ online: false })
+    queue.registerHandler('inspection_file', async () => {
+      throw new NonRetriableError('x')
+    })
+    queue.registerHandler('check_file', async () => {
+      throw new ConflictError('x')
+    })
+    queue.registerHandler('discrepancy_create', async () => {
+      throw new Error('transient')
+    })
+
+    await queue.enqueueOrExecute('inspection_file', {}, META) // → failed
+    await queue.enqueueOrExecute('check_file', {}, META) // → conflict
+    await queue.enqueueOrExecute('discrepancy_create', {}, META) // → pending after retry
+
+    expect(await queue.needsAttentionCount()).toBe(0)
+
+    online.value = true
+    clock.advanceMs(60_000)
+    await queue.drain()
+
+    expect(await queue.needsAttentionCount()).toBe(2)
+    expect(await queue.pendingCount()).toBe(1)
+  })
 })

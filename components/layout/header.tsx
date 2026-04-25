@@ -51,23 +51,29 @@ function useOnlineStatus(): boolean {
 }
 
 /**
- * Pending writes in the offline queue. Polls every 3s while the tab is
- * visible (cheap — reads IndexedDB) plus immediate refresh on `online`,
- * `visibilitychange`, and `focus`. Returns 0 when the queue is empty so
- * callers can skip rendering.
+ * Pending + needs-attention counts from the offline queue. Polls every
+ * 3s while visible plus immediate refresh on `online`, `visibilitychange`,
+ * `focus`, and on every `glidepath:write-committed` event. Returns
+ * { pending, attention } so the header can render two distinct pills.
+ *
+ * Pending = retriable items waiting for the next drain.
+ * Attention = failed or conflict items the user must resolve manually.
  */
-function useQueueDepth(): number {
-  const [count, setCount] = useState(0)
+function useQueueCounts(): { pending: number; attention: number } {
+  const [counts, setCounts] = useState({ pending: 0, attention: 0 })
 
   useEffect(() => {
     let cancelled = false
     const queue = getWriteQueue()
     const refresh = async () => {
       try {
-        const n = await queue.pendingCount()
-        if (!cancelled) setCount(n)
+        const [pending, attention] = await Promise.all([
+          queue.pendingCount(),
+          queue.needsAttentionCount(),
+        ])
+        if (!cancelled) setCounts({ pending, attention })
       } catch {
-        // Silent — IDB unavailable, etc. Pill just stays at 0.
+        // Silent — IDB unavailable, etc.
       }
     }
     refresh()
@@ -82,6 +88,7 @@ function useQueueDepth(): number {
     window.addEventListener('online', refresh)
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('glidepath:write-committed', refresh)
 
     return () => {
       cancelled = true
@@ -89,10 +96,11 @@ function useQueueDepth(): number {
       window.removeEventListener('online', refresh)
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('glidepath:write-committed', refresh)
     }
   }, [])
 
-  return count
+  return counts
 }
 
 export function Header() {
@@ -150,7 +158,9 @@ export function Header() {
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || userRole) : null
   const presence = presenceLabel(lastSeen)
   const isOnline = useOnlineStatus()
-  const queueDepth = useQueueDepth()
+  const queueCounts = useQueueCounts()
+  const queueDepth = queueCounts.pending
+  const queueAttention = queueCounts.attention
   const [inspectorOpen, setInspectorOpen] = useState(false)
 
   return (
@@ -281,6 +291,27 @@ export function Header() {
                   }}
                 >
                   ● {queueDepth} QUEUED
+                </button>
+              )}
+              {queueAttention > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setInspectorOpen(true)}
+                  title={`${queueAttention} write${queueAttention === 1 ? '' : 's'} need review — failed or conflict. Click to resolve.`}
+                  style={{
+                    fontSize: 'var(--fs-2xs)',
+                    fontWeight: 700,
+                    color: '#fff',
+                    background: 'var(--color-danger, #DC2626)',
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    letterSpacing: '0.05em',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  ● {queueAttention} NEEDS REVIEW
                 </button>
               )}
               <span style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600 }}>
