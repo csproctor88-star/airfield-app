@@ -52,25 +52,31 @@ Run this for:
 
 ---
 
-## Phase 3 — full offline (the gate holds)
+## Phase 3 — full offline
 
-For inspections + checks specifically:
+**Inspections** still have a hard gate:
 
-1. Start an inspection or check (online, normally)
+1. Start an inspection (online, normally)
 2. Switch throttle to **Offline**
-3. Tap File / Submit
-4. Expect a hard-fail toast: *"You're offline. Your inspection is saved as a draft — re-open and tap File when your connection is restored."* (or similar for checks)
+3. Tap File
+4. Expect a hard-fail toast: *"You're offline. Your inspection is saved as a draft — re-open and tap File when your connection is restored."*
 5. **Nothing should queue.** No QUEUED pill.
 
-This confirms we didn't accidentally allow fully-offline starts that would create partial state.
-
 - [ ] Inspection: hard-fail toast, no queue activity
-- [ ] Check: hard-fail toast, no queue activity
 
-ACSI and daily review do **not** have this gate (no FK fan-out from their call sites), so for those, fully offline → goes straight to the queue. Test that path too:
+The gate stays for inspections because the post-file flow fans out into discrepancy creates, NAVAID inop writes, and activity log entries that aren't queue-wrapped. The draft is preserved either way.
 
-- [ ] ACSI File while fully offline → queues
-- [ ] Daily review sign while fully offline → queues
+**Checks, ACSI, and daily review** all queue cleanly when fully offline:
+
+1. Disconnect WiFi or set DevTools throttle to **Offline**
+2. Submit / File / Sign
+
+- [ ] **Check Submit** while fully offline → queues. Toast wording is contextual:
+  - No photos / no log-as-discrepancy issues: *"Check queued — will save automatically when the network returns."*
+  - With photos or discrepancies: *"Check queued — will save automatically when the network returns. Re-add N photos and M discrepancies once reconnected."* (Photos / discrepancies are not yet queue-wrapped — slot #6 / #3 in the spec.)
+- [ ] Form resets to the type selector after submit; the user can immediately start another check while still offline (the "two checks on the airfield" workflow)
+- [ ] **ACSI File** while fully offline → queues
+- [ ] **Daily review sign** while fully offline → queues
 
 ---
 

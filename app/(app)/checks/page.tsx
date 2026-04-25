@@ -499,18 +499,11 @@ export default function AirfieldChecksPage() {
       return
     }
 
-    // Hard offline gate. Like inspections, the check submit fans out into
-    // photo uploads + discrepancy creates that aren't queue-wrapped yet.
-    // Once those wraps land (Offline_Write_Queue_Spec rollout slots #3 / #6),
-    // this gate can be relaxed. The check_file write itself is already
-    // queue-wrapped below to survive transient mid-call network drops.
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      toast.error(
-        "You're offline. Check submissions need a connection — try again when reconnected.",
-        { duration: 8000 },
-      )
-      return
-    }
+    // No hard offline gate — checks queue cleanly when the user is fully
+    // offline (e.g., walking the airfield without coverage). The queued
+    // path below resets the form and shows a contextual toast that names
+    // any photos / log-as-discrepancy issues that won't auto-sync, so
+    // the user knows what to re-add after reconnecting.
 
     setSaving(true)
 
@@ -574,6 +567,8 @@ export default function AirfieldChecksPage() {
         // The drain commits the check directly via the handler; the
         // recent-checks list refreshes via the WRITE_COMMITTED_EVENT
         // listener already wired on this page.
+        const photoCount = issuePhotos.flat().length
+        const logDiscCount = issues.filter((i) => i.log_as_discrepancy).length
         if (draftDbRowId) {
           await deleteCheckDraft(draftDbRowId)
           setDraftDbRowId(null)
@@ -591,10 +586,15 @@ export default function AirfieldChecksPage() {
         setCheckType('')
         resetTypeFields()
         setSaving(false)
-        toast.success(
-          'Check queued — will save automatically when the network returns. Re-add any photos or discrepancies once reconnected.',
-          { duration: 8000 },
-        )
+        const dataLoss: string[] = []
+        if (photoCount > 0) dataLoss.push(`${photoCount} photo${photoCount === 1 ? '' : 's'}`)
+        if (logDiscCount > 0) {
+          dataLoss.push(`${logDiscCount} discrepanc${logDiscCount === 1 ? 'y' : 'ies'}`)
+        }
+        const message = dataLoss.length > 0
+          ? `Check queued — will save automatically when the network returns. Re-add ${dataLoss.join(' and ')} once reconnected.`
+          : 'Check queued — will save automatically when the network returns.'
+        toast.success(message, { duration: 8000 })
         return
       }
     } catch (err) {
