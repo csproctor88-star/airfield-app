@@ -5,16 +5,21 @@
  * `{ data, error }`) into the throw-on-failure shape the queue expects.
  *
  * Error classification:
- *   - Structured error from the server (PostgrestError surfaced through
- *     fileInspection, etc.) → NonRetriableError. RLS denials, schema
- *     violations, FK errors — retry won't help.
- *   - Thrown TypeError / fetch failure → transient, default catch path
- *     so the queue retries with backoff.
+ *   - Structured error string matching a known network shape (e.g.,
+ *     "Failed to fetch", "NetworkError", "Load failed") → transient.
+ *     Supabase JS v2 surfaces fetch failures *structurally*, not as
+ *     thrown rejections, so we have to sniff them here or the queue
+ *     would mark them non-retriable and bail.
+ *   - Any other structured error → NonRetriableError. RLS denials,
+ *     schema violations, FK errors — retry won't help.
+ *   - Thrown error (rare in v2 but possible) → bubbles as transient by
+ *     default (queue's catch in enqueueOrExecute treats unknown throws
+ *     as transient).
  *
- * That heuristic mis-classifies transient 5xx/429 as non-retriable. Cost
- * is acceptable: those are rare in our deployment and the user can
- * "retry" from the queue inspector. Keeping it simple beats a regex over
- * friendlyError-mangled strings.
+ * Heuristic is intentionally conservative: a transient 5xx/429 returned
+ * structurally without a network-y message will still get marked
+ * non-retriable. Cost is acceptable — those are rare and the user can
+ * Retry from the inspector.
  */
 
 import { fileInspection } from '@/lib/supabase/inspections'
@@ -34,6 +39,40 @@ import {
 import { WriteQueue } from './write-queue'
 
 // ---------------------------------------------------------------------------
+// Error classification helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Recognize Supabase / fetch / browser network-error messages so we can
+ * mark them as transient (let the queue retry on next reconnect) rather
+ * than NonRetriable (terminal failure visible to the user as "save
+ * failed"). Each browser has its own wording; cover the common ones.
+ */
+const NETWORK_ERROR_RE =
+  /failed to fetch|networkerror|load failed|connection (refused|reset|timed out|aborted)|the network connection was lost|the operation couldn['']?t be completed|err_internet_disconnected|err_network|aborted/i
+
+function isNetworkErrorMessage(message: string): boolean {
+  if (!message) return false
+  if (NETWORK_ERROR_RE.test(message)) return true
+  // Also treat any structured error that arrives while navigator says
+  // we're offline as transient — covers messages we don't recognize.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true
+  return false
+}
+
+/**
+ * Throw the right error for a structured `{ data, error }` failure.
+ * Network shapes become plain Error (queue treats as transient);
+ * everything else is NonRetriable.
+ */
+function throwForStructuredError(message: string): never {
+  if (isNetworkErrorMessage(message)) {
+    throw new Error(message)
+  }
+  throw new NonRetriableError(message)
+}
+
+// ---------------------------------------------------------------------------
 // inspection_file
 // ---------------------------------------------------------------------------
 
@@ -45,7 +84,7 @@ const inspectionFileHandler: WriteHandler<
   InspectionFileResult
 > = async (payload) => {
   const { data, error } = await fileInspection(payload)
-  if (error) throw new NonRetriableError(error)
+  if (error) throwForStructuredError(error)
   return data
 }
 
@@ -60,7 +99,7 @@ const checkFileHandler: WriteHandler<CheckFilePayload, CheckFileResult> = async 
   payload,
 ) => {
   const { data, error } = await createCheck(payload)
-  if (error) throw new NonRetriableError(error)
+  if (error) throwForStructuredError(error)
   return data
 }
 
@@ -75,7 +114,7 @@ const acsiSubmitHandler: WriteHandler<AcsiSubmitPayload, AcsiSubmitResult> = asy
   payload,
 ) => {
   const { data, error } = await fileAcsiInspection(payload)
-  if (error) throw new NonRetriableError(error)
+  if (error) throwForStructuredError(error)
   return data
 }
 
@@ -108,7 +147,7 @@ const dailyReviewSignHandler: WriteHandler<
     }
   }
   const { data, error } = await signDailyReview(payload)
-  if (error) throw new NonRetriableError(error)
+  if (error) throwForStructuredError(error)
   return data
 }
 

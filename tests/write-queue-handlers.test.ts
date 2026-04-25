@@ -150,6 +150,26 @@ describe('inspection_file handler', () => {
     await expect(handler(INSPECTION_PAYLOAD)).rejects.toBeInstanceOf(NonRetriableError)
   })
 
+  it('treats a "Failed to fetch" structured error as transient (Supabase JS v2 returns network errors structurally)', async () => {
+    const handler = HANDLERS.inspection_file!
+    state.inspection.next = { data: null, error: 'Failed to fetch' }
+    let caught: unknown = null
+    try {
+      await handler(INSPECTION_PAYLOAD)
+    } catch (err) {
+      caught = err
+    }
+    expect(caught).not.toBeNull()
+    expect(caught).toBeInstanceOf(Error)
+    expect(caught).not.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats a "NetworkError" structured error as transient', async () => {
+    const handler = HANDLERS.inspection_file!
+    state.inspection.next = { data: null, error: 'NetworkError when attempting to fetch resource.' }
+    await expect(handler(INSPECTION_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+
   it('lets thrown fetch errors propagate so the queue treats them as transient', async () => {
     const handler = HANDLERS.inspection_file!
     state.inspection.throw = new TypeError('Failed to fetch')
