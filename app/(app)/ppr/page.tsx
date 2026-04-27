@@ -1121,60 +1121,74 @@ export default function PprPage() {
 
               {/* Requester */}
               {detailEntry.requester_name && (
-                <DetailSection title="Requester">
-                  <DetailRow label="Name" value={detailEntry.requester_name} />
-                  <DetailRow label="Email" value={detailEntry.requester_email || '—'} />
-                  {detailEntry.public_submission && (
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 4 }}>
-                      Submitted via public request form.
-                    </div>
-                  )}
-                </DetailSection>
+                <DetailSection
+                  title="Requester"
+                  rows={[
+                    { label: 'Name', value: detailEntry.requester_name },
+                    { label: 'Email', value: detailEntry.requester_email || '—' },
+                  ]}
+                  footnote={detailEntry.public_submission ? 'Submitted via public request form.' : undefined}
+                />
               )}
 
               {/* Schedule + form data */}
-              <DetailSection title="Request Details">
-                <DetailRow label="Arrival Date" value={detailEntry.arrival_date} />
-                {columns.map((c) => {
-                  const v = (detailEntry.column_values || {})[c.id]
-                  if (!v) return null
-                  return <DetailRow key={c.id} label={c.column_name} value={v} />
-                })}
-                {detailEntry.notes && <DetailRow label="Notes" value={detailEntry.notes} />}
-              </DetailSection>
+              <DetailSection
+                title="Request Details"
+                rows={[
+                  { label: 'Arrival Date', value: detailEntry.arrival_date },
+                  ...columns
+                    .map((c) => ({ label: c.column_name, value: (detailEntry.column_values || {})[c.id] || '' }))
+                    .filter((r) => r.value),
+                  ...(detailEntry.notes ? [{ label: 'Notes', value: detailEntry.notes }] : []),
+                ]}
+              />
 
               {/* Coordination */}
               {coords.length > 0 && (
-                <DetailSection title="Coordination">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {coords.map((row) => (
-                      <div key={row.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 8px', background: 'var(--color-bg-inset)', borderRadius: 4 }}>
-                        <span style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>{row.agency_name}</span>
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{
-                            fontSize: 'var(--fs-xs)', fontWeight: 700,
-                            color: row.status === 'concur' ? '#22c55e' : row.status === 'non_concur' ? '#ef4444' : 'var(--color-text-3)',
-                          }}>
-                            {row.status === 'concur' ? 'CONCUR' : row.status === 'non_concur' ? 'NON-CONCUR' : 'PENDING'}
-                          </span>
-                          {row.comment && (
-                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{row.comment}</div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{
+                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                    textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
+                  }}>
+                    Coordination
                   </div>
-                </DetailSection>
+                  <table style={{
+                    width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)',
+                    borderRadius: 4, overflow: 'hidden', border: '1px solid var(--color-border)',
+                  }}>
+                    <tbody>
+                      {coords.map((row, i) => (
+                        <tr key={row.id} style={{ background: i % 2 === 0 ? 'var(--color-bg-inset)' : 'transparent' }}>
+                          <td style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--color-text-1)', verticalAlign: 'top' }}>
+                            {row.agency_name}
+                          </td>
+                          <td style={{ padding: '6px 10px', textAlign: 'right', verticalAlign: 'top' }}>
+                            <span style={{
+                              fontSize: 'var(--fs-xs)', fontWeight: 700,
+                              color: row.status === 'concur' ? '#22c55e' : row.status === 'non_concur' ? '#ef4444' : 'var(--color-text-3)',
+                            }}>
+                              {row.status === 'concur' ? 'CONCUR' : row.status === 'non_concur' ? 'NON-CONCUR' : 'PENDING'}
+                            </span>
+                            {row.comment && (
+                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{row.comment}</div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
 
               {/* Audit */}
-              {(detailEntry.approver_oi || detailEntry.approval_at || detailEntry.denial_reason) && (
-                <DetailSection title="Audit">
-                  {detailEntry.approver_oi && <DetailRow label="Approver OI" value={detailEntry.approver_oi} />}
-                  {detailEntry.approval_at && <DetailRow label="Approved At" value={detailEntry.approval_at} />}
-                  {detailEntry.denial_reason && <DetailRow label="Denial Reason" value={detailEntry.denial_reason} />}
-                </DetailSection>
-              )}
+              <DetailSection
+                title="Audit"
+                rows={[
+                  ...(detailEntry.approver_oi ? [{ label: 'Approver OI', value: detailEntry.approver_oi }] : []),
+                  ...(detailEntry.approval_at ? [{ label: 'Approved At', value: detailEntry.approval_at }] : []),
+                  ...(detailEntry.denial_reason ? [{ label: 'Denial Reason', value: detailEntry.denial_reason }] : []),
+                ]}
+              />
 
               {/* Actions */}
               {acts.length > 0 && (
@@ -1248,25 +1262,51 @@ function KpiPill({
   )
 }
 
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+type DetailRow = { label: string; value: string }
+
+function DetailSection({ title, rows, footnote }: { title: string; rows: DetailRow[]; footnote?: string }) {
+  if (rows.length === 0 && !footnote) return null
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div style={{ marginBottom: 14 }}>
       <div style={{
         fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
         textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
       }}>
         {title}
       </div>
-      <div>{children}</div>
-    </div>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', gap: 12, padding: '4px 0', fontSize: 'var(--fs-sm)' }}>
-      <span style={{ minWidth: 130, color: 'var(--color-text-3)' }}>{label}</span>
-      <span style={{ flex: 1, color: 'var(--color-text-1)', wordBreak: 'break-word' }}>{value}</span>
+      {rows.length > 0 && (
+        <table style={{
+          width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)',
+          borderRadius: 4, overflow: 'hidden', border: '1px solid var(--color-border)',
+        }}>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr
+                key={`${r.label}-${i}`}
+                style={{ background: i % 2 === 0 ? 'var(--color-bg-inset)' : 'transparent' }}
+              >
+                <td style={{
+                  padding: '6px 10px', color: 'var(--color-text-3)',
+                  width: 170, verticalAlign: 'top',
+                }}>
+                  {r.label}
+                </td>
+                <td style={{
+                  padding: '6px 10px', color: 'var(--color-text-1)',
+                  wordBreak: 'break-word',
+                }}>
+                  {r.value}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {footnote && (
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 6 }}>
+          {footnote}
+        </div>
+      )}
     </div>
   )
 }

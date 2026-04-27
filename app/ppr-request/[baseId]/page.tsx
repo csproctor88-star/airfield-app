@@ -185,7 +185,6 @@ export default function PprRequestPage() {
     return (
       <div style={shellStyle('center')}>
         <div style={{ textAlign: 'center', maxWidth: 420, padding: 24 }}>
-          <div style={brandTagStyle}>GLIDEPATH</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 10 }}>{heading}</div>
           <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>{body}</div>
         </div>
@@ -230,7 +229,6 @@ export default function PprRequestPage() {
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={brandTagStyle}>GLIDEPATH</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#E2E8F0', marginBottom: 4 }}>
             {config.baseName}
           </div>
@@ -351,7 +349,3 @@ function shellStyle(align: 'center' | 'top'): React.CSSProperties {
   }
 }
 
-const brandTagStyle: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: '#22D3EE',
-  letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6,
-}
