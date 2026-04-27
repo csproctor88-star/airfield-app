@@ -172,16 +172,28 @@ export default function PprPage() {
     loadOI()
   }, [])
 
-  // Load columns + agencies + entries + coords + KPI counts.
-  // `loadKpiOnly=true` short-circuits to just the counts so realtime
-  // ticks don't refetch the whole table on every coord change.
+  // The table fetch normally honors the date chip (Today / 7d / 30d /
+  // custom). But pending queues — Awaiting Triage, In Coordination,
+  // Awaiting Approval, and per-agency filters — should always be
+  // visible regardless of arrival_date, since the KPI counts above
+  // are base-scoped without a date filter and we don't want a
+  // mismatch where the pill says "1 awaiting" but the table is empty
+  // because the requested arrival is outside today's range.
+  const ignoreDateFilter =
+    statusFilter === 'pending_amops_triage'
+    || statusFilter === 'pending_coordination'
+    || statusFilter === 'pending_amops_approval'
+    || agencyFilter !== null
+  const effectiveFrom = ignoreDateFilter ? undefined : dateFrom
+  const effectiveTo = ignoreDateFilter ? undefined : dateTo
+
   const loadData = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
     const [cols, ags, ents, triageCount, approvalCount, agencyCounts] = await Promise.all([
       fetchPprColumns(installationId),
       fetchPprAgencies(installationId, true),
-      fetchPprEntries(installationId, dateFrom, dateTo),
+      fetchPprEntries(installationId, effectiveFrom, effectiveTo),
       fetchPendingTriageCount(installationId),
       fetchPendingApprovalCount(installationId),
       fetchPendingCoordinationCounts(installationId),
@@ -207,7 +219,7 @@ export default function PprPage() {
     }
 
     setLoading(false)
-  }, [installationId, dateFrom, dateTo])
+  }, [installationId, effectiveFrom, effectiveTo])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -518,7 +530,10 @@ export default function PprPage() {
         </div>
       </div>
 
-      {/* KPI badges (triage + approval for AMOPS, plus per-agency for everyone) */}
+      {/* KPI badges. Triage / approval pills surface for any user with the
+          ppr:triage / ppr:approve permission (AFM, NAMO, AMOPS, base_admin,
+          sys_admin by default). Per-agency pills are visible to every PPR
+          user — the badge is the filter, not a per-row permission. */}
       {(canTriage || canApprove || agencies.length > 0) && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           {canTriage && pendingTriage > 0 && (

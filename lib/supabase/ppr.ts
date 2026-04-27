@@ -315,8 +315,10 @@ export async function fetchPprCoordinationForEntries(entryIds: string[]): Promis
 }
 
 /**
- * AMOPS triage step (post-public-submission). Picks which agencies
- * must coordinate. Empty `agencyIds` → mark approved (pre-coordinated).
+ * Triage step (post-public-submission). Any user holding `ppr:triage` —
+ * AFM, NAMO, AMOPS, base_admin, sys_admin by default — picks which
+ * agencies must coordinate. Empty `agencyIds` marks the entry approved
+ * outright (pre-coordinated path).
  */
 export async function triagePprEntry(input: {
   entryId: string
@@ -457,7 +459,11 @@ export async function coordinatePprEntry(input: {
   return { ok: true }
 }
 
-/** AMOPS final approval. Triggers the approval email via the API route. */
+/**
+ * Final approval. Any user holding `ppr:approve` (AFM, NAMO, AMOPS,
+ * base_admin, sys_admin by default) can call. Triggers the requester
+ * approval email via the API route.
+ */
 export async function approvePprEntry(input: {
   entryId: string
   baseId: string
@@ -491,7 +497,7 @@ export async function approvePprEntry(input: {
     'ppr_entry',
     entry.id,
     `PPR ${entry.ppr_number} APPROVED`,
-    { details: 'AMOPS final approval' },
+    { details: 'Final approval' },
     input.baseId,
   )
 

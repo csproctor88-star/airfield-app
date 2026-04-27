@@ -1,25 +1,31 @@
 -- ============================================================
--- PPR Module — public submissions, AMOPS triage, multi-agency
--- coordination, AMOPS final approval, approval/confirmation emails.
+-- PPR Module — public submissions, multi-agency coordination,
+-- final approval, approval/confirmation emails.
+--
+-- "AMOPS" in status names below is the office (Airfield Management
+-- Operations), not a role restriction. The triage and approve steps
+-- are open to any user holding `ppr:triage` / `ppr:approve`, which
+-- the seeds at the bottom of this migration grant to: AFM, NAMO,
+-- AMOPS, base_admin, sys_admin.
 --
 -- Lifecycle:
 --   pending_amops_triage   ← public submission lands here
---     │ AMOPS picks the agencies that must coordinate (or skips)
+--     │ approver picks which agencies must coordinate (or skips)
 --     ▼
 --   pending_coordination   ← (also where internal create with agencies starts)
 --     │ all coord rows non-pending
 --     ▼
---   pending_amops_approval ← AMOPS approves or denies
+--   pending_amops_approval ← approver approves or denies
 --     │
 --     ├─► approved           (sends approval email)
 --     └─► denied
 --
--- AMOPS internal-create with "Pre-coordinated — no agencies needed"
+-- Internal create with "Pre-coordinated — no agencies needed"
 -- skips straight to `approved`.
 --
 -- New tables:
 --   ppr_agencies     — per-base list of free-text coordinating agencies
---   ppr_coordination — one row per (entry × AMOPS-selected agency)
+--   ppr_coordination — one row per (entry × selected agency)
 --
 -- Augmented tables:
 --   ppr_entries  + status, requester_name/email, triage/approval audit
@@ -29,9 +35,11 @@
 --   bases        + amops_email (used as reply-to on emails).
 --
 -- New permission keys:
---   ppr:triage      AMOPS triage step (assign agencies)
---   ppr:coordinate  Any agency user acting on coord rows
---   ppr:approve     AMOPS final approve / deny
+--   ppr:triage      Triage step (assign agencies). Default grant to
+--                   AFM / NAMO / AMOPS / base_admin / sys_admin.
+--   ppr:coordinate  Any agency user acting on coord rows.
+--   ppr:approve     Final approve / deny. Same default grant set as
+--                   ppr:triage.
 --
 -- New RPCs (SECURITY DEFINER, callable by anon):
 --   get_public_ppr_config(base_id)        — returns base name +
@@ -204,7 +212,9 @@ ON CONFLICT (key) DO UPDATE SET
   category = EXCLUDED.category,
   description = EXCLUDED.description;
 
--- triage + approve → AMOPS / AFM / NAMO / base_admin / sys_admin
+-- triage + approve + coordinate seeded to all approver-class roles
+-- (AFM, NAMO, AMOPS, base_admin, sys_admin). The plain `ppr` role
+-- gets coordinate only — they don't triage or give final approval.
 INSERT INTO role_permissions (role, permission_key) VALUES
   ('amops',            'ppr:triage'),
   ('amops',            'ppr:approve'),

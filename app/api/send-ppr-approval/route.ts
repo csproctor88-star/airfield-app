@@ -17,11 +17,13 @@ function escapeHtml(str: string): string {
 }
 
 /**
- * Approval email — sent to the public requester once AMOPS approves the PPR.
- * Authenticated route (only AMOPS / approver can trigger). Looks up the entry
- * by id, validates status='approved', then sends a Resend email from
- * "{Base} AMOPS via Glidepath" with the PPR number, requester's column data,
- * and a reply-to set to the base's amops_email if configured.
+ * Approval email — sent to the public requester once a PPR is approved.
+ * Authenticated route — any user with `ppr:approve` (AFM, NAMO, AMOPS,
+ * base_admin, sys_admin) can trigger. Looks up the entry by id, validates
+ * status='approved', then sends a Resend email from "{Base} AMOPS via
+ * Glidepath" with the PPR number, requester's column data, and a reply-to
+ * set to the base's amops_email if configured. The "AMOPS" in the from
+ * line is the office name, not the role of whoever clicked Approve.
  */
 export async function POST(request: Request) {
   try {
