@@ -247,21 +247,23 @@ export default function PprPage() {
     }
   }, [installationId, loadData])
 
-  // Date mode changes
+  // Date mode changes. PPRs are inherently future-leaning — an aircraft
+  // is requesting permission to arrive at some future date — so the
+  // 7d / 30d windows look forward from today, not backward. (Backward
+  // looking range was the prior behavior and hid approved-but-not-yet-
+  // arrived PPRs.) For historical lookups, use the Custom range.
   useEffect(() => {
     const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
     if (dateMode === 'today') {
-      const d = now.toISOString().slice(0, 10)
-      setDateFrom(d)
-      setDateTo(d)
+      setDateFrom(todayStr)
+      setDateTo(todayStr)
     } else if (dateMode === '7d') {
-      const from = new Date(now.getTime() - 6 * 86400000).toISOString().slice(0, 10)
-      setDateFrom(from)
-      setDateTo(now.toISOString().slice(0, 10))
+      setDateFrom(todayStr)
+      setDateTo(new Date(now.getTime() + 6 * 86400000).toISOString().slice(0, 10))
     } else if (dateMode === '30d') {
-      const from = new Date(now.getTime() - 29 * 86400000).toISOString().slice(0, 10)
-      setDateFrom(from)
-      setDateTo(now.toISOString().slice(0, 10))
+      setDateFrom(todayStr)
+      setDateTo(new Date(now.getTime() + 29 * 86400000).toISOString().slice(0, 10))
     }
   }, [dateMode])
 
@@ -530,58 +532,66 @@ export default function PprPage() {
         </div>
       </div>
 
-      {/* KPI badges. Triage / approval pills surface for any user with the
-          ppr:triage / ppr:approve permission (AFM, NAMO, AMOPS, base_admin,
-          sys_admin by default). Per-agency pills are visible to every PPR
-          user — the badge is the filter, not a per-row permission. */}
-      {(canTriage || canApprove || agencies.length > 0) && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          {canTriage && pendingTriage > 0 && (
-            <KpiPill
-              label={`${pendingTriage} AWAITING TRIAGE`}
-              colorBg="rgba(220,38,38,0.12)"
-              colorFg="#ef4444"
-              colorBorder="rgba(220,38,38,0.4)"
-              active={statusFilter === 'pending_amops_triage'}
-              onClick={() => {
-                setStatusFilter(statusFilter === 'pending_amops_triage' ? 'all' : 'pending_amops_triage')
-                setAgencyFilter(null)
-              }}
-            />
-          )}
-          {canApprove && pendingApproval > 0 && (
-            <KpiPill
-              label={`${pendingApproval} AWAITING APPROVAL`}
-              colorBg="rgba(245,158,11,0.12)"
-              colorFg="#f59e0b"
-              colorBorder="rgba(245,158,11,0.4)"
-              active={statusFilter === 'pending_amops_approval'}
-              onClick={() => {
-                setStatusFilter(statusFilter === 'pending_amops_approval' ? 'all' : 'pending_amops_approval')
-                setAgencyFilter(null)
-              }}
-            />
-          )}
-          {agencies.map((a) => {
-            const n = pendingByAgency[a.id] ?? 0
-            const isActive = agencyFilter === a.id
-            return (
+      {/* KPI badges. Only render pills with > 0 pending so the bar
+          stays clean when queues are empty. Triage/approval pills
+          require ppr:triage / ppr:approve; agency pills are visible
+          to anyone with ppr:view (the per-agency filter is just a
+          shortcut, not a per-row permission). When everything is
+          zero the row collapses entirely. */}
+      {(() => {
+        const showTriage = canTriage && pendingTriage > 0
+        const showApproval = canApprove && pendingApproval > 0
+        const visibleAgencies = agencies.filter((a) => (pendingByAgency[a.id] ?? 0) > 0)
+        if (!showTriage && !showApproval && visibleAgencies.length === 0) return null
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {showTriage && (
               <KpiPill
-                key={a.id}
-                label={`${n} PENDING ${a.agency_name.toUpperCase()}`}
-                colorBg="rgba(56,189,248,0.10)"
-                colorFg="var(--color-accent)"
-                colorBorder="rgba(56,189,248,0.4)"
-                active={isActive}
+                label={`${pendingTriage} AWAITING TRIAGE`}
+                colorBg="rgba(220,38,38,0.12)"
+                colorFg="#ef4444"
+                colorBorder="rgba(220,38,38,0.4)"
+                active={statusFilter === 'pending_amops_triage'}
                 onClick={() => {
-                  setAgencyFilter(isActive ? null : a.id)
-                  setStatusFilter(isActive ? 'all' : 'pending_coordination')
+                  setStatusFilter(statusFilter === 'pending_amops_triage' ? 'all' : 'pending_amops_triage')
+                  setAgencyFilter(null)
                 }}
               />
-            )
-          })}
-        </div>
-      )}
+            )}
+            {showApproval && (
+              <KpiPill
+                label={`${pendingApproval} AWAITING APPROVAL`}
+                colorBg="rgba(245,158,11,0.12)"
+                colorFg="#f59e0b"
+                colorBorder="rgba(245,158,11,0.4)"
+                active={statusFilter === 'pending_amops_approval'}
+                onClick={() => {
+                  setStatusFilter(statusFilter === 'pending_amops_approval' ? 'all' : 'pending_amops_approval')
+                  setAgencyFilter(null)
+                }}
+              />
+            )}
+            {visibleAgencies.map((a) => {
+              const n = pendingByAgency[a.id] ?? 0
+              const isActive = agencyFilter === a.id
+              return (
+                <KpiPill
+                  key={a.id}
+                  label={`${n} ${a.agency_name.toUpperCase()}`}
+                  colorBg="rgba(56,189,248,0.10)"
+                  colorFg="var(--color-accent)"
+                  colorBorder="rgba(56,189,248,0.4)"
+                  active={isActive}
+                  onClick={() => {
+                    setAgencyFilter(isActive ? null : a.id)
+                    setStatusFilter(isActive ? 'all' : 'pending_coordination')
+                  }}
+                />
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {noColumns && (
         <div className="card" style={{ padding: 20, textAlign: 'center', marginBottom: 16 }}>
@@ -594,19 +604,19 @@ export default function PprPage() {
         </div>
       )}
 
-      {/* Status filter chips */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+      {/* Combined filter bar: status chips on the left, a vertical
+          divider, then date chips. Date chips look forward from
+          today (PPRs are about future arrivals; for retrospective
+          ranges use Custom). When the queue filter ignores dates,
+          the date chips render but are visually muted. */}
+      <div style={{
+        display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center',
+      }}>
         {(['all', 'pending_amops_triage', 'pending_coordination', 'pending_amops_approval', 'approved', 'denied'] as StatusFilter[]).map((f) => (
           <button
             key={f}
             onClick={() => { setStatusFilter(f); setAgencyFilter(null) }}
-            style={{
-              padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-              border: `1px solid ${statusFilter === f ? 'var(--color-accent)' : 'var(--color-border)'}`,
-              background: statusFilter === f ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
-              color: statusFilter === f ? 'var(--color-accent)' : 'var(--color-text-3)',
-              cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: '0.04em',
-            }}
+            style={chipStyle(statusFilter === f)}
           >
             {f === 'all' ? 'All'
               : f === 'pending_amops_triage' ? 'Triage'
@@ -616,43 +626,45 @@ export default function PprPage() {
               : 'Denied'}
           </button>
         ))}
-      </div>
 
-      {/* Date filter */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
+
         {(['today', '7d', '30d', 'custom'] as const).map(mode => (
           <button
             key={mode}
             onClick={() => setDateMode(mode)}
+            disabled={ignoreDateFilter}
+            title={ignoreDateFilter ? 'Date range is ignored when viewing pending queues' : undefined}
             style={{
-              padding: '5px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-              border: `1px solid ${dateMode === mode ? 'var(--color-accent)' : 'var(--color-border)'}`,
-              background: dateMode === mode ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
-              color: dateMode === mode ? 'var(--color-accent)' : 'var(--color-text-3)',
-              cursor: 'pointer', fontFamily: 'inherit',
+              ...chipStyle(dateMode === mode),
+              opacity: ignoreDateFilter ? 0.4 : 1,
+              cursor: ignoreDateFilter ? 'not-allowed' : 'pointer',
             }}
           >
-            {mode === 'today' ? 'Today' : mode === '7d' ? '7 Days' : mode === '30d' ? '30 Days' : 'Custom'}
+            {mode === 'today' ? 'Today' : mode === '7d' ? 'Next 7d' : mode === '30d' ? 'Next 30d' : 'Custom'}
           </button>
         ))}
-        {dateMode === 'custom' && (
+
+        {dateMode === 'custom' && !ignoreDateFilter && (
           <>
             <input
               type="date"
               value={dateFrom}
               onChange={e => setDateFrom(e.target.value)}
-              style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }}
+              style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)' }}
             />
-            <span style={{ color: 'var(--color-text-3)' }}>to</span>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)' }}>to</span>
             <input
               type="date"
               value={dateTo}
               onChange={e => setDateTo(e.target.value)}
-              style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }}
+              style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)' }}
             />
           </>
         )}
-        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginLeft: 4 }}>
+
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
           {filteredEntries.length} PPR{filteredEntries.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -1184,6 +1196,17 @@ function pdfBtnStyle(disabled: boolean): React.CSSProperties {
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontSize: 'var(--fs-sm)', fontWeight: 600, fontFamily: 'inherit',
     opacity: disabled ? 0.6 : 1,
+  }
+}
+
+function chipStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+    border: `1px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+    background: active ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
+    color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
+    cursor: 'pointer', fontFamily: 'inherit',
+    textTransform: 'uppercase', letterSpacing: '0.04em',
   }
 }
 

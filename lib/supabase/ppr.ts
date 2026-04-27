@@ -90,6 +90,22 @@ export function generatePprNumber(julDay: number, sequence: number, oi: string):
   return `${dayStr}-${seqStr}-${oi || 'XX'}`
 }
 
+/**
+ * Replace the trailing OI segment of an existing PPR number with a
+ * new OI. Used on approval of a public submission so the PPR# the
+ * requester receives carries the approver's initials instead of
+ * the 'XX' placeholder. Falls through unchanged if the number
+ * doesn't fit the expected `{jul}-{seq}-{OI}` shape.
+ */
+export function rewritePprOiSegment(pprNumber: string, newOi: string): string {
+  const trimmed = newOi.trim()
+  if (!trimmed) return pprNumber
+  const parts = pprNumber.split('-')
+  if (parts.length < 3) return pprNumber
+  parts[parts.length - 1] = trimmed
+  return parts.join('-')
+}
+
 // ── Columns CRUD ──
 
 export async function fetchPprColumns(baseId: string): Promise<PprColumn[]> {
@@ -336,17 +352,35 @@ export async function triagePprEntry(input: {
   const nowIso = new Date().toISOString()
 
   if (skip) {
+    // Same OI rewrite as approvePprEntry: a public submission that
+    // arrives here had the placeholder 'XX'; pre-coordinated approval
+    // should carry the approver's actual initials.
+    const { data: current } = await supabase
+      .from('ppr_entries')
+      .select('ppr_number')
+      .eq('id', input.entryId)
+      .single()
+    const currentNumber = (current as { ppr_number?: string } | null)?.ppr_number
+    const rewritten = (currentNumber && input.approver_oi)
+      ? rewritePprOiSegment(currentNumber, input.approver_oi)
+      : currentNumber
+
+    const patch: Record<string, unknown> = {
+      status: 'approved',
+      triaged_by: user.id,
+      triaged_at: nowIso,
+      approval_user_id: user.id,
+      approval_at: nowIso,
+      approver_oi: input.approver_oi || null,
+      updated_by: user.id,
+    }
+    if (rewritten && rewritten !== currentNumber) {
+      patch.ppr_number = rewritten
+    }
+
     const { error } = await supabase
       .from('ppr_entries')
-      .update({
-        status: 'approved',
-        triaged_by: user.id,
-        triaged_at: nowIso,
-        approval_user_id: user.id,
-        approval_at: nowIso,
-        approver_oi: input.approver_oi || null,
-        updated_by: user.id,
-      })
+      .update(patch)
       .eq('id', input.entryId)
     if (error) return { ok: false, error: friendlyError(error.message) }
     logActivity(
@@ -463,6 +497,13 @@ export async function coordinatePprEntry(input: {
  * Final approval. Any user holding `ppr:approve` (AFM, NAMO, AMOPS,
  * base_admin, sys_admin by default) can call. Triggers the requester
  * approval email via the API route.
+ *
+ * Public submissions mint their PPR# with an 'XX' OI placeholder
+ * because there's no logged-in user at submit time. On approval we
+ * rewrite the trailing OI segment to the approver's actual initials
+ * so the number reads as 'JJJ-SSS-XX' → 'JJJ-SSS-JD'. Internal
+ * pre-coordinated entries already have the creator's OI baked in,
+ * so we leave those untouched.
  */
 export async function approvePprEntry(input: {
   entryId: string
@@ -477,15 +518,30 @@ export async function approvePprEntry(input: {
 
   const nowIso = new Date().toISOString()
 
+  const { data: current } = await supabase
+    .from('ppr_entries')
+    .select('ppr_number')
+    .eq('id', input.entryId)
+    .single()
+  const currentNumber = (current as { ppr_number?: string } | null)?.ppr_number
+  const rewritten = (currentNumber && input.approver_oi)
+    ? rewritePprOiSegment(currentNumber, input.approver_oi)
+    : currentNumber
+
+  const updatePatch: Record<string, unknown> = {
+    status: 'approved',
+    approval_user_id: user.id,
+    approval_at: nowIso,
+    approver_oi: input.approver_oi || null,
+    updated_by: user.id,
+  }
+  if (rewritten && rewritten !== currentNumber) {
+    updatePatch.ppr_number = rewritten
+  }
+
   const { data, error } = await supabase
     .from('ppr_entries')
-    .update({
-      status: 'approved',
-      approval_user_id: user.id,
-      approval_at: nowIso,
-      approver_oi: input.approver_oi || null,
-      updated_by: user.id,
-    })
+    .update(updatePatch)
     .eq('id', input.entryId)
     .select()
     .single()
