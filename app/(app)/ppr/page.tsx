@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
-import { formatZuluDate } from '@/lib/utils'
+import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 import { PERM, usePermissions } from '@/lib/permissions'
 import {
   fetchPprColumns,
@@ -685,7 +685,7 @@ export default function PprPage() {
           <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>No PPRs match these filters.</p>
         </div>
       ) : (
-        <div style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
@@ -693,6 +693,12 @@ export default function PprPage() {
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Arrival</th>
                 <th style={thStyle}>Requester</th>
+                {columns.map(col => (
+                  <th key={col.id} style={thStyle}>{col.column_name}</th>
+                ))}
+                {filteredEntries.some(e => e.notes) && (
+                  <th style={thStyle}>Notes</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -700,22 +706,24 @@ export default function PprPage() {
                 const meta = STATUS_META[entry.status] ?? STATUS_META.approved
                 const coords = coordsByEntry[entry.id] ?? []
                 const nonConcur = coords.some((c) => c.status === 'non_concur')
+                const showNotesCol = filteredEntries.some(e => e.notes)
                 return (
-                  <tr
-                    key={entry.id}
-                    onClick={() => setDetailEntry(entry)}
-                    style={{
-                      borderBottom: '1px solid var(--color-border)',
-                      cursor: 'pointer',
-                      transition: 'background 80ms ease',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-inset)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
-                  >
+                  <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <td style={tdStyle}>
-                      <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace' }}>
+                      {/* Only the PPR # is clickable so users can scroll
+                          and read the rest of the row without
+                          accidentally opening the detail card. */}
+                      <button
+                        type="button"
+                        onClick={() => setDetailEntry(entry)}
+                        style={{
+                          fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace',
+                          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                          textDecoration: 'underline', textUnderlineOffset: 3,
+                        }}
+                      >
                         {entry.ppr_number}
-                      </span>
+                      </button>
                     </td>
                     <td style={tdStyle}>
                       <span style={{
@@ -743,6 +751,16 @@ export default function PprPage() {
                         <span style={{ color: 'var(--color-text-3)', fontStyle: 'italic' }}>Internal</span>
                       )}
                     </td>
+                    {columns.map(col => (
+                      <td key={col.id} style={tdStyle}>
+                        {(entry.column_values || {})[col.id] || '—'}
+                      </td>
+                    ))}
+                    {showNotesCol && (
+                      <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {entry.notes || '—'}
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -1185,8 +1203,10 @@ export default function PprPage() {
                 title="Audit"
                 rows={[
                   ...(detailEntry.approver_oi ? [{ label: 'Approver OI', value: detailEntry.approver_oi }] : []),
-                  ...(detailEntry.approval_at ? [{ label: 'Approved At', value: detailEntry.approval_at }] : []),
+                  ...(detailEntry.triaged_at ? [{ label: 'Reviewed At', value: formatZuluDateTime(detailEntry.triaged_at) }] : []),
+                  ...(detailEntry.approval_at ? [{ label: 'Approved At', value: formatZuluDateTime(detailEntry.approval_at) }] : []),
                   ...(detailEntry.denial_reason ? [{ label: 'Denial Reason', value: detailEntry.denial_reason }] : []),
+                  ...(detailEntry.created_at ? [{ label: 'Submitted At', value: formatZuluDateTime(detailEntry.created_at) }] : []),
                 ]}
               />
 

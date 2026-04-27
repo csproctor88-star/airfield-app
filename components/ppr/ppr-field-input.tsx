@@ -16,10 +16,16 @@ type Props = {
   inputBorder?: string
 }
 
-const INPUT_TYPE: Record<Exclude<PprColumnType, 'yes_no_na'>, string> = {
+// `time` deliberately renders as a text input rather than the native
+// `<input type="time">`. Chrome and Edge on en-US locales force the
+// native picker into 12-hour AM/PM regardless of the stored 24-hour
+// value, and there's no cross-browser way to override it. A plain
+// text input with a 24-hour pattern keeps the display consistent
+// (and the keyboard on mobile still defaults to numeric thanks to
+// `inputMode="numeric"`).
+const INPUT_TYPE: Record<Exclude<PprColumnType, 'yes_no_na' | 'time'>, string> = {
   text: 'text',
   date: 'date',
-  time: 'time',
   phone: 'tel',
   number: 'number',
   email: 'email',
@@ -96,9 +102,32 @@ export function PprFieldInput({
             )
           })}
         </div>
+      ) : columnType === 'time' ? (
+        <input
+          type="text"
+          inputMode="numeric"
+          // 00:00 through 23:59. Browser-side validation only — the
+          // staff modal and public form still surface their own
+          // required-field check before submit.
+          pattern="^([01]\d|2[0-3]):[0-5]\d$"
+          placeholder="HH:MM"
+          maxLength={5}
+          value={value}
+          onChange={(e) => {
+            // Filter to digits + colon and keep length capped at 5.
+            // Auto-insert ':' once two digits are typed without one
+            // for a slightly smoother keyboard entry.
+            let v = e.target.value.replace(/[^\d:]/g, '')
+            if (v.length === 2 && !v.includes(':') && (value || '').length === 1) v += ':'
+            onChange(v.slice(0, 5))
+          }}
+          required={isRequired}
+          id={`ppr-field-${columnId}`}
+          style={inputStyle}
+        />
       ) : (
         <input
-          type={INPUT_TYPE[columnType] ?? 'text'}
+          type={INPUT_TYPE[columnType as Exclude<PprColumnType, 'yes_no_na' | 'time'>] ?? 'text'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={isRequired}
