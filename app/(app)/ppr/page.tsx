@@ -20,9 +20,12 @@ import {
   fetchPendingTriageCount,
   fetchPendingApprovalCount,
   fetchPendingCoordinationCounts,
+  fetchPprRemarks,
+  addPprRemark,
   type PprColumn,
   type PprEntry,
   type PprCoordination,
+  type PprRemark,
   type PprStatus,
 } from '@/lib/supabase/ppr'
 import { fetchPprAgencies, type PprAgency } from '@/lib/supabase/ppr-agencies'
@@ -102,6 +105,9 @@ export default function PprPage() {
   // All row-level actions (Edit / Delete / Review / Coordinate / Decide)
   // live here; the table list itself is purely a summary.
   const [detailEntry, setDetailEntry] = useState<PprEntry | null>(null)
+  const [detailRemarks, setDetailRemarks] = useState<PprRemark[]>([])
+  const [remarkInput, setRemarkInput] = useState('')
+  const [remarkBusy, setRemarkBusy] = useState(false)
 
   // PDF export
   const [generatingPdf, setGeneratingPdf] = useState(false)
@@ -111,6 +117,16 @@ export default function PprPage() {
 
   async function preparePdf() {
     const { generatePprPdf } = await import('@/lib/ppr-pdf')
+    // Fetch the remark threads for every PPR in the export window so
+    // the PDF carries the same audit trail the staff page shows in
+    // the detail card. Run in parallel — these are independent reads.
+    const remarksByEntry: Record<string, PprRemark[]> = {}
+    if (entries.length > 0) {
+      const threads = await Promise.all(entries.map((e) => fetchPprRemarks(e.id)))
+      entries.forEach((e, i) => {
+        if (threads[i].length > 0) remarksByEntry[e.id] = threads[i]
+      })
+    }
     return generatePprPdf({
       columns,
       entries,
@@ -118,6 +134,7 @@ export default function PprPage() {
       dateTo,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao || undefined,
+      remarksByEntry,
     })
   }
 
@@ -252,6 +269,46 @@ export default function PprPage() {
       supabase.removeChannel(channel)
     }
   }, [installationId, loadData])
+
+  // Load the remark thread whenever the detail card opens for a new entry.
+  // Closing the card resets the input so a half-typed remark on one entry
+  // doesn't surface on the next.
+  useEffect(() => {
+    if (!detailEntry) {
+      setDetailRemarks([])
+      setRemarkInput('')
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const rows = await fetchPprRemarks(detailEntry.id)
+      if (!cancelled) setDetailRemarks(rows)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [detailEntry])
+
+  async function handleAddRemark() {
+    if (!detailEntry || !installationId) return
+    const text = remarkInput.trim()
+    if (!text) return
+    setRemarkBusy(true)
+    const { ok, error } = await addPprRemark({
+      entryId: detailEntry.id,
+      baseId: installationId,
+      remark: text,
+    })
+    if (!ok) {
+      toast.error(error || 'Failed to save remark')
+      setRemarkBusy(false)
+      return
+    }
+    setRemarkInput('')
+    const rows = await fetchPprRemarks(detailEntry.id)
+    setDetailRemarks(rows)
+    setRemarkBusy(false)
+  }
 
   // Date mode changes. PPRs are inherently future-leaning — an aircraft
   // is requesting permission to arrive at some future date — so the
@@ -1197,6 +1254,73 @@ export default function PprPage() {
                   </table>
                 </div>
               )}
+
+              {/* Remarks — free-form thread, any viewer can post. Coord
+                  comments are mirrored in here automatically by
+                  coordinatePprEntry, so this is a single timeline. */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{
+                  fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                  textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
+                }}>
+                  Remarks
+                </div>
+                {detailRemarks.length > 0 && (
+                  <table style={{
+                    width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)',
+                    borderRadius: 4, overflow: 'hidden', border: '1px solid var(--color-border)',
+                    marginBottom: 8,
+                  }}>
+                    <tbody>
+                      {detailRemarks.map((r, i) => (
+                        <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--color-bg-inset)' : 'transparent' }}>
+                          <td style={{ padding: '6px 10px', verticalAlign: 'top' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>
+                              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>
+                                {r.user_rank ? `${r.user_rank} ${r.user_name}` : r.user_name}
+                              </span>
+                              <span>{formatZuluDateTime(r.created_at)}</span>
+                            </div>
+                            <div style={{ color: 'var(--color-text-1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                              {r.remark}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <textarea
+                    value={remarkInput}
+                    onChange={(e) => setRemarkInput(e.target.value)}
+                    placeholder="Add a remark..."
+                    rows={2}
+                    disabled={remarkBusy}
+                    style={{
+                      flex: 1, padding: '6px 10px', borderRadius: 4,
+                      border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                      color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                      resize: 'vertical', minHeight: 40,
+                    }}
+                  />
+                  <button
+                    onClick={handleAddRemark}
+                    disabled={remarkBusy || !remarkInput.trim()}
+                    style={{
+                      padding: '6px 14px', borderRadius: 4,
+                      border: '1px solid var(--color-accent)',
+                      background: remarkBusy || !remarkInput.trim() ? 'transparent' : 'var(--color-accent)',
+                      color: remarkBusy || !remarkInput.trim() ? 'var(--color-accent)' : 'var(--color-bg)',
+                      cursor: remarkBusy || !remarkInput.trim() ? 'not-allowed' : 'pointer',
+                      fontWeight: 600, fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                      alignSelf: 'flex-start',
+                    }}
+                  >
+                    {remarkBusy ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
 
               {/* Audit */}
               <DetailSection

@@ -10,7 +10,7 @@ import {
   drawFooter,
   tableStyles,
 } from '@/lib/pdf-utils'
-import type { PprColumn, PprEntry } from '@/lib/supabase/ppr'
+import type { PprColumn, PprEntry, PprRemark } from '@/lib/supabase/ppr'
 
 interface PprPdfInput {
   columns: PprColumn[]
@@ -19,6 +19,10 @@ interface PprPdfInput {
   dateTo: string
   baseName?: string | null
   baseIcao?: string | null
+  /** Optional remark thread per entry id. When present, each PPR's
+   *  remarks (including coord-mirrored comments) are appended in a
+   *  REMARKS section after the main table. */
+  remarksByEntry?: Record<string, PprRemark[]>
 }
 
 function formatYesNoNa(v: string): string {
@@ -41,7 +45,7 @@ function formatCell(col: PprColumn, raw: string): string {
 }
 
 export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const { columns, entries, dateFrom, dateTo, baseName, baseIcao } = input
+  const { columns, entries, dateFrom, dateTo, baseName, baseIcao, remarksByEntry } = input
 
   // Landscape gives us more columns worth of horizontal room
   const ctx = createPdf({ orientation: 'landscape' })
@@ -82,6 +86,53 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
       body,
       didDrawPage: () => drawFooter(ctx),
     })
+  }
+
+  // ── Remarks ──
+  // Flatten {entryId → [remarks]} into one row per remark, sorted in
+  // entry/created_at order so each PPR's thread reads top-to-bottom.
+  // Coordination comments are already mirrored into ppr_remarks
+  // (with the [Agency — CONCUR/NON-CONCUR] prefix), so they fall
+  // out naturally here without a second data path.
+  if (remarksByEntry) {
+    const rows: string[][] = []
+    for (const entry of entries) {
+      const thread = (remarksByEntry[entry.id] ?? [])
+        .slice()
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      for (const r of thread) {
+        const author = r.user_rank ? `${r.user_rank} ${r.user_name || ''}`.trim() : (r.user_name || 'Unknown')
+        rows.push([
+          entry.ppr_number,
+          sanitizePdfText(author),
+          formatZuluDateTime(r.created_at),
+          sanitizePdfText(r.remark),
+        ])
+      }
+    }
+
+    if (rows.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lastY = (doc as any).lastAutoTable?.finalY ?? y
+      const remarksStartY = lastY + 16
+      doc.setFontSize(11)
+      doc.setTextColor(40)
+      doc.text('REMARKS', margin, remarksStartY)
+
+      autoTable(doc, {
+        ...tableStyles(ctx),
+        startY: remarksStartY + 4,
+        head: [['PPR #', 'User', 'When', 'Remark']],
+        body: rows,
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 110 },
+          2: { cellWidth: 110 },
+          3: { cellWidth: 'auto' },
+        },
+        didDrawPage: () => drawFooter(ctx),
+      })
+    }
   }
 
   const filename = `ppr-log-${dateFrom}${dateFrom === dateTo ? '' : '-to-' + dateTo}.pdf`

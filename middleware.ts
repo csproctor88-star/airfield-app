@@ -41,7 +41,9 @@ export async function middleware(request: NextRequest) {
       && !request.nextUrl.pathname.startsWith('/setup-account')
       && !request.nextUrl.pathname.startsWith('/auth/confirm')
       && !request.nextUrl.pathname.startsWith('/api/installations')
+      && !request.nextUrl.pathname.startsWith('/api/send-ppr-confirmation')
       && !request.nextUrl.pathname.startsWith('/feedback')
+      && !request.nextUrl.pathname.startsWith('/ppr-request')
       && !request.nextUrl.pathname.startsWith('/kiosk')
     ) {
       const redirectUrl = request.nextUrl.clone()
@@ -58,7 +60,9 @@ export async function middleware(request: NextRequest) {
       && !request.nextUrl.pathname.startsWith('/setup-account')
       && !request.nextUrl.pathname.startsWith('/auth/confirm')
       && !request.nextUrl.pathname.startsWith('/api/installations')
+      && !request.nextUrl.pathname.startsWith('/api/send-ppr-confirmation')
       && !request.nextUrl.pathname.startsWith('/feedback')
+      && !request.nextUrl.pathname.startsWith('/ppr-request')
       && !request.nextUrl.pathname.startsWith('/kiosk')
     ) {
       const redirectUrl = request.nextUrl.clone()

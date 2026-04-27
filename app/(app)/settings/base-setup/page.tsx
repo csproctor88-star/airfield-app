@@ -42,6 +42,7 @@ import {
   type PprColumnType,
 } from '@/lib/supabase/ppr'
 import TaxiwayEditor from '@/components/taxiway-editor-google'
+import { useDragReorder } from '@/hooks/use-drag-reorder'
 import {
   fetchLightingSystems,
   fetchLightingSystemWithComponents,
@@ -1728,6 +1729,17 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
     setStatuses(prev => prev.filter(s => s.navaid_name !== navaid.navaid_name))
   }
 
+  const { getDragProps, draggedId, dragOverId } = useDragReorder(navaids, async (next) => {
+    setNavaids(next.map((n, i) => ({ ...n, sort_order: i })))  // optimistic
+    const supabase = createClient()
+    if (!supabase) return
+    const results = await Promise.all(next.map((n, i) =>
+      supabase.from('base_navaids').update({ sort_order: i }).eq('id', n.id),
+    ))
+    const firstErr = results.find(r => r.error)?.error
+    if (firstErr) toast.error(`Reorder failed: ${firstErr.message}`)
+  })
+
   if (loading) {
     return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading NAVAIDs...</p>
   }
@@ -1756,14 +1768,22 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
       {navaids.map(navaid => {
         const status = statusMap[navaid.navaid_name]
         return (
-          <div key={navaid.id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 0',
-            borderBottom: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-md)',
-          }}>
+          <div
+            key={navaid.id}
+            {...getDragProps(navaid.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '8px 0',
+              borderBottom: '1px solid var(--color-border)',
+              borderTop: dragOverId === navaid.id && draggedId !== navaid.id ? '2px solid var(--color-cyan)' : '2px solid transparent',
+              background: dragOverId === navaid.id && draggedId !== navaid.id ? 'var(--color-bg-elevated)' : undefined,
+              opacity: draggedId === navaid.id ? 0.4 : 1,
+              cursor: 'grab',
+              fontSize: 'var(--fs-md)',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {status && (
                 <span style={{
@@ -1836,6 +1856,26 @@ function SimpleListTab({
   const [list, setList] = useState<string[]>(items)
   const [newItem, setNewItem] = useState('')
 
+  // Names are unique per base in these tables — safe to use as the
+  // drag id. The hook works against `{id}` rows so we wrap.
+  const dragRows = list.map(name => ({ id: name }))
+  const { getDragProps, draggedId, dragOverId } = useDragReorder(dragRows, async (next) => {
+    if (!installationId) return
+    const newOrder = next.map(r => r.id)
+    setList(newOrder) // optimistic
+    const supabase = createClient()
+    if (!supabase) return
+    const results = await Promise.all(newOrder.map((name, i) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from as any)(tableName)
+        .update({ sort_order: i })
+        .eq('base_id', installationId)
+        .eq(fieldName, name)
+    ))
+    const firstErr = results.find((r: { error: { message: string } | null }) => r.error)?.error
+    if (firstErr) toast.error(`Reorder failed: ${firstErr.message}`)
+  })
+
   const handleAdd = async () => {
     if (!newItem.trim() || !installationId) return
     const supabase = createClient()
@@ -1881,14 +1921,22 @@ function SimpleListTab({
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No items configured.</p>
       )}
       {list.map(item => (
-        <div key={item} style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 0',
-          borderBottom: '1px solid var(--color-border)',
-          fontSize: 'var(--fs-md)',
-        }}>
+        <div
+          key={item}
+          {...getDragProps(item)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 0',
+            borderBottom: '1px solid var(--color-border)',
+            borderTop: dragOverId === item && draggedId !== item ? '2px solid var(--color-cyan)' : '2px solid transparent',
+            background: dragOverId === item && draggedId !== item ? 'var(--color-bg-elevated)' : undefined,
+            opacity: draggedId === item ? 0.4 : 1,
+            cursor: 'grab',
+            fontSize: 'var(--fs-md)',
+          }}
+        >
           <span style={{ color: 'var(--color-text-1)' }}>{item}</span>
           <button
             onClick={() => handleDelete(item)}
@@ -2189,6 +2237,17 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
     }
   }
 
+  const { getDragProps, draggedId, dragOverId } = useDragReorder(facilities, async (next) => {
+    setFacilities(next)  // optimistic
+    const supabase = createClient()
+    if (!supabase) return
+    const results = await Promise.all(next.map((f, i) =>
+      supabase.from('base_facilities').update({ sort_order: i } as never).eq('id', f.id),
+    ))
+    const firstErr = results.find(r => r.error)?.error
+    if (firstErr) toast.error(`Reorder failed: ${firstErr.message}`)
+  })
+
   const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !installationId) return
@@ -2250,10 +2309,18 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No facilities configured.</p>
       )}
       {facilities.map(fac => (
-        <div key={fac.id} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
-        }}>
+        <div
+          key={fac.id}
+          {...getDragProps(fac.id)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
+            borderTop: dragOverId === fac.id && draggedId !== fac.id ? '2px solid var(--color-cyan)' : '2px solid transparent',
+            background: dragOverId === fac.id && draggedId !== fac.id ? 'var(--color-bg-elevated)' : undefined,
+            opacity: draggedId === fac.id ? 0.4 : 1,
+            cursor: 'grab',
+          }}
+        >
           <div>
             <span style={{ color: 'var(--color-accent)', fontWeight: 700, fontFamily: 'monospace', marginRight: 10 }}>{fac.facility_number}</span>
             <span style={{ color: 'var(--color-text-1)' }}>{fac.description}</span>
@@ -2787,6 +2854,103 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
     else await load()
   }
 
+  // ── Drag-and-drop reorder ─────────────────────────────────
+  // Mirrors the sidebar nav drag pattern but operates per-item
+  // (sidebar drops at section-level). Drop target = "insert before
+  // this row". Cross-shift drops are no-ops; users change a row's
+  // shift via the Edit form.
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  function handleDragStart(e: React.DragEvent, itemId: string) {
+    setDraggedId(itemId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', itemId)
+  }
+
+  function handleDragOverItem(e: React.DragEvent, itemId: string) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedId && itemId !== draggedId) setDragOverId(itemId)
+  }
+
+  function handleDragLeaveItem() {
+    setDragOverId(null)
+  }
+
+  function handleDragEnd() {
+    setDraggedId(null)
+    setDragOverId(null)
+  }
+
+  async function handleDropOnItem(e: React.DragEvent, target: ShiftChecklistItem) {
+    e.preventDefault()
+    const sourceId = draggedId
+    setDraggedId(null)
+    setDragOverId(null)
+    if (!sourceId || sourceId === target.id) return
+    const dragged = items.find(i => i.id === sourceId)
+    if (!dragged || dragged.shift !== target.shift) return
+
+    const shiftList = items.filter(i => i.shift === target.shift)
+    const fromIdx = shiftList.findIndex(i => i.id === sourceId)
+    const toIdx = shiftList.findIndex(i => i.id === target.id)
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+
+    const next = [...shiftList]
+    const [moved] = next.splice(fromIdx, 1)
+    // Splicing-out shifts indices when moving downward; compensate so
+    // the item lands BEFORE the target rather than after.
+    const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx
+    next.splice(insertIdx, 0, moved)
+
+    // Optimistic local update — without it the UI lags behind the drop
+    // until load() returns from the server.
+    const newOrder = new Map(next.map((it, i) => [it.id, i]))
+    setItems(prev => prev.map(it => (
+      newOrder.has(it.id) ? { ...it, sort_order: newOrder.get(it.id)! } : it
+    )))
+
+    // sort_order is global, but each shift renders independently, so
+    // 0..n-1 within this shift is safe even if it overlaps other shifts.
+    const results = await Promise.all(
+      next.map((it, i) => updateChecklistItem(it.id, { sort_order: i })),
+    )
+    const firstErr = results.find(r => r.error)?.error
+    if (firstErr) toast.error(firstErr)
+    await load()
+  }
+
+  async function handleMove(item: ShiftChecklistItem, direction: 'up' | 'down') {
+    // sort_order is global, but each shift renders as an independent
+    // filtered list — so swapping the two affected items' sort_order
+    // values is enough to reorder within the shift without disturbing
+    // any other shift.
+    const shiftList = items.filter(i => i.shift === item.shift)
+    const idx = shiftList.findIndex(i => i.id === item.id)
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= shiftList.length) return
+
+    const a = shiftList[idx]
+    const b = shiftList[targetIdx]
+    let aNew = b.sort_order
+    let bNew = a.sort_order
+    // Older rows can share a sort_order (legacy creates used items.length
+    // at insert time, which produced collisions when items were deleted).
+    // Force a 1-step gap so the swap actually changes ordering.
+    if (aNew === bNew) {
+      if (direction === 'up') aNew = bNew - 1
+      else bNew = aNew - 1
+    }
+
+    const [r1, r2] = await Promise.all([
+      updateChecklistItem(a.id, { sort_order: aNew }),
+      updateChecklistItem(b.id, { sort_order: bNew }),
+    ])
+    if (r1.error || r2.error) toast.error(r1.error || r2.error || 'Reorder failed')
+    await load()
+  }
+
   function startEdit(item: ShiftChecklistItem) {
     setEditingId(item.id)
     setEditLabel(item.label)
@@ -2839,11 +3003,57 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
                     </div>
                   </div>
                 ) : (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                    borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none',
-                    opacity: item.is_active ? 1 : 0.5,
-                  }}>
+                  <div
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, item.id)}
+                    onDragOver={(e) => handleDragOverItem(e, item.id)}
+                    onDragLeave={handleDragLeaveItem}
+                    onDrop={(e) => handleDropOnItem(e, item)}
+                    onDragEnd={handleDragEnd}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                      borderBottom: i < list.length - 1 ? '1px solid var(--color-border)' : 'none',
+                      // Top accent line shows the dragged item will land here.
+                      borderTop: dragOverId === item.id && draggedId !== item.id
+                        ? '2px solid var(--color-cyan)'
+                        : '2px solid transparent',
+                      opacity: draggedId === item.id ? 0.4 : (item.is_active ? 1 : 0.5),
+                      cursor: 'grab',
+                      background: dragOverId === item.id && draggedId !== item.id
+                        ? 'var(--color-bg-elevated)'
+                        : undefined,
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, flexShrink: 0 }}>
+                      <button
+                        onClick={() => handleMove(item, 'up')}
+                        disabled={i === 0}
+                        title="Move up"
+                        style={{
+                          background: 'none', border: 'none', padding: 0, lineHeight: 1,
+                          minWidth: 24, minHeight: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                          color: i === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+                          cursor: i === 0 ? 'default' : 'pointer',
+                        }}
+                      >
+                        &#9650;
+                      </button>
+                      <button
+                        onClick={() => handleMove(item, 'down')}
+                        disabled={i === list.length - 1}
+                        title="Move down"
+                        style={{
+                          background: 'none', border: 'none', padding: 0, lineHeight: 1,
+                          minWidth: 24, minHeight: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                          color: i === list.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)',
+                          cursor: i === list.length - 1 ? 'default' : 'pointer',
+                        }}
+                      >
+                        &#9660;
+                      </button>
+                    </div>
                     <div style={{ flex: 1, minWidth: 0, fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)' }}>{item.label}</div>
                     <span style={{
                       fontSize: 'var(--fs-xs)', fontWeight: 700, color: FREQ_TAG_COLORS[item.frequency],
@@ -3044,6 +3254,14 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
     else { toast.success('Template deleted'); await load() }
   }
 
+  const { getDragProps, draggedId, dragOverId } = useDragReorder(templates, async (next) => {
+    setTemplates(next)  // optimistic
+    const { updateQrcTemplate } = await import('@/lib/supabase/qrc')
+    const results = await Promise.all(next.map((t, i) => updateQrcTemplate(t.id, { sort_order: i })))
+    const firstErr = results.find(r => r.error)?.error
+    if (firstErr) toast.error(`Reorder failed: ${firstErr}`)
+  })
+
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
@@ -3094,12 +3312,22 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {templates.map(t => (
-            <div key={t.id} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-              background: 'var(--color-bg-elevated)', borderRadius: 'var(--radius-base)',
-              border: '1px solid var(--color-border)',
-              opacity: t.is_active ? 1 : 0.5,
-            }}>
+            <div
+              key={t.id}
+              {...getDragProps(t.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                background: dragOverId === t.id && draggedId !== t.id
+                  ? 'var(--color-bg-surface)'
+                  : 'var(--color-bg-elevated)',
+                borderRadius: 'var(--radius-base)',
+                border: dragOverId === t.id && draggedId !== t.id
+                  ? '1px solid var(--color-cyan)'
+                  : '1px solid var(--color-border)',
+                opacity: draggedId === t.id ? 0.4 : (t.is_active ? 1 : 0.5),
+                cursor: 'grab',
+              }}
+            >
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 800,
                 color: '#fff', background: t.is_active ? '#D97706' : 'var(--color-text-4)',
@@ -3512,6 +3740,19 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
 
   useEffect(() => { loadSystems() }, [loadSystems])
 
+  const { getHandleProps, getDropProps, draggedId, dragOverId } = useDragReorder(systems, async (next) => {
+    setSystems(next)  // optimistic
+    const supabase = createClient()
+    if (!supabase) return
+    const results = await Promise.all(next.map((s, i) =>
+      // sort_order isn't yet in the generated types — cast through.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from('lighting_systems').update as any)({ sort_order: i, updated_at: new Date().toISOString() }).eq('id', s.id),
+    ))
+    const firstErr = results.find((r: { error: { message: string } | null }) => r.error)?.error
+    if (firstErr) toast.error(`Reorder failed: ${firstErr.message}`)
+  })
+
   const handleUnlinkAll = async (compId: string, compLabel: string, systemId: string) => {
     if (!installationId) return
     if (!confirm(`Unlink all features from "${compLabel}"? Features will not be deleted.`)) return
@@ -3654,11 +3895,27 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
         const comps = compsMap[sys.id] || []
         const isLoadingC = loadingComps[sys.id]
         return (
-          <div key={sys.id} style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)', marginBottom: 8, overflow: 'hidden' }}>
+          <div
+            key={sys.id}
+            {...getDropProps(sys.id)}
+            style={{
+              border: dragOverId === sys.id && draggedId !== sys.id ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-base)',
+              marginBottom: 8,
+              overflow: 'hidden',
+              opacity: draggedId === sys.id ? 0.4 : 1,
+            }}
+          >
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: isExp ? 'rgba(56,189,248,0.06)' : 'transparent', cursor: 'pointer' }}
               onClick={() => handleExpand(sys.id)}
             >
+              <span
+                {...getHandleProps(sys.id)}
+                onClick={(e) => e.stopPropagation()}
+                title="Drag to reorder"
+                style={{ cursor: 'grab', color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', userSelect: 'none', padding: '0 2px' }}
+              >&#x2630;</span>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', transform: isExp ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.15s' }}>{'\u25BC'}</span>
               {editingSystemName === sys.id ? (
                 <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
@@ -4455,6 +4712,16 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [agencies, setAgencies] = useState<Agency[]>([])
   const [newAgencyName, setNewAgencyName] = useState('')
 
+  // Per-agency coordinator membership. The mapping drives both the
+  // count chip on each agency row and the email recipient list when
+  // a PPR is pushed for coordination.
+  type CoordPicker = { user_id: string; name: string; rank: string | null; email: string }
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
+  const [coordEditAgency, setCoordEditAgency] = useState<Agency | null>(null)
+  const [coordCandidates, setCoordCandidates] = useState<CoordPicker[]>([])
+  const [coordSelected, setCoordSelected] = useState<Set<string>>(new Set())
+  const [coordSaving, setCoordSaving] = useState(false)
+
   // Base AMOPS reply-to email (used as reply-to on confirmation + approval emails)
   const [amopsEmail, setAmopsEmail] = useState('')
   const [amopsEmailDirty, setAmopsEmailDirty] = useState(false)
@@ -4482,7 +4749,58 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       sort_order: r.sort_order,
       is_active: r.is_active,
     })))
+    // Per-agency member count drives the row chip + the no-coordinators
+    // warning. Issued as one query rather than N — handful of agencies
+    // per base.
+    const supabase = createClient()
+    if (supabase && rows.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: memberRows } = await (supabase as any)
+        .from('ppr_agency_members')
+        .select('agency_id')
+        .in('agency_id', rows.map(r => r.id))
+      const counts: Record<string, number> = {}
+      for (const m of (memberRows || []) as { agency_id: string }[]) {
+        counts[m.agency_id] = (counts[m.agency_id] || 0) + 1
+      }
+      setMemberCounts(counts)
+    } else {
+      setMemberCounts({})
+    }
   }, [installationId])
+
+  const openCoordPicker = useCallback(async (agency: Agency) => {
+    if (!installationId) return
+    const [{ fetchPprCoordinatorPicker, fetchAgencyMembers }] = await Promise.all([
+      import('@/lib/supabase/ppr-agency-members'),
+    ])
+    const [candidates, current] = await Promise.all([
+      fetchPprCoordinatorPicker(installationId),
+      fetchAgencyMembers(agency.id),
+    ])
+    setCoordCandidates(candidates)
+    setCoordSelected(new Set(current.map(m => m.user_id)))
+    setCoordEditAgency(agency)
+  }, [installationId])
+
+  const handleSaveCoordinators = useCallback(async () => {
+    if (!coordEditAgency || !installationId) return
+    setCoordSaving(true)
+    const { setAgencyMembers } = await import('@/lib/supabase/ppr-agency-members')
+    const result = await setAgencyMembers(
+      coordEditAgency.id,
+      installationId,
+      Array.from(coordSelected),
+    )
+    setCoordSaving(false)
+    if (!result.ok) {
+      toast.error(result.error || 'Failed to save coordinators')
+      return
+    }
+    toast.success(`Coordinators saved (${coordSelected.size})`)
+    setMemberCounts(prev => ({ ...prev, [coordEditAgency.id]: coordSelected.size }))
+    setCoordEditAgency(null)
+  }, [coordEditAgency, coordSelected, installationId])
 
   const loadAmopsEmail = useCallback(async () => {
     if (!installationId) return
@@ -4643,6 +4961,12 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
     setColumns(updated)
   }
 
+  const { getHandleProps, getDropProps, draggedId, dragOverId } = useDragReorder(columns, async (next) => {
+    setColumns(next.map((c, i) => ({ ...c, sort_order: i })))  // optimistic
+    const results = await Promise.all(next.map((c, i) => updatePprColumn(c.id, { sort_order: i })))
+    if (results.some(r => !r)) toast.error('Reorder failed')
+  })
+
   if (loading) {
     return <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>Loading PPR columns...</p>
   }
@@ -4660,11 +4984,23 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       )}
 
       {columns.map((col, i) => (
-        <div key={col.id} style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '8px 0',
-          borderBottom: '1px solid var(--color-border)',
-        }}>
+        <div
+          key={col.id}
+          {...getDropProps(col.id)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 0',
+            borderBottom: '1px solid var(--color-border)',
+            borderTop: dragOverId === col.id && draggedId !== col.id ? '2px solid var(--color-cyan)' : '2px solid transparent',
+            background: dragOverId === col.id && draggedId !== col.id ? 'var(--color-bg-elevated)' : undefined,
+            opacity: draggedId === col.id ? 0.4 : 1,
+          }}
+        >
+          <span
+            {...getHandleProps(col.id)}
+            title="Drag to reorder"
+            style={{ cursor: 'grab', color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', userSelect: 'none', flexShrink: 0, paddingRight: 4 }}
+          >&#x2630;</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0, width: 20, alignItems: 'center', flexShrink: 0 }}>
             <button
               onClick={() => handleMove(i, 'up')}
@@ -4807,37 +5143,158 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 8 }}>No agencies yet.</p>
         )}
 
-        {agencies.map(a => (
-          <div key={a.id} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
-          }}>
-            <span style={{ color: a.is_active ? 'var(--color-text-1)' : 'var(--color-text-3)', fontWeight: 600 }}>
-              {a.agency_name}
-              {!a.is_active && <span style={{ marginLeft: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>(inactive)</span>}
-            </span>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <button
-                onClick={() => handleToggleAgency(a)}
-                style={{
-                  padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  border: `1px solid ${a.is_active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                  background: a.is_active ? 'rgba(56,189,248,0.08)' : 'transparent',
-                  color: a.is_active ? 'var(--color-accent)' : 'var(--color-text-3)',
-                  cursor: 'pointer',
-                }}
-              >
-                {a.is_active ? 'Active' : 'Inactive'}
-              </button>
-              <button
-                onClick={() => handleDeleteAgency(a)}
-                style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
-              >
-                &times;
-              </button>
+        {agencies.map(a => {
+          const memberCount = memberCounts[a.id] ?? 0
+          return (
+            <div key={a.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ color: a.is_active ? 'var(--color-text-1)' : 'var(--color-text-3)', fontWeight: 600 }}>
+                  {a.agency_name}
+                  {!a.is_active && <span style={{ marginLeft: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>(inactive)</span>}
+                </span>
+                {/* Coordinator count chip — warns when zero so admins
+                    know emails won't fire for this agency. */}
+                {memberCount === 0 ? (
+                  <span style={{
+                    fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    color: 'var(--color-warning)',
+                    background: 'rgba(245,158,11,0.10)',
+                    border: '1px solid rgba(245,158,11,0.4)',
+                    padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+                  }}>No coordinators — emails won&apos;t fire</span>
+                ) : (
+                  <span style={{
+                    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+                    background: 'var(--color-bg-inset)',
+                    border: '1px solid var(--color-border)',
+                    padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+                  }}>{memberCount} coordinator{memberCount === 1 ? '' : 's'}</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button
+                  onClick={() => openCoordPicker(a)}
+                  style={{
+                    padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    border: '1px solid var(--color-border)', background: 'transparent',
+                    color: 'var(--color-text-2)', cursor: 'pointer',
+                  }}
+                >
+                  Coordinators
+                </button>
+                <button
+                  onClick={() => handleToggleAgency(a)}
+                  style={{
+                    padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    border: `1px solid ${a.is_active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                    background: a.is_active ? 'rgba(56,189,248,0.08)' : 'transparent',
+                    color: a.is_active ? 'var(--color-accent)' : 'var(--color-text-3)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {a.is_active ? 'Active' : 'Inactive'}
+                </button>
+                <button
+                  onClick={() => handleDeleteAgency(a)}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Coordinator picker modal */}
+        {coordEditAgency && (
+          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setCoordEditAgency(null) }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)', padding: 18, width: 480, maxHeight: '80vh',
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Coordinators
+                </div>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {coordEditAgency.agency_name}
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+                  Selected users will receive an email when a PPR is routed to this agency.
+                </div>
+              </div>
+
+              <div style={{
+                flex: 1, overflowY: 'auto', minHeight: 100,
+                border: '1px solid var(--color-border)', borderRadius: 'var(--radius-base)',
+                background: 'var(--color-bg)',
+              }}>
+                {coordCandidates.length === 0 ? (
+                  <div style={{ padding: 16, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', textAlign: 'center' }}>
+                    No users have been added to this base yet.
+                  </div>
+                ) : coordCandidates.map(u => {
+                  const checked = coordSelected.has(u.user_id)
+                  return (
+                    <label
+                      key={u.user_id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 12px', borderBottom: '1px solid var(--color-border)',
+                        cursor: 'pointer',
+                        background: checked ? 'rgba(56,189,248,0.06)' : 'transparent',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setCoordSelected(prev => {
+                            const next = new Set(prev)
+                            if (e.target.checked) next.add(u.user_id)
+                            else next.delete(u.user_id)
+                            return next
+                          })
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>
+                          {u.rank ? `${u.rank} ${u.name}` : u.name}
+                        </div>
+                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{u.email}</div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  onClick={() => setCoordEditAgency(null)}
+                  disabled={coordSaving}
+                  style={{
+                    padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+                    background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >Cancel</button>
+                <button
+                  onClick={handleSaveCoordinators}
+                  disabled={coordSaving}
+                  style={{
+                    padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
+                    background: 'var(--color-accent)', color: 'var(--color-bg)',
+                    fontWeight: 700, cursor: coordSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                  }}
+                >{coordSaving ? 'Saving…' : 'Save'}</button>
+              </div>
             </div>
           </div>
-        ))}
+        )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <input

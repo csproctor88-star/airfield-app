@@ -73,6 +73,17 @@ export type PprCoordination = {
   created_at: string
 }
 
+export type PprRemark = {
+  id: string
+  entry_id: string
+  base_id: string
+  remark: string
+  created_by: string | null
+  created_at: string
+  user_name?: string
+  user_rank?: string
+}
+
 // ── PPR Number Generation ──
 
 /** Get Julian day (1-366) from a date string (YYYY-MM-DD) */
@@ -289,6 +300,17 @@ export async function createPprEntry(input: {
       const { error: coordErr } = await supabase.from('ppr_coordination').insert(coordRows)
       if (coordErr) {
         console.error('createPprEntry coord insert failed:', coordErr.message)
+      } else {
+        // Same fire-and-forget coord email as the public-triage path.
+        try {
+          await fetch('/api/send-ppr-coordination-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entryId: entry.id, agencyIds }),
+          })
+        } catch (e) {
+          console.error('createPprEntry email send failed:', e)
+        }
       }
     }
   }
@@ -431,6 +453,21 @@ export async function triagePprEntry(input: {
     { details: `Routed to ${rows.length} agency(ies) for coordination` },
     input.baseId,
   )
+
+  // Best-effort coordination-request email to each agency's coordinators.
+  // Mirrors the approval-email pattern: failures here don't roll back
+  // the status flip, since agency members can still see the entry via
+  // the sidebar dot and the /ppr page once they log in.
+  try {
+    await fetch('/api/send-ppr-coordination-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId: input.entryId, agencyIds: input.agencyIds }),
+    })
+  } catch (e) {
+    console.error('triagePprEntry email send failed:', e)
+  }
+
   return { ok: true }
 }
 
@@ -482,6 +519,29 @@ export async function coordinatePprEntry(input: {
     }
   }
 
+  // Mirror the coordination comment into ppr_remarks so the remarks
+  // thread is the single human-readable timeline on an entry. The
+  // agency name + concur/non-concur is prefixed so context survives
+  // even if the coord row is later edited.
+  const trimmedComment = input.comment?.trim()
+  if (trimmedComment) {
+    const { data: coordRow } = await supabase
+      .from('ppr_coordination')
+      .select('agency_name')
+      .eq('id', input.coordinationId)
+      .single<{ agency_name: string }>()
+    const decision = input.status === 'concur' ? 'CONCUR' : 'NON-CONCUR'
+    const agency = coordRow?.agency_name || 'Coordination'
+    const remarkText = `[${agency} — ${decision}] ${trimmedComment}`
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('ppr_remarks').insert({
+      entry_id: input.entryId,
+      base_id: input.baseId,
+      remark: remarkText,
+      created_by: user.id,
+    })
+  }
+
   logActivity(
     'updated',
     'ppr_entry',
@@ -490,6 +550,72 @@ export async function coordinatePprEntry(input: {
     { details: input.comment ? `Comment: ${input.comment}` : undefined },
     input.baseId,
   )
+  return { ok: true }
+}
+
+// ── Remarks ──
+
+/**
+ * Free-form comment thread on a PPR entry. Any user with `ppr:view`
+ * can read or add a remark; edit/delete is gated on `ppr:write`.
+ * Coordination comments are mirrored here automatically by
+ * coordinatePprEntry so this is a single timeline.
+ */
+export async function fetchPprRemarks(entryId: string): Promise<PprRemark[]> {
+  const supabase = db()
+  if (!supabase) return []
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('ppr_remarks')
+    .select('*, profiles:created_by(name, rank)')
+    .eq('entry_id', entryId)
+    .order('created_at', { ascending: false })
+
+  if (!error && data) {
+    return (data as Record<string, unknown>[]).map((row) => ({
+      ...(row as unknown as PprRemark),
+      user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+      user_rank: (row.profiles as { rank?: string } | null)?.rank || undefined,
+    }))
+  }
+
+  // Fallback path mirrors discrepancies.fetchStatusUpdates — if the
+  // implicit FK join can't resolve (older DBs, dropped FK), return
+  // the bare rows so the UI still renders something useful.
+  console.warn('PPR remarks profile join failed, falling back:', error?.message)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: bare } = await (supabase as any)
+    .from('ppr_remarks')
+    .select('*')
+    .eq('entry_id', entryId)
+    .order('created_at', { ascending: false })
+
+  return ((bare || []) as PprRemark[]).map((r) => ({ ...r, user_name: 'Unknown' }))
+}
+
+export async function addPprRemark(input: {
+  entryId: string
+  baseId: string
+  remark: string
+}): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+
+  const text = input.remark.trim()
+  if (!text) return { ok: false, error: 'Remark cannot be empty' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any).from('ppr_remarks').insert({
+    entry_id: input.entryId,
+    base_id: input.baseId,
+    remark: text,
+    created_by: user.id,
+  })
+  if (error) return { ok: false, error: friendlyError(error.message) }
   return { ok: true }
 }
 

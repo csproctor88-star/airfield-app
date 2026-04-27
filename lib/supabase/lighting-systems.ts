@@ -7,10 +7,15 @@ export async function fetchLightingSystems(baseId: string): Promise<LightingSyst
   const supabase = createClient()
   if (!supabase) return []
 
-  const { data, error } = await supabase
-    .from('lighting_systems')
-    .select('*')
-    .eq('base_id', baseId)
+  // sort_order is the user's manual ordering; name is a tiebreaker
+  // for legacy rows that all share the default 0. The column isn't
+  // yet in the generated types, so we drop to a one-shot any cast on
+  // the query builder rather than the select() arg (which throws off
+  // the row type for the entire chain).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const q: any = supabase.from('lighting_systems').select('*').eq('base_id', baseId)
+  const { data, error } = await q
+    .order('sort_order', { ascending: true })
     .order('name')
 
   if (error) return []

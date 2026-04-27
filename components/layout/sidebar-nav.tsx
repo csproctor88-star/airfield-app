@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useTheme } from '@/lib/theme-context'
 import { useExpiringNotamCount } from '@/lib/use-expiring-notams'
+import { useSidebarBadgeCounts } from '@/hooks/use-sidebar-badge-counts'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
 import { usePermissions } from '@/lib/permissions'
@@ -127,6 +128,7 @@ export function SidebarNav() {
   const { isOpen, toggle } = useSidebar()
   const { resolvedTheme } = useTheme()
   const expiringNotamCount = useExpiringNotamCount()
+  const badgeCounts = useSidebarBadgeCounts()
   const { enabledModules } = useInstallation()
   const { has, loaded: permsLoaded } = usePermissions()
   const [isKioskRole, setIsKioskRole] = useState(false)
@@ -365,11 +367,31 @@ export function SidebarNav() {
               {expiringNotamCount > 9 ? '9+' : expiringNotamCount}
             </span>
           )}
+          {/* PPR pending dot — suppress while viewing /ppr since the
+              user is already aware. Operations section header keeps
+              its own dot regardless. */}
+          {href === '/ppr' && badgeCounts.ppr > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {badgeCounts.ppr > 9 ? '9+' : badgeCounts.ppr}
+            </span>
+          )}
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {expiringNotamCount} expiring
+          </span>
+        )}
+        {isOpen && href === '/ppr' && badgeCounts.ppr > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+            {badgeCounts.ppr} pending
           </span>
         )}
       </Link>
@@ -440,6 +462,10 @@ export function SidebarNav() {
     const isGroupOpen = openGroups[section.label] ?? false
     const hasActiveChild = section.items.some(href => isActive(href))
 
+    // Aggregate per-section pending count. Add new modules here as
+    // they start contributing to the sidebar badge hook.
+    const sectionPendingCount = section.items.includes('/ppr') ? badgeCounts.ppr : 0
+
     return (
       <button
         onClick={() => toggleGroup(section.label)}
@@ -464,7 +490,21 @@ export function SidebarNav() {
           textTransform: 'uppercase',
         }}
       >
-        <GroupIcon size={16} style={{ flexShrink: 0 }} />
+        <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+          <GroupIcon size={16} />
+          {sectionPendingCount > 0 && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 14 : 12, height: isOpen ? 14 : 12,
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {sectionPendingCount > 9 ? '9+' : sectionPendingCount}
+            </span>
+          )}
+        </span>
         {isOpen && (
           <>
             <span style={{ flex: 1 }}>{section.label}</span>
