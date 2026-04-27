@@ -93,6 +93,22 @@ export function useSidebarBadgeCounts() {
     }
   }, [installationId, refresh])
 
+  // Fallback for missed realtime events. If a tab was open before
+  // ppr_entries/ppr_coordination were added to the publication,
+  // its websocket subscription doesn't auto-pick up the change and
+  // the badge can stick. Re-fetch on tab focus so the user gets a
+  // self-heal whenever they switch back to Glidepath.
+  useEffect(() => {
+    function onFocus() { refresh() }
+    function onVisibility() { if (document.visibilityState === 'visible') refresh() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [refresh])
+
   const ppr = pprTriage + pprApproval + pprCoord
   const total = ppr
 
