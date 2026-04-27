@@ -4908,7 +4908,7 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
         <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Public Request URL</h3>
         <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
           Share this link or post the QR code so transient aircrews can submit PPR requests. Only columns flagged
-          <strong> Public</strong> appear on the form. Submissions land in <em>Awaiting Triage</em> on the PPR page.
+          <strong> Public</strong> appear on the form. Submissions land in <em>Awaiting Review</em> on the PPR page.
         </p>
         <button
           onClick={generatePublicQr}

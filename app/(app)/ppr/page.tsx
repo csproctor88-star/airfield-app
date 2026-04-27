@@ -35,7 +35,7 @@ type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'p
 
 // Color tokens used by the status chip + KPI pills.
 const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; border: string }> = {
-  pending_amops_triage:    { label: 'Awaiting Triage',    bg: 'rgba(220,38,38,0.12)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
+  pending_amops_triage:    { label: 'Awaiting Review',    bg: 'rgba(220,38,38,0.12)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
   pending_coordination:    { label: 'In Coordination',    bg: 'rgba(56,189,248,0.10)', fg: 'var(--color-accent)', border: 'rgba(56,189,248,0.4)' },
   pending_amops_approval:  { label: 'Awaiting Approval',  bg: 'rgba(245,158,11,0.12)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
   approved:                { label: 'Approved',           bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
@@ -326,7 +326,7 @@ export default function PprPage() {
       }
       const skip = formSkipCoord || formAgencyIds.length === 0
       if (!skip && !canTriage) {
-        toast.error('Routing to coordination requires the PPR Triage permission')
+        toast.error('Routing to coordination requires the PPR Review permission')
         return
       }
       const entry = await createPprEntry({
@@ -379,7 +379,7 @@ export default function PprPage() {
       setTriageEntry(null)
       loadData()
     } else {
-      toast.error(res.error || 'Triage failed')
+      toast.error(res.error || 'Review failed')
     }
   }
 
@@ -474,7 +474,7 @@ export default function PprPage() {
     const hasPendingCoord = coords.some((c) => c.status === 'pending')
     const acts: { label: string; color: string; onClick: () => void }[] = []
     if (canTriage && entry.status === 'pending_amops_triage') {
-      acts.push({ label: 'Triage', color: '#ef4444', onClick: () => openTriage(entry) })
+      acts.push({ label: 'Review', color: '#ef4444', onClick: () => openTriage(entry) })
     }
     if (canCoordinate && entry.status === 'pending_coordination' && hasPendingCoord) {
       acts.push({ label: 'Coordinate', color: 'var(--color-accent)', onClick: () => openCoordinate(entry) })
@@ -547,7 +547,7 @@ export default function PprPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
             {showTriage && (
               <KpiPill
-                label={`${pendingTriage} AWAITING TRIAGE`}
+                label={`${pendingTriage} AWAITING REVIEW`}
                 colorBg="rgba(220,38,38,0.12)"
                 colorFg="#ef4444"
                 colorBorder="rgba(220,38,38,0.4)"
@@ -619,7 +619,7 @@ export default function PprPage() {
             style={chipStyle(statusFilter === f)}
           >
             {f === 'all' ? 'All'
-              : f === 'pending_amops_triage' ? 'Triage'
+              : f === 'pending_amops_triage' ? 'Review'
               : f === 'pending_coordination' ? 'Coordination'
               : f === 'pending_amops_approval' ? 'Approval'
               : f === 'approved' ? 'Approved'
@@ -865,7 +865,7 @@ export default function PprPage() {
         <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setTriageEntry(null) }}>
           <div onClick={e => e.stopPropagation()} style={modalCardStyle}>
             <h3 style={{ margin: '0 0 8px', fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
-              Triage PPR {triageEntry.ppr_number}
+              Review PPR {triageEntry.ppr_number}
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               Public submission from <strong>{triageEntry.requester_name}</strong> ({triageEntry.requester_email}).
