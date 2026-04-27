@@ -4698,6 +4698,8 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
 
 // ── PPR Columns Tab ──
 function PprColumnsTab({ installationId }: { installationId: string | null }) {
+  const { currentInstallation } = useInstallation()
+  const baseIcao = (currentInstallation as { icao?: string | null } | null)?.icao || null
   const [columns, setColumns] = useState<PprColumn[]>([])
   const [newColName, setNewColName] = useState('')
   const [newColType, setNewColType] = useState<PprColumnType>('text')
@@ -4916,7 +4918,11 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
 
   const generatePublicQr = () => {
     if (!installationId) return
-    const url = `${window.location.origin}/ppr-request/${installationId}`
+    // Prefer the short ICAO-based URL when available; fall back to the
+    // legacy UUID URL for bases that somehow lack an ICAO.
+    const url = baseIcao
+      ? `${window.location.origin}/${baseIcao.toLowerCase()}/ppr-request`
+      : `${window.location.origin}/ppr-request/${installationId}`
     setQrUrl(url)
     setShowQr(true)
   }

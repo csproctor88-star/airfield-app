@@ -34,18 +34,7 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    if (
-      !user
-      && !request.nextUrl.pathname.startsWith('/login')
-      && !request.nextUrl.pathname.startsWith('/reset-password')
-      && !request.nextUrl.pathname.startsWith('/setup-account')
-      && !request.nextUrl.pathname.startsWith('/auth/confirm')
-      && !request.nextUrl.pathname.startsWith('/api/installations')
-      && !request.nextUrl.pathname.startsWith('/api/send-ppr-confirmation')
-      && !request.nextUrl.pathname.startsWith('/feedback')
-      && !request.nextUrl.pathname.startsWith('/ppr-request')
-      && !request.nextUrl.pathname.startsWith('/kiosk')
-    ) {
+    if (!user && !isPublicPath(request.nextUrl.pathname)) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       return NextResponse.redirect(redirectUrl)
@@ -54,23 +43,33 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   } catch {
     // If auth check fails, redirect to login as a safety fallback
-    if (
-      !request.nextUrl.pathname.startsWith('/login')
-      && !request.nextUrl.pathname.startsWith('/reset-password')
-      && !request.nextUrl.pathname.startsWith('/setup-account')
-      && !request.nextUrl.pathname.startsWith('/auth/confirm')
-      && !request.nextUrl.pathname.startsWith('/api/installations')
-      && !request.nextUrl.pathname.startsWith('/api/send-ppr-confirmation')
-      && !request.nextUrl.pathname.startsWith('/feedback')
-      && !request.nextUrl.pathname.startsWith('/ppr-request')
-      && !request.nextUrl.pathname.startsWith('/kiosk')
-    ) {
+    if (!isPublicPath(request.nextUrl.pathname)) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       return NextResponse.redirect(redirectUrl)
     }
     return NextResponse.next()
   }
+}
+
+/** Paths that bypass the auth gate. Anonymous visitors land here
+ *  via QR codes, password resets, public submission forms, etc. */
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname.startsWith('/login')
+    || pathname.startsWith('/reset-password')
+    || pathname.startsWith('/setup-account')
+    || pathname.startsWith('/auth/confirm')
+    || pathname.startsWith('/api/installations')
+    || pathname.startsWith('/api/send-ppr-confirmation')
+    || pathname.startsWith('/feedback')
+    || pathname.startsWith('/ppr-request')
+    || pathname.startsWith('/kiosk')
+    // Short PPR request URL: /<icao>/ppr-request[/...]. The route
+    // handler validates the ICAO and shows a not-found state if the
+    // base doesn't exist, so a permissive prefix match is safe.
+    || /^\/[^/]+\/ppr-request(\/.*)?$/.test(pathname)
+  )
 }
 
 export const config = {
