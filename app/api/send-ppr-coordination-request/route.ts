@@ -16,6 +16,17 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+/** Resend rejects sends entirely on a malformed replyTo. Trim and
+ *  do a permissive shape check so any garbage in bases.amops_email
+ *  doesn't kill the email. */
+function validReplyTo(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return undefined
+  return trimmed
+}
+
 /**
  * Coordination-request email — fired by triagePprEntry when a PPR is
  * routed to a set of agencies. Authenticated; any user with
@@ -130,6 +141,7 @@ export async function POST(request: Request) {
 
     const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
     const safeBase = escapeHtml(base.name)
+    const replyTo = validReplyTo(base.amops_email)
     const safePpr = escapeHtml(entry.ppr_number)
     const safeArrival = escapeHtml(entry.arrival_date)
     const safeRequester = escapeHtml(
@@ -155,7 +167,7 @@ export async function POST(request: Request) {
       const { error } = await getResend().emails.send({
         from: fromLabel,
         to: recipients,
-        replyTo: base.amops_email || undefined,
+        replyTo,
         subject: `${base.name} PPR coordination requested — ${agencyName}`,
         html: `
           <p>A Prior Permission Required (PPR) request at ${safeBase} has been routed to <strong>${safeAgency}</strong> for coordination.</p>

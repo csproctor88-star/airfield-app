@@ -16,6 +16,17 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+/** Resend rejects sends entirely on a malformed replyTo. Trim and
+ *  do a permissive shape check so any garbage in bases.amops_email
+ *  (whitespace, typo, leftover newline) doesn't kill the email. */
+function validReplyTo(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return undefined
+  return trimmed
+}
+
 /**
  * Approval email — sent to the public requester once a PPR is approved.
  * Authenticated route — any user with `ppr:approve` (AFM, NAMO, AMOPS,
@@ -134,11 +145,12 @@ export async function POST(request: Request) {
     const safeBase = escapeHtml(base.name)
     const safePpr = escapeHtml(entry.ppr_number)
     const safeArrival = escapeHtml(entry.arrival_date)
+    const replyTo = validReplyTo(base.amops_email)
 
     const { error } = await getResend().emails.send({
       from: fromLabel,
       to: entry.requester_email,
-      replyTo: base.amops_email || undefined,
+      replyTo,
       subject: `${base.name} PPR APPROVED — ${entry.ppr_number}`,
       html: `
         <p>Hello ${safeName},</p>
@@ -151,8 +163,8 @@ export async function POST(request: Request) {
         ${valuesHtml ? `<table style="border-collapse:collapse;margin-top:8px;">${valuesHtml}</table>` : ''}
         ${entry.notes ? `<p><strong>Notes:</strong> ${escapeHtml(entry.notes)}</p>` : ''}
         ${infoHtml}
-        ${base.amops_email
-          ? `<p>Questions or changes? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(base.amops_email)}">${escapeHtml(base.amops_email)}</a>.</p>`
+        ${replyTo
+          ? `<p>Questions or changes? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a>.</p>`
           : ''}
         <p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management.</p>
       `,

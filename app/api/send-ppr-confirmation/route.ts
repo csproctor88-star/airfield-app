@@ -15,6 +15,21 @@ function escapeHtml(str: string): string {
 }
 
 /**
+ * Returns a Resend-safe replyTo string, or undefined if the input
+ * doesn't look like an email. Resend rejects the entire send with a
+ * 422 if replyTo is malformed, so any garbage in `bases.amops_email`
+ * (whitespace, typo, leftover newline) takes down the whole email.
+ * Be permissive on the regex — Resend itself does the strict check.
+ */
+function validReplyTo(raw: string | null | undefined): string | undefined {
+  if (!raw) return undefined
+  const trimmed = raw.trim()
+  if (!trimmed) return undefined
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return undefined
+  return trimmed
+}
+
+/**
  * Public-facing PPR submission confirmation. Called immediately after
  * a successful submit_public_ppr_request RPC. Deliberately omits the
  * PPR number — the request hasn't been approved yet, and if AMOPS
@@ -90,11 +105,12 @@ export async function POST(request: Request) {
     const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
     const safeName = escapeHtml(requesterName)
     const safeBase = escapeHtml(base.name)
+    const replyTo = validReplyTo(base.amops_email)
 
     const { error } = await getResend().emails.send({
       from: fromLabel,
       to: requesterEmail,
-      replyTo: base.amops_email || undefined,
+      replyTo,
       subject: `${base.name} PPR request received`,
       html: `
         <p>Hello ${safeName},</p>
@@ -102,7 +118,7 @@ export async function POST(request: Request) {
         <p>Your request is now pending review. You will receive a separate email with your assigned PPR number once it is approved.
            If your request is denied or further information is needed, AMOPS will reach out to you directly.</p>
         ${infoHtml}
-        ${base.amops_email ? `<p>Questions? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(base.amops_email)}">${escapeHtml(base.amops_email)}</a>.</p>` : ''}
+        ${replyTo ? `<p>Questions? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a>.</p>` : ''}
         <p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management.</p>
       `,
     })
