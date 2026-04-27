@@ -421,6 +421,26 @@ export async function triagePprEntry(input: {
       { details: 'PRE-COORDINATED — APPROVED' },
       input.baseId,
     )
+
+    // Pre-coordinated path lands at status='approved' but used to skip
+    // the approval-email send entirely — only approvePprEntry (the
+    // post-coord Decide path) was firing the email. Send it here too
+    // so the requester gets their PPR number regardless of which
+    // approval path AMOPS used.
+    try {
+      const res = await fetch('/api/send-ppr-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: input.entryId }),
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        console.error('[triagePprEntry] approval email API non-2xx', res.status, body)
+      }
+    } catch (e) {
+      console.error('[triagePprEntry] approval email fetch threw:', e)
+    }
+
     return { ok: true }
   }
 
