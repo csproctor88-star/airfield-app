@@ -1,0 +1,357 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { PprFieldInput } from '@/components/ppr/ppr-field-input'
+import type { PprColumnType } from '@/lib/supabase/ppr'
+
+type PublicCol = {
+  id: string
+  name: string
+  type: PprColumnType
+  is_required: boolean
+  sort_order: number
+}
+
+type PublicConfig = {
+  baseName: string
+  moduleEnabled: boolean
+  columns: PublicCol[]
+}
+
+const COOLDOWN_KEY_PREFIX = 'ppr_request_cooldown_'
+const COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes
+
+export default function PprRequestPage() {
+  const { baseId } = useParams<{ baseId: string }>()
+
+  const [config, setConfig] = useState<PublicConfig | null>(null)
+  const [baseFound, setBaseFound] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+  const [rateLimited, setRateLimited] = useState(false)
+
+  // Form state
+  const today = new Date().toISOString().slice(0, 10)
+  const [requesterName, setRequesterName] = useState('')
+  const [requesterEmail, setRequesterEmail] = useState('')
+  const [arrivalDate, setArrivalDate] = useState(today)
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [notes, setNotes] = useState('')
+
+  useEffect(() => {
+    if (!baseId) return
+
+    const lastSubmit = localStorage.getItem(COOLDOWN_KEY_PREFIX + baseId)
+    if (lastSubmit && Date.now() - parseInt(lastSubmit) < COOLDOWN_MS) {
+      setRateLimited(true)
+    }
+
+    const supabase = createClient()
+    if (!supabase) {
+      setBaseFound(false)
+      setLoading(false)
+      return
+    }
+
+    // SECURITY DEFINER RPC: anon can call this. Returns base name +
+    // module-enabled flag + array of public columns.
+    ;(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: rpcErr } = await (supabase as any).rpc('get_public_ppr_config', {
+        p_base_id: baseId,
+      })
+      if (rpcErr) {
+        console.error('get_public_ppr_config:', rpcErr.message)
+        setBaseFound(false)
+        setLoading(false)
+        return
+      }
+      const row = Array.isArray(data) ? data[0] : data
+      if (!row || !row.base_name) {
+        setBaseFound(false)
+        setLoading(false)
+        return
+      }
+      setConfig({
+        baseName: row.base_name as string,
+        moduleEnabled: Boolean(row.module_enabled),
+        columns: ((row.columns as PublicCol[]) ?? []).slice().sort((a, b) => a.sort_order - b.sort_order),
+      })
+      setLoading(false)
+    })()
+  }, [baseId])
+
+  const handleSubmit = async () => {
+    if (!baseId || !config || submitting) return
+    setError('')
+
+    if (!requesterName.trim()) {
+      setError('Please enter your name')
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(requesterEmail.trim())) {
+      setError('Please enter a valid email address')
+      return
+    }
+    if (!arrivalDate) {
+      setError('Please select an arrival date')
+      return
+    }
+    for (const c of config.columns) {
+      if (c.is_required && !(values[c.id] || '').trim()) {
+        setError(`"${c.name}" is required`)
+        return
+      }
+    }
+
+    setSubmitting(true)
+
+    const supabase = createClient()
+    if (!supabase) {
+      setError('Service unavailable')
+      setSubmitting(false)
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: rpcErr } = await (supabase as any).rpc('submit_public_ppr_request', {
+      p_base_id: baseId,
+      p_requester_name: requesterName.trim(),
+      p_requester_email: requesterEmail.trim(),
+      p_arrival_date: arrivalDate,
+      p_column_values: values,
+      p_notes: notes.trim() || null,
+    })
+
+    if (rpcErr) {
+      setError(rpcErr.message || 'Submission failed')
+      setSubmitting(false)
+      return
+    }
+
+    // Best-effort confirmation email — failures don't block the success state,
+    // since the entry is in already and AMOPS will see it on triage.
+    try {
+      await fetch('/api/send-ppr-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          baseId,
+          requesterEmail: requesterEmail.trim(),
+          requesterName: requesterName.trim(),
+        }),
+      })
+    } catch (e) {
+      console.error('confirmation email failed:', e)
+    }
+
+    localStorage.setItem(COOLDOWN_KEY_PREFIX + baseId, String(Date.now()))
+    setSubmitted(true)
+    setSubmitting(false)
+  }
+
+  // ── Visual: shared dark inputs (mirror /feedback) ───────
+  const inputStyle: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+    border: '1px solid #334155', background: '#0F172A', color: '#E2E8F0',
+    fontSize: 16, fontFamily: 'inherit', outline: 'none',
+  }
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 14, fontWeight: 600, color: '#94A3B8', marginBottom: 4,
+  }
+
+  if (loading) {
+    return (
+      <div style={shellStyle('center')}>
+        <div style={{ color: '#94A3B8', fontSize: 16 }}>Loading...</div>
+      </div>
+    )
+  }
+
+  if (!baseFound || !config || !config.moduleEnabled) {
+    const heading = !baseFound
+      ? 'PPR Request Form Not Found'
+      : config && !config.moduleEnabled
+        ? `${config.baseName} is not accepting public PPR requests`
+        : 'PPR Request Form Closed'
+    const body = !baseFound
+      ? 'This link does not match an active base. Check the QR code and try again.'
+      : 'Please contact airfield management directly to request a Prior Permission slot.'
+    return (
+      <div style={shellStyle('center')}>
+        <div style={{ textAlign: 'center', maxWidth: 420, padding: 24 }}>
+          <div style={brandTagStyle}>GLIDEPATH</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 10 }}>{heading}</div>
+          <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>{body}</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (rateLimited) {
+    return (
+      <div style={shellStyle('center')}>
+        <div style={{ textAlign: 'center', maxWidth: 400, padding: 24 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 8 }}>Thanks</div>
+          <div style={{ fontSize: 14, color: '#64748B' }}>
+            You recently submitted a PPR request. Please wait a few minutes before submitting another, or
+            contact AMOPS directly if you need to update an existing request.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (submitted) {
+    return (
+      <div style={shellStyle('center')}>
+        <div style={{ textAlign: 'center', maxWidth: 460, padding: 24 }}>
+          <div style={{ fontSize: 48, marginBottom: 16, color: '#22C55E' }}>&#10003;</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#22C55E', marginBottom: 10 }}>Request Submitted</div>
+          <div style={{ fontSize: 16, color: '#E2E8F0', lineHeight: 1.5 }}>
+            {config.baseName} AMOPS has received your request and will review it.
+            You will receive a separate email with your assigned PPR number once it is approved.
+          </div>
+          <div style={{ marginTop: 16, fontSize: 12, color: '#64748B' }}>
+            A confirmation has been sent to {requesterEmail}.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0B1120', padding: '24px 16px' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={brandTagStyle}>GLIDEPATH</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#E2E8F0', marginBottom: 4 }}>
+            {config.baseName}
+          </div>
+          <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>
+            Prior Permission Required (PPR) Request
+          </div>
+        </div>
+
+        <div style={{
+          background: '#1E293B', border: '1px solid #334155', borderRadius: 12,
+          padding: 20, display: 'flex', flexDirection: 'column', gap: 16,
+        }}>
+          {/* Fixed: requester name */}
+          <div>
+            <label style={labelStyle}>Name <span style={{ color: '#EF4444' }}>*</span></label>
+            <input
+              value={requesterName}
+              onChange={(e) => setRequesterName(e.target.value)}
+              placeholder="First Last"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Fixed: requester email */}
+          <div>
+            <label style={labelStyle}>Email <span style={{ color: '#EF4444' }}>*</span></label>
+            <input
+              type="email"
+              value={requesterEmail}
+              onChange={(e) => setRequesterEmail(e.target.value)}
+              placeholder="your.email@example.com"
+              style={inputStyle}
+            />
+            <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+              We&apos;ll send your PPR number here once AMOPS approves the request.
+            </div>
+          </div>
+
+          {/* Fixed: arrival date */}
+          <div>
+            <label style={labelStyle}>Requested Arrival Date <span style={{ color: '#EF4444' }}>*</span></label>
+            <input
+              type="date"
+              value={arrivalDate}
+              onChange={(e) => setArrivalDate(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Dynamic public columns */}
+          {config.columns.length > 0 && (
+            <div style={{
+              borderTop: '1px solid #334155', paddingTop: 12,
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              {config.columns.map((col) => (
+                <PprFieldInput
+                  key={col.id}
+                  columnId={col.id}
+                  columnName={col.name}
+                  columnType={col.type}
+                  isRequired={col.is_required}
+                  value={values[col.id] || ''}
+                  onChange={(v) => setValues((prev) => ({ ...prev, [col.id]: v }))}
+                  inputBackground="#0F172A"
+                  inputColor="#E2E8F0"
+                  inputBorder="1px solid #334155"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Notes */}
+          <div>
+            <label style={labelStyle}>Additional Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Anything AMOPS should know about your request"
+              rows={3}
+              style={{ ...inputStyle, resize: 'vertical', minHeight: 60 }}
+            />
+          </div>
+
+          {error && (
+            <div style={{ fontSize: 13, color: '#EF4444', fontWeight: 600 }}>{error}</div>
+          )}
+
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{
+              padding: '12px 0', borderRadius: 8, border: 'none',
+              background: submitting ? '#334155' : 'linear-gradient(135deg, #0369A1, #22D3EE)',
+              color: '#FFF', fontSize: 16, fontWeight: 700,
+              cursor: submitting ? 'wait' : 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            {submitting ? 'Submitting...' : 'Submit PPR Request'}
+          </button>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: '#475569' }}>
+          Powered by Glidepath
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function shellStyle(align: 'center' | 'top'): React.CSSProperties {
+  return {
+    minHeight: '100vh',
+    background: '#0B1120',
+    display: 'flex',
+    alignItems: align === 'center' ? 'center' : 'flex-start',
+    justifyContent: 'center',
+  }
+}
+
+const brandTagStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 700, color: '#22D3EE',
+  letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6,
+}

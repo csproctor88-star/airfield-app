@@ -4445,9 +4445,24 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [newColName, setNewColName] = useState('')
   const [newColType, setNewColType] = useState<PprColumnType>('text')
   const [newColRequired, setNewColRequired] = useState(false)
+  const [newColPublic, setNewColPublic] = useState(false)
   const [editingColId, setEditingColId] = useState<string | null>(null)
   const [editingColName, setEditingColName] = useState('')
   const [loading, setLoading] = useState(true)
+
+  // Coordinating agencies (free-text, per base — no role mapping)
+  type Agency = { id: string; agency_name: string; sort_order: number; is_active: boolean }
+  const [agencies, setAgencies] = useState<Agency[]>([])
+  const [newAgencyName, setNewAgencyName] = useState('')
+
+  // Base AMOPS reply-to email (used as reply-to on confirmation + approval emails)
+  const [amopsEmail, setAmopsEmail] = useState('')
+  const [amopsEmailDirty, setAmopsEmailDirty] = useState(false)
+  const [amopsEmailSaving, setAmopsEmailSaving] = useState(false)
+
+  // Public-form QR
+  const [showQr, setShowQr] = useState(false)
+  const [qrUrl, setQrUrl] = useState('')
 
   const loadColumns = useCallback(async () => {
     if (!installationId) return
@@ -4457,7 +4472,32 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
     setLoading(false)
   }, [installationId])
 
-  useEffect(() => { loadColumns() }, [loadColumns])
+  const loadAgencies = useCallback(async () => {
+    if (!installationId) return
+    const { fetchPprAgencies } = await import('@/lib/supabase/ppr-agencies')
+    const rows = await fetchPprAgencies(installationId)
+    setAgencies(rows.map(r => ({
+      id: r.id,
+      agency_name: r.agency_name,
+      sort_order: r.sort_order,
+      is_active: r.is_active,
+    })))
+  }, [installationId])
+
+  const loadAmopsEmail = useCallback(async () => {
+    if (!installationId) return
+    const supabase = createClient()
+    if (!supabase) return
+    const { data } = await supabase.from('bases').select('amops_email').eq('id', installationId).single()
+    setAmopsEmail((data?.amops_email as string | null) || '')
+    setAmopsEmailDirty(false)
+  }, [installationId])
+
+  useEffect(() => {
+    loadColumns()
+    loadAgencies()
+    loadAmopsEmail()
+  }, [loadColumns, loadAgencies, loadAmopsEmail])
 
   const handleAdd = async () => {
     if (!installationId || !newColName.trim()) return
@@ -4467,14 +4507,88 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       column_type: newColType,
       sort_order: columns.length,
       is_required: newColRequired,
+      is_public: newColPublic,
     })
     if (col) {
       setColumns(prev => [...prev, col])
       setNewColName('')
       setNewColType('text')
       setNewColRequired(false)
+      setNewColPublic(false)
       toast.success(`Added "${col.column_name}"`)
     }
+  }
+
+  const handleTogglePublic = async (col: PprColumn) => {
+    const updated = await updatePprColumn(col.id, { is_public: !col.is_public })
+    if (updated) {
+      setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
+    }
+  }
+
+  const handleAddAgency = async () => {
+    if (!installationId || !newAgencyName.trim()) return
+    const { createPprAgency } = await import('@/lib/supabase/ppr-agencies')
+    const res = await createPprAgency(installationId, newAgencyName)
+    if (res.error || !res.data) {
+      toast.error(res.error || 'Failed to add agency')
+      return
+    }
+    setAgencies(prev => [...prev, {
+      id: res.data!.id,
+      agency_name: res.data!.agency_name,
+      sort_order: res.data!.sort_order,
+      is_active: res.data!.is_active,
+    }])
+    setNewAgencyName('')
+    toast.success(`Added "${res.data.agency_name}"`)
+  }
+
+  const handleDeleteAgency = async (a: Agency) => {
+    if (!confirm(`Delete agency "${a.agency_name}"? Existing coordination history will be preserved.`)) return
+    const { deletePprAgency } = await import('@/lib/supabase/ppr-agencies')
+    const res = await deletePprAgency(a.id)
+    if (res.error) {
+      toast.error(res.error)
+      return
+    }
+    setAgencies(prev => prev.filter(x => x.id !== a.id))
+    toast.success('Deleted')
+  }
+
+  const handleToggleAgency = async (a: Agency) => {
+    const { updatePprAgency } = await import('@/lib/supabase/ppr-agencies')
+    const res = await updatePprAgency(a.id, { is_active: !a.is_active })
+    if (res.error) {
+      toast.error(res.error)
+      return
+    }
+    setAgencies(prev => prev.map(x => x.id === a.id ? { ...x, is_active: !a.is_active } : x))
+  }
+
+  const handleSaveAmopsEmail = async () => {
+    if (!installationId) return
+    setAmopsEmailSaving(true)
+    const supabase = createClient()
+    if (!supabase) { setAmopsEmailSaving(false); return }
+    const { error } = await supabase
+      .from('bases')
+      .update({ amops_email: amopsEmail.trim() || null })
+      .eq('id', installationId)
+    setAmopsEmailSaving(false)
+    if (error) {
+      toast.error(`Save failed: ${error.message}`)
+      return
+    }
+    setAmopsEmailDirty(false)
+    toast.success('AMOPS email saved')
+  }
+
+  const generatePublicQr = () => {
+    if (!installationId) return
+    const url = `${window.location.origin}/ppr-request/${installationId}`
+    setQrUrl(url)
+    setShowQr(true)
   }
 
   const handleDelete = async (col: PprColumn) => {
@@ -4611,6 +4725,19 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             {col.is_required ? 'Required' : 'Optional'}
           </button>
           <button
+            onClick={() => handleTogglePublic(col)}
+            title="Show this column on the public PPR request form"
+            style={{
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: `1px solid ${col.is_public ? '#22c55e' : 'var(--color-border)'}`,
+              background: col.is_public ? 'rgba(34,197,94,0.10)' : 'transparent',
+              color: col.is_public ? '#22c55e' : 'var(--color-text-3)',
+              cursor: 'pointer',
+            }}
+          >
+            {col.is_public ? 'Public' : 'Internal'}
+          </button>
+          <button
             onClick={() => handleDelete(col)}
             style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
           >
@@ -4650,6 +4777,10 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           <input type="checkbox" checked={newColRequired} onChange={e => setNewColRequired(e.target.checked)} />
           Required
         </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on public request form">
+          <input type="checkbox" checked={newColPublic} onChange={e => setNewColPublic(e.target.checked)} />
+          Public
+        </label>
         <button
           onClick={handleAdd}
           disabled={!newColName.trim()}
@@ -4662,6 +4793,168 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
         >
           Add
         </button>
+      </div>
+
+      {/* ── Coordinating Agencies ──────────────────────────────── */}
+      <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+        <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Coordinating Agencies</h3>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+          When a public PPR submission lands, AMOPS picks which of these agencies must coordinate before final approval.
+          Anyone with the PPR role can act on any coordination row; the per-agency KPI badges on the PPR page filter the list.
+        </p>
+
+        {agencies.length === 0 && (
+          <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 8 }}>No agencies yet.</p>
+        )}
+
+        {agencies.map(a => (
+          <div key={a.id} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
+          }}>
+            <span style={{ color: a.is_active ? 'var(--color-text-1)' : 'var(--color-text-3)', fontWeight: 600 }}>
+              {a.agency_name}
+              {!a.is_active && <span style={{ marginLeft: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>(inactive)</span>}
+            </span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => handleToggleAgency(a)}
+                style={{
+                  padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  border: `1px solid ${a.is_active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                  background: a.is_active ? 'rgba(56,189,248,0.08)' : 'transparent',
+                  color: a.is_active ? 'var(--color-accent)' : 'var(--color-text-3)',
+                  cursor: 'pointer',
+                }}
+              >
+                {a.is_active ? 'Active' : 'Inactive'}
+              </button>
+              <button
+                onClick={() => handleDeleteAgency(a)}
+                style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        ))}
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <input
+            value={newAgencyName}
+            onChange={e => setNewAgencyName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAddAgency()}
+            placeholder="Agency name (e.g., Wing Safety, Fuels, Security Forces)..."
+            style={{
+              flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-inset)',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+            }}
+          />
+          <button
+            onClick={handleAddAgency}
+            disabled={!newAgencyName.trim()}
+            style={{
+              padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+              background: newAgencyName.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+              color: newAgencyName.trim() ? '#fff' : 'var(--color-text-3)',
+              cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* ── AMOPS reply-to email ─────────────────────────────── */}
+      <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+        <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>AMOPS Email (reply-to)</h3>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+          Used as the <code>reply-to</code> address on confirmation and approval emails sent to public requesters.
+          Leave blank to omit the reply-to header (the sender remains <code>info@glidepathops.com</code>).
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="email"
+            value={amopsEmail}
+            onChange={e => { setAmopsEmail(e.target.value); setAmopsEmailDirty(true) }}
+            placeholder="amops@base.example.mil"
+            style={{
+              flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-inset)',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+            }}
+          />
+          <button
+            onClick={handleSaveAmopsEmail}
+            disabled={!amopsEmailDirty || amopsEmailSaving}
+            style={{
+              padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+              background: amopsEmailDirty ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+              color: amopsEmailDirty ? '#fff' : 'var(--color-text-3)',
+              cursor: amopsEmailDirty && !amopsEmailSaving ? 'pointer' : 'not-allowed',
+              fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            }}
+          >
+            {amopsEmailSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Public Request URL + QR ─────────────────────────── */}
+      <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+        <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Public Request URL</h3>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+          Share this link or post the QR code so transient aircrews can submit PPR requests. Only columns flagged
+          <strong> Public</strong> appear on the form. Submissions land in <em>Awaiting Triage</em> on the PPR page.
+        </p>
+        <button
+          onClick={generatePublicQr}
+          style={{
+            padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Generate QR Code
+        </button>
+
+        {showQr && qrUrl && (
+          <div style={{
+            padding: 16, marginTop: 12, borderRadius: 'var(--radius-base)',
+            background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+              background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+              fontFamily: 'monospace', fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)',
+              wordBreak: 'break-all', marginBottom: 12,
+            }}>{qrUrl}</div>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUrl)}&bgcolor=0B1120&color=22D3EE`}
+              alt="QR Code"
+              width={200}
+              height={200}
+              style={{ borderRadius: 8, border: '1px solid var(--color-border)' }}
+            />
+            <div style={{ marginTop: 10 }}>
+              <button
+                onClick={() => { navigator.clipboard.writeText(qrUrl); toast.success('URL copied') }}
+                style={{
+                  padding: '4px 12px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg)', color: 'var(--color-text-1)',
+                  fontSize: 'var(--fs-sm)', cursor: 'pointer',
+                }}
+              >
+                Copy URL
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

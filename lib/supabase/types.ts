@@ -945,6 +945,7 @@ export type Database = {
       bases: {
         Row: {
           activity_templates: Json | null
+          amops_email: string | null
           arff_config: Json
           ce_shops: string[]
           checklist_reset_time: string
@@ -972,6 +973,7 @@ export type Database = {
         }
         Insert: {
           activity_templates?: Json | null
+          amops_email?: string | null
           arff_config?: Json
           ce_shops?: string[]
           checklist_reset_time?: string
@@ -999,6 +1001,7 @@ export type Database = {
         }
         Update: {
           activity_templates?: Json | null
+          amops_email?: string | null
           arff_config?: Json
           ce_shops?: string[]
           checklist_reset_time?: string
@@ -2867,6 +2870,41 @@ export type Database = {
           },
         ]
       }
+      ppr_agencies: {
+        Row: {
+          agency_name: string
+          base_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+        }
+        Insert: {
+          agency_name: string
+          base_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+        }
+        Update: {
+          agency_name?: string
+          base_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_agencies_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ppr_columns: {
         Row: {
           base_id: string
@@ -2874,6 +2912,7 @@ export type Database = {
           column_type: string
           created_at: string
           id: string
+          is_public: boolean
           is_required: boolean
           sort_order: number
         }
@@ -2883,6 +2922,7 @@ export type Database = {
           column_type?: string
           created_at?: string
           id?: string
+          is_public?: boolean
           is_required?: boolean
           sort_order?: number
         }
@@ -2892,6 +2932,7 @@ export type Database = {
           column_type?: string
           created_at?: string
           id?: string
+          is_public?: boolean
           is_required?: boolean
           sort_order?: number
         }
@@ -2905,43 +2946,128 @@ export type Database = {
           },
         ]
       }
+      ppr_coordination: {
+        Row: {
+          agency_id: string | null
+          agency_name: string
+          comment: string | null
+          coordinated_at: string | null
+          coordinated_by: string | null
+          created_at: string
+          entry_id: string
+          id: string
+          status: string
+        }
+        Insert: {
+          agency_id?: string | null
+          agency_name: string
+          comment?: string | null
+          coordinated_at?: string | null
+          coordinated_by?: string | null
+          created_at?: string
+          entry_id: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          agency_id?: string | null
+          agency_name?: string
+          comment?: string | null
+          coordinated_at?: string | null
+          coordinated_by?: string | null
+          created_at?: string
+          entry_id?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_coordination_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "ppr_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_coordination_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "ppr_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_coordination_coordinated_by_fkey"
+            columns: ["coordinated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ppr_entries: {
         Row: {
+          approval_at: string | null
+          approval_user_id: string | null
           approver_oi: string | null
           arrival_date: string
           base_id: string
           column_values: Json
           created_at: string
           created_by: string | null
+          denial_reason: string | null
           id: string
           notes: string | null
           ppr_number: string
+          public_submission: boolean
+          requester_email: string | null
+          requester_name: string | null
+          status: string
+          triaged_at: string | null
+          triaged_by: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          approval_at?: string | null
+          approval_user_id?: string | null
           approver_oi?: string | null
           arrival_date: string
           base_id: string
           column_values?: Json
           created_at?: string
           created_by?: string | null
+          denial_reason?: string | null
           id?: string
           notes?: string | null
           ppr_number: string
+          public_submission?: boolean
+          requester_email?: string | null
+          requester_name?: string | null
+          status?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          approval_at?: string | null
+          approval_user_id?: string | null
           approver_oi?: string | null
           arrival_date?: string
           base_id?: string
           column_values?: Json
           created_at?: string
           created_by?: string | null
+          denial_reason?: string | null
           id?: string
           notes?: string | null
           ppr_number?: string
+          public_submission?: boolean
+          requester_email?: string | null
+          requester_name?: string | null
+          status?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -2963,6 +3089,20 @@ export type Database = {
           {
             foreignKeyName: "ppr_entries_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_entries_approval_user_id_fkey"
+            columns: ["approval_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_entries_triaged_by_fkey"
+            columns: ["triaged_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
