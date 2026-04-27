@@ -116,7 +116,8 @@ describe('migrated generators render without errors', () => {
     const populated = await generatePprPdf({
       columns: [{
         id: 'c1', base_id: 'b1', column_name: 'Tail #', column_type: 'text',
-        sort_order: 1, is_required: false, is_public: false, created_at: '2026-04-01',
+        sort_order: 1, is_required: false, is_public: false, info_text: null,
+        created_at: '2026-04-01',
       }],
       entries: [{
         id: 'e1', base_id: 'b1', ppr_number: 'PPR-001', arrival_date: '2026-04-15',

@@ -345,6 +345,16 @@ export default function PprPage() {
     return rows
   }, [entries, statusFilter, agencyFilter, coordsByEntry])
 
+  // Columns that hold a per-PPR value. info_only columns carry static
+  // text on the column itself (info_text), not anything per-entry, so
+  // they're excluded from table headers, row cells, the detail card
+  // value list, and the PDF dynamic-column section. They still render
+  // as read-only blocks in form input contexts and in emails.
+  const dataColumns = useMemo(
+    () => columns.filter((c) => c.column_type !== 'info_only'),
+    [columns],
+  )
+
   // Open create modal
   const handleNew = () => {
     setEditingEntry(null)
@@ -750,7 +760,7 @@ export default function PprPage() {
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Arrival</th>
                 <th style={thStyle}>Requester</th>
-                {columns.map(col => (
+                {dataColumns.map(col => (
                   <th key={col.id} style={thStyle}>{col.column_name}</th>
                 ))}
                 {filteredEntries.some(e => e.notes) && (
@@ -808,7 +818,7 @@ export default function PprPage() {
                         <span style={{ color: 'var(--color-text-3)', fontStyle: 'italic' }}>Internal</span>
                       )}
                     </td>
-                    {columns.map(col => (
+                    {dataColumns.map(col => (
                       <td key={col.id} style={tdStyle}>
                         {(entry.column_values || {})[col.id] || '—'}
                       </td>
@@ -858,6 +868,7 @@ export default function PprPage() {
                 isRequired={col.is_required}
                 value={formValues[col.id] || ''}
                 onChange={(v) => setFormValues(prev => ({ ...prev, [col.id]: v }))}
+                infoText={col.info_text}
               />
             ))}
 
@@ -1211,7 +1222,7 @@ export default function PprPage() {
                 title="Request Details"
                 rows={[
                   { label: 'Arrival Date', value: detailEntry.arrival_date },
-                  ...columns
+                  ...dataColumns
                     .map((c) => ({ label: c.column_name, value: (detailEntry.column_values || {})[c.id] || '' }))
                     .filter((r) => r.value),
                   ...(detailEntry.notes ? [{ label: 'Notes', value: detailEntry.notes }] : []),
@@ -1460,6 +1471,8 @@ function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprCol
     <div style={{ padding: 10, background: 'var(--color-bg-inset)', borderRadius: 4, border: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)' }}>
       <div><strong>Arrival:</strong> {entry.arrival_date}</div>
       {columns.map((c) => {
+        // info_only columns have no per-entry value; skip.
+        if (c.column_type === 'info_only') return null
         const v = (entry.column_values || {})[c.id]
         if (!v) return null
         return <div key={c.id}><strong>{c.column_name}:</strong> {v}</div>

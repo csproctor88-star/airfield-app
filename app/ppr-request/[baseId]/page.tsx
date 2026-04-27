@@ -12,6 +12,7 @@ type PublicCol = {
   type: PprColumnType
   is_required: boolean
   sort_order: number
+  info_text: string | null
 }
 
 type PublicConfig = {
@@ -103,6 +104,9 @@ export default function PprRequestPage() {
       return
     }
     for (const c of config.columns) {
+      // info_only fields take no input — never enforce required on them
+      // even if the admin somehow toggled it on.
+      if (c.type === 'info_only') continue
       if (c.is_required && !(values[c.id] || '').trim()) {
         setError(`"${c.name}" is required`)
         return
@@ -293,6 +297,7 @@ export default function PprRequestPage() {
                   isRequired={col.is_required}
                   value={values[col.id] || ''}
                   onChange={(v) => setValues((prev) => ({ ...prev, [col.id]: v }))}
+                  infoText={col.info_text}
                   inputBackground="#0F172A"
                   inputColor="#E2E8F0"
                   inputBorder="1px solid #334155"

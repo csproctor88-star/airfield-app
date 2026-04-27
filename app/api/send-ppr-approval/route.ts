@@ -93,23 +93,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
-    // Pull human-readable column names for the email body.
+    // Pull human-readable column names for the email body. We fetch
+    // column_type + info_text so we can split the rendering: regular
+    // columns get the value table, info_only columns get rendered as
+    // their own boxed section so the requester sees airfield hours,
+    // restrictions, etc. on the approval too.
     const { data: columns } = await reader
       .from('ppr_columns')
-      .select('id, column_name, sort_order')
+      .select('id, column_name, column_type, info_text, sort_order')
       .eq('base_id', entry.base_id)
       .order('sort_order', { ascending: true })
 
-    const colRows: { id: string; column_name: string }[] =
-      ((columns ?? []) as { id: string; column_name: string }[]) || []
+    const colRows: { id: string; column_name: string; column_type: string; info_text: string | null }[] =
+      ((columns ?? []) as { id: string; column_name: string; column_type: string; info_text: string | null }[]) || []
 
     const valuesHtml = colRows
+      .filter((c) => c.column_type !== 'info_only')
       .map((c) => {
         const v = (entry.column_values || {})[c.id]
         if (!v) return null
         return `<tr><td style="padding:4px 10px;color:#666;">${escapeHtml(c.column_name)}</td><td style="padding:4px 10px;font-weight:600;">${escapeHtml(String(v))}</td></tr>`
       })
       .filter(Boolean)
+      .join('')
+
+    const infoHtml = colRows
+      .filter((c) => c.column_type === 'info_only' && (c.info_text || '').trim())
+      .map((c) => `
+        <div style="margin-top:12px;padding:10px 14px;background:#f4f4f4;border-radius:6px;">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
+            ${escapeHtml(c.column_name)}
+          </div>
+          <div style="font-size:14px;color:#222;white-space:pre-wrap;">${escapeHtml(c.info_text!)}</div>
+        </div>
+      `)
       .join('')
 
     const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
@@ -133,6 +150,7 @@ export async function POST(request: Request) {
         <p><strong>Arrival date:</strong> ${safeArrival}</p>
         ${valuesHtml ? `<table style="border-collapse:collapse;margin-top:8px;">${valuesHtml}</table>` : ''}
         ${entry.notes ? `<p><strong>Notes:</strong> ${escapeHtml(entry.notes)}</p>` : ''}
+        ${infoHtml}
         ${base.amops_email
           ? `<p>Questions or changes? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(base.amops_email)}">${escapeHtml(base.amops_email)}</a>.</p>`
           : ''}

@@ -4702,6 +4702,7 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [newColName, setNewColName] = useState('')
   const [newColType, setNewColType] = useState<PprColumnType>('text')
   const [newColRequired, setNewColRequired] = useState(false)
+  const [newColInfoText, setNewColInfoText] = useState('')
   const [newColPublic, setNewColPublic] = useState(false)
   const [editingColId, setEditingColId] = useState<string | null>(null)
   const [editingColName, setEditingColName] = useState('')
@@ -4721,6 +4722,12 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [coordCandidates, setCoordCandidates] = useState<CoordPicker[]>([])
   const [coordSelected, setCoordSelected] = useState<Set<string>>(new Set())
   const [coordSaving, setCoordSaving] = useState(false)
+
+  // Info-only column body editor — separate from the create-row
+  // textarea so admins can revise text without re-creating the column.
+  const [infoEditCol, setInfoEditCol] = useState<PprColumn | null>(null)
+  const [infoEditValue, setInfoEditValue] = useState('')
+  const [infoSaving, setInfoSaving] = useState(false)
 
   // Base AMOPS reply-to email (used as reply-to on confirmation + approval emails)
   const [amopsEmail, setAmopsEmail] = useState('')
@@ -4819,13 +4826,17 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
 
   const handleAdd = async () => {
     if (!installationId || !newColName.trim()) return
+    // info_only: required is meaningless (no input), and the body
+    // text comes from newColInfoText. Other types ignore info_text.
+    const isInfo = newColType === 'info_only'
     const col = await createPprColumn({
       base_id: installationId,
       column_name: newColName.trim(),
       column_type: newColType,
       sort_order: columns.length,
-      is_required: newColRequired,
+      is_required: isInfo ? false : newColRequired,
       is_public: newColPublic,
+      info_text: isInfo ? (newColInfoText.trim() || null) : null,
     })
     if (col) {
       setColumns(prev => [...prev, col])
@@ -4833,6 +4844,7 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       setNewColType('text')
       setNewColRequired(false)
       setNewColPublic(false)
+      setNewColInfoText('')
       toast.success(`Added "${col.column_name}"`)
     }
   }
@@ -5048,18 +5060,32 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
-          <button
-            onClick={() => handleToggleRequired(col)}
-            style={{
-              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-              border: `1px solid ${col.is_required ? 'var(--color-accent)' : 'var(--color-border)'}`,
-              background: col.is_required ? 'rgba(56,189,248,0.08)' : 'transparent',
-              color: col.is_required ? 'var(--color-accent)' : 'var(--color-text-3)',
-              cursor: 'pointer',
-            }}
-          >
-            {col.is_required ? 'Required' : 'Optional'}
-          </button>
+          {col.column_type === 'info_only' ? (
+            <button
+              onClick={() => { setInfoEditCol(col); setInfoEditValue(col.info_text || '') }}
+              title="Edit the static text shown to requesters"
+              style={{
+                padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                border: '1px solid var(--color-border)', background: 'transparent',
+                color: 'var(--color-text-2)', cursor: 'pointer',
+              }}
+            >
+              Edit Text
+            </button>
+          ) : (
+            <button
+              onClick={() => handleToggleRequired(col)}
+              style={{
+                padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                border: `1px solid ${col.is_required ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                background: col.is_required ? 'rgba(56,189,248,0.08)' : 'transparent',
+                color: col.is_required ? 'var(--color-accent)' : 'var(--color-text-3)',
+                cursor: 'pointer',
+              }}
+            >
+              {col.is_required ? 'Required' : 'Optional'}
+            </button>
+          )}
           <button
             onClick={() => handleTogglePublic(col)}
             title="Show this column on the public PPR request form"
@@ -5088,7 +5114,7 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           value={newColName}
           onChange={e => setNewColName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          placeholder="Column name (e.g., Aircraft Type, Tail #)..."
+          placeholder={newColType === 'info_only' ? 'Heading (e.g., Airfield Hours)…' : 'Column name (e.g., Aircraft Type, Tail #)...'}
           style={{
             flex: 1, minWidth: 160, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
@@ -5109,10 +5135,12 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-          <input type="checkbox" checked={newColRequired} onChange={e => setNewColRequired(e.target.checked)} />
-          Required
-        </label>
+        {newColType !== 'info_only' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={newColRequired} onChange={e => setNewColRequired(e.target.checked)} />
+            Required
+          </label>
+        )}
         <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on public request form">
           <input type="checkbox" checked={newColPublic} onChange={e => setNewColPublic(e.target.checked)} />
           Public
@@ -5130,6 +5158,25 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           Add
         </button>
       </div>
+
+      {/* info_only body editor — surfaces below the controls only
+          when the new-column type calls for static text. */}
+      {newColType === 'info_only' && (
+        <div style={{ marginTop: 8 }}>
+          <textarea
+            value={newColInfoText}
+            onChange={e => setNewColInfoText(e.target.value)}
+            placeholder="Info text shown to requesters (e.g., Airfield hours: 0700–2200L. PPRs accepted up to 24h prior. Limited fuel after 1800L.)"
+            rows={3}
+            style={{
+              width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+              resize: 'vertical' as const,
+            }}
+          />
+        </div>
+      )}
 
       {/* ── Coordinating Agencies ──────────────────────────────── */}
       <div style={{ marginTop: 28, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
@@ -5207,6 +5254,75 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             </div>
           )
         })}
+
+        {/* Info-only body editor modal */}
+        {infoEditCol && (
+          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setInfoEditCol(null) }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)', padding: 18, width: 520,
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              <div>
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Info Only — Body Text
+                </div>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {infoEditCol.column_name}
+                </div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+                  Shown verbatim on the public request form, internal create modal, and confirmation/approval emails.
+                </div>
+              </div>
+
+              <textarea
+                value={infoEditValue}
+                onChange={e => setInfoEditValue(e.target.value)}
+                rows={6}
+                autoFocus
+                style={{
+                  width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                  resize: 'vertical' as const,
+                }}
+              />
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  onClick={() => setInfoEditCol(null)}
+                  disabled={infoSaving}
+                  style={{
+                    padding: '6px 14px', borderRadius: 'var(--radius-sm)',
+                    background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >Cancel</button>
+                <button
+                  onClick={async () => {
+                    if (!infoEditCol) return
+                    setInfoSaving(true)
+                    const updated = await updatePprColumn(infoEditCol.id, { info_text: infoEditValue.trim() || null })
+                    setInfoSaving(false)
+                    if (updated) {
+                      setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
+                      toast.success('Info text saved')
+                      setInfoEditCol(null)
+                    } else {
+                      toast.error('Failed to save')
+                    }
+                  }}
+                  disabled={infoSaving}
+                  style={{
+                    padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
+                    background: 'var(--color-accent)', color: 'var(--color-bg)',
+                    fontWeight: 700, cursor: infoSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
+                  }}
+                >{infoSaving ? 'Saving…' : 'Save'}</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Coordinator picker modal */}
         {coordEditAgency && (

@@ -65,16 +65,21 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
   ])
 
   // ── Table ──
+  // info_only columns hold static text on the column itself, not a
+  // per-entry value — skip them in the table since every row would
+  // either be blank or duplicate the column's static text.
+  const dataColumns = columns.filter(c => c.column_type !== 'info_only')
+
   if (entries.length === 0) {
     doc.setFontSize(10)
     doc.setTextColor(120)
     doc.text('No PPR entries for the selected range.', margin, y)
   } else {
-    const head: string[] = ['PPR #', 'Arrival', ...columns.map(c => sanitizePdfText(c.column_name)), 'OI', 'Notes']
+    const head: string[] = ['PPR #', 'Arrival', ...dataColumns.map(c => sanitizePdfText(c.column_name)), 'OI', 'Notes']
     const body: string[][] = entries.map(entry => [
       entry.ppr_number,
       entry.arrival_date,
-      ...columns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || ''))),
+      ...dataColumns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || ''))),
       entry.approver_oi || '',
       sanitizePdfText(entry.notes || ''),
     ])

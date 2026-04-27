@@ -8,7 +8,7 @@ function db() {
 
 // ── Types ──
 
-export type PprColumnType = 'text' | 'date' | 'time' | 'yes_no_na' | 'phone' | 'number' | 'email'
+export type PprColumnType = 'text' | 'date' | 'time' | 'yes_no_na' | 'phone' | 'number' | 'email' | 'info_only'
 
 export const PPR_COLUMN_TYPES: { value: PprColumnType; label: string }[] = [
   { value: 'text', label: 'Text' },
@@ -18,6 +18,7 @@ export const PPR_COLUMN_TYPES: { value: PprColumnType; label: string }[] = [
   { value: 'phone', label: 'Phone Number' },
   { value: 'number', label: 'Number' },
   { value: 'email', label: 'Email' },
+  { value: 'info_only', label: 'Info Only (read-only)' },
 ]
 
 export type PprColumn = {
@@ -28,6 +29,8 @@ export type PprColumn = {
   sort_order: number
   is_required: boolean
   is_public: boolean
+  /** Body shown for info_only columns — null/unused for input types. */
+  info_text: string | null
   created_at: string
 }
 
@@ -139,11 +142,15 @@ export async function createPprColumn(input: {
   sort_order?: number
   is_required?: boolean
   is_public?: boolean
+  info_text?: string | null
 }): Promise<PprColumn | null> {
   const supabase = db()
   if (!supabase) return null
 
-  const { data, error } = await supabase
+  // info_text only meaningful for info_only columns; cast through any
+  // until the regenerated types pick up the new field.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from('ppr_columns')
     .insert(input)
     .select()
@@ -155,12 +162,13 @@ export async function createPprColumn(input: {
 
 export async function updatePprColumn(
   id: string,
-  updates: Partial<Pick<PprColumn, 'column_name' | 'column_type' | 'sort_order' | 'is_required' | 'is_public'>>,
+  updates: Partial<Pick<PprColumn, 'column_name' | 'column_type' | 'sort_order' | 'is_required' | 'is_public' | 'info_text'>>,
 ): Promise<PprColumn | null> {
   const supabase = db()
   if (!supabase) return null
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from('ppr_columns')
     .update(updates)
     .eq('id', id)

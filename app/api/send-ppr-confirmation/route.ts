@@ -64,6 +64,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
+    // Fetch info_only public columns so the requester sees airfield
+    // hours, restrictions, etc. inline in the confirmation email.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: infoCols } = await (sb as any)
+      .from('ppr_columns')
+      .select('column_name, info_text, sort_order')
+      .eq('base_id', baseId)
+      .eq('column_type', 'info_only')
+      .eq('is_public', true)
+      .order('sort_order', { ascending: true })
+
+    const infoHtml = ((infoCols ?? []) as { column_name: string; info_text: string | null }[])
+      .filter(c => (c.info_text || '').trim())
+      .map(c => `
+        <div style="margin-top:12px;padding:10px 14px;background:#f4f4f4;border-radius:6px;">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
+            ${escapeHtml(c.column_name)}
+          </div>
+          <div style="font-size:14px;color:#222;white-space:pre-wrap;">${escapeHtml(c.info_text!)}</div>
+        </div>
+      `)
+      .join('')
+
     const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
     const safeName = escapeHtml(requesterName)
     const safeBase = escapeHtml(base.name)
@@ -78,6 +101,7 @@ export async function POST(request: Request) {
         <p>${safeBase} Airfield Management Operations (AMOPS) has received your Prior Permission Required (PPR) request.</p>
         <p>Your request is now pending review. You will receive a separate email with your assigned PPR number once it is approved.
            If your request is denied or further information is needed, AMOPS will reach out to you directly.</p>
+        ${infoHtml}
         ${base.amops_email ? `<p>Questions? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(base.amops_email)}">${escapeHtml(base.amops_email)}</a>.</p>` : ''}
         <p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management.</p>
       `,

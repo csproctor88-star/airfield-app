@@ -9,6 +9,9 @@ type Props = {
   isRequired: boolean
   value: string
   onChange: (next: string) => void
+  /** Body for `info_only` columns — displayed verbatim under the
+   *  column name. Ignored for input types. */
+  infoText?: string | null
   // Optional override for the dark-on-light public form. The staff
   // modal leaves these out so var(--color-*) tokens take over.
   inputBackground?: string
@@ -23,7 +26,9 @@ type Props = {
 // text input with a 24-hour pattern keeps the display consistent
 // (and the keyboard on mobile still defaults to numeric thanks to
 // `inputMode="numeric"`).
-const INPUT_TYPE: Record<Exclude<PprColumnType, 'yes_no_na' | 'time'>, string> = {
+// `info_only` and the special-cased branches (`yes_no_na`, `time`)
+// never reach this map — they're handled in early returns.
+const INPUT_TYPE: Record<Exclude<PprColumnType, 'yes_no_na' | 'time' | 'info_only'>, string> = {
   text: 'text',
   date: 'date',
   phone: 'tel',
@@ -46,10 +51,53 @@ export function PprFieldInput({
   isRequired,
   value,
   onChange,
+  infoText,
   inputBackground,
   inputColor,
   inputBorder,
 }: Props) {
+  // info_only renders as a labeled read-only block — no input element,
+  // no required marker, no value/onChange wiring. Used for things like
+  // airfield hours, restrictions, and fuel availability that the base
+  // wants every requester to see.
+  if (columnType === 'info_only') {
+    return (
+      <div
+        style={{
+          display: 'block',
+          marginBottom: 10,
+          padding: 10,
+          borderRadius: 4,
+          border: inputBorder ?? '1px solid var(--color-border)',
+          background: inputBackground ?? 'var(--color-bg-inset, var(--color-bg))',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 'var(--fs-xs)',
+            fontWeight: 700,
+            color: inputColor ?? 'var(--color-text-3)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            marginBottom: 4,
+          }}
+        >
+          {columnName}
+        </div>
+        <div
+          style={{
+            fontSize: 'var(--fs-sm)',
+            color: inputColor ?? 'var(--color-text-1)',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {infoText || ''}
+        </div>
+      </div>
+    )
+  }
+
   const inputStyle: React.CSSProperties = {
     display: 'block',
     width: '100%',
@@ -127,7 +175,7 @@ export function PprFieldInput({
         />
       ) : (
         <input
-          type={INPUT_TYPE[columnType as Exclude<PprColumnType, 'yes_no_na' | 'time'>] ?? 'text'}
+          type={INPUT_TYPE[columnType as Exclude<PprColumnType, 'yes_no_na' | 'time' | 'info_only'>] ?? 'text'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={isRequired}
