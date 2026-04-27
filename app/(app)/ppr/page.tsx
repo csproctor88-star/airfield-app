@@ -97,6 +97,12 @@ export default function PprPage() {
   const [denyReason, setDenyReason] = useState('')
   const [decideBusy, setDecideBusy] = useState(false)
 
+  // Detail card modal — opened by clicking a row, shows full info
+  // including dynamic columns, coordination history, and audit fields.
+  // All row-level actions (Edit / Delete / Review / Coordinate / Decide)
+  // live here; the table list itself is purely a summary.
+  const [detailEntry, setDetailEntry] = useState<PprEntry | null>(null)
+
   // PDF export
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
@@ -679,19 +685,14 @@ export default function PprPage() {
           <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>No PPRs match these filters.</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+        <div style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
                 <th style={thStyle}>PPR #</th>
                 <th style={thStyle}>Status</th>
-                <th style={thStyle}>Date</th>
+                <th style={thStyle}>Arrival</th>
                 <th style={thStyle}>Requester</th>
-                {columns.map(col => (
-                  <th key={col.id} style={thStyle}>{col.column_name}</th>
-                ))}
-                <th style={thStyle}>Notes</th>
-                <th style={{ ...thStyle, width: 200 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -700,7 +701,17 @@ export default function PprPage() {
                 const coords = coordsByEntry[entry.id] ?? []
                 const nonConcur = coords.some((c) => c.status === 'non_concur')
                 return (
-                  <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <tr
+                    key={entry.id}
+                    onClick={() => setDetailEntry(entry)}
+                    style={{
+                      borderBottom: '1px solid var(--color-border)',
+                      cursor: 'pointer',
+                      transition: 'background 80ms ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-bg-inset)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = '' }}
+                  >
                     <td style={tdStyle}>
                       <span style={{ fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace' }}>
                         {entry.ppr_number}
@@ -722,34 +733,15 @@ export default function PprPage() {
                       )}
                     </td>
                     <td style={tdStyle}>{formatZuluDate(entry.arrival_date + 'T00:00:00Z')}</td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, whiteSpace: 'normal' }}>
                       {entry.requester_name ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontWeight: 600 }}>{entry.requester_name}</span>
                           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{entry.requester_email}</span>
                         </div>
-                      ) : '—'}
-                    </td>
-                    {columns.map(col => (
-                      <td key={col.id} style={tdStyle}>
-                        {(entry.column_values || {})[col.id] || '—'}
-                      </td>
-                    ))}
-                    <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {entry.notes || '—'}
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {rowActions(entry).map((a, i) => (
-                          <button
-                            key={i}
-                            onClick={a.onClick}
-                            style={{ background: 'none', border: 'none', color: a.color, cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600, padding: '2px 4px' }}
-                          >
-                            {a.label}
-                          </button>
-                        ))}
-                      </div>
+                      ) : (
+                        <span style={{ color: 'var(--color-text-3)', fontStyle: 'italic' }}>Internal</span>
+                      )}
                     </td>
                   </tr>
                 )
@@ -1087,6 +1079,126 @@ export default function PprPage() {
         </div>
       )}
 
+      {/* Detail card — opened by clicking a row in the table. Houses
+          all dynamic-column data, coordination history, audit info,
+          and every action that's currently allowed for this entry.
+          Action buttons close this modal and open the relevant
+          action modal (Review / Coordinate / Decide / Edit). Delete
+          confirms inline. */}
+      {detailEntry && (() => {
+        const meta = STATUS_META[detailEntry.status] ?? STATUS_META.approved
+        const coords = coordsByEntry[detailEntry.id] ?? []
+        const acts = rowActions(detailEntry)
+        const closeAndRun = (fn: () => void) => () => { setDetailEntry(null); fn() }
+        return (
+          <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setDetailEntry(null) }}>
+            <div onClick={e => e.stopPropagation()} style={{ ...modalCardStyle, width: 600 }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                    PPR {detailEntry.ppr_number}
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{
+                      display: 'inline-block', padding: '2px 10px', borderRadius: 12,
+                      fontSize: 'var(--fs-xs)', fontWeight: 700,
+                      background: meta.bg, color: meta.fg, border: `1px solid ${meta.border}`,
+                      textTransform: 'uppercase', letterSpacing: '0.03em',
+                    }}>
+                      {meta.label}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDetailEntry(null)}
+                  aria-label="Close"
+                  style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontSize: 24, lineHeight: 1, padding: 0 }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Requester */}
+              {detailEntry.requester_name && (
+                <DetailSection title="Requester">
+                  <DetailRow label="Name" value={detailEntry.requester_name} />
+                  <DetailRow label="Email" value={detailEntry.requester_email || '—'} />
+                  {detailEntry.public_submission && (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 4 }}>
+                      Submitted via public request form.
+                    </div>
+                  )}
+                </DetailSection>
+              )}
+
+              {/* Schedule + form data */}
+              <DetailSection title="Request Details">
+                <DetailRow label="Arrival Date" value={detailEntry.arrival_date} />
+                {columns.map((c) => {
+                  const v = (detailEntry.column_values || {})[c.id]
+                  if (!v) return null
+                  return <DetailRow key={c.id} label={c.column_name} value={v} />
+                })}
+                {detailEntry.notes && <DetailRow label="Notes" value={detailEntry.notes} />}
+              </DetailSection>
+
+              {/* Coordination */}
+              {coords.length > 0 && (
+                <DetailSection title="Coordination">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {coords.map((row) => (
+                      <div key={row.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '6px 8px', background: 'var(--color-bg-inset)', borderRadius: 4 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>{row.agency_name}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{
+                            fontSize: 'var(--fs-xs)', fontWeight: 700,
+                            color: row.status === 'concur' ? '#22c55e' : row.status === 'non_concur' ? '#ef4444' : 'var(--color-text-3)',
+                          }}>
+                            {row.status === 'concur' ? 'CONCUR' : row.status === 'non_concur' ? 'NON-CONCUR' : 'PENDING'}
+                          </span>
+                          {row.comment && (
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{row.comment}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </DetailSection>
+              )}
+
+              {/* Audit */}
+              {(detailEntry.approver_oi || detailEntry.approval_at || detailEntry.denial_reason) && (
+                <DetailSection title="Audit">
+                  {detailEntry.approver_oi && <DetailRow label="Approver OI" value={detailEntry.approver_oi} />}
+                  {detailEntry.approval_at && <DetailRow label="Approved At" value={detailEntry.approval_at} />}
+                  {detailEntry.denial_reason && <DetailRow label="Denial Reason" value={detailEntry.denial_reason} />}
+                </DetailSection>
+              )}
+
+              {/* Actions */}
+              {acts.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
+                  {acts.map((a, i) => (
+                    <button
+                      key={i}
+                      onClick={closeAndRun(a.onClick)}
+                      style={{
+                        padding: '6px 14px', borderRadius: 4, border: `1px solid ${a.color}`,
+                        background: 'transparent', color: a.color,
+                        cursor: 'pointer', fontWeight: 600, fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                      }}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       <EmailPdfModal
         open={emailModalOpen}
         onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
@@ -1133,6 +1245,29 @@ function KpiPill({
       <span style={{ width: 6, height: 6, borderRadius: 3, background: colorFg }} />
       {label}
     </button>
+  )
+}
+
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{
+        fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
+        textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
+      }}>
+        {title}
+      </div>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, padding: '4px 0', fontSize: 'var(--fs-sm)' }}>
+      <span style={{ minWidth: 130, color: 'var(--color-text-3)' }}>{label}</span>
+      <span style={{ flex: 1, color: 'var(--color-text-1)', wordBreak: 'break-word' }}>{value}</span>
+    </div>
   )
 }
 
