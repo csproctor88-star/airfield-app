@@ -98,10 +98,13 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       // ICAO path returns base_id; UUID path doesn't (we already have it).
       const baseId = (row.base_id as string) || (lookup.kind === 'baseId' ? lookup.value : null)
       if (!baseId) {
+        console.error('[ppr-request] Resolved no base_id from RPC', { lookup, row })
         setBaseFound(false)
         setLoading(false)
         return
       }
+      // eslint-disable-next-line no-console
+      console.info('[ppr-request] Resolved base', { lookup, baseId, baseName: row.base_name })
       setResolvedBaseId(baseId)
 
       // Cooldown is keyed on the resolved UUID so the same visitor
@@ -175,7 +178,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
     // Best-effort confirmation email — failures don't block the success state,
     // since the entry is in already and AMOPS will see it on triage.
     try {
-      await fetch('/api/send-ppr-confirmation', {
+      const res = await fetch('/api/send-ppr-confirmation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,8 +187,12 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
           requesterName: requesterName.trim(),
         }),
       })
+      if (!res.ok) {
+        const body = await res.text()
+        console.error('[ppr-request] Confirmation email API non-2xx', res.status, body)
+      }
     } catch (e) {
-      console.error('confirmation email failed:', e)
+      console.error('[ppr-request] Confirmation email fetch threw:', e)
     }
 
     localStorage.setItem(COOLDOWN_KEY_PREFIX + resolvedBaseId, String(Date.now()))
