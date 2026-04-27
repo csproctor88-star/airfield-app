@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join('')
 
-    const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
+    const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
     const safeBase = escapeHtml(base.name)
     const replyTo = validReplyTo(base.amops_email)
     const safePpr = escapeHtml(entry.ppr_number)
@@ -180,12 +180,13 @@ export async function POST(request: Request) {
           ${valuesHtml ? `<table style="border-collapse:collapse;margin-top:8px;">${valuesHtml}</table>` : ''}
           ${entry.notes ? `<p><strong>Notes:</strong> ${escapeHtml(entry.notes)}</p>` : ''}
           <p style="margin-top:18px;">
-            <a href="${appUrl}/ppr" style="display:inline-block;padding:10px 18px;background:#0369a1;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Review in Glidepath</a>
+            <a href="${appUrl}/ppr" style="display:inline-block;padding:10px 18px;background:#0369a1;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Review the PPR</a>
           </p>
           <p style="color:#888;font-size:12px;margin-top:18px;">
             You're receiving this because you're listed as a coordinator for <strong>${safeAgency}</strong> at <strong>${safeBase}</strong>.
             Ask AMOPS or your base admin to update coordinators in Base Setup.
           </p>
+          <p style="color:#888;font-size:12px;">Do not reply to this email — replies are unmonitored.</p>
         `,
       })
 

@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       `)
       .join('')
 
-    const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
+    const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
     const safeName = escapeHtml(requesterName)
     const safeBase = escapeHtml(base.name)
     const replyTo = validReplyTo(base.amops_email)
@@ -118,8 +118,8 @@ export async function POST(request: Request) {
         <p>Your request is now pending review. You will receive a separate email with your assigned PPR number once it is approved.
            If your request is denied or further information is needed, AMOPS will reach out to you directly.</p>
         ${infoHtml}
-        ${replyTo ? `<p>Questions? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a>.</p>` : ''}
-        <p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management.</p>
+        ${replyTo ? `<p>Contact AMOPS at <a href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a> with any questions or concerns.</p>` : ''}
+        <p style="color:#888;font-size:12px;">Do not reply to this email — replies are unmonitored.</p>
       `,
     })
 

@@ -84,10 +84,15 @@ export default function PprPage() {
   const [formAgencyIds, setFormAgencyIds] = useState<string[]>([])
   const [formSkipCoord, setFormSkipCoord] = useState(false)
 
-  // Triage modal
+  // Triage modal — three outcomes:
+  //   route     → status='pending_coordination' with selected agencies
+  //   preCoord  → status='approved' (no coord needed)
+  //   deny      → status='denied' with the entered reason
+  type TriageMode = 'route' | 'preCoord' | 'deny'
   const [triageEntry, setTriageEntry] = useState<PprEntry | null>(null)
+  const [triageMode, setTriageMode] = useState<TriageMode>('route')
   const [triageAgencyIds, setTriageAgencyIds] = useState<string[]>([])
-  const [triageSkip, setTriageSkip] = useState(false)
+  const [triageDenyReason, setTriageDenyReason] = useState('')
   const [triageBusy, setTriageBusy] = useState(false)
 
   // Coordinate modal
@@ -430,25 +435,51 @@ export default function PprPage() {
   // Triage
   const openTriage = (entry: PprEntry) => {
     setTriageEntry(entry)
+    setTriageMode('route')
     setTriageAgencyIds([])
-    setTriageSkip(false)
+    setTriageDenyReason('')
   }
   const submitTriage = async () => {
     if (!triageEntry || !installationId) return
-    if (!triageSkip && triageAgencyIds.length === 0) {
-      toast.error('Pick at least one agency, or check "Pre-coordinated"')
+
+    if (triageMode === 'deny') {
+      const reason = triageDenyReason.trim()
+      if (!reason) {
+        toast.error('Enter a denial reason')
+        return
+      }
+      setTriageBusy(true)
+      const res = await denyPprEntry({
+        entryId: triageEntry.id,
+        baseId: installationId,
+        reason,
+      })
+      setTriageBusy(false)
+      if (res.ok) {
+        toast.success('PPR denied')
+        setTriageEntry(null)
+        loadData()
+      } else {
+        toast.error(res.error || 'Deny failed')
+      }
       return
     }
+
+    if (triageMode === 'route' && triageAgencyIds.length === 0) {
+      toast.error('Pick at least one agency, or switch to Pre-coordinated')
+      return
+    }
+
     setTriageBusy(true)
     const res = await triagePprEntry({
       entryId: triageEntry.id,
       baseId: installationId,
-      agencyIds: triageSkip ? [] : triageAgencyIds,
-      approver_oi: triageSkip ? userOI : undefined,
+      agencyIds: triageMode === 'preCoord' ? [] : triageAgencyIds,
+      approver_oi: triageMode === 'preCoord' ? userOI : undefined,
     })
     setTriageBusy(false)
     if (res.ok) {
-      toast.success(triageSkip ? 'PPR approved (pre-coordinated)' : 'Routed to coordination')
+      toast.success(triageMode === 'preCoord' ? 'PPR approved (pre-coordinated)' : 'Routed to coordination')
       setTriageEntry(null)
       loadData()
     } else {
@@ -947,21 +978,46 @@ export default function PprPage() {
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               Public submission from <strong>{triageEntry.requester_name}</strong> ({triageEntry.requester_email}).
-              Pick the agencies that need to coordinate, or mark pre-coordinated.
             </p>
 
             <SubmittedSummary entry={triageEntry} columns={columns} />
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600, margin: '12px 0 8px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={triageSkip}
-                onChange={e => setTriageSkip(e.target.checked)}
-              />
-              Pre-coordinated — no agencies needed (approve immediately)
-            </label>
+            {/* Action picker — three mutually-exclusive outcomes. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '12px 0' }}>
+              {([
+                { mode: 'route',    label: 'Route to coordination', help: 'Select coordinating agencies; AMOPS approves after they concur.' },
+                { mode: 'preCoord', label: 'Pre-coordinated — approve now', help: 'No agency coordination needed. Approves immediately and emails the requester.' },
+                { mode: 'deny',     label: 'Deny request', help: 'Reject the PPR with a reason. Requester notified manually.' },
+              ] as { mode: TriageMode; label: string; help: string }[]).map((opt) => {
+                const selected = triageMode === opt.mode
+                return (
+                  <label
+                    key={opt.mode}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 8,
+                      padding: '8px 10px', borderRadius: 4,
+                      border: selected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
+                      background: selected ? 'rgba(56,189,248,0.06)' : 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="triage-mode"
+                      checked={selected}
+                      onChange={() => setTriageMode(opt.mode)}
+                      style={{ marginTop: 3 }}
+                    />
+                    <span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{opt.label}</span>
+                      <span style={{ display: 'block', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{opt.help}</span>
+                    </span>
+                  </label>
+                )
+              })}
+            </div>
 
-            {!triageSkip && (
+            {triageMode === 'route' && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
                   Required coordinating agencies:
@@ -988,14 +1044,37 @@ export default function PprPage() {
               </div>
             )}
 
+            {triageMode === 'deny' && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
+                  Reason for denial (required):
+                </div>
+                <textarea
+                  value={triageDenyReason}
+                  onChange={e => setTriageDenyReason(e.target.value)}
+                  rows={3}
+                  placeholder="Explain why this PPR is being denied — visible to internal staff in the audit trail."
+                  style={{ ...textInputStyle, resize: 'vertical' as const }}
+                />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setTriageEntry(null)} style={cancelBtnStyle}>Cancel</button>
               <button
                 onClick={submitTriage}
                 disabled={triageBusy}
-                style={primaryBtnStyle(!triageBusy)}
+                style={triageMode === 'deny'
+                  ? { ...primaryBtnStyle(!triageBusy), background: triageBusy ? 'var(--color-border)' : 'var(--color-danger)' }
+                  : primaryBtnStyle(!triageBusy)}
               >
-                {triageBusy ? 'Saving…' : (triageSkip ? 'Approve' : 'Route to Coordination')}
+                {triageBusy
+                  ? 'Saving…'
+                  : triageMode === 'deny'
+                    ? 'Deny PPR'
+                    : triageMode === 'preCoord'
+                      ? 'Approve'
+                      : 'Route to Coordination'}
               </button>
             </div>
           </div>

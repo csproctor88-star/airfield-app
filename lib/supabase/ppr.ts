@@ -694,13 +694,17 @@ export async function approvePprEntry(input: {
   // Best-effort approval email; failures don't block the status flip.
   if (entry.requester_email) {
     try {
-      await fetch('/api/send-ppr-approval', {
+      const res = await fetch('/api/send-ppr-approval', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entryId: entry.id }),
       })
+      if (!res.ok) {
+        const body = await res.text()
+        console.error('[approvePprEntry] approval email API non-2xx', res.status, body)
+      }
     } catch (e) {
-      console.error('approvePprEntry email send failed:', e)
+      console.error('[approvePprEntry] approval email fetch threw:', e)
     }
   }
 

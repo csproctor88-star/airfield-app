@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       `)
       .join('')
 
-    const fromLabel = `${base.name} AMOPS via Glidepath <info@glidepathops.com>`
+    const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
     const safeName = escapeHtml(entry.requester_name || 'Aircrew')
     const safeBase = escapeHtml(base.name)
     const safePpr = escapeHtml(entry.ppr_number)
@@ -164,9 +164,9 @@ export async function POST(request: Request) {
         ${entry.notes ? `<p><strong>Notes:</strong> ${escapeHtml(entry.notes)}</p>` : ''}
         ${infoHtml}
         ${replyTo
-          ? `<p>Questions or changes? Reply to this email or contact AMOPS at <a href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a>.</p>`
+          ? `<p>Contact AMOPS at <a href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a> with any questions or concerns.</p>`
           : ''}
-        <p style="color:#888;font-size:12px;">Sent from Glidepath Airfield Management.</p>
+        <p style="color:#888;font-size:12px;">Do not reply to this email — replies are unmonitored.</p>
       `,
     })
 
