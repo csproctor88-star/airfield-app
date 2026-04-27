@@ -1,91 +1,173 @@
 # Session Handoff
 
-**Date:** 2026-04-25 (continuation — same calendar day, different chunk of work)
+**Date:** 2026-04-26
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `fb487ba`
+**HEAD:** `ef04c36`
 
 ---
 
 ## What shipped this session
 
-**18 commits** on `main`, no migrations. The whole session was the offline write queue project: foundation through full inspection-flow gate-lift through field testing fixes.
+**10 commits** on `main`, **1 migration applied to prod** (`2026042600_ppr_coordination.sql`).
+The whole session was the PPR module expansion: public request form, AMOPS-triaged multi-agency
+coordination workflow, requester emails, plus a thread of UI/UX iterations from real testing
+on the Demo base. Wrapped with key rotations + git-history cleanup.
 
-### Foundation + first wraps (3 commits)
+### PPR module expansion (9 PPR commits)
 
-1. **`14e23fc`** — Foundation. `lib/sync/` with discriminated `WriteType` union, `IndexedDBStorage` (own DB, separate from PDF cache), `MemoryStorage` for tests, exponential backoff (1s → 16s, max 5 attempts), single-flight `WriteQueue` class. Plus three wraps shipped together: `inspection_file`, `check_file`, `acsi_submit`. Header gains the amber `● N QUEUED` pill, drain triggers on online + visibilitychange.
-2. **`ed4d114`** — Two bugs from real DevTools-offline testing: queued path was falling through to a misleading "completed & filed" success toast, and the inspections list wasn't refreshing after the drain (realtime fires INSERT only, not UPDATE). Added a clean queued-bail path and a `glidepath:write-committed` window event the page listens for.
-3. **`e1b3b88`** — Wired ACSI list + detail and checks page to subscribe to the new commit event so they refresh themselves on drain too.
+1. **`a1f7811`** — Foundation. Migration `2026042600` adds: `status` / `requester_name|email` /
+   triage + approval audit columns to `ppr_entries`; `is_public` to `ppr_columns`; `amops_email`
+   to `bases`; new `ppr_agencies` (per-base free-text agency list) and `ppr_coordination`
+   (one row per entry × selected agency) tables; SECURITY DEFINER RPCs `get_public_ppr_config`
+   and `submit_public_ppr_request` callable by anon. Three new permission keys
+   (`ppr:triage` / `ppr:coordinate` / `ppr:approve`) seeded to AFM, NAMO, AMOPS, base_admin,
+   sys_admin. Plus the entire app surface: `lib/supabase/ppr-agencies.ts` CRUD, extended
+   `lib/supabase/ppr.ts` with triage/coordinate/approve/deny + KPI count fetchers,
+   `components/ppr/ppr-field-input.tsx` shared field renderer, full rewrite of the staff
+   `/ppr` page (KPI badges, filter chips, status chip column, triage/coord/decide modals,
+   internal-create agency multi-select + skip-coord toggle, realtime subs), extended
+   `PprColumnsTab` in base-setup (per-column `is_public` toggle, agency management,
+   AMOPS reply-to email, public URL panel with QR), two new email API routes
+   (`/api/send-ppr-confirmation` and `/api/send-ppr-approval`), and the public form at
+   `/ppr-request/[baseId]` mirroring the `/feedback/[baseId]` pattern. Also removed the
+   `(Date)` / `(Email)` type-label badge next to PPR column names. Added `ppr_agencies`,
+   `ppr_coordination` table types to `lib/supabase/types.ts`, `amops_email` to bases.
+2. **`f6cc82d`** — Reported bug: TRIAGE pill said "1 awaiting" but the table was empty.
+   Root cause: KPI counts are base-scoped without date filter; the table query filters by
+   `arrival_date`. A public submission with arrival outside today's range counted toward the
+   pill but didn't render. Fix: when statusFilter is one of the pending states or an
+   agencyFilter is active, drop the date range from the table fetch.
+3. **`4128357`** — Three issues from demo testing:
+   - Approval email showed `118-001-XX` because the OI placeholder was never rewritten.
+     Public submissions mint with `XX` (no logged-in user at submit time); now both
+     `approvePprEntry` and the `triagePprEntry` skip-coord path replace the trailing OI
+     segment with the approver's actual initials. New `rewritePprOiSegment` helper.
+   - Approved future-dated PPR didn't appear in the log. Date chips were past-looking;
+     PPRs are inherently future-leaning. Flipped 7d/30d to look forward (today through
+     today+6 / today+29) and relabeled to **Next 7d** / **Next 30d**. Past-arrival lookups
+     go through Custom.
+   - KPI bar was congested with six "0 PENDING X" agency pills. Now hidden when count = 0
+     (consistent with how triage/approval pills already worked). Status + date chips
+     collapsed onto a single row with a divider; date chips dim when a pending queue is
+     selected (since dates are bypassed there).
+4. **`bf8a564`** — User-facing copy rename: **Triage → Review** (status chip, KPI pill,
+   modal heading, row action, toasts, base-setup help text). DB status name
+   `pending_amops_triage`, the `triagePprEntry` function, and the `ppr:triage` permission key
+   all stay as internal identifiers — renaming would mean another migration with no
+   user-visible benefit.
+5. **`bd84c8a`** — PPR list felt cramped from dynamic columns + actions cell + notes column.
+   Slimmed to PPR # / Status / Arrival / Requester. Whole row clickable to open a detail
+   card modal with full picture (requester contact, all column data, coordination history
+   with concur/non-concur per agency, audit trail). All actions
+   (Edit / Delete / Review / Coordinate / Decide) moved to the detail card footer.
+6. **`d459ea4`** — Airfield status home page filtered to `status='approved'` only. Was
+   showing every entry whose arrival was today regardless of state, including denied and
+   still-pending — misleading for an at-a-glance ops board. Added a small green Approved
+   chip column for visual confirmation.
+7. **`43cf99d`** — Public form: dropped the small "GLIDEPATH" tag from the top of the form
+   and the not-available/not-found states. Footer "Powered by Glidepath" stayed
+   per request scope. Detail card: each section now renders as a real `<table>` with
+   alternating row shading inside a bordered, rounded container. Coordination section
+   uses the same zebra pattern. `DetailSection` accepts a rows array now plus an optional
+   footnote slot for inline notes.
+8. **`ab891b9`** — 24-hour time picker: native `<input type="time">` displayed AM/PM in
+   en-US Chrome regardless of stored value. Switched the `time` column type to a text
+   input with HH:MM pattern, `inputMode="numeric"`, auto-colon after two digits.
+   Stored values stay 24-hour HH:MM. Restored the full PPR table breadth (PPR # / Status /
+   Arrival / Requester / [dynamic columns] / Notes) so users can scan all data inline;
+   only the PPR # is now the click target for the detail card. Audit rows in the detail
+   card run timestamps through `formatZuluDateTime` so "Approved At" reads as
+   `2026-04-27 00:36Z` instead of raw ISO. Added Reviewed At and Submitted At rows.
 
-### Inspector + observability (2 commits)
+### Security cleanup (1 commit)
 
-4. **`e6b8871`** — Queue inspector modal. Click the QUEUED pill → list of items with type / age / status / attempts / last error, per-row Retry + Discard, Upload All for photos, conflict items render purple.
-5. **`7d1be16`** — Red `● N NEEDS REVIEW` pill for failed/conflict items so they don't slip past the user once they leave the pending state. Refactored to one polling hook returning all three counts; added write-committed listener so pills refresh immediately on commit.
+9. **`ef04c36`** — Untracked `.env.local`. The file was committed in `278844f` and
+   `e06f82e` (Feb 2026), exposing the old Supabase service-role JWT and Mapbox token in
+   public GitHub history. The `.gitignore` rule `.env*.local` was added later but had no
+   effect on the already-tracked file. `git rm --cached` removes the index entry so the
+   gitignore rule actually takes hold for future modifications. Local file untouched.
 
-### Daily review + ConflictError (1 commit)
+   Out-of-band cleanup (no code change, but worth recording here):
+   - **Mapbox token**, **Resend API key**, and **Google Maps / Elevation key** rotated at
+     each provider; old ones explicitly deleted. New values pasted into Vercel
+     (Production + Preview only — Development scope dropped to enable Sensitive flagging
+     where the plan allows). New values also live in local `.env.local`.
+   - Triggered a Vercel redeploy to pick up the new env vars; smoke-tested approval
+     email + Mapbox heatmap + elevation API on prod.
+   - Confirmed `.env.local` no longer appears in `git status`.
 
-6. **`99ec15d`** — `daily_review_sign` wrap. First real `ConflictError` user — handler fetches the row first and refuses to overwrite an already-signed slot. The signature is a regulatory record (DAFMAN 13-204 Para 2.5.2.10), so last-write-wins is the wrong default. Inspector shows conflict items in purple; user resolves with Discard.
-
-### Spec doc (1 commit)
-
-7. **`6edbb67`** — Brought `docs/Offline_Write_Queue_Spec.md` current with implementation status + lessons learned (realtime UPDATE blind spot, queued-path-must-bail pattern, CREATE wraps need pre-allocated IDs to chain, ConflictError is rare but real, `'use client'` server-import trap).
-
-### Pending photos middle option (3 commits)
-
-8. **`d9128f0`** — `lib/sync/pending-photos.ts`: separate IDB store for photos that fail inline upload (offline / transient drop / no parent id). Inspection page's two photo-add handlers persist to it. Photos are NOT auto-drained; user manually triggers upload from the inspector.
-9. **`4a3a41c`** — Cyan `● N PHOTO WAITING` pill + inspector section with thumbnails + Upload All flow.
-10. **`4abe100`** — Adds `docs/Offline_Queue_Test_Plan.md`. Six-phase manual run-through with checkboxes.
-
-### Field-test bug fixes (3 commits)
-
-11. **`0f40d86`** — Critical: Supabase JS v2 returns network errors *structurally* (`{error: 'Failed to fetch'}`) rather than throwing. My handler classifier was treating these as `NonRetriableError`. Added `throwForStructuredError()` helper that recognizes network-shape messages (Failed to fetch / NetworkError / Load failed / etc.) and routes them to transient.
-12. **`ec61312`** — Two bugs from check_file testing: queued bail wasn't resetting the form (user staring at a stuck "in progress" form), and the network-error regex needed broader coverage.
-13. **`70187a9`** — Lifted the checks hard-offline gate. User specifically called out the "two checks on the airfield without network access" workflow — the gate was blocking it. Toast is now context-aware: only mentions photos / discrepancies if the check actually has them.
-
-### Inspection fan-out + gate-lift (4 commits)
-
-14. **`d20160f`** — Wrapped four non-chaining fan-out writes (`airfield_status_update`, `infrastructure_feature_status_update`, `outage_event_create`, `activity_log_insert`) so a queued inspection drain doesn't drop them. Activity log writes carry an explicit `createdAt` so the events log shows when the user actually filed, not when the queue drained.
-15. **`e39f128`** — `discrepancy_create` wrap with pre-allocated UUIDs. Inspection-time disc creates now mint `crypto.randomUUID()` up front; downstream writes (NAVAID inop, photo links, outage events) FK against the pre-allocated id whether the create committed inline or queued. `createDiscrepancy` accepts an optional `id` input — Postgres treats it identically to `gen_random_uuid()`.
-16. **`05065e7`** — First inspection gate-lift: started-online → File-offline now flows through the queue cleanly.
-17. **`3471af5`** — Full gate-lift. `handleBeginNew` mints UUID + sets `dbRowId` immediately + queues `inspection_save_draft` via the new `createInspectionDraftWithId()` helper. The whole "started fully offline" path now works.
-
-### Field-test bug fixes (round 2) (1 commit)
-
-18. **`fb487ba`** — Three bugs from offline inspection testing:
-    - `inspection_save_draft` was landing as FAILED with "This record already exists" because the inline INSERT actually committed but the response was lost mid-flight, causing my catch path to queue a retry that then conflicted on its own row. Handler now treats "already exists" as success.
-    - Realtime alert banner spam: fileInspection's 1–3 internal `updateAirfieldStatus` calls echoed back as cyan "Airfield Status updated" alerts. Banner now suppresses any update where `updated_by` matches the current user, regardless of which path triggered the write. Plus dropped the noisy "updated the Airfield Status" fallback when only `updated_at` / `updated_by` changed.
-    - Defensive: inspection page now refreshes on `visibilitychange` and `focus` in addition to write-committed events.
+   **Old Supabase service-role JWT** (in `e06f82e`): user reports nothing in their inbox
+   from GitHub or Supabase secret-scanning, but they migrated to the newer `sb_secret_*`
+   key format some time ago and the JWT-format keys are presumed to have been retired by
+   that migration. Worth a final verification next session — see Tasks below.
 
 ---
 
-## Migrations added this session
+## Migrations applied this session
 
-**None.** All work was code-only. The `inspections.id` and `discrepancies.id` columns already accept client-supplied UUIDs.
+**`2026042600_ppr_coordination.sql`** — applied to prod ✓.
+
+Changes recap:
+- `ppr_entries`: + `status`, `requester_name`, `requester_email`, `triaged_by`, `triaged_at`,
+  `approval_user_id`, `approval_at`, `denial_reason`, `public_submission`. Default
+  status=`approved` so existing rows pass straight through; legacy data isn't pulled into
+  the new queues.
+- `ppr_columns`: + `is_public BOOLEAN DEFAULT false` so legacy columns stay internal-only
+  until admin opts each one in.
+- `bases`: + `amops_email` (used as reply-to on outbound PPR emails).
+- New tables: `ppr_agencies` and `ppr_coordination` with RLS keyed off
+  `ppr:view` / `ppr:coordinate` / `ppr:write` / `base_setup:write`.
+- New permission keys: `ppr:triage`, `ppr:coordinate`, `ppr:approve` seeded to
+  `amops`, `airfield_manager`, `namo`, `base_admin`, `sys_admin`. Plus the existing
+  `ppr` role gains `ppr:coordinate`.
+- SECURITY DEFINER RPCs:
+  - `get_public_ppr_config(base_id)` — anon-callable; returns base name + is_public columns.
+  - `submit_public_ppr_request(base_id, requester_name, requester_email, arrival_date,
+    column_values, notes)` — anon-callable; inserts entry with status=`pending_amops_triage`.
+    Does **not** return the PPR number to the caller.
+- Helper: `_ppr_generate_number(base_id, arrival_date, oi)` — plpgsql port of the JS
+  `generatePprNumber` so the public RPC can mint a number without a logged-in user. OI
+  placeholder is `XX`; rewritten by approver later.
 
 ---
 
-## Final state of the offline queue
+## Final state of the PPR module
 
-**Wrapped WriteTypes (12):**
-- `inspection_file` — UPDATE existing inspection
-- `inspection_save_draft` — INSERT first save with pre-allocated id (idempotent on duplicate-key)
-- `check_file` — CREATE new check
-- `acsi_submit` — UPDATE ACSI inspection
-- `daily_review_sign` — UPDATE daily review slot (with ConflictError refusal)
-- `discrepancy_create` — INSERT with pre-allocated id
-- `airfield_status_update` — UPDATE airfield_status row
-- `infrastructure_feature_status_update` — bulk NAVAID inop/operational
-- `outage_event_create` — INSERT outage event
-- `activity_log_insert` — INSERT events-log entry with explicit createdAt
-- `photo_upload` — placeholder for direct disc-photo / wildlife / parking work later
-- (`waiver_create`, `waiver_update`, `notam_create` — declared in WriteType union, no handlers, deliberately deferred)
+**State machine:**
+```
+pending_amops_triage  ◄── public submission lands here
+   │ approver picks agencies (or skips)
+   ▼
+pending_coordination  ◄── internal create with agencies starts here too
+   │ all coord rows non-pending
+   ▼
+pending_amops_approval
+   │
+   ├─► approved  (sends approval email; PPR# OI rewritten to approver's initials)
+   └─► denied
+```
 
-**Pending photo store** — IDB-backed, manual upload only. Currently feeds inspection photos; inspector dispatcher handles `entityType: 'discrepancy'` for future direct-from-disc captures.
+Internal create with **Pre-coordinated — no agencies needed** skips straight to `approved`.
 
-**Hard-offline gates remaining:**
-- Inspections: only fires for legacy in-progress drafts that pre-date the `inspection_save_draft` wrap (`dbRowId === null`). New drafts have `dbRowId` from Begin time; gate doesn't fire.
-- Checks: lifted entirely.
-- ACSI / daily review: never had one.
+**Surfaces:**
+- `/ppr` (staff) — KPI badges (review / approval for permitted users + per-agency for
+  everyone, all auto-hide at zero), filter chips (All / Review / Coordination / Approval /
+  Approved / Denied), date chips (Today / Next 7d / Next 30d / Custom — date filter
+  bypassed when in a pending queue), full table with PPR # / Status / Arrival / Requester /
+  [dynamic columns] / Notes. Click PPR # → detail card with full picture + every action.
+  Realtime subs on `ppr_entries` and `ppr_coordination`.
+- `/ppr-request/[baseId]` (public) — anon, dark theme, no Glidepath header. Fixed name +
+  email + arrival-date fields plus dynamic public columns. Submit triggers confirmation
+  email (no PPR number).
+- `/` (airfield status home) — Today's PPRs section filters to `status='approved'` only,
+  with green Approved chip per row.
+- `/api/send-ppr-confirmation` and `/api/send-ppr-approval` — Resend, with sender
+  `"{Base} AMOPS via Glidepath" <info@glidepathops.com>` and reply-to=`bases.amops_email`
+  if configured.
+- Base setup PPR step gains: per-column **Public** toggle, **Coordinating Agencies**
+  management (free-text labels, active toggle), **AMOPS reply-to email** field,
+  **Public Request URL** panel with copy button + QR.
 
 ---
 
@@ -93,40 +175,60 @@
 
 | Item | Severity | Notes |
 |---|---|---|
-| **`.env.local` modified, `docs/DEMO_LOGINS.md` untracked** | Trivial | Local-only; always skip on commits. |
-| **Photos missing on resume (Bug B)** | Low | Photos uploaded via the manual pending-photos flow don't appear in the form on resume. The page reads `draft_data` from DB but doesn't fetch the `photos` table to repopulate `itemPhotos` / `discPhotos` / `uploadedPhotos`. Existing limitation, exposed by the queued workflow. ~30 lines to fix; deferred until someone asks. |
-| **Disc photo → discrepancy linking on queued path** | Low | `linkPhotosToDiscrepancy` is wrapped in try/catch on the queued path, fails silently when offline. Photos exist on the inspection but aren't auto-linked to the disc. Manual link from `/discrepancies/[id]` works. |
-| **Slot #7 wraps not done** | Low | NOTAM (stub today, no DB write), waiver create/update, airfield_status from dashboard handlers. Each has FK fan-out concerns similar to discrepancies — deferred until there's a concrete workflow demand. |
-| **Toast delay on transient mid-call drop** | Trivial | Browser-level fetch behavior — when the network drops mid-request, the browser holds the connection until reconnect, only then resolving as failed. Not fixable at our layer without canceling the request. Document and move on. |
-| **Pre-fix legacy in-progress drafts** | One-time | Drafts in localStorage from before `3471af5` have `dbRowId === null`. They hit the residual gate and ask user to reconnect briefly. Only affects users who had an in-progress inspection across the deploy. |
-| **No offline reads** | Medium-Big | Customer asks for "offline use" likely meant offline READS too (browse pages without a connection). Not done. Real lift — TanStack Query + IDB persister is industry standard, ~3–4 weeks to migrate. Workbox runtime caching for QRC + Regulations pages would be a focused 1-day win for the safety-critical reference data. See user-facing thread for the analysis. |
-| **iOS PWA Blob-in-IDB reliability** | Low | Pending-photos persists `Blob` in IDB. Spec says it works; iOS Safari has had multi-year-old quirks. Worth one real-iPad test before betting field deployments on it. |
-| **Tests: 165 → 247 (+82)** | None | New `tests/write-queue-{backoff,storage,drainer,handlers}.test.ts` and `tests/pending-photos-storage.test.ts`. |
-| **Bundle: `/inspections` 229 → 233 kB (+4 kB)** | None | Foundation + handlers + UI. |
+| **Old Supabase JWT in git history** | Low (likely already invalid) | User migrated to `sb_secret_*` keys; old JWT-format service-role token in `e06f82e` is presumed retired by that migration but not yet *explicitly* verified in Supabase dashboard. See Tasks. |
+| **`docs/DEMO_LOGINS.md` untracked** | Trivial | Deliberately uncommitted; skip on commits. |
+| **Re-approval doesn't refresh OI on already-approved entries** | Low | The OI rewrite only fires on the approve action. Pre-fix entries that landed at `118-001-XX` keep that number. Hand-edit if anyone cares; otherwise leave them. |
+| **Email on denial** | Deferred | v1 has approval email only. AMOPS contacts requester out-of-band on deny. Add when there's a concrete ask. |
+| **Sequential coordination** | Deferred | All assigned agencies see their work in parallel. No ordering. |
+| **Public form file uploads** | Deferred | Flight plans, certificates, etc. — out of scope unless requested. |
+| **Bulk coordinate** | Deferred | Per-row only. |
+| **PDF coordination summary section** | Deferred | `lib/ppr-pdf.ts` doesn't surface the new status/coordination data yet. Easy add when someone asks. |
+| **PPR number clash on second public submit same day** | Low | The plpgsql helper increments off `COUNT(*)` — under simultaneous anon submissions for the same arrival date, two could mint the same `{jul}-{seq}-XX`. Realistic? No — submissions are minutes apart. Worth tightening with a sequence or unique constraint if the module sees real volume. |
+| **Public form locale-display of dates** | Trivial | Browser-locale dependent (en-US shows `MM/DD/YYYY` in the picker; stored value is `YYYY-MM-DD`). Time was fixed via text input + HH:MM pattern; date stays native. |
 
 ---
 
 ## Next session tasks (prioritized)
 
-### P1 — verify this session's work
-1. **Production smoke** of the offline queue. Hard-refresh the PWA (Ctrl+Shift+R) on each test session — `@ducanh2912/next-pwa`'s service worker can cache stale bundles. Walk through `docs/Offline_Queue_Test_Plan.md` Phase 2 and Phase 3 specifically; the rest are smoke-only since they exercised cleanly during this session.
-2. **Watch for stuck queue items** — if anyone reports a NEEDS REVIEW pill that doesn't clear, ask them to screenshot the IDB queue contents (Application → IndexedDB → `glidepath-write-queue` → `queue`) and the inspector view.
+### P1 — verify cleanup loose ends
+1. **Verify the old Supabase JWT is dead.** Supabase dashboard → Settings → API. Confirm
+   the legacy JWT signing-secret has been rotated (which invalidates anon + service-role
+   JWT tokens issued under it) and that only the new `sb_secret_*` / `sb_publishable_*`
+   keys are listed as active. If GitHub's secret scanner caught the original Feb 24
+   commit, there should be an email at `csproctor88@gmail.com` from
+   `noreply@github.com` confirming the auto-revoke. Five-minute task; closes the last
+   security loose end from history.
+2. **Smoke a fresh public PPR end-to-end on prod.** Hard-refresh PWA (Ctrl+Shift+R) on
+   each session. Submit anon at `/ppr-request/[baseId]` → log in as AMOPS → review and
+   pick agencies → coordinate as a `ppr`-role user → approve as AMOPS → confirm
+   approval email lands with the rewritten OI in the PPR number.
 
 ### P2 — small follow-ups if anyone asks
-3. **Bug B (photos on resume)** — `~30 lines`, fetch from `photos` table by `inspection_id` on resume, populate `itemPhotos` / `discPhotos` / `uploadedPhotos`. Defer until the manual-upload flow is exercised enough to make this friction.
-4. **iOS real-device test** — confirm Blob-in-IDB works across PWA backgrounding / cold start. Borrow an iPad, take a photo offline, force-quit, reopen, confirm photo still in the inspector.
-5. **Disc photo → discrepancy linking on queued path** — `linkPhotosToDiscrepancy` wrap. ~1 hour. Adds a 13th WriteType but the FK chain is straightforward (photo ids are real, disc id is pre-allocated).
+3. **Denial email** — when AMOPS denies a public submission, send the requester a
+   short notice with the reason. Mirror the approval-email API route shape.
+4. **PPR PDF — coordination + status section** — extend `lib/ppr-pdf.ts` to include the
+   status column and a per-entry coordination summary. The data is all there, just not
+   rendered.
+5. **Already-approved PPRs with `XX` OI** — one-shot SQL update to rewrite the
+   trailing segment with `approver_oi` for any already-approved rows that landed
+   pre-`4128357`. Trivial migration; only needed if someone notices the inconsistency.
 
 ### P3 — bigger work, only if customer demand
-6. **Offline reads** — full conversation captured in this session. Workbox runtime cache for QRC + Regulations is a 1-day "safety-critical reference offline" win. Full app-wide offline-first via TanStack Query is a 3–4 week project. **Recommend waiting for concrete customer ask before starting.**
-7. **Slot #7 wraps** (waivers, NOTAM-if-it-becomes-real, dashboard airfield_status calls) — diminishing returns vs. effort. Skip unless asked.
+6. **Sequential coordination** (Agency A must concur before Agency B can review).
+   Adds ordering UI + per-row gating logic. Skip unless a customer asks.
+7. **Public form file uploads** (flight plans, certs). Storage bucket policy + UI lift.
+8. **Bulk coordinate** (mark many agency rows in one go). Diminishing returns.
 
 ### P4 — deferred from prior sessions
-- Component extraction for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`)
-- Re-introduce path-scoped storage RLS for `airfield-diagrams` and entity photo paths
-- Trademark resolution — CDW Class 42 conflict on "GLIDEPATH"
-- CAC/PIV authentication (blocked on Platform One)
-- Outage analytics, training management, Part 139 civilian template
+- **Offline reads** for QRC + Regulations (Workbox runtime cache, ~1-day win) or full
+  TanStack Query + IDB persister (3–4 weeks). User opted in to a partial slice last
+  session; track customer feedback before expanding.
+- **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`).
+- **Re-introduce path-scoped storage RLS** for `airfield-diagrams` and entity photo
+  paths.
+- **Trademark resolution** — CDW Class 42 conflict on "GLIDEPATH".
+- **CAC/PIV authentication** (blocked on Platform One).
+- **Outage analytics, training management, Part 139 civilian template.**
 
 ---
 
@@ -136,27 +238,28 @@
 ✓ Compiled successfully
 TypeScript clean (npx tsc --noEmit exit 0)
 Tests: 247 pass
-  - 18 commits this session add ~82 new tests across 5 new test files
 
 Notable First Load JS:
-  /wildlife            788 kB  (heatmap)
+  /wildlife            788 kB  (heatmap, unchanged)
   /parking             411 kB
   /reports/aging       331 kB
   /reports/discrepancies 330 kB
   /obstructions/[id]   327 kB
   /reports/daily       322 kB
-  /reports/lighting    317 kB
+  /reports/lighting    318 kB
   /reports/trends      315 kB
   /library             292 kB
-  /settings/base-setup 233 kB
-  /inspections         233 kB  (+4 kB this session)
+  /settings/base-setup 236 kB  (+3 kB this session — new agency / public-URL UI)
+  /inspections         233 kB
   /discrepancies       224 kB
-  /settings            200 kB
+  /settings            199 kB
   /regulations         182 kB
   /scn                 181 kB
+  /qrc                 180 kB
   /more                177 kB
   /settings/base-setup/modules 176 kB
-  /recent-activity     160 kB
+  /ppr                 (~180 kB — new since v2.32; see route table)
+  /ppr-request/[baseId] (~151 kB — new public route)
 
 Middleware             74.4 kB
 ```
@@ -167,26 +270,33 @@ Middleware             74.4 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-25 (cont.) | Offline write queue: foundation + 12 wraps + inspector + pending photos. Inspection gate lifted for online-Begin flow; full gate lifted for fully-offline Begin too. Realtime alert spam fixed. |
-| **Unreleased** | 2026-04-25 | iOS PWA fixes, airfield diagram upload rewrite, OFFLINE pill, codebase primer + offline-queue spec, kiosk tests, PDF polish |
-| **Unreleased** | 2026-04-22 | Email flow fixes, Safety role gate closeout, kiosk auto-login, shared PDF utility |
+| **Unreleased** | 2026-04-26 | PPR public form + AMOPS-triaged multi-agency coordination, requester emails, full UI/UX iteration on detail card / KPI bar / time picker; security cleanup (`.env.local` untracked, old keys rotated at providers) |
+| **Unreleased** | 2026-04-25 (cont.) | Offline write queue: foundation + 12 wraps + inspector + pending photos. Inspection gate lifted for online-Begin and offline-Begin flows. |
+| **Unreleased** | 2026-04-25 | iOS PWA fixes, airfield diagram upload rewrite, OFFLINE pill, codebase primer + offline-queue spec, kiosk tests, PDF polish. Workbox runtime caching for offline reads on QRC / PPR / Contractors / Discrepancies / Library / Aircraft / Waivers. |
 | v2.32.0 | 2026-04-21 | Modular Onboarding, SCN, Close-for-Day, What's New modal |
 | v2.31.0 | 2026-04-07 | Full Google Maps migration, Custom Status Boards, PPR Log |
 | v2.30.0 | 2026-04-14 | Daily Reviews + shift sign-off, ARFF status log, Vitest scaffold |
-| v2.29.0 | 2026-04-02 | Training system, 12-step base setup wizard, dark mode readability |
 
 See `CHANGELOG.md` for full history.
 
 ---
 
-## Key docs touched / created this session
+## Key docs / files touched this session
 
-- `docs/Offline_Write_Queue_Spec.md` — design spec brought current with implementation status + lessons (`6edbb67`)
-- `docs/Offline_Queue_Test_Plan.md` — six-phase manual run-through, updated through the gate-lift work (`4abe100`, `70187a9`, `05065e7`, `3471af5`)
-- `lib/sync/types.ts`, `lib/sync/backoff.ts`, `lib/sync/queue-storage.ts`, `lib/sync/write-queue.ts`, `lib/sync/handlers.ts`, `lib/sync/pending-photos.ts` — the entire foundation
-- `components/sync/write-queue-provider.tsx`, `components/sync/queue-inspector.tsx` — UI surfaces
-- 12 page-level wraps across inspections, checks, ACSI, daily reviews; drain-commit listeners on the corresponding pages
-- `lib/supabase/inspections.ts` — added `createInspectionDraftWithId` (INSERT-with-id helper)
-- `lib/supabase/discrepancies.ts` — added optional `id` input to `createDiscrepancy`
-- `lib/supabase/activity.ts` — added optional `createdAt` to `logActivity` so queued events-log entries preserve original time
-- `components/realtime-alert-banner.tsx` — own-update suppression by user-id match
+- `supabase/migrations/2026042600_ppr_coordination.sql` — full PPR workflow schema +
+  RLS + RPCs + permission seeds
+- `lib/supabase/ppr.ts` — extensive: types, status flow, OI rewrite helper, KPI counts
+- `lib/supabase/ppr-agencies.ts` (new) — per-base agency CRUD
+- `lib/supabase/types.ts` — `ppr_agencies`, `ppr_coordination`, augmented `ppr_entries`
+  / `ppr_columns` / `bases.amops_email`
+- `lib/permissions.ts` — `PPR_TRIAGE`, `PPR_COORDINATE`, `PPR_APPROVE`
+- `components/ppr/ppr-field-input.tsx` (new) — shared field renderer; HH:MM 24-hour
+  text input for time columns
+- `app/(app)/ppr/page.tsx` — full rewrite then iterated heavily through the session
+- `app/(app)/settings/base-setup/page.tsx` — extended `PprColumnsTab`
+- `app/(app)/page.tsx` — airfield status PPR section now `status='approved'` only
+- `app/api/send-ppr-confirmation/route.ts` (new) — public submission confirmation, no
+  PPR number
+- `app/api/send-ppr-approval/route.ts` (new) — approval email with rewritten OI in PPR#
+- `app/ppr-request/[baseId]/page.tsx` (new) — public form, anon, no Glidepath header
+- `.env.local` — untracked via `git rm --cached`; local file unchanged
