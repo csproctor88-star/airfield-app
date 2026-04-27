@@ -276,6 +276,10 @@ export default function HomePage() {
   }
 
   // --- Load today's PPRs ---
+  // Filter to approved entries only — the airfield status page is the
+  // operational view of what's actually scheduled to be on the field.
+  // Pending review / coordination / approval and denied entries live
+  // in the PPR module proper, not here.
   const loadTodayPprs = useCallback(async () => {
     if (!installationId) { setTodayPprs([]); setPprColumns([]); return }
     const today = new Date().toISOString().slice(0, 10)
@@ -283,7 +287,7 @@ export default function HomePage() {
       fetchPprEntriesForDate(installationId, today),
       fetchPprColumns(installationId),
     ])
-    setTodayPprs(entries)
+    setTodayPprs(entries.filter((e) => e.status === 'approved'))
     setPprColumns(cols)
   }, [installationId])
 
@@ -2348,6 +2352,7 @@ export default function HomePage() {
                 <thead>
                   <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
                     <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>PPR #</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Status</th>
                     {pprColumns.map(col => (
                       <th key={col.id} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{col.column_name}</th>
                     ))}
@@ -2361,6 +2366,18 @@ export default function HomePage() {
                     <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                         {entry.ppr_number}
+                      </td>
+                      <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '2px 8px', borderRadius: 12,
+                          fontSize: 'var(--fs-xs)', fontWeight: 700,
+                          background: 'rgba(34,197,94,0.10)',
+                          color: '#22c55e',
+                          border: '1px solid rgba(34,197,94,0.4)',
+                          textTransform: 'uppercase', letterSpacing: '0.03em',
+                        }}>
+                          Approved
+                        </span>
                       </td>
                       {pprColumns.map(col => (
                         <td key={col.id} style={{ padding: '6px 8px', color: 'var(--color-text-1)', whiteSpace: 'nowrap' }}>
