@@ -365,7 +365,16 @@ export default function ActivityPage() {
   const loadEntries = useCallback(async () => {
     setLoading(true)
     const { start, end } = getDateRange()
-    const { data } = await fetchActivityLog({ baseId: installationId, startDate: start, endDate: end, limit: 500 })
+    // Events Log is the AF Form 3616 operational log. PPR workflow
+    // churn and high-volume wildlife sightings would flood it; those
+    // still appear on the Activity Log page (/recent-activity).
+    const { data } = await fetchActivityLog({
+      baseId: installationId,
+      startDate: start,
+      endDate: end,
+      limit: 500,
+      excludeEntityTypes: ['ppr_entry', 'wildlife_sighting'],
+    })
     setEntries(data)
     const details = await fetchEntityDetails(data)
     setDetailsMap(details)

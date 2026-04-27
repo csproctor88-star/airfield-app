@@ -104,11 +104,16 @@ export async function fetchActivityLog(options: {
   startDate?: string
   endDate?: string
   limit?: number
+  /** Entity types to omit. The Events Log page (`/activity`, AF Form
+   *  3616-style operational log) excludes high-volume internal-workflow
+   *  rows like PPR coordination and wildlife sightings — those still
+   *  show on the Activity Log page (`/recent-activity`). */
+  excludeEntityTypes?: string[]
 }): Promise<{ data: ActivityEntry[]; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: [], error: 'Supabase not configured' }
 
-  const { baseId, startDate, endDate, limit = 200 } = options
+  const { baseId, startDate, endDate, limit = 200, excludeEntityTypes } = options
 
   let query = supabase
     .from('activity_log')
@@ -119,6 +124,9 @@ export async function fetchActivityLog(options: {
   if (baseId) query = query.eq('base_id', baseId)
   if (startDate) query = query.gte('created_at', startDate)
   if (endDate) query = query.lte('created_at', endDate)
+  if (excludeEntityTypes && excludeEntityTypes.length > 0) {
+    query = query.not('entity_type', 'in', `(${excludeEntityTypes.join(',')})`)
+  }
 
   const { data, error } = await query
 
@@ -133,6 +141,9 @@ export async function fetchActivityLog(options: {
     if (baseId) fallbackQuery = fallbackQuery.eq('base_id', baseId)
     if (startDate) fallbackQuery = fallbackQuery.gte('created_at', startDate)
     if (endDate) fallbackQuery = fallbackQuery.lte('created_at', endDate)
+    if (excludeEntityTypes && excludeEntityTypes.length > 0) {
+      fallbackQuery = fallbackQuery.not('entity_type', 'in', `(${excludeEntityTypes.join(',')})`)
+    }
 
     const { data: fallback } = await fallbackQuery
 
