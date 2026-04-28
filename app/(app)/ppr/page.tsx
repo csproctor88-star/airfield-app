@@ -22,6 +22,7 @@ import {
   fetchPendingCoordinationCounts,
   fetchPprRemarks,
   addPprRemark,
+  cancelPprEntry,
   isSummaryColumn,
   type PprColumn,
   type PprEntry,
@@ -36,7 +37,7 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { PprFieldInput } from '@/components/ppr/ppr-field-input'
 import type jsPDF from 'jspdf'
 
-type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'pending_amops_approval' | 'approved' | 'denied'
+type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'pending_amops_approval' | 'approved' | 'denied' | 'canceled'
 
 // Color tokens used by the status chip + KPI pills.
 const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; border: string }> = {
@@ -45,6 +46,7 @@ const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; bo
   pending_amops_approval:  { label: 'Awaiting Approval',  bg: 'rgba(245,158,11,0.12)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
   approved:                { label: 'Approved',           bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
   denied:                  { label: 'Denied',             bg: 'rgba(220,38,38,0.10)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
+  canceled:                { label: 'Canceled',           bg: 'rgba(148,163,184,0.10)', fg: '#94a3b8', border: 'rgba(148,163,184,0.4)' },
 }
 
 export default function PprPage() {
@@ -506,6 +508,32 @@ export default function PprPage() {
     }
   }
 
+  // Soft-cancel — keeps the row + audit trail, flips status. Reason
+  // captured via window.prompt to keep this lightweight; if cancel
+  // becomes a frequent enough action we can lift it into a modal.
+  const handleCancel = async (entry: PprEntry) => {
+    if (!installationId) return
+    const reason = window.prompt(`Cancel PPR ${entry.ppr_number}?\n\nEnter a reason (required):`)
+    if (reason === null) return // user dismissed
+    const trimmed = reason.trim()
+    if (!trimmed) {
+      toast.error('A cancellation reason is required')
+      return
+    }
+    const { ok, error } = await cancelPprEntry({
+      entryId: entry.id,
+      baseId: installationId,
+      reason: trimmed,
+    })
+    if (!ok) {
+      toast.error(error || 'Failed to cancel PPR')
+      return
+    }
+    toast.success(`PPR ${entry.ppr_number} canceled`)
+    setDetailEntry(null)
+    loadData()
+  }
+
   // Triage
   const openTriage = (entry: PprEntry) => {
     setTriageEntry(entry)
@@ -663,6 +691,11 @@ export default function PprPage() {
     if (canWrite) {
       acts.push({ label: 'Edit', color: 'var(--color-accent)', onClick: () => handleEdit(entry) })
     }
+    // Cancel is a soft state flip — only meaningful on non-terminal
+    // entries. Already-denied or already-canceled rows skip it.
+    if (canWrite && entry.status !== 'denied' && entry.status !== 'canceled') {
+      acts.push({ label: 'Cancel', color: '#94a3b8', onClick: () => handleCancel(entry) })
+    }
     if (canDelete) {
       acts.push({ label: 'Del', color: 'var(--color-danger)', onClick: () => handleDelete(entry) })
     }
@@ -790,7 +823,7 @@ export default function PprPage() {
       <div style={{
         display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center',
       }}>
-        {(['all', 'pending_amops_triage', 'pending_coordination', 'pending_amops_approval', 'approved', 'denied'] as StatusFilter[]).map((f) => (
+        {(['all', 'pending_amops_triage', 'pending_coordination', 'pending_amops_approval', 'approved', 'denied', 'canceled'] as StatusFilter[]).map((f) => (
           <button
             key={f}
             onClick={() => { setStatusFilter(f); setAgencyFilter(null) }}
@@ -801,7 +834,8 @@ export default function PprPage() {
               : f === 'pending_coordination' ? 'Coordination'
               : f === 'pending_amops_approval' ? 'Approval'
               : f === 'approved' ? 'Approved'
-              : 'Denied'}
+              : f === 'denied' ? 'Denied'
+              : 'Canceled'}
           </button>
         ))}
 
@@ -876,7 +910,16 @@ export default function PprPage() {
                 const coords = coordsByEntry[entry.id] ?? []
                 const nonConcur = coords.some((c) => c.status === 'non_concur')
                 return (
-                  <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <tr
+                    key={entry.id}
+                    style={{
+                      borderBottom: '1px solid var(--color-border)',
+                      // Soft-cancel visual: strike + dim. Detail dialog
+                      // still renders without strikethrough.
+                      textDecoration: entry.status === 'canceled' ? 'line-through' : undefined,
+                      opacity: entry.status === 'canceled' ? 0.55 : 1,
+                    }}
+                  >
                     <td style={tdStyle}>
                       {/* Only the PPR # is clickable so users can scroll
                           and read the rest of the row without
@@ -1610,6 +1653,7 @@ export default function PprPage() {
                   ...(detailEntry.triaged_at ? [{ label: 'Reviewed At', value: formatZuluDateTime(detailEntry.triaged_at) }] : []),
                   ...(detailEntry.approval_at ? [{ label: 'Approved At', value: formatZuluDateTime(detailEntry.approval_at) }] : []),
                   ...(detailEntry.denial_reason ? [{ label: 'Denial Reason', value: detailEntry.denial_reason }] : []),
+                  ...(detailEntry.cancellation_reason ? [{ label: 'Cancellation Reason', value: detailEntry.cancellation_reason }] : []),
                   ...(detailEntry.created_at ? [{ label: 'Submitted At', value: formatZuluDateTime(detailEntry.created_at) }] : []),
                 ]}
               />

@@ -18,6 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending_amops_approval: 'Pending Approval',
   approved: 'Approved',
   denied: 'Denied',
+  canceled: 'Canceled',
 }
 
 const COORD_STATUS_LABELS: Record<string, string> = {

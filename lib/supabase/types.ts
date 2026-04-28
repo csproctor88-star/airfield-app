@@ -3064,6 +3064,7 @@ export type Database = {
           arrival_date: string
           arrival_eta_zulu: string | null
           base_id: string
+          cancellation_reason: string | null
           column_values: Json
           created_at: string
           created_by: string | null
@@ -3088,6 +3089,7 @@ export type Database = {
           arrival_date: string
           arrival_eta_zulu?: string | null
           base_id: string
+          cancellation_reason?: string | null
           column_values?: Json
           created_at?: string
           created_by?: string | null
@@ -3112,6 +3114,7 @@ export type Database = {
           arrival_date?: string
           arrival_eta_zulu?: string | null
           base_id?: string
+          cancellation_reason?: string | null
           column_values?: Json
           created_at?: string
           created_by?: string | null

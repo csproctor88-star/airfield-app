@@ -2352,6 +2352,7 @@ export default function HomePage() {
           pending_coordination:   { label: 'Coord',     bg: 'rgba(56,189,248,0.10)', fg: '#38bdf8', border: 'rgba(56,189,248,0.4)' },
           pending_amops_triage:   { label: 'Triage',    bg: 'rgba(167,139,250,0.10)',fg: '#a78bfa', border: 'rgba(167,139,250,0.4)' },
           denied:                 { label: 'Denied',    bg: 'rgba(239,68,68,0.10)',  fg: '#ef4444', border: 'rgba(239,68,68,0.4)' },
+          canceled:               { label: 'Canceled',  bg: 'rgba(148,163,184,0.10)',fg: '#94a3b8', border: 'rgba(148,163,184,0.4)' },
         }
         return (
           <div style={{ marginTop: 12 }}>
@@ -2387,8 +2388,16 @@ export default function HomePage() {
                   <tbody>
                     {todayPprs.map(entry => {
                       const meta = statusMeta[entry.status] ?? statusMeta.approved
+                      const canceled = entry.status === 'canceled'
                       return (
-                        <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <tr
+                          key={entry.id}
+                          style={{
+                            borderBottom: '1px solid var(--color-border)',
+                            textDecoration: canceled ? 'line-through' : undefined,
+                            opacity: canceled ? 0.55 : 1,
+                          }}
+                        >
                           <td style={{ ...ppPanelTd, fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace' }}>
                             {entry.ppr_number}
                           </td>

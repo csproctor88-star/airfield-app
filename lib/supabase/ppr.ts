@@ -53,6 +53,7 @@ export type PprStatus =
   | 'pending_amops_approval'
   | 'approved'
   | 'denied'
+  | 'canceled'
 
 export type PprEntry = {
   id: string
@@ -76,6 +77,7 @@ export type PprEntry = {
   approval_user_id: string | null
   approval_at: string | null
   denial_reason: string | null
+  cancellation_reason: string | null
   public_submission: boolean
 }
 
@@ -739,6 +741,74 @@ export async function approvePprEntry(input: {
   }
 
   return { ok: true, entry }
+}
+
+/**
+ * Soft-cancel a PPR. Keeps the row, flips status to 'canceled',
+ * stores the reason, and stamps the canceller via updated_by /
+ * updated_at. Unlike denial this does not gate on
+ * approval_user_id — anyone with ppr:write can cancel any non-
+ * terminal entry. Already-denied or already-canceled entries are
+ * treated as no-ops at the UI layer; this function will still
+ * write the new reason if called.
+ */
+export async function cancelPprEntry(input: {
+  entryId: string
+  baseId: string
+  reason: string
+}): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const reason = input.reason.trim()
+  if (!reason) return { ok: false, error: 'Cancellation reason is required' }
+
+  const { data, error } = await supabase
+    .from('ppr_entries')
+    .update({
+      status: 'canceled',
+      cancellation_reason: reason,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.entryId)
+    .select('id, requester_email')
+    .single()
+  if (error) return { ok: false, error: friendlyError(error.message) }
+
+  logActivity(
+    'updated',
+    'ppr_entry',
+    input.entryId,
+    'PPR CANCELED',
+    { details: `Reason: ${reason}` },
+    input.baseId,
+  )
+
+  // Best-effort cancellation email; mirrors approvePprEntry / denyPprEntry.
+  // Fire-and-forget — email failures don't block the status flip, and an
+  // internally-created PPR with no requester_email skips silently.
+  const requesterEmail = (data as { requester_email: string | null } | null)?.requester_email
+  if (requesterEmail) {
+    try {
+      const res = await fetch('/api/send-ppr-cancellation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: input.entryId }),
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        console.error('[cancelPprEntry] cancellation email API non-2xx', res.status, body)
+      }
+    } catch (e) {
+      console.error('[cancelPprEntry] cancellation email fetch threw:', e)
+    }
+  }
+
+  return { ok: true }
 }
 
 export async function denyPprEntry(input: {
