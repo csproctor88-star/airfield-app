@@ -3062,6 +3062,7 @@ export type Database = {
           approval_user_id: string | null
           approver_oi: string | null
           arrival_date: string
+          arrival_eta_zulu: string | null
           base_id: string
           column_values: Json
           created_at: string
@@ -3073,6 +3074,7 @@ export type Database = {
           public_submission: boolean
           requester_email: string | null
           requester_name: string | null
+          requester_phone: string | null
           status: string
           triaged_at: string | null
           triaged_by: string | null
@@ -3084,6 +3086,7 @@ export type Database = {
           approval_user_id?: string | null
           approver_oi?: string | null
           arrival_date: string
+          arrival_eta_zulu?: string | null
           base_id: string
           column_values?: Json
           created_at?: string
@@ -3095,6 +3098,7 @@ export type Database = {
           public_submission?: boolean
           requester_email?: string | null
           requester_name?: string | null
+          requester_phone?: string | null
           status?: string
           triaged_at?: string | null
           triaged_by?: string | null
@@ -3106,6 +3110,7 @@ export type Database = {
           approval_user_id?: string | null
           approver_oi?: string | null
           arrival_date?: string
+          arrival_eta_zulu?: string | null
           base_id?: string
           column_values?: Json
           created_at?: string
@@ -3117,6 +3122,7 @@ export type Database = {
           public_submission?: boolean
           requester_email?: string | null
           requester_name?: string | null
+          requester_phone?: string | null
           status?: string
           triaged_at?: string | null
           triaged_by?: string | null

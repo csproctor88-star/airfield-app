@@ -46,6 +46,7 @@ export type PprEntry = {
   base_id: string
   ppr_number: string
   arrival_date: string
+  arrival_eta_zulu: string | null
   column_values: Record<string, string>
   notes: string | null
   approver_oi: string | null
@@ -56,6 +57,7 @@ export type PprEntry = {
   status: PprStatus
   requester_name: string | null
   requester_email: string | null
+  requester_phone: string | null
   triaged_by: string | null
   triaged_at: string | null
   approval_user_id: string | null
@@ -214,6 +216,7 @@ export async function fetchPprEntriesForDate(baseId: string, date: string): Prom
 export async function createPprEntry(input: {
   base_id: string
   arrival_date: string
+  arrival_eta_zulu?: string | null
   column_values: Record<string, string>
   notes?: string
   approver_oi: string
@@ -251,6 +254,7 @@ export async function createPprEntry(input: {
       base_id: input.base_id,
       ppr_number: pprNumber,
       arrival_date: input.arrival_date,
+      arrival_eta_zulu: input.arrival_eta_zulu?.trim() || null,
       column_values: input.column_values,
       notes: input.notes || null,
       approver_oi: skipCoordination ? input.approver_oi : null,
@@ -830,7 +834,7 @@ export async function fetchPendingCoordinationCounts(
 
 export async function updatePprEntry(
   id: string,
-  updates: Partial<Pick<PprEntry, 'column_values' | 'notes' | 'arrival_date' | 'approver_oi'>>,
+  updates: Partial<Pick<PprEntry, 'column_values' | 'notes' | 'arrival_date' | 'arrival_eta_zulu' | 'approver_oi'>>,
   baseId?: string,
 ): Promise<PprEntry | null> {
   const supabase = db()

@@ -76,11 +76,6 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     ? formatZuluDate(new Date(dateFrom + 'T00:00:00'))
     : `${formatZuluDate(new Date(dateFrom + 'T00:00:00'))} – ${formatZuluDate(new Date(dateTo + 'T00:00:00'))}`
   y = drawReportTitle(ctx, y, { title: 'PPR LOG', subtitle: `Arrival date: ${rangeLabel}` })
-  y = drawStatBox(ctx, y, [
-    { label: 'Entries', value: String(entries.length) },
-    { label: 'Columns', value: String(columns.length) },
-    { label: 'Generated', value: formatZuluDateTime(new Date()) },
-  ])
 
   // ── Table ──
   // info_only columns hold static text on the column itself, not a
@@ -88,19 +83,52 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
   // either be blank or duplicate the column's static text.
   const dataColumns = columns.filter(c => c.column_type !== 'info_only')
 
+  y = drawStatBox(ctx, y, [
+    { label: 'Entries', value: String(entries.length) },
+    { label: 'Columns', value: String(dataColumns.length) },
+    { label: 'Generated', value: formatZuluDateTime(new Date()) },
+  ])
+
+  // Build the per-entry remarks string once so it can drop into the
+  // main table cell. Each remark is one line prefixed with its
+  // Zulu timestamp + author so the audit context lands inline with
+  // the PPR rather than in a separate (and previously bloated)
+  // bottom section.
+  const formatRemarksCell = (entryId: string): string => {
+    const thread = (remarksByEntry?.[entryId] ?? [])
+      .slice()
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    if (thread.length === 0) return ''
+    return thread
+      .map((r) => {
+        const author = r.user_rank ? `${r.user_rank} ${r.user_name || ''}`.trim() : (r.user_name || 'Unknown')
+        const when = formatZuluDateTime(r.created_at)
+        return sanitizePdfText(`[${when} · ${author}] ${r.remark}`)
+      })
+      .join('\n')
+  }
+  const anyRemarks = entries.some((e) => (remarksByEntry?.[e.id] ?? []).length > 0)
+
   if (entries.length === 0) {
     doc.setFontSize(10)
     doc.setTextColor(120)
     doc.text('No PPR entries for the selected range.', margin, y)
   } else {
-    const head: string[] = ['PPR #', 'Arrival', 'Status', ...dataColumns.map(c => sanitizePdfText(c.column_name)), 'OI', 'Notes']
+    const head: string[] = [
+      'PPR #', 'Arrival Date', 'ETA (Z)', 'Status',
+      ...dataColumns.map(c => sanitizePdfText(c.column_name)),
+      'OI', 'Notes',
+      ...(anyRemarks ? ['Remarks'] : []),
+    ]
     const body: string[][] = entries.map(entry => [
       entry.ppr_number,
       entry.arrival_date,
+      entry.arrival_eta_zulu ? entry.arrival_eta_zulu.replace(':', '') + 'Z' : '',
       STATUS_LABELS[entry.status] || entry.status,
       ...dataColumns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || ''))),
       entry.approver_oi || '',
       sanitizePdfText(entry.notes || ''),
+      ...(anyRemarks ? [formatRemarksCell(entry.id)] : []),
     ])
 
     autoTable(doc, {
@@ -110,53 +138,6 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
       body,
       didDrawPage: () => drawFooter(ctx),
     })
-  }
-
-  // ── Remarks ──
-  // Flatten {entryId → [remarks]} into one row per remark, sorted in
-  // entry/created_at order so each PPR's thread reads top-to-bottom.
-  // Coordination comments are already mirrored into ppr_remarks
-  // (with the [Agency — CONCUR/NON-CONCUR] prefix), so they fall
-  // out naturally here without a second data path.
-  if (remarksByEntry) {
-    const rows: string[][] = []
-    for (const entry of entries) {
-      const thread = (remarksByEntry[entry.id] ?? [])
-        .slice()
-        .sort((a, b) => a.created_at.localeCompare(b.created_at))
-      for (const r of thread) {
-        const author = r.user_rank ? `${r.user_rank} ${r.user_name || ''}`.trim() : (r.user_name || 'Unknown')
-        rows.push([
-          entry.ppr_number,
-          sanitizePdfText(author),
-          formatZuluDateTime(r.created_at),
-          sanitizePdfText(r.remark),
-        ])
-      }
-    }
-
-    if (rows.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const lastY = (doc as any).lastAutoTable?.finalY ?? y
-      const remarksStartY = lastY + 16
-      doc.setFontSize(11)
-      doc.setTextColor(40)
-      doc.text('REMARKS', margin, remarksStartY)
-
-      autoTable(doc, {
-        ...tableStyles(ctx),
-        startY: remarksStartY + 4,
-        head: [['PPR #', 'User', 'When', 'Remark']],
-        body: rows,
-        columnStyles: {
-          0: { cellWidth: 60 },
-          1: { cellWidth: 110 },
-          2: { cellWidth: 110 },
-          3: { cellWidth: 'auto' },
-        },
-        didDrawPage: () => drawFooter(ctx),
-      })
-    }
   }
 
   // ── Coordination ──

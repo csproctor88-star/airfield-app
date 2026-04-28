@@ -1982,8 +1982,12 @@ function SimpleListTab({
 // ═══════════════════════════════════════════════════════════════
 
 function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
+  type Row = { id: string; agency_name: string; sort_order: number }
   const [loaded, setLoaded] = useState(false)
-  const [agencies, setAgencies] = useState<string[]>([])
+  const [agencies, setAgencies] = useState<Row[]>([])
+  const [newName, setNewName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -1992,13 +1996,77 @@ function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
       const { fetchScnAgencies } = await import('@/lib/supabase/scn-agencies')
       const rows = await fetchScnAgencies(installationId)
       if (!cancelled) {
-        setAgencies(rows.map(r => r.agency_name))
+        setAgencies(rows.map(r => ({ id: r.id, agency_name: r.agency_name, sort_order: r.sort_order })))
         setLoaded(true)
       }
     }
     load()
     return () => { cancelled = true }
   }, [installationId])
+
+  const { getDragProps, draggedId, dragOverId } = useDragReorder(agencies, async (next) => {
+    setAgencies(next.map((r, i) => ({ ...r, sort_order: i })))
+    const { reorderScnAgencies } = await import('@/lib/supabase/scn-agencies')
+    const { error } = await reorderScnAgencies(next.map((r, i) => ({ id: r.id, sort_order: i })))
+    if (error) toast.error(`Reorder failed: ${error}`)
+  })
+
+  const handleAdd = async () => {
+    const trimmed = newName.trim()
+    if (!trimmed || !installationId) return
+    const { createScnAgency } = await import('@/lib/supabase/scn-agencies')
+    const { data, error } = await createScnAgency(installationId, trimmed)
+    if (error || !data) {
+      toast.error(error || 'Failed to add agency')
+      return
+    }
+    setAgencies(prev => [...prev, { id: data.id, agency_name: data.agency_name, sort_order: data.sort_order }])
+    setNewName('')
+    toast.success(`Added "${data.agency_name}"`)
+  }
+
+  const handleDelete = async (row: Row) => {
+    if (!confirm(`Delete "${row.agency_name}"?`)) return
+    const { deleteScnAgency } = await import('@/lib/supabase/scn-agencies')
+    const { error } = await deleteScnAgency(row.id)
+    if (error) {
+      toast.error(error)
+      return
+    }
+    setAgencies(prev => prev.filter(r => r.id !== row.id))
+    toast.success(`Deleted "${row.agency_name}"`)
+  }
+
+  const startEdit = (row: Row) => {
+    setEditingId(row.id)
+    setEditingName(row.agency_name)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditingName('')
+  }
+
+  const saveEdit = async (row: Row) => {
+    const trimmed = editingName.trim()
+    if (!trimmed) {
+      toast.error('Name cannot be empty')
+      return
+    }
+    if (trimmed === row.agency_name) {
+      cancelEdit()
+      return
+    }
+    const { updateScnAgency } = await import('@/lib/supabase/scn-agencies')
+    const { error } = await updateScnAgency(row.id, { agency_name: trimmed })
+    if (error) {
+      toast.error(error)
+      return
+    }
+    setAgencies(prev => prev.map(r => r.id === row.id ? { ...r, agency_name: trimmed } : r))
+    cancelEdit()
+    toast.success('Renamed')
+  }
 
   if (!loaded) return null
 
@@ -2007,15 +2075,107 @@ function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
       <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 14, lineHeight: 1.6 }}>
         Add every agency contacted on the Secondary Crash Net. Each appears as a toggleable
         badge on the daily SCN check page where the controller marks it Loud &amp; Clear, No Response,
-        or Out of Service.
+        or Out of Service. Drag rows to reorder; click Edit to rename.
       </p>
-      <SimpleListTab
-        title="SCN Agencies"
-        items={agencies}
-        tableName="scn_agencies"
-        fieldName="agency_name"
-        installationId={installationId}
-      />
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>SCN Agencies</h3>
+      {agencies.length === 0 && (
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No agencies configured.</p>
+      )}
+      {agencies.map(row => {
+        const isEditing = editingId === row.id
+        const dragProps = isEditing ? {} : getDragProps(row.id)
+        return (
+          <div
+            key={row.id}
+            {...dragProps}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              padding: '8px 0',
+              borderBottom: '1px solid var(--color-border)',
+              borderTop: !isEditing && dragOverId === row.id && draggedId !== row.id ? '2px solid var(--color-cyan)' : '2px solid transparent',
+              background: !isEditing && dragOverId === row.id && draggedId !== row.id ? 'var(--color-bg-elevated)' : undefined,
+              opacity: draggedId === row.id ? 0.4 : 1,
+              cursor: isEditing ? 'default' : 'grab',
+              fontSize: 'var(--fs-md)',
+            }}
+          >
+            {isEditing ? (
+              <input
+                value={editingName}
+                onChange={e => setEditingName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveEdit(row)
+                  else if (e.key === 'Escape') cancelEdit()
+                }}
+                autoFocus
+                style={{
+                  flex: 1, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-inset)',
+                  color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+                }}
+              />
+            ) : (
+              <span style={{ color: 'var(--color-text-1)' }}>{row.agency_name}</span>
+            )}
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={() => saveEdit(row)}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-success)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}
+                  >Save</button>
+                  <button
+                    onClick={cancelEdit}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}
+                  >Cancel</button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => startEdit(row)}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600 }}
+                  >Edit</button>
+                  <button
+                    onClick={() => handleDelete(row)}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
+                  >&times;</button>
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <input
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Add agency (e.g. Tower, Fire Dept, Security Forces)..."
+          style={{
+            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+          }}
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!newName.trim()}
+          style={{
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            opacity: !newName.trim() ? 0.5 : 1,
+          }}
+        >
+          Save
+        </button>
+      </div>
     </div>
   )
 }

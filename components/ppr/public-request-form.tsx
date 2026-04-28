@@ -59,7 +59,9 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
   const today = new Date().toISOString().slice(0, 10)
   const [requesterName, setRequesterName] = useState('')
   const [requesterEmail, setRequesterEmail] = useState('')
+  const [requesterPhone, setRequesterPhone] = useState('')
   const [arrivalDate, setArrivalDate] = useState(today)
+  const [arrivalEta, setArrivalEta] = useState('')
   const [values, setValues] = useState<Record<string, string>>({})
   const [notes, setNotes] = useState('')
 
@@ -136,8 +138,20 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       setError('Please enter a valid email address')
       return
     }
+    // Permissive phone check: at least 7 digits anywhere in the input.
+    // We don't constrain to a single format because aircrews may submit
+    // from international numbers, DSN, or a commercial line with extension.
+    const phoneDigits = requesterPhone.replace(/\D+/g, '')
+    if (phoneDigits.length < 7) {
+      setError('Please enter a valid commercial phone number')
+      return
+    }
     if (!arrivalDate) {
       setError('Please select an arrival date')
+      return
+    }
+    if (!/^[0-2]\d:[0-5]\d$/.test(arrivalEta)) {
+      setError('Please enter your ETA in HH:MM (24-hour Zulu)')
       return
     }
     for (const c of config.columns) {
@@ -164,7 +178,9 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       p_base_id: resolvedBaseId,
       p_requester_name: requesterName.trim(),
       p_requester_email: requesterEmail.trim(),
+      p_requester_phone: requesterPhone.trim(),
       p_arrival_date: arrivalDate,
+      p_arrival_eta_zulu: arrivalEta,
       p_column_values: values,
       p_notes: notes.trim() || null,
     })
@@ -312,6 +328,21 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
             </div>
           </div>
 
+          {/* Fixed: requester commercial phone */}
+          <div>
+            <label style={labelStyle}>Commercial Phone <span style={{ color: '#EF4444' }}>*</span></label>
+            <input
+              type="tel"
+              value={requesterPhone}
+              onChange={(e) => setRequesterPhone(e.target.value)}
+              placeholder="e.g. +1 555 123 4567"
+              style={inputStyle}
+            />
+            <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+              POC number AMOPS or coordinating agencies can reach you on if a question comes up.
+            </div>
+          </div>
+
           {/* Fixed: arrival date */}
           <div>
             <label style={labelStyle}>Requested Arrival Date <span style={{ color: '#EF4444' }}>*</span></label>
@@ -335,6 +366,25 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
                 </div>
               )
             })()}
+          </div>
+
+          {/* Fixed: arrival ETA (Zulu) — kept directly under the date so
+              all arrival info is grouped before any aircraft / departure
+              fields. */}
+          <div>
+            <label style={labelStyle}>ETA (Z) <span style={{ color: '#EF4444' }}>*</span></label>
+            <input
+              type="time"
+              value={arrivalEta}
+              onChange={(e) => setArrivalEta(e.target.value)}
+              placeholder="HH:MM"
+              style={inputStyle}
+            />
+            {arrivalEta && /^[0-2]\d:[0-5]\d$/.test(arrivalEta) && (
+              <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                → {arrivalEta.replace(':', '')}Z
+              </div>
+            )}
           </div>
 
           {/* Dynamic public columns */}

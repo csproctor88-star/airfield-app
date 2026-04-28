@@ -81,6 +81,7 @@ export default function PprPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingEntry, setEditingEntry] = useState<PprEntry | null>(null)
   const [formDate, setFormDate] = useState(today)
+  const [formEta, setFormEta] = useState('')
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [formNotes, setFormNotes] = useState('')
   const [formApproverOi, setFormApproverOi] = useState('')
@@ -379,6 +380,7 @@ export default function PprPage() {
   const handleNew = () => {
     setEditingEntry(null)
     setFormDate(today)
+    setFormEta('')
     setFormValues({})
     setFormNotes('')
     setFormApproverOi('')
@@ -391,6 +393,7 @@ export default function PprPage() {
   const handleEdit = (entry: PprEntry) => {
     setEditingEntry(entry)
     setFormDate(entry.arrival_date)
+    setFormEta(entry.arrival_eta_zulu || '')
     setFormValues(entry.column_values || {})
     setFormNotes(entry.notes || '')
     setFormApproverOi(entry.approver_oi || '')
@@ -411,6 +414,7 @@ export default function PprPage() {
       const trimmedOi = formApproverOi.trim().toUpperCase()
       const updated = await updatePprEntry(editingEntry.id, {
         arrival_date: formDate,
+        arrival_eta_zulu: formEta.trim() || null,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         ...(canEditOi && trimmedOi ? { approver_oi: trimmedOi } : {}),
@@ -433,6 +437,7 @@ export default function PprPage() {
       const entry = await createPprEntry({
         base_id: installationId,
         arrival_date: formDate,
+        arrival_eta_zulu: formEta.trim() || null,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         approver_oi: userOI,
@@ -812,13 +817,14 @@ export default function PprPage() {
               <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
                 <th style={thStyle}>PPR #</th>
                 <th style={thStyle}>Status</th>
-                <th style={thStyle}>Arrival</th>
+                <th style={thStyle}>Arrival Date</th>
+                <th style={thStyle}>ETA (Z)</th>
                 <th style={thStyle}>Requester</th>
                 {dataColumns.map(col => (
-                  <th key={col.id} style={thStyle}>{col.column_name}</th>
+                  <th key={col.id} style={dynamicThStyle}>{col.column_name}</th>
                 ))}
                 {filteredEntries.some(e => e.notes) && (
-                  <th style={thStyle}>Notes</th>
+                  <th style={dynamicThStyle}>Notes</th>
                 )}
               </tr>
             </thead>
@@ -862,23 +868,31 @@ export default function PprPage() {
                       )}
                     </td>
                     <td style={tdStyle}>{formatZuluDate(entry.arrival_date + 'T00:00:00Z')}</td>
+                    <td style={tdStyle}>
+                      {entry.arrival_eta_zulu
+                        ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
+                        : <span style={{ color: 'var(--color-text-3)' }}>—</span>}
+                    </td>
                     <td style={{ ...tdStyle, whiteSpace: 'normal' }}>
                       {entry.requester_name ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <span style={{ fontWeight: 600 }}>{entry.requester_name}</span>
                           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{entry.requester_email}</span>
+                          {entry.requester_phone && (
+                            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{entry.requester_phone}</span>
+                          )}
                         </div>
                       ) : (
                         <span style={{ color: 'var(--color-text-3)', fontStyle: 'italic' }}>Internal</span>
                       )}
                     </td>
                     {dataColumns.map(col => (
-                      <td key={col.id} style={tdStyle}>
+                      <td key={col.id} style={dynamicTdStyle}>
                         {(entry.column_values || {})[col.id] || '—'}
                       </td>
                     ))}
                     {showNotesCol && (
-                      <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <td style={dynamicTdStyle}>
                         {entry.notes || '—'}
                       </td>
                     )}
@@ -911,6 +925,19 @@ export default function PprPage() {
                 onChange={e => setFormDate(e.target.value)}
                 style={textInputStyle}
               />
+            </label>
+
+            <label style={labelStyle}>
+              ETA (Z)
+              <input
+                type="time"
+                value={formEta}
+                onChange={e => setFormEta(e.target.value)}
+                style={textInputStyle}
+              />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 'normal' }}>
+                Optional on internal-create. Public submissions require it.
+              </span>
             </label>
 
             {columns.map(col => (
@@ -1017,7 +1044,8 @@ export default function PprPage() {
               Review PPR {triageEntry.ppr_number}
             </h3>
             <p style={{ margin: '0 0 12px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-              Public submission from <strong>{triageEntry.requester_name}</strong> ({triageEntry.requester_email}).
+              Public submission from <strong>{triageEntry.requester_name}</strong> ({triageEntry.requester_email}
+              {triageEntry.requester_phone ? ` · ${triageEntry.requester_phone}` : ''}).
             </p>
 
             <SubmittedSummary entry={triageEntry} columns={columns} />
@@ -1353,6 +1381,7 @@ export default function PprPage() {
                   rows={[
                     { label: 'Name', value: detailEntry.requester_name },
                     { label: 'Email', value: detailEntry.requester_email || '—' },
+                    { label: 'Phone', value: detailEntry.requester_phone || '—' },
                   ]}
                   footnote={detailEntry.public_submission ? 'Submitted via public request form.' : undefined}
                 />
@@ -1363,6 +1392,9 @@ export default function PprPage() {
                 title="Request Details"
                 rows={[
                   { label: 'Arrival Date', value: detailEntry.arrival_date },
+                  ...(detailEntry.arrival_eta_zulu
+                    ? [{ label: 'ETA (Z)', value: detailEntry.arrival_eta_zulu.replace(':', '') + 'Z' }]
+                    : []),
                   ...dataColumns
                     .map((c) => ({ label: c.column_name, value: (detailEntry.column_values || {})[c.id] || '' }))
                     .filter((r) => r.value),
@@ -1418,29 +1450,48 @@ export default function PprPage() {
                   Remarks
                 </div>
                 {detailRemarks.length > 0 && (
-                  <table style={{
-                    width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)',
-                    borderRadius: 4, overflow: 'hidden', border: '1px solid var(--color-border)',
-                    marginBottom: 8,
-                  }}>
-                    <tbody>
-                      {detailRemarks.map((r, i) => (
-                        <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--color-bg-inset)' : 'transparent' }}>
-                          <td style={{ padding: '6px 10px', verticalAlign: 'top' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>
-                              <span style={{ fontWeight: 600, color: 'var(--color-text-2)' }}>
-                                {r.user_rank ? `${r.user_rank} ${r.user_name}` : r.user_name}
-                              </span>
-                              <span>{formatZuluDateTime(r.created_at)}</span>
-                            </div>
-                            <div style={{ color: 'var(--color-text-1)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                              {r.remark}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                    {detailRemarks.map((r) => (
+                      <div
+                        key={r.id}
+                        style={{
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 6,
+                          overflow: 'hidden',
+                          background: 'var(--color-bg-elevated)',
+                        }}
+                      >
+                        {/* Header strip — author + Zulu timestamp visually
+                            separated from the remark body by a divider
+                            and a subtler background. */}
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+                          padding: '6px 10px',
+                          background: 'var(--color-bg-inset)',
+                          borderBottom: '1px solid var(--color-border)',
+                          fontSize: 'var(--fs-xs)',
+                        }}>
+                          <span style={{ fontWeight: 700, color: 'var(--color-text-2)' }}>
+                            {r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')}
+                          </span>
+                          <span style={{ color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
+                            {formatZuluDateTime(r.created_at)}
+                          </span>
+                        </div>
+                        {/* Body */}
+                        <div style={{
+                          padding: '8px 10px',
+                          color: 'var(--color-text-1)',
+                          fontSize: 'var(--fs-sm)',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          lineHeight: 1.5,
+                        }}>
+                          {r.remark}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <textarea
@@ -1610,7 +1661,10 @@ function DetailSection({ title, rows, footnote }: { title: string; rows: DetailR
 function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprColumn[] }) {
   return (
     <div style={{ padding: 10, background: 'var(--color-bg-inset)', borderRadius: 4, border: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)' }}>
-      <div><strong>Arrival:</strong> {entry.arrival_date}</div>
+      <div>
+        <strong>Arrival:</strong> {entry.arrival_date}
+        {entry.arrival_eta_zulu && <> &middot; <strong>ETA:</strong> {entry.arrival_eta_zulu.replace(':', '')}Z</>}
+      </div>
       {columns.map((c) => {
         // info_only columns have no per-entry value; skip.
         if (c.column_type === 'info_only') return null
@@ -1632,9 +1686,28 @@ const thStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
 }
 
+// Dynamic / long-label columns (admin-configured + Notes) — wrap the
+// header onto multiple lines and cap cell width so an admin-defined
+// column like "Point of Contact Name (if different than above)" can't
+// blow out the table to 4× the viewport. Long cell values wrap too.
+const dynamicThStyle: React.CSSProperties = {
+  ...thStyle,
+  whiteSpace: 'normal',
+  verticalAlign: 'bottom',
+  maxWidth: 140,
+}
+
 const tdStyle: React.CSSProperties = {
   padding: '8px 10px', color: 'var(--color-text-1)',
   whiteSpace: 'nowrap',
+}
+
+const dynamicTdStyle: React.CSSProperties = {
+  ...tdStyle,
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
+  verticalAlign: 'top',
+  maxWidth: 200,
 }
 
 const labelStyle: React.CSSProperties = {
