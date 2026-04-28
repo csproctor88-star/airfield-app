@@ -3,7 +3,7 @@
 **Date:** 2026-04-27 (extended same-day session)
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `84b60ba`
+**HEAD:** `44f0332`
 
 ---
 
@@ -218,6 +218,15 @@ Five commits closing P2 + tech-debt items. Two new migrations.
   rolled back as a transaction (no prod state changed). Rewrite uses
   `user_has_permission(uid, 'photos:write')` exclusively. Saved a
   feedback memory `feedback_rls_helpers.md` to prevent a repeat.
+- **Sidebar badge: in-app nav refresh + polling fallback** (`44f0332`) —
+  user reported the PPR pending dot still doesn't clear after the prior
+  fix landed. Diagnosis: the sidebar persists across in-app navigation,
+  so neither `focus` nor `visibilitychange` fires on a sidebar click —
+  only a full page reload pulled fresh counts. Added `usePathname()`
+  as a refresh dep (any route change → recount), a 30s polling
+  interval (self-heals realtime silent failures), and a `subscribe()`
+  status log so the next stuck-badge incident can confirm from devtools
+  whether the channel is alive.
 
 ---
 
@@ -256,6 +265,7 @@ The two same-day follow-up migrations (2026042803, 2026042804) are
 | Simultaneous PPR submits could mint duplicate ppr_numbers | `_ppr_generate_number` did COUNT(*) + 1; two concurrent calls saw the same count | `5019762` (migration `2026042803` — atomic counter table) |
 | Storage bucket lost path scoping after matrix refactor | `2026042208` replaced 2026041600's path-scoped policies with bare permission checks | `08b12f0` + `84b60ba` (migration `2026042804`) |
 | Migration `2026042804` failed with `42883: function user_can_write(uuid) does not exist` | First cut referenced helper dropped in 2026042208 | `84b60ba` (rewrite using matrix helpers; saved feedback memory) |
+| Sidebar PPR dot didn't clear on in-app navigation | `useSidebarBadgeCounts` hook persists across nav; `focus`/`visibilitychange` only fire on browser-tab change, not sidebar click | `44f0332` (pathname-based refresh + 30s polling fallback) |
 
 ---
 
@@ -354,6 +364,13 @@ the new RPC); the second is backwards-compatible but should ride along.
    date → confirm distinct numbers (best-effort; the race was
    unobservable before so this just confirms the happy path holds).
 7. **Storage RLS.** Upload a photo on a discrepancy you own → succeeds.
+8. **Sidebar PPR dot clears on nav.** Approve a pending PPR, then click any
+   sidebar item → dot clears immediately (pathname-based refresh). Or wait
+   ≤30s without navigating → dot clears via polling. If the dot is sticking
+   despite both, check devtools console: a `[sidebar-badge] realtime channel
+   CHANNEL_ERROR` / `TIMED_OUT` warning means the websocket sub failed and
+   polling is the only thing keeping counts current. Healthy realtime is
+   silent.
 
 ### P2 — bug-of-the-day backlog (next quick wins)
 
