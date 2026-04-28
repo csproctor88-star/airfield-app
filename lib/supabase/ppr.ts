@@ -221,6 +221,15 @@ export async function createPprEntry(input: {
   notes?: string
   approver_oi: string
   agencyIds?: string[]
+  /**
+   * AMOPS path: save the PPR at status='pending_amops_approval' so
+   * the requester can be coordinated externally (phone / email /
+   * face-to-face) and the same AMOPS user can come back later via
+   * Decide → Approve to finalize. No agency rows are created.
+   * Mutually exclusive with agencyIds — if both are passed,
+   * manualCoordPending wins (no in-app coord).
+   */
+  manualCoordPending?: boolean
 }): Promise<PprEntry | null> {
   const supabase = db()
   if (!supabase) return null
@@ -228,8 +237,9 @@ export async function createPprEntry(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const agencyIds = input.agencyIds ?? []
-  const skipCoordination = agencyIds.length === 0
+  const manualPending = Boolean(input.manualCoordPending)
+  const agencyIds = manualPending ? [] : (input.agencyIds ?? [])
+  const skipCoordination = !manualPending && agencyIds.length === 0
   const nowIso = new Date().toISOString()
 
   // Mint the PPR number via the atomic RPC. This serializes concurrent
@@ -261,11 +271,17 @@ export async function createPprEntry(input: {
       created_by: user.id,
       updated_by: user.id,
       public_submission: false,
-      status: skipCoordination ? 'approved' : 'pending_coordination',
+      status: manualPending
+        ? 'pending_amops_approval'
+        : (skipCoordination ? 'approved' : 'pending_coordination'),
       approval_user_id: skipCoordination ? user.id : null,
       approval_at: skipCoordination ? nowIso : null,
-      triaged_by: skipCoordination ? null : user.id,
-      triaged_at: skipCoordination ? null : nowIso,
+      // For manual-pending the creator IS the triager (they decided
+      // to handle coord externally), so log them as such — keeps the
+      // audit trail consistent with how routed-to-coord PPRs record
+      // the triage actor.
+      triaged_by: manualPending ? user.id : (skipCoordination ? null : user.id),
+      triaged_at: manualPending ? nowIso : (skipCoordination ? null : nowIso),
     })
     .select()
     .single()

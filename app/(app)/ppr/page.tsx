@@ -86,7 +86,14 @@ export default function PprPage() {
   const [formNotes, setFormNotes] = useState('')
   const [formApproverOi, setFormApproverOi] = useState('')
   const [formAgencyIds, setFormAgencyIds] = useState<string[]>([])
-  const [formSkipCoord, setFormSkipCoord] = useState(false)
+  // Three mutually-exclusive create-time outcomes:
+  //   pending  → status='pending_amops_approval', no in-app coord;
+  //              AMOPS coordinates externally and approves later.
+  //   preCoord → status='approved' (no coord needed at all).
+  //   route    → status='pending_coordination' with selected agencies;
+  //              requires ppr:triage so non-triagers can't bypass.
+  type CreateMode = 'pending' | 'preCoord' | 'route'
+  const [formCreateMode, setFormCreateMode] = useState<CreateMode>('preCoord')
 
   // Triage modal — three outcomes:
   //   route     → status='pending_coordination' with selected agencies
@@ -385,7 +392,11 @@ export default function PprPage() {
     setFormNotes('')
     setFormApproverOi('')
     setFormAgencyIds([])
-    setFormSkipCoord(agencies.length === 0)
+    // Default mode mirrors the prior checkbox behavior: route to
+    // coord when the base has agencies configured AND the user can
+    // triage; otherwise pre-coordinate. Save-pending is opt-in so
+    // we don't surprise a user expecting the legacy two-button flow.
+    setFormCreateMode(agencies.length > 0 && canTriage ? 'route' : 'preCoord')
     setShowModal(true)
   }
 
@@ -398,7 +409,7 @@ export default function PprPage() {
     setFormNotes(entry.notes || '')
     setFormApproverOi(entry.approver_oi || '')
     setFormAgencyIds([])
-    setFormSkipCoord(false)
+    setFormCreateMode('preCoord')
     setShowModal(true)
   }
 
@@ -429,9 +440,12 @@ export default function PprPage() {
         toast.error('Set your Operating Initials in Settings before creating PPRs')
         return
       }
-      const skip = formSkipCoord || formAgencyIds.length === 0
-      if (!skip && !canTriage) {
+      if (formCreateMode === 'route' && !canTriage) {
         toast.error('Routing to coordination requires the PPR Review permission')
+        return
+      }
+      if (formCreateMode === 'route' && formAgencyIds.length === 0) {
+        toast.error('Pick at least one coordinating agency, or switch to a different save mode')
         return
       }
       const entry = await createPprEntry({
@@ -441,10 +455,16 @@ export default function PprPage() {
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         approver_oi: userOI,
-        agencyIds: skip ? [] : formAgencyIds,
+        agencyIds: formCreateMode === 'route' ? formAgencyIds : [],
+        manualCoordPending: formCreateMode === 'pending',
       })
       if (entry) {
-        toast.success(skip ? `PPR ${entry.ppr_number} created (pre-coordinated)` : `PPR ${entry.ppr_number} sent to coordination`)
+        const msg = formCreateMode === 'pending'
+          ? `PPR ${entry.ppr_number} saved — pending manual coordination`
+          : formCreateMode === 'preCoord'
+            ? `PPR ${entry.ppr_number} created (pre-coordinated)`
+            : `PPR ${entry.ppr_number} sent to coordination`
+        toast.success(msg)
         setShowModal(false)
         loadData()
       }
@@ -980,19 +1000,64 @@ export default function PprPage() {
               </label>
             )}
 
-            {/* Coordination picker (create only) */}
-            {!editingEntry && agencies.length > 0 && (
+            {/* Save-mode picker (create only) — three mutually
+                exclusive outcomes. Mirrors the triage modal's three
+                radio pattern so the create / triage flows feel the
+                same shape to AMOPS. */}
+            {!editingEntry && (
               <div style={{ marginBottom: 12, padding: 10, border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-bg-inset)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600, marginBottom: 8, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={formSkipCoord}
-                    onChange={e => setFormSkipCoord(e.target.checked)}
-                  />
-                  Pre-coordinated — no agencies needed
-                </label>
-                {!formSkipCoord && (
-                  <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {([
+                    {
+                      mode: 'pending' as const,
+                      label: 'Save pending — coordinating manually',
+                      help: 'Saves at "Pending Approval" with no in-app coordination. Use when you\'ll coordinate by phone, email, or in person and finalize later via Decide → Approve.',
+                    },
+                    {
+                      mode: 'preCoord' as const,
+                      label: 'Pre-coordinated — approve now',
+                      help: 'No coordination needed. Approves immediately and mints the PPR number with your OI.',
+                    },
+                    ...(agencies.length > 0 ? [{
+                      mode: 'route' as const,
+                      label: canTriage ? 'Send to coordination' : 'Send to coordination (requires PPR Review)',
+                      help: 'Pick the agencies that must concur. They get an email with a link back into Glidepath.',
+                    }] : []),
+                  ]).map((opt) => {
+                    const selected = formCreateMode === opt.mode
+                    const disabled = opt.mode === 'route' && !canTriage
+                    return (
+                      <label
+                        key={opt.mode}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 8,
+                          padding: '8px 10px', borderRadius: 4,
+                          border: selected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
+                          background: selected ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                          opacity: disabled ? 0.5 : 1,
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="create-mode"
+                          checked={selected}
+                          disabled={disabled}
+                          onChange={() => setFormCreateMode(opt.mode)}
+                          style={{ marginTop: 3, accentColor: 'var(--color-accent)' }}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{opt.label}</div>
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{opt.help}</div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+
+                {/* Agency picker only shows when 'route' is selected. */}
+                {formCreateMode === 'route' && agencies.length > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
                       Required coordinating agencies:
                     </div>
@@ -1011,7 +1076,7 @@ export default function PprPage() {
                         )
                       })}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -1029,7 +1094,13 @@ export default function PprPage() {
                 disabled={!formDate || (!editingEntry && !userOI)}
                 style={primaryBtnStyle(Boolean(formDate))}
               >
-                {editingEntry ? 'Save Changes' : (formSkipCoord || formAgencyIds.length === 0 ? 'Approve PPR' : 'Send to Coordination')}
+                {editingEntry
+                  ? 'Save Changes'
+                  : formCreateMode === 'pending'
+                    ? 'Save Pending'
+                    : formCreateMode === 'preCoord'
+                      ? 'Approve PPR'
+                      : 'Send to Coordination'}
               </button>
             </div>
           </div>
