@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
 import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
-import { fetchPprEntriesForDate, fetchPprColumns, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
+import { fetchPprEntriesForDate, fetchPprColumns, isSummaryColumn, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
@@ -2328,75 +2328,101 @@ export default function HomePage() {
       </div>
       </div>{/* end bottom-info-row */}
 
-      {/* ===== Today's PPRs ===== */}
-      {pprColumns.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span className="section-label" style={{ marginBottom: 0 }}>
-              Prior Permission Required ({todayPprs.length})
-            </span>
-            <button
-              onClick={() => router.push('/ppr')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-            >
-              View All &rarr;
-            </button>
-          </div>
-          {todayPprs.length === 0 ? (
-            <div className="card" style={{ padding: 12, textAlign: 'center' }}>
-              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No PPRs for today</span>
+      {/* ===== Today's PPRs =====
+          Column set intentionally mirrors the slim PPR Log on /ppr:
+          PPR # / Status / Arrival Date / ETA (Z) / Callsign / Aircraft
+          Type. Anything else (requester, all admin columns, notes,
+          coord, remarks) lives in the detail view on /ppr. */}
+      {pprColumns.length > 0 && (() => {
+        const summaryCols = pprColumns.filter((c) => isSummaryColumn(c.column_name))
+        const ppPanelTh: React.CSSProperties = {
+          padding: '6px 8px', textAlign: 'center', fontWeight: 700,
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)',
+          textTransform: 'uppercase', whiteSpace: 'nowrap',
+        }
+        const ppPanelTd: React.CSSProperties = {
+          padding: '6px 8px', color: 'var(--color-text-1)',
+          whiteSpace: 'nowrap', textAlign: 'center',
+        }
+        // Compact status pill \u2014 single source of styling for the four
+        // statuses that can show on a "today's" board.
+        const statusMeta: Record<string, { label: string; bg: string; fg: string; border: string }> = {
+          approved:               { label: 'Approved',  bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
+          pending_amops_approval: { label: 'Pending',   bg: 'rgba(245,158,11,0.10)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
+          pending_coordination:   { label: 'Coord',     bg: 'rgba(56,189,248,0.10)', fg: '#38bdf8', border: 'rgba(56,189,248,0.4)' },
+          pending_amops_triage:   { label: 'Triage',    bg: 'rgba(167,139,250,0.10)',fg: '#a78bfa', border: 'rgba(167,139,250,0.4)' },
+          denied:                 { label: 'Denied',    bg: 'rgba(239,68,68,0.10)',  fg: '#ef4444', border: 'rgba(239,68,68,0.4)' },
+        }
+        return (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span className="section-label" style={{ marginBottom: 0 }}>
+                Prior Permission Required ({todayPprs.length})
+              </span>
+              <button
+                onClick={() => router.push('/ppr')}
+                style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+              >
+                View All &rarr;
+              </button>
             </div>
-          ) : (
-            <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
-                <thead>
-                  <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>PPR #</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Status</th>
-                    {pprColumns.map(col => (
-                      <th key={col.id} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{col.column_name}</th>
-                    ))}
-                    {todayPprs.some(e => e.notes) && (
-                      <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)', textTransform: 'uppercase' }}>Notes</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {todayPprs.map(entry => (
-                    <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '6px 8px', fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                        {entry.ppr_number}
-                      </td>
-                      <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
-                        <span style={{
-                          display: 'inline-block', padding: '2px 8px', borderRadius: 12,
-                          fontSize: 'var(--fs-xs)', fontWeight: 700,
-                          background: 'rgba(34,197,94,0.10)',
-                          color: '#22c55e',
-                          border: '1px solid rgba(34,197,94,0.4)',
-                          textTransform: 'uppercase', letterSpacing: '0.03em',
-                        }}>
-                          Approved
-                        </span>
-                      </td>
-                      {pprColumns.map(col => (
-                        <td key={col.id} style={{ padding: '6px 8px', color: 'var(--color-text-1)', whiteSpace: 'nowrap' }}>
-                          {(entry.column_values || {})[col.id] || '\u2014'}
-                        </td>
+            {todayPprs.length === 0 ? (
+              <div className="card" style={{ padding: 12, textAlign: 'center' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No PPRs for today</span>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
+                      <th style={ppPanelTh}>PPR #</th>
+                      <th style={ppPanelTh}>Status</th>
+                      <th style={ppPanelTh}>Arrival Date</th>
+                      <th style={ppPanelTh}>ETA (Z)</th>
+                      {summaryCols.map(col => (
+                        <th key={col.id} style={ppPanelTh}>{col.column_name}</th>
                       ))}
-                      {todayPprs.some(e => e.notes) && (
-                        <td style={{ padding: '6px 8px', color: 'var(--color-text-2)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {entry.notes || ''}
-                        </td>
-                      )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {todayPprs.map(entry => {
+                      const meta = statusMeta[entry.status] ?? statusMeta.approved
+                      return (
+                        <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ ...ppPanelTd, fontWeight: 700, color: 'var(--color-accent)', fontFamily: 'monospace' }}>
+                            {entry.ppr_number}
+                          </td>
+                          <td style={ppPanelTd}>
+                            <span style={{
+                              display: 'inline-block', padding: '2px 8px', borderRadius: 12,
+                              fontSize: 'var(--fs-xs)', fontWeight: 700,
+                              background: meta.bg, color: meta.fg, border: `1px solid ${meta.border}`,
+                              textTransform: 'uppercase', letterSpacing: '0.03em',
+                            }}>
+                              {meta.label}
+                            </span>
+                          </td>
+                          <td style={ppPanelTd}>{formatZuluDate(entry.arrival_date + 'T00:00:00Z')}</td>
+                          <td style={ppPanelTd}>
+                            {entry.arrival_eta_zulu
+                              ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
+                              : <span style={{ color: 'var(--color-text-3)' }}>\u2014</span>}
+                          </td>
+                          {summaryCols.map(col => (
+                            <td key={col.id} style={ppPanelTd}>
+                              {(entry.column_values || {})[col.id] || '\u2014'}
+                            </td>
+                          ))}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Construction/Closures edit dialog */}
       {editingConstruction && (

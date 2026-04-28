@@ -40,7 +40,13 @@ export function useSidebarBadgeCounts() {
     if (!installationId || !permsLoaded) return
     const supabase = createClient()
     if (!supabase) return
-    const { data: { user } } = await supabase.auth.getUser()
+    // getSession() reads from local storage — no auth-server roundtrip.
+    // RLS on the count queries below enforces actual authorization, so
+    // we don't need a server-validated user object for badge counts.
+    // Saves ~one auth call per refresh tick (which, with polling at
+    // 60s + realtime + focus + nav listeners, adds up fast).
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) return
 
     const tasks: Promise<unknown>[] = []
@@ -134,10 +140,17 @@ export function useSidebarBadgeCounts() {
   // Polling fallback. Realtime can silently fail for several reasons
   // — websocket dropped, RLS denying the payload, publication
   // metadata staleness, schema change after subscribe — and the user
-  // shouldn't have to refresh the page. 30s is a reasonable trade-off
-  // between staleness and load (3 small count queries per tick).
+  // shouldn't have to refresh the page. 60s balances staleness against
+  // Supabase request volume; pathname + custom-event + focus +
+  // visibilitychange listeners cover sub-minute updates whenever the
+  // user is actually interacting. Skip the tick when the tab is
+  // hidden — visibilitychange fires the next refresh on return.
   useEffect(() => {
-    const interval = setInterval(refresh, 30_000)
+    const interval = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        refresh()
+      }
+    }, 60_000)
     return () => clearInterval(interval)
   }, [refresh])
 

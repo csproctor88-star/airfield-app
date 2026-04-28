@@ -21,6 +21,19 @@ export const PPR_COLUMN_TYPES: { value: PprColumnType; label: string }[] = [
   { value: 'info_only', label: 'Info Only (read-only)' },
 ]
 
+/**
+ * Identifies admin-configured columns that should surface in the slim
+ * summary tables (the `/ppr` Log and the Airfield Status `/` "Today's
+ * PPRs" panel). Match is on column_name only so any base whose admin
+ * has configured Callsign + Aircraft Type gets the consistent layout
+ * regardless of `sort_order`. Anything not matching here lives in the
+ * detail dialog / PDF only.
+ */
+const SUMMARY_COLUMN_NAMES = new Set(['callsign', 'call sign', 'aircraft type'])
+export function isSummaryColumn(columnName: string): boolean {
+  return SUMMARY_COLUMN_NAMES.has(columnName.trim().toLowerCase())
+}
+
 export type PprColumn = {
   id: string
   base_id: string

@@ -22,6 +22,7 @@ import {
   fetchPendingCoordinationCounts,
   fetchPprRemarks,
   addPprRemark,
+  isSummaryColumn,
   type PprColumn,
   type PprEntry,
   type PprCoordination,
@@ -384,13 +385,17 @@ export default function PprPage() {
   )
 
   // PPR Log table is intentionally narrow — only the spine fields
-  // (PPR # / Status / Arrival Date / ETA) plus the first two
-  // admin-configured columns by sort_order, which by convention are
-  // Callsign + Aircraft Type at every base. Everything else
-  // (requester, full column set, notes, coord, remarks) lives in the
-  // detail dialog. Bases that prefer different summary columns can
-  // drag the desired pair to the top in Base Setup → PPR Columns.
-  const summaryColumns = useMemo(() => dataColumns.slice(0, 2), [dataColumns])
+  // (PPR # / Status / Arrival Date / ETA) plus the Callsign + Aircraft
+  // Type admin columns. Match by column_name so the filter works
+  // regardless of where in the sort order the admin placed them, and
+  // so a base that hasn't configured these labels just gets a thinner
+  // summary instead of the wrong columns. Same filter is mirrored on
+  // the Airfield Status (`/`) "Today's PPRs" table so the two views
+  // stay column-consistent.
+  const summaryColumns = useMemo(
+    () => dataColumns.filter((c) => isSummaryColumn(c.column_name)),
+    [dataColumns],
+  )
 
   // Open create modal
   const handleNew = () => {
@@ -413,7 +418,8 @@ export default function PprPage() {
   const handleEdit = (entry: PprEntry) => {
     setEditingEntry(entry)
     setFormDate(entry.arrival_date)
-    setFormEta(entry.arrival_eta_zulu || '')
+    // DB stores HH:MM; UI works in HHMM. Strip the colon on load.
+    setFormEta((entry.arrival_eta_zulu || '').replace(':', ''))
     setFormValues(entry.column_values || {})
     setFormNotes(entry.notes || '')
     setFormApproverOi(entry.approver_oi || '')
@@ -426,6 +432,17 @@ export default function PprPage() {
   const handleSave = async () => {
     if (!installationId) return
 
+    // ETA is collected as HHMM in the form; DB stores HH:MM (matches
+    // column_type='time' convention + the public RPC's regex check).
+    // Convert at the wire boundary; reject malformed input early so a
+    // stray "9" doesn't slip through as "9:" or similar.
+    const etaRaw = formEta.trim()
+    if (etaRaw && !/^([01]\d|2[0-3])[0-5]\d$/.test(etaRaw)) {
+      toast.error('ETA must be 4-digit HHMM (24-hour Zulu, e.g. 1500)')
+      return
+    }
+    const etaForDb = etaRaw ? `${etaRaw.slice(0, 2)}:${etaRaw.slice(2)}` : null
+
     if (editingEntry) {
       // Only send approver_oi when the user can approve AND the entry
       // is already approved — that's the case where the OI segment of
@@ -434,7 +451,7 @@ export default function PprPage() {
       const trimmedOi = formApproverOi.trim().toUpperCase()
       const updated = await updatePprEntry(editingEntry.id, {
         arrival_date: formDate,
-        arrival_eta_zulu: formEta.trim() || null,
+        arrival_eta_zulu: etaForDb,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         ...(canEditOi && trimmedOi ? { approver_oi: trimmedOi } : {}),
@@ -460,7 +477,7 @@ export default function PprPage() {
       const entry = await createPprEntry({
         base_id: installationId,
         arrival_date: formDate,
-        arrival_eta_zulu: formEta.trim() || null,
+        arrival_eta_zulu: etaForDb,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         approver_oi: userOI,
@@ -936,13 +953,16 @@ export default function PprPage() {
             <label style={labelStyle}>
               ETA (Z)
               <input
-                type="time"
+                type="text"
+                inputMode="numeric"
+                maxLength={4}
                 value={formEta}
-                onChange={e => setFormEta(e.target.value)}
+                onChange={e => setFormEta(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="HHMM (e.g. 1500)"
                 style={textInputStyle}
               />
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 'normal' }}>
-                Optional on internal-create. Public submissions require it.
+                Optional on internal-create. Public submissions require it. 24-hour Zulu, no colon.
               </span>
             </label>
 
@@ -1737,7 +1757,7 @@ function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprCol
 // ── Style helpers ──
 
 const thStyle: React.CSSProperties = {
-  padding: '8px 10px', textAlign: 'left', fontWeight: 700,
+  padding: '6px 8px', textAlign: 'center', fontWeight: 700,
   color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)',
   textTransform: 'uppercase', letterSpacing: '0.04em',
   whiteSpace: 'nowrap',
@@ -1750,21 +1770,21 @@ const thStyle: React.CSSProperties = {
 const dynamicThStyle: React.CSSProperties = {
   ...thStyle,
   whiteSpace: 'normal',
-  verticalAlign: 'bottom',
-  maxWidth: 140,
+  verticalAlign: 'middle',
+  maxWidth: 120,
 }
 
 const tdStyle: React.CSSProperties = {
-  padding: '8px 10px', color: 'var(--color-text-1)',
-  whiteSpace: 'nowrap',
+  padding: '6px 8px', color: 'var(--color-text-1)',
+  whiteSpace: 'nowrap', textAlign: 'center',
 }
 
 const dynamicTdStyle: React.CSSProperties = {
   ...tdStyle,
   whiteSpace: 'normal',
   wordBreak: 'break-word',
-  verticalAlign: 'top',
-  maxWidth: 200,
+  verticalAlign: 'middle',
+  maxWidth: 160,
 }
 
 const labelStyle: React.CSSProperties = {

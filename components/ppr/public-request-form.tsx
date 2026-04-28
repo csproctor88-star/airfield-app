@@ -150,8 +150,8 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       setError('Please select an arrival date')
       return
     }
-    if (!/^[0-2]\d:[0-5]\d$/.test(arrivalEta)) {
-      setError('Please enter your ETA in HH:MM (24-hour Zulu)')
+    if (!/^([01]\d|2[0-3])[0-5]\d$/.test(arrivalEta)) {
+      setError('Please enter your ETA as 4-digit HHMM (24-hour Zulu, e.g. 1500)')
       return
     }
     for (const c of config.columns) {
@@ -180,7 +180,10 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       p_requester_email: requesterEmail.trim(),
       p_requester_phone: requesterPhone.trim(),
       p_arrival_date: arrivalDate,
-      p_arrival_eta_zulu: arrivalEta,
+      // Stored canonical form is HH:MM (matches the column_type='time'
+      // convention + the DB regex check). Wire format to the user
+      // remains HHMM 24-hour Zulu.
+      p_arrival_eta_zulu: `${arrivalEta.slice(0, 2)}:${arrivalEta.slice(2)}`,
       p_column_values: values,
       p_notes: notes.trim() || null,
     })
@@ -370,19 +373,23 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
 
           {/* Fixed: arrival ETA (Zulu) — kept directly under the date so
               all arrival info is grouped before any aircraft / departure
-              fields. */}
+              fields. 24-hour HHMM (no colon) matches military / Zulu
+              convention and avoids the locale-dependent AM/PM that
+              <input type="time"> renders in en-US browsers. */}
           <div>
             <label style={labelStyle}>ETA (Z) <span style={{ color: '#EF4444' }}>*</span></label>
             <input
-              type="time"
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
               value={arrivalEta}
-              onChange={(e) => setArrivalEta(e.target.value)}
-              placeholder="HH:MM"
+              onChange={(e) => setArrivalEta(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="HHMM (e.g. 1500)"
               style={inputStyle}
             />
-            {arrivalEta && /^[0-2]\d:[0-5]\d$/.test(arrivalEta) && (
+            {arrivalEta && /^([01]\d|2[0-3])[0-5]\d$/.test(arrivalEta) && (
               <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
-                → {arrivalEta.replace(':', '')}Z
+                → {arrivalEta}Z
               </div>
             )}
           </div>
