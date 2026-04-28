@@ -62,6 +62,12 @@ export default function QrcPage() {
     setOpenExecs(o)
     setHistory(h)
     setLoaded(true)
+    // Nudge the sidebar badge — every QRC mutation calls load()
+    // afterward, so this single dispatch covers open/close/cancel
+    // without depending on realtime (which is unreliable on prod).
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('glidepath:badges-refresh'))
+    }
   }, [installationId])
 
   useEffect(() => { load() }, [load])

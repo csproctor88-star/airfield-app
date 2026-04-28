@@ -188,6 +188,18 @@ export async function fetchOpenExecutions(baseId?: string | null): Promise<QrcEx
   return (data || []) as QrcExecution[]
 }
 
+/** Sidebar badge count — number of currently-open QRC executions for a base. */
+export async function fetchActiveQrcCount(baseId?: string | null): Promise<number> {
+  const supabase = createClient()
+  if (!supabase || !baseId) return 0
+  const { count } = await supabase
+    .from('qrc_executions')
+    .select('id', { count: 'exact', head: true })
+    .eq('base_id', baseId)
+    .eq('status', 'open')
+  return count ?? 0
+}
+
 export async function fetchExecutionHistory(baseId?: string | null, limit = 50): Promise<QrcExecution[]> {
   const supabase = createClient()
   if (!supabase || !baseId) return []

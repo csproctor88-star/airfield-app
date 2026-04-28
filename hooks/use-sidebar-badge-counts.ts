@@ -7,6 +7,7 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { fetchPendingTriageCount, fetchPendingApprovalCount } from '@/lib/supabase/ppr'
 import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-members'
+import { fetchActiveQrcCount } from '@/lib/supabase/qrc'
 
 /**
  * Per-module pending-action counts for sidebar badges.
@@ -21,6 +22,7 @@ import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-
  *           - has ppr:approve → pending_amops_approval entries
  *           - has ppr:coordinate → pending coord rows on agencies
  *             where the current user is a member
+ *   qrc   — count of currently-open qrc_executions, gated on qrc:view.
  *   total — sum across all modules tracked here. Used to drive the
  *           Operations section-header dot.
  */
@@ -32,6 +34,7 @@ export function useSidebarBadgeCounts() {
   const [pprTriage, setPprTriage] = useState(0)
   const [pprApproval, setPprApproval] = useState(0)
   const [pprCoord, setPprCoord] = useState(0)
+  const [qrcActive, setQrcActive] = useState(0)
 
   const refresh = useCallback(async () => {
     if (!installationId || !permsLoaded) return
@@ -58,6 +61,11 @@ export function useSidebarBadgeCounts() {
     } else {
       setPprCoord(0)
     }
+    if (has(PERM.QRC_VIEW)) {
+      tasks.push(fetchActiveQrcCount(installationId).then(setQrcActive))
+    } else {
+      setQrcActive(0)
+    }
     await Promise.all(tasks)
   }, [installationId, has, permsLoaded])
 
@@ -81,7 +89,7 @@ export function useSidebarBadgeCounts() {
     if (!supabase) return
 
     const channel = supabase
-      .channel(`sidebar-ppr-${installationId}`)
+      .channel(`sidebar-badges-${installationId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'ppr_entries', filter: `base_id=eq.${installationId}` },
@@ -92,6 +100,11 @@ export function useSidebarBadgeCounts() {
         { event: '*', schema: 'public', table: 'ppr_coordination' },
         // Coord rows aren't base-scoped at the row level (entry_id only),
         // so refresh on any change — the count query filters by base.
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'qrc_executions', filter: `base_id=eq.${installationId}` },
         () => refresh(),
       )
       .subscribe((status) => {
@@ -144,7 +157,8 @@ export function useSidebarBadgeCounts() {
   }, [refresh])
 
   const ppr = pprTriage + pprApproval + pprCoord
-  const total = ppr
+  const qrc = qrcActive
+  const total = ppr + qrc
 
-  return { ppr, total }
+  return { ppr, qrc, total }
 }

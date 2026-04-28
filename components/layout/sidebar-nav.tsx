@@ -382,6 +382,19 @@ export function SidebarNav() {
               {badgeCounts.ppr > 9 ? '9+' : badgeCounts.ppr}
             </span>
           )}
+          {/* QRC active dot — same pattern as PPR. */}
+          {href === '/qrc' && badgeCounts.qrc > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {badgeCounts.qrc > 9 ? '9+' : badgeCounts.qrc}
+            </span>
+          )}
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
@@ -392,6 +405,11 @@ export function SidebarNav() {
         {isOpen && href === '/ppr' && badgeCounts.ppr > 0 && !active && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {badgeCounts.ppr} pending
+          </span>
+        )}
+        {isOpen && href === '/qrc' && badgeCounts.qrc > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+            {badgeCounts.qrc} active
           </span>
         )}
       </Link>
@@ -464,7 +482,9 @@ export function SidebarNav() {
 
     // Aggregate per-section pending count. Add new modules here as
     // they start contributing to the sidebar badge hook.
-    const sectionPendingCount = section.items.includes('/ppr') ? badgeCounts.ppr : 0
+    const sectionPendingCount =
+      (section.items.includes('/ppr') ? badgeCounts.ppr : 0)
+      + (section.items.includes('/qrc') ? badgeCounts.qrc : 0)
 
     return (
       <button
