@@ -16,10 +16,16 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
     onChange(updated)
   }
 
+  const toggleSignatureRequired = (index: number, checked: boolean) => {
+    const updated = [...team]
+    updated[index] = { ...updated[index], signature_required: checked }
+    onChange(updated)
+  }
+
   const addMember = () => {
     onChange([
       ...team,
-      { id: crypto.randomUUID(), role: 'other', name: '', rank: '', title: '' },
+      { id: crypto.randomUUID(), role: 'other', name: '', rank: '', title: '', signature_required: true },
     ])
   }
 
@@ -133,6 +139,26 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
                     />
                   </div>
                 </div>
+
+                {/* Signature toggle. Defaults true (existing rows that
+                    predate this field render undefined → required), so
+                    legacy data still produces a signature block. Checking
+                    off here drops the block from the PDF only — the
+                    member still appears in the team roster. */}
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  marginTop: 10, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)',
+                  cursor: readOnly ? 'default' : 'pointer', userSelect: 'none',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={member.signature_required !== false}
+                    disabled={readOnly}
+                    onChange={(e) => toggleSignatureRequired(i, e.target.checked)}
+                    style={{ accentColor: 'var(--color-accent)' }}
+                  />
+                  <span>Signature required on PDF</span>
+                </label>
               </div>
               {!readOnly && !isRequired && (
                 <button

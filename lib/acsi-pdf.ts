@@ -493,11 +493,18 @@ export async function generateAcsiPdf(
   if (inspection.inspection_team && inspection.inspection_team.length > 0) {
     sectionHeader('INSPECTION TEAM')
 
-    const boxH = 32
+    // Two-row layout per member: members marked signature_required=false
+    // get a compact roster row (no signature/date lines); everyone else
+    // gets the full signature box. signature_required is undefined on
+    // pre-existing data — treat that as required for backwards compat.
+    const sigBoxH = 32
+    const rosterRowH = 14
     const sigLineW = 70
     const dateLineW = 35
 
     for (const member of inspection.inspection_team) {
+      const requiresSig = member.signature_required !== false
+      const boxH = requiresSig ? sigBoxH : rosterRowH
       checkPageBreak(boxH + 6)
 
       // Box border
@@ -519,19 +526,21 @@ export async function generateAcsiPdf(
       const nameStr = [member.rank, member.name].filter(Boolean).join(' ') || '(not assigned)'
       doc.text(nameStr, margin + 5, y + 11)
 
-      // Signature line
-      const sigY = y + boxH - 7
-      doc.setDrawColor(120)
-      doc.setLineWidth(0.4)
-      doc.line(margin + 5, sigY, margin + 5 + sigLineW, sigY)
-      doc.setFontSize(6.5)
-      doc.setTextColor(130)
-      doc.text('Signature', margin + 5, sigY + 3.5)
+      if (requiresSig) {
+        // Signature line
+        const sigY = y + boxH - 7
+        doc.setDrawColor(120)
+        doc.setLineWidth(0.4)
+        doc.line(margin + 5, sigY, margin + 5 + sigLineW, sigY)
+        doc.setFontSize(6.5)
+        doc.setTextColor(130)
+        doc.text('Signature', margin + 5, sigY + 3.5)
 
-      // Date line
-      const dateX = margin + contentWidth - dateLineW - 5
-      doc.line(dateX, sigY, dateX + dateLineW, sigY)
-      doc.text('Date', dateX, sigY + 3.5)
+        // Date line
+        const dateX = margin + contentWidth - dateLineW - 5
+        doc.line(dateX, sigY, dateX + dateLineW, sigY)
+        doc.text('Date', dateX, sigY + 3.5)
+      }
 
       y += boxH + 4
     }

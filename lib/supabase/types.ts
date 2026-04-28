@@ -5153,6 +5153,13 @@ export type AcsiTeamMember = {
   name: string
   rank: string
   title: string
+  /**
+   * When false, the PDF export skips this member's signature block but
+   * still lists them in the Inspection Team roster. Undefined / true is
+   * treated as required so existing draft + filed rows that predate
+   * this field stay backwards-compatible.
+   */
+  signature_required?: boolean
 }
 
 export type AcsiSignatureBlock = {

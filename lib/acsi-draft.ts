@@ -27,9 +27,9 @@ export function createNewAcsiDraft(): AcsiDraftData {
     comments: {},
     discrepancies: {},
     team: [
-      { id: crypto.randomUUID(), role: 'afm', name: '', rank: '', title: 'Airfield Manager' },
-      { id: crypto.randomUUID(), role: 'ce', name: '', rank: '', title: 'CE Representative' },
-      { id: crypto.randomUUID(), role: 'safety', name: '', rank: '', title: 'Safety' },
+      { id: crypto.randomUUID(), role: 'afm', name: '', rank: '', title: 'Airfield Manager', signature_required: true },
+      { id: crypto.randomUUID(), role: 'ce', name: '', rank: '', title: 'CE Representative', signature_required: true },
+      { id: crypto.randomUUID(), role: 'safety', name: '', rank: '', title: 'Safety', signature_required: true },
     ],
     signatures: [
       { label: 'OG/CC', organization: '', name: '', rank: '', title: '' },
