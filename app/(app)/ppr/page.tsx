@@ -253,6 +253,15 @@ export default function PprPage() {
     }
 
     setLoading(false)
+
+    // Nudge the sidebar badge to recount. Every page-level mutation
+    // calls loadData() afterward, so this single dispatch covers
+    // approve / deny / triage / coordinate / create / edit without
+    // depending on the realtime websocket (which has been observed
+    // to silently fail on prod).
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('glidepath:badges-refresh'))
+    }
   }, [installationId, effectiveFrom, effectiveTo])
 
   useEffect(() => { loadData() }, [loadData])

@@ -106,6 +106,18 @@ export function useSidebarBadgeCounts() {
     }
   }, [installationId, refresh])
 
+  // Action bridge. Mutation handlers (approve/deny/triage/coordinate
+  // on /ppr) dispatch `glidepath:badges-refresh` after they succeed,
+  // so the badge updates instantly without depending on the realtime
+  // websocket — which has been observed to silently fail on prod.
+  // Pages don't need to import the hook; firing the event is the
+  // entire contract.
+  useEffect(() => {
+    function onRefresh() { refresh() }
+    window.addEventListener('glidepath:badges-refresh', onRefresh)
+    return () => window.removeEventListener('glidepath:badges-refresh', onRefresh)
+  }, [refresh])
+
   // Polling fallback. Realtime can silently fail for several reasons
   // — websocket dropped, RLS denying the payload, publication
   // metadata staleness, schema change after subscribe — and the user
