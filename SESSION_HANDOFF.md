@@ -3,7 +3,7 @@
 **Date:** 2026-04-27 (extended same-day session)
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `a06713c`
+**HEAD:** `0e509f6`
 
 ---
 
@@ -178,7 +178,9 @@ websocket, RLS hiccup, publication metadata staleness, etc.
 
 ## Same-day follow-up (2026-04-27 cont.)
 
-Five commits closing P2 + tech-debt items. Two new migrations.
+Eight code commits + three doc-update commits closing P2, tech-debt items,
+and two real-world bugs surfaced during smoke testing. Two new migrations
+(both **still pending** on prod — see Migrations status below).
 
 - **Denial email + AMOPS reply-to format validation on save** (`1de6e7a`) — new
   `/api/send-ppr-denial` route; `denyPprEntry()` fires it after the status flip,
@@ -227,6 +229,16 @@ Five commits closing P2 + tech-debt items. Two new migrations.
   interval (self-heals realtime silent failures), and a `subscribe()`
   status log so the next stuck-badge incident can confirm from devtools
   whether the channel is alive.
+- **Sidebar badge: action-bridge for instant clear after mutations**
+  (`a06713c`) — second user report: pathname refresh works for nav, but
+  the dot still stuck after approving/denying a PPR while staying on
+  `/ppr`. Mutation handlers only refresh the page's local `loadData()`;
+  realtime appears silent on prod. Added a custom-event bridge — the
+  hook listens for `'glidepath:badges-refresh'`, and `/ppr`'s `loadData()`
+  dispatches it at the end. Since every mutation handler calls
+  `loadData()` afterward, the single dispatch covers approve/deny/
+  triage/coordinate/create/edit without per-handler plumbing. Loose
+  coupling: pages don't import the hook, only fire the event.
 
 ---
 
@@ -290,7 +302,10 @@ the approval email with PPR#, dynamic columns, and info-only blocks.
 
 **Notifications**
 - Sidebar dot on Operations section + PPR Log item, scoped per-user (only counts work the
-  user can act on). Realtime + focus-refresh fallback.
+  user can act on). Five-layer refresh strategy: (1) custom-event bridge fired by
+  `/ppr`'s `loadData()` after every mutation, (2) Next.js pathname change on any in-app
+  nav, (3) Supabase realtime websocket, (4) 30s polling, (5) browser tab focus /
+  visibilitychange. Realtime appears unreliable on prod; the other four cover the gap.
 - Confirmation email on submission (no PPR#).
 - Coord-request email per agency on triage with agencies (best-effort, skipped silently
   when an agency has no coordinators — warning chip in Base Setup).
@@ -314,6 +329,15 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 - **Memory was stale on `daily_reviews` / `arff_status_log`** — both were
   already in `lib/supabase/types.ts` (the carry-over note implied otherwise).
   Cleaned up.
+- **Don't trust Supabase realtime as the only badge-refresh path.**
+  Took three iterations to land a working sidebar badge: realtime was the
+  original design, then `focus`/`visibilitychange` was bolted on for missed
+  events, then pathname-refresh + polling for in-app nav, then a custom-event
+  bridge for instant clear after mutations. Realtime *should* work but
+  silently fails on prod (websocket / RLS / publication metadata — diagnosis
+  pending). For any new "this dot should clear quickly" need, default to the
+  custom-event pattern (`window.dispatchEvent(new Event('module:refresh'))`
+  after the mutation) and treat realtime as a nice-to-have.
 
 ---
 
@@ -365,25 +389,65 @@ the new RPC); the second is backwards-compatible but should ride along.
    date → confirm distinct numbers (best-effort; the race was
    unobservable before so this just confirms the happy path holds).
 7. **Storage RLS.** Upload a photo on a discrepancy you own → succeeds.
-8. **Sidebar PPR dot clears on nav.** Approve a pending PPR, then click any
-   sidebar item → dot clears immediately (pathname-based refresh). Or wait
-   ≤30s without navigating → dot clears via polling. If the dot is sticking
-   despite both, check devtools console: a `[sidebar-badge] realtime channel
-   CHANNEL_ERROR` / `TIMED_OUT` warning means the websocket sub failed and
-   polling is the only thing keeping counts current. Healthy realtime is
-   silent.
+8. **Sidebar PPR dot — instant clear after action.** On `/ppr`, approve or
+   deny a PPR while staying on the page → dot should clear within ~1s
+   (custom-event bridge fires from `loadData()`). Don't navigate away.
+9. **Sidebar PPR dot — clears on nav.** Approve a pending PPR, then click
+   any sidebar item → dot clears immediately (pathname-based refresh).
+   Wait ≤30s without navigating → dot clears via polling. If the dot
+   sticks past 30s, open devtools console: `[sidebar-badge] realtime
+   channel CHANNEL_ERROR` / `TIMED_OUT` → websocket dead, polling is
+   doing the work. Healthy realtime is silent.
 
-### P2 — bug-of-the-day backlog (next quick wins)
+### P2 — diagnose Supabase realtime on prod
 
-Empty for now. The previous P2 list was fully closed in the same-day
-follow-up. If new items surface during P1 verification, log them here.
+Realtime sub fires reliably on dev but appears to silently fail on prod —
+confirmed by the user reporting twice that the badge didn't update without
+a manual refresh, even with `ppr_entries` and `ppr_coordination` in the
+realtime publication (`2026042802`). The session-end fix layered four
+non-realtime refresh paths on top, so user-facing UX is unblocked, but the
+underlying realtime gap is worth diagnosing because it will affect any
+future feature relying on it (Realtime sub on `airfield_status`,
+`airfield_checks`, `inspections` is already wired — those modules may have
+the same silent-failure problem).
 
-### P3 — bigger work, only if customer demand
+Likely candidates to check:
+
+1. **Auth on the websocket.** Supabase realtime authenticates with the
+   user's JWT. If the JWT is stale (post-rotation) or the websocket was
+   established before sign-in completed, RLS will reject the payload at
+   the realtime layer, dropping the event. Test: sign out, sign back in,
+   re-test the badge from a fresh tab.
+2. **RLS on the table reaches realtime.** Realtime only emits payloads
+   the subscriber can SELECT. Confirm the user has `ppr:view` (the
+   SELECT gate on `ppr_entries`) and is a member of the agency on
+   `ppr_coordination`. Check the RLS policies on those tables again —
+   if the SELECT policy was tightened recently, realtime stops firing
+   before the JS callback ever runs.
+3. **Publication metadata.** `pg_publication_tables` confirmed both
+   tables are in `supabase_realtime` after `2026042802`, but a tab open
+   before the migration won't pick up the new tables on its existing
+   websocket. The focus/pathname/polling fallbacks now self-heal that.
+4. **Per-tab websocket throttling.** The Supabase free tier caps
+   concurrent realtime connections; if multiple tabs are open and the
+   limit is hit, new tabs subscribe but get no events. Devtools network
+   tab → WebSockets → look for the realtime connection.
+
+If realtime can't be made reliable, the custom-event + polling pattern
+should become the default for all "pending action" badges — sidebar
+isn't the only place we'll want one (think: pending discrepancies for
+CES, pending checks for the AMOPS dashboard, etc.). Worth codifying.
+
+### P3 — bug-of-the-day backlog (next quick wins)
+
+Empty for now. If new items surface during P1 verification, log them here.
+
+### P4 — bigger work, only if customer demand
 
 *(Sequential coordination, bulk coordinate, public form file uploads —
 all deferred pending customer ask.)*
 
-### P4 — long-running carryover from prior sessions
+### P5 — long-running carryover from prior sessions
 - **Offline reads** for QRC + Regulations. Workbox runtime caching is
   already wired for some routes; add these two.
 - **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`,
@@ -434,7 +498,7 @@ Middleware             74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping. Two pending migrations (2026042803, 2026042804). |
+| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge). Two pending migrations (2026042803, 2026042804). |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
 | **Unreleased** | 2026-04-26 | PPR public form + AMOPS-triaged multi-agency coordination, requester emails, full UI/UX iteration on detail card / KPI bar / time picker; security cleanup (`.env.local` untracked, old keys rotated at providers) |
 | **Unreleased** | 2026-04-25 (cont.) | Offline write queue: foundation + 12 wraps + inspector + pending photos. Inspection gate lifted for online-Begin and offline-Begin flows. |
@@ -506,10 +570,14 @@ See `CHANGELOG.md` for full history.
   removed all `(supabase as any)` casts.
 - `lib/ppr-pdf.ts` — Status column on the main table, COORDINATION section.
 - `app/(app)/ppr/page.tsx` — denial email help-text, no-coord warning chip +
-  banner in triage modal, Approver-OI edit field on already-approved entries.
+  banner in triage modal, Approver-OI edit field on already-approved entries,
+  `loadData()` dispatches `glidepath:badges-refresh` at the end.
 - `app/(app)/settings/base-setup/page.tsx` — `handleSaveAmopsEmail` rejects
   malformed input with a toast.
 - `components/ppr/public-request-form.tsx` — DD MMM YYYY echo below date picker.
+- `hooks/use-sidebar-badge-counts.ts` — `usePathname` dep on initial-fetch
+  effect, 30s polling interval, `subscribe()` status log on
+  CHANNEL_ERROR/TIMED_OUT, listener for `glidepath:badges-refresh` event.
 
 ---
 
