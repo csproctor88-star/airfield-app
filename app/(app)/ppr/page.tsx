@@ -29,6 +29,7 @@ import {
   type PprStatus,
 } from '@/lib/supabase/ppr'
 import { fetchPprAgencies, type PprAgency } from '@/lib/supabase/ppr-agencies'
+import { fetchAgencyCoordinatorCounts } from '@/lib/supabase/ppr-agency-members'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { PprFieldInput } from '@/components/ppr/ppr-field-input'
@@ -58,6 +59,7 @@ export default function PprPage() {
   const [columns, setColumns] = useState<PprColumn[]>([])
   const [entries, setEntries] = useState<PprEntry[]>([])
   const [agencies, setAgencies] = useState<PprAgency[]>([])
+  const [agencyCoordCounts, setAgencyCoordCounts] = useState<Record<string, number>>({})
   const [coordsByEntry, setCoordsByEntry] = useState<Record<string, PprCoordination[]>>({})
   const [pendingTriage, setPendingTriage] = useState(0)
   const [pendingApproval, setPendingApproval] = useState(0)
@@ -140,6 +142,7 @@ export default function PprPage() {
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao || undefined,
       remarksByEntry,
+      coordsByEntry,
     })
   }
 
@@ -218,13 +221,14 @@ export default function PprPage() {
   const loadData = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
-    const [cols, ags, ents, triageCount, approvalCount, agencyCounts] = await Promise.all([
+    const [cols, ags, ents, triageCount, approvalCount, agencyCounts, coordCounts] = await Promise.all([
       fetchPprColumns(installationId),
       fetchPprAgencies(installationId, true),
       fetchPprEntries(installationId, effectiveFrom, effectiveTo),
       fetchPendingTriageCount(installationId),
       fetchPendingApprovalCount(installationId),
       fetchPendingCoordinationCounts(installationId),
+      fetchAgencyCoordinatorCounts(installationId),
     ])
     setColumns(cols)
     setAgencies(ags)
@@ -232,6 +236,7 @@ export default function PprPage() {
     setPendingTriage(triageCount)
     setPendingApproval(approvalCount)
     setPendingByAgency(agencyCounts)
+    setAgencyCoordCounts(coordCounts)
 
     // Coordination rows for the visible entries.
     if (ents.length > 0) {
@@ -1017,32 +1022,54 @@ export default function PprPage() {
               })}
             </div>
 
-            {triageMode === 'route' && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
-                  Required coordinating agencies:
+            {triageMode === 'route' && (() => {
+              const orphans = triageAgencyIds.filter((id) => (agencyCoordCounts[id] ?? 0) === 0)
+              const orphanNames = orphans
+                .map((id) => agencies.find((a) => a.id === id)?.agency_name)
+                .filter(Boolean) as string[]
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
+                    Required coordinating agencies:
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {agencies.length === 0 ? (
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                        No agencies configured. Add them in Base Setup → PPR.
+                      </span>
+                    ) : agencies.map((a) => {
+                      const selected = triageAgencyIds.includes(a.id)
+                      const noCoords = (agencyCoordCounts[a.id] ?? 0) === 0
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setTriageAgencyIds(selected ? triageAgencyIds.filter((id) => id !== a.id) : [...triageAgencyIds, a.id])}
+                          style={chipBtn(selected)}
+                          title={noCoords ? 'No coordinators assigned — email will be skipped for this agency' : undefined}
+                        >
+                          {a.agency_name}
+                          {noCoords && <span style={{ marginLeft: 6, color: 'var(--color-warning, #f59e0b)' }}>⚠</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {orphanNames.length > 0 && (
+                    <div style={{
+                      marginTop: 8,
+                      padding: '8px 10px',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid var(--color-warning, #f59e0b)',
+                      borderRadius: 4,
+                      fontSize: 'var(--fs-xs)',
+                      color: 'var(--color-text-1)',
+                    }}>
+                      <strong>⚠ No coordinators</strong> for {orphanNames.join(', ')}. The coordination-request email will be skipped for {orphanNames.length === 1 ? 'this agency' : 'these agencies'}; assign coordinators in Base Setup → PPR Columns or notify them out-of-band.
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {agencies.length === 0 ? (
-                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-                      No agencies configured. Add them in Base Setup → PPR.
-                    </span>
-                  ) : agencies.map((a) => {
-                    const selected = triageAgencyIds.includes(a.id)
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        onClick={() => setTriageAgencyIds(selected ? triageAgencyIds.filter((id) => id !== a.id) : [...triageAgencyIds, a.id])}
-                        style={chipBtn(selected)}
-                      >
-                        {a.agency_name}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+              )
+            })()}
 
             {triageMode === 'deny' && (
               <div style={{ marginBottom: 16 }}>

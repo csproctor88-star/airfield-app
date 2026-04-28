@@ -10,7 +10,21 @@ import {
   drawFooter,
   tableStyles,
 } from '@/lib/pdf-utils'
-import type { PprColumn, PprEntry, PprRemark } from '@/lib/supabase/ppr'
+import type { PprColumn, PprCoordination, PprEntry, PprRemark } from '@/lib/supabase/ppr'
+
+const STATUS_LABELS: Record<string, string> = {
+  pending_amops_triage: 'Pending Triage',
+  pending_coordination: 'Pending Coord',
+  pending_amops_approval: 'Pending Approval',
+  approved: 'Approved',
+  denied: 'Denied',
+}
+
+const COORD_STATUS_LABELS: Record<string, string> = {
+  pending: 'PENDING',
+  concur: 'CONCUR',
+  non_concur: 'NON-CONCUR',
+}
 
 interface PprPdfInput {
   columns: PprColumn[]
@@ -23,6 +37,10 @@ interface PprPdfInput {
    *  remarks (including coord-mirrored comments) are appended in a
    *  REMARKS section after the main table. */
   remarksByEntry?: Record<string, PprRemark[]>
+  /** Optional coordination rows per entry id. When present, a
+   *  COORDINATION section is appended summarizing each agency's
+   *  decision, when, and any non-concur reason. */
+  coordsByEntry?: Record<string, PprCoordination[]>
 }
 
 function formatYesNoNa(v: string): string {
@@ -45,7 +63,7 @@ function formatCell(col: PprColumn, raw: string): string {
 }
 
 export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const { columns, entries, dateFrom, dateTo, baseName, baseIcao, remarksByEntry } = input
+  const { columns, entries, dateFrom, dateTo, baseName, baseIcao, remarksByEntry, coordsByEntry } = input
 
   // Landscape gives us more columns worth of horizontal room
   const ctx = createPdf({ orientation: 'landscape' })
@@ -75,10 +93,11 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     doc.setTextColor(120)
     doc.text('No PPR entries for the selected range.', margin, y)
   } else {
-    const head: string[] = ['PPR #', 'Arrival', ...dataColumns.map(c => sanitizePdfText(c.column_name)), 'OI', 'Notes']
+    const head: string[] = ['PPR #', 'Arrival', 'Status', ...dataColumns.map(c => sanitizePdfText(c.column_name)), 'OI', 'Notes']
     const body: string[][] = entries.map(entry => [
       entry.ppr_number,
       entry.arrival_date,
+      STATUS_LABELS[entry.status] || entry.status,
       ...dataColumns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || ''))),
       entry.approver_oi || '',
       sanitizePdfText(entry.notes || ''),
@@ -134,6 +153,52 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
           1: { cellWidth: 110 },
           2: { cellWidth: 110 },
           3: { cellWidth: 'auto' },
+        },
+        didDrawPage: () => drawFooter(ctx),
+      })
+    }
+  }
+
+  // ── Coordination ──
+  // Per-entry agency decisions. Useful for after-action review and for
+  // recreating the coordination timeline outside the app. Pending rows
+  // are included so the export reflects the live state of the PPR.
+  if (coordsByEntry) {
+    const rows: string[][] = []
+    for (const entry of entries) {
+      const list = (coordsByEntry[entry.id] ?? [])
+        .slice()
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      for (const c of list) {
+        rows.push([
+          entry.ppr_number,
+          sanitizePdfText(c.agency_name),
+          COORD_STATUS_LABELS[c.status] || c.status,
+          c.coordinated_at ? formatZuluDateTime(c.coordinated_at) : '—',
+          sanitizePdfText(c.comment || ''),
+        ])
+      }
+    }
+
+    if (rows.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lastY = (doc as any).lastAutoTable?.finalY ?? y
+      const coordStartY = lastY + 16
+      doc.setFontSize(11)
+      doc.setTextColor(40)
+      doc.text('COORDINATION', margin, coordStartY)
+
+      autoTable(doc, {
+        ...tableStyles(ctx),
+        startY: coordStartY + 4,
+        head: [['PPR #', 'Agency', 'Decision', 'When', 'Comment']],
+        body: rows,
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 130 },
+          2: { cellWidth: 70 },
+          3: { cellWidth: 110 },
+          4: { cellWidth: 'auto' },
         },
         didDrawPage: () => drawFooter(ctx),
       })

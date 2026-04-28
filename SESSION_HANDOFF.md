@@ -176,6 +176,26 @@ websocket, RLS hiccup, publication metadata staleness, etc.
 
 ---
 
+## Same-day follow-up (2026-04-27 cont.)
+
+Two commits closing P2 items from the list below:
+
+- **Denial email + AMOPS reply-to format validation on save** (`1de6e7a`) — new
+  `/api/send-ppr-denial` route; `denyPprEntry()` fires it after the status flip,
+  covering both deny call sites (triage-Deny radio + post-coord Decide-Deny).
+  Base Setup `handleSaveAmopsEmail` rejects malformed input with a toast instead
+  of relying on send-time `validReplyTo()` to drop bad data.
+- **PPR PDF coordination + status section + no-coordinators warning at triage**
+  (pending commit) — `lib/ppr-pdf.ts` gains a Status column on the main table
+  and a COORDINATION section (PPR# / Agency / Decision / When / Comment).
+  New `fetchAgencyCoordinatorCounts()` helper feeds the triage modal: each
+  agency chip shows ⚠ when zero coordinators, and a banner surfaces when any
+  *selected* agency would silently skip the email.
+
+No new migrations.
+
+---
+
 ## Migrations applied this session
 
 All six were applied to prod by session end. Confirmed via `pg_publication_tables` query
@@ -229,6 +249,8 @@ the approval email with PPR#, dynamic columns, and info-only blocks.
   when an agency has no coordinators — warning chip in Base Setup).
 - Approval email with PPR#, columns, info-only blocks (fires on both pre-coord and
   post-coord approval paths now).
+- Denial email with the reason (fires on both triage-Deny and post-coord Decide-Deny
+  paths via `denyPprEntry`).
 
 **Email cosmetics** — From line `{Base} AMOPS <info@glidepathops.com>` (no "via Glidepath"
 suffix anymore). Footer: "Do not reply to this email — replies are unmonitored." Reply-to
@@ -240,11 +262,7 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 
 | Item | Severity | Notes |
 |---|---|---|
-| **AMOPS email field has no save-time format validation** | Low | Base Setup trims on save but accepts any string. Bad data persists in DB until admin notices the missing reply-to in emails. Could add a toast warning on save. |
-| **Denial email not implemented** | Deferred | When AMOPS denies a PPR (via Decide or via the new Review-Deny path), no email goes to the requester. Out of scope this session; AMOPS contacts requester out-of-band. |
 | **Re-approval doesn't refresh OI on already-approved entries** | Low | Carried from prior session. Hand-edit if anyone cares. |
-| **No-coordinators warning is per-row only** | Low | If you triage a PPR to an agency with zero coordinators, the email path silently skips that agency. The warning chip in Base Setup makes this visible at config time, but there's no warning surfaced at triage time. |
-| **PPR PDF coordination summary section** | Deferred | `lib/ppr-pdf.ts` shows entries + remarks but not the per-entry coordination history. Easy add. |
 | **Sequential coordination** | Deferred | All assigned agencies see their work in parallel. No ordering. |
 | **Public form file uploads** | Deferred | Flight plans, certificates, etc. — out of scope unless requested. |
 | **Bulk coordinate** | Deferred | Per-row only. |
@@ -257,34 +275,34 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 ## Next session tasks (prioritized)
 
 ### P1 — close the loop on this session's deploy
-1. **Smoke pre-coordinated approval email on prod.** Hard-refresh, submit a public PPR,
-   review with "Pre-coordinated — approve now", confirm approval email lands with PPR#
-   and info-only blocks. The prior session's bug was that this path skipped the email
-   entirely; `eb39f85` fixed it but verification on real Resend is worth the five
-   minutes.
-2. **Verify sidebar dot clears after approval** in any tab — the focus-refresh fallback
-   in `02bdb2e` should self-heal even if the realtime publication change didn't reach a
-   long-open tab.
+
+Original P1 (pre-coord approval email + sidebar dot clearing) verified on prod
+during same-day follow-up. New P1 from the same-day follow-up commits, to verify
+once Vercel finishes the next deploy:
+
+1. **Denial email lands on both paths.** Submit a public PPR, deny it via the
+   triage-Deny radio with a reason → confirm email arrives with the reason in
+   the red block. Then submit another, route to coord, post-coord Decide → Deny
+   with a reason → confirm email arrives.
+2. **AMOPS email format check on save.** Base Setup → PPR Columns → AMOPS Email →
+   type something malformed (e.g. `not-an-email`) and Save → expect rejection
+   toast; clear field and Save → expect success.
+3. **No-coordinators warning at triage.** Open a public submission with the
+   triage modal → Route mode. Any agency with zero assigned coordinators
+   should show ⚠ on its chip; selecting one should surface the warning banner.
+4. **PPR PDF coordination + status section.** Export the PPR log → confirm the
+   main table has a Status column and a COORDINATION section follows the
+   REMARKS section with one row per coord decision.
 
 ### P2 — small follow-ups
-3. **Denial email** — when AMOPS denies a PPR (either via Decide post-coord or via the
-   new Review-Deny path), send the requester a short notice with the reason. Mirror the
-   approval-email API route shape; add a "Reason for denial" block.
-4. **Validate `amops_email` format on save** in Base Setup → PPR Columns → AMOPS
-   reply-to. Reject malformed values with a toast instead of silently accepting and
-   relying on the runtime `validReplyTo()` to drop them.
-5. **PPR PDF — coordination + status section** — extend `lib/ppr-pdf.ts` to include the
-   status column and a per-entry coordination summary. Data is all there; just not
-   rendered.
-6. **No-coordinators warning at triage time** — when AMOPS routes a PPR to an agency
-   with zero coordinators, surface a warning in the triage modal so they know the email
-   path will silently skip that agency.
+
+*(All resolved in same-day follow-up — see top section.)*
 
 ### P3 — bigger work, only if customer demand
-7. **Sequential coordination** (Agency A must concur before Agency B can review).
+3. **Sequential coordination** (Agency A must concur before Agency B can review).
    Adds ordering UI + per-row gating logic.
-8. **Public form file uploads** (flight plans, certs). Storage bucket policy + UI lift.
-9. **Bulk coordinate**.
+4. **Public form file uploads** (flight plans, certs). Storage bucket policy + UI lift.
+5. **Bulk coordinate**.
 
 ### P4 — deferred from prior sessions
 - **Offline reads** for QRC + Regulations.

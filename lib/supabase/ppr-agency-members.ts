@@ -137,6 +137,28 @@ export async function fetchPendingCoordinationCountForUser(
   return count ?? 0
 }
 
+/** Per-agency coordinator counts for a base. Used by the triage modal
+ *  to surface the "no coordinators — email will be skipped" warning at
+ *  the moment AMOPS is choosing routing. Returns a map of agency_id →
+ *  member count, including zero entries for agencies with no members. */
+export async function fetchAgencyCoordinatorCounts(
+  baseId: string,
+): Promise<Record<string, number>> {
+  const supabase = db()
+  if (!supabase) return {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (supabase as any)
+    .from('ppr_agency_members')
+    .select('agency_id')
+    .eq('base_id', baseId)
+
+  const counts: Record<string, number> = {}
+  for (const row of (data || []) as { agency_id: string }[]) {
+    counts[row.agency_id] = (counts[row.agency_id] || 0) + 1
+  }
+  return counts
+}
+
 /** Fetch the email recipients for a set of agencies. Used by the
  *  triage email path. */
 export async function fetchAgencyMemberEmails(agencyIds: string[]): Promise<{ agency_id: string; email: string }[]> {
