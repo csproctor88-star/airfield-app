@@ -88,21 +88,9 @@ export type PprRemark = {
 }
 
 // ── PPR Number Generation ──
-
-/** Get Julian day (1-366) from a date string (YYYY-MM-DD) */
-function julianDay(dateStr: string): number {
-  const d = new Date(dateStr + 'T00:00:00')
-  const start = new Date(d.getFullYear(), 0, 0)
-  const diff = d.getTime() - start.getTime()
-  return Math.floor(diff / 86400000)
-}
-
-/** Generate PPR number: {julian_day}-{sequence}-{OI} */
-export function generatePprNumber(julDay: number, sequence: number, oi: string): string {
-  const dayStr = String(julDay).padStart(3, '0')
-  const seqStr = String(sequence).padStart(3, '0')
-  return `${dayStr}-${seqStr}-${oi || 'XX'}`
-}
+// Numbers are minted server-side via the `_ppr_generate_number` RPC,
+// which uses an atomic counter table to serialize concurrent submits.
+// See migration 2026042803_ppr_number_serialize.sql.
 
 /**
  * Replace the trailing OI segment of an existing PPR number with a
@@ -211,20 +199,6 @@ export async function fetchPprEntriesForDate(baseId: string, date: string): Prom
   return fetchPprEntries(baseId, date, date)
 }
 
-/** Count existing PPRs for a given base + arrival date (for sequence numbering) */
-async function countPprsForDate(baseId: string, arrivalDate: string): Promise<number> {
-  const supabase = db()
-  if (!supabase) return 0
-
-  const { count } = await supabase
-    .from('ppr_entries')
-    .select('id', { count: 'exact', head: true })
-    .eq('base_id', baseId)
-    .eq('arrival_date', arrivalDate)
-
-  return count ?? 0
-}
-
 /**
  * Internal AMOPS create flow.
  *
@@ -255,10 +229,21 @@ export async function createPprEntry(input: {
   const skipCoordination = agencyIds.length === 0
   const nowIso = new Date().toISOString()
 
-  // Generate PPR number
-  const existingCount = await countPprsForDate(input.base_id, input.arrival_date)
-  const julDay = julianDay(input.arrival_date)
-  const pprNumber = generatePprNumber(julDay, existingCount + 1, input.approver_oi)
+  // Mint the PPR number via the atomic RPC. This serializes concurrent
+  // submits on the same (base, arrival_date) — the prior JS-side
+  // COUNT-and-format had a race where two simultaneous submissions
+  // could both observe the same count and insert duplicate numbers.
+  const { data: minted, error: mintErr } = await supabase
+    .rpc('_ppr_generate_number', {
+      p_base_id: input.base_id,
+      p_arrival: input.arrival_date,
+      p_oi: input.approver_oi,
+    })
+  if (mintErr || !minted) {
+    console.error('[createPprEntry] mint failed:', mintErr)
+    return null
+  }
+  const pprNumber = minted as string
 
   const { data, error } = await supabase
     .from('ppr_entries')

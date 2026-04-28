@@ -4682,6 +4682,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _ppr_generate_number: {
+        Args: { p_base_id: string; p_arrival: string; p_oi: string }
+        Returns: string
+      }
       base_exists: { Args: { p_base_id: string }; Returns: boolean }
       ces_update_discrepancy: {
         Args: {
