@@ -502,7 +502,31 @@ export async function generateAcsiPdf(
     const sigLineW = 70
     const dateLineW = 35
 
-    for (const member of inspection.inspection_team) {
+    inspection.inspection_team.forEach((member, idx) => {
+      // Members beyond the first three are "Additional Inspection Team
+      // Members" — by convention coordination-notification only, with
+      // no signature block unless explicitly toggled. Print a labeled
+      // separator above the first additional member so signatures
+      // missing from those rows aren't confusing on the PDF.
+      if (idx === 3) {
+        checkPageBreak(14)
+        doc.setDrawColor(180)
+        doc.setLineWidth(0.3)
+        doc.setLineDashPattern([1.5, 1.5], 0)
+        doc.line(margin, y + 2, margin + contentWidth, y + 2)
+        doc.setLineDashPattern([], 0)
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(80)
+        doc.text('ADDITIONAL INSPECTION TEAM MEMBERS', margin, y + 8)
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(7)
+        doc.setTextColor(120)
+        doc.text('Coordination notification only — no signature block unless toggled.', margin, y + 12)
+        doc.setFont('helvetica', 'normal')
+        y += 14
+      }
+
       const requiresSig = member.signature_required !== false
       const boxH = requiresSig ? sigBoxH : rosterRowH
       checkPageBreak(boxH + 6)
@@ -543,7 +567,7 @@ export async function generateAcsiPdf(
       }
 
       y += boxH + 4
-    }
+    })
     y += 4
   }
 

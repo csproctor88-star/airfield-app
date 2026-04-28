@@ -23,9 +23,12 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
   }
 
   const addMember = () => {
+    // Additional members default to "coordination only" — no signature
+    // block on the PDF. Admins can toggle the checkbox on per-row when
+    // a particular extra member does need to sign.
     onChange([
       ...team,
-      { id: crypto.randomUUID(), role: 'other', name: '', rank: '', title: '', signature_required: true },
+      { id: crypto.randomUUID(), role: 'other', name: '', rank: '', title: '', signature_required: false },
     ])
   }
 
@@ -73,6 +76,7 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {team.map((member, i) => {
           const isRequired = i < 3
+          const isFirstAdditional = i === 3
           const roleLabels: Record<string, string> = {
             afm: 'Airfield Manager (Required)',
             ce: 'CE Representative (Required)',
@@ -81,7 +85,30 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
           const roleLabel = roleLabels[member.role] || `Additional Member ${i - 2}`
 
           return (
-            <div key={member.id} style={{
+            <div key={member.id} style={{ display: 'contents' }}>
+              {/* Divider introducing the additional-members group, so
+                  it's obvious why these rows don't get signature blocks
+                  on the PDF by default. */}
+              {isFirstAdditional && (
+                <div style={{
+                  marginTop: 6, marginBottom: -2,
+                  borderTop: '1px dashed var(--color-border)',
+                  paddingTop: 12,
+                }}>
+                  <div style={{
+                    fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    color: 'var(--color-text-2)',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    marginBottom: 2,
+                  }}>
+                    Additional Inspection Team Members
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                    Coordination notification only — no signature block on the PDF unless toggled below.
+                  </div>
+                </div>
+              )}
+            <div style={{
               display: 'flex',
               alignItems: 'flex-start',
               gap: 10,
@@ -176,6 +203,7 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
                   <X size={16} />
                 </button>
               )}
+            </div>
             </div>
           )
         })}
