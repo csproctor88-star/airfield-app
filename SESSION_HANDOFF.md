@@ -178,21 +178,36 @@ websocket, RLS hiccup, publication metadata staleness, etc.
 
 ## Same-day follow-up (2026-04-27 cont.)
 
-Two commits closing P2 items from the list below:
+Five commits closing P2 + tech-debt items. Two new migrations.
 
 - **Denial email + AMOPS reply-to format validation on save** (`1de6e7a`) — new
   `/api/send-ppr-denial` route; `denyPprEntry()` fires it after the status flip,
   covering both deny call sites (triage-Deny radio + post-coord Decide-Deny).
-  Base Setup `handleSaveAmopsEmail` rejects malformed input with a toast instead
-  of relying on send-time `validReplyTo()` to drop bad data.
+  Base Setup `handleSaveAmopsEmail` rejects malformed input with a toast.
 - **PPR PDF coordination + status section + no-coordinators warning at triage**
-  (pending commit) — `lib/ppr-pdf.ts` gains a Status column on the main table
-  and a COORDINATION section (PPR# / Agency / Decision / When / Comment).
-  New `fetchAgencyCoordinatorCounts()` helper feeds the triage modal: each
-  agency chip shows ⚠ when zero coordinators, and a banner surfaces when any
-  *selected* agency would silently skip the email.
-
-No new migrations.
+  (`ca23602`) — `lib/ppr-pdf.ts` gains a Status column on the main table and a
+  COORDINATION section. Triage modal in route mode shows ⚠ on agency chips with
+  zero coordinators and a banner when any selected agency would skip the email.
+- **PPR cleanup: types backfill + OI refresh + date echo on public form**
+  (`8993341`) — `ppr_agency_members`, `ppr_remarks`, `ppr_columns.info_text`,
+  and `lighting_systems.sort_order` added to `lib/supabase/types.ts`; ten
+  `(supabase as any)` casts removed. `updatePprEntry` now accepts `approver_oi`
+  and rewrites the OI segment of the `ppr_number`; the edit modal exposes the
+  field to `ppr:approve` users on already-approved entries (closes the
+  "hand-edit if anyone cares" gap). Public PPR form echoes the picked arrival
+  date back as DD MMM YYYY to disarm browser-locale ambiguity.
+- **PPR # serialization** (`5019762`) — replace COUNT-based numbering with an
+  atomic counter table. `_ppr_generate_number` now does
+  INSERT..ON CONFLICT DO UPDATE RETURNING; `createPprEntry` calls the RPC
+  instead of doing JS-side COUNT + format. UNIQUE index on
+  `(base_id, ppr_number)` catches future regressions. Migration
+  `2026042803_ppr_number_serialize.sql`.
+- **Storage RLS: tighter entity-scope on photo INSERT** (pending commit) —
+  migration 2026041600 path-scoped the photos bucket but left entity photo
+  paths (discrepancy/check/inspection/acsi) prefix-checked only. This commit
+  joins to the parent entity and gates upload on `user_has_base_access` to
+  the entity's base. Closes the orphan-upload storage hygiene gap.
+  Migration `2026042804_storage_rls_tighter_entity_scope.sql`.
 
 ---
 
@@ -262,13 +277,9 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 
 | Item | Severity | Notes |
 |---|---|---|
-| **Re-approval doesn't refresh OI on already-approved entries** | Low | Carried from prior session. Hand-edit if anyone cares. |
 | **Sequential coordination** | Deferred | All assigned agencies see their work in parallel. No ordering. |
 | **Public form file uploads** | Deferred | Flight plans, certificates, etc. — out of scope unless requested. |
 | **Bulk coordinate** | Deferred | Per-row only. |
-| **ppr_agency_members not in `lib/supabase/types.ts`** | Trivial | Like `daily_reviews` and `arff_status_log` before it; accessed via `(supabase as any)` casts until types regen. |
-| **PPR# clash on simultaneous public submits same date** | Low | Carried from prior session. The plpgsql helper increments off `COUNT(*)`. Realistically unaffected by everyday volume. |
-| **Public form locale-display of dates** | Trivial | Carried — browser-locale dependent in the date picker; stored value is `YYYY-MM-DD`. |
 
 ---
 
@@ -277,37 +288,52 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 ### P1 — close the loop on this session's deploy
 
 Original P1 (pre-coord approval email + sidebar dot clearing) verified on prod
-during same-day follow-up. New P1 from the same-day follow-up commits, to verify
-once Vercel finishes the next deploy:
+during same-day follow-up. P2 verifies (denial email both paths, AMOPS email
+format check, no-coord warning, PDF coord section) — apply once verified in the
+next session if not already.
 
-1. **Denial email lands on both paths.** Submit a public PPR, deny it via the
-   triage-Deny radio with a reason → confirm email arrives with the reason in
-   the red block. Then submit another, route to coord, post-coord Decide → Deny
-   with a reason → confirm email arrives.
-2. **AMOPS email format check on save.** Base Setup → PPR Columns → AMOPS Email →
-   type something malformed (e.g. `not-an-email`) and Save → expect rejection
-   toast; clear field and Save → expect success.
-3. **No-coordinators warning at triage.** Open a public submission with the
-   triage modal → Route mode. Any agency with zero assigned coordinators
-   should show ⚠ on its chip; selecting one should surface the warning banner.
-4. **PPR PDF coordination + status section.** Export the PPR log → confirm the
-   main table has a Status column and a COORDINATION section follows the
-   REMARKS section with one row per coord decision.
+**Apply migrations on prod first, then deploy:**
+- `2026042803_ppr_number_serialize.sql` — atomic counter table for PPR#.
+  **Required** before the next public submit lands (or `createPprEntry` will
+  fail with "function _ppr_generate_number does not exist").
+- `2026042804_storage_rls_tighter_entity_scope.sql` — entity-scope INSERT
+  policy on the `photos` bucket. Backwards-compatible for legitimate flows;
+  tightens the orphan-upload gap.
+
+**Verify post-deploy:**
+
+1. **Denial email lands on both paths.** Submit a public PPR, deny via
+   triage-Deny with a reason → email arrives. Submit another, route → coord →
+   Decide → Deny → email arrives.
+2. **AMOPS email format check.** Base Setup → AMOPS Email → enter
+   `not-an-email` → reject toast; clear → save success.
+3. **No-coordinators warning.** Triage modal → Route mode → agencies with no
+   coordinators show ⚠; selecting one shows the warning banner.
+4. **PPR PDF.** Export the PPR log → main table has Status column;
+   COORDINATION section appears after REMARKS.
+5. **Approver OI edit on approved entries.** Open an already-approved PPR's
+   edit modal as a `ppr:approve` user → "Approver OI" field appears → change
+   it and save → confirm `ppr_number` rewrites the OI segment.
+6. **PPR# race fix.** Best-effort smoke (real concurrent simulation is hard):
+   submit two public PPRs back-to-back on the same date → confirm distinct
+   numbers (the race was unobservable before; this just confirms the new path
+   doesn't break the happy case).
+7. **Storage RLS.** Upload a photo on a discrepancy you own → succeeds.
+   (Negative case is hard to test from the app since the UI never crafts
+   a path for a foreign base — covered by the policy at the DB layer.)
 
 ### P2 — small follow-ups
 
 *(All resolved in same-day follow-up — see top section.)*
 
 ### P3 — bigger work, only if customer demand
-3. **Sequential coordination** (Agency A must concur before Agency B can review).
-   Adds ordering UI + per-row gating logic.
-4. **Public form file uploads** (flight plans, certs). Storage bucket policy + UI lift.
-5. **Bulk coordinate**.
+
+*(Sequential coordination, bulk coordinate, public form file uploads — all
+deferred pending customer ask.)*
 
 ### P4 — deferred from prior sessions
 - **Offline reads** for QRC + Regulations.
-- **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`).
-- **Re-introduce path-scoped storage RLS** for `airfield-diagrams` and entity photo paths.
+- **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`) — explicitly multi-session work.
 - **Trademark resolution** — CDW Class 42 conflict on "GLIDEPATH".
 - **CAC/PIV authentication** (blocked on Platform One).
 - **Outage analytics, training management, Part 139 civilian template.**
