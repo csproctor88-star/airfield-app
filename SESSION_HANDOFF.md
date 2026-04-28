@@ -3,7 +3,7 @@
 **Date:** 2026-04-27 (extended same-day session)
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `44f0332`
+**HEAD:** `a06713c`
 
 ---
 
@@ -266,6 +266,7 @@ The two same-day follow-up migrations (2026042803, 2026042804) are
 | Storage bucket lost path scoping after matrix refactor | `2026042208` replaced 2026041600's path-scoped policies with bare permission checks | `08b12f0` + `84b60ba` (migration `2026042804`) |
 | Migration `2026042804` failed with `42883: function user_can_write(uuid) does not exist` | First cut referenced helper dropped in 2026042208 | `84b60ba` (rewrite using matrix helpers; saved feedback memory) |
 | Sidebar PPR dot didn't clear on in-app navigation | `useSidebarBadgeCounts` hook persists across nav; `focus`/`visibilitychange` only fire on browser-tab change, not sidebar click | `44f0332` (pathname-based refresh + 30s polling fallback) |
+| Sidebar PPR dot didn't clear after approve/deny on /ppr | Mutation handlers only refreshed the page's local state; realtime appears silent on prod | `a06713c` (custom-event bridge: hook listens for `'glidepath:badges-refresh'`; `/ppr` dispatches at the end of `loadData()`) |
 
 ---
 
