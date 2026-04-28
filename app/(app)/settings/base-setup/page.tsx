@@ -4900,12 +4900,20 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
 
   const handleSaveAmopsEmail = async () => {
     if (!installationId) return
+    const trimmed = amopsEmail.trim()
+    // Reject malformed values up front so bad data never lands in the DB.
+    // Same shape check the PPR email routes apply at send time via
+    // validReplyTo() — clearing the field is allowed.
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error('Enter a valid email address (e.g. amops@example.mil) or leave blank')
+      return
+    }
     setAmopsEmailSaving(true)
     const supabase = createClient()
     if (!supabase) { setAmopsEmailSaving(false); return }
     const { error } = await supabase
       .from('bases')
-      .update({ amops_email: amopsEmail.trim() || null })
+      .update({ amops_email: trimmed || null })
       .eq('id', installationId)
     setAmopsEmailSaving(false)
     if (error) {

@@ -987,7 +987,7 @@ export default function PprPage() {
               {([
                 { mode: 'route',    label: 'Route to coordination', help: 'Select coordinating agencies; AMOPS approves after they concur.' },
                 { mode: 'preCoord', label: 'Pre-coordinated — approve now', help: 'No agency coordination needed. Approves immediately and emails the requester.' },
-                { mode: 'deny',     label: 'Deny request', help: 'Reject the PPR with a reason. Requester notified manually.' },
+                { mode: 'deny',     label: 'Deny request', help: 'Reject the PPR with a reason. Emails the requester.' },
               ] as { mode: TriageMode; label: string; help: string }[]).map((opt) => {
                 const selected = triageMode === opt.mode
                 return (

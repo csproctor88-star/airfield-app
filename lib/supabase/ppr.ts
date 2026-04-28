@@ -745,7 +745,7 @@ export async function denyPprEntry(input: {
   const reason = input.reason.trim()
   if (!reason) return { ok: false, error: 'Denial reason is required' }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('ppr_entries')
     .update({
       status: 'denied',
@@ -755,6 +755,8 @@ export async function denyPprEntry(input: {
       updated_by: user.id,
     })
     .eq('id', input.entryId)
+    .select('id, requester_email')
+    .single()
   if (error) return { ok: false, error: friendlyError(error.message) }
 
   logActivity(
@@ -765,6 +767,27 @@ export async function denyPprEntry(input: {
     { details: `Reason: ${reason}` },
     input.baseId,
   )
+
+  // Best-effort denial email; failures don't block the status flip.
+  // Mirrors approvePprEntry's pattern — covers both deny call sites
+  // (triage-Deny radio and post-coord Decide-Deny).
+  const requesterEmail = (data as { requester_email: string | null } | null)?.requester_email
+  if (requesterEmail) {
+    try {
+      const res = await fetch('/api/send-ppr-denial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: input.entryId }),
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        console.error('[denyPprEntry] denial email API non-2xx', res.status, body)
+      }
+    } catch (e) {
+      console.error('[denyPprEntry] denial email fetch threw:', e)
+    }
+  }
+
   return { ok: true }
 }
 
