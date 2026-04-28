@@ -83,6 +83,7 @@ export default function PprPage() {
   const [formDate, setFormDate] = useState(today)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [formNotes, setFormNotes] = useState('')
+  const [formApproverOi, setFormApproverOi] = useState('')
   const [formAgencyIds, setFormAgencyIds] = useState<string[]>([])
   const [formSkipCoord, setFormSkipCoord] = useState(false)
 
@@ -371,6 +372,7 @@ export default function PprPage() {
     setFormDate(today)
     setFormValues({})
     setFormNotes('')
+    setFormApproverOi('')
     setFormAgencyIds([])
     setFormSkipCoord(agencies.length === 0)
     setShowModal(true)
@@ -382,6 +384,7 @@ export default function PprPage() {
     setFormDate(entry.arrival_date)
     setFormValues(entry.column_values || {})
     setFormNotes(entry.notes || '')
+    setFormApproverOi(entry.approver_oi || '')
     setFormAgencyIds([])
     setFormSkipCoord(false)
     setShowModal(true)
@@ -392,10 +395,16 @@ export default function PprPage() {
     if (!installationId) return
 
     if (editingEntry) {
+      // Only send approver_oi when the user can approve AND the entry
+      // is already approved — that's the case where the OI segment of
+      // the PPR# may need rewriting. Otherwise leave it untouched.
+      const canEditOi = canApprove && editingEntry.status === 'approved'
+      const trimmedOi = formApproverOi.trim().toUpperCase()
       const updated = await updatePprEntry(editingEntry.id, {
         arrival_date: formDate,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
+        ...(canEditOi && trimmedOi ? { approver_oi: trimmedOi } : {}),
       }, installationId)
       if (updated) {
         toast.success('PPR updated')
@@ -917,6 +926,23 @@ export default function PprPage() {
                 style={{ ...textInputStyle, resize: 'vertical' as const }}
               />
             </label>
+
+            {editingEntry && canApprove && editingEntry.status === 'approved' && (
+              <label style={{ ...labelStyle, marginBottom: 12 }}>
+                Approver OI
+                <input
+                  type="text"
+                  value={formApproverOi}
+                  onChange={e => setFormApproverOi(e.target.value.toUpperCase().slice(0, 4))}
+                  maxLength={4}
+                  placeholder={editingEntry.approver_oi || 'XX'}
+                  style={textInputStyle}
+                />
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 'normal' }}>
+                  Changing this rewrites the OI segment of the PPR# (e.g. {editingEntry.ppr_number}).
+                </span>
+              </label>
+            )}
 
             {/* Coordination picker (create only) */}
             {!editingEntry && agencies.length > 0 && (

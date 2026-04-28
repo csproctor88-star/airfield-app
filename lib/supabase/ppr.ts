@@ -147,10 +147,7 @@ export async function createPprColumn(input: {
   const supabase = db()
   if (!supabase) return null
 
-  // info_text only meaningful for info_only columns; cast through any
-  // until the regenerated types pick up the new field.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('ppr_columns')
     .insert(input)
     .select()
@@ -167,8 +164,7 @@ export async function updatePprColumn(
   const supabase = db()
   if (!supabase) return null
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('ppr_columns')
     .update(updates)
     .eq('id', id)
@@ -561,8 +557,7 @@ export async function coordinatePprEntry(input: {
     const decision = input.status === 'concur' ? 'CONCUR' : 'NON-CONCUR'
     const agency = coordRow?.agency_name || 'Coordination'
     const remarkText = `[${agency} — ${decision}] ${trimmedComment}`
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('ppr_remarks').insert({
+    await supabase.from('ppr_remarks').insert({
       entry_id: input.entryId,
       base_id: input.baseId,
       remark: remarkText,
@@ -593,8 +588,7 @@ export async function fetchPprRemarks(entryId: string): Promise<PprRemark[]> {
   const supabase = db()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('ppr_remarks')
     .select('*, profiles:created_by(name, rank)')
     .eq('entry_id', entryId)
@@ -612,8 +606,7 @@ export async function fetchPprRemarks(entryId: string): Promise<PprRemark[]> {
   // implicit FK join can't resolve (older DBs, dropped FK), return
   // the bare rows so the UI still renders something useful.
   console.warn('PPR remarks profile join failed, falling back:', error?.message)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: bare } = await (supabase as any)
+  const { data: bare } = await supabase
     .from('ppr_remarks')
     .select('*')
     .eq('entry_id', entryId)
@@ -636,8 +629,7 @@ export async function addPprRemark(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('ppr_remarks').insert({
+  const { error } = await supabase.from('ppr_remarks').insert({
     entry_id: input.entryId,
     base_id: input.baseId,
     remark: text,
@@ -853,7 +845,7 @@ export async function fetchPendingCoordinationCounts(
 
 export async function updatePprEntry(
   id: string,
-  updates: Partial<Pick<PprEntry, 'column_values' | 'notes' | 'arrival_date'>>,
+  updates: Partial<Pick<PprEntry, 'column_values' | 'notes' | 'arrival_date' | 'approver_oi'>>,
   baseId?: string,
 ): Promise<PprEntry | null> {
   const supabase = db()
@@ -861,9 +853,32 @@ export async function updatePprEntry(
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // approver_oi changes on an already-approved entry must rewrite the
+  // OI segment of the ppr_number so the displayed identifier matches
+  // the new approver. Mirrors approvePprEntry's behavior. Only fetch
+  // the current row when the caller is touching approver_oi.
+  const patch: Record<string, unknown> = {
+    ...updates,
+    updated_by: user?.id,
+    updated_at: new Date().toISOString(),
+  }
+  if (updates.approver_oi !== undefined) {
+    const { data: current } = await supabase
+      .from('ppr_entries')
+      .select('ppr_number, approver_oi')
+      .eq('id', id)
+      .single<{ ppr_number: string; approver_oi: string | null }>()
+    if (current && updates.approver_oi && updates.approver_oi !== current.approver_oi) {
+      const rewritten = rewritePprOiSegment(current.ppr_number, updates.approver_oi)
+      if (rewritten && rewritten !== current.ppr_number) {
+        patch.ppr_number = rewritten
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('ppr_entries')
-    .update({ ...updates, updated_by: user?.id, updated_at: new Date().toISOString() })
+    .update(patch)
     .eq('id', id)
     .select()
     .single()

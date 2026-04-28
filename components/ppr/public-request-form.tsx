@@ -321,6 +321,20 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
               onChange={(e) => setArrivalDate(e.target.value)}
               style={inputStyle}
             />
+            {arrivalDate && (() => {
+              // Echo the parsed date back in DD MMM YYYY so the user can
+              // confirm what AMOPS will see — the native picker's display
+              // is browser-locale dependent (US visitors see MM/DD/YYYY,
+              // others see DD/MM/YYYY) but we always store YYYY-MM-DD.
+              const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+              const [y, m, d] = arrivalDate.split('-').map(Number)
+              if (!y || !m || !d) return null
+              return (
+                <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                  → {String(d).padStart(2, '0')} {months[m - 1]} {y}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Dynamic public columns */}

@@ -1929,6 +1929,7 @@ export type Database = {
           name: string
           notes: string | null
           runway_or_taxiway: string | null
+          sort_order: number
           system_type: string
           updated_at: string
         }
@@ -1940,6 +1941,7 @@ export type Database = {
           name: string
           notes?: string | null
           runway_or_taxiway?: string | null
+          sort_order?: number
           system_type: string
           updated_at?: string
         }
@@ -1951,6 +1953,7 @@ export type Database = {
           name?: string
           notes?: string | null
           runway_or_taxiway?: string | null
+          sort_order?: number
           system_type?: string
           updated_at?: string
         }
@@ -2905,6 +2908,52 @@ export type Database = {
           },
         ]
       }
+      ppr_agency_members: {
+        Row: {
+          agency_id: string
+          base_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          base_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          base_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_agency_members_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "ppr_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_agency_members_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_agency_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ppr_columns: {
         Row: {
           base_id: string
@@ -2912,6 +2961,7 @@ export type Database = {
           column_type: string
           created_at: string
           id: string
+          info_text: string | null
           is_public: boolean
           is_required: boolean
           sort_order: number
@@ -2922,6 +2972,7 @@ export type Database = {
           column_type?: string
           created_at?: string
           id?: string
+          info_text?: string | null
           is_public?: boolean
           is_required?: boolean
           sort_order?: number
@@ -2932,6 +2983,7 @@ export type Database = {
           column_type?: string
           created_at?: string
           id?: string
+          info_text?: string | null
           is_public?: boolean
           is_required?: boolean
           sort_order?: number
@@ -3105,6 +3157,55 @@ export type Database = {
             columns: ["triaged_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppr_remarks: {
+        Row: {
+          base_id: string
+          created_at: string
+          created_by: string | null
+          entry_id: string
+          id: string
+          remark: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          entry_id: string
+          id?: string
+          remark: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          entry_id?: string
+          id?: string
+          remark?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_remarks_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_remarks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_remarks_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "ppr_entries"
             referencedColumns: ["id"]
           },
         ]

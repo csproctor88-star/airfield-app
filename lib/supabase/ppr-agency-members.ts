@@ -1,9 +1,6 @@
 import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
 
-// `ppr_agency_members` isn't in the generated types yet — drop to
-// any cast on the query builder rather than the .from() arg so the
-// row type stays sane through the chain.
 function db() {
   return createClient()
 }
@@ -26,8 +23,7 @@ export type PprAgencyMemberWithProfile = PprAgencyMember & {
 export async function fetchAgencyMembers(agencyId: string): Promise<PprAgencyMemberWithProfile[]> {
   const supabase = db()
   if (!supabase) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('ppr_agency_members')
     .select('*, profiles:user_id(name, rank, email)')
     .eq('agency_id', agencyId)
@@ -53,8 +49,7 @@ export async function setAgencyMembers(
   // Wipe and rewrite rather than diff — handful of users per agency,
   // and a clean replace keeps RLS auditable. Any failure leaves the
   // table in a consistent state because the delete is idempotent.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: delErr } = await (supabase as any)
+  const { error: delErr } = await supabase
     .from('ppr_agency_members')
     .delete()
     .eq('agency_id', agencyId)
@@ -67,8 +62,7 @@ export async function setAgencyMembers(
     user_id: uid,
     base_id: baseId,
   }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insErr } = await (supabase as any)
+  const { error: insErr } = await supabase
     .from('ppr_agency_members')
     .insert(rows)
   if (insErr) return { ok: false, error: friendlyError(insErr.message) }
@@ -106,8 +100,7 @@ export async function fetchPendingCoordinationCountForUser(
   if (!supabase) return 0
 
   // Step 1 — find the agency_ids this user is a member of in this base.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: memberships } = await (supabase as any)
+  const { data: memberships } = await supabase
     .from('ppr_agency_members')
     .select('agency_id')
     .eq('base_id', baseId)
@@ -146,8 +139,7 @@ export async function fetchAgencyCoordinatorCounts(
 ): Promise<Record<string, number>> {
   const supabase = db()
   if (!supabase) return {}
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('ppr_agency_members')
     .select('agency_id')
     .eq('base_id', baseId)
@@ -164,8 +156,7 @@ export async function fetchAgencyCoordinatorCounts(
 export async function fetchAgencyMemberEmails(agencyIds: string[]): Promise<{ agency_id: string; email: string }[]> {
   const supabase = db()
   if (!supabase || agencyIds.length === 0) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('ppr_agency_members')
     .select('agency_id, profiles:user_id(email)')
     .in('agency_id', agencyIds)
