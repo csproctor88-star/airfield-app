@@ -244,9 +244,7 @@ and two real-world bugs surfaced during smoke testing. Two new migrations
 
 ## Migrations status
 
-The first six were applied to prod during the original 2026-04-27 session.
-The two same-day follow-up migrations (2026042803, 2026042804) are
-**pending** — they need to be applied next session before the deploy.
+All eight were applied to prod by session end.
 
 | Migration | Status | What it does |
 |---|---|---|
@@ -256,8 +254,8 @@ The two same-day follow-up migrations (2026042803, 2026042804) are
 | `2026042800_ppr_info_only_column.sql` | ✅ Applied | Adds `ppr_columns.info_text`, refreshes `get_public_ppr_config` RPC, extends column_type CHECK |
 | `2026042801_ppr_request_by_icao.sql` | ✅ Applied | New `get_public_ppr_config_by_icao(TEXT)` SECURITY DEFINER RPC |
 | `2026042802_ppr_realtime.sql` | ✅ Applied | Adds `ppr_entries` + `ppr_coordination` to `supabase_realtime` publication |
-| `2026042803_ppr_number_serialize.sql` | ⏳ Pending | Atomic counter table for PPR# minting (fixes simultaneous-submit race). **Required before next deploy** — `createPprEntry` calls the new RPC. |
-| `2026042804_storage_rls_tighter_entity_scope.sql` | ⏳ Pending | Re-introduces path scoping on photos bucket on top of matrix permission. Backwards-compatible for legitimate flows. |
+| `2026042803_ppr_number_serialize.sql` | ✅ Applied | Atomic counter table for PPR# minting (fixes simultaneous-submit race). |
+| `2026042804_storage_rls_tighter_entity_scope.sql` | ✅ Applied | Re-introduces path scoping on photos bucket on top of matrix permission. |
 
 ---
 
@@ -334,10 +332,11 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
   original design, then `focus`/`visibilitychange` was bolted on for missed
   events, then pathname-refresh + polling for in-app nav, then a custom-event
   bridge for instant clear after mutations. Realtime *should* work but
-  silently fails on prod (websocket / RLS / publication metadata — diagnosis
-  pending). For any new "this dot should clear quickly" need, default to the
-  custom-event pattern (`window.dispatchEvent(new Event('module:refresh'))`
-  after the mutation) and treat realtime as a nice-to-have.
+  silently fails on prod for reasons we're not pursuing — the four-layer
+  fallback covers it. For any new "this dot should clear quickly" need,
+  default to the custom-event pattern (`window.dispatchEvent(new
+  Event('module:refresh'))` after the mutation) and treat realtime as a
+  nice-to-have.
 
 ---
 
@@ -351,103 +350,21 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 
 ---
 
-## Next session tasks (prioritized)
+## Next session tasks
 
-### P0 — apply pending migrations BEFORE deploying any new code
+The active backlog is empty. P0–P4 from the prior pass were all cleared
+this session — migrations applied, smoke tests done, realtime gap accepted
+(four-layer fallback covers it), and customer-demand features (sequential
+coord, bulk coord, public form file uploads) explicitly deferred
+indefinitely.
 
-Run these on prod, in order. The first is required (the deployed app calls
-the new RPC); the second is backwards-compatible but should ride along.
+Pick up wherever the user wants — there's no required next step.
 
-1. **`2026042803_ppr_number_serialize.sql`** — creates `ppr_number_sequence`
-   counter table, replaces `_ppr_generate_number` with atomic upsert,
-   backfills existing rows from MAX of parsed sequence segment, adds
-   UNIQUE index `(base_id, ppr_number)`. **Without this, `createPprEntry`
-   fails with "function `_ppr_generate_number` does not exist."** The
-   public RPC `submit_public_ppr_request` continues to work via the older
-   in-place definition, but new authenticated PPR creation breaks.
-2. **`2026042804_storage_rls_tighter_entity_scope.sql`** — restores path
-   scoping on the `photos` bucket on top of the matrix permission. Fixed
-   version using `user_has_permission(uid, 'photos:write'/'delete')` —
-   the first attempt referenced the dropped `user_can_write` helper and
-   failed with `42883`. Read the migration top comment for context.
+### Long-running carryover from prior sessions
 
-### P1 — verify on prod after deploy (smoke test list)
+Pick from these only when bandwidth allows or a customer asks. Order is
+not a priority ranking — group by appetite.
 
-1. **Denial email lands on both paths.** Public PPR → triage-Deny with a
-   reason → email arrives. Another → route → coord → Decide → Deny →
-   email arrives. Both should show the reason in a red-bordered block.
-2. **AMOPS email format check.** Base Setup → AMOPS Email → `not-an-email`
-   → reject toast. Clear → save success.
-3. **No-coordinators warning at triage.** Route mode → agencies with no
-   coordinators show ⚠; selecting one surfaces the warning banner.
-4. **PPR PDF.** Export → main table has Status column; COORDINATION
-   section appears after REMARKS.
-5. **Approver OI edit.** Open an already-approved PPR's edit modal as a
-   `ppr:approve` user → "Approver OI" field appears → change → confirm
-   `ppr_number` rewrites the OI segment.
-6. **PPR# race smoke.** Submit two public PPRs back-to-back on the same
-   date → confirm distinct numbers (best-effort; the race was
-   unobservable before so this just confirms the happy path holds).
-7. **Storage RLS.** Upload a photo on a discrepancy you own → succeeds.
-8. **Sidebar PPR dot — instant clear after action.** On `/ppr`, approve or
-   deny a PPR while staying on the page → dot should clear within ~1s
-   (custom-event bridge fires from `loadData()`). Don't navigate away.
-9. **Sidebar PPR dot — clears on nav.** Approve a pending PPR, then click
-   any sidebar item → dot clears immediately (pathname-based refresh).
-   Wait ≤30s without navigating → dot clears via polling. If the dot
-   sticks past 30s, open devtools console: `[sidebar-badge] realtime
-   channel CHANNEL_ERROR` / `TIMED_OUT` → websocket dead, polling is
-   doing the work. Healthy realtime is silent.
-
-### P2 — diagnose Supabase realtime on prod
-
-Realtime sub fires reliably on dev but appears to silently fail on prod —
-confirmed by the user reporting twice that the badge didn't update without
-a manual refresh, even with `ppr_entries` and `ppr_coordination` in the
-realtime publication (`2026042802`). The session-end fix layered four
-non-realtime refresh paths on top, so user-facing UX is unblocked, but the
-underlying realtime gap is worth diagnosing because it will affect any
-future feature relying on it (Realtime sub on `airfield_status`,
-`airfield_checks`, `inspections` is already wired — those modules may have
-the same silent-failure problem).
-
-Likely candidates to check:
-
-1. **Auth on the websocket.** Supabase realtime authenticates with the
-   user's JWT. If the JWT is stale (post-rotation) or the websocket was
-   established before sign-in completed, RLS will reject the payload at
-   the realtime layer, dropping the event. Test: sign out, sign back in,
-   re-test the badge from a fresh tab.
-2. **RLS on the table reaches realtime.** Realtime only emits payloads
-   the subscriber can SELECT. Confirm the user has `ppr:view` (the
-   SELECT gate on `ppr_entries`) and is a member of the agency on
-   `ppr_coordination`. Check the RLS policies on those tables again —
-   if the SELECT policy was tightened recently, realtime stops firing
-   before the JS callback ever runs.
-3. **Publication metadata.** `pg_publication_tables` confirmed both
-   tables are in `supabase_realtime` after `2026042802`, but a tab open
-   before the migration won't pick up the new tables on its existing
-   websocket. The focus/pathname/polling fallbacks now self-heal that.
-4. **Per-tab websocket throttling.** The Supabase free tier caps
-   concurrent realtime connections; if multiple tabs are open and the
-   limit is hit, new tabs subscribe but get no events. Devtools network
-   tab → WebSockets → look for the realtime connection.
-
-If realtime can't be made reliable, the custom-event + polling pattern
-should become the default for all "pending action" badges — sidebar
-isn't the only place we'll want one (think: pending discrepancies for
-CES, pending checks for the AMOPS dashboard, etc.). Worth codifying.
-
-### P3 — bug-of-the-day backlog (next quick wins)
-
-Empty for now. If new items surface during P1 verification, log them here.
-
-### P4 — bigger work, only if customer demand
-
-*(Sequential coordination, bulk coordinate, public form file uploads —
-all deferred pending customer ask.)*
-
-### P5 — long-running carryover from prior sessions
 - **Offline reads** for QRC + Regulations. Workbox runtime caching is
   already wired for some routes; add these two.
 - **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`,
@@ -498,7 +415,7 @@ Middleware             74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge). Two pending migrations (2026042803, 2026042804). |
+| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge). Migrations 2026042803 + 2026042804 applied. |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
 | **Unreleased** | 2026-04-26 | PPR public form + AMOPS-triaged multi-agency coordination, requester emails, full UI/UX iteration on detail card / KPI bar / time picker; security cleanup (`.env.local` untracked, old keys rotated at providers) |
 | **Unreleased** | 2026-04-25 (cont.) | Offline write queue: foundation + 12 wraps + inspector + pending photos. Inspection gate lifted for online-Begin and offline-Begin flows. |
@@ -581,6 +498,4 @@ See `CHANGELOG.md` for full history.
 
 ---
 
-*Two migrations pending: `2026042803_ppr_number_serialize.sql` (required before
-next deploy — `createPprEntry` calls the new RPC) and
-`2026042804_storage_rls_tighter_entity_scope.sql` (backwards-compatible).*
+*All migrations applied. No pending DB work.*
