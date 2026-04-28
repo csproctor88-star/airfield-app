@@ -1,9 +1,9 @@
 # Session Handoff
 
-**Date:** 2026-04-27
+**Date:** 2026-04-27 (extended same-day session)
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `02bdb2e`
+**HEAD:** `84b60ba`
 
 ---
 
@@ -202,28 +202,41 @@ Five commits closing P2 + tech-debt items. Two new migrations.
   instead of doing JS-side COUNT + format. UNIQUE index on
   `(base_id, ppr_number)` catches future regressions. Migration
   `2026042803_ppr_number_serialize.sql`.
-- **Storage RLS: tighter entity-scope on photo INSERT** (pending commit) —
-  migration 2026041600 path-scoped the photos bucket but left entity photo
-  paths (discrepancy/check/inspection/acsi) prefix-checked only. This commit
-  joins to the parent entity and gates upload on `user_has_base_access` to
-  the entity's base. Closes the orphan-upload storage hygiene gap.
-  Migration `2026042804_storage_rls_tighter_entity_scope.sql`.
+- **Storage RLS: tighter entity-scope on photo INSERT** (`08b12f0`) —
+  migration 2026041600 path-scoped the photos bucket but 2026042208 (the
+  permission-matrix refactor) replaced those policies with a simple
+  `user_has_permission(uid, 'photos:write')` check, dropping path scoping.
+  Migration `2026042804` re-establishes path scoping on top of the matrix
+  permission: INSERT/UPDATE/DELETE on the `photos` bucket now require BOTH
+  the matrix permission AND a path-resolved base-access check via the
+  parent entity (discrepancy/check/inspection/acsi/airfield-diagrams).
+- **Migration fix: drop `user_can_write` reference** (`84b60ba`) — the
+  first cut of `2026042804` referenced `user_can_write()` for the
+  airfield-diagrams write check. That helper was dropped in 2026042208 as
+  part of the matrix refactor — the user got `42883: function
+  user_can_write(uuid) does not exist` when applying. The full migration
+  rolled back as a transaction (no prod state changed). Rewrite uses
+  `user_has_permission(uid, 'photos:write')` exclusively. Saved a
+  feedback memory `feedback_rls_helpers.md` to prevent a repeat.
 
 ---
 
-## Migrations applied this session
+## Migrations status
 
-All six were applied to prod by session end. Confirmed via `pg_publication_tables` query
-on the realtime migration and `pg_proc` query on the ICAO RPC.
+The first six were applied to prod during the original 2026-04-27 session.
+The two same-day follow-up migrations (2026042803, 2026042804) are
+**pending** — they need to be applied next session before the deploy.
 
-| Migration | What it does |
-|---|---|
-| `2026042700_ppr_remarks.sql` | New `ppr_remarks` table + RLS |
-| `2026042701_lighting_systems_sort_order.sql` | Adds `lighting_systems.sort_order`, seeds by name |
-| `2026042702_ppr_agency_members.sql` | New `ppr_agency_members` join table + RLS |
-| `2026042800_ppr_info_only_column.sql` | Adds `ppr_columns.info_text`, refreshes `get_public_ppr_config` RPC, extends column_type CHECK |
-| `2026042801_ppr_request_by_icao.sql` | New `get_public_ppr_config_by_icao(TEXT)` SECURITY DEFINER RPC |
-| `2026042802_ppr_realtime.sql` | Adds `ppr_entries` + `ppr_coordination` to `supabase_realtime` publication |
+| Migration | Status | What it does |
+|---|---|---|
+| `2026042700_ppr_remarks.sql` | ✅ Applied | New `ppr_remarks` table + RLS |
+| `2026042701_lighting_systems_sort_order.sql` | ✅ Applied | Adds `lighting_systems.sort_order`, seeds by name |
+| `2026042702_ppr_agency_members.sql` | ✅ Applied | New `ppr_agency_members` join table + RLS |
+| `2026042800_ppr_info_only_column.sql` | ✅ Applied | Adds `ppr_columns.info_text`, refreshes `get_public_ppr_config` RPC, extends column_type CHECK |
+| `2026042801_ppr_request_by_icao.sql` | ✅ Applied | New `get_public_ppr_config_by_icao(TEXT)` SECURITY DEFINER RPC |
+| `2026042802_ppr_realtime.sql` | ✅ Applied | Adds `ppr_entries` + `ppr_coordination` to `supabase_realtime` publication |
+| `2026042803_ppr_number_serialize.sql` | ⏳ Pending | Atomic counter table for PPR# minting (fixes simultaneous-submit race). **Required before next deploy** — `createPprEntry` calls the new RPC. |
+| `2026042804_storage_rls_tighter_entity_scope.sql` | ⏳ Pending | Re-introduces path scoping on photos bucket on top of matrix permission. Backwards-compatible for legitimate flows. |
 
 ---
 
@@ -235,6 +248,14 @@ on the realtime migration and `pg_proc` query on the ICAO RPC.
 | Confirmation + approval emails silently failing | Resend 422 on malformed `bases.amops_email` reaching `replyTo` | `e0fe8ac` |
 | Sidebar dot persisted after PPR approval | `ppr_entries` / `ppr_coordination` not in realtime publication | `505c222` (migration) + `02bdb2e` (focus-refresh fallback) |
 | Pre-coordinated approval sent no email | `triagePprEntry` skip path wasn't firing the email API; only the post-coord Decide path was | `eb39f85` |
+| Denial sent no notification to requester | `denyPprEntry` had no email path | `1de6e7a` (new `/api/send-ppr-denial` route) |
+| Bad AMOPS email could persist in DB | Save handler trimmed but didn't validate format | `1de6e7a` (regex check on save) |
+| Triage didn't warn when an agency had zero coordinators | Email path silently skipped agencies with no members; warning was only at Base Setup time | `ca23602` (per-chip ⚠ + banner) |
+| Re-approval couldn't refresh OI on already-approved entries | Edit modal didn't expose approver_oi; `updatePprEntry` didn't accept it | `8993341` (field gated to `ppr:approve` users + ppr_number rewrite) |
+| Public form date confused users with non-US locales | Native picker rendered MM/DD/YYYY for some, DD/MM/YYYY for others | `8993341` (DD MMM YYYY echo below picker) |
+| Simultaneous PPR submits could mint duplicate ppr_numbers | `_ppr_generate_number` did COUNT(*) + 1; two concurrent calls saw the same count | `5019762` (migration `2026042803` — atomic counter table) |
+| Storage bucket lost path scoping after matrix refactor | `2026042208` replaced 2026041600's path-scoped policies with bare permission checks | `08b12f0` + `84b60ba` (migration `2026042804`) |
+| Migration `2026042804` failed with `42883: function user_can_write(uuid) does not exist` | First cut referenced helper dropped in 2026042208 | `84b60ba` (rewrite using matrix helpers; saved feedback memory) |
 
 ---
 
@@ -273,6 +294,18 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 
 ---
 
+## Lessons from this session
+- **RLS migrations must use the matrix helpers** (`user_has_permission(uid, key)`,
+  `user_has_base_access`, `user_is_sys_admin`). The legacy `user_can_write`,
+  `user_is_admin`, `user_is_base_admin_at` were dropped in `2026042208`. Any
+  new policy referencing them will fail with `42883`. Pinned in
+  `~/.claude/projects/.../memory/feedback_rls_helpers.md`.
+- **Memory was stale on `daily_reviews` / `arff_status_log`** — both were
+  already in `lib/supabase/types.ts` (the carry-over note implied otherwise).
+  Cleaned up.
+
+---
+
 ## Known issues / tech debt
 
 | Item | Severity | Notes |
@@ -285,55 +318,59 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 
 ## Next session tasks (prioritized)
 
-### P1 — close the loop on this session's deploy
+### P0 — apply pending migrations BEFORE deploying any new code
 
-Original P1 (pre-coord approval email + sidebar dot clearing) verified on prod
-during same-day follow-up. P2 verifies (denial email both paths, AMOPS email
-format check, no-coord warning, PDF coord section) — apply once verified in the
-next session if not already.
+Run these on prod, in order. The first is required (the deployed app calls
+the new RPC); the second is backwards-compatible but should ride along.
 
-**Apply migrations on prod first, then deploy:**
-- `2026042803_ppr_number_serialize.sql` — atomic counter table for PPR#.
-  **Required** before the next public submit lands (or `createPprEntry` will
-  fail with "function _ppr_generate_number does not exist").
-- `2026042804_storage_rls_tighter_entity_scope.sql` — entity-scope INSERT
-  policy on the `photos` bucket. Backwards-compatible for legitimate flows;
-  tightens the orphan-upload gap.
+1. **`2026042803_ppr_number_serialize.sql`** — creates `ppr_number_sequence`
+   counter table, replaces `_ppr_generate_number` with atomic upsert,
+   backfills existing rows from MAX of parsed sequence segment, adds
+   UNIQUE index `(base_id, ppr_number)`. **Without this, `createPprEntry`
+   fails with "function `_ppr_generate_number` does not exist."** The
+   public RPC `submit_public_ppr_request` continues to work via the older
+   in-place definition, but new authenticated PPR creation breaks.
+2. **`2026042804_storage_rls_tighter_entity_scope.sql`** — restores path
+   scoping on the `photos` bucket on top of the matrix permission. Fixed
+   version using `user_has_permission(uid, 'photos:write'/'delete')` —
+   the first attempt referenced the dropped `user_can_write` helper and
+   failed with `42883`. Read the migration top comment for context.
 
-**Verify post-deploy:**
+### P1 — verify on prod after deploy (smoke test list)
 
-1. **Denial email lands on both paths.** Submit a public PPR, deny via
-   triage-Deny with a reason → email arrives. Submit another, route → coord →
-   Decide → Deny → email arrives.
-2. **AMOPS email format check.** Base Setup → AMOPS Email → enter
-   `not-an-email` → reject toast; clear → save success.
-3. **No-coordinators warning.** Triage modal → Route mode → agencies with no
-   coordinators show ⚠; selecting one shows the warning banner.
-4. **PPR PDF.** Export the PPR log → main table has Status column;
-   COORDINATION section appears after REMARKS.
-5. **Approver OI edit on approved entries.** Open an already-approved PPR's
-   edit modal as a `ppr:approve` user → "Approver OI" field appears → change
-   it and save → confirm `ppr_number` rewrites the OI segment.
-6. **PPR# race fix.** Best-effort smoke (real concurrent simulation is hard):
-   submit two public PPRs back-to-back on the same date → confirm distinct
-   numbers (the race was unobservable before; this just confirms the new path
-   doesn't break the happy case).
+1. **Denial email lands on both paths.** Public PPR → triage-Deny with a
+   reason → email arrives. Another → route → coord → Decide → Deny →
+   email arrives. Both should show the reason in a red-bordered block.
+2. **AMOPS email format check.** Base Setup → AMOPS Email → `not-an-email`
+   → reject toast. Clear → save success.
+3. **No-coordinators warning at triage.** Route mode → agencies with no
+   coordinators show ⚠; selecting one surfaces the warning banner.
+4. **PPR PDF.** Export → main table has Status column; COORDINATION
+   section appears after REMARKS.
+5. **Approver OI edit.** Open an already-approved PPR's edit modal as a
+   `ppr:approve` user → "Approver OI" field appears → change → confirm
+   `ppr_number` rewrites the OI segment.
+6. **PPR# race smoke.** Submit two public PPRs back-to-back on the same
+   date → confirm distinct numbers (best-effort; the race was
+   unobservable before so this just confirms the happy path holds).
 7. **Storage RLS.** Upload a photo on a discrepancy you own → succeeds.
-   (Negative case is hard to test from the app since the UI never crafts
-   a path for a foreign base — covered by the policy at the DB layer.)
 
-### P2 — small follow-ups
+### P2 — bug-of-the-day backlog (next quick wins)
 
-*(All resolved in same-day follow-up — see top section.)*
+Empty for now. The previous P2 list was fully closed in the same-day
+follow-up. If new items surface during P1 verification, log them here.
 
 ### P3 — bigger work, only if customer demand
 
-*(Sequential coordination, bulk coordinate, public form file uploads — all
-deferred pending customer ask.)*
+*(Sequential coordination, bulk coordinate, public form file uploads —
+all deferred pending customer ask.)*
 
-### P4 — deferred from prior sessions
-- **Offline reads** for QRC + Regulations.
-- **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`, `infrastructure`) — explicitly multi-session work.
+### P4 — long-running carryover from prior sessions
+- **Offline reads** for QRC + Regulations. Workbox runtime caching is
+  already wired for some routes; add these two.
+- **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`,
+  `infrastructure`) — explicitly multi-session work. Pure refactor,
+  large test surface.
 - **Trademark resolution** — CDW Class 42 conflict on "GLIDEPATH".
 - **CAC/PIV authentication** (blocked on Platform One).
 - **Outage analytics, training management, Part 139 civilian template.**
@@ -379,6 +416,7 @@ Middleware             74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping. Two pending migrations (2026042803, 2026042804). |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
 | **Unreleased** | 2026-04-26 | PPR public form + AMOPS-triaged multi-agency coordination, requester emails, full UI/UX iteration on detail card / KPI bar / time picker; security cleanup (`.env.local` untracked, old keys rotated at providers) |
 | **Unreleased** | 2026-04-25 (cont.) | Offline write queue: foundation + 12 wraps + inspector + pending photos. Inspection gate lifted for online-Begin and offline-Begin flows. |
@@ -428,6 +466,35 @@ See `CHANGELOG.md` for full history.
 - `middleware.ts` — `isPublicPath()` helper, regex for `/<icao>/ppr-request`
 - `tests/pdf-utils.test.ts` — `info_text: null` on test fixture
 
+### Same-day follow-up — new files
+- `app/api/send-ppr-denial/route.ts` — Resend, validates `status='denied'`, renders
+  reason in red-bordered block.
+- `supabase/migrations/2026042803_ppr_number_serialize.sql` — `ppr_number_sequence`
+  counter table + atomic `_ppr_generate_number`, UNIQUE index on
+  `(base_id, ppr_number)`.
+- `supabase/migrations/2026042804_storage_rls_tighter_entity_scope.sql` — restored
+  path-scoped photos bucket policies on top of the matrix permission.
+- `~/.claude/projects/.../memory/feedback_rls_helpers.md` — pinned rule on
+  matrix RLS helpers (don't reach for `user_can_write` and friends).
+
+### Same-day follow-up — modified files
+- `lib/supabase/ppr.ts` — `denyPprEntry` fires denial email; `updatePprEntry`
+  accepts `approver_oi` and rewrites `ppr_number`; `createPprEntry` mints via
+  RPC; removed dead `julianDay` / `generatePprNumber` / `countPprsForDate`.
+- `lib/supabase/types.ts` — added `ppr_agency_members`, `ppr_remarks`,
+  `_ppr_generate_number` RPC; backfilled `ppr_columns.info_text` and
+  `lighting_systems.sort_order`.
+- `lib/supabase/ppr-agency-members.ts` — added `fetchAgencyCoordinatorCounts`;
+  removed all `(supabase as any)` casts.
+- `lib/ppr-pdf.ts` — Status column on the main table, COORDINATION section.
+- `app/(app)/ppr/page.tsx` — denial email help-text, no-coord warning chip +
+  banner in triage modal, Approver-OI edit field on already-approved entries.
+- `app/(app)/settings/base-setup/page.tsx` — `handleSaveAmopsEmail` rejects
+  malformed input with a toast.
+- `components/ppr/public-request-form.tsx` — DD MMM YYYY echo below date picker.
+
 ---
 
-*Pending migrations applied this session: all six listed above. No more pending migrations.*
+*Two migrations pending: `2026042803_ppr_number_serialize.sql` (required before
+next deploy — `createPprEntry` calls the new RPC) and
+`2026042804_storage_rls_tighter_entity_scope.sql` (backwards-compatible).*
