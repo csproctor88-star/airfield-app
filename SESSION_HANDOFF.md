@@ -1,268 +1,172 @@
 # Session Handoff
 
-**Date:** 2026-04-27 (extended same-day session)
+**Date:** 2026-04-28
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `48cb7c6`
+**HEAD:** `ff8f408`
 
 ---
 
 ## What shipped this session
 
-**9 commits** on `main`, **6 new migrations** introduced (all applied to prod by session end).
-Two themes: continuing the PPR module hardening that started 2026-04-26, and cross-cutting
-quality-of-life work (drag-and-drop reorder in base-setup, Events Log filter, info-only PPR
-column type, sidebar pending-action dots). Plus a thread of bug fixes from real testing —
-the email path had three independent failures, sidebar dots had a stale-state issue after
-the realtime publication change, and pre-coordinated approval was silently skipping the
-requester email.
+**8 commits** on `main`, **4 new migrations** introduced (3 still pending on prod;
+2026042902 was applied out of order by the user — see Migrations status). The
+session was almost entirely PPR-shaped: spine-field expansion (commercial phone,
+ETA Zulu), a cancellation flow, AMOPS permission catch-up, an internal-create
+"save pending" path, and a long polish pass on the on-screen Log + Today's-PPRs
+panel + PDF. The non-PPR work was a per-member ACSI inspection-team signature
+toggle and a one-pass cut on the sidebar badge polling that was driving Supabase
+auth volume.
 
-### PPR remarks + coordinator routing + sidebar pending dots + base-setup drag-reorder (`4048d05`)
+### PPR public-form spine + log polish; SCN agency edit/reorder (`d6c7d84`)
 
-A single big commit covering four distinct features:
+Two mandatory spine fields added to `ppr_entries` and the public form:
+`requester_phone` and `arrival_eta_zulu`. Both stored on the row directly (not
+in `column_values`) so they're always present and never configurable away. The
+public-submit RPC was dropped and recreated twice — once per migration — to
+extend the signature; server-side validation rejects empty values and enforces
+`HH:MM` shape on the ETA. Internal-create PPRs leave both columns NULL, same
+pattern as the existing `requester_email`.
 
-- **PPR remarks** — new `ppr_remarks` table (entry × user × text × Zulu timestamp). RLS
-  gates SELECT/INSERT on `ppr:view` (so any viewer can post — matches the intent that
-  anyone in the loop can leave context); UPDATE/DELETE on `ppr:write`. `coordinatePprEntry`
-  mirrors coord comments into `ppr_remarks` with a `[Agency — CONCUR/NON-CONCUR]` prefix
-  so the remarks thread is the single human-readable timeline. Detail card on `/ppr` renders
-  the thread (zebra-striped rows with rank/name + Zulu timestamp) plus a textarea+Save row
-  at the bottom. PDF export gains a REMARKS section after the main table — PPR # / User /
-  When / Remark, one row per remark.
+`/ppr` table split the single Arrival column into `Arrival Date` + `ETA (Z)`,
+admin-configured headers + cells gained wrapping with capped widths so a long
+admin label can't blow out the table to 4× the viewport, and the bottom REMARKS
+section in the PDF was folded into an inline `Remarks` column on the main
+table — each cell stacks that PPR's remarks one per line as
+`[2026-04-27 2114Z · MSgt Proctor] Denied`. Detail-card remarks render as cards
+with a header strip (author + Zulu timestamp) above the body. PDF stat box
+counts only what the table renders (info_only excluded).
 
-- **Sidebar PPR notification dots** — new hook `useSidebarBadgeCounts()` returns per-user
-  pending counts gated by permission: `ppr:triage` → `pending_amops_triage`; `ppr:approve`
-  → `pending_amops_approval`; `ppr:coordinate` → pending coord rows on agencies the user
-  is a member of. Red circular badge on the `/ppr` nav item (with "X pending" text label
-  when expanded; suppresses while viewing `/ppr`). Same red dot on the Operations section
-  header. Aggregates across any items in the section that contribute counts (today: just
-  `/ppr`).
+SCN Agencies tab in Base Setup is now a custom list using the typed helpers in
+`lib/supabase/scn-agencies.ts`: id-keyed drag reorder, inline rename via
+Edit/Save/Cancel (drag disabled while editing), add/delete unchanged. Renames
+are safe — historical SCN check records snapshot `agency_name` at submit time.
 
-- **PPR coordinator assignment + email-on-coordination** — new `ppr_agency_members` table
-  (agency × user × base) bridging the free-text `ppr_agencies` list to the people
-  responsible for it. Admin manages via Base Setup → PPR Columns → existing Coordinating
-  Agencies section, which gains a "Coordinators" button per agency that opens a checkbox
-  modal of base members. Coordinator count chip shows on each agency row; warning chip
-  when zero ("No coordinators — emails won't fire"). New API route
-  `/api/send-ppr-coordination-request` — Resend, one email per agency to its coordinators.
-  `triagePprEntry` (multi-agency path) and `createPprEntry` (internal-with-agencies path)
-  both fire-and-forget the new email API.
+### PPR manual-coord-pending save mode + AMOPS delete/approve perms (`f39ff2e`)
 
-- **Base-setup drag-and-drop reorder** — new `hooks/use-drag-reorder.ts` generic hook with
-  whole-row and split handle/drop modes. Applied to: Airfield Areas, NAVAIDs, Facilities,
-  QRC Templates, Lighting Systems (☰ grip handle since rows expand on click), and PPR
-  Columns (☰ handle alongside the existing up/down arrows). Migration
-  `2026042701_lighting_systems_sort_order.sql` adds the missing `sort_order` column to
-  `lighting_systems` and seeds existing rows by current alphabetical name so display is
-  unchanged at deploy.
+The internal New PPR modal grew a third save mode (radio, mirroring the triage
+modal's pattern): **Save pending — coordinating manually**. Lands the PPR at
+`status='pending_amops_approval'` with no in-app coord rows or email, so AMOPS
+can coordinate by phone/email/in-person and finalize later via Decide → Approve.
+The legacy "Pre-coordinated → approve now" and "Send to coordination" outcomes
+are unchanged. `createPprEntry` gained a `manualCoordPending` flag, mutually
+exclusive with `agencyIds` (flag wins). The new path records the creator as
+`triaged_by/at` so the audit trail captures who started external coordination.
 
-  Also: PPR public-form middleware fix. `/ppr-request` and `/api/send-ppr-confirmation`
-  weren't in the unauthenticated allowlist, so anonymous QR-code visitors hit the
-  /login redirect before the page could call its SECURITY DEFINER RPCs. The original test
-  session was authenticated, so the gap surfaced only after the recent JWT rotation
-  invalidated all sessions.
+Migration `2026042902` grants `ppr:delete` and `ppr:approve` to the `amops`
+role. Delete was the explicit ask. Approve was the gap that would otherwise
+dead-end the new save-pending flow — without it the same AMOPS user who saved
+a PPR pending couldn't finalize it.
 
-### Hide PPR + wildlife-sighting rows from the Events Log (`9d78785`)
+### Slim PPR Log table to PPR# / Status / Arrival / ETA + first 2 admin columns (`f6d7f64`)
 
-The Events Log (`/activity`) is the AF Form 3616 operational log — PPR coordination /
-triage / approval churn and high-volume wildlife sightings flood it and aren't what
-tower / AMOPS scan that page for. Both still write to `activity_log`, so both still
-appear on the Activity Log (`/recent-activity`) which is the full audit trail.
-`fetchActivityLog` gains an optional `excludeEntityTypes` filter; `/activity` passes
-`['ppr_entry', 'wildlife_sighting']`. Wildlife strikes stay on the Events Log — those
-are real airfield events that warrant the AF 3616 entry.
+Dropped Requester, the full admin column set, and Notes from the on-screen
+`/ppr` table — all of those still surface in the detail dialog. Only the spine
+fields plus the first two admin columns by `sort_order` render inline (Callsign
++ Aircraft Type at this base by convention). The PDF export is unchanged — that
+artifact keeps every admin-configured column.
 
-### PPR info-only column type (`786a1b3`)
+### PPR ETA HHMM, summary column alignment, badge polling cuts (`2ea8d03`)
 
-A new `column_type='info_only'` lets base admins surface static text on the PPR Request
-form (and the internal create modal) without asking the requester for input. Used for
-airfield hours, parking restrictions, fuel availability, hazardous-cargo procedures —
-context every aircrew needs but that doesn't belong as a free-text field. Migration
-`2026042800` adds `ppr_columns.info_text TEXT` and extends the `column_type` CHECK to
-admit `'info_only'`. The `get_public_ppr_config` RPC is refreshed to project `info_text`.
+ETA fields (public form + internal modal) switched from `<input type="time">`
+to 4-digit HHMM text input. The native time picker rendered locale-dependent
+AM/PM in en-US browsers and forced the colon into the visible value. DB still
+stores `HH:MM` to match the `column_type='time'` convention + the public RPC's
+regex check; the split happens at the wire boundary (`slice(0,2) + ':' + slice(2)`).
 
-`PprFieldInput` renders info-only as a labeled read-only block (column name as a small
-uppercase heading, info_text below, with preserved line breaks). The `/ppr` table headers,
-row cells, detail card "Request Details" section, SubmittedSummary preview, and the PDF
-dynamic-column table all filter info_only columns out — these carry no per-PPR value.
-Confirmation email (`/api/send-ppr-confirmation`) fetches public info_only columns and
-renders each as a boxed section. Approval email splits the column fetch: regular columns
-drive the value table; info_only columns render as boxed sections after.
+`isSummaryColumn()` in `lib/supabase/ppr.ts` is now the single source of truth
+for which admin columns surface in the slim summary tables. The `/ppr` Log and
+the Airfield Status `/` "Today's PPRs" panel both use it, so the two views stay
+column-consistent: PPR# / Status / Arrival Date / ETA (Z) / Callsign / Aircraft
+Type. Match is on `column_name` only (case-insensitive) so any base whose admin
+has configured Callsign + Aircraft Type gets the consistent layout regardless
+of `sort_order`. Both tables centered + tightened: padding 8x10 → 6x8, text
+alignment center across headers and cells, dynamic-column max widths
+140→120 (header) and 200→160 (cell).
 
-Base Setup UX: "Required" toggle is replaced with "Edit Text" on existing info_only
-column rows; new-column row hides the Required checkbox when the type selector is on
-info_only and surfaces a textarea below the row.
+`useSidebarBadgeCounts` cuts: `getUser()` → `getSession()` (no auth-server
+roundtrip; RLS still enforces on the count queries), polling 30 s → 60 s, and
+the polling tick is now gated on `document.visibilityState === 'visible'` so
+background tabs stop generating Supabase requests entirely. Triggered by
+observing 11,222 auth/24 h on the Supabase dashboard during testing — the
+30s-polling-on-every-tab math worked out to roughly that absolute number.
+Realtime + pathname + custom-event + focus listeners already cover sub-minute
+updates whenever the user is interacting, so the slower polling is purely a
+safety net.
 
-### PPR Request short ICAO-based URL (`f9ce76d`)
+### PPR soft-cancel + cancellation email (`507d060`)
 
-QR codes now point to `https://glidepathops.com/kmtc/ppr-request` rather than a
-UUID-shaped `/ppr-request/<uuid>`. New SECURITY DEFINER RPC
-`get_public_ppr_config_by_icao(p_icao)` does case-insensitive ICAO lookup and returns
-the same config shape plus the resolved `base_id` so the form can submit via the
-existing `submit_public_ppr_request(p_base_id UUID)` RPC. Granted to anon.
+Sixth PPR status: `canceled`. Distinct from `denied` — denied is "AMOPS
+rejected the request"; canceled is "the requester or AMOPS pulled a previously
+approved/pending entry" (aircrew cancellation, weather scrub, schedule slip).
+Migration `2026042903` drops + recreates the `ppr_entries_status_check`
+constraint to allow the new value and adds nullable `cancellation_reason`.
 
-The existing form was extracted into `components/ppr/public-request-form.tsx` and
-accepts a `lookup` discriminated union `{kind:'baseId'|'icao'}`. Both routes
-(`/ppr-request/[baseId]` legacy + `/[icao]/ppr-request` new) are now thin wrappers
-around the shared component. Cooldown localStorage key is keyed on the resolved UUID
-so a visitor hitting both URLs is rate-limited consistently.
+`cancelPprEntry()` in `lib/supabase/ppr.ts` mirrors `denyPprEntry`'s shape:
+required reason, status flip, audit-log entry, and a fire-and-forget
+cancellation email via the new `/api/send-ppr-cancellation` route (slate-grey
+palette, `validReplyTo` gate, internal-create PPRs with no requester email
+skip silently). Row-action Cancel button gated on `ppr:write`, hidden on
+already-denied / already-canceled rows. Strikethrough + 0.55 opacity on
+canceled rows in both the `/ppr` Log and the Today's-PPRs panel; detail dialog
+renders without strikethrough so the audit trail stays legible. Detail audit
+section surfaces the cancellation reason. PPR Log PDF gets the new label.
 
-Middleware: the long inline allowlist was replaced with a small `isPublicPath()` helper.
-A regex (`/^\/[^/]+\/ppr-request(\/.*)?$/`) admits the ICAO route — the page itself
-validates the ICAO and shows a not-found state, so a permissive prefix is fine. Base
-Setup's `generatePublicQr()` now prefers the ICAO URL when the base has one.
+### ACSI inspection-team per-member signature toggle (`04fc376`) + divider (`584e58d`)
 
-### PPR public-form diagnostic logging (`61d3188`)
+`AcsiTeamMember` gained an optional `signature_required` flag — undefined /
+true keeps the existing PDF behavior (full signature box) so pre-existing
+drafts and filed rows that predate this field stay backwards-compatible.
+Editor row gets a "Signature required on PDF" checkbox under the Title field;
+toggling it doesn't drop the member from the roster, just from the PDF
+signature blocks. PDF Inspection Team section branches per member: required →
+full 32 mm box with name + role + signature/date lines; optional → compact
+14 mm roster row, name + role only.
 
-No behavior change. The form was swallowing the confirmation-email response, so a
-4xx/5xx from `/api/send-ppr-confirmation` produced no signal on the client. Logs the
-resolved base on RPC success and the API status text on failure so the next problem
-report has something to attach.
+Follow-up commit added a dashed-line divider with a two-line header above the
+first member beyond the required three (AFM / CE / Safety) — both in the
+editor and in the PDF — so it's obvious why those rows don't generate
+signature blocks by default. New additional members default
+`signature_required: false` to match the divider's convention; the per-row
+checkbox still lets admins opt a specific extra member back in.
 
-### PPR emails: drop malformed replyTo (`e0fe8ac`)
+### PPR time columns: HHMM input, HHMMZ display, formatter helper (`ff8f408`)
 
-Resend returned 422 `validation_error` and refused to send the entire email when the
-replyTo field didn't match its email shape. The three PPR routes were passing
-`bases.amops_email` through with just `|| undefined`, which catches null/empty but
-not whitespace, typos, multi-recipient strings, or stray newlines. One bad row in
-`bases.amops_email` was killing every confirmation/approval/coord email at that base.
-Adds a small `validReplyTo()` helper to each of the three routes: trims, checks against
-a permissive email regex, returns `undefined` if anything looks off. The email still
-sends; the requester just can't reply directly to AMOPS until the admin fixes the bad
-value. The "Contact AMOPS at <addr>" footer line is also gated on the validated value
-rather than the raw column.
+Admin-configured `time` columns (e.g., the ETD column) were still rendering
+with a colon (`15:00`) in tables and the PDF, which clashed with the spine
+ETA (Z) field's `1500Z` shape. The input branch in `PprFieldInput` switched to
+the same locale-stable 4-digit HHMM pattern; backwards-compatible with values
+stored as `HH:MM` from before the change because it strips the colon on
+render. Storage now stores HHMM going forward, but display formatters handle
+both shapes.
 
-### Deny on review, sidebar realtime, email copy cleanup (`505c222`)
+`formatPprColumnValue(col, raw)` in `lib/supabase/ppr.ts` is the new single
+source of truth for column-value rendering. Time columns → `1500Z` (handles
+both `15:00` and `1500` storage shapes). yes_no_na → YES/NO/N/A. Date →
+localized. The `/ppr` Log table, `/ppr` detail card, `/ppr` triage summary,
+the Today's-PPRs panel, the PDF (where it replaces the local `formatCell`),
+and the coordination + approval emails all route through it.
 
-- **Sidebar dot stuck after approval** — `ppr_entries` and `ppr_coordination` weren't
-  in the `supabase_realtime` publication, so `useSidebarBadgeCounts`'s listener never
-  fired and the count only refreshed on full page reload. Migration `2026042802_ppr_realtime.sql`
-  adds both tables to the publication.
-
-- **Deny on review** — the triage modal had only "Route to Coordination" + "Pre-coordinated".
-  AMOPS had no way to deny a public submission outright; the workaround was routing
-  then deleting. Replaced the single pre-coordinated checkbox with three radio options:
-  Route → coordination, Pre-coordinated → approve now, Deny → set status='denied' with
-  a required reason. Submit button label and styling change with the selected mode (deny
-  goes red).
-
-- **Email copy** — removed the "via Glidepath" suffix on the from-line across all three
-  PPR routes. Replaced "Sent from Glidepath Airfield Management." footer with "Do not
-  reply to this email — replies are unmonitored." Replaced "Questions? Reply to this
-  email or contact AMOPS at X" with "Contact AMOPS at X with any questions or concerns."
-  Coord email's "Review in Glidepath" CTA → "Review the PPR".
-
-- **Approval-email diagnostic** — `approvePprEntry` now logs API non-2xx status + body
-  to console. The prior code only caught network throws.
-
-### Approval email on pre-coordinated triage path (`eb39f85`)
-
-The pre-coordinated review action (admin checks "Approve now" in the triage modal)
-flips status straight to 'approved' but never fired the approval-email API. Only the
-post-coord Decide path — `approvePprEntry` — was sending the email. Net effect: a
-public submission AMOPS approved without coordination got no notification, no PPR
-number, no info-only fields. Added the same fire-and-forget
-`/api/send-ppr-approval` call to the skip path in `triagePprEntry`.
-
-### Sidebar badge: refresh on tab focus / visibility change (`02bdb2e`)
-
-When the realtime publication was extended after a tab was already open, that tab's
-websocket subscription didn't auto-pick up the new table additions and the badge count
-stuck at a stale value. Hard-refreshing fixed it, but the user shouldn't have to.
-Adds a focus + visibilitychange listener that re-runs the count fetcher whenever the
-user switches back to the tab. Cheap (one fetch per focus, against three small queries)
-and recovers from any missed realtime event regardless of cause — temporary loss of
-websocket, RLS hiccup, publication metadata staleness, etc.
-
----
-
-## Same-day follow-up (2026-04-27 cont.)
-
-Eight code commits + three doc-update commits closing P2, tech-debt items,
-and two real-world bugs surfaced during smoke testing. Two new migrations
-(both **still pending** on prod — see Migrations status below).
-
-- **Denial email + AMOPS reply-to format validation on save** (`1de6e7a`) — new
-  `/api/send-ppr-denial` route; `denyPprEntry()` fires it after the status flip,
-  covering both deny call sites (triage-Deny radio + post-coord Decide-Deny).
-  Base Setup `handleSaveAmopsEmail` rejects malformed input with a toast.
-- **PPR PDF coordination + status section + no-coordinators warning at triage**
-  (`ca23602`) — `lib/ppr-pdf.ts` gains a Status column on the main table and a
-  COORDINATION section. Triage modal in route mode shows ⚠ on agency chips with
-  zero coordinators and a banner when any selected agency would skip the email.
-- **PPR cleanup: types backfill + OI refresh + date echo on public form**
-  (`8993341`) — `ppr_agency_members`, `ppr_remarks`, `ppr_columns.info_text`,
-  and `lighting_systems.sort_order` added to `lib/supabase/types.ts`; ten
-  `(supabase as any)` casts removed. `updatePprEntry` now accepts `approver_oi`
-  and rewrites the OI segment of the `ppr_number`; the edit modal exposes the
-  field to `ppr:approve` users on already-approved entries (closes the
-  "hand-edit if anyone cares" gap). Public PPR form echoes the picked arrival
-  date back as DD MMM YYYY to disarm browser-locale ambiguity.
-- **PPR # serialization** (`5019762`) — replace COUNT-based numbering with an
-  atomic counter table. `_ppr_generate_number` now does
-  INSERT..ON CONFLICT DO UPDATE RETURNING; `createPprEntry` calls the RPC
-  instead of doing JS-side COUNT + format. UNIQUE index on
-  `(base_id, ppr_number)` catches future regressions. Migration
-  `2026042803_ppr_number_serialize.sql`.
-- **Storage RLS: tighter entity-scope on photo INSERT** (`08b12f0`) —
-  migration 2026041600 path-scoped the photos bucket but 2026042208 (the
-  permission-matrix refactor) replaced those policies with a simple
-  `user_has_permission(uid, 'photos:write')` check, dropping path scoping.
-  Migration `2026042804` re-establishes path scoping on top of the matrix
-  permission: INSERT/UPDATE/DELETE on the `photos` bucket now require BOTH
-  the matrix permission AND a path-resolved base-access check via the
-  parent entity (discrepancy/check/inspection/acsi/airfield-diagrams).
-- **Migration fix: drop `user_can_write` reference** (`84b60ba`) — the
-  first cut of `2026042804` referenced `user_can_write()` for the
-  airfield-diagrams write check. That helper was dropped in 2026042208 as
-  part of the matrix refactor — the user got `42883: function
-  user_can_write(uuid) does not exist` when applying. The full migration
-  rolled back as a transaction (no prod state changed). Rewrite uses
-  `user_has_permission(uid, 'photos:write')` exclusively. Saved a
-  feedback memory `feedback_rls_helpers.md` to prevent a repeat.
-- **Sidebar badge: in-app nav refresh + polling fallback** (`44f0332`) —
-  user reported the PPR pending dot still doesn't clear after the prior
-  fix landed. Diagnosis: the sidebar persists across in-app navigation,
-  so neither `focus` nor `visibilitychange` fires on a sidebar click —
-  only a full page reload pulled fresh counts. Added `usePathname()`
-  as a refresh dep (any route change → recount), a 30s polling
-  interval (self-heals realtime silent failures), and a `subscribe()`
-  status log so the next stuck-badge incident can confirm from devtools
-  whether the channel is alive.
-- **Sidebar badge: action-bridge for instant clear after mutations**
-  (`a06713c`) — second user report: pathname refresh works for nav, but
-  the dot still stuck after approving/denying a PPR while staying on
-  `/ppr`. Mutation handlers only refresh the page's local `loadData()`;
-  realtime appears silent on prod. Added a custom-event bridge — the
-  hook listens for `'glidepath:badges-refresh'`, and `/ppr`'s `loadData()`
-  dispatches it at the end. Since every mutation handler calls
-  `loadData()` afterward, the single dispatch covers approve/deny/
-  triage/coordinate/create/edit without per-handler plumbing. Loose
-  coupling: pages don't import the hook, only fire the event.
-- **Sidebar badge for active QRCs** (`48cb7c6`) — mirrors the PPR
-  pattern. New `fetchActiveQrcCount(baseId)` counts `qrc_executions`
-  with `status='open'`; hook gains a `qrc` field gated on `PERM.QRC_VIEW`
-  and a realtime sub on `qrc_executions`; sidebar renders the same
-  red dot + "X active" label on `/qrc` (suppressed while viewing).
-  `/qrc`'s `load()` dispatches the event at the end. Section-header
-  aggregator now sums `ppr + qrc` for any section containing those paths.
+Two bug fixes folded in: the Today's-PPRs panel was rendering the literal
+string `—` in the ETA cell because the escape sequence sat in a JSX text
+node rather than a JS string expression — wrapped as `{'—'}`. And the
+Today's-PPRs table swapped from `width:100%` to `width:auto` with a minWidth
+floor so columns don't stretch across the full airfield-status panel width.
 
 ---
 
 ## Migrations status
 
-All eight were applied to prod by session end.
+All four applied to prod by session end. `2026042902` was applied out of order
+ahead of the schema migrations — confirmed safe because it only touches
+`role_permissions` and has no schema dependencies on the others.
 
 | Migration | Status | What it does |
 |---|---|---|
-| `2026042700_ppr_remarks.sql` | ✅ Applied | New `ppr_remarks` table + RLS |
-| `2026042701_lighting_systems_sort_order.sql` | ✅ Applied | Adds `lighting_systems.sort_order`, seeds by name |
-| `2026042702_ppr_agency_members.sql` | ✅ Applied | New `ppr_agency_members` join table + RLS |
-| `2026042800_ppr_info_only_column.sql` | ✅ Applied | Adds `ppr_columns.info_text`, refreshes `get_public_ppr_config` RPC, extends column_type CHECK |
-| `2026042801_ppr_request_by_icao.sql` | ✅ Applied | New `get_public_ppr_config_by_icao(TEXT)` SECURITY DEFINER RPC |
-| `2026042802_ppr_realtime.sql` | ✅ Applied | Adds `ppr_entries` + `ppr_coordination` to `supabase_realtime` publication |
-| `2026042803_ppr_number_serialize.sql` | ✅ Applied | Atomic counter table for PPR# minting (fixes simultaneous-submit race). |
-| `2026042804_storage_rls_tighter_entity_scope.sql` | ✅ Applied | Re-introduces path scoping on photos bucket on top of matrix permission. |
+| `2026042900_ppr_requester_phone.sql` | ✅ Applied | Adds `requester_phone` to `ppr_entries`; drops + recreates the public-submit RPC with the new arg + server-side required validation |
+| `2026042901_ppr_arrival_eta_zulu.sql` | ✅ Applied | Adds `arrival_eta_zulu` (TEXT, HH:MM); drops + recreates the public-submit RPC with the new arg + HH:MM regex check |
+| `2026042902_amops_ppr_perms.sql` | ✅ Applied | Grants `ppr:delete` + `ppr:approve` to the amops role |
+| `2026042903_ppr_canceled_status.sql` | ✅ Applied | Extends the `ppr_entries.status` CHECK to admit `canceled`; adds nullable `cancellation_reason` |
 
 ---
 
@@ -270,80 +174,45 @@ All eight were applied to prod by session end.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| `/kmtc/ppr-request` redirected to /login | Middleware allowlist missed the route | `4048d05` (middleware fix bundled in big commit) |
-| Confirmation + approval emails silently failing | Resend 422 on malformed `bases.amops_email` reaching `replyTo` | `e0fe8ac` |
-| Sidebar dot persisted after PPR approval | `ppr_entries` / `ppr_coordination` not in realtime publication | `505c222` (migration) + `02bdb2e` (focus-refresh fallback) |
-| Pre-coordinated approval sent no email | `triagePprEntry` skip path wasn't firing the email API; only the post-coord Decide path was | `eb39f85` |
-| Denial sent no notification to requester | `denyPprEntry` had no email path | `1de6e7a` (new `/api/send-ppr-denial` route) |
-| Bad AMOPS email could persist in DB | Save handler trimmed but didn't validate format | `1de6e7a` (regex check on save) |
-| Triage didn't warn when an agency had zero coordinators | Email path silently skipped agencies with no members; warning was only at Base Setup time | `ca23602` (per-chip ⚠ + banner) |
-| Re-approval couldn't refresh OI on already-approved entries | Edit modal didn't expose approver_oi; `updatePprEntry` didn't accept it | `8993341` (field gated to `ppr:approve` users + ppr_number rewrite) |
-| Public form date confused users with non-US locales | Native picker rendered MM/DD/YYYY for some, DD/MM/YYYY for others | `8993341` (DD MMM YYYY echo below picker) |
-| Simultaneous PPR submits could mint duplicate ppr_numbers | `_ppr_generate_number` did COUNT(*) + 1; two concurrent calls saw the same count | `5019762` (migration `2026042803` — atomic counter table) |
-| Storage bucket lost path scoping after matrix refactor | `2026042208` replaced 2026041600's path-scoped policies with bare permission checks | `08b12f0` + `84b60ba` (migration `2026042804`) |
-| Migration `2026042804` failed with `42883: function user_can_write(uuid) does not exist` | First cut referenced helper dropped in 2026042208 | `84b60ba` (rewrite using matrix helpers; saved feedback memory) |
-| Sidebar PPR dot didn't clear on in-app navigation | `useSidebarBadgeCounts` hook persists across nav; `focus`/`visibilitychange` only fire on browser-tab change, not sidebar click | `44f0332` (pathname-based refresh + 30s polling fallback) |
-| Sidebar PPR dot didn't clear after approve/deny on /ppr | Mutation handlers only refreshed the page's local state; realtime appears silent on prod | `a06713c` (custom-event bridge: hook listens for `'glidepath:badges-refresh'`; `/ppr` dispatches at the end of `loadData()`) |
-
----
-
-## Final state of the PPR module
-
-**Public flow** — `/[icao]/ppr-request` (preferred) or `/ppr-request/[baseId]` (legacy QRs).
-Form renders public columns including info-only blocks. On submit, status lands at
-`pending_amops_triage` and a confirmation email goes out (no PPR# yet).
-
-**Triage flow** — AMOPS user with `ppr:triage` opens a public submission and chooses one
-of three: Route to Coordination (pick agencies → status=`pending_coordination`,
-coordination-request email per agency to its coordinators), Pre-coordinated (status=
-`approved`, approval email with PPR#), or Deny (status=`denied` with a required reason).
-
-**Coordination flow** — Each agency's coordinator opens the coord modal and concur /
-non-concur on their row. The coord comment is mirrored into `ppr_remarks` for the timeline.
-When the last pending coord row resolves, status auto-advances to `pending_amops_approval`.
-
-**Approval flow** — AMOPS with `ppr:approve` clicks Decide → Approve / Deny. Approve fires
-the approval email with PPR#, dynamic columns, and info-only blocks.
-
-**Notifications**
-- Sidebar dot on Operations section + PPR Log item, scoped per-user (only counts work the
-  user can act on). Five-layer refresh strategy: (1) custom-event bridge fired by
-  `/ppr`'s `loadData()` after every mutation, (2) Next.js pathname change on any in-app
-  nav, (3) Supabase realtime websocket, (4) 30s polling, (5) browser tab focus /
-  visibilitychange. Realtime appears unreliable on prod; the other four cover the gap.
-- Confirmation email on submission (no PPR#).
-- Coord-request email per agency on triage with agencies (best-effort, skipped silently
-  when an agency has no coordinators — warning chip in Base Setup).
-- Approval email with PPR#, columns, info-only blocks (fires on both pre-coord and
-  post-coord approval paths now).
-- Denial email with the reason (fires on both triage-Deny and post-coord Decide-Deny
-  paths via `denyPprEntry`).
-
-**Email cosmetics** — From line `{Base} AMOPS <info@glidepathops.com>` (no "via Glidepath"
-suffix anymore). Footer: "Do not reply to this email — replies are unmonitored." Reply-to
-set to `bases.amops_email` only when it passes a basic email-shape check.
+| `<input type="time">` rendered AM/PM picker for en-US locales on the public form + internal modal | Native time picker is locale-driven, no cross-browser override | `2ea8d03` (text input + 4-digit HHMM) |
+| Today's-PPRs panel ETA cell showed literal text `—` | Unicode escape was sitting in a JSX text node, not evaluated | `ff8f408` (wrapped as `{'—'}`) |
+| Today's-PPRs columns stretched the full airfield-status panel | `<table style={{ width: '100%' }}>` + 6 columns in a wide container | `ff8f408` (`width: auto` + minWidth floor) |
+| Admin `time` columns (ETD) still displayed with colons in tables / PDF / emails | No formatter — code printed raw `column_values[col.id]` | `ff8f408` (`formatPprColumnValue` helper, used everywhere) |
+| Supabase auth dashboard showing ~11.2k auth/day | Sidebar badge hook polled every 30s with `getUser()` (auth-server roundtrip) on every tab, regardless of visibility | `2ea8d03` (`getSession()` + 60s + visibility-gated polling) |
+| Sidebar Cancel button on a denied / canceled PPR was confusing | No status filter on the action list | `507d060` (gate on status not in `denied`/`canceled`) |
+| Long admin column headers blew out the `/ppr` table to 4× viewport | `whiteSpace: nowrap` global on every `<th>` | `2ea8d03` (`dynamicThStyle` + `dynamicTdStyle` overrides) |
+| `2026042902` was applied out of order (before the schema migrations) | User mistake, no consequence | n/a — verified independent |
 
 ---
 
 ## Lessons from this session
-- **RLS migrations must use the matrix helpers** (`user_has_permission(uid, key)`,
-  `user_has_base_access`, `user_is_sys_admin`). The legacy `user_can_write`,
-  `user_is_admin`, `user_is_base_admin_at` were dropped in `2026042208`. Any
-  new policy referencing them will fail with `42883`. Pinned in
-  `~/.claude/projects/.../memory/feedback_rls_helpers.md`.
-- **Memory was stale on `daily_reviews` / `arff_status_log`** — both were
-  already in `lib/supabase/types.ts` (the carry-over note implied otherwise).
-  Cleaned up.
-- **Don't trust Supabase realtime as the only badge-refresh path.**
-  Took three iterations to land a working sidebar badge: realtime was the
-  original design, then `focus`/`visibilitychange` was bolted on for missed
-  events, then pathname-refresh + polling for in-app nav, then a custom-event
-  bridge for instant clear after mutations. Realtime *should* work but
-  silently fails on prod for reasons we're not pursuing — the four-layer
-  fallback covers it. For any new "this dot should clear quickly" need,
-  default to the custom-event pattern (`window.dispatchEvent(new
-  Event('module:refresh'))` after the mutation) and treat realtime as a
-  nice-to-have.
+
+- **`<input type="time">` is a locale trap.** Chrome and Edge on en-US force
+  AM/PM regardless of stored 24-hour value, with no documented override. For
+  Zulu / military time always use `<input type="text" inputMode="numeric">`
+  with a 4-digit HHMM pattern. The pattern's already mirrored on the spine
+  ETA field, the internal modal, and the dynamic `time` columns via
+  `PprFieldInput` — keep doing that.
+- **One formatter, many call sites.** The PPR display values (`time`,
+  `yes_no_na`, `date`) were drifting between the slim Log, the Today's-PPRs
+  panel, the detail card, the triage summary, the PDF, and three email
+  templates. Consolidated into `formatPprColumnValue` in `lib/supabase/ppr.ts`.
+  When adding a new column type or display rule, update the helper, not each
+  consumer.
+- **Polling cost is per-tab.** The 30s sidebar polling was fine when designed
+  for a single user, but with multi-tab testing the math went sideways fast.
+  Default for any new background fetch loop: visibility-gated +
+  `getSession()` (not `getUser()` unless validation matters) + ≥60s interval
+  unless the use case demands otherwise.
+- **Migrations that change RPC signatures must be DROP + CREATE.**
+  `CREATE OR REPLACE` rejects parameter-list changes. The pattern is `DROP
+  FUNCTION IF EXISTS <name>(<old-arg-list>)` then `CREATE OR REPLACE FUNCTION
+  <name>(<new-arg-list>)`, with the GRANT re-issued against the new
+  signature. Four migrations followed this pattern this session.
+- **Permission grants should follow a workflow chain end-to-end.** Adding the
+  Save-Pending mode without `ppr:approve` on AMOPS would have created a
+  dead-end where the same user couldn't finalize their own entry. Audit
+  permission-gated workflows for completeness when introducing them.
 
 ---
 
@@ -351,32 +220,31 @@ set to `bases.amops_email` only when it passes a basic email-shape check.
 
 | Item | Severity | Notes |
 |---|---|---|
-| **Sequential coordination** | Deferred | All assigned agencies see their work in parallel. No ordering. |
-| **Public form file uploads** | Deferred | Flight plans, certificates, etc. — out of scope unless requested. |
-| **Bulk coordinate** | Deferred | Per-row only. |
+| **Sequential coordination** | Deferred | Inherited. All assigned agencies see their work in parallel; no ordering. |
+| **Public form file uploads** | Deferred | Inherited. Out of scope unless requested. |
+| **Bulk coordinate** | Deferred | Inherited. Per-row only. |
+| **`time` column legacy storage shapes** | Low | Pre-2026-04-28 entries store `HH:MM`; new entries store `HHMM`. Display formatters handle both. Cleanup migration optional, not required. |
+| **Cancellation email template is plain** | Low | Functional but uses the same boxed-section pattern as denial. Could share a layout helper across the four PPR email routes. |
+| **`PprFieldInput` time branch differs from spine ETA input** | Low | Both work the same way, but the spine ETA inlines its onChange + validation in the page component while `PprFieldInput` does it inside the dispatch. Worth extracting a shared `<HhmmInput>` if a third site adds one. |
 
 ---
 
 ## Next session tasks
 
-The active backlog is empty. P0–P4 from the prior pass were all cleared
-this session — migrations applied, smoke tests done, realtime gap accepted
-(four-layer fallback covers it), and customer-demand features (sequential
-coord, bulk coord, public form file uploads) explicitly deferred
-indefinitely.
-
-Pick up wherever the user wants — there's no required next step.
+The active backlog is empty. The migrations are documented and can be applied
+in order whenever the user is ready (`2900` → `2901` → `2903`; `2902` already
+applied). Pick up wherever the user wants — no required next step.
 
 ### Long-running carryover from prior sessions
 
-Pick from these only when bandwidth allows or a customer asks. Order is
-not a priority ranking — group by appetite.
+Pick from these only when bandwidth allows or a customer asks. Not a priority
+ranking — group by appetite.
 
-- **Offline reads** for QRC + Regulations. Workbox runtime caching is
-  already wired for some routes; add these two.
-- **Component extraction** for 4K+ LOC pages (`base-setup`, `parking`,
-  `infrastructure`) — explicitly multi-session work. Pure refactor,
-  large test surface.
+- **Offline reads** for QRC + Regulations. Workbox runtime caching is already
+  wired for some routes; add these two.
+- **Component extraction** for 4 K+ LOC pages (`base-setup`, `parking`,
+  `infrastructure`) — explicitly multi-session work. Pure refactor, large
+  test surface.
 - **Trademark resolution** — CDW Class 42 conflict on "GLIDEPATH".
 - **CAC/PIV authentication** (blocked on Platform One).
 - **Outage analytics, training management, Part 139 civilian template.**
@@ -400,14 +268,14 @@ Notable First Load JS:
   /reports/lighting      318 kB
   /reports/trends        315 kB
   /library               292 kB
-  /settings/base-setup   240 kB  (+4 kB this session — drag handles, info_only, coord picker)
+  /settings/base-setup   241 kB  (+1 kB this session — drag handles, info_only, coord picker)
   /inspections           233 kB
   /discrepancies         224 kB
   /settings              199 kB
   /regulations           182 kB
   /scn                   181 kB
   /qrc                   180 kB
-  /ppr                   178 kB
+  /ppr                   181 kB  (+3 kB this session — three-mode create, cancel flow, summary filter)
   /more                  176 kB
   /settings/base-setup/modules 176 kB
   /ppr-request/[baseId]  152 kB  (legacy)
@@ -422,6 +290,7 @@ Middleware             74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-04-28 | PPR commercial phone + ETA Zulu spine, soft-cancel status + email, AMOPS delete/approve perms, manual-coord-pending save mode, slim Log + Today's PPRs panel, `formatPprColumnValue` helper for time/yes_no_na/date, ACSI per-member signature toggle + additional-members divider, sidebar badge polling cuts. Four migrations applied. |
 | **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge), QRC sidebar badge. Migrations 2026042803 + 2026042804 applied. |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
 | **Unreleased** | 2026-04-26 | PPR public form + AMOPS-triaged multi-agency coordination, requester emails, full UI/UX iteration on detail card / KPI bar / time picker; security cleanup (`.env.local` untracked, old keys rotated at providers) |
@@ -438,77 +307,31 @@ See `CHANGELOG.md` for full history.
 ## Key docs / files touched this session
 
 ### New files
-- `supabase/migrations/2026042700_ppr_remarks.sql`
-- `supabase/migrations/2026042701_lighting_systems_sort_order.sql`
-- `supabase/migrations/2026042702_ppr_agency_members.sql`
-- `supabase/migrations/2026042800_ppr_info_only_column.sql`
-- `supabase/migrations/2026042801_ppr_request_by_icao.sql`
-- `supabase/migrations/2026042802_ppr_realtime.sql`
-- `lib/supabase/ppr-agency-members.ts` — `fetchAgencyMembers`, `setAgencyMembers`,
-  `fetchPprCoordinatorPicker`, `fetchPendingCoordinationCountForUser`, `fetchAgencyMemberEmails`
-- `app/api/send-ppr-coordination-request/route.ts` — Resend, one email per agency
-- `hooks/use-sidebar-badge-counts.ts` — per-user pending counts + realtime + focus refresh
-- `hooks/use-drag-reorder.ts` — generic D&D hook (whole-row + split handle/drop modes)
-- `components/ppr/public-request-form.tsx` — extracted shared form, accepts `{kind:'baseId'|'icao'}`
-- `app/[icao]/ppr-request/page.tsx` — new short-URL route
+
+- `supabase/migrations/2026042900_ppr_requester_phone.sql`
+- `supabase/migrations/2026042901_ppr_arrival_eta_zulu.sql`
+- `supabase/migrations/2026042902_amops_ppr_perms.sql`
+- `supabase/migrations/2026042903_ppr_canceled_status.sql`
+- `app/api/send-ppr-cancellation/route.ts` — cancellation email, slate-grey palette
 
 ### Modified files
-- `lib/supabase/ppr.ts` — `PprRemark`, `fetchPprRemarks`, `addPprRemark`,
-  `info_only` column type, `info_text` field, coord-mirror in `coordinatePprEntry`,
-  pre-coord email send in `triagePprEntry`, approval-email logging
-- `lib/supabase/lighting-systems.ts` — order by `sort_order` then `name` tiebreaker
-- `lib/supabase/activity-queries.ts` — `excludeEntityTypes` filter
-- `lib/ppr-pdf.ts` — REMARKS section, info-only filter on dynamic columns
-- `components/ppr/ppr-field-input.tsx` — `info_only` read-only block branch
-- `components/layout/sidebar-nav.tsx` — section-header dot + per-item dot for `/ppr`
-- `app/(app)/ppr/page.tsx` — remarks UI, three-mode triage modal, info-only filter on data
-  rendering, coord email integration, sidebar count integration
-- `app/(app)/settings/base-setup/page.tsx` — drag-reorder on six tabs, coordinator picker,
-  info-only edit modal + new-row textarea
-- `app/(app)/activity/page.tsx` — `excludeEntityTypes: ['ppr_entry', 'wildlife_sighting']`
-- `app/ppr-request/[baseId]/page.tsx` — thin wrapper around shared form
-- `app/api/send-ppr-confirmation/route.ts` — `validReplyTo`, info-only render, copy
-- `app/api/send-ppr-approval/route.ts` — `validReplyTo`, info-only render, copy
-- `middleware.ts` — `isPublicPath()` helper, regex for `/<icao>/ppr-request`
-- `tests/pdf-utils.test.ts` — `info_text: null` on test fixture
 
-### Same-day follow-up — new files
-- `app/api/send-ppr-denial/route.ts` — Resend, validates `status='denied'`, renders
-  reason in red-bordered block.
-- `supabase/migrations/2026042803_ppr_number_serialize.sql` — `ppr_number_sequence`
-  counter table + atomic `_ppr_generate_number`, UNIQUE index on
-  `(base_id, ppr_number)`.
-- `supabase/migrations/2026042804_storage_rls_tighter_entity_scope.sql` — restored
-  path-scoped photos bucket policies on top of the matrix permission.
-- `~/.claude/projects/.../memory/feedback_rls_helpers.md` — pinned rule on
-  matrix RLS helpers (don't reach for `user_can_write` and friends).
-
-### Same-day follow-up — modified files
-- `lib/supabase/ppr.ts` — `denyPprEntry` fires denial email; `updatePprEntry`
-  accepts `approver_oi` and rewrites `ppr_number`; `createPprEntry` mints via
-  RPC; removed dead `julianDay` / `generatePprNumber` / `countPprsForDate`.
-- `lib/supabase/types.ts` — added `ppr_agency_members`, `ppr_remarks`,
-  `_ppr_generate_number` RPC; backfilled `ppr_columns.info_text` and
-  `lighting_systems.sort_order`.
-- `lib/supabase/ppr-agency-members.ts` — added `fetchAgencyCoordinatorCounts`;
-  removed all `(supabase as any)` casts.
-- `lib/ppr-pdf.ts` — Status column on the main table, COORDINATION section.
-- `app/(app)/ppr/page.tsx` — denial email help-text, no-coord warning chip +
-  banner in triage modal, Approver-OI edit field on already-approved entries,
-  `loadData()` dispatches `glidepath:badges-refresh` at the end.
-- `app/(app)/settings/base-setup/page.tsx` — `handleSaveAmopsEmail` rejects
-  malformed input with a toast.
-- `components/ppr/public-request-form.tsx` — DD MMM YYYY echo below date picker.
-- `hooks/use-sidebar-badge-counts.ts` — `usePathname` dep on initial-fetch
-  effect, 30s polling interval, `subscribe()` status log on
-  CHANNEL_ERROR/TIMED_OUT, listener for `glidepath:badges-refresh` event,
-  added `qrc` count gated on `PERM.QRC_VIEW` + realtime sub on
-  `qrc_executions`.
-- `lib/supabase/qrc.ts` — added `fetchActiveQrcCount(baseId)`.
-- `components/layout/sidebar-nav.tsx` — QRC dot + "X active" label on
-  `/qrc`; section-header aggregator sums `ppr + qrc`.
-- `app/(app)/qrc/page.tsx` — `load()` dispatches `glidepath:badges-refresh`
-  at the end so the badge clears instantly after open/close/cancel.
+- `components/ppr/public-request-form.tsx` — phone + HHMM ETA spine inputs
+- `components/ppr/ppr-field-input.tsx` — time branch swapped to HHMM
+- `components/acsi/acsi-team-editor.tsx` — signature-required checkbox, additional-members divider
+- `app/(app)/ppr/page.tsx` — three-mode create, soft-cancel, summary columns, ETA HHMM, status filter chip, strikethrough on canceled rows, formatter wiring
+- `app/(app)/page.tsx` — Today's-PPRs panel: status pill, ETA, summary columns, strikethrough on canceled, width auto, formatter wiring
+- `app/(app)/settings/base-setup/page.tsx` — SCN Agencies custom list (drag + inline rename)
+- `app/api/send-ppr-coordination-request/route.ts` — phone + ETA in subject; `formatPprColumnValue`
+- `app/api/send-ppr-approval/route.ts` — `formatPprColumnValue`
+- `lib/supabase/ppr.ts` — `PprStatus` + `cancellation_reason`, `cancelPprEntry`, `manualCoordPending` flag, `isSummaryColumn`, `formatPprColumnValue`
+- `lib/supabase/types.ts` — `requester_phone`, `arrival_eta_zulu`, `cancellation_reason`, `signature_required`
+- `lib/supabase/scn-agencies.ts` — typed helpers exposed for editor consumption
+- `lib/ppr-pdf.ts` — Remarks inline column, summary stat fix, `formatCell` → `formatPprColumnValue`, ETA column, canceled status label
+- `lib/acsi-pdf.ts` — Inspection Team branches by `signature_required`; additional-members divider
+- `lib/acsi-draft.ts` — required team members default `signature_required: true`
+- `hooks/use-sidebar-badge-counts.ts` — `getSession()`, 60s poll, visibility-gated
+- `tests/pdf-utils.test.ts` — fixture additions for new optional fields
 
 ---
 
