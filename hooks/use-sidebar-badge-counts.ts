@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +27,7 @@ import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-
 export function useSidebarBadgeCounts() {
   const { installationId } = useInstallation()
   const { has, loaded: permsLoaded } = usePermissions()
+  const pathname = usePathname()
 
   const [pprTriage, setPprTriage] = useState(0)
   const [pprApproval, setPprApproval] = useState(0)
@@ -59,14 +61,20 @@ export function useSidebarBadgeCounts() {
     await Promise.all(tasks)
   }, [installationId, has, permsLoaded])
 
-  // Initial fetch + on installation/permission change.
+  // Initial fetch + on installation/permission change + on
+  // in-app navigation. The sidebar persists across route changes,
+  // so neither focus nor visibilitychange fires on a sidebar click
+  // — pathname is the only signal that pulls fresh data when the
+  // user navigates between modules within the same tab.
   useEffect(() => {
     refresh()
-  }, [refresh])
+  }, [refresh, pathname])
 
   // Realtime — refresh on any ppr_entries / ppr_coordination change
   // for this base. The /ppr page already subscribes; another channel
-  // here is cheap and isolates the sidebar's data.
+  // here is cheap and isolates the sidebar's data. Subscribe status
+  // is logged so we can tell from devtools whether the channel is
+  // alive when the badge appears stuck.
   useEffect(() => {
     if (!installationId) return
     const supabase = createClient()
@@ -86,18 +94,32 @@ export function useSidebarBadgeCounts() {
         // so refresh on any change — the count query filters by base.
         () => refresh(),
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[sidebar-badge] realtime channel', status,
+            '— polling fallback will keep counts current')
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
     }
   }, [installationId, refresh])
 
-  // Fallback for missed realtime events. If a tab was open before
-  // ppr_entries/ppr_coordination were added to the publication,
-  // its websocket subscription doesn't auto-pick up the change and
-  // the badge can stick. Re-fetch on tab focus so the user gets a
-  // self-heal whenever they switch back to Glidepath.
+  // Polling fallback. Realtime can silently fail for several reasons
+  // — websocket dropped, RLS denying the payload, publication
+  // metadata staleness, schema change after subscribe — and the user
+  // shouldn't have to refresh the page. 30s is a reasonable trade-off
+  // between staleness and load (3 small count queries per tick).
+  useEffect(() => {
+    const interval = setInterval(refresh, 30_000)
+    return () => clearInterval(interval)
+  }, [refresh])
+
+  // Fallback for missed realtime events when the user switches
+  // BROWSER tabs (vs. in-app sidebar navigation, which is handled by
+  // the pathname effect above). visibilitychange fires when the tab
+  // becomes visible; focus fires when the window regains focus.
   useEffect(() => {
     function onFocus() { refresh() }
     function onVisibility() { if (document.visibilityState === 'visible') refresh() }
