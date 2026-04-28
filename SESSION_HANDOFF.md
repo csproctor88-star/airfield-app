@@ -3,7 +3,7 @@
 **Date:** 2026-04-27 (extended same-day session)
 **Branch:** `main`
 **Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `0e509f6`
+**HEAD:** `48cb7c6`
 
 ---
 
@@ -239,6 +239,13 @@ and two real-world bugs surfaced during smoke testing. Two new migrations
   `loadData()` afterward, the single dispatch covers approve/deny/
   triage/coordinate/create/edit without per-handler plumbing. Loose
   coupling: pages don't import the hook, only fire the event.
+- **Sidebar badge for active QRCs** (`48cb7c6`) — mirrors the PPR
+  pattern. New `fetchActiveQrcCount(baseId)` counts `qrc_executions`
+  with `status='open'`; hook gains a `qrc` field gated on `PERM.QRC_VIEW`
+  and a realtime sub on `qrc_executions`; sidebar renders the same
+  red dot + "X active" label on `/qrc` (suppressed while viewing).
+  `/qrc`'s `load()` dispatches the event at the end. Section-header
+  aggregator now sums `ppr + qrc` for any section containing those paths.
 
 ---
 
@@ -415,7 +422,7 @@ Middleware             74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge). Migrations 2026042803 + 2026042804 applied. |
+| **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge), QRC sidebar badge. Migrations 2026042803 + 2026042804 applied. |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
 | **Unreleased** | 2026-04-26 | PPR public form + AMOPS-triaged multi-agency coordination, requester emails, full UI/UX iteration on detail card / KPI bar / time picker; security cleanup (`.env.local` untracked, old keys rotated at providers) |
 | **Unreleased** | 2026-04-25 (cont.) | Offline write queue: foundation + 12 wraps + inspector + pending photos. Inspection gate lifted for online-Begin and offline-Begin flows. |
@@ -494,7 +501,14 @@ See `CHANGELOG.md` for full history.
 - `components/ppr/public-request-form.tsx` — DD MMM YYYY echo below date picker.
 - `hooks/use-sidebar-badge-counts.ts` — `usePathname` dep on initial-fetch
   effect, 30s polling interval, `subscribe()` status log on
-  CHANNEL_ERROR/TIMED_OUT, listener for `glidepath:badges-refresh` event.
+  CHANNEL_ERROR/TIMED_OUT, listener for `glidepath:badges-refresh` event,
+  added `qrc` count gated on `PERM.QRC_VIEW` + realtime sub on
+  `qrc_executions`.
+- `lib/supabase/qrc.ts` — added `fetchActiveQrcCount(baseId)`.
+- `components/layout/sidebar-nav.tsx` — QRC dot + "X active" label on
+  `/qrc`; section-header aggregator sums `ppr + qrc`.
+- `app/(app)/qrc/page.tsx` — `load()` dispatches `glidepath:badges-refresh`
+  at the end so the badge clears instantly after open/close/cancel.
 
 ---
 
