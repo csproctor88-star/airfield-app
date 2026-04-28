@@ -383,6 +383,15 @@ export default function PprPage() {
     [columns],
   )
 
+  // PPR Log table is intentionally narrow — only the spine fields
+  // (PPR # / Status / Arrival Date / ETA) plus the first two
+  // admin-configured columns by sort_order, which by convention are
+  // Callsign + Aircraft Type at every base. Everything else
+  // (requester, full column set, notes, coord, remarks) lives in the
+  // detail dialog. Bases that prefer different summary columns can
+  // drag the desired pair to the top in Base Setup → PPR Columns.
+  const summaryColumns = useMemo(() => dataColumns.slice(0, 2), [dataColumns])
+
   // Open create modal
   const handleNew = () => {
     setEditingEntry(null)
@@ -839,13 +848,9 @@ export default function PprPage() {
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Arrival Date</th>
                 <th style={thStyle}>ETA (Z)</th>
-                <th style={thStyle}>Requester</th>
-                {dataColumns.map(col => (
+                {summaryColumns.map(col => (
                   <th key={col.id} style={dynamicThStyle}>{col.column_name}</th>
                 ))}
-                {filteredEntries.some(e => e.notes) && (
-                  <th style={dynamicThStyle}>Notes</th>
-                )}
               </tr>
             </thead>
             <tbody>
@@ -853,7 +858,6 @@ export default function PprPage() {
                 const meta = STATUS_META[entry.status] ?? STATUS_META.approved
                 const coords = coordsByEntry[entry.id] ?? []
                 const nonConcur = coords.some((c) => c.status === 'non_concur')
-                const showNotesCol = filteredEntries.some(e => e.notes)
                 return (
                   <tr key={entry.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <td style={tdStyle}>
@@ -893,29 +897,11 @@ export default function PprPage() {
                         ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
                         : <span style={{ color: 'var(--color-text-3)' }}>—</span>}
                     </td>
-                    <td style={{ ...tdStyle, whiteSpace: 'normal' }}>
-                      {entry.requester_name ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ fontWeight: 600 }}>{entry.requester_name}</span>
-                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{entry.requester_email}</span>
-                          {entry.requester_phone && (
-                            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{entry.requester_phone}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--color-text-3)', fontStyle: 'italic' }}>Internal</span>
-                      )}
-                    </td>
-                    {dataColumns.map(col => (
+                    {summaryColumns.map(col => (
                       <td key={col.id} style={dynamicTdStyle}>
                         {(entry.column_values || {})[col.id] || '—'}
                       </td>
                     ))}
-                    {showNotesCol && (
-                      <td style={dynamicTdStyle}>
-                        {entry.notes || '—'}
-                      </td>
-                    )}
                   </tr>
                 )
               })}
