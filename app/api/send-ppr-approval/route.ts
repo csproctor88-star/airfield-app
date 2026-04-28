@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
+import { formatPprColumnValue } from '@/lib/supabase/ppr'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -121,9 +122,10 @@ export async function POST(request: Request) {
     const valuesHtml = colRows
       .filter((c) => c.column_type !== 'info_only')
       .map((c) => {
-        const v = (entry.column_values || {})[c.id]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const v = formatPprColumnValue(c as any, (entry.column_values || {})[c.id])
         if (!v) return null
-        return `<tr><td style="padding:4px 10px;color:#666;">${escapeHtml(c.column_name)}</td><td style="padding:4px 10px;font-weight:600;">${escapeHtml(String(v))}</td></tr>`
+        return `<tr><td style="padding:4px 10px;color:#666;">${escapeHtml(c.column_name)}</td><td style="padding:4px 10px;font-weight:600;">${escapeHtml(v)}</td></tr>`
       })
       .filter(Boolean)
       .join('')

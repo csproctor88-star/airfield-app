@@ -34,6 +34,39 @@ export function isSummaryColumn(columnName: string): boolean {
   return SUMMARY_COLUMN_NAMES.has(columnName.trim().toLowerCase())
 }
 
+/**
+ * Format a raw `column_values[col.id]` string for display in tables,
+ * the detail card, the PDF, and outbound emails. Mirrors the spine
+ * ETA (Z) convention for `time` columns — strips any stored colon
+ * and appends a `Z` suffix so admin-configured time columns render
+ * consistently with the spine field. Empty / null inputs fall through
+ * as empty strings; callers handle the em-dash placeholder.
+ *
+ * Backwards-compatible with both shapes that may currently live in
+ * `column_values`:
+ *   - "15:00" — entries written before the HHMM input swap
+ *   - "1500"  — entries written after
+ * Either way the rendered output is "1500Z".
+ */
+export function formatPprColumnValue(col: PprColumn, raw: string | null | undefined): string {
+  if (!raw) return ''
+  switch (col.column_type) {
+    case 'yes_no_na':
+      if (raw === 'yes') return 'YES'
+      if (raw === 'no')  return 'NO'
+      if (raw === 'na')  return 'N/A'
+      return raw
+    case 'date':
+      try { return new Date(raw + 'T00:00:00').toLocaleDateString() } catch { return raw }
+    case 'time': {
+      const digits = raw.replace(/\D/g, '').slice(0, 4)
+      return digits ? `${digits}Z` : raw
+    }
+    default:
+      return raw
+  }
+}
+
 export type PprColumn = {
   id: string
   base_id: string

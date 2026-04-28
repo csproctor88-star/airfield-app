@@ -10,7 +10,7 @@ import {
   drawFooter,
   tableStyles,
 } from '@/lib/pdf-utils'
-import type { PprColumn, PprCoordination, PprEntry, PprRemark } from '@/lib/supabase/ppr'
+import { formatPprColumnValue, type PprColumn, type PprCoordination, type PprEntry, type PprRemark } from '@/lib/supabase/ppr'
 
 const STATUS_LABELS: Record<string, string> = {
   pending_amops_triage: 'Pending Triage',
@@ -44,24 +44,13 @@ interface PprPdfInput {
   coordsByEntry?: Record<string, PprCoordination[]>
 }
 
-function formatYesNoNa(v: string): string {
-  if (v === 'yes') return 'YES'
-  if (v === 'no') return 'NO'
-  if (v === 'na') return 'N/A'
-  return v || ''
-}
-
-function formatCell(col: PprColumn, raw: string): string {
-  if (!raw) return ''
-  switch (col.column_type) {
-    case 'yes_no_na':
-      return formatYesNoNa(raw)
-    case 'date':
-      try { return new Date(raw + 'T00:00:00').toLocaleDateString() } catch { return raw }
-    default:
-      return raw
-  }
-}
+// Single source of truth for column-value formatting lives in
+// lib/supabase/ppr.ts (`formatPprColumnValue`) so the PDF, the
+// in-app tables, the detail card, and the email templates all
+// render `time` as HHMM Z, `yes_no_na` as YES/NO/N/A, etc. the
+// same way. Local alias kept so the rest of this file reads
+// without churn.
+const formatCell = formatPprColumnValue
 
 export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; filename: string }> {
   const { columns, entries, dateFrom, dateTo, baseName, baseIcao, remarksByEntry, coordsByEntry } = input

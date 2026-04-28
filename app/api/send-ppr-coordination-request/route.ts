@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
+import { formatPprColumnValue } from '@/lib/supabase/ppr'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -96,14 +97,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
-    // Column labels for the body.
+    // Column labels for the body. column_type is needed so time
+    // columns render as HHMM Z (matching the in-app slim Log + the
+    // PDF), not the raw stored "15:00" or "1500".
     const { data: columns } = await reader
       .from('ppr_columns')
-      .select('id, column_name, sort_order')
+      .select('id, column_name, column_type, sort_order')
       .eq('base_id', entry.base_id)
       .order('sort_order', { ascending: true })
-    const colRows: { id: string; column_name: string }[] =
-      ((columns ?? []) as { id: string; column_name: string }[]) || []
+    const colRows: { id: string; column_name: string; column_type: string }[] =
+      ((columns ?? []) as { id: string; column_name: string; column_type: string }[]) || []
 
     // Agency labels for subject lines.
     const { data: agencies } = await reader
@@ -134,9 +137,10 @@ export async function POST(request: Request) {
 
     const valuesHtml = colRows
       .map((c) => {
-        const v = (entry.column_values || {})[c.id]
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const v = formatPprColumnValue(c as any, (entry.column_values || {})[c.id])
         if (!v) return null
-        return `<tr><td style="padding:4px 10px;color:#666;">${escapeHtml(c.column_name)}</td><td style="padding:4px 10px;font-weight:600;">${escapeHtml(String(v))}</td></tr>`
+        return `<tr><td style="padding:4px 10px;color:#666;">${escapeHtml(c.column_name)}</td><td style="padding:4px 10px;font-weight:600;">${escapeHtml(v)}</td></tr>`
       })
       .filter(Boolean)
       .join('')

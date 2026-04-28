@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
 import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
-import { fetchPprEntriesForDate, fetchPprColumns, isSummaryColumn, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
+import { fetchPprEntriesForDate, fetchPprColumns, isSummaryColumn, formatPprColumnValue, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
@@ -2373,7 +2373,7 @@ export default function HomePage() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
+                <table style={{ width: 'auto', minWidth: 'min(100%, 720px)', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
                   <thead>
                     <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
                       <th style={ppPanelTh}>PPR #</th>
@@ -2415,13 +2415,16 @@ export default function HomePage() {
                           <td style={ppPanelTd}>
                             {entry.arrival_eta_zulu
                               ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
-                              : <span style={{ color: 'var(--color-text-3)' }}>\u2014</span>}
+                              : <span style={{ color: 'var(--color-text-3)' }}>{'\u2014'}</span>}
                           </td>
-                          {summaryCols.map(col => (
-                            <td key={col.id} style={ppPanelTd}>
-                              {(entry.column_values || {})[col.id] || '\u2014'}
-                            </td>
-                          ))}
+                          {summaryCols.map(col => {
+                            const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id])
+                            return (
+                              <td key={col.id} style={ppPanelTd}>
+                                {formatted || '\u2014'}
+                              </td>
+                            )
+                          })}
                         </tr>
                       )
                     })}

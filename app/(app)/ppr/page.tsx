@@ -24,6 +24,7 @@ import {
   addPprRemark,
   cancelPprEntry,
   isSummaryColumn,
+  formatPprColumnValue,
   type PprColumn,
   type PprEntry,
   type PprCoordination,
@@ -957,11 +958,14 @@ export default function PprPage() {
                         ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
                         : <span style={{ color: 'var(--color-text-3)' }}>—</span>}
                     </td>
-                    {summaryColumns.map(col => (
-                      <td key={col.id} style={dynamicTdStyle}>
-                        {(entry.column_values || {})[col.id] || '—'}
-                      </td>
-                    ))}
+                    {summaryColumns.map(col => {
+                      const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id])
+                      return (
+                        <td key={col.id} style={dynamicTdStyle}>
+                          {formatted || '—'}
+                        </td>
+                      )
+                    })}
                   </tr>
                 )
               })}
@@ -1516,7 +1520,7 @@ export default function PprPage() {
                     ? [{ label: 'ETA (Z)', value: detailEntry.arrival_eta_zulu.replace(':', '') + 'Z' }]
                     : []),
                   ...dataColumns
-                    .map((c) => ({ label: c.column_name, value: (detailEntry.column_values || {})[c.id] || '' }))
+                    .map((c) => ({ label: c.column_name, value: formatPprColumnValue(c, (detailEntry.column_values || {})[c.id]) }))
                     .filter((r) => r.value),
                   ...(detailEntry.notes ? [{ label: 'Notes', value: detailEntry.notes }] : []),
                 ]}
@@ -1789,7 +1793,7 @@ function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprCol
       {columns.map((c) => {
         // info_only columns have no per-entry value; skip.
         if (c.column_type === 'info_only') return null
-        const v = (entry.column_values || {})[c.id]
+        const v = formatPprColumnValue(c, (entry.column_values || {})[c.id])
         if (!v) return null
         return <div key={c.id}><strong>{c.column_name}:</strong> {v}</div>
       })}

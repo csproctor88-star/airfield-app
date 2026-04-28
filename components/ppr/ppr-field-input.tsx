@@ -154,21 +154,18 @@ export function PprFieldInput({
         <input
           type="text"
           inputMode="numeric"
-          // 00:00 through 23:59. Browser-side validation only — the
-          // staff modal and public form still surface their own
-          // required-field check before submit.
-          pattern="^([01]\d|2[0-3]):[0-5]\d$"
-          placeholder="HH:MM"
-          maxLength={5}
-          value={value}
-          onChange={(e) => {
-            // Filter to digits + colon and keep length capped at 5.
-            // Auto-insert ':' once two digits are typed without one
-            // for a slightly smoother keyboard entry.
-            let v = e.target.value.replace(/[^\d:]/g, '')
-            if (v.length === 2 && !v.includes(':') && (value || '').length === 1) v += ':'
-            onChange(v.slice(0, 5))
-          }}
+          // 4-digit HHMM (24-hour Zulu). Mirrors the spine ETA (Z)
+          // field on /ppr — no colon in display or storage. Existing
+          // entries that predate this change may carry "HH:MM" in
+          // column_values; the display formatters strip the colon
+          // before rendering, so both shapes coexist cleanly.
+          pattern="^([01]\d|2[0-3])[0-5]\d$"
+          placeholder="HHMM"
+          maxLength={4}
+          // Strip a stale colon from legacy values so the input
+          // always shows 4 digits regardless of how it was stored.
+          value={(value || '').replace(':', '').slice(0, 4)}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
           required={isRequired}
           id={`ppr-field-${columnId}`}
           style={inputStyle}
