@@ -9,7 +9,28 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
-import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES } from '@/lib/constants'
+import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES, STATUS_CONFIG } from '@/lib/constants'
+
+// Render a status_updates.notes value as plain language. Handles two
+// shapes: the new "Status changed to: <Label>" prefix written by
+// updateDiscrepancy / ces_update_discrepancy, and the legacy
+// "CURRENT_STATUS: <enum>" rows already in the DB from before that fix.
+function formatStatusUpdateNotes(notes: string | null | undefined): string {
+  if (!notes) return ''
+  const legacy = notes.match(/^CURRENT_STATUS:\s*(\S+)/)
+  if (legacy) {
+    const match = CURRENT_STATUS_OPTIONS.find(o => o.value === legacy[1])
+    return `Status changed to: ${match ? match.label : legacy[1]}`
+  }
+  return notes
+}
+
+// Capitalize a discrepancy `status` enum (open / completed / cancelled)
+// for display in the Notes History "Status: x → y" line.
+function statusLabel(value: string | null | undefined): string {
+  if (!value) return ''
+  return STATUS_CONFIG[value as keyof typeof STATUS_CONFIG]?.label ?? value
+}
 
 import { fetchInfrastructureFeature, fetchSystemFeaturesForFeature, buildFeatureDisplayName, formatFeatureType } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
@@ -260,9 +281,9 @@ export default function DiscrepancyDetailPage() {
         created_at: u.created_at,
         user_name: u.user_name,
         user_rank: u.user_rank,
-        old_status: u.old_status,
-        new_status: u.new_status,
-        notes: u.notes,
+        old_status: u.old_status ? statusLabel(u.old_status) : u.old_status,
+        new_status: u.new_status ? statusLabel(u.new_status) : u.new_status,
+        notes: formatStatusUpdateNotes(u.notes),
       })),
     })
   }
@@ -335,11 +356,11 @@ export default function DiscrepancyDetailPage() {
                 </div>
                 {update.old_status && (
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 2 }}>
-                    Status: {update.old_status} → {update.new_status}
+                    Status: {statusLabel(update.old_status)} → {statusLabel(update.new_status)}
                   </div>
                 )}
                 {update.notes && (
-                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{update.notes}</div>
+                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{formatStatusUpdateNotes(update.notes)}</div>
                 )}
               </div>
             ))}

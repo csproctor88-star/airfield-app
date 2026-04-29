@@ -1,6 +1,15 @@
 import { friendlyError } from '@/lib/utils'
+import { CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createClient } from './client'
 import type { DiscrepancyStatus, CurrentStatus } from './types'
+
+// Human-readable label for a current_status enum value. Used when we
+// need to write a status transition into a free-text audit field
+// (status_updates.notes) that an Airfield Manager will read directly.
+function currentStatusLabel(value: string): string {
+  const match = CURRENT_STATUS_OPTIONS.find(o => o.value === value)
+  return match ? match.label : value
+}
 
 export type DiscrepancyRow = {
   id: string
@@ -219,7 +228,7 @@ export async function updateDiscrepancy(
           discrepancy_id: id,
           old_status: null,
           new_status: null,
-          notes: `CURRENT_STATUS: ${fields.current_status}`,
+          notes: `Status changed to: ${currentStatusLabel(fields.current_status as string)}`,
           updated_by: user.id,
         }
         if (updated?.base_id) auditRow.base_id = updated.base_id
