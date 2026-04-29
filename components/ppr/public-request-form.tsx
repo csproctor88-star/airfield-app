@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { PprFieldInput } from '@/components/ppr/ppr-field-input'
 import type { PprColumnType } from '@/lib/supabase/ppr'
+import { CheckCircle2, Plane } from 'lucide-react'
+
+// Shared required-marker so the four fixed labels and any dynamic
+// columns rendered below can use the same red token instead of
+// inlining `#EF4444` repeatedly.
+const RequiredMark = () => (
+  <span style={{ color: 'var(--color-danger, #EF4444)' }} aria-label="required">*</span>
+)
 
 type PublicCol = {
   id: string
@@ -275,14 +283,25 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
   if (submitted) {
     return (
       <div style={shellStyle('center')}>
-        <div style={{ textAlign: 'center', maxWidth: 460, padding: 24 }}>
-          <div style={{ fontSize: 48, marginBottom: 16, color: '#22C55E' }}>&#10003;</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#22C55E', marginBottom: 10 }}>Request Submitted</div>
-          <div style={{ fontSize: 16, color: '#E2E8F0', lineHeight: 1.5 }}>
+        <div style={{
+          textAlign: 'left', maxWidth: 480, width: '100%', padding: 20,
+          borderLeft: '4px solid var(--color-success, #22C55E)',
+          borderRadius: 8,
+          background: '#1E293B',
+          border: '1px solid #334155',
+          borderLeftWidth: 4, borderLeftColor: 'var(--color-success, #22C55E)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+            <CheckCircle2 size={48} color="var(--color-success, #22C55E)" />
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0' }}>
+              Request Submitted
+            </div>
+          </div>
+          <div style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.55 }}>
             {config.baseName} AMOPS has received your request and will review it.
             You will receive a separate email with your assigned PPR number once it is approved.
           </div>
-          <div style={{ marginTop: 16, fontSize: 12, color: '#64748B' }}>
+          <div style={{ marginTop: 14, fontSize: 12, color: '#64748B' }}>
             A confirmation has been sent to {requesterEmail}.
           </div>
         </div>
@@ -293,13 +312,22 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
   return (
     <div style={{ minHeight: '100vh', background: '#0B1120', padding: '24px 16px' }}>
       <div style={{ maxWidth: 520, margin: '0 auto' }}>
-        {/* Header */}
+        {/* Header — base name in primary tier; subtitle demoted to a
+            tertiary uppercase label so the page feels like the rest
+            of Glidepath rather than a one-off public form. */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#E2E8F0', marginBottom: 4 }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 6,
+          }}>
+            <Plane size={18} color="var(--color-accent, #38BDF8)" />
             {config.baseName}
           </div>
-          <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>
-            Prior Permission Required (PPR) Request
+          <div style={{
+            fontSize: 11, fontWeight: 600, color: '#94A3B8',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>
+            Prior Permission Required Request
           </div>
         </div>
 
@@ -309,7 +337,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
         }}>
           {/* Fixed: requester name */}
           <div>
-            <label style={labelStyle}>Name <span style={{ color: '#EF4444' }}>*</span></label>
+            <label style={labelStyle}>Name <RequiredMark /></label>
             <input
               value={requesterName}
               onChange={(e) => setRequesterName(e.target.value)}
@@ -320,7 +348,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
 
           {/* Fixed: requester email */}
           <div>
-            <label style={labelStyle}>Email <span style={{ color: '#EF4444' }}>*</span></label>
+            <label style={labelStyle}>Email <RequiredMark /></label>
             <input
               type="email"
               value={requesterEmail}
@@ -335,7 +363,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
 
           {/* Fixed: requester commercial phone */}
           <div>
-            <label style={labelStyle}>Commercial Phone <span style={{ color: '#EF4444' }}>*</span></label>
+            <label style={labelStyle}>Commercial Phone <RequiredMark /></label>
             <input
               type="tel"
               value={requesterPhone}
@@ -350,7 +378,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
 
           {/* Fixed: arrival date */}
           <div>
-            <label style={labelStyle}>Requested Arrival Date <span style={{ color: '#EF4444' }}>*</span></label>
+            <label style={labelStyle}>Requested Arrival Date <RequiredMark /></label>
             <input
               type="date"
               value={arrivalDate}
@@ -419,7 +447,15 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
           </div>
 
           {error && (
-            <div style={{ fontSize: 13, color: '#EF4444', fontWeight: 600 }}>{error}</div>
+            <div style={{
+              padding: '8px 12px', borderRadius: 8,
+              background: 'rgba(239, 68, 68, 0.10)',
+              border: '1px solid rgba(239, 68, 68, 0.30)',
+              color: '#FCA5A5',
+              fontSize: 13, fontWeight: 600,
+            }}>
+              {error}
+            </div>
           )}
 
           <button

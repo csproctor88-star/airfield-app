@@ -1173,6 +1173,14 @@ html, body {
 }
 .weather-skeleton {
   animation: skeletonPulse 1.4s ease-in-out infinite;
+  background: var(--color-bg-elevated);
+}
+
+/* Subtle row hover affordance for slim Log table on /ppr — same
+   pattern that /discrepancies uses, scoped to a class so it doesn't
+   bleed into other tables. */
+.ppr-log-row:hover {
+  background: var(--color-bg-elevated);
 }
 
 /* On narrow phones the operational cluster in the app-shell header

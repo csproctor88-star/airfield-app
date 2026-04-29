@@ -37,6 +37,12 @@ import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { PprFieldInput } from '@/components/ppr/ppr-field-input'
 import type jsPDF from 'jspdf'
+import {
+  Plus, FileText, Mail, Search, SlidersHorizontal, X,
+  Inbox, MailQuestion, Clock, CheckCircle2, XCircle, Hourglass,
+  CheckCircle, AlertTriangle, AlertCircle,
+  Route, Check, CheckSquare, Bookmark,
+} from 'lucide-react'
 
 type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'pending_amops_approval' | 'approved' | 'denied' | 'canceled'
 
@@ -81,6 +87,10 @@ export default function PprPage() {
   // Filter chips
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [agencyFilter, setAgencyFilter] = useState<string | null>(null)
+
+  // Search + filter dropdown (mirrors /discrepancies pattern)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   // Create/Edit modal
   const [showModal, setShowModal] = useState(false)
@@ -375,8 +385,33 @@ export default function PprPage() {
         return coords.some((c) => c.agency_id === agencyFilter && c.status === 'pending')
       })
     }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      rows = rows.filter((e) => {
+        if (e.ppr_number?.toLowerCase().includes(q)) return true
+        if (e.notes?.toLowerCase().includes(q)) return true
+        if (e.requester_name?.toLowerCase().includes(q)) return true
+        // Match against any column value (covers Callsign / Aircraft Type
+        // and any base-defined column the admin chose to surface).
+        const vals = e.column_values || {}
+        return Object.values(vals).some((v) => String(v ?? '').toLowerCase().includes(q))
+      })
+    }
     return rows
-  }, [entries, statusFilter, agencyFilter, coordsByEntry])
+  }, [entries, statusFilter, agencyFilter, coordsByEntry, searchQuery])
+
+  const dateActive = dateMode !== 'today'
+  const activeFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) +
+    (agencyFilter ? 1 : 0) +
+    (dateActive ? 1 : 0)
+  const hasAnyFilter = activeFilterCount > 0 || searchQuery.trim().length > 0
+  const clearAllFilters = () => {
+    setStatusFilter('all')
+    setAgencyFilter(null)
+    setDateMode('today')
+    setSearchQuery('')
+  }
 
   // Columns that hold a per-PPR value AND the admin chose to surface
   // on the PPR Log (table + detail card + PDF). info_only is excluded
@@ -685,26 +720,37 @@ export default function PprPage() {
 
   return (
     <div className="page-container" style={{ maxWidth: 1200 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <h1 style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
-          Prior Permission Required
-        </h1>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* Page header — tertiary tier label + utility/primary action cluster
+          + accent underline. Mirrors /discrepancies. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 8,
+        paddingBottom: 8, marginBottom: 12,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <div style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          PPR Log
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             onClick={handleExportPdf}
             disabled={generatingPdf || filteredEntries.length === 0}
             title={filteredEntries.length === 0 ? 'No entries in the selected range' : 'Export PDF'}
-            style={pdfBtnStyle(generatingPdf || filteredEntries.length === 0)}
+            style={utilityBtnStyle(generatingPdf || filteredEntries.length === 0)}
           >
-            {generatingPdf ? 'Generating…' : 'Export PDF'}
+            <FileText size={14} color="var(--color-accent)" />
+            {generatingPdf ? 'Generating…' : 'PDF'}
           </button>
           <button
             onClick={handleEmailPdf}
             disabled={generatingPdf || filteredEntries.length === 0}
-            style={pdfBtnStyle(generatingPdf || filteredEntries.length === 0)}
+            style={utilityBtnStyle(generatingPdf || filteredEntries.length === 0)}
           >
-            Email PDF
+            <Mail size={14} color="var(--color-accent)" />
+            Email
           </button>
           {canWrite && (
             <button
@@ -712,13 +758,19 @@ export default function PprPage() {
               disabled={noColumns}
               title={noColumns ? 'Configure PPR columns in Base Setup first' : 'New PPR'}
               style={{
-                padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-                background: noColumns ? 'var(--color-border)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                color: noColumns ? 'var(--color-text-3)' : '#fff',
-                cursor: noColumns ? 'not-allowed' : 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid rgba(56,189,248,0.40)',
+                background: noColumns ? 'var(--color-border)' : 'rgba(56,189,248,0.10)',
+                color: noColumns ? 'var(--color-text-3)' : 'var(--color-accent)',
+                cursor: noColumns ? 'not-allowed' : 'pointer',
+                fontSize: 'var(--fs-xs)', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+                fontFamily: 'inherit',
               }}
             >
-              + New PPR
+              <Plus size={14} />
+              New
             </button>
           )}
         </div>
@@ -739,7 +791,9 @@ export default function PprPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
             {showTriage && (
               <KpiPill
-                label={`${pendingTriage} AWAITING REVIEW`}
+                count={pendingTriage}
+                label="Awaiting Review"
+                icon={<Inbox size={14} />}
                 colorBg="rgba(220,38,38,0.12)"
                 colorFg="#ef4444"
                 colorBorder="rgba(220,38,38,0.4)"
@@ -752,7 +806,9 @@ export default function PprPage() {
             )}
             {showApproval && (
               <KpiPill
-                label={`${pendingApproval} AWAITING APPROVAL`}
+                count={pendingApproval}
+                label="Awaiting Approval"
+                icon={<Clock size={14} />}
                 colorBg="rgba(245,158,11,0.12)"
                 colorFg="#f59e0b"
                 colorBorder="rgba(245,158,11,0.4)"
@@ -769,7 +825,9 @@ export default function PprPage() {
               return (
                 <KpiPill
                   key={a.id}
-                  label={`${n} ${a.agency_name.toUpperCase()}`}
+                  count={n}
+                  label={a.agency_name}
+                  icon={<MailQuestion size={14} />}
                   colorBg="rgba(56,189,248,0.10)"
                   colorFg="var(--color-accent)"
                   colorBorder="rgba(56,189,248,0.4)"
@@ -796,86 +854,270 @@ export default function PprPage() {
         </div>
       )}
 
-      {/* Combined filter bar: status chips on the left, a vertical
-          divider, then date chips. Date chips look forward from
-          today (PPRs are about future arrivals; for retrospective
-          ranges use Custom). When the queue filter ignores dates,
-          the date chips render but are visually muted. */}
-      <div style={{
-        display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center',
-      }}>
-        {(['all', 'pending_amops_triage', 'pending_coordination', 'pending_amops_approval', 'approved', 'denied', 'canceled'] as StatusFilter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => { setStatusFilter(f); setAgencyFilter(null) }}
-            style={chipStyle(statusFilter === f)}
-          >
-            {f === 'all' ? 'All'
-              : f === 'pending_amops_triage' ? 'Review'
-              : f === 'pending_coordination' ? 'Coordination'
-              : f === 'pending_amops_approval' ? 'Approval'
-              : f === 'approved' ? 'Approved'
-              : f === 'denied' ? 'Denied'
-              : 'Canceled'}
-          </button>
-        ))}
-
-        <span style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
-
-        {(['today', '7d', '30d', 'custom'] as const).map(mode => (
-          <button
-            key={mode}
-            onClick={() => setDateMode(mode)}
-            disabled={ignoreDateFilter}
-            title={ignoreDateFilter ? 'Date range is ignored when viewing pending queues' : undefined}
+      {/* Search + Filters cluster. Mirrors /discrepancies — search
+          input promoted to top, filters tucked into a dropdown, and
+          an active-filter chip strip below for one-click dismissal. */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', position: 'relative' }}>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <Search size={14} color="var(--color-text-3)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search PPR #, callsign, aircraft, notes…"
             style={{
-              ...chipStyle(dateMode === mode),
-              opacity: ignoreDateFilter ? 0.4 : 1,
-              cursor: ignoreDateFilter ? 'not-allowed' : 'pointer',
+              width: '100%', boxSizing: 'border-box',
+              padding: '8px 10px 8px 30px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg)', color: 'var(--color-text-1)',
+              fontSize: 'var(--fs-sm)', fontFamily: 'inherit', outline: 'none',
+            }}
+          />
+        </div>
+        <button
+          onClick={() => setFiltersOpen(o => !o)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: `1px solid ${filtersOpen || activeFilterCount > 0 ? 'var(--color-accent)' : 'var(--color-border)'}`,
+            background: filtersOpen ? 'rgba(56,189,248,0.08)' : 'var(--color-bg-surface)',
+            color: filtersOpen || activeFilterCount > 0 ? 'var(--color-accent)' : 'var(--color-text-2)',
+            cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}
+        >
+          <SlidersHorizontal size={14} />
+          Filters
+          {activeFilterCount > 0 && (
+            <span style={{
+              minWidth: 18, padding: '0 5px', borderRadius: 9, lineHeight: '18px',
+              background: 'var(--color-accent)', color: 'var(--color-bg)',
+              fontSize: 'var(--fs-2xs)', fontWeight: 800, textAlign: 'center',
+            }}>
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+
+        {filtersOpen && (
+          <div
+            style={{
+              position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 30,
+              minWidth: 320, padding: 12, borderRadius: 'var(--radius-md)',
+              background: 'var(--color-bg-surface)',
+              border: '1px solid var(--color-border)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+              display: 'flex', flexDirection: 'column', gap: 12,
             }}
           >
-            {mode === 'today' ? 'Today' : mode === '7d' ? 'Next 7d' : mode === '30d' ? 'Next 30d' : 'Custom'}
-          </button>
-        ))}
+            <div>
+              <div style={{
+                fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+              }}>
+                Status
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {(['all', 'pending_amops_triage', 'pending_coordination', 'pending_amops_approval', 'approved', 'denied', 'canceled'] as StatusFilter[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => { setStatusFilter(f); setAgencyFilter(null) }}
+                    style={chipStyle(statusFilter === f)}
+                  >
+                    {f === 'all' ? 'All'
+                      : f === 'pending_amops_triage' ? 'Review'
+                      : f === 'pending_coordination' ? 'Coordination'
+                      : f === 'pending_amops_approval' ? 'Approval'
+                      : f === 'approved' ? 'Approved'
+                      : f === 'denied' ? 'Denied'
+                      : 'Canceled'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {dateMode === 'custom' && !ignoreDateFilter && (
-          <>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
-              style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)' }}
-            />
-            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)' }}>to</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
-              style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)' }}
-            />
-          </>
+            <div>
+              <div style={{
+                fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+              }}>
+                Date Range
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {(['today', '7d', '30d', 'custom'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setDateMode(mode)}
+                    disabled={ignoreDateFilter}
+                    title={ignoreDateFilter ? 'Date range is ignored when viewing pending queues' : undefined}
+                    style={{
+                      ...chipStyle(dateMode === mode),
+                      opacity: ignoreDateFilter ? 0.4 : 1,
+                      cursor: ignoreDateFilter ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {mode === 'today' ? 'Today' : mode === '7d' ? 'Next 7d' : mode === '30d' ? 'Next 30d' : 'Custom'}
+                  </button>
+                ))}
+              </div>
+              {dateMode === 'custom' && !ignoreDateFilter && (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8 }}>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)' }}
+                  />
+                  <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)' }}>to</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                    style={{ padding: '4px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-text-1)', fontSize: 'var(--fs-xs)' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4, borderTop: '1px solid var(--color-border)' }}>
+              <button
+                onClick={clearAllFilters}
+                disabled={!hasAnyFilter}
+                style={{
+                  background: 'none', border: 'none',
+                  color: hasAnyFilter ? 'var(--color-accent)' : 'var(--color-text-3)',
+                  fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  cursor: hasAnyFilter ? 'pointer' : 'default', padding: 0,
+                }}
+              >
+                Clear all
+              </button>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                {filteredEntries.length} PPR{filteredEntries.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
         )}
-
-        <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-          {filteredEntries.length} PPR{filteredEntries.length !== 1 ? 's' : ''}
-        </span>
       </div>
+
+      {/* Active-filter chip strip — only when something is set. */}
+      {hasAnyFilter && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10, alignItems: 'center' }}>
+          {searchQuery.trim() && (
+            <ActiveFilterChip label={`"${searchQuery.trim()}"`} onClear={() => setSearchQuery('')} />
+          )}
+          {statusFilter !== 'all' && (
+            <ActiveFilterChip
+              label={`Status: ${statusFilter === 'pending_amops_triage' ? 'Review'
+                : statusFilter === 'pending_coordination' ? 'Coordination'
+                : statusFilter === 'pending_amops_approval' ? 'Approval'
+                : statusFilter === 'approved' ? 'Approved'
+                : statusFilter === 'denied' ? 'Denied'
+                : 'Canceled'}`}
+              onClear={() => setStatusFilter('all')}
+            />
+          )}
+          {agencyFilter && (
+            <ActiveFilterChip
+              label={`Agency: ${agencies.find(a => a.id === agencyFilter)?.agency_name || ''}`}
+              onClear={() => setAgencyFilter(null)}
+            />
+          )}
+          {dateActive && (
+            <ActiveFilterChip
+              label={`Date: ${dateMode === '7d' ? 'Next 7d' : dateMode === '30d' ? 'Next 30d' : 'Custom'}`}
+              onClear={() => setDateMode('today')}
+            />
+          )}
+          <button
+            onClick={clearAllFilters}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              color: 'var(--color-accent)', cursor: 'pointer',
+              fontSize: 'var(--fs-xs)', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+            }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* PPR Table */}
       {loading ? (
-        <div className="card" style={{ padding: 24, textAlign: 'center' }}>
-          <p style={{ color: 'var(--color-text-3)' }}>Loading...</p>
+        <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
+            <thead>
+              <tr style={{ background: 'var(--color-bg-elevated)', borderBottom: '2px solid var(--color-border)' }}>
+                <th style={thStyle}>PPR #</th>
+                <th style={thStyle}>Status</th>
+                <th style={thStyle}>Arrival Date</th>
+                {summaryColumns.map(col => (
+                  <th key={col.id} style={dynamicThStyle}>{col.column_name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <td style={tdStyle}><span className="weather-skeleton" style={{ display: 'inline-block', width: 80, height: 14, borderRadius: 4 }} /></td>
+                  <td style={tdStyle}><span className="weather-skeleton" style={{ display: 'inline-block', width: 100, height: 18, borderRadius: 9 }} /></td>
+                  <td style={tdStyle}><span className="weather-skeleton" style={{ display: 'inline-block', width: 90, height: 14, borderRadius: 4 }} /></td>
+                  {summaryColumns.map(col => (
+                    <td key={col.id} style={dynamicTdStyle}><span className="weather-skeleton" style={{ display: 'inline-block', width: 70, height: 14, borderRadius: 4 }} /></td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : filteredEntries.length === 0 ? (
-        <div className="card" style={{ padding: 24, textAlign: 'center' }}>
-          <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>No PPRs match these filters.</p>
+        <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', margin: '0 0 12px' }}>
+            {hasAnyFilter ? 'No PPRs match the current filters.' : 'No PPRs in the selected range.'}
+          </p>
+          <div style={{ display: 'inline-flex', gap: 8, justifyContent: 'center' }}>
+            {hasAnyFilter && (
+              <button
+                onClick={clearAllFilters}
+                style={{
+                  padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+                  cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Clear all filters
+              </button>
+            )}
+            {canWrite && !noColumns && (
+              <button
+                onClick={handleNew}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(56,189,248,0.40)',
+                  background: 'rgba(56,189,248,0.10)', color: 'var(--color-accent)',
+                  cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <Plus size={14} />
+                New PPR
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
-              <tr style={{ background: 'var(--color-bg-inset)', borderBottom: '2px solid var(--color-border)' }}>
+              <tr style={{ background: 'var(--color-bg-elevated)', borderBottom: '2px solid var(--color-border)' }}>
                 <th style={thStyle}>PPR #</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Arrival Date</th>
@@ -892,6 +1134,7 @@ export default function PprPage() {
                 return (
                   <tr
                     key={entry.id}
+                    className="ppr-log-row"
                     style={{
                       borderBottom: '1px solid var(--color-border)',
                       // Soft-cancel visual: strike + dim. Detail dialog
@@ -926,8 +1169,9 @@ export default function PprPage() {
                         {meta.label}
                       </span>
                       {nonConcur && entry.status !== 'approved' && entry.status !== 'denied' && (
-                        <span style={{ marginLeft: 6, color: '#ef4444', fontSize: 'var(--fs-xs)', fontWeight: 700 }} title="At least one agency non-concurred">
-                          ⚠ NON-CONCUR
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 6, color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700 }} title="At least one agency non-concurred">
+                          <AlertTriangle size={12} />
+                          NON-CONCUR
                         </span>
                       )}
                     </td>
@@ -1013,59 +1257,36 @@ export default function PprPage() {
             )}
 
             {/* Save-mode picker (create only) — three mutually
-                exclusive outcomes. Mirrors the triage modal's three
-                radio pattern so the create / triage flows feel the
-                same shape to AMOPS. */}
+                exclusive outcomes. Card-based segmented control so
+                the selected outcome is visually unambiguous. */}
             {!editingEntry && (
-              <div style={{ marginBottom: 12, padding: 10, border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-bg-inset)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {([
-                    {
-                      mode: 'pending' as const,
-                      label: 'Save pending — coordinating manually',
-                      help: 'Saves at "Pending Approval" with no in-app coordination. Use when you\'ll coordinate by phone, email, or in person and finalize later via Decide → Approve.',
-                    },
-                    {
-                      mode: 'preCoord' as const,
-                      label: 'Pre-coordinated — approve now',
-                      help: 'No coordination needed. Approves immediately and mints the PPR number with your OI.',
-                    },
+              <div style={{ marginBottom: 12 }}>
+                <SegmentedCard<CreateMode>
+                  name="create-mode"
+                  value={formCreateMode}
+                  onChange={setFormCreateMode}
+                  options={[
                     ...(agencies.length > 0 ? [{
-                      mode: 'route' as const,
+                      value: 'route' as const,
                       label: canTriage ? 'Send to coordination' : 'Send to coordination (requires PPR Review)',
                       help: 'Pick the agencies that must concur. They get an email with a link back into Glidepath.',
+                      icon: <Route size={18} />,
+                      disabled: !canTriage,
                     }] : []),
-                  ]).map((opt) => {
-                    const selected = formCreateMode === opt.mode
-                    const disabled = opt.mode === 'route' && !canTriage
-                    return (
-                      <label
-                        key={opt.mode}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 8,
-                          padding: '8px 10px', borderRadius: 4,
-                          border: selected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
-                          background: selected ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
-                          cursor: disabled ? 'not-allowed' : 'pointer',
-                          opacity: disabled ? 0.5 : 1,
-                        }}
-                      >
-                        <input
-                          type="radio"
-                          name="create-mode"
-                          checked={selected}
-                          disabled={disabled}
-                          onChange={() => setFormCreateMode(opt.mode)}
-                          style={{ marginTop: 3, accentColor: 'var(--color-accent)' }}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{opt.label}</div>
-                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{opt.help}</div>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
+                    {
+                      value: 'preCoord' as const,
+                      label: 'Pre-coordinated — approve now',
+                      help: 'No coordination needed. Approves immediately and mints the PPR number with your OI.',
+                      icon: <CheckSquare size={18} />,
+                    },
+                    {
+                      value: 'pending' as const,
+                      label: 'Save pending — coordinating manually',
+                      help: 'Saves at "Pending Approval" with no in-app coordination. Use when you\'ll coordinate by phone, email, or in person and finalize later via Decide → Approve.',
+                      icon: <Bookmark size={18} />,
+                    },
+                  ]}
+                />
 
                 {/* Agency picker only shows when 'route' is selected. */}
                 {formCreateMode === 'route' && agencies.length > 0 && (
@@ -1134,38 +1355,17 @@ export default function PprPage() {
             <SubmittedSummary entry={triageEntry} columns={columns} />
 
             {/* Action picker — three mutually-exclusive outcomes. */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, margin: '12px 0' }}>
-              {([
-                { mode: 'route',    label: 'Route to coordination', help: 'Select coordinating agencies; AMOPS approves after they concur.' },
-                { mode: 'preCoord', label: 'Pre-coordinated — approve now', help: 'No agency coordination needed. Approves immediately and emails the requester.' },
-                { mode: 'deny',     label: 'Deny request', help: 'Reject the PPR with a reason. Emails the requester.' },
-              ] as { mode: TriageMode; label: string; help: string }[]).map((opt) => {
-                const selected = triageMode === opt.mode
-                return (
-                  <label
-                    key={opt.mode}
-                    style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 8,
-                      padding: '8px 10px', borderRadius: 4,
-                      border: selected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
-                      background: selected ? 'rgba(56,189,248,0.06)' : 'transparent',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="triage-mode"
-                      checked={selected}
-                      onChange={() => setTriageMode(opt.mode)}
-                      style={{ marginTop: 3 }}
-                    />
-                    <span>
-                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{opt.label}</span>
-                      <span style={{ display: 'block', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{opt.help}</span>
-                    </span>
-                  </label>
-                )
-              })}
+            <div style={{ margin: '12px 0' }}>
+              <SegmentedCard<TriageMode>
+                name="triage-mode"
+                value={triageMode}
+                onChange={setTriageMode}
+                options={[
+                  { value: 'route',    label: 'Route to coordination',    help: 'Select coordinating agencies; AMOPS approves after they concur.', icon: <Route size={18} /> },
+                  { value: 'preCoord', label: 'Pre-coordinated — approve now', help: 'No agency coordination needed. Approves immediately and emails the requester.', icon: <Check size={18} /> },
+                  { value: 'deny',     label: 'Deny request',             help: 'Reject the PPR with a reason. Emails the requester.', icon: <XCircle size={18} /> },
+                ]}
+              />
             </div>
 
             {triageMode === 'route' && (() => {
@@ -1195,7 +1395,7 @@ export default function PprPage() {
                           title={noCoords ? 'No coordinators assigned — email will be skipped for this agency' : undefined}
                         >
                           {a.agency_name}
-                          {noCoords && <span style={{ marginLeft: 6, color: 'var(--color-warning, #f59e0b)' }}>⚠</span>}
+                          {noCoords && <AlertTriangle size={12} color="var(--color-warning, #f59e0b)" style={{ marginLeft: 6, verticalAlign: '-2px' }} />}
                         </button>
                       )
                     })}
@@ -1209,8 +1409,12 @@ export default function PprPage() {
                       borderRadius: 4,
                       fontSize: 'var(--fs-xs)',
                       color: 'var(--color-text-1)',
+                      display: 'flex', alignItems: 'flex-start', gap: 8,
                     }}>
-                      <strong>⚠ No coordinators</strong> for {orphanNames.join(', ')}. The coordination-request email will be skipped for {orphanNames.length === 1 ? 'this agency' : 'these agencies'}; assign coordinators in Base Setup → PPR Columns or notify them out-of-band.
+                      <AlertCircle size={14} color="var(--color-warning, #f59e0b)" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <span>
+                        <strong>No coordinators</strong> for {orphanNames.join(', ')}. The coordination-request email will be skipped for {orphanNames.length === 1 ? 'this agency' : 'these agencies'}; assign coordinators in Base Setup → PPR Columns or notify them out-of-band.
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1290,31 +1494,33 @@ export default function PprPage() {
                     {isPending && (
                       <>
                         <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                          {(['concur', 'non_concur'] as const).map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setCoordSelections((prev) => ({
-                                ...prev,
-                                [row.id]: { status: opt, comment: prev[row.id]?.comment ?? '' },
-                              }))}
-                              style={{
-                                flex: 1, padding: '6px 8px', borderRadius: 4, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                                cursor: 'pointer',
-                                border: sel?.status === opt
-                                  ? `2px solid ${opt === 'concur' ? '#22c55e' : '#ef4444'}`
-                                  : '1px solid var(--color-border)',
-                                background: sel?.status === opt
-                                  ? (opt === 'concur' ? 'rgba(34,197,94,0.10)' : 'rgba(220,38,38,0.10)')
-                                  : 'var(--color-bg)',
-                                color: sel?.status === opt
-                                  ? (opt === 'concur' ? '#22c55e' : '#ef4444')
-                                  : 'var(--color-text-3)',
-                              }}
-                            >
-                              {opt === 'concur' ? 'Concur' : 'Non-concur'}
-                            </button>
-                          ))}
+                          {(['concur', 'non_concur'] as const).map((opt) => {
+                            const isSel = sel?.status === opt
+                            const tier = opt === 'concur' ? 'var(--color-success)' : 'var(--color-danger)'
+                            const tierBg = opt === 'concur' ? 'rgba(34,197,94,0.10)' : 'rgba(220,38,38,0.10)'
+                            const Icon = opt === 'concur' ? CheckCircle2 : XCircle
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setCoordSelections((prev) => ({
+                                  ...prev,
+                                  [row.id]: { status: opt, comment: prev[row.id]?.comment ?? '' },
+                                }))}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                  flex: 1, padding: '8px 8px', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
+                                  cursor: 'pointer', fontFamily: 'inherit',
+                                  border: isSel ? `2px solid ${tier}` : '1px solid var(--color-border)',
+                                  background: isSel ? tierBg : 'var(--color-bg)',
+                                  color: isSel ? tier : 'var(--color-text-3)',
+                                }}
+                              >
+                                <Icon size={14} />
+                                {opt === 'concur' ? 'Concur' : 'Non-concur'}
+                              </button>
+                            )
+                          })}
                         </div>
                         <textarea
                           placeholder="Comment (optional)"
@@ -1394,22 +1600,28 @@ export default function PprPage() {
                 onClick={submitDeny}
                 disabled={decideBusy}
                 style={{
-                  padding: '6px 16px', borderRadius: 4, border: '1px solid #ef4444',
-                  background: 'transparent', color: '#ef4444',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 16px', borderRadius: 4, border: '1px solid var(--color-danger)',
+                  background: 'transparent', color: 'var(--color-danger)',
                   cursor: decideBusy ? 'not-allowed' : 'pointer', fontWeight: 600,
+                  fontFamily: 'inherit',
                 }}
               >
+                <XCircle size={14} />
                 Deny
               </button>
               <button
                 onClick={submitApprove}
                 disabled={decideBusy}
                 style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '6px 16px', borderRadius: 4, border: 'none',
-                  background: '#22c55e', color: '#fff',
+                  background: 'var(--color-success)', color: '#fff',
                   cursor: decideBusy ? 'not-allowed' : 'pointer', fontWeight: 700,
+                  fontFamily: 'inherit',
                 }}
               >
+                <CheckCircle2 size={14} />
                 {decideBusy ? '…' : 'Approve'}
               </button>
             </div>
@@ -1437,12 +1649,12 @@ export default function PprPage() {
                   <div style={{ fontFamily: 'monospace', fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-accent)' }}>
                     PPR {detailEntry.ppr_number}
                   </div>
-                  <div style={{ marginTop: 6 }}>
+                  <div style={{ marginTop: 8 }}>
                     <span style={{
-                      display: 'inline-block', padding: '2px 10px', borderRadius: 12,
-                      fontSize: 'var(--fs-xs)', fontWeight: 700,
+                      display: 'inline-block', padding: '4px 12px', borderRadius: 12,
+                      fontSize: 'var(--fs-sm)', fontWeight: 700,
                       background: meta.bg, color: meta.fg, border: `1px solid ${meta.border}`,
-                      textTransform: 'uppercase', letterSpacing: '0.03em',
+                      textTransform: 'uppercase', letterSpacing: '0.05em',
                     }}>
                       {meta.label}
                     </span>
@@ -1482,40 +1694,63 @@ export default function PprPage() {
                 ]}
               />
 
-              {/* Coordination */}
+              {/* Coordination — bordered tiles with semantic per-row left
+                  border. Concur green, Non-Concur red, Pending neutral. */}
               {coords.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
                   <div style={{
                     fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
-                    textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                    paddingBottom: 6, marginBottom: 8,
+                    borderBottom: '1px solid rgba(56,189,248,0.20)',
                   }}>
                     Coordination
                   </div>
-                  <table style={{
-                    width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)',
-                    borderRadius: 4, overflow: 'hidden', border: '1px solid var(--color-border)',
-                  }}>
-                    <tbody>
-                      {coords.map((row, i) => (
-                        <tr key={row.id} style={{ background: i % 2 === 0 ? 'var(--color-bg-inset)' : 'transparent' }}>
-                          <td style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--color-text-1)', verticalAlign: 'top' }}>
-                            {row.agency_name}
-                          </td>
-                          <td style={{ padding: '6px 10px', textAlign: 'right', verticalAlign: 'top' }}>
-                            <span style={{
-                              fontSize: 'var(--fs-xs)', fontWeight: 700,
-                              color: row.status === 'concur' ? '#22c55e' : row.status === 'non_concur' ? '#ef4444' : 'var(--color-text-3)',
-                            }}>
-                              {row.status === 'concur' ? 'CONCUR' : row.status === 'non_concur' ? 'NON-CONCUR' : 'PENDING'}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {coords.map((row) => {
+                      const isConcur = row.status === 'concur'
+                      const isNonConcur = row.status === 'non_concur'
+                      const accent = isConcur ? 'var(--color-success)'
+                        : isNonConcur ? 'var(--color-danger)'
+                        : 'var(--color-text-4)'
+                      const StatusIcon = isConcur ? CheckCircle : isNonConcur ? XCircle : Hourglass
+                      return (
+                        <div
+                          key={row.id}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'var(--color-bg-inset)',
+                            border: '1px solid var(--color-border)',
+                            borderLeft: `2px solid ${accent}`,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontWeight: 600, color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)' }}>
+                              {row.agency_name}
                             </span>
-                            {row.comment && (
-                              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>{row.comment}</div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                              textTransform: 'uppercase', letterSpacing: '0.06em',
+                              color: accent,
+                            }}>
+                              <StatusIcon size={12} />
+                              {row.status === 'concur' ? 'Concur' : row.status === 'non_concur' ? 'Non-Concur' : 'Pending'}
+                            </span>
+                          </div>
+                          {row.comment && (
+                            <div style={{
+                              marginTop: 4, fontSize: 'var(--fs-sm)',
+                              color: 'var(--color-text-2)', lineHeight: 1.4,
+                            }}>
+                              {row.comment}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -1525,7 +1760,9 @@ export default function PprPage() {
               <div style={{ marginBottom: 14 }}>
                 <div style={{
                   fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
-                  textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                  paddingBottom: 6, marginBottom: 8,
+                  borderBottom: '1px solid rgba(56,189,248,0.20)',
                 }}>
                   Remarks
                 </div>
@@ -1656,14 +1893,18 @@ export default function PprPage() {
 // ── Subcomponents ──
 
 function KpiPill({
+  count,
   label,
+  icon,
   colorBg,
   colorFg,
   colorBorder,
   active,
   onClick,
 }: {
+  count: number
   label: string
+  icon: React.ReactNode
   colorBg: string
   colorFg: string
   colorBorder: string
@@ -1674,19 +1915,134 @@ function KpiPill({
     <button
       onClick={onClick}
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '4px 10px', borderRadius: 999,
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '6px 12px', borderRadius: 999,
         background: colorBg,
-        border: `1px solid ${active ? colorFg : colorBorder}`,
+        border: `${active ? 2 : 1}px solid ${active ? colorFg : colorBorder}`,
         color: colorFg,
-        fontSize: 'var(--fs-xs)', fontWeight: 700,
-        textTransform: 'uppercase', letterSpacing: '0.04em',
-        cursor: 'pointer', fontFamily: 'inherit',
+        fontFamily: 'inherit', cursor: 'pointer',
       }}
     >
-      <span style={{ width: 6, height: 6, borderRadius: 3, background: colorFg }} />
-      {label}
+      <span style={{ display: 'inline-flex', color: colorFg }}>{icon}</span>
+      <span style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: colorFg, lineHeight: 1 }}>
+        {count}
+      </span>
+      <span style={{
+        fontSize: 'var(--fs-2xs)', fontWeight: 700,
+        color: 'var(--color-text-3)',
+        textTransform: 'uppercase', letterSpacing: '0.06em',
+      }}>
+        {label}
+      </span>
     </button>
+  )
+}
+
+// Card-based segmented control. Used by the Create, Triage, and other
+// PPR modals so operators have an unambiguous selected state for
+// outcome pickers (where the wrong choice = wrong submission).
+function SegmentedCard<T extends string>({
+  options,
+  value,
+  onChange,
+  name,
+}: {
+  options: {
+    value: T
+    label: string
+    help?: string
+    icon: React.ReactNode
+    disabled?: boolean
+  }[]
+  value: T
+  onChange: (next: T) => void
+  name: string
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {options.map((opt) => {
+        const selected = value === opt.value
+        const disabled = !!opt.disabled
+        return (
+          <label
+            key={opt.value}
+            style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              padding: '12px 14px', borderRadius: 12,
+              border: selected ? '2px solid var(--color-accent)' : '2px solid var(--color-border)',
+              background: selected ? 'rgba(56,189,248,0.08)' : 'transparent',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.5 : 1,
+              transition: 'border-color 0.15s, background 0.15s',
+            }}
+          >
+            <input
+              type="radio"
+              name={name}
+              checked={selected}
+              disabled={disabled}
+              onChange={() => onChange(opt.value)}
+              style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+            />
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 18, height: 18, marginTop: 1, flexShrink: 0,
+              color: selected ? 'var(--color-accent)' : 'var(--color-text-3)',
+            }}>
+              {opt.icon}
+            </span>
+            <span style={{ flex: 1 }}>
+              <span style={{
+                display: 'block',
+                fontSize: 'var(--fs-sm)', fontWeight: 600,
+                color: selected ? 'var(--color-text-1)' : 'var(--color-text-2)',
+              }}>
+                {opt.label}
+              </span>
+              {opt.help && (
+                <span style={{
+                  display: 'block', marginTop: 3,
+                  fontSize: 'var(--fs-xs)',
+                  color: selected ? 'var(--color-text-2)' : 'var(--color-text-3)',
+                  lineHeight: 1.45,
+                }}>
+                  {opt.help}
+                </span>
+              )}
+            </span>
+          </label>
+        )
+      })}
+    </div>
+  )
+}
+
+function ActiveFilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '3px 4px 3px 10px', borderRadius: 999,
+      background: 'rgba(56,189,248,0.10)',
+      border: '1px solid rgba(56,189,248,0.40)',
+      color: 'var(--color-accent)',
+      fontSize: 'var(--fs-2xs)', fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '0.06em',
+    }}>
+      {label}
+      <button
+        type="button"
+        onClick={onClear}
+        aria-label={`Clear ${label}`}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 16, height: 16, borderRadius: 8,
+          background: 'transparent', border: 'none', color: 'inherit',
+          cursor: 'pointer', padding: 0,
+        }}
+      >
+        <X size={11} />
+      </button>
+    </span>
   )
 }
 
@@ -1698,7 +2054,9 @@ function DetailSection({ title, rows, footnote }: { title: string; rows: DetailR
     <div style={{ marginBottom: 14 }}>
       <div style={{
         fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
-        textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6,
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        paddingBottom: 6, marginBottom: 8,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
       }}>
         {title}
       </div>
@@ -1827,6 +2185,19 @@ function pdfBtnStyle(disabled: boolean): React.CSSProperties {
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontSize: 'var(--fs-sm)', fontWeight: 600, fontFamily: 'inherit',
     opacity: disabled ? 0.6 : 1,
+  }
+}
+
+function utilityBtnStyle(disabled: boolean): React.CSSProperties {
+  return {
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'inherit',
+    textTransform: 'uppercase', letterSpacing: '0.06em',
+    opacity: disabled ? 0.5 : 1,
   }
 }
 
