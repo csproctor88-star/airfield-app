@@ -291,7 +291,7 @@ export function Header() {
             >
               {baseName && (
                 <span style={{
-                  fontSize: 'clamp(15px, 1.6vw, 19px)', fontWeight: 800,
+                  fontSize: 'clamp(15px, 1.6vw, 19px)', fontWeight: 700,
                   color: 'var(--color-text-1)', letterSpacing: '-0.005em',
                   lineHeight: 1.1, whiteSpace: 'nowrap',
                 }}>

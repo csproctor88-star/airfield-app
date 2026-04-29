@@ -12,17 +12,13 @@ import { logManualEntry } from '@/lib/supabase/activity'
 import { toast } from 'sonner'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
-import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
-import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
-import { calculateAllSystemHealth, getAlertTier, getHealthSummary, ALERT_TIER_CONFIG, type SystemHealth, type AlertTier } from '@/lib/outage-rules'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { useDashboard } from '@/lib/dashboard-context'
-
-// --- Quick Actions (KPI badges) ---
-const QUICK_ACTIONS = [
-  { label: 'Airfield Checks', icon: '\uD83D\uDEE1\uFE0F', color: 'var(--color-warning)', href: '/checks' },
-  { label: 'New Discrepancy', icon: '\uD83D\uDEA8', color: 'var(--color-danger)', href: '/discrepancies/new' },
-]
+import {
+  ShieldAlert, AlertTriangle, HardHat, ListChecks, Zap, Radio,
+  ClipboardList, Bird, DoorOpen, AlertOctagon, Moon,
+  CheckCircle2, Sunrise, ChevronRight,
+} from 'lucide-react'
 
 export default function AMDashboardPage() {
   const router = useRouter()
@@ -56,35 +52,9 @@ export default function AMDashboardPage() {
   const [todayAirfieldStatus, setTodayAirfieldStatus] = useState<{ status: 'none' | 'in_progress' | 'completed'; inspector?: string }>({ status: 'none' })
   const [todayLightingStatus, setTodayLightingStatus] = useState<{ status: 'none' | 'in_progress' | 'completed'; inspector?: string }>({ status: 'none' })
 
-  // ── Lighting system health summary ──
-  const [lightingHealthSummary, setLightingHealthSummary] = useState<{
-    worstTier: AlertTier
-    total: number
-    exceeded: number
-    inoperative: number
-    degraded: number
-  } | null>(null)
-
-  useEffect(() => {
-    if (!installationId) return
-    async function loadHealth() {
-      const [systems, components, features] = await Promise.all([
-        fetchLightingSystems(installationId!),
-        fetchAllComponentsForBase(installationId!),
-        fetchInfrastructureFeatures(installationId!),
-      ])
-      if (systems.length === 0) return
-      const compMap = new Map<string, typeof components>()
-      for (const c of components) {
-        if (!compMap.has(c.system_id)) compMap.set(c.system_id, [])
-        compMap.get(c.system_id)!.push(c)
-      }
-      const healths = calculateAllSystemHealth(systems, compMap, features)
-      const summary = getHealthSummary(healths)
-      setLightingHealthSummary(summary)
-    }
-    loadHealth()
-  }, [installationId])
+  // (Lighting health summary used to render here but the surface was
+  // dead — the only operational view of system health lives at
+  // /infrastructure. Removed 2026-04-29.)
 
   // --- Load Last Check Completed ---
   const loadLastCheck = useCallback(async () => {
@@ -145,21 +115,37 @@ export default function AMDashboardPage() {
 
   return (
     <div className="page-container">
-      {/* ===== Dashboard Header ===== */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: lastCheckType ? 8 : 0 }}>
-          <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>Dashboard</h2>
+      {/* ===== Dashboard Header =====
+          Tight single row: page label left, last-check status right.
+          The accent underline matches the section-header treatment
+          on / so the page reads as one consistent design language. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12, flexWrap: 'wrap',
+        marginBottom: 10, paddingBottom: 6,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <span style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>Dashboard</span>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span style={{
+            fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>Last Check</span>
+          {lastCheckType && lastCheckTime ? (
+            <span style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-accent)',
+              fontFamily: 'monospace', letterSpacing: '0.04em',
+            }}>{lastCheckType} @ {lastCheckTime}</span>
+          ) : (
+            <span style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)',
+              fontFamily: 'monospace',
+            }}>—</span>
+          )}
         </div>
-        {lastCheckType && lastCheckTime && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '8px 16px', borderRadius: 'var(--radius-md)',
-            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          }}>
-            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>Last Check Completed</span>
-            <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-cyan)' }}>{lastCheckType} @ {lastCheckTime}</span>
-          </div>
-        )}
       </div>
 
       {/* ===== Inspection Status Strip ===== */}
@@ -172,12 +158,22 @@ export default function AMDashboardPage() {
             : todayAirfieldStatus.status === 'in_progress' ? '3px solid var(--color-status-inwork)'
             : '3px solid var(--color-text-4)',
         }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>
-            {todayAirfieldStatus.status === 'completed' ? '\u2705' : todayAirfieldStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\u2600\uFE0F'}
-          </span>
+          {(() => {
+            const s = todayAirfieldStatus.status
+            const color = s === 'completed' ? 'var(--color-status-pass)'
+              : s === 'in_progress' ? 'var(--color-status-inwork)'
+              : 'var(--color-text-3)'
+            const Icon = s === 'completed' ? CheckCircle2 : s === 'in_progress' ? ClipboardList : Sunrise
+            return <Icon size={20} color={color} strokeWidth={2.25} />
+          })()}
           <div>
             <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Airfield Inspection</div>
-            <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)' : todayAirfieldStatus.status === 'in_progress' ? 'var(--color-status-inwork)' : 'var(--color-text-3)' }}>
+            <div style={{
+              fontSize: 'var(--fs-2xs)', fontWeight: 800, letterSpacing: '0.04em',
+              color: todayAirfieldStatus.status === 'completed' ? 'var(--color-status-pass)'
+                : todayAirfieldStatus.status === 'in_progress' ? 'var(--color-status-inwork)'
+                : 'var(--color-text-3)',
+            }}>
               {todayAirfieldStatus.status === 'completed' ? 'Complete' : todayAirfieldStatus.status === 'in_progress' ? `In Progress${todayAirfieldStatus.inspector ? ` — ${todayAirfieldStatus.inspector}` : ''}` : 'Not Started'}
             </div>
           </div>
@@ -190,12 +186,22 @@ export default function AMDashboardPage() {
             : todayLightingStatus.status === 'in_progress' ? '3px solid var(--color-status-inwork)'
             : '3px solid var(--color-text-4)',
         }}>
-          <span style={{ fontSize: 'var(--fs-lg)' }}>
-            {todayLightingStatus.status === 'completed' ? '\u2705' : todayLightingStatus.status === 'in_progress' ? '\uD83D\uDCDD' : '\uD83C\uDF19'}
-          </span>
+          {(() => {
+            const s = todayLightingStatus.status
+            const color = s === 'completed' ? 'var(--color-status-pass)'
+              : s === 'in_progress' ? 'var(--color-status-inwork)'
+              : 'var(--color-text-3)'
+            const Icon = s === 'completed' ? CheckCircle2 : s === 'in_progress' ? ClipboardList : Moon
+            return <Icon size={20} color={color} strokeWidth={2.25} />
+          })()}
           <div>
             <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Lighting Inspection</div>
-            <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)' : todayLightingStatus.status === 'in_progress' ? 'var(--color-status-inwork)' : 'var(--color-text-3)' }}>
+            <div style={{
+              fontSize: 'var(--fs-2xs)', fontWeight: 800, letterSpacing: '0.04em',
+              color: todayLightingStatus.status === 'completed' ? 'var(--color-status-pass)'
+                : todayLightingStatus.status === 'in_progress' ? 'var(--color-status-inwork)'
+                : 'var(--color-text-3)',
+            }}>
               {todayLightingStatus.status === 'completed' ? 'Complete' : todayLightingStatus.status === 'in_progress' ? `In Progress${todayLightingStatus.inspector ? ` — ${todayLightingStatus.inspector}` : ''}` : 'Not Started'}
             </div>
           </div>
@@ -215,13 +221,15 @@ export default function AMDashboardPage() {
         const extra = incomplete.length > 3 ? ` and ${incomplete.length - 3} more` : ''
         return (
           <Link href="/settings/base-setup" style={{
-            display: 'block', marginBottom: 12, padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: 6,
+            marginBottom: 12, padding: '8px 12px',
             borderRadius: 'var(--radius-md)',
             background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.35)',
             color: 'var(--color-text-1)', textDecoration: 'none',
             fontSize: 'var(--fs-sm)',
           }}>
-            <span style={{ fontWeight: 700, color: 'var(--color-warning)' }}>Finish base setup →</span>{' '}
+            <span style={{ fontWeight: 800, color: 'var(--color-warning)' }}>Finish base setup</span>
+            <ChevronRight size={14} color="var(--color-warning)" strokeWidth={2.5} />
             <span style={{ color: 'var(--color-text-2)' }}>
               Still need to configure: {labels}{extra}.
             </span>
@@ -236,20 +244,22 @@ export default function AMDashboardPage() {
         gap: 8,
         marginBottom: 20,
       }}>
-        {[
-          { label: 'Airfield Checks', icon: '\uD83D\uDEE1\uFE0F', href: '/checks' },
-          { label: 'New Discrepancy', icon: '\uD83D\uDEA8', href: '/discrepancies/new' },
-        ]
+        {/* Primary tier \u2014 daily ops actions. Accent border + elevated
+            bg + colored Lucide icon so the eye lands here first. */}
+        {([
+          { label: 'Airfield Checks', Icon: ShieldAlert,   iconColor: 'var(--color-accent)', href: '/checks' },
+          { label: 'New Discrepancy', Icon: AlertTriangle, iconColor: 'var(--color-danger)', href: '/discrepancies/new' },
+        ] as const)
           .filter(q => isModuleEnabled(q.href, enabledModules))
           .map(q => (
           <Link key={q.label} href={q.href} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
-            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)',
+            background: 'var(--color-bg-elevated)', border: '1px solid rgba(56,189,248,0.40)',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{q.icon}</span>
+            <q.Icon size={22} color={q.iconColor} strokeWidth={2.25} />
             <span>{q.label}</span>
           </Link>
         ))}
@@ -258,10 +268,10 @@ export default function AMDashboardPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>🏗️</span>
+            <HardHat size={22} color="var(--color-warning)" strokeWidth={2.25} />
             <span>Personnel on Airfield</span>
           </button>
         )}
@@ -270,10 +280,10 @@ export default function AMDashboardPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>☑️</span>
+            <ListChecks size={22} color="var(--color-accent-secondary)" strokeWidth={2.25} />
             <span>Shift Checklist</span>
           </button>
         )}
@@ -282,10 +292,10 @@ export default function AMDashboardPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>⚡</span>
+            <Zap size={22} color="var(--color-warning)" strokeWidth={2.25} />
             <span>QRCs</span>
           </button>
         )}
@@ -294,10 +304,10 @@ export default function AMDashboardPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>📻</span>
+            <Radio size={22} color="var(--color-accent)" strokeWidth={2.25} />
             <span>SCN</span>
           </Link>
         )}
@@ -306,10 +316,10 @@ export default function AMDashboardPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>📝</span>
+            <ClipboardList size={22} color="var(--color-accent)" strokeWidth={2.25} />
             <span>PPR Log</span>
           </Link>
         )}
@@ -318,10 +328,10 @@ export default function AMDashboardPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
             background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', fontFamily: 'inherit',
+            textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>🦅</span>
+            <Bird size={22} color="var(--color-orange)" strokeWidth={2.25} />
             <span>BASH</span>
           </Link>
         )}
@@ -336,14 +346,15 @@ export default function AMDashboardPage() {
           }} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
-            background: afmOutOfOffice ? 'rgba(239,68,68,0.15)' : 'var(--color-bg-surface)',
-            border: afmOutOfOffice ? '2px solid rgba(239,68,68,0.55)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-sm)', fontWeight: 700,
-            color: afmOutOfOffice ? 'var(--color-danger)' : 'var(--color-text-1)',
+            background: afmOutOfOffice ? 'rgba(56,189,248,0.10)' : 'var(--color-bg-surface)',
+            border: afmOutOfOffice ? '1px solid rgba(56,189,248,0.40)' : '1px solid var(--color-border)',
+            borderLeft: afmOutOfOffice ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 600,
+            color: afmOutOfOffice ? 'var(--color-accent)' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{afmOutOfOffice ? '🔴' : '🚪'}</span>
+            <DoorOpen size={22} color={afmOutOfOffice ? 'var(--color-accent)' : 'var(--color-text-2)'} strokeWidth={2.25} />
             <span>{afmOutOfOffice ? 'End Out of Office' : 'Out of Office'}</span>
           </button>
         )}
@@ -358,14 +369,17 @@ export default function AMDashboardPage() {
           }} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
-            background: afmClosed ? 'rgba(100,116,139,0.25)' : 'var(--color-bg-surface)',
-            border: afmClosed ? '2px solid rgba(100,116,139,0.65)' : '1px solid var(--color-border)',
-            fontSize: 'var(--fs-sm)', fontWeight: 700,
-            color: afmClosed ? '#CBD5E1' : 'var(--color-text-1)',
+            background: afmClosed ? 'rgba(239,68,68,0.10)' : 'var(--color-bg-surface)',
+            border: afmClosed ? '1px solid rgba(239,68,68,0.40)' : '1px solid var(--color-border)',
+            borderLeft: afmClosed ? '4px solid var(--color-danger)' : '1px solid var(--color-border)',
+            fontSize: 'var(--fs-sm)', fontWeight: 600,
+            color: afmClosed ? 'var(--color-danger)' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>🌙</span>
+            {afmClosed
+              ? <AlertOctagon size={22} color="var(--color-danger)" strokeWidth={2.5} />
+              : <Moon size={22} color="var(--color-text-2)" strokeWidth={2.25} />}
             <span>{afmClosed ? 'Reopen Airfield' : 'Close Airfield'}</span>
           </button>
         )}
@@ -378,8 +392,11 @@ export default function AMDashboardPage() {
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 440, border: '1px solid var(--color-border-mid)',
           }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
-              Out of Office
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <DoorOpen size={22} color="var(--color-accent)" strokeWidth={2.25} />
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+                Out of Office
+              </div>
             </div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
               This message will display as a full-screen overlay on the Airfield Status page for all users.
@@ -456,8 +473,11 @@ export default function AMDashboardPage() {
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
           }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
-              End Out of Office
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <DoorOpen size={22} color="var(--color-accent)" strokeWidth={2.25} />
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+                End Out of Office
+              </div>
             </div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
               This will clear the Out of Office overlay and log a Command Post notification in the events log.
@@ -496,8 +516,11 @@ export default function AMDashboardPage() {
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 460, border: '1px solid var(--color-border-mid)',
           }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 6 }}>
-              Close Airfield Management
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <AlertOctagon size={22} color="var(--color-danger)" strokeWidth={2.5} />
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+                Close Airfield Management
+              </div>
             </div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12, lineHeight: 1.55 }}>
               Displays a CLOSED banner on the Airfield Status page and{' '}
@@ -576,8 +599,11 @@ export default function AMDashboardPage() {
             background: 'var(--color-bg-surface-solid)', borderRadius: 'var(--radius-lg)', padding: 24,
             width: '100%', maxWidth: 380, border: '1px solid var(--color-border-mid)',
           }}>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 14 }}>
-              End Closed Status
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <AlertOctagon size={22} color="var(--color-danger)" strokeWidth={2.5} />
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+                End Closed Status
+              </div>
             </div>
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16, lineHeight: 1.55 }}>
               This will clear the CLOSED banner. Runway, RSC, and BWC values remain blank — enter fresh values
