@@ -39,6 +39,9 @@ supabase/.temp/
 # Prompt/instruction files
 CLAUDE_CODE_PROMPT*.md
 
+# Per-user Claude Code settings (plugin enables, etc.) — never team-shared
+.claude/settings.local.json
+
 # Personal files accidentally added
 public/Downloads/
 

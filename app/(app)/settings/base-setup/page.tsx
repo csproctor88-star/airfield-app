@@ -5199,22 +5199,6 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
     setEditingColId(null)
   }
 
-  const handleMove = async (index: number, direction: 'up' | 'down') => {
-    const swapIdx = direction === 'up' ? index - 1 : index + 1
-    if (swapIdx < 0 || swapIdx >= columns.length) return
-    const a = columns[index]
-    const b = columns[swapIdx]
-    await Promise.all([
-      updatePprColumn(a.id, { sort_order: b.sort_order }),
-      updatePprColumn(b.id, { sort_order: a.sort_order }),
-    ])
-    const updated = [...columns]
-    updated[index] = { ...b, sort_order: a.sort_order }
-    updated[swapIdx] = { ...a, sort_order: b.sort_order }
-    updated.sort((x, y) => x.sort_order - y.sort_order)
-    setColumns(updated)
-  }
-
   const { getHandleProps, getDropProps, draggedId, dragOverId } = useDragReorder(columns, async (next) => {
     setColumns(next.map((c, i) => ({ ...c, sort_order: i })))  // optimistic
     const results = await Promise.all(next.map((c, i) => updatePprColumn(c.id, { sort_order: i })))
@@ -5227,17 +5211,16 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>PPR Columns</h3>
-      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
-        Define the data fields for your PPR table. Common examples: Aircraft Type, Tail #, Unit, POC, Purpose, ETA, ETD, Parking.
-        PPR # and Arrival Date are always included automatically.
+      <h3 style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>PPR Columns</h3>
+      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
+        Custom fields for the PPR table. PPR # and Arrival Date are always included.
       </p>
 
       {columns.length === 0 && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 12 }}>No columns configured yet.</p>
       )}
 
-      {columns.map((col, i) => (
+      {columns.map((col) => (
         <div
           key={col.id}
           {...getDropProps(col.id)}
@@ -5253,22 +5236,8 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           <span
             {...getHandleProps(col.id)}
             title="Drag to reorder"
-            style={{ cursor: 'grab', color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', userSelect: 'none', flexShrink: 0, paddingRight: 4 }}
+            style={{ cursor: 'grab', color: 'var(--color-text-4)', fontSize: 'var(--fs-sm)', userSelect: 'none', flexShrink: 0, paddingRight: 2 }}
           >&#x2630;</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, width: 20, alignItems: 'center', flexShrink: 0 }}>
-            <button
-              onClick={() => handleMove(i, 'up')}
-              disabled={i === 0}
-              style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--color-border)' : 'var(--color-text-3)', fontSize: 12, padding: 0, lineHeight: 1 }}
-              title="Move up"
-            >&uarr;</button>
-            <button
-              onClick={() => handleMove(i, 'down')}
-              disabled={i === columns.length - 1}
-              style={{ background: 'none', border: 'none', cursor: i === columns.length - 1 ? 'default' : 'pointer', color: i === columns.length - 1 ? 'var(--color-border)' : 'var(--color-text-3)', fontSize: 12, padding: 0, lineHeight: 1 }}
-              title="Move down"
-            >&darr;</button>
-          </div>
           {editingColId === col.id ? (
             <input
               autoFocus
