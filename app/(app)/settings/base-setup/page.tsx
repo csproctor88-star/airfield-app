@@ -5271,6 +5271,22 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
+          {col.column_type === 'time' && (
+            <ChipCluster
+              chips={[
+                {
+                  key: 'zulu', label: 'Z', title: 'Display as Zulu (HHMMZ)',
+                  on: (col.time_display ?? 'zulu') === 'zulu',
+                  onClick: () => handleChangeTimeDisplay(col, 'zulu'),
+                },
+                {
+                  key: 'local', label: 'L', title: 'Display as base local time (HHMM)',
+                  on: col.time_display === 'local',
+                  onClick: () => handleChangeTimeDisplay(col, 'local'),
+                },
+              ]}
+            />
+          )}
           {col.column_type === 'info_only' ? (
             <button
               onClick={() => { setInfoEditCol(col); setInfoEditValue(col.info_text || '') }}
@@ -5297,22 +5313,6 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             >
               {col.is_required ? 'Req' : 'Opt'}
             </button>
-          )}
-          {col.column_type === 'time' && (
-            <ChipCluster
-              chips={[
-                {
-                  key: 'zulu', label: 'Z', title: 'Display as Zulu (HHMMZ)',
-                  on: (col.time_display ?? 'zulu') === 'zulu',
-                  onClick: () => handleChangeTimeDisplay(col, 'zulu'),
-                },
-                {
-                  key: 'local', label: 'L', title: 'Display as base local time (HHMM)',
-                  on: col.time_display === 'local',
-                  onClick: () => handleChangeTimeDisplay(col, 'local'),
-                },
-              ]}
-            />
           )}
           {/* Per-surface visibility — one cluster, three letters. The
               hardcoded spine columns (PPR#, Status, Arrival Date, ETA)
@@ -5360,6 +5360,14 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
+        {newColType === 'time' && (
+          <ChipCluster
+            chips={[
+              { key: 'zulu',  label: 'Z', title: 'Display as Zulu',      on: newColTimeDisplay === 'zulu',  onClick: () => setNewColTimeDisplay('zulu') },
+              { key: 'local', label: 'L', title: 'Display as base local', on: newColTimeDisplay === 'local', onClick: () => setNewColTimeDisplay('local') },
+            ]}
+          />
+        )}
         {newColType !== 'info_only' && (
           <button
             type="button"
@@ -5376,14 +5384,6 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           >
             {newColRequired ? 'Req' : 'Opt'}
           </button>
-        )}
-        {newColType === 'time' && (
-          <ChipCluster
-            chips={[
-              { key: 'zulu',  label: 'Z', title: 'Display as Zulu',      on: newColTimeDisplay === 'zulu',  onClick: () => setNewColTimeDisplay('zulu') },
-              { key: 'local', label: 'L', title: 'Display as base local', on: newColTimeDisplay === 'local', onClick: () => setNewColTimeDisplay('local') },
-            ]}
-          />
         )}
         <ChipCluster
           chips={[
