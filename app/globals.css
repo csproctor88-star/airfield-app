@@ -789,6 +789,10 @@ html, body {
 /* ── Tablet (768px+) ── */
 @media (min-width: 768px) {
   :root, [data-theme="dark"], [data-theme="light"] {
+    /* Tablet body sizes match mobile; only the heading end of the
+     * scale grows so the ramp into desktop stays smooth. Headings
+     * trimmed by 1–2px per step in the same pass that shrunk the
+     * desktop scale. */
     --fs-2xs: 11px;
     --fs-xs: 12px;
     --fs-sm: 13px;
@@ -796,10 +800,10 @@ html, body {
     --fs-md: 15px;
     --fs-lg: 16px;
     --fs-xl: 17px;
-    --fs-2xl: 19px;
-    --fs-3xl: 21px;
-    --fs-4xl: 24px;
-    --fs-5xl: 30px;
+    --fs-2xl: 18px;
+    --fs-3xl: 20px;
+    --fs-4xl: 22px;
+    --fs-5xl: 28px;
 
     --map-height: 35vh;
     --map-height-expanded: 50vh;
@@ -986,17 +990,21 @@ html, body {
 /* ── Desktop (1024px+) ── */
 @media (min-width: 1024px) {
   :root, [data-theme="dark"], [data-theme="light"] {
-    --fs-2xs: 12px;
-    --fs-xs: 13px;
-    --fs-sm: 14px;
-    --fs-base: 15px;
-    --fs-md: 16px;
-    --fs-lg: 18px;
-    --fs-xl: 20px;
-    --fs-2xl: 22px;
-    --fs-3xl: 26px;
-    --fs-4xl: 30px;
-    --fs-5xl: 36px;
+    /* Trimmed ~10–15% across the scale on desktop to relieve the
+     * crowded feeling once the app filled out with detail-heavy
+     * modules. Body text matches tablet (no churn for content
+     * density); headings drop most. Mobile + tablet bases unchanged. */
+    --fs-2xs: 11px;
+    --fs-xs: 12px;
+    --fs-sm: 13px;
+    --fs-base: 14px;
+    --fs-md: 15px;
+    --fs-lg: 16px;
+    --fs-xl: 18px;
+    --fs-2xl: 19px;
+    --fs-3xl: 22px;
+    --fs-4xl: 26px;
+    --fs-5xl: 30px;
 
     --map-height: 40vh;
     --map-height-expanded: 55vh;
