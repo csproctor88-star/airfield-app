@@ -56,7 +56,7 @@ const CORE_PUBLICATIONS: RegulationEntry[] = [
     is_core: true,
     is_cross_ref: false,
     is_scrubbed: false,
-    tags: ['AM', 'airfield management', 'NOTAM', 'inspections', 'airfield driving', 'transient aircraft', 'flight plans', 'runway closures', 'AM duties', 'FOD walk', 'RSC', 'RCR', 'BWC', 'bird watch condition', 'airfield checks', 'local procedures'],
+    tags: ['AM', 'airfield management', 'NOTAM', 'inspections', 'airfield driving', 'transient aircraft', 'flight plans', 'runway closures', 'AM duties', 'FOD Check', 'RSC', 'RCR', 'BWC', 'bird watch condition', 'airfield checks', 'local procedures'],
   },
   {
     reg_id: 'DAFMAN 13-204, Vol. 3',

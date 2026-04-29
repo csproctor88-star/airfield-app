@@ -401,8 +401,8 @@ BEGIN
   INSERT INTO runway_status_log (old_runway_status, new_runway_status, old_active_runway, new_active_runway,
     old_advisory_type, new_advisory_type, old_advisory_text, new_advisory_text,
     changed_by, reason, created_at) VALUES
-    ('open','closed',     '01','01', NULL,'closed',     NULL, 'RWY 01/19 closed for sweep',        demo_user, 'DEMO: FOD walk',                 NOW() - interval '6 hours'),
-    ('closed','open',     '01','01', 'closed', NULL,    'RWY 01/19 closed for sweep', NULL,        demo_user, 'DEMO: FOD walk complete',        NOW() - interval '5 hours 20 minutes'),
+    ('open','closed',     '01','01', NULL,'closed',     NULL, 'RWY 01/19 closed for sweep',        demo_user, 'DEMO: FOD Check',                NOW() - interval '6 hours'),
+    ('closed','open',     '01','01', 'closed', NULL,    'RWY 01/19 closed for sweep', NULL,        demo_user, 'DEMO: FOD Check complete',       NOW() - interval '5 hours 20 minutes'),
     ('open','open',       '01','19', NULL, NULL,        NULL, NULL,                                demo_user, 'DEMO: Wind shift — active runway change',    NOW() - interval '3 hours'),
     ('open','restricted', '19','19', NULL,'advisory',   NULL, 'BWC MOD — fresh snow 0.5in',        demo_user, 'DEMO: Snow event arrival',       NOW() - interval '1 day 4 hours'),
     ('restricted','open', '19','19', 'advisory', NULL,  'BWC MOD — fresh snow 0.5in', NULL,        demo_user, 'DEMO: Plow/broom complete — BWC LOW', NOW() - interval '1 day 1 hour'),

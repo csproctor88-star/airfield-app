@@ -2,7 +2,7 @@
 
 **Path:** Sidebar → Airfield Checks · URL `/checks`
 
-Airfield Checks are the ad-hoc, as-needed inspections that happen throughout the day: FOD walks, runway condition readings, IFE response walkdowns, BASH sweeps. They are distinct from the once-per-day Daily Inspection (see [04_daily_inspections.md](04_daily_inspections.md)).
+Airfield Checks are the ad-hoc, as-needed inspections that happen throughout the day: FOD Checks, runway condition readings, IFE response walkdowns, BASH sweeps. They are distinct from the once-per-day Daily Inspection (see [04_daily_inspections.md](04_daily_inspections.md)).
 
 ---
 
@@ -12,7 +12,7 @@ Glidepath supports seven check types, each with its own tailored data entry form
 
 | Check Type | Purpose |
 |---|---|
-| **FOD Walk** | Foreign Object Debris sweep |
+| **FOD Check** | Foreign Object Debris sweep |
 | **RSC / RCR** | Runway Surface Condition reading, with optional Runway Condition Reading reported in the same check |
 | **IFE Response** | In-Flight Emergency response walkdown |
 | **Ground Emergency** | Ground emergency response |

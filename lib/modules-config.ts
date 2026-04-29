@@ -57,7 +57,7 @@ export const MODULES: ModuleDef[] = [
     label: 'Airfield Checks',
     category: 'core-ops',
     description: 'Daily, weekly, and monthly airfield condition checks with photo capture and signatures.',
-    useCase: 'BASH, FOD walk, daily airfield, lighting, and friction checks — the everyday rhythm of the airfield manager.',
+    useCase: 'BASH, FOD Check, daily airfield, lighting, and friction checks — the everyday rhythm of the airfield manager.',
     hrefs: ['/checks'],
     setupSteps: [],
     defaultEnabled: true,
