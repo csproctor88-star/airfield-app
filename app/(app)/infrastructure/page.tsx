@@ -1961,6 +1961,21 @@ export default function InfrastructureMapPage() {
   type MarkerMeta = { kind: 'sign'; signKey: string } | { kind: 'icon' } | { kind: 'circle'; color: string; isInop: boolean }
   const markerMetaRef = useRef<Map<string, MarkerMeta>>(new Map())
 
+  // Tracks whether feature markers/circles are currently hidden (zoom < 13).
+  // Used to flip setMap(null/gmap) only when crossing the threshold and to
+  // gate the initial render in renderFeatures().
+  const featuresHiddenRef = useRef(false)
+  // Last applied scale — short-circuits the rescale loop when the new scale
+  // is within ~10% of the prior one (most zoom adjustments inside the flat
+  // 13-15 region don't change scale at all).
+  const lastScaleRef = useRef<number>(0)
+
+  // Below this zoom, every feature marker and overlay circle is removed from
+  // the map (setMap(null)). Google Maps stops rasterizing mapless markers
+  // entirely — biggest single perf win when "all layers enabled" with
+  // thousands of lights and the user is zoomed way out.
+  const HIDE_FEATURES_BELOW_ZOOM = 13
+
   // In-place zoom rescale — fires on 'idle' (after zoom/pan animation settles),
   // not on 'zoom_changed' (which fires during the animation and causes flicker).
   // Markers keep their old size during the animation and snap to new size once settled.
@@ -1974,8 +1989,31 @@ export default function InfrastructureMapPage() {
       if (zoom === lastZoom) return // pan-only — no rescale needed
       lastZoom = zoom
       currentZoomRef.current = zoom
+
+      // Threshold cross: flip every feature marker + overlay circle on/off
+      // the map. Only runs when actually crossing — pure no-op otherwise.
+      const shouldHide = zoom < HIDE_FEATURES_BELOW_ZOOM
+      if (shouldHide !== featuresHiddenRef.current) {
+        const target = shouldHide ? null : w.gmap
+        w.markers.forEach(m => m.setMap(target))
+        selectionCirclesRef.current.forEach(c => c.setMap(target))
+        healthCirclesRef.current.forEach(c => c.setMap(target))
+        auditCirclesRef.current.forEach(c => c.setMap(target))
+        inopCirclesRef.current.forEach(c => c.setMap(target))
+        featuresHiddenRef.current = shouldHide
+      }
+      if (shouldHide) return // nothing on the map — skip the rescale walk
+
+      // Scale-delta short-circuit: skip the per-marker walk when the new
+      // scale is essentially the same as the last applied scale. Combined
+      // with the flat 13-15 region in zoomScale(), most zoom adjustments
+      // never touch a marker.
       const scale = zoomScale(zoom)
       const circleRad = zoomCircleRadius(zoom)
+      if (lastScaleRef.current > 0 && Math.abs(scale - lastScaleRef.current) / lastScaleRef.current < 0.10) {
+        return
+      }
+      lastScaleRef.current = scale
 
       w.markers.forEach((marker, featureId) => {
         const meta = markerMetaRef.current.get(featureId)
@@ -2019,32 +2057,35 @@ export default function InfrastructureMapPage() {
     }
   }, [mapLoaded])
 
-  /** Interpolate icon scale based on zoom — Google Maps markers need larger values than Mapbox */
+  // Features stay small (constant) up to zoom 15, then ramp into final size
+  // between zoom 16-19. Most zoom transitions land in the flat region and
+  // become no-ops, so the per-marker setIcon walk stays quiet during normal
+  // panning/zooming. Below zoom 13 features are hidden entirely (see the
+  // hide-below-13 logic in the rescale useEffect).
   function zoomScale(zoom: number): number {
-    if (zoom <= 12) return 0.4
-    if (zoom >= 18) return 2.0
-    const stops = [[12, 0.4], [14, 0.8], [16, 1.4], [18, 2.0]]
+    if (zoom <= 15) return 0.30
+    if (zoom >= 19) return 1.40
+    const stops = [[15, 0.30], [16, 0.45], [17, 0.70], [18, 1.00], [19, 1.40]]
     for (let i = 0; i < stops.length - 1; i++) {
       if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
         const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
         return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
       }
     }
-    return 1.0
+    return 0.30
   }
 
-  /** Circle radius in pixels based on zoom — sized to match Mapbox visual appearance */
   function zoomCircleRadius(zoom: number): number {
-    if (zoom <= 12) return 4
-    if (zoom >= 18) return 16
-    const stops = [[12, 4], [14, 7], [16, 11], [18, 16]]
+    if (zoom <= 15) return 3
+    if (zoom >= 19) return 16
+    const stops = [[15, 3], [16, 5], [17, 8], [18, 11], [19, 16]]
     for (let i = 0; i < stops.length - 1; i++) {
       if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
         const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
         return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
       }
     }
-    return 8
+    return 3
   }
 
   // ── Render all features as Google Maps markers ──
@@ -2060,6 +2101,12 @@ export default function InfrastructureMapPage() {
     markerMetaRef.current.clear()
 
     const zoom = currentZoomRef.current
+    // Honor the hide-below-13 threshold on initial draw so layer toggles
+    // while zoomed out don't briefly flash visible markers. The zoom listener
+    // will flip them back on when the user crosses back above the threshold.
+    const initiallyHidden = zoom < HIDE_FEATURES_BELOW_ZOOM
+    featuresHiddenRef.current = initiallyHidden
+    const initialMap = initiallyHidden ? null : wrapper.gmap
 
     // All visible-layer features are rendered regardless of viewport position.
     // Since layers start hidden and users enable 1-2 at a time, the feature count
@@ -2139,7 +2186,7 @@ export default function InfrastructureMapPage() {
 
       const marker = new google.maps.Marker({
         position: { lat, lng },
-        map: wrapper.gmap,
+        map: initialMap,
         icon: markerIcon,
         zIndex: isInop ? 100 : 10,
       })
