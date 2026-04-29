@@ -1,172 +1,83 @@
 # Session Handoff
 
-**Date:** 2026-04-28
+**Date:** 2026-04-28 (continued)
 **Branch:** `main`
-**Build:** Clean — `npm run build` ✓, `npx tsc --noEmit` ✓, `npx vitest run` 247 pass
-**HEAD:** `ff8f408`
+**Build:** Clean — `npx tsc --noEmit` ✓
+**HEAD:** `596d947`
 
 ---
 
 ## What shipped this session
 
-**8 commits** on `main`, **4 new migrations** introduced (3 still pending on prod;
-2026042902 was applied out of order by the user — see Migrations status). The
-session was almost entirely PPR-shaped: spine-field expansion (commercial phone,
-ETA Zulu), a cancellation flow, AMOPS permission catch-up, an internal-create
-"save pending" path, and a long polish pass on the on-screen Log + Today's-PPRs
-panel + PDF. The non-PPR work was a per-member ACSI inspection-team signature
-toggle and a one-pass cut on the sidebar badge polling that was driving Supabase
-auth volume.
+**6 commits** on `main`. Mostly docs / terminology / a real perf fix on the Visual NAVAIDs page / a real plain-language fix on the discrepancy Notes History audit trail. **One new migration** (`2026042904`) introduced and **NOT YET APPLIED** to prod.
 
-### PPR public-form spine + log polish; SCN agency edit/reorder (`d6c7d84`)
+### CLAUDE.md: refresh stale facts (`f79bd86`)
 
-Two mandatory spine fields added to `ppr_entries` and the public form:
-`requester_phone` and `arrival_eta_zulu`. Both stored on the row directly (not
-in `column_values`) so they're always present and never configurable away. The
-public-submit RPC was dropped and recreated twice — once per migration — to
-extend the signature; server-side validation rejects empty values and enforces
-`HH:MM` shape on the ETA. Internal-create PPRs leave both columns NULL, same
-pattern as the existing `requester_email`.
+The repo's primary onboarding doc had drifted. Fixed in one pass:
 
-`/ppr` table split the single Arrival column into `Arrival Date` + `ETA (Z)`,
-admin-configured headers + cells gained wrapping with capped widths so a long
-admin label can't blow out the table to 4× the viewport, and the bottom REMARKS
-section in the PDF was folded into an inline `Remarks` column on the main
-table — each cell stacks that PPR's remarks one per line as
-`[2026-04-27 2114Z · MSgt Proctor] Denied`. Detail-card remarks render as cards
-with a header strip (author + Zulu timestamp) above the body. PDF stat box
-counts only what the table renders (info_only excluded).
+- RLS helpers section listed `user_can_write` / `user_is_admin` (both dropped in `2026042208`). Replaced with the matrix-based pattern: `user_has_permission(auth.uid(), '<key>')` + `user_has_base_access(auth.uid(), base_id)`.
+- Branch convention claimed `tweaks` is the active branch and `main` is release-only — true once, not anymore. Only `main` exists locally + on origin since the v2.30 cycle. Co-author trailer also bumped 4.6 → 4.7.
+- Modules table: `/parking` was marked 🆕 but it's been around since 2026-03-14 (v2.20) — set to ✅. Added `/scn` and `/daily-reviews` rows (both shipped but missing). Added `/users` next to `/settings/users` (both routes exist). Migration count 135 → 174.
+- Status legend: dropped the "🆕 added in v2.31–v2.32" tier since no remaining modules are flagged new.
 
-SCN Agencies tab in Base Setup is now a custom list using the typed helpers in
-`lib/supabase/scn-agencies.ts`: id-keyed drag reorder, inline rename via
-Edit/Save/Cancel (drag disabled while editing), add/delete unchanged. Renames
-are safe — historical SCN check records snapshot `agency_name` at submit time.
+### Capabilities doc v2.32 + FOD Check terminology cleanup (`d4858cb`)
 
-### PPR manual-coord-pending save mode + AMOPS delete/approve perms (`f39ff2e`)
+New artifact: `docs/Glidepath_Capabilities_v2.32.md` (~11 K words, 1073 lines on initial commit; user revised it down to ~1041 lines in subsequent edits). Replaces the v2.27 / v2.33 drafts deleted in the 2026-04-13 docs cleanup. Mixed audience (decision-makers + working AFMs / NAMOs / AMOPS personnel). Six parts — At a glance / Why Glidepath / Operational core / Specialized modules / Reports-Reference-Admin / Platform capabilities / Integrations & deployment / Regulatory coverage matrix — plus Appendix A (module-permission table) and Appendix B (route inventory). Built fresh from the codebase + CLAUDE.md, not from `docs/manual/`. No screenshots — text-only so it doesn't go stale on UI iteration.
 
-The internal New PPR modal grew a third save mode (radio, mirroring the triage
-modal's pattern): **Save pending — coordinating manually**. Lands the PPR at
-`status='pending_amops_approval'` with no in-app coord rows or email, so AMOPS
-can coordinate by phone/email/in-person and finalize later via Decide → Approve.
-The legacy "Pre-coordinated → approve now" and "Send to coordination" outcomes
-are unchanged. `createPprEntry` gained a `manualCoordPending` flag, mutually
-exclusive with `agencyIds` (flag wins). The new path records the creator as
-`triaged_by/at` so the audit trail captures who started external coordination.
+Same commit: cleanup of the 7 surviving "FOD walk" stragglers in `docs/manual/03_airfield_checks.md` (×2), `lib/modules-config.ts`, `lib/regulations-data.ts`, `supabase/seed-demo-walkthrough.sql` (×2), and `app/(app)/activity/page.tsx`. The PDF export label was already migrated per `CHANGELOG.md:1523`; that historical line stays as the audit trail.
 
-Migration `2026042902` grants `ppr:delete` and `ppr:approve` to the `amops`
-role. Delete was the explicit ask. Approve was the gap that would otherwise
-dead-end the new save-pending flow — without it the same AMOPS user who saved
-a PPR pending couldn't finalize it.
+### Discrepancy notes history: humanize raw current_status enum (`fea5ea5`)
 
-### Slim PPR Log table to PPR# / Status / Arrival / ETA + first 2 admin columns (`f6d7f64`)
+Audit found: every discrepancy current_status transition was writing `notes: 'CURRENT_STATUS: <enum>'` (e.g., `CURRENT_STATUS: awaiting_action_by_ces`) into `status_updates.notes`. The discrepancy detail page rendered that field verbatim in the Notes History panel. Two write paths had the same bug — the TS path (`lib/supabase/discrepancies.ts:222`, used by AFM/AMOPS/NAMO) and the SECURITY DEFINER RPC for CES users (`2026042201_ces_update_discrepancy_rpc.sql:94`).
 
-Dropped Requester, the full admin column set, and Notes from the on-screen
-`/ppr` table — all of those still surface in the detail dialog. Only the spine
-fields plus the first two admin columns by `sort_order` render inline (Callsign
-+ Aircraft Type at this base by convention). The PDF export is unchanged — that
-artifact keeps every admin-configured column.
+Three-part fix:
 
-### PPR ETA HHMM, summary column alignment, badge polling cuts (`2ea8d03`)
+1. **`lib/supabase/discrepancies.ts`** — added `currentStatusLabel()` helper using `CURRENT_STATUS_OPTIONS` lookup. Audit insert now writes `Status changed to: Awaiting Action by CES`.
+2. **`app/(app)/discrepancies/[id]/page.tsx`** — added `formatStatusUpdateNotes()` that recognizes the legacy `CURRENT_STATUS: <enum>` prefix and rewrites it on read, so historical rows already in the DB display cleanly without a backfill. Also added `statusLabel()` so the `Status: x → y` line shows `Open → Completed` instead of raw lowercase. Both helpers flow into the PDF `notesHistory` mapping.
+3. **`supabase/migrations/2026042904_ces_rpc_humanize_status_note.sql`** (new) — `CREATE OR REPLACE` on `ces_update_discrepancy` with a `CASE` mapping that mirrors `CURRENT_STATUS_OPTIONS`. **Pending application to prod.**
 
-ETA fields (public form + internal modal) switched from `<input type="time">`
-to 4-digit HHMM text input. The native time picker rendered locale-dependent
-AM/PM in en-US browsers and forced the colon into the visible value. DB still
-stores `HH:MM` to match the `column_type='time'` convention + the public RPC's
-regex check; the split happens at the wire boundary (`slice(0,2) + ':' + slice(2)`).
+Discovered via a two-Explore-agent audit of the rest of the app for snake_case-to-user leaks. Everything else is clean — every status enum elsewhere has a label map (`CURRENT_STATUS_OPTIONS`, `WAIVER_STATUS_CONFIG`, `ACSI_STATUS_CONFIG`, `STATUS_META`, `SCN_STATUS_LABELS`, `formatPprColumnValue`) and uses it at render time.
 
-`isSummaryColumn()` in `lib/supabase/ppr.ts` is now the single source of truth
-for which admin columns surface in the slim summary tables. The `/ppr` Log and
-the Airfield Status `/` "Today's PPRs" panel both use it, so the two views stay
-column-consistent: PPR# / Status / Arrival Date / ETA (Z) / Callsign / Aircraft
-Type. Match is on `column_name` only (case-insensitive) so any base whose admin
-has configured Callsign + Aircraft Type gets the consistent layout regardless
-of `sort_order`. Both tables centered + tightened: padding 8x10 → 6x8, text
-alignment center across headers and cells, dynamic-column max widths
-140→120 (header) and 200→160 (cell).
+### Visual NAVAIDs: stabilize zoom with all layers enabled (`14045e1`)
 
-`useSidebarBadgeCounts` cuts: `getUser()` → `getSession()` (no auth-server
-roundtrip; RLS still enforces on the count queries), polling 30 s → 60 s, and
-the polling tick is now gated on `document.visibilityState === 'visible'` so
-background tabs stop generating Supabase requests entirely. Triggered by
-observing 11,222 auth/24 h on the Supabase dashboard during testing — the
-30s-polling-on-every-tab math worked out to roughly that absolute number.
-Realtime + pathname + custom-event + focus listeners already cover sub-minute
-updates whenever the user is interacting, so the slower polling is purely a
-safety net.
+User-reported instability when zooming with every feature layer enabled at a base with a few thousand lights / signs. Root cause: the `idle`-fired rescale loop in `app/(app)/infrastructure/page.tsx` walked every marker and called `marker.setIcon(...)` on each, forcing Google Maps to re-rasterize. With ~thousands of markers, that's the dominant cost on every fractional zoom step. Made worse by the original 0.4 → 2.0 scale curve interpolating linearly across zoom 12-18, so almost any zoom adjustment produced a different scale value.
 
-### PPR soft-cancel + cancellation email (`507d060`)
+Three targeted changes, all in the rescale `useEffect` and the helpers:
 
-Sixth PPR status: `canceled`. Distinct from `denied` — denied is "AMOPS
-rejected the request"; canceled is "the requester or AMOPS pulled a previously
-approved/pending entry" (aircrew cancellation, weather scrub, schedule slip).
-Migration `2026042903` drops + recreates the `ppr_entries_status_check`
-constraint to allow the new value and adds nullable `cancellation_reason`.
+1. **Reshape the scale curves** (`zoomScale`, `zoomCircleRadius`). New curve is **flat at 0.30 / 3 px below zoom 16**, then ramps 16 → 19 to 1.40 / 16 px. Most zoom transitions land in the flat region and become no-ops. Side benefit: features stay reasonably sized at airfield-overview zoom (14-15) instead of growing chunky.
+2. **Hide every feature marker + overlay circle below zoom 13** via `setMap(null)`. New `featuresHiddenRef` tracks prior state so the flip only runs on threshold cross. `renderFeatures()` honors the same threshold on initial draw so layer toggles while zoomed out don't briefly flash. Below zoom 13 the field is a tiny dot anyway and Google Maps stops rasterizing mapless markers entirely — single biggest win.
+3. **Scale-delta short-circuit.** New `lastScaleRef`. After computing the new scale, if `|new - last| / last < 0.10`, return without walking markers.
 
-`cancelPprEntry()` in `lib/supabase/ppr.ts` mirrors `denyPprEntry`'s shape:
-required reason, status flip, audit-log entry, and a fire-and-forget
-cancellation email via the new `/api/send-ppr-cancellation` route (slate-grey
-palette, `validReplyTo` gate, internal-create PPRs with no requester email
-skip silently). Row-action Cancel button gated on `ppr:write`, hidden on
-already-denied / already-canceled rows. Strikethrough + 0.55 opacity on
-canceled rows in both the `/ppr` Log and the Today's-PPRs panel; detail dialog
-renders without strikethrough so the audit trail stays legible. Detail audit
-section surfaces the cancellation reason. PPR Log PDF gets the new label.
+Out of scope (separate optimizations if needed): full `renderFeatures` rebuild on layer toggle, health-ring `Circle` volume when "Color by health" is on, audit-mode panel cost.
 
-### ACSI inspection-team per-member signature toggle (`04fc376`) + divider (`584e58d`)
+### Rename Training nav label to "Glidepath Training" (`602e314`)
 
-`AcsiTeamMember` gained an optional `signature_required` flag — undefined /
-true keeps the existing PDF behavior (full signature box) so pre-existing
-drafts and filed rows that predate this field stay backwards-compatible.
-Editor row gets a "Signature required on PDF" checkbox under the Title field;
-toggling it doesn't drop the member from the roster, just from the PDF
-signature blocks. PDF Inspection Team section branches per member: required →
-full 32 mm box with name + role + signature/date lines; optional → compact
-14 mm roster row, name + role only.
+Disambiguates the in-app guidance module from airfield management training records / personnel training compliance — users were assuming "Training" meant the latter and skipping the page. Three small label changes (`lib/sidebar-config.ts`, `app/(app)/more/page.tsx`, `CLAUDE.md` modules table) plus the `### 3.5` heading in the capabilities doc. Page header inside `/training` already read "Glidepath Training" so the in-page experience was already consistent. Permission key label `'View Training Page'` left as-is — only visible in the admin permission editor; not worth a new migration.
 
-Follow-up commit added a dashed-line divider with a two-line header above the
-first member beyond the required three (AFM / CE / Safety) — both in the
-editor and in the PDF — so it's obvious why those rows don't generate
-signature blocks by default. New additional members default
-`signature_required: false` to match the divider's convention; the per-row
-checkbox still lets admins opt a specific extra member back in.
+### Docs: terminology + factual sync after capabilities-doc revisions (`596d947`)
 
-### PPR time columns: HHMM input, HHMMZ display, formatter helper (`ff8f408`)
+While I was working, the user revised the v2.32 capabilities doc directly with a batch of terminology preferences and factual corrections. Propagated the durable ones to every other doc and tightened the doc itself for internal consistency:
 
-Admin-configured `time` columns (e.g., the ETD column) were still rendering
-with a colon (`15:00`) in tables and the PDF, which clashed with the spine
-ETA (Z) field's `1500Z` shape. The input branch in `PprFieldInput` switched to
-the same locale-stable 4-digit HHMM pattern; backwards-compatible with values
-stored as `HH:MM` from before the change because it strips the colon on
-render. Storage now stores HHMM going forward, but display formatters handle
-both shapes.
+- Capabilities doc: Daily Inspections regulatory backing line `Vol 1 → Vol 2` (matches the "What it does" sentence the user already updated above); `ACSI book → ACSI report` in the PDF generators list.
+- `docs/manual/01_airfield_status.md` + `02_dashboard.md`: every `AFM Out of Office` rewritten to `Airfield Management Out of Office`, matching the doc and the long-form module name.
 
-`formatPprColumnValue(col, raw)` in `lib/supabase/ppr.ts` is the new single
-source of truth for column-value rendering. Time columns → `1500Z` (handles
-both `15:00` and `1500` storage shapes). yes_no_na → YES/NO/N/A. Date →
-localized. The `/ppr` Log table, `/ppr` detail card, `/ppr` triage summary,
-the Today's-PPRs panel, the PDF (where it replaces the local `formatCell`),
-and the coordination + approval emails all route through it.
-
-Two bug fixes folded in: the Today's-PPRs panel was rendering the literal
-string `—` in the ETA cell because the escape sequence sat in a JSX text
-node rather than a JS string expression — wrapped as `{'—'}`. And the
-Today's-PPRs table swapped from `width:100%` to `width:auto` with a minWidth
-floor so columns don't stretch across the full airfield-status panel width.
+Memory (auto-memory dir, not in any commit):
+- `feedback_glidepath_glossary.md` (new) — single glossary covering WWA Notifications (vs Advisories), Quick Reaction Checklists (full QRC expansion), USDA notified (vs BASH officer), MAJCOM RFM/FAM (vs RFM alone), ACSI report (vs book), AMOPS Out-of-Office, daily SCN check log. Each entry says where the user-facing copy lives and where internal identifiers (`advisory_type` column, `--advisory-padding` CSS, etc.) are exempt.
+- `feedback_amops_terminology.md` extended: "AMOPS personnel" added as the preferred plural; "AMOPS staff" explicitly disallowed.
+- `project_permission_matrix.md`: `MAJCOM/RFM → MAJCOM RFM/FAM` in two spots.
+- `MEMORY.md` index updated to point at the new glossary.
 
 ---
 
 ## Migrations status
 
-All four applied to prod by session end. `2026042902` was applied out of order
-ahead of the schema migrations — confirmed safe because it only touches
-`role_permissions` and has no schema dependencies on the others.
+**1 new migration introduced this session — not yet applied.**
 
 | Migration | Status | What it does |
 |---|---|---|
-| `2026042900_ppr_requester_phone.sql` | ✅ Applied | Adds `requester_phone` to `ppr_entries`; drops + recreates the public-submit RPC with the new arg + server-side required validation |
-| `2026042901_ppr_arrival_eta_zulu.sql` | ✅ Applied | Adds `arrival_eta_zulu` (TEXT, HH:MM); drops + recreates the public-submit RPC with the new arg + HH:MM regex check |
-| `2026042902_amops_ppr_perms.sql` | ✅ Applied | Grants `ppr:delete` + `ppr:approve` to the amops role |
-| `2026042903_ppr_canceled_status.sql` | ✅ Applied | Extends the `ppr_entries.status` CHECK to admit `canceled`; adds nullable `cancellation_reason` |
+| `2026042904_ces_rpc_humanize_status_note.sql` | ⚠️ **Pending** | `CREATE OR REPLACE` on `ces_update_discrepancy` so the audit note written to `status_updates.notes` says `Status changed to: <Label>` instead of `CURRENT_STATUS: <enum>`. Idempotent (function-replace only, no schema change). Safe to apply any time. |
+
+The TypeScript update path (`lib/supabase/discrepancies.ts`) and rendering defense (`app/(app)/discrepancies/[id]/page.tsx`) ship live with the next deploy and immediately clean up both new writes from non-CES users AND historical rows already in the DB. Until `2026042904` is applied, **CES users (only)** will continue to write the legacy `CURRENT_STATUS:` text on transition — which the rendering defense still humanizes on display, so the visible Notes History stays clean either way. Apply at convenience.
 
 ---
 
@@ -174,45 +85,20 @@ ahead of the schema migrations — confirmed safe because it only touches
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| `<input type="time">` rendered AM/PM picker for en-US locales on the public form + internal modal | Native time picker is locale-driven, no cross-browser override | `2ea8d03` (text input + 4-digit HHMM) |
-| Today's-PPRs panel ETA cell showed literal text `—` | Unicode escape was sitting in a JSX text node, not evaluated | `ff8f408` (wrapped as `{'—'}`) |
-| Today's-PPRs columns stretched the full airfield-status panel | `<table style={{ width: '100%' }}>` + 6 columns in a wide container | `ff8f408` (`width: auto` + minWidth floor) |
-| Admin `time` columns (ETD) still displayed with colons in tables / PDF / emails | No formatter — code printed raw `column_values[col.id]` | `ff8f408` (`formatPprColumnValue` helper, used everywhere) |
-| Supabase auth dashboard showing ~11.2k auth/day | Sidebar badge hook polled every 30s with `getUser()` (auth-server roundtrip) on every tab, regardless of visibility | `2ea8d03` (`getSession()` + 60s + visibility-gated polling) |
-| Sidebar Cancel button on a denied / canceled PPR was confusing | No status filter on the action list | `507d060` (gate on status not in `denied`/`canceled`) |
-| Long admin column headers blew out the `/ppr` table to 4× viewport | `whiteSpace: nowrap` global on every `<th>` | `2ea8d03` (`dynamicThStyle` + `dynamicTdStyle` overrides) |
-| `2026042902` was applied out of order (before the schema migrations) | User mistake, no consequence | n/a — verified independent |
+| Notes History on a discrepancy showed `CURRENT_STATUS: awaiting_action_by_ces` (raw enum) | Both write paths wrote a synthetic `CURRENT_STATUS: <enum>` notes string with no humanization | `fea5ea5` (TS humanizes on write; rendering humanizes on read for legacy rows; new migration humanizes the CES RPC) |
+| Visual NAVAIDs page extremely laggy when zooming with all layers enabled | Scale curve produced a new value on every fractional zoom step → idle listener walked every marker and `setIcon()`'d each (Google Maps re-rasterizes per call) | `14045e1` (flat curve below 16 + hide below 13 + scale-delta short-circuit) |
+| "Training" sidebar link confused users into thinking it was personnel training records | Label was just "Training" — ambiguous | `602e314` (renamed to "Glidepath Training") |
+| 7 surviving "FOD walk" stragglers in code/docs/seed after the original PDF-label migration | Cleanup pass missed the manual, module-config, regulations tags, demo SQL, activity-page placeholder | `d4858cb` |
+| CLAUDE.md said `user_can_write` is a current RLS helper | CLAUDE.md not updated when `2026042208` dropped the legacy helpers | `f79bd86` |
 
 ---
 
 ## Lessons from this session
 
-- **`<input type="time">` is a locale trap.** Chrome and Edge on en-US force
-  AM/PM regardless of stored 24-hour value, with no documented override. For
-  Zulu / military time always use `<input type="text" inputMode="numeric">`
-  with a 4-digit HHMM pattern. The pattern's already mirrored on the spine
-  ETA field, the internal modal, and the dynamic `time` columns via
-  `PprFieldInput` — keep doing that.
-- **One formatter, many call sites.** The PPR display values (`time`,
-  `yes_no_na`, `date`) were drifting between the slim Log, the Today's-PPRs
-  panel, the detail card, the triage summary, the PDF, and three email
-  templates. Consolidated into `formatPprColumnValue` in `lib/supabase/ppr.ts`.
-  When adding a new column type or display rule, update the helper, not each
-  consumer.
-- **Polling cost is per-tab.** The 30s sidebar polling was fine when designed
-  for a single user, but with multi-tab testing the math went sideways fast.
-  Default for any new background fetch loop: visibility-gated +
-  `getSession()` (not `getUser()` unless validation matters) + ≥60s interval
-  unless the use case demands otherwise.
-- **Migrations that change RPC signatures must be DROP + CREATE.**
-  `CREATE OR REPLACE` rejects parameter-list changes. The pattern is `DROP
-  FUNCTION IF EXISTS <name>(<old-arg-list>)` then `CREATE OR REPLACE FUNCTION
-  <name>(<new-arg-list>)`, with the GRANT re-issued against the new
-  signature. Four migrations followed this pattern this session.
-- **Permission grants should follow a workflow chain end-to-end.** Adding the
-  Save-Pending mode without `ppr:approve` on AMOPS would have created a
-  dead-end where the same user couldn't finalize their own entry. Audit
-  permission-gated workflows for completeness when introducing them.
+- **Audit trails are user-facing.** Anything that lands in a `notes` field, a `details` field, an `update.notes`, an `entity_display_id` — assume an Airfield Manager will read it. Never write a synthetic `KEY: <enum>` audit string. Humanize at the write site (so the DB stays clean) AND defend at the read site (so historical rows display cleanly without a backfill).
+- **Per-marker `setIcon()` is the dominant cost in Google Maps overlays.** Flat scale curves + threshold-based `setMap(null)` + change-delta short-circuiting beat any amount of cleverness on the per-call side. The rescale loop ran on every `idle` event regardless of whether scale actually changed — fixing that one early-return saved more than the curve reshape did.
+- **When the user is editing the same doc you are, expect Edit-tool conflicts.** The "file modified since read" error fired three times this session on the capabilities doc. The fix is to re-Read before each retry. The user's edits and yours aren't a merge conflict — they're sequential — so re-reading + re-editing always works.
+- **Terminology has accumulated cost.** Every wrong noun in a doc gets repeated. The user's revisions (WWA Notifications, AMOPS personnel, MAJCOM RFM/FAM, ACSI report, USDA notified, Quick Reaction Checklists) come from real-world correctness drift — settle them in `feedback_glidepath_glossary.md` so the next session doesn't reintroduce them.
 
 ---
 
@@ -220,32 +106,26 @@ ahead of the schema migrations — confirmed safe because it only touches
 
 | Item | Severity | Notes |
 |---|---|---|
-| **Sequential coordination** | Deferred | Inherited. All assigned agencies see their work in parallel; no ordering. |
-| **Public form file uploads** | Deferred | Inherited. Out of scope unless requested. |
-| **Bulk coordinate** | Deferred | Inherited. Per-row only. |
-| **`time` column legacy storage shapes** | Low | Pre-2026-04-28 entries store `HH:MM`; new entries store `HHMM`. Display formatters handle both. Cleanup migration optional, not required. |
-| **Cancellation email template is plain** | Low | Functional but uses the same boxed-section pattern as denial. Could share a layout helper across the four PPR email routes. |
-| **`PprFieldInput` time branch differs from spine ETA input** | Low | Both work the same way, but the spine ETA inlines its onChange + validation in the page component while `PprFieldInput` does it inside the dispatch. Worth extracting a shared `<HhmmInput>` if a third site adds one. |
+| **`2026042904` not applied to prod** | Low | The rendering defense covers the user-visible artifact; only the CES write path emits stale text until applied. Idempotent. |
+| **Discrepancy "Notes History" backfill** | Optional | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; the rendering defense rewrites on display. A backfill UPDATE would clean the underlying data but isn't necessary. |
+| **Visual NAVAIDs further perf wins** | Deferred | Layer-toggle full-rebuild, health-ring `Circle` volume when "Color by health" is on, audit-mode panel. Pick up only if user reports more lag after the zoom changes settle. |
+| **UI labels for "Advisories" → "WWA Notifications"** | Deferred | Glossary memory says the user-facing copy is "WWA Notifications", but the actual button labels in the running app still say "Advisories" / "Post Advisory" / etc. Not changed this session — would require coordinated code + manual updates. Internal identifiers (`advisory_type` DB column, `advisoryDraft*` state) stay either way. |
+| **Permission key label `'View Training Page'`** | Low | Visible only in the admin permission editor. Update opportunistically next time a permission migration ships. |
+| **Sequential PPR coordination** | Deferred | Inherited. All assigned agencies see their work in parallel; no ordering. |
+| **Public PPR form file uploads** | Deferred | Inherited. Out of scope unless requested. |
 
 ---
 
 ## Next session tasks
 
-The active backlog is empty. The migrations are documented and can be applied
-in order whenever the user is ready (`2900` → `2901` → `2903`; `2902` already
-applied). Pick up wherever the user wants — no required next step.
+The active backlog is empty. Pick up wherever the user wants — no required next step beyond applying `2026042904` whenever convenient.
 
 ### Long-running carryover from prior sessions
 
-Pick from these only when bandwidth allows or a customer asks. Not a priority
-ranking — group by appetite.
+Pick from these only when bandwidth allows or a customer asks. Not a priority ranking — group by appetite.
 
-- **Offline reads** for QRC + Regulations. Workbox runtime caching is already
-  wired for some routes; add these two.
-- **Component extraction** for 4 K+ LOC pages (`base-setup`, `parking`,
-  `infrastructure`) — explicitly multi-session work. Pure refactor, large
-  test surface.
-- **Trademark resolution** — CDW Class 42 conflict on "GLIDEPATH".
+- **Offline reads** for QRC + Regulations. Workbox runtime caching is already wired for some routes; add these two.
+- **Component extraction** for 4 K+ LOC pages (`base-setup`, `parking`, `infrastructure`) — explicitly multi-session work. Pure refactor, large test surface.
 - **CAC/PIV authentication** (blocked on Platform One).
 - **Outage analytics, training management, Part 139 civilian template.**
 
@@ -254,34 +134,12 @@ ranking — group by appetite.
 ## Build snapshot
 
 ```
-✓ Compiled successfully
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 247 pass
+Tests not re-run this session — none of the touched surfaces have test
+coverage; prior baseline was 247 pass and remains valid.
 
-Notable First Load JS:
-  /wildlife              788 kB (heatmap, unchanged)
-  /parking               411 kB
-  /reports/aging         331 kB
-  /reports/discrepancies 330 kB
-  /obstructions/[id]     327 kB
-  /reports/daily         322 kB
-  /reports/lighting      318 kB
-  /reports/trends        315 kB
-  /library               292 kB
-  /settings/base-setup   241 kB  (+1 kB this session — drag handles, info_only, coord picker)
-  /inspections           233 kB
-  /discrepancies         224 kB
-  /settings              199 kB
-  /regulations           182 kB
-  /scn                   181 kB
-  /qrc                   180 kB
-  /ppr                   181 kB  (+3 kB this session — three-mode create, cancel flow, summary filter)
-  /more                  176 kB
-  /settings/base-setup/modules 176 kB
-  /ppr-request/[baseId]  152 kB  (legacy)
-  /[icao]/ppr-request    152 kB  (new short URL)
-
-Middleware             74.5 kB
+No bundle size deltas to flag — changes were docs (text-only) + small
+TypeScript edits in existing files.
 ```
 
 ---
@@ -290,6 +148,7 @@ Middleware             74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-04-28 (cont.) | Capabilities doc v2.32 + FOD Check terminology cleanup, discrepancy Notes History humanization (TS + rendering + new migration `2026042904`), Visual NAVAIDs zoom stabilization (flat curve + hide-below-13 + scale-delta short-circuit), Training nav rename → "Glidepath Training", CLAUDE.md drift fixes (RLS helpers, branch, modules table, migration count), terminology glossary memory file. 6 commits. **Migration `2026042904` pending.** |
 | **Unreleased** | 2026-04-28 | PPR commercial phone + ETA Zulu spine, soft-cancel status + email, AMOPS delete/approve perms, manual-coord-pending save mode, slim Log + Today's PPRs panel, `formatPprColumnValue` helper for time/yes_no_na/date, ACSI per-member signature toggle + additional-members divider, sidebar badge polling cuts. Four migrations applied. |
 | **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge), QRC sidebar badge. Migrations 2026042803 + 2026042804 applied. |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
@@ -308,31 +167,33 @@ See `CHANGELOG.md` for full history.
 
 ### New files
 
-- `supabase/migrations/2026042900_ppr_requester_phone.sql`
-- `supabase/migrations/2026042901_ppr_arrival_eta_zulu.sql`
-- `supabase/migrations/2026042902_amops_ppr_perms.sql`
-- `supabase/migrations/2026042903_ppr_canceled_status.sql`
-- `app/api/send-ppr-cancellation/route.ts` — cancellation email, slate-grey palette
+- `docs/Glidepath_Capabilities_v2.32.md` — capabilities reference handed to anyone asking "what can Glidepath do and why should we use it?"
+- `supabase/migrations/2026042904_ces_rpc_humanize_status_note.sql` — recreates `ces_update_discrepancy` with humanized notes (pending application)
 
 ### Modified files
 
-- `components/ppr/public-request-form.tsx` — phone + HHMM ETA spine inputs
-- `components/ppr/ppr-field-input.tsx` — time branch swapped to HHMM
-- `components/acsi/acsi-team-editor.tsx` — signature-required checkbox, additional-members divider
-- `app/(app)/ppr/page.tsx` — three-mode create, soft-cancel, summary columns, ETA HHMM, status filter chip, strikethrough on canceled rows, formatter wiring
-- `app/(app)/page.tsx` — Today's-PPRs panel: status pill, ETA, summary columns, strikethrough on canceled, width auto, formatter wiring
-- `app/(app)/settings/base-setup/page.tsx` — SCN Agencies custom list (drag + inline rename)
-- `app/api/send-ppr-coordination-request/route.ts` — phone + ETA in subject; `formatPprColumnValue`
-- `app/api/send-ppr-approval/route.ts` — `formatPprColumnValue`
-- `lib/supabase/ppr.ts` — `PprStatus` + `cancellation_reason`, `cancelPprEntry`, `manualCoordPending` flag, `isSummaryColumn`, `formatPprColumnValue`
-- `lib/supabase/types.ts` — `requester_phone`, `arrival_eta_zulu`, `cancellation_reason`, `signature_required`
-- `lib/supabase/scn-agencies.ts` — typed helpers exposed for editor consumption
-- `lib/ppr-pdf.ts` — Remarks inline column, summary stat fix, `formatCell` → `formatPprColumnValue`, ETA column, canceled status label
-- `lib/acsi-pdf.ts` — Inspection Team branches by `signature_required`; additional-members divider
-- `lib/acsi-draft.ts` — required team members default `signature_required: true`
-- `hooks/use-sidebar-badge-counts.ts` — `getSession()`, 60s poll, visibility-gated
-- `tests/pdf-utils.test.ts` — fixture additions for new optional fields
+- `CLAUDE.md` — RLS helpers, branch convention, modules table, migration count, status legend, /training row clarified
+- `app/(app)/activity/page.tsx` — placeholder text "FOD walk" → "FOD Check"
+- `app/(app)/discrepancies/[id]/page.tsx` — `formatStatusUpdateNotes()` + `statusLabel()` helpers; PDF notesHistory mapping
+- `app/(app)/infrastructure/page.tsx` — flat scale curves, hide-below-13 with `featuresHiddenRef`, scale-delta short-circuit with `lastScaleRef`
+- `app/(app)/more/page.tsx` — Training entry renamed
+- `docs/manual/01_airfield_status.md` — "AFM Out of Office" → "Airfield Management Out of Office"
+- `docs/manual/02_dashboard.md` — same
+- `docs/manual/03_airfield_checks.md` — "FOD walk" / "FOD Walk" → "FOD Check"
+- `lib/modules-config.ts` — Checks module use-case "FOD walk" → "FOD Check"
+- `lib/regulations-data.ts` — DAFMAN 13-204 v2 tags array "FOD walk" → "FOD Check"
+- `lib/sidebar-config.ts` — Training entry renamed
+- `lib/supabase/discrepancies.ts` — `currentStatusLabel()` helper + audit insert humanized
+- `supabase/seed-demo-walkthrough.sql` — two demo runway-status reasons "FOD walk" → "FOD Check"
+
+### Auto-memory (not in any commit)
+
+- `feedback_glidepath_glossary.md` (new) — terminology table
+- `feedback_amops_terminology.md` (extended) — "AMOPS personnel" preference
+- `feedback_fod_terminology.md` (added earlier this day)
+- `project_permission_matrix.md` (updated) — MAJCOM RFM/FAM
+- `MEMORY.md` — index updated
 
 ---
 
-*All migrations applied. No pending DB work.*
+*All changes pushed to `origin/main`. One migration pending application to prod.*
