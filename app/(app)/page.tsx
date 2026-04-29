@@ -123,6 +123,12 @@ export default function HomePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ContractorTemplate | null>(null)
   const [editingConstruction, setEditingConstruction] = useState(false)
   const [constructionDraft, setConstructionDraft] = useState('')
+  // Inline structured-add state for Construction/Closures. Lets users
+  // append a single LOCATION + work entry without dropping into the
+  // free-text textarea for the bulk Edit flow.
+  const [addingConstruction, setAddingConstruction] = useState(false)
+  const [newConstructionLocation, setNewConstructionLocation] = useState('')
+  const [newConstructionWork, setNewConstructionWork] = useState('')
   const [editingMisc, setEditingMisc] = useState(false)
   const [miscDraft, setMiscDraft] = useState('')
   // RSC dialog state
@@ -753,16 +759,16 @@ export default function HomePage() {
                 )}
               </div>
               {canWriteAirfieldStatus && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 3,
-                  padding: '2px 7px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(56,189,248,0.35)',
-                  background: 'rgba(56,189,248,0.08)',
-                  color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
-                  letterSpacing: '0.05em', textTransform: 'uppercase',
-                }}>
-                  <Plus size={10} strokeWidth={2.5} />
-                  Add
+                <div
+                  title="Add a weather alert"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: 'var(--radius-sm)',
+                    border: '1px solid rgba(56,189,248,0.35)',
+                    background: 'rgba(56,189,248,0.08)',
+                    color: 'var(--color-accent)',
+                  }}>
+                  <Plus size={14} strokeWidth={2.5} />
                 </div>
               )}
             </div>
@@ -799,16 +805,16 @@ export default function HomePage() {
                 )}
               </div>
               {canWriteAirfieldStatus && (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 3,
-                  padding: '2px 7px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(56,189,248,0.35)',
-                  background: 'rgba(56,189,248,0.08)',
-                  color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
-                  letterSpacing: '0.05em', textTransform: 'uppercase',
-                }}>
-                  <Plus size={10} strokeWidth={2.5} />
-                  Add
+                <div
+                  title="Add a weather alert"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: 'var(--radius-sm)',
+                    border: '1px solid rgba(56,189,248,0.35)',
+                    background: 'rgba(56,189,248,0.08)',
+                    color: 'var(--color-accent)',
+                  }}>
+                  <Plus size={14} strokeWidth={2.5} />
                 </div>
               )}
             </div>
@@ -2428,8 +2434,8 @@ export default function HomePage() {
           </button>
         )}
       </div>
-      <div className="card" style={{ padding: constructionRemarks ? '10px 14px' : 16, textAlign: constructionRemarks ? 'left' : 'center', marginBottom: 12 }}>
-        {constructionRemarks ? (() => {
+      <div className="card" style={{ padding: '10px 14px', textAlign: 'left', marginBottom: 12 }}>
+        {(() => {
           // Best-effort parse of the free-text remarks into structured
           // rows. Pattern recognized: optional leading "<digit>." then
           // a LOCATION segment ending in ":" then work text on the
@@ -2437,24 +2443,47 @@ export default function HomePage() {
           // back to plain pre-wrap so user formatting always survives.
           type Item = { location: string; work: string }
           const items: Item[] = []
-          const blocks = constructionRemarks.split(/\n\s*\n+/)
-          for (const block of blocks) {
-            const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
-            if (lines.length === 0) continue
-            const headMatch = lines[0].match(/^\s*(?:\d+[.)]\s*)?(.+?):\s*$/)
-            if (headMatch && lines.length >= 2) {
-              items.push({ location: headMatch[1].trim(), work: lines.slice(1).join(' ').trim() })
-            } else {
-              // Single-line "LOCATION: work" form
-              const inlineMatch = lines[0].match(/^\s*(?:\d+[.)]\s*)?(.+?):\s+(.+)$/)
-              if (inlineMatch) {
-                items.push({ location: inlineMatch[1].trim(), work: inlineMatch[2].trim() })
+          if (constructionRemarks) {
+            const blocks = constructionRemarks.split(/\n\s*\n+/)
+            for (const block of blocks) {
+              const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
+              if (lines.length === 0) continue
+              const headMatch = lines[0].match(/^\s*(?:\d+[.)]\s*)?(.+?):\s*$/)
+              if (headMatch && lines.length >= 2) {
+                items.push({ location: headMatch[1].trim(), work: lines.slice(1).join(' ').trim() })
+              } else {
+                // Single-line "LOCATION: work" form
+                const inlineMatch = lines[0].match(/^\s*(?:\d+[.)]\s*)?(.+?):\s+(.+)$/)
+                if (inlineMatch) {
+                  items.push({ location: inlineMatch[1].trim(), work: inlineMatch[2].trim() })
+                }
               }
             }
           }
-          if (items.length === 0) {
+          // Free-text fell through the parser — render it as-is and
+          // skip the structured add (the user is mid-edit in the
+          // bulk-edit flow; let them finish there).
+          if (constructionRemarks && items.length === 0) {
             return <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{constructionRemarks}</div>
           }
+
+          const handleSaveNewItem = () => {
+            const loc = newConstructionLocation.trim()
+            const work = newConstructionWork.trim()
+            if (!loc || !work) return
+            const entry = `${loc.toUpperCase()}: ${work}`
+            const next = constructionRemarks ? `${constructionRemarks}\n\n${entry}` : entry
+            setConstructionRemarks(next)
+            setNewConstructionLocation('')
+            setNewConstructionWork('')
+            setAddingConstruction(false)
+          }
+          const handleCancelNewItem = () => {
+            setNewConstructionLocation('')
+            setNewConstructionWork('')
+            setAddingConstruction(false)
+          }
+
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {items.map((it, idx) => (
@@ -2471,11 +2500,110 @@ export default function HomePage() {
                   </span>
                 </div>
               ))}
+
+              {items.length === 0 && !addingConstruction && (
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', textAlign: 'center', padding: '4px 0' }}>None</div>
+              )}
+
+              {/* Inline structured add — appends one LOCATION: work
+                  entry to the underlying free-text remarks. The bulk
+                  Edit flow remains available via the section-header
+                  Edit/Add link for free-form changes. */}
+              {canWriteAirfieldStatus && !addingConstruction && (
+                <button
+                  type="button"
+                  onClick={() => setAddingConstruction(true)}
+                  style={{
+                    alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6,
+                    marginTop: items.length > 0 ? 4 : 0,
+                    padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+                    border: '1px dashed rgba(56,189,248,0.40)', background: 'transparent',
+                    color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                    letterSpacing: '0.05em', textTransform: 'uppercase',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <Plus size={11} strokeWidth={2.5} />
+                  Add Item
+                </button>
+              )}
+
+              {canWriteAirfieldStatus && addingConstruction && (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', gap: 6,
+                  marginTop: items.length > 0 ? 4 : 0,
+                  padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input
+                      autoFocus
+                      value={newConstructionLocation}
+                      onChange={(e) => setNewConstructionLocation(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveNewItem()
+                        if (e.key === 'Escape') handleCancelNewItem()
+                      }}
+                      placeholder="LOCATION (e.g. HANGAR 4)"
+                      style={{
+                        flex: '1 1 140px', minWidth: 0,
+                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border-mid)',
+                        background: 'var(--color-bg)', color: 'var(--color-warning)',
+                        fontFamily: 'monospace', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        letterSpacing: '0.04em', textTransform: 'uppercase', outline: 'none',
+                      }}
+                    />
+                    <input
+                      value={newConstructionWork}
+                      onChange={(e) => setNewConstructionWork(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveNewItem()
+                        if (e.key === 'Escape') handleCancelNewItem()
+                      }}
+                      placeholder="Work description"
+                      style={{
+                        flex: '2 1 200px', minWidth: 0,
+                        padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border-mid)',
+                        background: 'var(--color-bg)', color: 'var(--color-text-1)',
+                        fontSize: 'var(--fs-sm)', fontFamily: 'inherit', outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={handleCancelNewItem}
+                      style={{
+                        padding: '3px 10px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border-mid)', background: 'transparent',
+                        color: 'var(--color-text-3)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                        letterSpacing: '0.04em', textTransform: 'uppercase',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >Cancel</button>
+                    <button
+                      type="button"
+                      onClick={handleSaveNewItem}
+                      disabled={!newConstructionLocation.trim() || !newConstructionWork.trim()}
+                      style={{
+                        padding: '3px 12px', borderRadius: 'var(--radius-sm)',
+                        border: '1px solid rgba(56,189,248,0.40)',
+                        background: 'rgba(56,189,248,0.10)',
+                        color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 800,
+                        letterSpacing: '0.04em', textTransform: 'uppercase',
+                        cursor: newConstructionLocation.trim() && newConstructionWork.trim() ? 'pointer' : 'not-allowed',
+                        opacity: newConstructionLocation.trim() && newConstructionWork.trim() ? 1 : 0.5,
+                        fontFamily: 'inherit',
+                      }}
+                    >Save</button>
+                  </div>
+                </div>
+              )}
             </div>
           )
-        })() : (
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
-        )}
+        })()}
       </div>
 
       </div>
