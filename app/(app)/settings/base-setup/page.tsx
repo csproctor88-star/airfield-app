@@ -4856,24 +4856,46 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
   )
 }
 
-// Tight per-surface visibility chip used in the PPR Columns row.
-// Green-on when active, neutral border-only when off — matches the
-// previous Public/Internal pill so the visual weight stays balanced.
-function SurfaceToggle({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
+// Compact chip cluster used by the PPR Columns row to keep multiple
+// related toggles reading as a single unit. Letters live inside one
+// rounded border; the per-letter button has no border of its own, so
+// "off" letters dim into the background and the active state sits as
+// a green fill — visually one widget, not three.
+type ChipDef = { key: string; label: string; on: boolean; onClick: () => void; title?: string }
+function ChipCluster({ chips }: { chips: ChipDef[] }) {
   return (
-    <button
-      onClick={onClick}
-      title={`Show this column on the ${label} surface`}
+    <div
       style={{
-        padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-        border: `1px solid ${on ? '#22c55e' : 'var(--color-border)'}`,
-        background: on ? 'rgba(34,197,94,0.10)' : 'transparent',
-        color: on ? '#22c55e' : 'var(--color-text-3)',
-        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'stretch',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-sm)',
+        overflow: 'hidden',
+        height: 22,
       }}
     >
-      {label}
-    </button>
+      {chips.map((chip, i) => (
+        <button
+          key={chip.key}
+          onClick={chip.onClick}
+          title={chip.title || chip.label}
+          style={{
+            padding: '0 8px',
+            border: 'none',
+            borderLeft: i === 0 ? 'none' : '1px solid var(--color-border)',
+            background: chip.on ? 'rgba(34,197,94,0.14)' : 'transparent',
+            color: chip.on ? '#22c55e' : 'var(--color-text-4)',
+            fontSize: 'var(--fs-xs)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            letterSpacing: '0.04em',
+          }}
+        >
+          {chip.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -5220,8 +5242,8 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           key={col.id}
           {...getDropProps(col.id)}
           style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '8px 0',
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 0',
             borderBottom: '1px solid var(--color-border)',
             borderTop: dragOverId === col.id && draggedId !== col.id ? '2px solid var(--color-cyan)' : '2px solid transparent',
             background: dragOverId === col.id && draggedId !== col.id ? 'var(--color-bg-elevated)' : undefined,
@@ -5264,14 +5286,14 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             <span
               onClick={() => { setEditingColId(col.id); setEditingColName(col.column_name) }}
               title="Click to rename"
-              style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', fontWeight: 600, cursor: 'pointer' }}
+              style={{ flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 500, cursor: 'pointer' }}
             >{col.column_name}</span>
           )}
           <select
             value={col.column_type || 'text'}
             onChange={e => handleChangeType(col, e.target.value as PprColumnType)}
             style={{
-              padding: '2px 6px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
+              padding: '0 6px', height: 22, borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
               border: '1px solid var(--color-border)', background: 'var(--color-bg)',
               color: 'var(--color-text-2)', cursor: 'pointer',
             }}
@@ -5285,9 +5307,9 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
               onClick={() => { setInfoEditCol(col); setInfoEditValue(col.info_text || '') }}
               title="Edit the static text shown to requesters"
               style={{
-                padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                padding: '0 8px', height: 22, borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                 border: '1px solid var(--color-border)', background: 'transparent',
-                color: 'var(--color-text-2)', cursor: 'pointer',
+                color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
               Edit Text
@@ -5295,38 +5317,44 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           ) : (
             <button
               onClick={() => handleToggleRequired(col)}
+              title={col.is_required ? 'Required — click to make optional' : 'Optional — click to make required'}
               style={{
-                padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                padding: '0 8px', height: 22, borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 border: `1px solid ${col.is_required ? 'var(--color-accent)' : 'var(--color-border)'}`,
                 background: col.is_required ? 'rgba(56,189,248,0.08)' : 'transparent',
-                color: col.is_required ? 'var(--color-accent)' : 'var(--color-text-3)',
-                cursor: 'pointer',
+                color: col.is_required ? 'var(--color-accent)' : 'var(--color-text-4)',
+                cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
-              {col.is_required ? 'Required' : 'Optional'}
+              {col.is_required ? 'Req' : 'Opt'}
             </button>
           )}
           {col.column_type === 'time' && (
-            <select
-              value={col.time_display ?? 'zulu'}
-              onChange={e => handleChangeTimeDisplay(col, e.target.value as 'zulu' | 'local')}
-              title="How this time column displays — Zulu (HHMMZ) or base local (HHMM)"
-              style={{
-                padding: '2px 6px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
-                border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-                color: 'var(--color-text-2)', cursor: 'pointer',
-              }}
-            >
-              <option value="zulu">Zulu</option>
-              <option value="local">Local</option>
-            </select>
+            <ChipCluster
+              chips={[
+                {
+                  key: 'zulu', label: 'Z', title: 'Display as Zulu (HHMMZ)',
+                  on: (col.time_display ?? 'zulu') === 'zulu',
+                  onClick: () => handleChangeTimeDisplay(col, 'zulu'),
+                },
+                {
+                  key: 'local', label: 'L', title: 'Display as base local time (HHMM)',
+                  on: col.time_display === 'local',
+                  onClick: () => handleChangeTimeDisplay(col, 'local'),
+                },
+              ]}
+            />
           )}
-          {/* Per-surface visibility — three independent toggles. The
+          {/* Per-surface visibility — one cluster, three letters. The
               hardcoded spine columns (PPR#, Status, Arrival Date, ETA)
               show on every surface regardless of these flags. */}
-          <SurfaceToggle on={col.show_on_status} label="Status" onClick={() => handleToggleSurface(col, 'show_on_status')} />
-          <SurfaceToggle on={col.show_on_form}   label="Form"   onClick={() => handleToggleSurface(col, 'show_on_form')} />
-          <SurfaceToggle on={col.show_on_log}    label="Log"    onClick={() => handleToggleSurface(col, 'show_on_log')} />
+          <ChipCluster
+            chips={[
+              { key: 'status', label: 'S', title: 'Show on Airfield Status panel',          on: col.show_on_status, onClick: () => handleToggleSurface(col, 'show_on_status') },
+              { key: 'form',   label: 'F', title: 'Show on public PPR request form',        on: col.show_on_form,   onClick: () => handleToggleSurface(col, 'show_on_form')   },
+              { key: 'log',    label: 'L', title: 'Show on PPR Log table + detail card + PDF', on: col.show_on_log, onClick: () => handleToggleSurface(col, 'show_on_log')    },
+            ]}
+          />
           <button
             onClick={() => handleDelete(col)}
             style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
@@ -5364,40 +5392,37 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
           ))}
         </select>
         {newColType !== 'info_only' && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            <input type="checkbox" checked={newColRequired} onChange={e => setNewColRequired(e.target.checked)} />
-            Required
-          </label>
+          <button
+            type="button"
+            onClick={() => setNewColRequired(v => !v)}
+            title="Toggle required"
+            style={{
+              padding: '2px 8px', height: 22, borderRadius: 'var(--radius-sm)',
+              fontSize: 'var(--fs-xs)', fontWeight: 700,
+              border: `1px solid ${newColRequired ? 'var(--color-accent)' : 'var(--color-border)'}`,
+              background: newColRequired ? 'rgba(56,189,248,0.10)' : 'transparent',
+              color: newColRequired ? 'var(--color-accent)' : 'var(--color-text-4)',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            {newColRequired ? 'Req' : 'Opt'}
+          </button>
         )}
         {newColType === 'time' && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }} title="Display this time as Zulu or base local">
-            Display:
-            <select
-              value={newColTimeDisplay}
-              onChange={e => setNewColTimeDisplay(e.target.value as 'zulu' | 'local')}
-              style={{
-                padding: '2px 6px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
-                border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
-                color: 'var(--color-text-2)', cursor: 'pointer',
-              }}
-            >
-              <option value="zulu">Zulu</option>
-              <option value="local">Local</option>
-            </select>
-          </label>
+          <ChipCluster
+            chips={[
+              { key: 'zulu',  label: 'Z', title: 'Display as Zulu',      on: newColTimeDisplay === 'zulu',  onClick: () => setNewColTimeDisplay('zulu') },
+              { key: 'local', label: 'L', title: 'Display as base local', on: newColTimeDisplay === 'local', onClick: () => setNewColTimeDisplay('local') },
+            ]}
+          />
         )}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on Airfield Status panel">
-          <input type="checkbox" checked={newColShowOnStatus} onChange={e => setNewColShowOnStatus(e.target.checked)} />
-          Status
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on public PPR request form">
-          <input type="checkbox" checked={newColShowOnForm} onChange={e => setNewColShowOnForm(e.target.checked)} />
-          Form
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on PPR Log table + detail card + PDF">
-          <input type="checkbox" checked={newColShowOnLog} onChange={e => setNewColShowOnLog(e.target.checked)} />
-          Log
-        </label>
+        <ChipCluster
+          chips={[
+            { key: 'status', label: 'S', title: 'Show on Airfield Status panel',             on: newColShowOnStatus, onClick: () => setNewColShowOnStatus(v => !v) },
+            { key: 'form',   label: 'F', title: 'Show on public PPR request form',           on: newColShowOnForm,   onClick: () => setNewColShowOnForm(v => !v)   },
+            { key: 'log',    label: 'L', title: 'Show on PPR Log table + detail card + PDF', on: newColShowOnLog,    onClick: () => setNewColShowOnLog(v => !v)    },
+          ]}
+        />
         <button
           onClick={handleAdd}
           disabled={!newColName.trim()}
