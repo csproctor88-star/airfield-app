@@ -135,7 +135,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 **Outputs.** PDF · Email · Auto-created discrepancies · NAVAID status updates.
 
-**Regulatory backing.** DAFMAN 13-204 Vol 1 (daily airfield + lighting inspection requirement); DAFMAN 13-204 Vol 2 Para 5.4.3.
+**Regulatory backing.** DAFMAN 13-204 Vol 2 (daily airfield + lighting inspection requirement); DAFMAN 13-204 Vol 2 Para 5.4.3.
 
 ---
 
@@ -812,7 +812,7 @@ All PDF generation is client-side via jsPDF + jspdf-autotable. Photos and maps e
 5. **discrepancy-trends-pdf** — opened-vs-closed trend chart
 6. **lighting-report-pdf** — system health, component inventory, outages
 7. **check-pdf** — single check with photo grid, signature, map
-8. **acsi-pdf** — ACSI book with sections, findings, signature blocks
+8. **acsi-pdf** — ACSI report with sections, findings, signature blocks
 9. **inspection-pdf** — daily airfield / lighting inspection
 10. **obstruction-pdf** — UFC 3-260-01 surface analysis with penetrations
 11. **parking-pdf** — to-scale parking diagram with map snapshot

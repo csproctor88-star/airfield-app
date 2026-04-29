@@ -193,14 +193,14 @@ None specific to this module (all interactions are tap/click).
 | Can't change a status | Your role is restricted (Safety/ATC/Read Only are observers) | Check with admin; AMOPS, AFM, NAMO, and admins can change status. |
 | "Runway status log" entry missing from Daily Ops PDF | Handler didn't call `logRunwayStatusChange()` — very rare | File a support ticket; the runway status change itself is in `activity_log`. |
 | Advisory didn't auto-clear at expiry | Server timezone mismatch (very rare) | Manually clear; report to support. |
-| AFM Out of Office banner won't clear | You're not the activator and your role doesn't allow clearing | Ask AFM or an admin; Command Post initials are required. |
+| Airfield Management Out of Office banner won't clear | You're not the activator and your role doesn't allow clearing | Ask AFM or an admin; Command Post initials are required. |
 | Personnel count mismatches reality | Personnel weren't marked Completed when they left | Use the Personnel module to close out entries ([20_personnel.md](20_personnel.md)). |
 
 ---
 
 ## Related manual files
 
-- [02_dashboard.md](02_dashboard.md) — Where AFM Out of Office is toggled.
+- [02_dashboard.md](02_dashboard.md) — Where Airfield Management Out of Office is toggled.
 - [06_discrepancies.md](06_discrepancies.md) — Linked discrepancies auto-created from NAVAID outages.
 - [19_events_log.md](19_events_log.md) — All status changes are logged here.
 - [20_personnel.md](20_personnel.md) — Personnel on Airfield panel.

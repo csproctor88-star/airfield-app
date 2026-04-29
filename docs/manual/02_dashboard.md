@@ -9,7 +9,7 @@
 The Dashboard is organized into four bands (top to bottom):
 
 1. **Inspection status strip + Quick actions** — inspection-of-the-day status and large pill buttons for common workflows.
-2. **AFM Out of Office toggle** — visible to AFM, AMOPS, and admins.
+2. **Airfield Management Out of Office toggle** — visible to AFM, AMOPS, and admins.
 3. **Recent Activity feed** — a unified stream of the last ~20 events across the system.
 
 ---
@@ -150,7 +150,7 @@ None specific to the Dashboard.
 | Badge count doesn't match another module | Realtime delay (rare); or cached filter state | Refresh the page. |
 | Activity feed missing entries you expect | The entries may predate the feed window (~last 20) | Open Events Log for the full history. |
 | Edit/Delete buttons missing from a feed entry | You're not an admin and it isn't your entry, or it's a synthetic entry | Go to the source module (e.g., Discrepancies) to edit/delete. |
-| AFM Out of Office toggle not visible | Your role lacks permission (AFM, AMOPS, Base Admin, Sys Admin only) | Ask a qualifying user. |
+| Airfield Management Out of Office toggle not visible | Your role lacks permission (AFM, AMOPS, Base Admin, Sys Admin only) | Ask a qualifying user. |
 | Out of Office banner still shows after deactivation | Realtime push missed — refresh | Refresh the affected device. |
 | Synthetic entry delete removes the feed item but source still exists | Deletion failed at the source table (e.g., discrepancy protected by RLS) | Check the source module for an error toast. |
 
@@ -158,7 +158,7 @@ None specific to the Dashboard.
 
 ## Related manual files
 
-- [01_airfield_status.md](01_airfield_status.md) — Where AFM Out of Office banner appears.
+- [01_airfield_status.md](01_airfield_status.md) — Where Airfield Management Out of Office banner appears.
 - [04_daily_inspections.md](04_daily_inspections.md) — What the Inspection Status Strip links to.
 - [12_shift_checklist.md](12_shift_checklist.md) — Shift Checklist modal and reset.
 - [16_ppr.md](16_ppr.md) — Today's PPRs section.
