@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
 import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
-import { fetchPprEntriesForDate, fetchPprColumns, isSummaryColumn, formatPprColumnValue, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
+import { fetchPprEntriesForDate, fetchPprColumns, formatPprColumnValue, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
@@ -280,16 +280,28 @@ export default function HomePage() {
   // operational view of what's actually scheduled to be on the field.
   // Pending review / coordination / approval and denied entries live
   // in the PPR module proper, not here.
+  //
+  // "Today" here means today **in base local time** — operators read
+  // this panel for what's landing on their field today, not what's
+  // happening on the UTC calendar. en-CA returns YYYY-MM-DD which
+  // matches the storage shape of `arrival_date` directly. Falls back
+  // to UTC if the installation timezone is somehow missing.
+  const baseTimezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || 'UTC'
   const loadTodayPprs = useCallback(async () => {
     if (!installationId) { setTodayPprs([]); setPprColumns([]); return }
-    const today = new Date().toISOString().slice(0, 10)
+    let today: string
+    try {
+      today = new Intl.DateTimeFormat('en-CA', { timeZone: baseTimezone }).format(new Date())
+    } catch {
+      today = new Date().toISOString().slice(0, 10)
+    }
     const [entries, cols] = await Promise.all([
       fetchPprEntriesForDate(installationId, today),
       fetchPprColumns(installationId),
     ])
     setTodayPprs(entries.filter((e) => e.status === 'approved'))
     setPprColumns(cols)
-  }, [installationId])
+  }, [installationId, baseTimezone])
 
   useEffect(() => { loadTodayPprs() }, [loadTodayPprs])
 
@@ -2334,7 +2346,14 @@ export default function HomePage() {
           Type. Anything else (requester, all admin columns, notes,
           coord, remarks) lives in the detail view on /ppr. */}
       {pprColumns.length > 0 && (() => {
-        const summaryCols = pprColumns.filter((c) => isSummaryColumn(c.column_name))
+        // Custom columns the admin chose to surface on this panel.
+        // info_only is excluded — it would render as a wall of text in
+        // a row. The legacy isSummaryColumn() check has been retired
+        // in favor of the explicit show_on_status flag set in Base
+        // Setup → PPR Columns.
+        const summaryCols = pprColumns.filter(
+          (c) => c.show_on_status && c.column_type !== 'info_only',
+        )
         const ppPanelTh: React.CSSProperties = {
           padding: '6px 8px', textAlign: 'center', fontWeight: 700,
           color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)',
@@ -2418,7 +2437,11 @@ export default function HomePage() {
                               : <span style={{ color: 'var(--color-text-3)' }}>{'\u2014'}</span>}
                           </td>
                           {summaryCols.map(col => {
-                            const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id])
+                            const formatted = formatPprColumnValue(
+                              col,
+                              (entry.column_values || {})[col.id],
+                              { tz: baseTimezone },
+                            )
                             return (
                               <td key={col.id} style={ppPanelTd}>
                                 {formatted || '\u2014'}

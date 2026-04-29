@@ -12,10 +12,15 @@ type PublicCol = {
   is_required: boolean
   sort_order: number
   info_text: string | null
+  /** Only meaningful for type='time'. NULL → Zulu (default). */
+  time_display: 'zulu' | 'local' | null
 }
 
 type PublicConfig = {
   baseName: string
+  /** IANA tz from `bases.timezone` — used to label time columns
+   *  configured for local display. */
+  timezone: string
   moduleEnabled: boolean
   columns: PublicCol[]
 }
@@ -61,7 +66,6 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
   const [requesterEmail, setRequesterEmail] = useState('')
   const [requesterPhone, setRequesterPhone] = useState('')
   const [arrivalDate, setArrivalDate] = useState(today)
-  const [arrivalEta, setArrivalEta] = useState('')
   const [values, setValues] = useState<Record<string, string>>({})
   const [notes, setNotes] = useState('')
 
@@ -118,6 +122,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
 
       setConfig({
         baseName: row.base_name as string,
+        timezone: (row.timezone as string) || 'UTC',
         moduleEnabled: Boolean(row.module_enabled),
         columns: ((row.columns as PublicCol[]) ?? []).slice().sort((a, b) => a.sort_order - b.sort_order),
       })
@@ -150,10 +155,6 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       setError('Please select an arrival date')
       return
     }
-    if (!/^([01]\d|2[0-3])[0-5]\d$/.test(arrivalEta)) {
-      setError('Please enter your ETA as 4-digit HHMM (24-hour Zulu, e.g. 1500)')
-      return
-    }
     for (const c of config.columns) {
       // info_only fields take no input — never enforce required on them
       // even if the admin somehow toggled it on.
@@ -180,10 +181,11 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       p_requester_email: requesterEmail.trim(),
       p_requester_phone: requesterPhone.trim(),
       p_arrival_date: arrivalDate,
-      // Stored canonical form is HH:MM (matches the column_type='time'
-      // convention + the DB regex check). Wire format to the user
-      // remains HHMM 24-hour Zulu.
-      p_arrival_eta_zulu: `${arrivalEta.slice(0, 2)}:${arrivalEta.slice(2)}`,
+      // ETA is no longer collected on the public form. Bases that
+      // want a public arrival time add a custom time column themselves
+      // with the desired Zulu/Local display mode. Omitting the
+      // parameter relies on the default-NULL signature in
+      // 2026042905_ppr_per_surface_flags.sql.
       p_column_values: values,
       p_notes: notes.trim() || null,
     })
@@ -371,28 +373,13 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
             })()}
           </div>
 
-          {/* Fixed: arrival ETA (Zulu) — kept directly under the date so
-              all arrival info is grouped before any aircraft / departure
-              fields. 24-hour HHMM (no colon) matches military / Zulu
-              convention and avoids the locale-dependent AM/PM that
-              <input type="time"> renders in en-US browsers. */}
-          <div>
-            <label style={labelStyle}>ETA (Z) <span style={{ color: '#EF4444' }}>*</span></label>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={4}
-              value={arrivalEta}
-              onChange={(e) => setArrivalEta(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              placeholder="HHMM (e.g. 1500)"
-              style={inputStyle}
-            />
-            {arrivalEta && /^([01]\d|2[0-3])[0-5]\d$/.test(arrivalEta) && (
-              <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
-                → {arrivalEta}Z
-              </div>
-            )}
-          </div>
+          {/* ETA was previously a mandatory Zulu HHMM input here. It's
+              been removed: requesters think in local time and the
+              forced Zulu entry was a confusion source. Bases that
+              want public time capture add a custom `time` column in
+              Base Setup → PPR Columns with the desired Zulu/Local
+              display mode — that column will render below in the
+              dynamic-columns block. */}
 
           {/* Dynamic public columns */}
           {config.columns.length > 0 && (
@@ -410,6 +397,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
                   value={values[col.id] || ''}
                   onChange={(v) => setValues((prev) => ({ ...prev, [col.id]: v }))}
                   infoText={col.info_text}
+                  timeDisplay={col.time_display}
                   inputBackground="#0F172A"
                   inputColor="#E2E8F0"
                   inputBorder="1px solid #334155"

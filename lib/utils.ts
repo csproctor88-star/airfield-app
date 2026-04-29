@@ -26,6 +26,34 @@ export function formatZuluDateShort(date: Date | string): string {
   return d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' })
 }
 
+// ── Base-local time formatting ──────────────────────────────────────
+/**
+ * Convert an HH:MM (or HHMM) Zulu wall-clock time to its base-local
+ * HHMM equivalent in the supplied IANA timezone. The date is anchored
+ * to today UTC; HH:MM has no calendar component on its own, so the
+ * conversion is a pure offset application. Falls back to the raw
+ * digits stripped of separators when inputs are malformed.
+ */
+export function formatLocalTime(zuluHHMM: string, tz: string): string {
+  const digits = (zuluHHMM || '').replace(/\D/g, '').slice(0, 4)
+  if (digits.length !== 4) return digits
+  const hh = digits.slice(0, 2)
+  const mm = digits.slice(2, 4)
+  const today = new Date().toISOString().slice(0, 10)
+  const d = new Date(`${today}T${hh}:${mm}:00Z`)
+  if (Number.isNaN(d.getTime())) return digits
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d).replace(':', '')
+  } catch {
+    return digits
+  }
+}
+
 // Format relative time, e.g. "2h ago", "3d ago"
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()

@@ -52,6 +52,7 @@ const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; bo
 
 export default function PprPage() {
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const baseTimezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || 'UTC'
   const { has: hasPerm } = usePermissions()
 
   const canTriage = hasPerm(PERM.PPR_TRIAGE)
@@ -154,6 +155,7 @@ export default function PprPage() {
       dateTo,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao || undefined,
+      timezone: baseTimezone,
       remarksByEntry,
       coordsByEntry,
     })
@@ -377,24 +379,19 @@ export default function PprPage() {
     return rows
   }, [entries, statusFilter, agencyFilter, coordsByEntry])
 
-  // Columns that hold a per-PPR value. info_only columns carry static
-  // text on the column itself (info_text), not anything per-entry, so
-  // they're excluded from table headers, row cells, the detail card
-  // value list, and the PDF dynamic-column section. They still render
-  // as read-only blocks in form input contexts and in emails.
+  // Columns that hold a per-PPR value AND the admin chose to surface
+  // on the PPR Log (table + detail card + PDF). info_only is excluded
+  // because it has no per-entry value; show_on_log is the explicit gate
+  // (replacing the legacy "always show every input column" default).
   const dataColumns = useMemo(
-    () => columns.filter((c) => c.column_type !== 'info_only'),
+    () => columns.filter((c) => c.show_on_log && c.column_type !== 'info_only'),
     [columns],
   )
 
-  // PPR Log table is intentionally narrow — only the spine fields
+  // PPR Log table stays intentionally narrow — only the spine fields
   // (PPR # / Status / Arrival Date / ETA) plus the Callsign + Aircraft
-  // Type admin columns. Match by column_name so the filter works
-  // regardless of where in the sort order the admin placed them, and
-  // so a base that hasn't configured these labels just gets a thinner
-  // summary instead of the wrong columns. Same filter is mirrored on
-  // the Airfield Status (`/`) "Today's PPRs" table so the two views
-  // stay column-consistent.
+  // Type admin columns when those exist AND have show_on_log enabled.
+  // The full set of show_on_log columns lives in the detail card.
   const summaryColumns = useMemo(
     () => dataColumns.filter((c) => isSummaryColumn(c.column_name)),
     [dataColumns],
@@ -959,7 +956,7 @@ export default function PprPage() {
                         : <span style={{ color: 'var(--color-text-3)' }}>—</span>}
                     </td>
                     {summaryColumns.map(col => {
-                      const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id])
+                      const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id], { tz: baseTimezone })
                       return (
                         <td key={col.id} style={dynamicTdStyle}>
                           {formatted || '—'}
@@ -1023,6 +1020,7 @@ export default function PprPage() {
                 value={formValues[col.id] || ''}
                 onChange={(v) => setFormValues(prev => ({ ...prev, [col.id]: v }))}
                 infoText={col.info_text}
+                timeDisplay={col.time_display}
               />
             ))}
 
@@ -1520,7 +1518,7 @@ export default function PprPage() {
                     ? [{ label: 'ETA (Z)', value: detailEntry.arrival_eta_zulu.replace(':', '') + 'Z' }]
                     : []),
                   ...dataColumns
-                    .map((c) => ({ label: c.column_name, value: formatPprColumnValue(c, (detailEntry.column_values || {})[c.id]) }))
+                    .map((c) => ({ label: c.column_name, value: formatPprColumnValue(c, (detailEntry.column_values || {})[c.id], { tz: baseTimezone }) }))
                     .filter((r) => r.value),
                   ...(detailEntry.notes ? [{ label: 'Notes', value: detailEntry.notes }] : []),
                 ]}
@@ -1793,6 +1791,11 @@ function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprCol
       {columns.map((c) => {
         // info_only columns have no per-entry value; skip.
         if (c.column_type === 'info_only') return null
+        // SubmittedSummary intentionally renders every input column the
+        // requester provided regardless of show_on_log — it's the
+        // record of what was submitted, not a Log view. Time columns
+        // still respect time_display via the column metadata; we just
+        // don't have a tz here so they fall through as Zulu.
         const v = formatPprColumnValue(c, (entry.column_values || {})[c.id])
         if (!v) return null
         return <div key={c.id}><strong>{c.column_name}:</strong> {v}</div>

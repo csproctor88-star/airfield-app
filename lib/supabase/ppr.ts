@@ -1,6 +1,6 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
-import { friendlyError } from '@/lib/utils'
+import { formatLocalTime, friendlyError } from '@/lib/utils'
 
 function db() {
   return createClient()
@@ -36,19 +36,20 @@ export function isSummaryColumn(columnName: string): boolean {
 
 /**
  * Format a raw `column_values[col.id]` string for display in tables,
- * the detail card, the PDF, and outbound emails. Mirrors the spine
- * ETA (Z) convention for `time` columns — strips any stored colon
- * and appends a `Z` suffix so admin-configured time columns render
- * consistently with the spine field. Empty / null inputs fall through
- * as empty strings; callers handle the em-dash placeholder.
+ * the detail card, the PDF, and outbound emails. For `time` columns
+ * the output respects `col.time_display`:
+ *   - 'local' + opts.tz set → "HHMM" in base local time
+ *   - anything else        → "HHMMZ" (Zulu, the historical default)
  *
- * Backwards-compatible with both shapes that may currently live in
- * `column_values`:
+ * Backwards-compatible with both raw shapes in `column_values`:
  *   - "15:00" — entries written before the HHMM input swap
  *   - "1500"  — entries written after
- * Either way the rendered output is "1500Z".
  */
-export function formatPprColumnValue(col: PprColumn, raw: string | null | undefined): string {
+export function formatPprColumnValue(
+  col: PprColumn,
+  raw: string | null | undefined,
+  opts?: { tz?: string },
+): string {
   if (!raw) return ''
   switch (col.column_type) {
     case 'yes_no_na':
@@ -60,7 +61,12 @@ export function formatPprColumnValue(col: PprColumn, raw: string | null | undefi
       try { return new Date(raw + 'T00:00:00').toLocaleDateString() } catch { return raw }
     case 'time': {
       const digits = raw.replace(/\D/g, '').slice(0, 4)
-      return digits ? `${digits}Z` : raw
+      if (!digits) return raw
+      if (col.time_display === 'local' && opts?.tz) {
+        const hhmm = `${digits.slice(0, 2)}:${digits.slice(2, 4)}`
+        return formatLocalTime(hhmm, opts.tz)
+      }
+      return `${digits}Z`
     }
     default:
       return raw
@@ -74,7 +80,12 @@ export type PprColumn = {
   column_type: PprColumnType
   sort_order: number
   is_required: boolean
-  is_public: boolean
+  /** Independent visibility flags — replaces the legacy `is_public`. */
+  show_on_status: boolean
+  show_on_form: boolean
+  show_on_log: boolean
+  /** Display mode for `column_type='time'`. NULL → Zulu (default). */
+  time_display: 'zulu' | 'local' | null
   /** Body shown for info_only columns — null/unused for input types. */
   info_text: string | null
   created_at: string
@@ -179,7 +190,10 @@ export async function createPprColumn(input: {
   column_type?: PprColumnType
   sort_order?: number
   is_required?: boolean
-  is_public?: boolean
+  show_on_status?: boolean
+  show_on_form?: boolean
+  show_on_log?: boolean
+  time_display?: 'zulu' | 'local' | null
   info_text?: string | null
 }): Promise<PprColumn | null> {
   const supabase = db()
@@ -197,7 +211,17 @@ export async function createPprColumn(input: {
 
 export async function updatePprColumn(
   id: string,
-  updates: Partial<Pick<PprColumn, 'column_name' | 'column_type' | 'sort_order' | 'is_required' | 'is_public' | 'info_text'>>,
+  updates: Partial<Pick<PprColumn,
+    | 'column_name'
+    | 'column_type'
+    | 'sort_order'
+    | 'is_required'
+    | 'show_on_status'
+    | 'show_on_form'
+    | 'show_on_log'
+    | 'time_display'
+    | 'info_text'
+  >>,
 ): Promise<PprColumn | null> {
   const supabase = db()
   if (!supabase) return null

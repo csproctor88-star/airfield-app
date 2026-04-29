@@ -79,15 +79,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
-    // Fetch info_only public columns so the requester sees airfield
-    // hours, restrictions, etc. inline in the confirmation email.
+    // Fetch info_only columns flagged for the public form so the
+    // requester sees airfield hours, restrictions, etc. inline in
+    // the confirmation email. show_on_form replaced is_public in
+    // migration 2026042905_ppr_per_surface_flags.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: infoCols } = await (sb as any)
       .from('ppr_columns')
       .select('column_name, info_text, sort_order')
       .eq('base_id', baseId)
       .eq('column_type', 'info_only')
-      .eq('is_public', true)
+      .eq('show_on_form', true)
       .order('sort_order', { ascending: true })
 
     const infoHtml = ((infoCols ?? []) as { column_name: string; info_text: string | null }[])

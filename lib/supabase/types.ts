@@ -2962,9 +2962,12 @@ export type Database = {
           created_at: string
           id: string
           info_text: string | null
-          is_public: boolean
           is_required: boolean
+          show_on_form: boolean
+          show_on_log: boolean
+          show_on_status: boolean
           sort_order: number
+          time_display: string | null
         }
         Insert: {
           base_id: string
@@ -2973,9 +2976,12 @@ export type Database = {
           created_at?: string
           id?: string
           info_text?: string | null
-          is_public?: boolean
           is_required?: boolean
+          show_on_form?: boolean
+          show_on_log?: boolean
+          show_on_status?: boolean
           sort_order?: number
+          time_display?: string | null
         }
         Update: {
           base_id?: string
@@ -2984,9 +2990,12 @@ export type Database = {
           created_at?: string
           id?: string
           info_text?: string | null
-          is_public?: boolean
           is_required?: boolean
+          show_on_form?: boolean
+          show_on_log?: boolean
+          show_on_status?: boolean
           sort_order?: number
+          time_display?: string | null
         }
         Relationships: [
           {

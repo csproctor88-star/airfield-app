@@ -12,6 +12,9 @@ type Props = {
   /** Body for `info_only` columns — displayed verbatim under the
    *  column name. Ignored for input types. */
   infoText?: string | null
+  /** Only meaningful for `time` columns — appends "(Z)" or "(Local)"
+   *  to the label so requesters know which clock they're entering. */
+  timeDisplay?: 'zulu' | 'local' | null
   // Optional override for the dark-on-light public form. The staff
   // modal leaves these out so var(--color-*) tokens take over.
   inputBackground?: string
@@ -52,10 +55,14 @@ export function PprFieldInput({
   value,
   onChange,
   infoText,
+  timeDisplay,
   inputBackground,
   inputColor,
   inputBorder,
 }: Props) {
+  const labelText = columnType === 'time'
+    ? `${columnName} (${timeDisplay === 'local' ? 'Local' : 'Z'})`
+    : columnName
   // info_only renders as a labeled read-only block — no input element,
   // no required marker, no value/onChange wiring. Used for things like
   // airfield hours, restrictions, and fuel availability that the base
@@ -119,7 +126,7 @@ export function PprFieldInput({
         marginBottom: 10,
       }}
     >
-      {columnName}
+      {labelText}
       {isRequired ? ' *' : ''}
       {columnType === 'yes_no_na' ? (
         <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>

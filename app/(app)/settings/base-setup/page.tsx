@@ -4856,6 +4856,27 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
   )
 }
 
+// Tight per-surface visibility chip used in the PPR Columns row.
+// Green-on when active, neutral border-only when off — matches the
+// previous Public/Internal pill so the visual weight stays balanced.
+function SurfaceToggle({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={`Show this column on the ${label} surface`}
+      style={{
+        padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+        border: `1px solid ${on ? '#22c55e' : 'var(--color-border)'}`,
+        background: on ? 'rgba(34,197,94,0.10)' : 'transparent',
+        color: on ? '#22c55e' : 'var(--color-text-3)',
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 // ── PPR Columns Tab ──
 function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const { currentInstallation } = useInstallation()
@@ -4865,7 +4886,14 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
   const [newColType, setNewColType] = useState<PprColumnType>('text')
   const [newColRequired, setNewColRequired] = useState(false)
   const [newColInfoText, setNewColInfoText] = useState('')
-  const [newColPublic, setNewColPublic] = useState(false)
+  // Per-surface visibility flags. Default: log only — admins opt
+  // into airfield-status / public-form exposure deliberately. The
+  // info_only fallback (form-on by default) is applied at handleAdd
+  // time so the user toggling type doesn't lose their explicit picks.
+  const [newColShowOnStatus, setNewColShowOnStatus] = useState(false)
+  const [newColShowOnForm, setNewColShowOnForm] = useState(false)
+  const [newColShowOnLog, setNewColShowOnLog] = useState(true)
+  const [newColTimeDisplay, setNewColTimeDisplay] = useState<'zulu' | 'local'>('zulu')
   const [editingColId, setEditingColId] = useState<string | null>(null)
   const [editingColName, setEditingColName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -4997,7 +5025,12 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       column_type: newColType,
       sort_order: columns.length,
       is_required: isInfo ? false : newColRequired,
-      is_public: newColPublic,
+      // info_only's most common shape is a public-form disclaimer —
+      // default to form-on if the admin didn't already toggle it.
+      show_on_status: newColShowOnStatus,
+      show_on_form: isInfo ? (newColShowOnForm || true) : newColShowOnForm,
+      show_on_log: newColShowOnLog,
+      time_display: newColType === 'time' ? newColTimeDisplay : null,
       info_text: isInfo ? (newColInfoText.trim() || null) : null,
     })
     if (col) {
@@ -5005,14 +5038,27 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       setNewColName('')
       setNewColType('text')
       setNewColRequired(false)
-      setNewColPublic(false)
+      setNewColShowOnStatus(false)
+      setNewColShowOnForm(false)
+      setNewColShowOnLog(true)
+      setNewColTimeDisplay('zulu')
       setNewColInfoText('')
       toast.success(`Added "${col.column_name}"`)
     }
   }
 
-  const handleTogglePublic = async (col: PprColumn) => {
-    const updated = await updatePprColumn(col.id, { is_public: !col.is_public })
+  const handleToggleSurface = async (
+    col: PprColumn,
+    surface: 'show_on_status' | 'show_on_form' | 'show_on_log',
+  ) => {
+    const updated = await updatePprColumn(col.id, { [surface]: !col[surface] })
+    if (updated) {
+      setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
+    }
+  }
+
+  const handleChangeTimeDisplay = async (col: PprColumn, mode: 'zulu' | 'local') => {
+    const updated = await updatePprColumn(col.id, { time_display: mode })
     if (updated) {
       setColumns(prev => prev.map(c => c.id === updated.id ? updated : c))
     }
@@ -5260,19 +5306,27 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
               {col.is_required ? 'Required' : 'Optional'}
             </button>
           )}
-          <button
-            onClick={() => handleTogglePublic(col)}
-            title="Show this column on the public PPR request form"
-            style={{
-              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-              border: `1px solid ${col.is_public ? '#22c55e' : 'var(--color-border)'}`,
-              background: col.is_public ? 'rgba(34,197,94,0.10)' : 'transparent',
-              color: col.is_public ? '#22c55e' : 'var(--color-text-3)',
-              cursor: 'pointer',
-            }}
-          >
-            {col.is_public ? 'Public' : 'Internal'}
-          </button>
+          {col.column_type === 'time' && (
+            <select
+              value={col.time_display ?? 'zulu'}
+              onChange={e => handleChangeTimeDisplay(col, e.target.value as 'zulu' | 'local')}
+              title="How this time column displays — Zulu (HHMMZ) or base local (HHMM)"
+              style={{
+                padding: '2px 6px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
+                border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                color: 'var(--color-text-2)', cursor: 'pointer',
+              }}
+            >
+              <option value="zulu">Zulu</option>
+              <option value="local">Local</option>
+            </select>
+          )}
+          {/* Per-surface visibility — three independent toggles. The
+              hardcoded spine columns (PPR#, Status, Arrival Date, ETA)
+              show on every surface regardless of these flags. */}
+          <SurfaceToggle on={col.show_on_status} label="Status" onClick={() => handleToggleSurface(col, 'show_on_status')} />
+          <SurfaceToggle on={col.show_on_form}   label="Form"   onClick={() => handleToggleSurface(col, 'show_on_form')} />
+          <SurfaceToggle on={col.show_on_log}    label="Log"    onClick={() => handleToggleSurface(col, 'show_on_log')} />
           <button
             onClick={() => handleDelete(col)}
             style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
@@ -5315,9 +5369,34 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
             Required
           </label>
         )}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on public request form">
-          <input type="checkbox" checked={newColPublic} onChange={e => setNewColPublic(e.target.checked)} />
-          Public
+        {newColType === 'time' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }} title="Display this time as Zulu or base local">
+            Display:
+            <select
+              value={newColTimeDisplay}
+              onChange={e => setNewColTimeDisplay(e.target.value as 'zulu' | 'local')}
+              style={{
+                padding: '2px 6px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)',
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                color: 'var(--color-text-2)', cursor: 'pointer',
+              }}
+            >
+              <option value="zulu">Zulu</option>
+              <option value="local">Local</option>
+            </select>
+          </label>
+        )}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on Airfield Status panel">
+          <input type="checkbox" checked={newColShowOnStatus} onChange={e => setNewColShowOnStatus(e.target.checked)} />
+          Status
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on public PPR request form">
+          <input type="checkbox" checked={newColShowOnForm} onChange={e => setNewColShowOnForm(e.target.checked)} />
+          Form
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Show on PPR Log table + detail card + PDF">
+          <input type="checkbox" checked={newColShowOnLog} onChange={e => setNewColShowOnLog(e.target.checked)} />
+          Log
         </label>
         <button
           onClick={handleAdd}

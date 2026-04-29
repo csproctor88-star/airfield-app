@@ -34,6 +34,9 @@ interface PprPdfInput {
   dateTo: string
   baseName?: string | null
   baseIcao?: string | null
+  /** IANA timezone of the base — used to render time-type custom
+   *  columns whose `time_display='local'`. Falls back to UTC. */
+  timezone?: string | null
   /** Optional remark thread per entry id. When present, each PPR's
    *  remarks (including coord-mirrored comments) are appended in a
    *  REMARKS section after the main table. */
@@ -53,7 +56,8 @@ interface PprPdfInput {
 const formatCell = formatPprColumnValue
 
 export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const { columns, entries, dateFrom, dateTo, baseName, baseIcao, remarksByEntry, coordsByEntry } = input
+  const { columns, entries, dateFrom, dateTo, baseName, baseIcao, timezone, remarksByEntry, coordsByEntry } = input
+  const tz = timezone || 'UTC'
 
   // Landscape gives us more columns worth of horizontal room
   const ctx = createPdf({ orientation: 'landscape' })
@@ -68,10 +72,10 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
   y = drawReportTitle(ctx, y, { title: 'PPR LOG', subtitle: `Arrival date: ${rangeLabel}` })
 
   // ── Table ──
-  // info_only columns hold static text on the column itself, not a
-  // per-entry value — skip them in the table since every row would
-  // either be blank or duplicate the column's static text.
-  const dataColumns = columns.filter(c => c.column_type !== 'info_only')
+  // The PDF mirrors the in-app PPR Log view: dynamic columns appear
+  // when the admin marked them show_on_log. info_only is excluded
+  // because it has no per-entry value.
+  const dataColumns = columns.filter(c => c.show_on_log && c.column_type !== 'info_only')
 
   y = drawStatBox(ctx, y, [
     { label: 'Entries', value: String(entries.length) },
@@ -113,9 +117,9 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     const body: string[][] = entries.map(entry => [
       entry.ppr_number,
       entry.arrival_date,
-      entry.arrival_eta_zulu ? entry.arrival_eta_zulu.replace(':', '') + 'Z' : '',
+      entry.arrival_eta_zulu ? entry.arrival_eta_zulu.replace(':', '') + 'Z' : '—',
       STATUS_LABELS[entry.status] || entry.status,
-      ...dataColumns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || ''))),
+      ...dataColumns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || '', { tz }))),
       entry.approver_oi || '',
       sanitizePdfText(entry.notes || ''),
       ...(anyRemarks ? [formatRemarksCell(entry.id)] : []),
