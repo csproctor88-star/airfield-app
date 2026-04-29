@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '@/lib/theme-context'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
+import { useDashboard } from '@/lib/dashboard-context'
 import { createClient } from '@/lib/supabase/client'
 import { getWriteQueue } from '@/lib/sync/write-queue'
 import {
   PENDING_PHOTOS_CHANGED_EVENT,
   getPendingPhotoStorage,
 } from '@/lib/sync/pending-photos'
+import { fetchPprEntriesForDate } from '@/lib/supabase/ppr'
 import { QueueInspector } from '@/components/sync/queue-inspector'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
 
@@ -23,14 +25,6 @@ const ROLE_LABELS: Record<string, string> = {
   read_only: 'Read Only',
   base_admin: 'Base Admin',
   sys_admin: 'Sys Admin',
-}
-
-function presenceLabel(lastSeen: string | null): { label: string; color: string } {
-  if (!lastSeen) return { label: 'Offline', color: 'var(--color-text-3)' }
-  const diff = Date.now() - new Date(lastSeen).getTime()
-  if (diff < 15 * 60 * 1000) return { label: 'Online', color: 'var(--color-success)' }
-  if (diff < 60 * 60 * 1000) return { label: 'Away', color: 'var(--color-warning)' }
-  return { label: 'Inactive', color: 'var(--color-text-3)' }
 }
 
 /**
@@ -119,9 +113,46 @@ export function Header() {
   const { resolvedTheme } = useTheme()
   const { isOpen, toggle } = useSidebar()
   const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
+  const { advisories } = useDashboard()
   const [userName, setUserName] = useState<string | null>(null)
-  const [lastSeen, setLastSeen] = useState<string | null>(null)
   const [showInstSwitcher, setShowInstSwitcher] = useState(false)
+
+  // Live Zulu clock — ticks every second. Bounded re-render: only the
+  // header subtree re-renders, not the page. The cost of one second-
+  // resolution clock is well worth the operational signal.
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Today's PPR count — single fetch on installation change. Refreshed
+  // on the same window events the queue counts use, so a PPR submit /
+  // approve elsewhere in the app flows back to the count without a
+  // tight polling loop.
+  const installationId = currentInstallation?.id || null
+  const [todayPprCount, setTodayPprCount] = useState(0)
+  useEffect(() => {
+    if (!installationId) { setTodayPprCount(0); return }
+    let cancelled = false
+    const refresh = async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10)
+        const entries = await fetchPprEntriesForDate(installationId, today)
+        if (!cancelled) setTodayPprCount(entries.length)
+      } catch { /* silent — header chip; no toast */ }
+    }
+    refresh()
+    const onWriteCommitted = () => refresh()
+    const onFocus = () => refresh()
+    window.addEventListener('glidepath:write-committed', onWriteCommitted)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      cancelled = true
+      window.removeEventListener('glidepath:write-committed', onWriteCommitted)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [installationId])
 
   // Visibility still driven from the user's role via the permission
   // matrix — matches the Phase C seed (`installations:switch` is on
@@ -145,15 +176,16 @@ export function Header() {
           await supabase.from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id)
         }
 
-        // Fetch profile
+        // Fetch profile (last_seen_at is no longer rendered in the
+        // header chrome; it's still written above for the LoginActivityDialog
+        // and any other consumers that need recent presence data).
         const { data: profile } = await supabase
           .from('profiles')
-          .select('name, rank, last_seen_at')
+          .select('name, rank')
           .eq('id', user.id)
           .single()
         if (profile) {
           setUserName(profile.rank ? `${profile.rank} ${profile.name}` : profile.name)
-          setLastSeen(profile.last_seen_at)
         } else {
           setUserName(user.email || null)
         }
@@ -168,7 +200,6 @@ export function Header() {
   const baseName = currentInstallation?.name || null
   const baseIcao = currentInstallation?.icao || null
   const roleLabel = userRole ? (ROLE_LABELS[userRole] || userRole) : null
-  const presence = presenceLabel(lastSeen)
   const isOnline = useOnlineStatus()
   const queueCounts = useQueueCounts()
   const queueDepth = queueCounts.pending
@@ -189,21 +220,52 @@ export function Header() {
         zIndex: 50,
       }}
     >
-      {/* Info row: sidebar toggle + installation left, status+user right */}
-      {(baseName || userName) && (
+      {/* Info row: sidebar toggle + installation left, ops cluster
+          middle, status+user right. The ops cluster (advisories /
+          PPRs / Z time / Julian / calendar date) lives here so it
+          rides the sticky header and stays visible across every
+          page \u2014 not just /. */}
+      {(baseName || userName) && (() => {
+        // Live Zulu clock pieces \u2014 recomputed each second from nowTick.
+        const nowDate = new Date(nowTick)
+        const hh = String(nowDate.getUTCHours()).padStart(2, '0')
+        const mm = String(nowDate.getUTCMinutes()).padStart(2, '0')
+        const ss = String(nowDate.getUTCSeconds()).padStart(2, '0')
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+        const dateLine = `${String(nowDate.getUTCDate()).padStart(2, '0')} ${months[nowDate.getUTCMonth()]} ${nowDate.getUTCFullYear()}`
+        const startOfUtcYear = Date.UTC(nowDate.getUTCFullYear(), 0, 1)
+        const julianDay = Math.floor((nowDate.getTime() - startOfUtcYear) / 86400000) + 1
+        const julianStr = String(julianDay).padStart(3, '0')
+
+        const advCount = advisories.length
+
+        const opsChip = (label: string, color: string) => (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '2px 9px', borderRadius: 999,
+            fontSize: 'var(--fs-2xs)', fontWeight: 700,
+            background: 'var(--color-bg-inset)',
+            border: `1px solid ${color}40`,
+            color: color, letterSpacing: '0.04em', textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}>{label}</span>
+        )
+
+        return (
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: 12, flexWrap: 'wrap',
             fontSize: 'var(--fs-xs)',
             color: 'var(--color-text-3)',
             fontWeight: 600,
             letterSpacing: '0.03em',
           }}
         >
-          {/* Left: sidebar toggle + installation name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+          {/* Left: sidebar toggle + installation name (hero treatment) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
             <button
               onClick={toggle}
               className={`sidebar-toggle${!isOpen ? ' sidebar-toggle-visible' : ''}`}
@@ -224,16 +286,30 @@ export function Header() {
             </button>
           <div style={{ position: 'relative' }}>
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: canSwitchInstallation ? 'pointer' : 'default' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: canSwitchInstallation ? 'pointer' : 'default' }}
               onClick={canSwitchInstallation ? () => setShowInstSwitcher(!showInstSwitcher) : undefined}
             >
-              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                {baseName
-                  ? `${baseName.toUpperCase()}${baseIcao ? ` \u2022 ${baseIcao}` : ''}`
-                  : ''}
-              </span>
+              {baseName && (
+                <span style={{
+                  fontSize: 'clamp(15px, 1.6vw, 19px)', fontWeight: 800,
+                  color: 'var(--color-text-1)', letterSpacing: '-0.005em',
+                  lineHeight: 1.1, whiteSpace: 'nowrap',
+                }}>
+                  {baseName}
+                </span>
+              )}
+              {baseIcao && (
+                <span style={{
+                  fontFamily: 'monospace', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  color: 'var(--color-accent)',
+                  padding: '1px 7px', borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(56,189,248,0.10)',
+                  border: '1px solid rgba(56,189,248,0.35)',
+                  letterSpacing: '0.06em',
+                }}>{baseIcao.toUpperCase()}</span>
+              )}
               {canSwitchInstallation && (
-                <ChevronDown size={12} color="var(--color-text-3)" style={{ transition: 'transform 0.2s', transform: showInstSwitcher ? 'rotate(180deg)' : 'none' }} />
+                <ChevronDown size={14} color="var(--color-text-3)" style={{ transition: 'transform 0.2s', transform: showInstSwitcher ? 'rotate(180deg)' : 'none' }} />
               )}
             </div>
 
@@ -264,6 +340,40 @@ export function Header() {
               </div>
             )}
           </div>
+          </div>
+
+          {/* Middle: operational cluster \u2014 chips (when count > 0) +
+              live Zulu clock + Julian day + calendar date. Hidden on
+              the very narrowest viewports (handled by the existing
+              .hero-summary class via @media in globals.css; the clock
+              itself stays visible). */}
+          <div className="header-ops-cluster" style={{
+            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            marginLeft: 'auto',
+          }}>
+            <div className="hero-summary" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {advCount > 0 && opsChip(`${advCount} Advisor${advCount === 1 ? 'y' : 'ies'}`, 'var(--color-warning)')}
+              {todayPprCount > 0 && opsChip(`${todayPprCount} PPR${todayPprCount === 1 ? '' : 's'} Today`, 'var(--color-accent)')}
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'baseline', gap: 8,
+              fontFamily: 'monospace',
+            }}>
+              <span style={{
+                fontSize: 'var(--fs-md)', fontWeight: 700,
+                color: 'var(--color-text-1)', letterSpacing: '0.04em', lineHeight: 1,
+              }}>
+                {hh}:{mm}:{ss}<span style={{ color: 'var(--color-accent)', marginLeft: 4 }}>Z</span>
+              </span>
+              <span style={{
+                fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+                fontWeight: 700, letterSpacing: '0.06em',
+              }}>JD {julianStr}</span>
+              <span className="header-date" style={{
+                fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+                fontWeight: 600, letterSpacing: '0.06em',
+              }}>{dateLine}</span>
+            </div>
           </div>
 
           {/* Right: status + user */}
@@ -348,14 +458,17 @@ export function Header() {
                   ● {photosWaiting} PHOTO{photosWaiting === 1 ? '' : 'S'} WAITING
                 </button>
               )}
-              <span style={{ fontSize: 'var(--fs-2xs)', color: presence.color, fontWeight: 600 }}>
-                {presence.label}
-              </span>
+              {/* Presence label ("Online" / "5m ago") removed —
+                  the user identity below is the operator-facing
+                  signal; the actionable status badges (OFFLINE,
+                  QUEUED, NEEDS REVIEW, PHOTOS WAITING) above are
+                  what the user needs to react to. */}
             </div>
             {userName && <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>{userName}</div>}
           </div>
         </div>
-      )}
+        )
+      })()}
       <QueueInspector open={inspectorOpen} onClose={() => setInspectorOpen(false)} />
     </div>
   )

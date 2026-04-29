@@ -20,21 +20,27 @@ import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
+import {
+  Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudFog, CloudLightning,
+  Snowflake, HelpCircle, DoorOpen, AlertOctagon, Plus,
+} from 'lucide-react'
 
-// --- Weather emoji mapping ---
-function weatherEmoji(conditions: string): string {
+// Weather conditions → Lucide icon component. The hero / weather strip
+// renders these at varying sizes; pass `size` and `color` at the
+// callsite. Falls back to Sun when no rule matches.
+function weatherIcon(conditions: string) {
   const c = conditions.toLowerCase()
-  if (c.includes('thunderstorm')) return '⛈️'
-  if (c.includes('heavy snow') || c.includes('snow grains')) return '❄️'
-  if (c.includes('snow')) return '🌨️'
-  if (c.includes('freezing')) return '🌨️'
-  if (c.includes('heavy rain') || c.includes('heavy showers')) return '🌧️'
-  if (c.includes('rain') || c.includes('drizzle') || c.includes('showers')) return '🌧️'
-  if (c.includes('fog')) return '🌫️'
-  if (c.includes('overcast')) return '☁️'
-  if (c.includes('partly cloudy')) return '⛅'
-  if (c.includes('mostly clear')) return '🌤️'
-  return '☀️'
+  if (c.includes('thunderstorm')) return CloudLightning
+  if (c.includes('heavy snow') || c.includes('snow grains')) return Snowflake
+  if (c.includes('snow')) return CloudSnow
+  if (c.includes('freezing')) return CloudSnow
+  if (c.includes('heavy rain') || c.includes('heavy showers')) return CloudRain
+  if (c.includes('rain') || c.includes('drizzle') || c.includes('showers')) return CloudRain
+  if (c.includes('fog')) return CloudFog
+  if (c.includes('overcast')) return Cloud
+  if (c.includes('partly cloudy')) return CloudSun
+  if (c.includes('mostly clear')) return CloudSun
+  return Sun
 }
 
 // --- NAVAID color map (theme-aware for text, raw hex for alpha interpolation) ---
@@ -53,10 +59,13 @@ const STATUS_HEX: Record<string, string> = {
 const DEFAULT_NAVAIDS: NavaidStatus[] = []
 
 const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  WATCH: { bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.35)', text: 'var(--color-warning)' },
-  WARNING: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', text: 'var(--color-danger)' },
-  ADVISORY: { bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.35)', text: 'var(--color-accent)' },
+  WATCH: { bg: 'rgba(251,191,36,0.18)', border: 'rgba(251,191,36,0.50)', text: 'var(--color-warning)' },
+  WARNING: { bg: 'rgba(239,68,68,0.18)', border: 'rgba(239,68,68,0.50)', text: 'var(--color-danger)' },
+  ADVISORY: { bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.50)', text: 'var(--color-accent)' },
 }
+
+// Render order so a red is never visually buried under a yellow.
+const ADVISORY_SEVERITY: Record<string, number> = { WARNING: 0, WATCH: 1, ADVISORY: 2 }
 
 export default function HomePage() {
   const router = useRouter()
@@ -89,7 +98,6 @@ export default function HomePage() {
   const canEditLabels = canWriteAirfieldStatus
   const [oooMinimized, setOooMinimized] = useState(false)
   const [showOooDeactivate, setShowOooDeactivate] = useState(false)
-  const [closedMinimized, setClosedMinimized] = useState(false)
   const [showClosedDeactivate, setShowClosedDeactivate] = useState(false)
   const [customItemDialog, setCustomItemDialog] = useState<{
     item: CustomStatusItem
@@ -463,40 +471,47 @@ export default function HomePage() {
     <div className="page-container">
       <LoginActivityDialog />
 
-      {/* AFM Out of Office banner — semi-transparent, minimizable */}
+      {/* The operational status strip (advisories chip / PPRs chip /
+          live Zulu clock / Julian / calendar date) lives in the
+          app-shell header now, so it follows the user across every
+          page instead of only landing on /. */}
+
+      {/* AFM Out of Office banner — informational tier. Calmer than
+          Closed; left accent rule keeps the affordance scannable
+          without dominating the page when also-Closed. */}
       {afmOutOfOffice && !oooMinimized && (
         <div style={{
           position: 'sticky', top: 0, zIndex: 100,
-          background: 'rgba(127, 29, 29, 0.92)',
+          background: 'rgba(15, 23, 42, 0.92)',
           backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(239, 68, 68, 0.5)',
+          border: '1px solid var(--color-border-mid)',
+          borderLeft: '2px solid var(--color-accent)',
           borderRadius: 'var(--radius-lg)',
-          padding: '16px 20px',
+          padding: '14px 18px',
           marginBottom: 12,
-          textAlign: 'center',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 24 }}>🚪</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <DoorOpen size={20} color="var(--color-accent)" strokeWidth={2.25} />
             <span style={{
-              fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#FECACA',
+              fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)',
               textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
-              Out of Office
+              AFM Out of Office
             </span>
           </div>
           <div style={{
-            fontSize: 'var(--fs-md)', color: '#FEE2E2', lineHeight: 1.5,
-            marginTop: 8, whiteSpace: 'pre-wrap',
+            fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.5,
+            marginTop: 6, whiteSpace: 'pre-wrap',
           }}>
             {afmOooMessage || 'Airfield Management is currently out of office.'}
           </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <button
               onClick={() => setOooMinimized(true)}
               style={{
-                padding: '6px 16px', borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(254,202,202,0.3)', background: 'rgba(0,0,0,0.3)',
-                color: '#FECACA', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-border-mid)', background: 'transparent',
+                color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >Minimize</button>
@@ -504,7 +519,7 @@ export default function HomePage() {
               <button
                 onClick={() => setShowOooDeactivate(true)}
                 style={{
-                  padding: '6px 16px', borderRadius: 'var(--radius-md)',
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
                   color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
@@ -519,19 +534,20 @@ export default function HomePage() {
           onClick={() => setOooMinimized(false)}
           style={{
             position: 'sticky', top: 0, zIndex: 100,
-            background: 'rgba(127, 29, 29, 0.9)',
+            background: 'rgba(15, 23, 42, 0.9)',
+            borderLeft: '2px solid var(--color-accent)',
             borderRadius: 'var(--radius-md)',
-            padding: '6px 14px',
+            padding: '6px 12px',
             marginBottom: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            display: 'flex', alignItems: 'center', gap: 8,
             cursor: 'pointer',
           }}
         >
-          <span style={{ fontSize: 14 }}>🚪</span>
-          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: '#FECACA', textTransform: 'uppercase' }}>
+          <DoorOpen size={14} color="var(--color-accent)" />
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', textTransform: 'uppercase' }}>
             AFM Out of Office
           </span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: '#FCA5A5' }}>— tap to expand</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>— tap to expand</span>
         </div>
       )}
 
@@ -575,22 +591,24 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* AFM Closed banner */}
-      {afmClosed && !closedMinimized && (
+      {/* AFM Closed banner — blocking-state tier. Thick danger rule
+          + larger title. No minimize: a closed airfield is not
+          background information. */}
+      {afmClosed && (
         <div style={{
           position: 'sticky', top: 0, zIndex: 100,
-          background: 'rgba(15, 23, 42, 0.94)',
+          background: 'rgba(15, 23, 42, 0.96)',
           backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(100, 116, 139, 0.5)',
+          border: '1px solid rgba(239, 68, 68, 0.45)',
+          borderLeft: '4px solid var(--color-danger)',
           borderRadius: 'var(--radius-lg)',
-          padding: '16px 20px',
+          padding: '18px 22px',
           marginBottom: 12,
-          textAlign: 'center',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 24 }}>🌙</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <AlertOctagon size={26} color="var(--color-danger)" strokeWidth={2.5} />
             <span style={{
-              fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#E2E8F0',
+              fontSize: 'var(--fs-2xl)', fontWeight: 800, color: '#FECACA',
               textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
               Airfield Management Closed
@@ -602,48 +620,19 @@ export default function HomePage() {
           }}>
             {afmClosedMessage || 'Airfield Management is closed for the day.'}
           </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
-            <button
-              onClick={() => setClosedMinimized(true)}
-              style={{
-                padding: '6px 16px', borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(203,213,225,0.3)', background: 'rgba(0,0,0,0.3)',
-                color: '#E2E8F0', fontSize: 'var(--fs-sm)', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >Minimize</button>
-            {canWriteAirfieldStatus && (
+          {canWriteAirfieldStatus && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button
                 onClick={() => setShowClosedDeactivate(true)}
                 style={{
-                  padding: '6px 16px', borderRadius: 'var(--radius-md)',
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)',
                   border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.1)',
                   color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >Reopen</button>
-            )}
-          </div>
-        </div>
-      )}
-      {afmClosed && closedMinimized && (
-        <div
-          onClick={() => setClosedMinimized(false)}
-          style={{
-            position: 'sticky', top: 0, zIndex: 100,
-            background: 'rgba(15, 23, 42, 0.9)',
-            borderRadius: 'var(--radius-md)',
-            padding: '6px 14px',
-            marginBottom: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            cursor: 'pointer',
-          }}
-        >
-          <span style={{ fontSize: 14 }}>🌙</span>
-          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: '#E2E8F0', textTransform: 'uppercase' }}>
-            Airfield Closed
-          </span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: '#94A3B8' }}>— tap to expand</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -687,7 +676,14 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ===== Weather Strip ===== */}
+      {/* ===== Weather Strip =====
+          Renders three states:
+            - loading  → skeleton pulse so layout doesn't jump
+            - loaded + data → Lucide weather icon + temp/conditions
+                              + a visible Edit affordance for write users
+            - loaded + no data → fallback "Weather Unavailable"
+          The right-side "Weather Info" cluster is the entry point for
+          adding/editing WWA advisories — kept clickable for write users. */}
       <div
         className="card"
         style={{
@@ -698,32 +694,56 @@ export default function HomePage() {
           background: 'rgba(56,189,248,0.03)',
           border: '1px solid var(--color-border-mid)',
           marginBottom: 16,
+          position: 'relative',
         }}
       >
-        {weatherLoaded ? (
-          weather ? (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)' }}>
-                <span style={{ fontSize: 'var(--fs-3xl)' }}>{weatherEmoji(weather.conditions)}</span>
-                <div>
-                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>
-                    {weather.temperature_f}&deg;F &bull; {weather.conditions}
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-                    Wind {weather.wind_speed_mph} mph &bull; Vis {weather.visibility_miles} SM
-                  </div>
+        {!weatherLoaded ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)', width: '100%',
+          }}>
+            <div className="weather-skeleton" style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'var(--color-bg-inset)',
+            }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="weather-skeleton" style={{
+                width: '40%', height: 14, borderRadius: 4, background: 'var(--color-bg-inset)',
+              }} />
+              <div className="weather-skeleton" style={{
+                width: '28%', height: 10, borderRadius: 4, background: 'var(--color-bg-inset)',
+              }} />
+            </div>
+          </div>
+        ) : weather ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)' }}>
+              {(() => {
+                const Icon = weatherIcon(weather.conditions)
+                return <Icon size={32} color="var(--color-accent)" strokeWidth={2} />
+              })()}
+              <div>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>
+                  {weather.temperature_f}&deg;F &bull; {weather.conditions}
+                </div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                  Wind {weather.wind_speed_mph} mph &bull; Vis {weather.visibility_miles} SM
                 </div>
               </div>
-              <div
-                onClick={canWriteAirfieldStatus ? () => {
-                  setEditingAdvisoryId(null)
-                  setAdvisoryDraftType('ADVISORY')
-                  setAdvisoryDraftText('')
-                  setAdvisoryDialogOpen(true)
-                } : undefined}
-                style={{ textAlign: 'right', cursor: canWriteAirfieldStatus ? 'pointer' : 'default', minWidth: 60 }}
-              >
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
+            </div>
+            <div
+              onClick={canWriteAirfieldStatus ? () => {
+                setEditingAdvisoryId(null)
+                setAdvisoryDraftType('ADVISORY')
+                setAdvisoryDraftText('')
+                setAdvisoryDialogOpen(true)
+              } : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                cursor: canWriteAirfieldStatus ? 'pointer' : 'default',
+              }}
+            >
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Alerts</div>
                 {advisories.length > 0 ? (
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisories.some(a => a.type === 'WARNING') ? 'WARNING' : advisories.some(a => a.type === 'WATCH') ? 'WATCH' : 'ADVISORY'].text }}>
                     {advisories.length} Active
@@ -732,47 +752,80 @@ export default function HomePage() {
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
                 )}
               </div>
-            </>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)' }}>
-                <span style={{ fontSize: 'var(--fs-3xl)' }}>❓</span>
-                <div>
-                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-3)' }}>UNKWN</div>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Weather data unavailable</div>
+              {canWriteAirfieldStatus && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 3,
+                  padding: '2px 7px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(56,189,248,0.35)',
+                  background: 'rgba(56,189,248,0.08)',
+                  color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                }}>
+                  <Plus size={10} strokeWidth={2.5} />
+                  Add
                 </div>
-              </div>
-              <div
-                onClick={canWriteAirfieldStatus ? () => {
-                  setEditingAdvisoryId(null)
-                  setAdvisoryDraftType('ADVISORY')
-                  setAdvisoryDraftText('')
-                  setAdvisoryDialogOpen(true)
-                } : undefined}
-                style={{ textAlign: 'right', cursor: canWriteAirfieldStatus ? 'pointer' : 'default', minWidth: 60 }}
-              >
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Info</div>
-                {advisories.length > 0 ? (
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisories.some(a => a.type === 'WARNING') ? 'WARNING' : advisories.some(a => a.type === 'WATCH') ? 'WATCH' : 'ADVISORY'].text }}>
-                    {advisories.length} Active
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
-                )}
-              </div>
-            </>
-          )
+              )}
+            </div>
+          </>
         ) : (
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>Loading weather...</div>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--weather-gap)' }}>
+              <HelpCircle size={32} color="var(--color-text-3)" strokeWidth={2} />
+              <div>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-3)' }}>UNKWN</div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Weather data unavailable</div>
+              </div>
+            </div>
+            <div
+              onClick={canWriteAirfieldStatus ? () => {
+                setEditingAdvisoryId(null)
+                setAdvisoryDraftType('ADVISORY')
+                setAdvisoryDraftText('')
+                setAdvisoryDialogOpen(true)
+              } : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                cursor: canWriteAirfieldStatus ? 'pointer' : 'default',
+              }}
+            >
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Weather Alerts</div>
+                {advisories.length > 0 ? (
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: ADVISORY_COLORS[advisories.some(a => a.type === 'WARNING') ? 'WARNING' : advisories.some(a => a.type === 'WATCH') ? 'WATCH' : 'ADVISORY'].text }}>
+                    {advisories.length} Active
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>None</div>
+                )}
+              </div>
+              {canWriteAirfieldStatus && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 3,
+                  padding: '2px 7px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(56,189,248,0.35)',
+                  background: 'rgba(56,189,248,0.08)',
+                  color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                }}>
+                  <Plus size={10} strokeWidth={2.5} />
+                  Add
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Advisory banners — stacked, each clickable to edit */}
-      {advisories.map((adv) => {
+      {/* Advisory banners — severity-sorted (WARNING → WATCH → ADVISORY)
+          so red never lands below yellow. Each clickable to edit. */}
+      {[...advisories]
+        .sort((a, b) => (ADVISORY_SEVERITY[a.type] ?? 9) - (ADVISORY_SEVERITY[b.type] ?? 9))
+        .map((adv) => {
         const now = Date.now()
         const endMs = adv.effective_end ? new Date(adv.effective_end).getTime() : null
         const msRemaining = endMs ? endMs - now : null
         const expiringSoon = msRemaining !== null && msRemaining > 0 && msRemaining <= 5 * 60 * 1000
+        const urgentCountdown = msRemaining !== null && msRemaining > 0 && msRemaining <= 30 * 60 * 1000
         const colors = ADVISORY_COLORS[adv.type]
 
         // Build effective time label
@@ -821,9 +874,17 @@ export default function HomePage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: colors.text }}>{adv.type}{adv.number ? ` #${adv.number.toUpperCase()}` : ''}</div>
+              <div style={{
+                fontSize: 'var(--fs-base)', fontWeight: 800, color: colors.text,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>{adv.type}{adv.number ? ` #${adv.number.toUpperCase()}` : ''}</div>
               {countdownText && (
-                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: expiringSoon ? colors.text : 'var(--color-text-3)' }}>
+                <div style={{
+                  fontSize: 'var(--fs-xs)',
+                  fontWeight: urgentCountdown ? 800 : 600,
+                  color: urgentCountdown ? 'var(--color-danger)' : 'var(--color-text-3)',
+                  letterSpacing: urgentCountdown ? '0.04em' : 0,
+                }}>
                   {countdownText}
                 </div>
               )}
@@ -837,32 +898,9 @@ export default function HomePage() {
           </div>
         )
       })}
-      {/* + Add Weather Info button */}
-      <div
-        onClick={() => {
-          setEditingAdvisoryId(null)
-          setAdvisoryDraftType('ADVISORY')
-          setAdvisoryDraftText('')
-          setAdvisoryDraftStart(new Date().toISOString().slice(0, 16))
-          setAdvisoryDraftEnd('')
-          setAdvisoryDraftUfn(true)
-          setAdvisoryDraftNumber('')
-          setAdvisoryDialogOpen(true)
-        }}
-        style={{
-          padding: '8px 14px',
-          marginBottom: 12,
-          borderRadius: 'var(--radius-md)',
-          border: '1px dashed var(--color-border-mid)',
-          color: 'var(--color-text-3)',
-          fontSize: 'var(--fs-sm)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          textAlign: 'center',
-        }}
-      >
-        + Add Weather Info
-      </div>
+      {/* The standalone "+ Add Weather Info" button was removed —
+          the +Add chip on the weather card's Weather Alerts cluster
+          is the single canonical entry point for adding an advisory. */}
 
       {/* Advisory dialog (add or edit) */}
       {advisoryDialogOpen && (
@@ -1656,18 +1694,28 @@ export default function HomePage() {
         const sectionHeaderStyle = {
           fontSize: 'var(--fs-sm)',
           fontWeight: 700,
-          color: 'var(--color-text-3)',
+          color: 'var(--color-text-2)',
           textTransform: 'uppercase' as const,
-          letterSpacing: '0.05em',
-          marginBottom: 8,
+          letterSpacing: '0.08em',
+          marginBottom: 6,
+          paddingBottom: 4,
+          borderBottom: '1px solid rgba(56,189,248,0.20)',
         }
 
         return (<>
       {/* ── Status Sections — side-by-side on desktop, stacked on mobile ── */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
-      {/* ── RUNWAY STATUS ── */}
-      <div style={sectionCardStyle}>
+      {/* ── RUNWAY STATUS ──
+          Promoted with an accent left border + elevated background so
+          the operational vital signs (active runway / RSC / BWC) read
+          as the most weighty zone on the page. NAVAID + ARFF stay on
+          the calmer default sectionCardStyle. */}
+      <div style={{
+        ...sectionCardStyle,
+        background: 'var(--color-bg-elevated)',
+        borderLeft: '3px solid var(--color-accent)',
+      }}>
         {renderEditableLabel('section_runway', 'Runway Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
       {(() => {
@@ -1701,7 +1749,10 @@ export default function HomePage() {
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   background: c.bg, border: `1px solid ${c.border}`,
                 }}>
-                  <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>Active RWY</div>
+                  <div style={{
+                    fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700,
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}>Active RWY</div>
                   <button
                     disabled={!canWriteAirfieldStatus}
                     onClick={() => {
@@ -1814,44 +1865,57 @@ export default function HomePage() {
                 </div>
               )
             })}
-          {/* RSC / RCR card */}
+          {/* RSC / RCR + BWC — secondary vital signs. Smaller chrome
+              than the active-runway button so the runway stays the
+              dominant element in the band. Values still mono. */}
           {rcrValue ? (
             <div className="card" style={{
-              padding: '8px 10px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              padding: '6px 10px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
               border: '1px solid rgba(34,211,238,0.25)', textAlign: 'center',
             }}>
-              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-cyan)', fontWeight: 600 }}>RCR</div>
-              <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>{rcrValue}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>RCR</div>
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-accent)', lineHeight: 1 }}>{rcrValue}</div>
               {rcrCondition && (
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', fontWeight: 600, marginTop: 2 }}>{RCR_CONDITION_TYPES.find(c => c.value === rcrCondition)?.label || rcrCondition}</div>
+                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>{RCR_CONDITION_TYPES.find(c => c.value === rcrCondition)?.label || rcrCondition}</div>
               )}
             </div>
           ) : (
             <div className="card" onClick={canEditRscBwc ? () => { setRscDraftValue(rscCondition); setRscDraftNotes(''); setRscDialogOpen(true) } : undefined}
               style={{
-                padding: '8px 10px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                padding: '6px 10px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
                 cursor: canEditRscBwc ? 'pointer' : 'default', textAlign: 'center',
               }}>
-              <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>RSC</div>
-              <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, color: 'var(--color-accent)' }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>RSC</div>
+              <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-accent)', lineHeight: 1 }}>
                 {rscCondition || '—'}
               </div>
             </div>
           )}
-          {/* BWC card */}
-          <div className="card" onClick={canEditRscBwc ? () => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) } : undefined}
-            style={{
-              padding: '8px 10px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              cursor: canEditRscBwc ? 'pointer' : 'default', textAlign: 'center',
-            }}>
-            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-3)', fontWeight: 600 }}>BWC</div>
-            <div style={{ fontSize: 'var(--rwy-btn-font)', fontWeight: 700, color: bwcValue === 'SEV' || bwcValue === 'PROHIB' ? 'var(--color-danger)' : bwcValue === 'MOD' ? 'var(--color-warning)' : 'var(--color-success)' }}>
-              {bwcValue || '—'}
-            </div>
-          </div>
+          {(() => {
+            const bwcAlert = bwcValue === 'SEV' || bwcValue === 'PROHIB'
+            const bwcMod = bwcValue === 'MOD'
+            const bwcColor = bwcAlert ? 'var(--color-danger)' : bwcMod ? 'var(--color-warning)' : 'var(--color-success)'
+            return (
+              <div className="card" onClick={canEditRscBwc ? () => { setBwcDraftValue(bwcValue); setBwcDraftNotes(''); setBwcDialogOpen(true) } : undefined}
+                style={{
+                  padding: '6px 10px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+                  cursor: canEditRscBwc ? 'pointer' : 'default', textAlign: 'center',
+                  // BWC at MOD/SEV/PROHIB earns alert chrome — calm at LOW,
+                  // urgent above. The colored border + tint is the only
+                  // signal we need; no extra label or icon noise.
+                  border: bwcAlert || bwcMod ? `1px solid ${bwcColor}55` : undefined,
+                  background: bwcAlert ? 'rgba(239,68,68,0.06)' : bwcMod ? 'rgba(251,191,36,0.06)' : undefined,
+                }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>BWC</div>
+                <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: bwcColor, lineHeight: 1 }}>
+                  {bwcValue || '—'}
+                </div>
+              </div>
+            )
+          })()}
         </>)
       })()}
       {boardsBySection.runway.map(b => renderBoardCard(b))}
@@ -1993,7 +2057,10 @@ export default function HomePage() {
             const renderNavaidItem = (n: NavaidStatus) => (
               <div key={n.id} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>
+                  <span style={{
+                    fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-3)',
+                    letterSpacing: '0.04em', flex: 1,
+                  }}>
                     {getNavaidDisplayName(n.navaid_name)}
                   </span>
                   <button
@@ -2002,11 +2069,12 @@ export default function HomePage() {
                       setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
                     } : undefined}
                     style={{
-                      width: 36, height: 28, borderRadius: 'var(--radius-sm)',
-                      border: `2px solid ${STATUS_COLORS[n.status]}`,
-                      background: `${STATUS_HEX[n.status]}20`,
-                      cursor: canWriteAirfieldStatus ? 'pointer' : 'default', fontSize: 'var(--fs-base)', fontWeight: 700,
+                      width: 28, height: 28, borderRadius: 'var(--radius-sm)',
+                      border: `1.5px solid ${STATUS_COLORS[n.status]}`,
+                      background: `${STATUS_HEX[n.status]}22`,
+                      cursor: canWriteAirfieldStatus ? 'pointer' : 'default', fontSize: 'var(--fs-base)', fontWeight: 800,
                       color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
+                      letterSpacing: 0, lineHeight: 1,
                     }}
                   >
                     {NAVAID_LABELS[n.status] || 'G'}
@@ -2049,13 +2117,13 @@ export default function HomePage() {
             return (<>
                 {endGroups.filter(group => group.items.length > 0).map(group => (
                   <div key={group.designator} className="card" style={{ padding: '8px 12px 4px' }}>
-                    {renderEditableLabel(`navaid_rwy_${group.designator}`, `RWY ${group.designator}`, { fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' })}
+                    {renderEditableLabel(`navaid_rwy_${group.designator}`, `RWY ${group.designator}`, { fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' })}
                     {group.items.map(renderNavaidItem)}
                   </div>
                 ))}
                 {otherNavaids.length > 0 && (
                   <div className="card" style={{ padding: '8px 12px 4px' }}>
-                    {renderEditableLabel('navaid_other', 'OTHER', { fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-warning)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.06em' })}
+                    {renderEditableLabel('navaid_other', 'OTHER', { fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 8, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' })}
                     {otherNavaids.map(renderNavaidItem)}
                   </div>
                 )}
@@ -2075,7 +2143,10 @@ export default function HomePage() {
             padding: '8px 12px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
           }}>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>CAT</div>
+            <div style={{
+              fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}>CAT</div>
             <select
               value={arffCat ?? ''}
               disabled={!canWriteAirfieldStatus}
@@ -2116,16 +2187,22 @@ export default function HomePage() {
           </div>
           )}
 
-          {/* Aircraft readiness cards */}
+          {/* Aircraft readiness cards — tiered by readiness so off-nominal
+              states pop. Optimum reads as calm reassurance; reduced gets
+              a warning hue; critical and inadequate get heavier left
+              borders + elevated background tint, with INADEQUATE picking
+              up an AlertTriangle prefix because it's the only state that
+              means "ARFF cannot meet mission". */}
           {arffAircraft.map(aircraft => {
             const readiness = (arffStatuses[aircraft] ?? 'optimum') as 'inadequate' | 'critical' | 'reduced' | 'optimum'
-            const ARFF_COLORS: Record<string, { color: string; bg: string; border: string }> = {
-              optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' },
-              reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' },
-              critical: { color: 'var(--color-orange)', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
-              inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)' },
+            const ARFF_COLORS: Record<string, { color: string; bg: string; border: string; tint: string }> = {
+              optimum: { color: 'var(--color-success)', bg: 'rgba(52,211,153,0.06)', border: 'rgba(52,211,153,0.20)', tint: 'rgba(52,211,153,0.10)' },
+              reduced: { color: 'var(--color-warning)', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.30)', tint: 'rgba(251,191,36,0.14)' },
+              critical: { color: 'var(--color-orange)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.40)', tint: 'rgba(249,115,22,0.18)' },
+              inadequate: { color: 'var(--color-danger)', bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.50)', tint: 'rgba(239,68,68,0.20)' },
             }
             const c = ARFF_COLORS[readiness]
+            const heavyTier = readiness === 'critical' || readiness === 'inadequate'
             return (
               <div
                 key={aircraft}
@@ -2135,14 +2212,21 @@ export default function HomePage() {
                   padding: '8px 12px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
                   cursor: canWriteAirfieldStatus ? 'pointer' : 'default',
-                  background: c.bg, border: `1px solid ${c.border}`,
+                  background: heavyTier ? c.tint : c.bg,
+                  border: `1px solid ${c.border}`,
+                  borderLeft: heavyTier ? `3px solid ${c.color}` : `1px solid ${c.border}`,
                 }}
               >
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600 }}>{aircraft}</div>
                 <div style={{
-                  fontSize: 'var(--fs-md)', fontWeight: 700, color: c.color,
-                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                  fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'monospace',
+                  color: 'var(--color-text-1)', letterSpacing: '0.04em',
+                }}>{aircraft}</div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: 'var(--fs-sm)', fontWeight: 800, color: c.color,
+                  textTransform: 'uppercase', letterSpacing: '0.05em',
                 }}>
+                  {readiness === 'inadequate' && <AlertOctagon size={12} strokeWidth={2.5} />}
                   {readiness}
                 </div>
               </div>
@@ -2169,8 +2253,21 @@ export default function HomePage() {
 
       <div>
       {/* ===== Personnel on Airfield ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Personnel on Airfield</span>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <span style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          Personnel on Airfield
+          {activeContractors.length > 0 && (
+            <span style={{ color: 'var(--color-text-3)', fontWeight: 600, marginLeft: 8 }}>
+              · {activeContractors.length}
+            </span>
+          )}
+        </span>
         <button
           onClick={() => router.push('/contractors')}
           style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
@@ -2188,21 +2285,24 @@ export default function HomePage() {
             const cfg = CONTRACTOR_STATUS_CONFIG[c.status]
             const daysSinceStart = Math.max(1, Math.ceil((Date.now() - new Date(c.start_date).getTime()) / 86400000))
             return (
-              <div key={c.id} className="card" style={{ padding: 14, overflow: 'hidden' }}>
+              <div key={c.id} className="card" style={{ padding: '12px 14px', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Header: Callsign (or company name fallback) + status badge + day counter */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {/* Header: Callsign (or company fallback) + status badge + day counter.
+                        Drops the form-style LABEL: value layout in favor of a scannable
+                        status row — name dominant, supporting facts as compact chips. */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)',
+                        fontFamily: c.callsign ? 'monospace' : 'inherit', letterSpacing: c.callsign ? '0.03em' : 0,
+                      }}>
                         {c.callsign || c.company_name}
                       </span>
                       <span style={{
-                        fontSize: 'var(--fs-2xs)',
-                        fontWeight: 700,
-                        color: cfg.color,
-                        background: cfg.bg,
-                        padding: '1px 8px',
-                        borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                        color: cfg.color, background: cfg.bg,
+                        padding: '1px 8px', borderRadius: 'var(--radius-md)',
+                        textTransform: 'uppercase', letterSpacing: '0.04em',
                       }}>
                         {cfg.label}
                       </span>
@@ -2210,48 +2310,62 @@ export default function HomePage() {
                         Day {daysSinceStart}
                       </span>
                     </div>
-                    {/* Labeled fields */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Company: </span>
-                        {c.company_name}
+
+                    {/* Body row 1: Company · Contact (no labels — context is enough) */}
+                    {c.callsign && (
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                        <span style={{ fontWeight: 600 }}>{c.company_name}</span>
+                        {c.contact_name && (
+                          <>
+                            <span style={{ color: 'var(--color-text-3)' }}>·</span>
+                            <span style={{ color: 'var(--color-text-3)' }}>{c.contact_name}</span>
+                          </>
+                        )}
                       </div>
-                      {c.contact_name && (
-                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Contact: </span>
-                          {c.contact_name}
-                        </div>
+                    )}
+                    {!c.callsign && c.contact_name && (
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                        {c.contact_name}
+                      </div>
+                    )}
+
+                    {/* Body row 2: Location chip · Work chip — visually
+                        groups the "where + what" into one scan band. */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-2)',
+                        padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                      }}>{c.location}</span>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-2)',
+                        padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                      }}>{c.work_description}</span>
+                      {c.radio_number && (
+                        <span style={{
+                          fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+                          padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                          background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                          fontFamily: 'monospace',
+                        }}>RADIO {c.radio_number}</span>
                       )}
-                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Location: </span>
-                        {c.location}
-                      </div>
-                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Work: </span>
-                        {c.work_description}
-                      </div>
-                      {(c.radio_number || c.flag_number) && (
-                        <div style={{ display: 'flex', gap: 16, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', flexWrap: 'wrap' }}>
-                          {c.radio_number && (
-                            <span>
-                              <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Radio: </span>
-                              {c.radio_number}
-                            </span>
-                          )}
-                          {c.flag_number && (
-                            <span>
-                              <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Flag: </span>
-                              {c.flag_number}
-                            </span>
-                          )}
-                        </div>
+                      {c.flag_number && (
+                        <span style={{
+                          fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+                          padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                          background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                          fontFamily: 'monospace',
+                        }}>FLAG {c.flag_number}</span>
                       )}
                     </div>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                      Started: {formatZuluDate(new Date(c.start_date))}
+
+                    {/* Footer: Started date dim. Notes (if any) below in italic. */}
+                    <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                      Started {formatZuluDate(new Date(c.start_date))}
                     </div>
                     {c.notes && (
-                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 4 }}>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
                         {c.notes}
                       </div>
                     )}
@@ -2295,8 +2409,16 @@ export default function HomePage() {
 
       <div>
       {/* ===== Construction / Closures ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Construction / Closures</span>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <span style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          Construction / Closures
+        </span>
         {canWriteAirfieldStatus && (
           <button
             onClick={() => { setConstructionDraft(constructionRemarks || ''); setEditingConstruction(true) }}
@@ -2307,9 +2429,51 @@ export default function HomePage() {
         )}
       </div>
       <div className="card" style={{ padding: constructionRemarks ? '10px 14px' : 16, textAlign: constructionRemarks ? 'left' : 'center', marginBottom: 12 }}>
-        {constructionRemarks ? (
-          <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{constructionRemarks}</div>
-        ) : (
+        {constructionRemarks ? (() => {
+          // Best-effort parse of the free-text remarks into structured
+          // rows. Pattern recognized: optional leading "<digit>." then
+          // a LOCATION segment ending in ":" then work text on the
+          // next non-blank line(s). Anything we can't parse falls
+          // back to plain pre-wrap so user formatting always survives.
+          type Item = { location: string; work: string }
+          const items: Item[] = []
+          const blocks = constructionRemarks.split(/\n\s*\n+/)
+          for (const block of blocks) {
+            const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
+            if (lines.length === 0) continue
+            const headMatch = lines[0].match(/^\s*(?:\d+[.)]\s*)?(.+?):\s*$/)
+            if (headMatch && lines.length >= 2) {
+              items.push({ location: headMatch[1].trim(), work: lines.slice(1).join(' ').trim() })
+            } else {
+              // Single-line "LOCATION: work" form
+              const inlineMatch = lines[0].match(/^\s*(?:\d+[.)]\s*)?(.+?):\s+(.+)$/)
+              if (inlineMatch) {
+                items.push({ location: inlineMatch[1].trim(), work: inlineMatch[2].trim() })
+              }
+            }
+          }
+          if (items.length === 0) {
+            return <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{constructionRemarks}</div>
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {items.map((it, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 'var(--fs-2xs)', fontWeight: 700, fontFamily: 'monospace',
+                    color: 'var(--color-warning)', letterSpacing: '0.04em', textTransform: 'uppercase',
+                    padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.35)',
+                    whiteSpace: 'nowrap',
+                  }}>{it.location}</span>
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>
+                    {it.work}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )
+        })() : (
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>None</div>
         )}
       </div>
@@ -2318,8 +2482,16 @@ export default function HomePage() {
 
       <div>
       {/* ===== Miscellaneous Info ===== */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span className="section-label" style={{ marginBottom: 0 }}>Miscellaneous Info</span>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <span style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          Miscellaneous Info
+        </span>
         {canWriteAirfieldStatus && (
           <button
             onClick={() => { setMiscDraft(miscRemarks || ''); setEditingMisc(true) }}
@@ -2375,9 +2547,18 @@ export default function HomePage() {
         }
         return (
           <div style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span className="section-label" style={{ marginBottom: 0 }}>
-                Prior Permission Required ({todayPprs.length})
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+            }}>
+              <span style={{
+                fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>
+                Prior Permission Required
+                <span style={{ color: 'var(--color-text-3)', fontWeight: 600, marginLeft: 8 }}>
+                  · {todayPprs.length}
+                </span>
               </span>
               <button
                 onClick={() => router.push('/ppr')}

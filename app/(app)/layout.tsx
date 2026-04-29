@@ -28,12 +28,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     >
       <SidebarProvider>
         <InstallationProvider>
-          <SidebarNav />
-          <div className="app-main">
-            <Header />
-
-            <ScrollToTop />
-            <DashboardProvider>
+          <DashboardProvider>
+            <SidebarNav />
+            <div className="app-main">
+              <Header />
+              <ScrollToTop />
               <KioskGuard />
               <RealtimeAlertBanner />
               <WhatsNewGate />
@@ -42,9 +41,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <main className="app-content">
                 {children}
               </main>
-            </DashboardProvider>
-            <BottomNav />
-          </div>
+              <BottomNav />
+            </div>
+          </DashboardProvider>
         </InstallationProvider>
       </SidebarProvider>
     </div>
