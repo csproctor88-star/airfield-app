@@ -123,7 +123,6 @@ describe('migrated generators render without errors', () => {
       }],
       entries: [{
         id: 'e1', base_id: 'b1', ppr_number: 'PPR-001', arrival_date: '2026-04-15',
-        arrival_eta_zulu: null,
         column_values: { c1: 'N12345' }, approver_oi: 'JD', notes: 'OK',
         created_by: null, updated_by: null,
         created_at: '2026-04-14', updated_at: '2026-04-14',

@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     const { data: entry, error: entryErr } = await reader
       .from('ppr_entries')
-      .select('id, base_id, ppr_number, requester_name, requester_email, requester_phone, arrival_date, arrival_eta_zulu, column_values, notes')
+      .select('id, base_id, ppr_number, requester_name, requester_email, requester_phone, arrival_date, column_values, notes')
       .eq('id', entryId)
       .single<{
         id: string
@@ -79,7 +79,6 @@ export async function POST(request: Request) {
         requester_email: string | null
         requester_phone: string | null
         arrival_date: string
-        arrival_eta_zulu: string | null
         column_values: Record<string, string> | null
         notes: string | null
       }>()
@@ -149,11 +148,7 @@ export async function POST(request: Request) {
     const safeBase = escapeHtml(base.name)
     const replyTo = validReplyTo(base.amops_email)
     const safePpr = escapeHtml(entry.ppr_number)
-    const safeArrival = escapeHtml(
-      entry.arrival_eta_zulu
-        ? `${entry.arrival_date} · ${entry.arrival_eta_zulu.replace(':', '')}Z`
-        : entry.arrival_date,
-    )
+    const safeArrival = escapeHtml(entry.arrival_date)
     const safeRequester = escapeHtml(
       [entry.requester_name, entry.requester_email, entry.requester_phone].filter(Boolean).join(' — ') || 'Internal request',
     )

@@ -109,7 +109,7 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     doc.text('No PPR entries for the selected range.', margin, y)
   } else {
     const head: string[] = [
-      'PPR #', 'Arrival Date', 'ETA (Z)', 'Status',
+      'PPR #', 'Arrival Date', 'Status',
       ...dataColumns.map(c => sanitizePdfText(c.column_name)),
       'OI', 'Notes',
       ...(anyRemarks ? ['Remarks'] : []),
@@ -117,7 +117,6 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     const body: string[][] = entries.map(entry => [
       entry.ppr_number,
       entry.arrival_date,
-      entry.arrival_eta_zulu ? entry.arrival_eta_zulu.replace(':', '') + 'Z' : '—',
       STATUS_LABELS[entry.status] || entry.status,
       ...dataColumns.map(c => sanitizePdfText(formatCell(c, entry.column_values?.[c.id] || '', { tz }))),
       entry.approver_oi || '',

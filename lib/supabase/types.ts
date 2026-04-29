@@ -3071,7 +3071,6 @@ export type Database = {
           approval_user_id: string | null
           approver_oi: string | null
           arrival_date: string
-          arrival_eta_zulu: string | null
           base_id: string
           cancellation_reason: string | null
           column_values: Json
@@ -3096,7 +3095,6 @@ export type Database = {
           approval_user_id?: string | null
           approver_oi?: string | null
           arrival_date: string
-          arrival_eta_zulu?: string | null
           base_id: string
           cancellation_reason?: string | null
           column_values?: Json
@@ -3121,7 +3119,6 @@ export type Database = {
           approval_user_id?: string | null
           approver_oi?: string | null
           arrival_date?: string
-          arrival_eta_zulu?: string | null
           base_id?: string
           cancellation_reason?: string | null
           column_values?: Json

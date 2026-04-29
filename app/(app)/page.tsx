@@ -2342,9 +2342,9 @@ export default function HomePage() {
 
       {/* ===== Today's PPRs =====
           Column set intentionally mirrors the slim PPR Log on /ppr:
-          PPR # / Status / Arrival Date / ETA (Z) / Callsign / Aircraft
-          Type. Anything else (requester, all admin columns, notes,
-          coord, remarks) lives in the detail view on /ppr. */}
+          PPR # / Status / Arrival Date / Callsign / Aircraft Type.
+          Anything else (requester, all admin columns, notes, coord,
+          remarks) lives in the detail view on /ppr. */}
       {pprColumns.length > 0 && (() => {
         // Custom columns the admin chose to surface on this panel.
         // info_only is excluded — it would render as a wall of text in
@@ -2398,7 +2398,6 @@ export default function HomePage() {
                       <th style={ppPanelTh}>PPR #</th>
                       <th style={ppPanelTh}>Status</th>
                       <th style={ppPanelTh}>Arrival Date</th>
-                      <th style={ppPanelTh}>ETA (Z)</th>
                       {summaryCols.map(col => (
                         <th key={col.id} style={ppPanelTh}>{col.column_name}</th>
                       ))}
@@ -2431,11 +2430,6 @@ export default function HomePage() {
                             </span>
                           </td>
                           <td style={ppPanelTd}>{formatZuluDate(entry.arrival_date + 'T00:00:00Z')}</td>
-                          <td style={ppPanelTd}>
-                            {entry.arrival_eta_zulu
-                              ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
-                              : <span style={{ color: 'var(--color-text-3)' }}>{'\u2014'}</span>}
-                          </td>
                           {summaryCols.map(col => {
                             const formatted = formatPprColumnValue(
                               col,

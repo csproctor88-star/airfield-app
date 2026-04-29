@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const reader = serviceKey ? createServiceClient(url, serviceKey) : sb
     const { data: entry, error: entryErr } = await reader
       .from('ppr_entries')
-      .select('id, base_id, ppr_number, status, requester_name, requester_email, arrival_date, arrival_eta_zulu, cancellation_reason')
+      .select('id, base_id, ppr_number, status, requester_name, requester_email, arrival_date, cancellation_reason')
       .eq('id', entryId)
       .single<{
         id: string
@@ -74,7 +74,6 @@ export async function POST(request: Request) {
         requester_name: string | null
         requester_email: string | null
         arrival_date: string
-        arrival_eta_zulu: string | null
         cancellation_reason: string | null
       }>()
 
@@ -102,11 +101,7 @@ export async function POST(request: Request) {
     const safeName = escapeHtml(entry.requester_name || 'Aircrew')
     const safeBase = escapeHtml(base.name)
     const safePpr = escapeHtml(entry.ppr_number)
-    const safeArrival = escapeHtml(
-      entry.arrival_eta_zulu
-        ? `${entry.arrival_date} · ${entry.arrival_eta_zulu.replace(':', '')}Z`
-        : entry.arrival_date,
-    )
+    const safeArrival = escapeHtml(entry.arrival_date)
     const safeReason = escapeHtml(entry.cancellation_reason || 'No reason provided.')
     const replyTo = validReplyTo(base.amops_email)
 

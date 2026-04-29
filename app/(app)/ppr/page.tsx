@@ -86,7 +86,6 @@ export default function PprPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingEntry, setEditingEntry] = useState<PprEntry | null>(null)
   const [formDate, setFormDate] = useState(today)
-  const [formEta, setFormEta] = useState('')
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [formNotes, setFormNotes] = useState('')
   const [formApproverOi, setFormApproverOi] = useState('')
@@ -389,9 +388,9 @@ export default function PprPage() {
   )
 
   // PPR Log table stays intentionally narrow — only the spine fields
-  // (PPR # / Status / Arrival Date / ETA) plus the Callsign + Aircraft
-  // Type admin columns when those exist AND have show_on_log enabled.
-  // The full set of show_on_log columns lives in the detail card.
+  // (PPR # / Status / Arrival Date) plus the Callsign + Aircraft Type
+  // admin columns when those exist AND have show_on_log enabled. The
+  // full set of show_on_log columns lives in the detail card.
   const summaryColumns = useMemo(
     () => dataColumns.filter((c) => isSummaryColumn(c.column_name)),
     [dataColumns],
@@ -401,7 +400,6 @@ export default function PprPage() {
   const handleNew = () => {
     setEditingEntry(null)
     setFormDate(today)
-    setFormEta('')
     setFormValues({})
     setFormNotes('')
     setFormApproverOi('')
@@ -418,8 +416,6 @@ export default function PprPage() {
   const handleEdit = (entry: PprEntry) => {
     setEditingEntry(entry)
     setFormDate(entry.arrival_date)
-    // DB stores HH:MM; UI works in HHMM. Strip the colon on load.
-    setFormEta((entry.arrival_eta_zulu || '').replace(':', ''))
     setFormValues(entry.column_values || {})
     setFormNotes(entry.notes || '')
     setFormApproverOi(entry.approver_oi || '')
@@ -432,17 +428,6 @@ export default function PprPage() {
   const handleSave = async () => {
     if (!installationId) return
 
-    // ETA is collected as HHMM in the form; DB stores HH:MM (matches
-    // column_type='time' convention + the public RPC's regex check).
-    // Convert at the wire boundary; reject malformed input early so a
-    // stray "9" doesn't slip through as "9:" or similar.
-    const etaRaw = formEta.trim()
-    if (etaRaw && !/^([01]\d|2[0-3])[0-5]\d$/.test(etaRaw)) {
-      toast.error('ETA must be 4-digit HHMM (24-hour Zulu, e.g. 1500)')
-      return
-    }
-    const etaForDb = etaRaw ? `${etaRaw.slice(0, 2)}:${etaRaw.slice(2)}` : null
-
     if (editingEntry) {
       // Only send approver_oi when the user can approve AND the entry
       // is already approved — that's the case where the OI segment of
@@ -451,7 +436,6 @@ export default function PprPage() {
       const trimmedOi = formApproverOi.trim().toUpperCase()
       const updated = await updatePprEntry(editingEntry.id, {
         arrival_date: formDate,
-        arrival_eta_zulu: etaForDb,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         ...(canEditOi && trimmedOi ? { approver_oi: trimmedOi } : {}),
@@ -477,7 +461,6 @@ export default function PprPage() {
       const entry = await createPprEntry({
         base_id: installationId,
         arrival_date: formDate,
-        arrival_eta_zulu: etaForDb,
         column_values: formValues,
         notes: formNotes.trim() || undefined,
         approver_oi: userOI,
@@ -896,7 +879,6 @@ export default function PprPage() {
                 <th style={thStyle}>PPR #</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Arrival Date</th>
-                <th style={thStyle}>ETA (Z)</th>
                 {summaryColumns.map(col => (
                   <th key={col.id} style={dynamicThStyle}>{col.column_name}</th>
                 ))}
@@ -950,11 +932,6 @@ export default function PprPage() {
                       )}
                     </td>
                     <td style={tdStyle}>{formatZuluDate(entry.arrival_date + 'T00:00:00Z')}</td>
-                    <td style={tdStyle}>
-                      {entry.arrival_eta_zulu
-                        ? entry.arrival_eta_zulu.replace(':', '') + 'Z'
-                        : <span style={{ color: 'var(--color-text-3)' }}>—</span>}
-                    </td>
                     {summaryColumns.map(col => {
                       const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id], { tz: baseTimezone })
                       return (
@@ -992,22 +969,6 @@ export default function PprPage() {
                 onChange={e => setFormDate(e.target.value)}
                 style={textInputStyle}
               />
-            </label>
-
-            <label style={labelStyle}>
-              ETA (Z)
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={4}
-                value={formEta}
-                onChange={e => setFormEta(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="HHMM (e.g. 1500)"
-                style={textInputStyle}
-              />
-              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 'normal' }}>
-                Optional on internal-create. Public submissions require it. 24-hour Zulu, no colon.
-              </span>
             </label>
 
             {columns.map(col => (
@@ -1514,9 +1475,6 @@ export default function PprPage() {
                 title="Request Details"
                 rows={[
                   { label: 'Arrival Date', value: detailEntry.arrival_date },
-                  ...(detailEntry.arrival_eta_zulu
-                    ? [{ label: 'ETA (Z)', value: detailEntry.arrival_eta_zulu.replace(':', '') + 'Z' }]
-                    : []),
                   ...dataColumns
                     .map((c) => ({ label: c.column_name, value: formatPprColumnValue(c, (detailEntry.column_values || {})[c.id], { tz: baseTimezone }) }))
                     .filter((r) => r.value),
@@ -1786,7 +1744,6 @@ function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprCol
     <div style={{ padding: 10, background: 'var(--color-bg-inset)', borderRadius: 4, border: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)' }}>
       <div>
         <strong>Arrival:</strong> {entry.arrival_date}
-        {entry.arrival_eta_zulu && <> &middot; <strong>ETA:</strong> {entry.arrival_eta_zulu.replace(':', '')}Z</>}
       </div>
       {columns.map((c) => {
         // info_only columns have no per-entry value; skip.
