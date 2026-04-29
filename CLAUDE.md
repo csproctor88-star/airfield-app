@@ -32,26 +32,28 @@ Glidepath — Progressive Web App for USAF Airfield Management. Replaces paper l
 | `/discrepancies` | ✅ | `app/(app)/discrepancies/{page,[id],new}.tsx` |
 | `/ces` | ✅ | `app/(app)/ces/page.tsx` — CES Work Orders (CES role landing) |
 | `/infrastructure` | ✅ | `app/(app)/infrastructure/page.tsx` — Visual NAVAIDs (~4k LOC) |
-| `/parking` | 🆕 | `app/(app)/parking/page.tsx` — multi-select, taxilane point editing |
+| `/parking` | ✅ | `app/(app)/parking/page.tsx` — multi-select, taxilane point editing |
 | `/obstructions` | ✅ | `app/(app)/obstructions/{page,[id],history}.tsx` — UFC 3-260-01 |
 | `/qrc` | ✅ | `app/(app)/qrc/page.tsx` — 25 QRCs, 8 step types |
 | `/shift-checklist` | ✅ | `app/(app)/shift-checklist/page.tsx` — 3-state toggle, 0600L reset |
 | `/wildlife` | ✅ | `app/(app)/wildlife/page.tsx` — 270+ species, BASH heatmap |
 | `/waivers` | ✅ | `app/(app)/waivers/{page,[id],[id]/edit,new,annual-review/[year]}.tsx` |
 | `/notams` | ✅ | `app/(app)/notams/{page,[id],new}.tsx` — live FAA feed |
-| `/ppr` | 🆕 | `app/(app)/ppr/page.tsx` — Prior Permission Required log + PDF |
-| `/feedback` | 🆕 | `app/(app)/feedback/page.tsx` (staff) · `app/feedback/[baseId]/page.tsx` (public QR form) |
+| `/ppr` | ✅ | `app/(app)/ppr/page.tsx` — Prior Permission Required log + PDF; public form at `app/(public)/[icao]/ppr-request` (and legacy `/ppr-request/[baseId]`) |
+| `/feedback` | ✅ | `app/(app)/feedback/page.tsx` (staff) · `app/feedback/[baseId]/page.tsx` (public QR form) |
+| `/scn` | ✅ | `app/(app)/scn/page.tsx` — Secondary Crash Net record + agency log |
+| `/daily-reviews` | ✅ | `app/(app)/daily-reviews/page.tsx` — DAFMAN 2.5.2.10.3/10.4 shift sign-off queue |
 | `/contractors` | ✅ | `app/(app)/contractors/page.tsx` — Personnel on Airfield + AF Form 483 |
 | `/reports` | ✅ | `app/(app)/reports/{page,daily,trends,aging,discrepancies,lighting}.tsx` |
 | `/activity` | ✅ | `app/(app)/activity/page.tsx` — Events Log |
 | `/training` | ✅ | `app/(app)/training/page.tsx` — built-in user training |
 | `/regulations` · `/aircraft` · `/library` | ✅ | reference data (70 regs, 200+ aircraft) |
 | `/settings/base-setup` | ✅ | `app/(app)/settings/base-setup/page.tsx` — 15-step wizard (~4k LOC) |
-| `/settings/users` | ✅ | `app/(app)/settings/users/page.tsx` — user management |
+| `/users` · `/settings/users` | ✅ | `app/(app)/users/page.tsx` (top-level) · `app/(app)/settings/users/page.tsx` (settings nav entry) |
 | `/more` | ✅ | `app/(app)/more/page.tsx` — mobile module menu |
 | `/api/*` | ✅ | 12 routes: admin (invite, reset-password, users), elevation, airport-lookup, notams/sync, send-pdf-email, signup-email, user-emails, infrastructure-import, installations, airfield-status |
 
-Status: ✅ stable · 🆕 added in v2.31–v2.32
+Status: ✅ stable
 
 ## Project Structure
 
@@ -73,7 +75,7 @@ airfield-app/
 ├── public/
 │   ├── wildlife_images/    # bird/ mammal/ reptile/ bat/ — local photo cache
 │   ├── training/, aircraft_silhouettes/, wildlife_image_manifest.json
-├── supabase/migrations/    # 135 migrations, YYYYMMDDXX_<name>.sql
+├── supabase/migrations/    # 174 migrations, YYYYMMDDXX_<name>.sql
 ├── scripts/                # scrape_wildlife_images.py, scrape_aircraft_images.py (Python)
 ├── docs/                   # Capabilities, Leadership Briefing, manual/ (23 files), session handoffs
 └── middleware.ts           # Supabase SSR auth gate
@@ -85,9 +87,9 @@ airfield-app/
 
 **Naming** — React components PascalCase (`EmailPdfModal.tsx`). Hooks use `use-` prefix, kebab-case (`use-google-map-ruler.ts`). Library files kebab-case (`installation-context.tsx`, `qrc-pdf.ts`). Database identifiers snake_case, plural tables (`airfield_checks`, `parking_spots`).
 
-**Database** — All operational tables include `base_id UUID REFERENCES bases(id)` and Row-Level Security. RLS helpers: `user_has_base_access`, `user_can_write`, `user_is_admin`, `user_is_sys_admin`. Migrations dated `YYYYMMDDXX_<name>.sql`. Don't write to `activity_log` from CRUD modules — discrepancies/checks/inspections write to their own status/event tables. PDF generators always return `{ doc, filename }`.
+**Database** — All operational tables include `base_id UUID REFERENCES bases(id)` and Row-Level Security. RLS is permission-matrix based (migrations `2026042200`–`2026042208`). The only helpers that exist now: `user_has_base_access(uid, base_id)`, `user_has_permission(uid, '<resource>:<action>')`, `user_is_sys_admin(uid)`. **Do not call `user_can_write` / `user_is_admin` / `user_is_base_admin_at` — they were dropped in `2026042208`.** New write policies: `user_has_base_access(auth.uid(), base_id) AND user_has_permission(auth.uid(), '<resource>:write')`. SECURITY DEFINER RPCs cover narrow / column-scoped writes (CES update, Safety, public PPR submit, public feedback submit). Migrations dated `YYYYMMDDXX_<name>.sql`. Don't write to `activity_log` from CRUD modules — discrepancies/checks/inspections write to their own status/event tables. PDF generators always return `{ doc, filename }`.
 
-**Git** — Active branch `tweaks`; merge to `main` for releases. No CODEOWNERS, no PR template. Commit messages: imperative sentence header + optional body explaining why. Co-author trailer: `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`. Never commit `.env.local`.
+**Git** — All work commits directly to `main` (the old `tweaks` / `tweaking` branches were retired during the v2.30 cycle; only `main` exists locally and on origin). No CODEOWNERS, no PR template. Commit messages: imperative sentence header + optional body explaining why. Co-author trailer: `Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>` (older commits used 4.6 — keep the trailer current with the model in use). Never commit `.env.local`.
 
 ## Commands
 
