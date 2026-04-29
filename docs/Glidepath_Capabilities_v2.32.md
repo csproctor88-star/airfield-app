@@ -10,7 +10,7 @@ Glidepath is a single-platform Airfield Management System for USAF base airfield
 
 | | |
 |---|---|
-| **Audience** | Airfield Managers, NAMOs, AMOPS staff, CES shop leads, Safety, ATC, leadership reviewers, transient aircrew (public-facing forms only) |
+| **Audience** | Airfield Managers, NAMOs, AMOPS personnel, CES shop leads, Safety, ATC, leadership reviewers, transient aircrew (public-facing forms only) |
 | **Deployment today** | Vercel (Next.js 14) + Supabase (Postgres + Auth + Storage + Realtime); Resend for transactional email; Google Maps + Mapbox for cartography |
 | **Deployment roadmap** | Platform One Party Bus migration for IL4/IL5 environments; CAC/PIV authentication |
 | **Modules** | 22 core modules + 6 reference/admin surfaces |
@@ -26,9 +26,9 @@ A working AFM cares about what's true on the airfield right now and what's been 
 1. **One source of truth, live.** Runway status, NAVAID status, advisories, ARFF readiness, current personnel on the airfield, today's PPRs, and weather all show on a single Airfield Status board — and update on every connected tablet within a second of any change. Shift turnover stops being a phone call.
 2. **The DAFMAN outage engine runs continuously.** As soon as a light is marked inoperative, the system recomputes percentage / count / spatial / consecutive thresholds against DAFMAN 13-204 Vol 2 Table A3.1 and surfaces the right tier (green / yellow / red / black). Bar-out detection is built in — three or more inoperative lights in the same physical bar count as a single bar-out, exactly the way the manual reads it.
 3. **Every action is auditable.** `logActivity` writes a Zulu-timestamped row with the user's operating initials for every status change, every check, every inspection, every discrepancy transition, every QRC step. The Events Log is the airfield manager's desk diary, automatically. The Daily Reviews queue rolls those entries into per-shift sign-off slots that satisfy DAFMAN 13-204 Vol 1 Para 2.5.2.10.3/10.4.
-4. **The artifacts you have to produce, you produce.** 16 PDF generators cover the daily ops summary, single-discrepancy report, ACSI book, AF Form 505 waiver package, AF Form 483 personnel roster, parking diagram with clearance overlay, obstruction evaluation with surface penetrations, PPR log, monthly SCN report, and lighting health snapshot. Email distribution is one click.
-5. **It works offline.** The PWA caches reads for QRC, PPR, contractors, discrepancies, regulations, aircraft, and waivers via Workbox. Writes queue to IndexedDB during outages and drain automatically when connectivity returns — including photo uploads. The flight line and the alert facility are first-class environments, not edge cases.
-6. **Permissions are surgical.** A 12-role × ~80-key matrix with per-user overrides means the CES electrician sees only their work orders and can transition CES-stage statuses without seeing wildlife strikes; the Safety officer can update RSC/BWC without touching runway closures; AMOPS can triage a PPR and approve it in one session; the read-only MAJCOM RFM can pull the dashboard without the ability to write anything.
+4. **The artifacts you have to produce, you produce.** 16 PDF generators cover the daily ops summary, single-discrepancy report, ACSI report, AF Form 505 waiver package, contractors on the airfield logging, parking diagram with clearance overlay with UFC requirements embeded, obstruction evaluation with surface penetrations automatically calculated, PPR log, daily SCN check log, and lighting health snapshot. Email distribution is one click.
+5. **It works offline.** The PWA caches reads for QRC, PPR, contractors, discrepancies, regulations, aircraft, and waivers via Workbox. Writes queue to IndexedDB during outages and drain automatically when connectivity returns — including photo uploads.
+6. **Permissions are surgical.** A 12-role × ~80-key matrix with per-user overrides means the CES electrician sees only their work orders and can transition CES-stage statuses without seeing wildlife strikes; the Safety officer can update RSC/BWC without touching runway closures; AMOPS can triage a PPR and approve it in one session; the read-only MAJCOM RFM/FAM can pull the dashboard without the ability to write anything.
 7. **Multi-installation by design.** A single login can switch between bases the user has access to — runways, areas, shops, templates, QRC presets, lighting systems, wildlife species, status boards, and PPR columns are all scoped per-installation. ANG units with multiple aprons or AETC instructors covering several bases work natively.
 8. **Regulatory math, not regulatory references.** The wingtip clearance check is UFC 3-260-01 Table 6-1a, computed live as you drag aircraft on the apron. The obstruction evaluator computes 50:1 approach surfaces, transitional surfaces, inner horizontal, and conical surfaces — and tells you which ones an object penetrates. The Visual NAVAID outage engine is DAFMAN 13-204 Vol 2 Table A3.1 with bar-out logic, computed across every system on the field.
 
@@ -43,15 +43,14 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 **What it does.** The default landing page. Real-time picture of runways, taxiways, NAVAIDs, ARFF readiness, BWC / RSC / RCR, advisories, today's PPRs, current personnel on the airfield, and weather — for whichever installation is active.
 
 **Capabilities:**
-- **Runway status** — open / closed / maintenance / suspended per runway end, with optional `estimated_resume_at` for closures and free-text reason notes.
-- **Taxiway status** — same state model per taxiway designator.
-- **NAVAID status** — green / yellow / red toggle per configured NAVAID with notes; only NAVAIDs configured in Base Setup appear, so the panel stays specific to the field.
+- **Runway status** — open / closed / suspended per runway, with optional `estimated_resume_at` for closures and free-text reason notes.
+- **NAVAID status** — green / yellow / red toggle per configured NAVAID with notes; only NAVAIDs configured in Base Setup appear, so the panel stays specific to that airfield.
 - **ARFF status** — CAT level (Full / Marginal / Critical / Inadequate) and per-aircraft readiness (Full / Marginal / Critical / Inadequate / aircraft-out) with reason notes; both writes log to `arff_status_log` for the Daily Operations PDF.
 - **RSC** (Runway Surface Condition) — Dry / Wet / Ice / Snow / Slush / Standing Water with notes.
-- **RCR** (Runway Condition Reading) — Dry / Wet / Standing Water and 1–10 friction values.
+- **RCR** (Runway Condition Reading) — Dry / Wet / Standing Water and friction values.
 - **BWC** (Bird Watch Condition) — LOW / MODERATE / SEVERE / PROHIBITED.
 - **Custom status boards** — admin-defined panels (Arresting Systems, Comm Status, etc.) with three-state items per board.
-- **Advisories** — typed (WATCH / WARNING / ADVISORY) with effective_start, effective_end (or UFN), and message; auto-expire on schedule with a live 15-second countdown ticker.
+- **WWA Notifications** — typed (WATCH / WARNING / ADVISORY) with effective_start, effective_end (or UFN), and message; auto-expire on schedule with a live 15-second countdown ticker.
 - **Out-of-Office / Closed-for-Day toggles** — AFM signals coverage state with a saved default message; visible on every connected tablet.
 - **Today's PPRs panel** — slim view of the day's approved PPRs (PPR # / Status / Arrival Date / ETA Z / first two admin columns); strikethrough on canceled rows.
 - **Personnel on Airfield** — live roster of active contractors with company, location, callsign, radio, AF Form 483 expiration.
@@ -68,21 +67,18 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 ### 1.2  Dashboard (`/dashboard`)
 
-**What it does.** KPI hub. Today's inspection progress, lighting system health, last completed check, quick action tiles, AFM Out-of-Office controls, pending Daily Reviews count.
+**What it does.** KPI hub. Today's inspection progress, last completed check, quick action tiles, AFM Out-of-Office controls, pending Daily Reviews count.
 
 **Capabilities:**
 - **Today's inspections card** — airfield + lighting status (not started / in progress / completed) with inspector name when known.
-- **Lighting health card** — worst alert tier across all systems, with counts of total / approaching / exceeded / inoperative.
 - **Last check tile** — latest completed check type and Zulu time; subscribes to realtime so it updates the moment another user files a check.
 - **Quick action tiles** — `/checks/new`, `/discrepancies/new`.
-- **AFM Out-of-Office** — toggle plus saved default message ("Airfield Management is Out of the Office. Contact …"). Optional Closed-for-Day mode for full-coverage loss.
+- **AMOPS Out-of-Office** — toggle plus saved default message ("Airfield Management is Out of the Office. Contact …"). Optional Closed-for-Day mode for full-coverage loss.
 - **Pending Daily Reviews pill** — surfaces when any of the last 7 days has un-certified shift sign-off slots.
 
 **Roles & permissions.** `dashboard:view` to see; `airfield_status:write` to toggle Out-of-Office.
 
 **Outputs.** None directly; quick-action tiles deep-link to other modules.
-
-**Regulatory backing.** DAFMAN 13-204 Vol 2 Table A3.1 (lighting health summary).
 
 ---
 
@@ -119,7 +115,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 ### 1.4  Daily Inspections (`/inspections`)
 
-**What it does.** Formal daily airfield + lighting inspections per DAFMAN 13-204 Vol 1, plus construction and joint-monthly variants. Multi-section pass / fail / N/A checklists, photo per failed item, auto-creation of discrepancies for failures, PDF filing.
+**What it does.** Formal daily airfield + lighting inspections per DAFMAN 13-204 Vol 2, plus construction and joint-monthly variants. Multi-section pass / fail / N/A checklists, photo per failed item, auto-creation of discrepancies for failures, PDF filing.
 
 **Capabilities:**
 - **Four inspection variants** — Daily Airfield, Daily Lighting, Construction Meeting, Joint Monthly.
@@ -145,7 +141,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 ### 1.5  ACSI Annual Compliance (`/acsi`)
 
-**What it does.** Airfield Certification & Safety Inspection — the annual compliance walk per DAFMAN 13-204 Vol 2 Para 5.4.3. Ten-section ~100-item checklist, team assignments, per-member signature toggle, PDF book.
+**What it does.** Airfield Certification & Safety Inspection — the annual compliance inspection per DAFMAN 13-204 Vol 2 Para 5.4.3. Ten-section ~100-item checklist, team assignments, per-member signature toggle, PDF report.
 
 **Capabilities:**
 - **Ten sections** — Pavement Areas, Safety Clearances & Apron, Markings, Signs, Lighting, Wind Cones, Obstructions, Arresting Systems, Other Hazards, Local Information.
@@ -156,7 +152,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 - **Mark-all-Y action** for bulk pre-fills before a re-inspection.
 - **Status workflow** — Draft → In Progress → Completed → Staffed.
 - **Reopen + draft rebuild** — return a completed ACSI to in-progress without losing photo attachments or comments.
-- **PDF export** — full ACSI book with sections, responses, team roster, signature blocks, regulation references; rendered with parent/sub-field hierarchy and inline photos / maps.
+- **PDF export** — full ACSI report with sections, responses, team roster, signature blocks, regulation references; rendered with parent/sub-field hierarchy and inline photos / maps.
 
 **Roles & permissions.** `acsi:write` to create / edit; `acsi:file` to file; `acsi:delete` to remove.
 
@@ -216,7 +212,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 ---
 
-### 1.8  QRC — Emergency Checklists (`/qrc`)
+### 1.8  QRC — Quick Reaction Checklists (`/qrc`)
 
 **What it does.** Quick Reaction Checklists for emergency and contingency response — aircraft mishap, hung ordnance, fuel spill, severe weather, BASH event, etc. 25 default templates, eight step types, execution tracking, SCN tagging, PDF export.
 
@@ -413,7 +409,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 - **Sighting form** — date / Zulu time, species, location, quantity, behavior (roosting / flying / feeding / nesting), weather conditions.
 - **Strike form** — aircraft tail number, runway, species, damage level (none / minor / major / destroyed), personnel injury, photo upload.
 - **Weather auto-fill** — `weatherToFormFields()` maps Open-Meteo conditions to form values on mount; inspector doesn't have to retype temp / wind / ceiling.
-- **Action checklist** — deterrent applied, BASH officer notified, FOD Check, area closure, hazard reported to ATC.
+- **Action checklist** — deterrent applied, USDA notified, FOD Check, area closure, hazard reported to ATC.
 - **BASH heatmap** — Mapbox GL density visualization (the only Mapbox holdout in the platform; everything else is Google Maps).
 - **Heatmap capture** for the monthly BASH report.
 - **Species favorites** — `is_favorite` flag per base; favorites sorted first with gold border / star in the picker.
@@ -463,15 +459,13 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 **Capabilities:**
 - **Live FAA feed** — `app/api/notams/sync/route.ts` pulls from `notams.aim.faa.gov`; no API key required; manual sync button.
-- **Local NOTAM creation** — base-specific NOTAMs (e.g., "Apron 2 closed for FOD Check"); dropdown selectors for type and status.
 - **Source badges** — FAA (cyan), LOCAL (purple).
 - **Filtering** — source, status, type, date range.
 - **Auto-expire** — NOTAMs flip to expired when FAA end-date passes.
 - **Date parsing** for FAA format (MM/DD/YYYY HHMM), "PERM", and ISO.
-- **Mark as reviewed** — track which NOTAMs staff have acknowledged.
 - **PDF export** — list of active NOTAMs with full text.
 - **Email distribution** to stakeholders.
-- **Sidebar badge** for newly synced NOTAMs.
+- **Sidebar badge** for expiring NOTAMs.
 
 **Roles & permissions.** `notams:view`, `notams:write`, `notams:cancel`.
 
@@ -586,7 +580,7 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 ### 2.10  Personnel on Airfield (`/contractors`)
 
-**What it does.** AF Form 483 escort credential log with expiration tracking and reusable contractor templates.
+**What it does.** Tracks when contractors and other personnel are working on the airfield, captures AF Form 483 and personnel information with expiration tracking and reusable contractor templates.
 
 **Capabilities:**
 - **Contractor records** — company, contact person, location, description, start date, notes.
@@ -683,9 +677,9 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 
 ---
 
-### 3.5  In-App Training (`/training`)
+### 3.5  Glidepath Training (`/training`)
 
-**What it does.** Built-in user onboarding and per-module documentation. 36 screenshots, downloadable PDF curriculum.
+**What it does.** Built-in onboarding and per-module documentation for using the Glidepath platform itself — distinct from airfield management training records. The sidebar label reads "Glidepath Training" so users don't confuse it with personnel training compliance. 36 screenshots, downloadable PDF curriculum.
 
 **Capabilities:**
 - **Three tabs** — Getting Started / Module Guides / Tips.
@@ -726,7 +720,6 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 - **Module enablement** — toggle which of the 17 modules are active per base.
 - **Progress tracking** — per-step `complete` / `skipped` / `in_progress` with user attribution.
 - **Kiosk token generation** — URL-based public PPR + Feedback forms with no login required.
-- **Default OOO + Closed-for-Day messages** — saved per base.
 - **Default PDF email** — preferred address for report distribution.
 - **Discrepancy type-to-shop mapping** UI on the CE Shops tab.
 - **Bulk wildlife import** — add multiple species at once.
@@ -767,7 +760,6 @@ The everyday rhythm: status, checks, inspections, discrepancies, work orders, em
 **Capabilities:**
 - **Theme toggle** — dark / light mode with full contrast pass.
 - **Default PDF email** — saved to profile.
-- **Default OOO + Closed-for-Day messages** — per-base saved text.
 - **Installation switcher** — pick the active base from accessible installations.
 - **Operating initials** self-service edit.
 - **About section** — current version, build info.
@@ -783,7 +775,7 @@ The cross-cutting machinery that makes the modules work as a single platform —
 
 ### 4.1  Multi-installation fabric
 
-`useInstallation()` is the single hook every page uses to access the current base context. Switching bases re-fetches runways, areas, CE shops, type-to-shop mapping, ARFF aircraft, facilities, default PDF email, default OOO messages, enabled modules, and setup progress in parallel via `Promise.all`. All operational tables include `base_id` with RLS enforcing match. Every map component depends on `[token, installationId]` and uses destroy-and-recreate (not early-return guard) to re-init cleanly on installation switch. ANG units with multiple aprons or AETC instructors covering several bases work natively from a single login.
+`useInstallation()` is the single hook every page uses to access the current base context. Switching bases re-fetches runways, areas, CE shops, type-to-shop mapping, ARFF aircraft, facilities, default PDF email, default OOO messages, enabled modules, and setup progress in parallel via `Promise.all`. All operational tables include `base_id` with RLS enforcing match. Every map component depends on `[token, installationId]` and uses destroy-and-recreate (not early-return guard) to re-init cleanly on installation switch. ANG units with multiple aprons or RFMs/FAMs covering several bases work natively from a single login.
 
 ### 4.2  Permission matrix (12 roles × ~80 keys + per-user overrides)
 
@@ -885,7 +877,7 @@ Presence: header status dot from `last_seen_at` (green / yellow / red), with the
 
 ### 4.11  Demo mode
 
-URL-based auto-login at `/login?demo=true`. Middleware detects unconfigured Supabase and skips the auth gate. Demo AFB is cloned from Selfridge via `supabase/seed-demo-base.sql`; the demo user is `airfield_manager` on the isolated Demo AFB. All demo data lives in `lib/demo-data.ts` (10 arrays); no Supabase writes; airfield-diagram falls back to IndexedDB; full feature parity for evaluation. Risk-free sandbox for stakeholders to click around.
+URL-based auto-login at `/login?demo=true`. Middleware detects unconfigured Supabase and skips the auth gate. Demo AFB contains non-real world data provided via `supabase/seed-demo-base.sql`; the demo user is `airfield_manager` on the isolated Demo AFB. All demo data lives in `lib/demo-data.ts` (10 arrays); no Supabase writes; airfield-diagram falls back to IndexedDB; full feature parity for evaluation. Risk-free sandbox for stakeholders to click around.
 
 ### 4.12  Friendly error mapping
 
@@ -921,7 +913,6 @@ URL-based auto-login at `/login?demo=true`. Middleware detects unconfigured Supa
 
 - **Platform One Party Bus** — DoD cATO via P1 for IL4 / IL5 environments. Approach A: port to Vite SPA + Express API. ~6–8 weeks. Scaffold staged.
 - **CAC / PIV authentication** — blocked on Platform One.
-- **Trademark resolution** — CDW holds live "GLIDEPATH" Class 42 (SaaS) registration; commercial-use risk under review.
 
 ---
 
@@ -1070,4 +1061,4 @@ URL-based auto-login at `/login?demo=true`. Middleware detects unconfigured Supa
 
 ---
 
-*This document reflects Glidepath as of v2.32.0 (released April 2026) plus the unreleased work on `main` through 2026-04-28 (PPR public form, soft-cancel + cancellation email, ACSI per-member signature toggle, sidebar polling cleanup, offline write queue). For the engineering-side handoff and current build state, see `SESSION_HANDOFF.md` at the repo root. For the per-module user manual, see `docs/manual/`.*
+*This document reflects Glidepath as of v2.32.0 (released April 2026) plus the unreleased work through 2026-04-28 (PPR public form, soft-cancel + cancellation email, ACSI per-member signature toggle, sidebar polling cleanup, offline write queue). For the engineering-side handoff and current build state, see `SESSION_HANDOFF.md` at the repo root. For the per-module user manual, see `docs/manual/`.*

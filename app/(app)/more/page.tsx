@@ -52,7 +52,7 @@ const adminItems: ModuleItem[] = [
   { name: 'Daily Reviews', icon: '🗓️', color: '#A78BFA', href: '/daily-reviews' },
   { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
   { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
-  { name: 'Training', icon: '🎓', color: '#38BDF8', href: '/training' },
+  { name: 'Glidepath Training', icon: '🎓', color: '#38BDF8', href: '/training' },
   { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
   { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
 ]
