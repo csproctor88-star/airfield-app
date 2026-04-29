@@ -71,13 +71,13 @@ Memory (auto-memory dir, not in any commit):
 
 ## Migrations status
 
-**1 new migration introduced this session — not yet applied.**
+All applied to prod by session end.
 
 | Migration | Status | What it does |
 |---|---|---|
-| `2026042904_ces_rpc_humanize_status_note.sql` | ⚠️ **Pending** | `CREATE OR REPLACE` on `ces_update_discrepancy` so the audit note written to `status_updates.notes` says `Status changed to: <Label>` instead of `CURRENT_STATUS: <enum>`. Idempotent (function-replace only, no schema change). Safe to apply any time. |
+| `2026042904_ces_rpc_humanize_status_note.sql` | ✅ Applied | `CREATE OR REPLACE` on `ces_update_discrepancy` so the audit note written to `status_updates.notes` says `Status changed to: <Label>` instead of `CURRENT_STATUS: <enum>`. |
 
-The TypeScript update path (`lib/supabase/discrepancies.ts`) and rendering defense (`app/(app)/discrepancies/[id]/page.tsx`) ship live with the next deploy and immediately clean up both new writes from non-CES users AND historical rows already in the DB. Until `2026042904` is applied, **CES users (only)** will continue to write the legacy `CURRENT_STATUS:` text on transition — which the rendering defense still humanizes on display, so the visible Notes History stays clean either way. Apply at convenience.
+Both write paths now emit human-readable text from the start. The rendering defense in `app/(app)/discrepancies/[id]/page.tsx` continues to rewrite the legacy `CURRENT_STATUS: <enum>` rows already in the DB on read — no backfill required.
 
 ---
 
@@ -106,7 +106,6 @@ The TypeScript update path (`lib/supabase/discrepancies.ts`) and rendering defen
 
 | Item | Severity | Notes |
 |---|---|---|
-| **`2026042904` not applied to prod** | Low | The rendering defense covers the user-visible artifact; only the CES write path emits stale text until applied. Idempotent. |
 | **Discrepancy "Notes History" backfill** | Optional | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; the rendering defense rewrites on display. A backfill UPDATE would clean the underlying data but isn't necessary. |
 | **Visual NAVAIDs further perf wins** | Deferred | Layer-toggle full-rebuild, health-ring `Circle` volume when "Color by health" is on, audit-mode panel. Pick up only if user reports more lag after the zoom changes settle. |
 | **UI labels for "Advisories" → "WWA Notifications"** | Deferred | Glossary memory says the user-facing copy is "WWA Notifications", but the actual button labels in the running app still say "Advisories" / "Post Advisory" / etc. Not changed this session — would require coordinated code + manual updates. Internal identifiers (`advisory_type` DB column, `advisoryDraft*` state) stay either way. |
@@ -118,7 +117,7 @@ The TypeScript update path (`lib/supabase/discrepancies.ts`) and rendering defen
 
 ## Next session tasks
 
-The active backlog is empty. Pick up wherever the user wants — no required next step beyond applying `2026042904` whenever convenient.
+The active backlog is empty. Pick up wherever the user wants — no required next step.
 
 ### Long-running carryover from prior sessions
 
@@ -148,7 +147,7 @@ TypeScript edits in existing files.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-28 (cont.) | Capabilities doc v2.32 + FOD Check terminology cleanup, discrepancy Notes History humanization (TS + rendering + new migration `2026042904`), Visual NAVAIDs zoom stabilization (flat curve + hide-below-13 + scale-delta short-circuit), Training nav rename → "Glidepath Training", CLAUDE.md drift fixes (RLS helpers, branch, modules table, migration count), terminology glossary memory file. 6 commits. **Migration `2026042904` pending.** |
+| **Unreleased** | 2026-04-28 (cont.) | Capabilities doc v2.32 + FOD Check terminology cleanup, discrepancy Notes History humanization (TS + rendering + migration `2026042904` applied), Visual NAVAIDs zoom stabilization (flat curve + hide-below-13 + scale-delta short-circuit), Training nav rename → "Glidepath Training", CLAUDE.md drift fixes (RLS helpers, branch, modules table, migration count), terminology glossary memory file. 6 commits. |
 | **Unreleased** | 2026-04-28 | PPR commercial phone + ETA Zulu spine, soft-cancel status + email, AMOPS delete/approve perms, manual-coord-pending save mode, slim Log + Today's PPRs panel, `formatPprColumnValue` helper for time/yes_no_na/date, ACSI per-member signature toggle + additional-members divider, sidebar badge polling cuts. Four migrations applied. |
 | **Unreleased** | 2026-04-27 (cont.) | Same-day follow-up: denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord warning at triage, types backfill, OI refresh, public form date echo, PPR# atomic counter, storage RLS path scoping, sidebar badge cascading fixes (pathname refresh + 30s polling + mutation event-bridge), QRC sidebar badge. Migrations 2026042803 + 2026042804 applied. |
 | **Unreleased** | 2026-04-27 | PPR remarks, info-only columns, ICAO-based URL, sidebar pending dots, agency coordinators, deny-on-review, base-setup drag-reorder, Events Log filter, six migrations. Bug fixes: replyTo malformed, sidebar realtime, pre-coord approval email |
@@ -168,7 +167,7 @@ See `CHANGELOG.md` for full history.
 ### New files
 
 - `docs/Glidepath_Capabilities_v2.32.md` — capabilities reference handed to anyone asking "what can Glidepath do and why should we use it?"
-- `supabase/migrations/2026042904_ces_rpc_humanize_status_note.sql` — recreates `ces_update_discrepancy` with humanized notes (pending application)
+- `supabase/migrations/2026042904_ces_rpc_humanize_status_note.sql` — recreates `ces_update_discrepancy` with humanized notes (applied)
 
 ### Modified files
 
@@ -196,4 +195,4 @@ See `CHANGELOG.md` for full history.
 
 ---
 
-*All changes pushed to `origin/main`. One migration pending application to prod.*
+*All changes pushed to `origin/main`. All migrations applied to prod.*
