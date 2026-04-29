@@ -12,6 +12,17 @@ import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-featu
 import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
+import { ArrowLeft, ListChecks, MapPin } from 'lucide-react'
+
+// Section header treatment used to delimit visual groups in the
+// create form. Matches the accent-underline pattern on / and
+// /dashboard so every page reads as the same design language.
+const formGroupHeaderStyle: React.CSSProperties = {
+  fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+  textTransform: 'uppercase', letterSpacing: '0.08em',
+  marginBottom: 8, paddingBottom: 4,
+  borderBottom: '1px solid rgba(56,189,248,0.20)',
+}
 
 const DiscrepancyLocationMap = dynamic(
   () => import('@/components/ui/location-picker-map-google'),
@@ -227,16 +238,34 @@ export default function NewDiscrepancyPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
-          ← Back
+        <button onClick={() => router.back()} className="btn-ghost" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          color: 'var(--color-cyan)', padding: 0,
+        }}>
+          <ArrowLeft size={14} strokeWidth={2.25} /> Back
         </button>
-        <button onClick={() => router.push('/discrepancies')} style={{ background: 'color-mix(in srgb, var(--color-amber) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-amber) 20%, transparent)', borderRadius: 'var(--radius-md)', padding: '6px 12px', color: 'var(--color-amber)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-          ⚠️ View All Discrepancies
+        <button onClick={() => router.push('/discrepancies')} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+          padding: '5px 10px', color: 'var(--color-text-2)',
+          fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <ListChecks size={12} color="var(--color-accent)" strokeWidth={2.25} />
+          View All
         </button>
       </div>
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>New Discrepancy</div>
+      <div style={{
+        fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        marginBottom: 10, paddingBottom: 6,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>New Discrepancy</div>
 
       <div className="card">
+        <div style={formGroupHeaderStyle}>Discrepancy Details</div>
+
         <div style={{ marginBottom: 12, position: 'relative' }}>
           <span className="section-label">Location</span>
           <button
@@ -329,6 +358,8 @@ export default function NewDiscrepancyPage() {
           <input type="text" className="input-dark" placeholder="e.g., 01/003" value={formData.notam_reference} onChange={(e) => setFormData((p) => ({ ...p, notam_reference: e.target.value }))} />
         </div>
 
+        <div style={{ ...formGroupHeaderStyle, marginTop: 16 }}>Classification &amp; Assignment</div>
+
         <div style={{ marginBottom: 12 }}>
           <span className="section-label">Current Status</span>
           <select className="input-dark" value={formData.current_status} onChange={(e) => setFormData((p) => ({ ...p, current_status: e.target.value }))}>
@@ -373,6 +404,8 @@ export default function NewDiscrepancyPage() {
             DAFMAN 2.3.2.7.3 — expected CES closure date.
           </div>
         </div>
+
+        <div style={{ ...formGroupHeaderStyle, marginTop: 16 }}>Location &amp; Linked Features</div>
 
         {/* Location Map */}
         <div style={{ marginBottom: 12 }}>
@@ -444,12 +477,11 @@ export default function NewDiscrepancyPage() {
             opacity: gpsLoading ? 0.6 : 1,
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-          </svg>
+          <MapPin size={14} strokeWidth={2.25} />
           {gpsLoading ? 'Getting Location...' : 'Use My Location'}
         </button>
+
+        <div style={{ ...formGroupHeaderStyle, marginTop: 16 }}>Media</div>
 
         {photos.length > 0 && (
           <div className="photo-grid" style={{ marginBottom: 12 }}>

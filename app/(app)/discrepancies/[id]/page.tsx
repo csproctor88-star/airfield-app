@@ -34,7 +34,7 @@ function statusLabel(value: string | null | undefined): string {
 
 import { fetchInfrastructureFeature, fetchSystemFeaturesForFeature, buildFeatureDisplayName, formatFeatureType } from '@/lib/supabase/infrastructure-features'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
-import { EditDiscrepancyModal, StatusUpdateModal, WorkOrderModal, PhotoViewerModal } from '@/components/discrepancies/modals'
+import { EditDiscrepancyModal, StatusUpdateModal, PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
@@ -43,8 +43,23 @@ import Link from 'next/link'
 import { DetailGrid } from '@/components/ui/detail-grid'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
+import {
+  Pencil, Camera, FileUp, RefreshCw, FileText, Mail, Trash2,
+  ArrowLeft, MapPin,
+} from 'lucide-react'
 
-type ModalType = 'edit' | 'status' | 'workorder' | null
+// Centralized color map for the `current_status` enum. Used by the
+// detail header pill and any other surface that renders the value.
+// Pattern: rgba(_,0.10) bg + rgba(_,0.30) border + base color text.
+const CURRENT_STATUS_COLORS: Record<string, { color: string; rgb: string }> = {
+  submitted_to_afm:                    { color: 'var(--color-accent)',    rgb: '34,211,238'  },
+  submitted_to_ces:                    { color: 'var(--color-accent)',    rgb: '34,211,238'  },
+  awaiting_action_by_ces:              { color: 'var(--color-warning)',   rgb: '251,191,36'  },
+  waiting_for_project:                 { color: 'var(--color-orange)',    rgb: '249,115,22'  },
+  work_completed_awaiting_verification:{ color: 'var(--color-success)',   rgb: '52,211,153'  },
+}
+
+type ModalType = 'edit' | 'status' | null
 
 export default function DiscrepancyDetailPage() {
   const params = useParams()
@@ -290,14 +305,38 @@ export default function DiscrepancyDetailPage() {
 
   return (
     <div className="page-container">
-      <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
-        ← Back
+      <button onClick={() => router.back()} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        background: 'none', border: 'none', color: 'var(--color-cyan)',
+        fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer',
+        padding: 0, marginBottom: 12, fontFamily: 'inherit',
+      }}>
+        <ArrowLeft size={14} strokeWidth={2.25} /> Back
       </button>
 
       <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{d.work_order_number || 'Pending'}</span>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* current_status pill — promoted from plain text in the
+                metadata grid so the workflow stage reads at a glance
+                next to the lifecycle status. */}
+            {(() => {
+              const cs = (d as typeof d & { current_status?: string }).current_status
+              if (!cs) return null
+              const meta = CURRENT_STATUS_COLORS[cs] || { color: 'var(--color-text-3)', rgb: '148,163,184' }
+              const label = CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs
+              return (
+                <span style={{
+                  display: 'inline-block', padding: '2px 8px', borderRadius: 12,
+                  fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  background: `rgba(${meta.rgb},0.10)`,
+                  color: meta.color,
+                  border: `1px solid rgba(${meta.rgb},0.30)`,
+                  textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap',
+                }}>{label}</span>
+              )
+            })()}
             <StatusBadge status={d.status} />
           </div>
         </div>
@@ -306,24 +345,156 @@ export default function DiscrepancyDetailPage() {
 
         <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6, marginBottom: 12 }}>{d.description}</div>
 
-        <DetailGrid items={[
-          { label: 'Location', value: (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })() },
-          { label: 'Type', value: (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })() },
-          { label: 'Current Status', value: (() => { const cs = (d as typeof d & { current_status?: string }).current_status; return CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs || 'N/A' })() },
-          { label: 'Facility #', value: (d as typeof d & { facility_number?: string | null }).facility_number || '—' },
-          { label: 'Work Order Currently Assigned to', value: d.assigned_shop || 'Unassigned' },
-          { label: 'NOTAM', value: (d as typeof d & { notam_reference?: string }).notam_reference || 'None' },
-          { label: 'Days Open', value: `${daysOpen}` },
-          { label: 'ECD', value: (() => {
-            const ecd = (d as typeof d & { estimated_completion_date?: string | null }).estimated_completion_date
-            if (!ecd) return '—'
-            const dt = new Date(ecd)
-            return isNaN(dt.getTime()) ? '—' : dt.toISOString().slice(0, 10)
-          })() },
-          { label: 'Project #', value: (d as typeof d & { project_number?: string | null }).project_number || '—' },
-          { label: 'Estimated Cost', value: (d as typeof d & { estimated_cost?: string | null }).estimated_cost || '—' },
-          { label: 'Photos', value: `${d.photo_count}` },
-        ]} />
+        {/* Two-col row inside the card: detail items (left) sit
+            alongside the map + photo thumbnails (right). Stacks to
+            one column on narrow viewports via the responsive minmax.
+            Detail items render inline with a stronger label/value
+            tier than the shared DetailGrid: tiny dim uppercase
+            labels, larger weight-600 text-1 values, generous vertical
+            gap between pairs so the eye lands on each value. */}
+        {(() => {
+          const csValue = (d as typeof d & { current_status?: string }).current_status
+          const csLabel = csValue ? (CURRENT_STATUS_OPTIONS.find(o => o.value === csValue)?.label || csValue) : '—'
+          const createdBy = (d as typeof d & { created_by_name?: string | null; submitter_name?: string | null }).submitter_name
+            || (d as typeof d & { created_by_name?: string | null }).created_by_name || null
+          const detailItems: { label: string; value: React.ReactNode }[] = [
+            { label: 'Location', value: (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })() },
+            { label: 'Type', value: (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })() },
+            { label: 'Current Status', value: csLabel },
+            { label: 'Facility #', value: (d as typeof d & { facility_number?: string | null }).facility_number || '—' },
+            { label: 'Work Order Assigned to', value: d.assigned_shop || 'Unassigned' },
+            { label: 'NOTAM', value: (d as typeof d & { notam_reference?: string }).notam_reference || 'None' },
+            { label: 'Days Open', value: `${daysOpen}` },
+            { label: 'ECD', value: (() => {
+              const ecd = (d as typeof d & { estimated_completion_date?: string | null }).estimated_completion_date
+              if (!ecd) return '—'
+              const dt = new Date(ecd)
+              return isNaN(dt.getTime()) ? '—' : dt.toISOString().slice(0, 10)
+            })() },
+            { label: 'Project #', value: (d as typeof d & { project_number?: string | null }).project_number || '—' },
+            { label: 'Estimated Cost', value: (d as typeof d & { estimated_cost?: string | null }).estimated_cost || '—' },
+            { label: 'Submitted', value: formatZuluDateTime(new Date(d.created_at)) },
+            ...(createdBy ? [{ label: 'Submitted By', value: createdBy }] : []),
+            { label: 'Photos', value: `${d.photo_count}` },
+          ]
+          const showSystemMap = Boolean(systemMapUrl)
+          const showPinnedMap = Boolean(staticMapUrl) && !showSystemMap
+          const hasMap = showSystemMap || showPinnedMap
+          const hasRightContent = hasMap || allPhotos.length > 0
+
+          return (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: hasRightContent
+                ? 'repeat(auto-fit, minmax(260px, 1fr))'
+                : '1fr',
+              gap: 16, alignItems: 'start',
+            }}>
+              {/* Detail items — each cell is its own bordered tile so
+                  label/value pairs are visually contained. Labels are
+                  tiny dim uppercase; values pop in larger weight-700
+                  text-1. The accent-colored left rule on each tile
+                  reinforces "this label belongs to this value". */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: 8,
+              }}>
+                {detailItems.map((item, i) => (
+                  <div key={i} style={{
+                    padding: '6px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'var(--color-bg-inset)',
+                    borderLeft: '2px solid rgba(56,189,248,0.35)',
+                  }}>
+                    <div style={{
+                      fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
+                      letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2,
+                    }}>{item.label}</div>
+                    <div style={{
+                      fontSize: 'var(--fs-md)', fontWeight: 500, color: 'var(--color-text-1)',
+                      lineHeight: 1.3,
+                    }}>
+                      {item.value ?? 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Right column — map + photo thumbnails. The map is
+                  whichever is contextual (system overview if NAVAID
+                  linked, otherwise pinned location). Photos stack
+                  beneath. */}
+              {hasRightContent && (
+                <div>
+                  {showSystemMap && (
+                    <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
+                      <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        System Overview
+                      </div>
+                      <img src={systemMapUrl!} alt="NAVAID system overview" style={{ width: '100%', aspectRatio: '4 / 3', maxHeight: 480, objectFit: 'cover', display: 'block' }} />
+                      <div style={{ padding: '4px 12px 8px', display: 'flex', gap: 10, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', flexWrap: 'wrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-green)', display: 'inline-block' }} />
+                          Operational
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} />
+                          Inoperative
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block', border: '2px solid #fff' }} />
+                          This
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {showPinnedMap && (
+                    <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
+                      <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        Pinned Location
+                      </div>
+                      <img src={staticMapUrl!} alt="Discrepancy location on map" style={{ width: '100%', aspectRatio: '4 / 3', maxHeight: 480, objectFit: 'cover', display: 'block', borderRadius: '0 0 10px 10px' }} />
+                      <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontFamily: 'monospace', fontWeight: 600 }}>
+                        {lat!.toFixed(5)}, {lng!.toFixed(5)}
+                      </div>
+                    </div>
+                  )}
+                  {allPhotos.length > 0 && (
+                    <div className="photo-grid">
+                      {allPhotos.map((p, i) => (
+                        <div
+                          key={i}
+                          style={{ position: 'relative', width: 64, height: 64, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
+                          onClick={() => setViewerIndex(i)}
+                        >
+                          <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {dbPhotos[i] && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeletePhoto(dbPhotos[i]) }}
+                              disabled={deletingPhotoId === dbPhotos[i].id}
+                              style={{
+                                position: 'absolute', top: 2, right: 2,
+                                width: 18, height: 18, borderRadius: '50%',
+                                background: 'rgba(239,68,68,0.85)', color: '#fff',
+                                border: 'none', fontSize: '11px', fontWeight: 700, lineHeight: '1',
+                                cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: 0,
+                                opacity: deletingPhotoId === dbPhotos[i].id ? 0.5 : 1,
+                              }}
+                              title="Delete photo"
+                            >×</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {(() => {
           const rcm = (d as typeof d & { risk_control_measure?: string | null }).risk_control_measure
@@ -368,24 +539,10 @@ export default function DiscrepancyDetailPage() {
         )}
       </div>
 
-      {/* Pinned location map — skip if system overview map is shown */}
-      {staticMapUrl && !systemMapUrl && (
-        <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            Pinned Location
-          </div>
-          <img
-            src={staticMapUrl}
-            alt="Discrepancy location on map"
-            style={{ width: '100%', display: 'block', borderRadius: '0 0 10px 10px' }}
-          />
-          <div style={{ padding: '4px 12px 8px', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', fontFamily: 'monospace', fontWeight: 600 }}>
-            {lat!.toFixed(5)}, {lng!.toFixed(5)}
-          </div>
-        </div>
-      )}
+      {/* Pinned location map moved into the actions/map/photos
+          two-col cluster below. */}
 
-      {/* Linked Visual NAVAID */}
+      {/* Linked Visual NAVAID — text-only context card */}
       {linkedFeature && (
         <div className="card" style={{ marginBottom: 8 }}>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
@@ -426,148 +583,101 @@ export default function DiscrepancyDetailPage() {
         </div>
       )}
 
-      {/* NAVAID System Map — shows all features in the system with linked feature highlighted */}
-      {systemMapUrl && (
-        <div className="card" style={{ marginBottom: 8, padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 12px 6px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            System Overview
-          </div>
-          <img
-            src={systemMapUrl}
-            alt="NAVAID system overview"
-            style={{ width: '100%', display: 'block' }}
-          />
-          <div style={{ padding: '4px 12px 8px', display: 'flex', gap: 12, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-green)', display: 'inline-block' }} />
-              Operational
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} />
-              Inoperative
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block', border: '2px solid #fff' }} />
-              This Discrepancy
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Photo thumbnails — tap to view full screen, X to delete */}
-      {allPhotos.length > 0 && (
-        <div className="photo-grid" style={{ marginBottom: 8 }}>
-          {allPhotos.map((p, i) => (
-            <div
-              key={i}
-              style={{ position: 'relative', width: 64, height: 64, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-active)', cursor: 'pointer' }}
-              onClick={() => setViewerIndex(i)}
-            >
-              <img src={p.url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              {dbPhotos[i] && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeletePhoto(dbPhotos[i]) }}
-                  disabled={deletingPhotoId === dbPhotos[i].id}
-                  style={{
-                    position: 'absolute',
-                    top: 2,
-                    right: 2,
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    background: 'rgba(239,68,68,0.85)',
-                    color: '#fff',
-                    border: 'none',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    lineHeight: '1',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 0,
-                    opacity: deletingPhotoId === dbPhotos[i].id ? 0.5 : 1,
-                  }}
-                  title="Delete photo"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* System overview map + photo thumbnails moved into the
+          actions/map/photos two-col cluster below. */}
 
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 8 }}>
-        <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')}>✏️ Edit</ActionButton>
-        <ActionButton color="#0EA5E9" onClick={() => cameraInputRef.current?.click()} disabled={uploading}>
-          {uploading ? '...' : '📸 Capture'}
-        </ActionButton>
-        <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-          {uploading ? '...' : `📁 Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
-        </ActionButton>
-        <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')}>🔄 Status</ActionButton>
-        <ActionButton color="#34D399" onClick={() => setActiveModal('workorder')}>📋 Work Order</ActionButton>
-        <ActionButton
-          color="#A78BFA"
-          onClick={async () => {
-            setGeneratingPdf(true)
-            try {
-              const { doc, filename } = await buildPdf()
-              doc.save(filename)
-              toast.success('PDF exported')
-            } catch (e) {
-              console.error(e)
-              toast.error('PDF export failed')
-            }
-            setGeneratingPdf(false)
-          }}
-        >
-          {generatingPdf ? 'Generating...' : '📄 Export PDF'}
-        </ActionButton>
-        <ActionButton
-          color="#A78BFA"
-          onClick={async () => {
-            setGeneratingPdf(true)
-            try {
-              const result = await buildPdf()
-              setEmailPdfData(result)
-              setEmailModalOpen(true)
-            } catch (e) {
-              console.error(e)
-              toast.error('PDF generation failed')
-            }
-            setGeneratingPdf(false)
-          }}
-        >
-          {generatingPdf ? 'Preparing...' : '✉️ Email PDF'}
-        </ActionButton>
-      </div>
+      {/* ===== Horizontal action toolbar =====
+          Sits below the detail card. Buttons wrap responsively so
+          each keeps its compact size; on desktop the whole toolbar
+          reads as one row. Delete pushes to the right with auto
+          margin so the destructive action sits visually apart from
+          the daily-ops controls. */}
+      {(() => {
+        const compactStyle: React.CSSProperties = {
+          padding: '6px 12px', minHeight: 32,
+          fontSize: 'var(--fs-xs)', fontWeight: 700,
+          letterSpacing: '0.04em', textTransform: 'uppercase',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+        }
 
-      {/* Admin: Delete Discrepancy */}
-      {canDeleteDiscrepancy && !usingDemo && (
-        <div style={{ marginBottom: 8 }}>
-          <ActionButton
-            color="#EF4444"
-            onClick={async () => {
-              if (!confirm('Permanently delete this discrepancy and all associated photos, status updates? This cannot be undone.')) return
-              setActionLoading(true)
-              const { error } = await deleteDiscrepancy(d.id)
-              if (error) {
-                toast.error(error)
-                setActionLoading(false)
-              } else {
-                toast.success('Discrepancy deleted')
-                router.push('/discrepancies')
-              }
-            }}
-          >
-            {actionLoading ? 'Deleting...' : '🗑️ Delete Discrepancy'}
-          </ActionButton>
-        </div>
-      )}
+        return (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+            marginBottom: 8,
+          }}>
+            <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')} style={compactStyle}>
+              <Pencil size={12} strokeWidth={2.25} />Update
+            </ActionButton>
+            <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')} style={compactStyle}>
+              <RefreshCw size={12} strokeWidth={2.25} />Status
+            </ActionButton>
+            <ActionButton color="#0EA5E9" onClick={() => cameraInputRef.current?.click()} disabled={uploading} style={compactStyle}>
+              <Camera size={12} strokeWidth={2.25} />{uploading ? '...' : 'Capture'}
+            </ActionButton>
+            <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading} style={compactStyle}>
+              <FileUp size={12} strokeWidth={2.25} />{uploading ? '...' : `Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+            </ActionButton>
+            <ActionButton
+              color="#A78BFA"
+              style={compactStyle}
+              onClick={async () => {
+                setGeneratingPdf(true)
+                try {
+                  const { doc, filename } = await buildPdf()
+                  doc.save(filename)
+                  toast.success('PDF exported')
+                } catch (e) {
+                  console.error(e)
+                  toast.error('PDF export failed')
+                }
+                setGeneratingPdf(false)
+              }}
+            >
+              <FileText size={12} strokeWidth={2.25} />{generatingPdf ? '...' : 'Export PDF'}
+            </ActionButton>
+            <ActionButton
+              color="#A78BFA"
+              style={compactStyle}
+              onClick={async () => {
+                setGeneratingPdf(true)
+                try {
+                  const result = await buildPdf()
+                  setEmailPdfData(result)
+                  setEmailModalOpen(true)
+                } catch (e) {
+                  console.error(e)
+                  toast.error('PDF generation failed')
+                }
+                setGeneratingPdf(false)
+              }}
+            >
+              <Mail size={12} strokeWidth={2.25} />{generatingPdf ? '...' : 'Email PDF'}
+            </ActionButton>
+            {canDeleteDiscrepancy && !usingDemo && (
+              <ActionButton
+                color="#EF4444"
+                style={{ ...compactStyle, marginLeft: 'auto' }}
+                onClick={async () => {
+                  if (!confirm('Permanently delete this discrepancy and all associated photos, status updates? This cannot be undone.')) return
+                  setActionLoading(true)
+                  const { error } = await deleteDiscrepancy(d.id)
+                  if (error) {
+                    toast.error(error)
+                    setActionLoading(false)
+                  } else {
+                    toast.success('Discrepancy deleted')
+                    router.push('/discrepancies')
+                  }
+                }}
+              >
+                <Trash2 size={12} strokeWidth={2.25} />{actionLoading ? 'Deleting...' : 'Delete'}
+              </ActionButton>
+            )}
+          </div>
+        )
+      })()}
 
       {linkedNotam && (
         <Link
@@ -591,9 +701,6 @@ export default function DiscrepancyDetailPage() {
       )}
       {activeModal === 'status' && liveData && (
         <StatusUpdateModal discrepancy={liveData} onClose={() => setActiveModal(null)} onSaved={handleSaved} onDeleted={() => router.push('/discrepancies')} />
-      )}
-      {activeModal === 'workorder' && liveData && (
-        <WorkOrderModal discrepancy={liveData} onClose={() => setActiveModal(null)} onSaved={handleSaved} />
       )}
       {viewerIndex !== null && allPhotos.length > 0 && (
         <PhotoViewerModal photos={allPhotos} initialIndex={viewerIndex} onClose={() => setViewerIndex(null)} />

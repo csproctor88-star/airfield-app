@@ -16,7 +16,10 @@ import {
 } from '@/lib/pdf-config'
 import PdfExportDialog from '@/components/ui/pdf-template-selector'
 import { EditDiscrepancyModal } from '@/components/discrepancies/modals'
-import { Map, List, Pencil, Trash2 } from 'lucide-react'
+import {
+  Map, List, Pencil, Trash2,
+  Plus, Sheet, FileText, Mail, Search, SlidersHorizontal, X, AlertOctagon,
+} from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
@@ -62,6 +65,10 @@ export default function DiscrepanciesPage() {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
   const [pdfDialogMode, setPdfDialogMode] = useState<'download' | 'email'>('download')
   const [pdfExporting, setPdfExporting] = useState(false)
+  // Filters dropdown — collapses status / shop / type chips into a
+  // single Filters affordance with active-count badge. Click outside
+  // (or the same button again) closes.
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -478,85 +485,88 @@ export default function DiscrepanciesPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Discrepancies</div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button
-            onClick={handleExportExcel}
-            style={{
-              background: 'rgba(168,85,247,0.12)',
-              border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 'var(--radius-md)',
-              padding: '7px 10px',
-              color: '#A855F7',
-              fontSize: 'var(--fs-base)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            Excel
-          </button>
-          <button
-            onClick={handleDownloadPdf}
-            style={{
-              background: 'rgba(168,85,247,0.12)',
-              border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 'var(--radius-md)',
-              padding: '7px 10px',
-              color: '#A855F7',
-              fontSize: 'var(--fs-base)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            PDF
-          </button>
-          <button
-            onClick={handleEmailPdf}
-            style={{
-              background: 'rgba(168,85,247,0.12)',
-              border: '1px solid rgba(168,85,247,0.3)',
-              borderRadius: 'var(--radius-md)',
-              padding: '7px 10px',
-              color: '#A855F7',
-              fontSize: 'var(--fs-base)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-            title="Email PDF"
-          >
-            ✉
-          </button>
-          {!isCes && (
-            <Link
-              href="/discrepancies/new"
-              style={{
-                background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                padding: '7px 12px',
-                color: '#fff',
-                fontSize: 'var(--fs-base)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                textDecoration: 'none',
-              }}
-            >
-              + New
-            </Link>
-          )}
-        </div>
-      </div>
+      {/* Page header — small uppercase tertiary label + tiered action
+          cluster on the right. Excel/PDF/Email read as a calm utility
+          family; +New stays the cyan primary action. */}
+      {(() => {
+        const utilityBtn: React.CSSProperties = {
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '5px 10px',
+          color: 'var(--color-text-2)',
+          fontSize: 'var(--fs-xs)',
+          fontWeight: 700,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }
+        return (
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            gap: 12, flexWrap: 'wrap',
+            marginBottom: 10, paddingBottom: 6,
+            borderBottom: '1px solid rgba(56,189,248,0.20)',
+          }}>
+            <span style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>Discrepancies</span>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button onClick={handleExportExcel} style={utilityBtn} title="Export to Excel">
+                <Sheet size={12} color="var(--color-accent)" strokeWidth={2.25} />
+                Excel
+              </button>
+              <button onClick={handleDownloadPdf} style={utilityBtn} title="Download PDF">
+                <FileText size={12} color="var(--color-accent)" strokeWidth={2.25} />
+                PDF
+              </button>
+              <button onClick={handleEmailPdf} style={utilityBtn} title="Email PDF">
+                <Mail size={12} color="var(--color-accent)" strokeWidth={2.25} />
+                Email
+              </button>
+              {!isCes && (
+                <Link
+                  href="/discrepancies/new"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    background: 'rgba(56,189,248,0.10)',
+                    border: '1px solid rgba(56,189,248,0.40)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '5px 12px',
+                    color: 'var(--color-accent)',
+                    fontSize: 'var(--fs-xs)',
+                    fontWeight: 800,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <Plus size={12} strokeWidth={2.5} />
+                  New
+                </Link>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
-      {/* Row 1: OPEN + > 30 DAYS (larger) */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
+      {/* KPI band — primary pair (OPEN + > 30 DAYS) flush with the
+          secondary triplet (AFM / CES / AMOPS) so the eye lands on
+          OPEN/>30 first; the secondary tier recedes via smaller
+          numerals + tertiary labels. > 30 DAYS gets an AlertOctagon
+          prefix when non-zero so the alert reads at a glance. */}
+      <div style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'stretch', gap: 8,
+        marginBottom: 12, flexWrap: 'wrap',
+      }}>
+        {/* Primary pair */}
         {[
-          { label: 'OPEN', value: openCount, color: 'var(--color-warning)', active: filter === 'open' && !over30Only && !currentStatusFilter,
+          { label: 'OPEN', value: openCount, color: 'var(--color-warning)', active: filter === 'open' && !over30Only && !currentStatusFilter, alert: false,
             onClick: () => { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) } },
-          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? 'var(--color-danger)' : 'var(--color-success)', active: over30Only,
+          { label: '> 30 DAYS', value: over30Count, color: over30Count > 0 ? 'var(--color-danger)' : 'var(--color-success)', active: over30Only, alert: over30Count > 0,
             onClick: () => { setFilter('open'); setOver30Only(!over30Only); setCurrentStatusFilter(null) } },
         ].map((k) => (
           <div
@@ -569,16 +579,26 @@ export default function DiscrepanciesPage() {
               maxWidth: 260,
             }}
           >
-            <div className="kpi-label kpi-label-lg" style={{ color: 'var(--color-text-3)' }}>
+            <div className="kpi-label kpi-label-lg" style={{
+              color: 'var(--color-text-3)', fontSize: 'var(--fs-2xs)',
+              fontWeight: 700, letterSpacing: '0.06em',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              {k.alert && <AlertOctagon size={11} color={k.color} strokeWidth={2.5} />}
               {k.label}
             </div>
             <div className="kpi-value kpi-value-lg" style={{ color: k.color }}>{k.value}</div>
           </div>
         ))}
-      </div>
 
-      {/* Row 2: AFM / CES / AMOPS (smaller) */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 12 }}>
+        {/* Subtle vertical separator between primary pair and triplet */}
+        <div style={{
+          width: 1, alignSelf: 'stretch',
+          background: 'var(--color-border)', opacity: 0.5,
+          minHeight: 40,
+        }} />
+
+        {/* Secondary triplet — AFM / CES / AMOPS */}
         {KPI_DEFS.map((kpi) => {
           const active = currentStatusFilter === kpi.key
           return (
@@ -600,7 +620,10 @@ export default function DiscrepanciesPage() {
                 minWidth: 70,
               }}
             >
-              <div className="kpi-label" style={{ color: 'var(--color-text-3)' }}>
+              <div className="kpi-label" style={{
+                color: 'var(--color-text-3)', fontSize: 'var(--fs-2xs)',
+                fontWeight: 700, letterSpacing: '0.06em',
+              }}>
                 {kpi.label}
               </div>
               <div className="kpi-value kpi-value-sm" style={{ color: kpi.color }}>{kpiCounts[kpi.key]}</div>
@@ -609,146 +632,342 @@ export default function DiscrepanciesPage() {
         })}
       </div>
 
-      {/* Shop filter chips */}
-      {ceShops.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
-          {ceShops.map(shop => {
-            const active = shopFilter === shop
-            const count = allItems.filter(d => d.status === 'open' && d.assigned_shop === shop).length
-            return (
+      {/* Search + Filters dropdown + view toggle.
+          Search promoted to the top so the most-used control sits
+          first. Filters button collapses status/shop/type chips
+          into a single panel that opens on demand. The view-mode
+          toggle (map/list) sits inline so it stays visible without
+          adding another row. */}
+      {(() => {
+        const statusActive = filter !== 'open' || over30Only || currentStatusFilter !== null
+        const shopActive = shopFilter !== null
+        const typeActive = typeFilter !== null
+        const activeCount = (statusActive ? 1 : 0) + (shopActive ? 1 : 0) + (typeActive ? 1 : 0)
+        const clearAll = () => {
+          setFilter('open')
+          setOver30Only(false)
+          setCurrentStatusFilter(null)
+          setShopFilter(null)
+          setTypeFilter(null)
+        }
+        // Type counts used by both the dropdown and (when no map)
+        // contextual chips below. Match status + search filters but
+        // not type itself.
+        const baseForTypeCounts = (usingDemo ? DEMO_DISCREPANCIES : discrepancies)
+          .filter(d => filter === 'all' || d.status === filter)
+          .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
+          .filter(d => matchesCurrentStatus(d.current_status))
+          .filter(matchesSearch)
+        const typeCountsAll: Record<string, number> = {}
+        for (const d of baseForTypeCounts) {
+          for (const v of d.type.split(',').map(t => t.trim())) {
+            typeCountsAll[v] = (typeCountsAll[v] || 0) + 1
+          }
+        }
+        const typesWithMatches = DISCREPANCY_TYPES.filter(t => typeCountsAll[t.value])
+
+        return (
+          <>
+            {/* Top control row */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap',
+            }}>
+              {/* Search */}
+              <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 0 }}>
+                <Search size={14} color="var(--color-text-3)" style={{
+                  position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none',
+                }} />
+                <input
+                  type="text"
+                  placeholder="Search title, description, or work order..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '8px 12px 8px 32px',
+                    background: 'var(--color-search-bg)',
+                    border: '1px solid var(--color-search-border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+                    fontFamily: 'inherit', outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Filters button */}
               <button
-                key={shop}
                 type="button"
-                onClick={() => {
-                  setShopFilter(active ? null : shop)
-                  if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
-                }}
+                onClick={() => setFiltersOpen(!filtersOpen)}
                 style={{
-                  padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                  border: filtersOpen || activeCount > 0 ? '1px solid rgba(56,189,248,0.40)' : '1px solid var(--color-border)',
+                  background: filtersOpen ? 'rgba(56,189,248,0.10)' : 'var(--color-bg-surface)',
+                  color: filtersOpen || activeCount > 0 ? 'var(--color-accent)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
-                  background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
-                  color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
-                  display: 'flex', alignItems: 'center', gap: 4,
                 }}
               >
-                {shop}
-                {count > 0 && (
+                <SlidersHorizontal size={13} strokeWidth={2.25} />
+                Filters
+                {activeCount > 0 && (
                   <span style={{
-                    fontSize: 'var(--fs-2xs)', fontWeight: 700,
-                    background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
-                    color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
-                    padding: '0 4px', borderRadius: 'var(--radius-xs)', minWidth: 16, textAlign: 'center',
-                  }}>
-                    {count}
-                  </span>
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 18, height: 18, padding: '0 5px',
+                    borderRadius: 9, background: 'var(--color-accent)', color: '#fff',
+                    fontSize: 'var(--fs-2xs)', fontWeight: 800, marginLeft: 2,
+                  }}>{activeCount}</span>
                 )}
               </button>
-            )
-          })}
-          {allItems.some(d => d.status === 'open' && !d.assigned_shop) && (
-            <button
-              type="button"
-              onClick={() => {
-                const active = shopFilter === '__unassigned'
-                setShopFilter(active ? null : '__unassigned')
-                if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
-              }}
-              style={{
-                padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
-                background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
-                color: shopFilter === '__unassigned' ? 'var(--color-danger)' : 'var(--color-text-3)',
-              }}
-            >
-              Unassigned
-            </button>
-          )}
-        </div>
-      )}
 
-      <div className="filter-bar" style={{ marginBottom: 12, justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {FILTERS.map((v) => (
-            <button
-              key={v}
-              onClick={() => { setFilter(v); setOver30Only(false); setCurrentStatusFilter(null) }}
-              style={{
-                background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
-                border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-                borderRadius: 'var(--radius-sm)',
-                padding: '4px 8px',
-                color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                fontSize: 'var(--fs-xs)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {FILTER_LABELS[v]}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-          <button
-            onClick={() => setViewMode('map')}
-            title="Map view"
-            style={{
-              background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
-              border: 'none',
-              borderRight: '1px solid var(--color-border)',
-              padding: '4px 8px',
-              color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Map size={14} />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            title="List view"
-            style={{
-              background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
-              border: 'none',
-              padding: '4px 8px',
-              color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <List size={14} />
-          </button>
-        </div>
-      </div>
+              {/* View toggle */}
+              <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                <button
+                  onClick={() => setViewMode('map')}
+                  title="Map view"
+                  style={{
+                    background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                    border: 'none', borderRight: '1px solid var(--color-border)',
+                    padding: '7px 9px',
+                    color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  }}
+                ><Map size={14} /></button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  title="List view"
+                  style={{
+                    background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                    border: 'none',
+                    padding: '7px 9px',
+                    color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  }}
+                ><List size={14} /></button>
+              </div>
+            </div>
 
-      <input
-        type="text"
-        placeholder="Search title, description, or work order..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '8px 12px',
-          marginBottom: 12,
-          background: 'var(--color-search-bg)',
-          border: '1px solid var(--color-search-border)',
-          borderRadius: 'var(--radius-md)',
-          color: 'var(--color-text-1)',
-          fontSize: 'var(--fs-md)',
-          fontFamily: 'inherit',
-          outline: 'none',
-          boxSizing: 'border-box',
-        }}
-      />
+            {/* Filters dropdown panel */}
+            {filtersOpen && (
+              <div style={{
+                marginBottom: 10, padding: 12, borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)',
+                display: 'flex', flexDirection: 'column', gap: 12,
+              }}>
+                {/* Status */}
+                <div>
+                  <div style={{
+                    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                    letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4,
+                  }}>Status</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {FILTERS.map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => { setFilter(v); setOver30Only(false); setCurrentStatusFilter(null) }}
+                        style={{
+                          background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
+                          border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
+                          borderRadius: 'var(--radius-sm)', padding: '3px 8px',
+                          color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                          fontSize: 'var(--fs-xs)', fontWeight: 700,
+                          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                        }}
+                      >{FILTER_LABELS[v]}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Shop */}
+                {ceShops.length > 0 && (
+                  <div>
+                    <div style={{
+                      fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                      letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4,
+                    }}>Shop</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {ceShops.map(shop => {
+                        const active = shopFilter === shop
+                        const count = allItems.filter(d => d.status === 'open' && d.assigned_shop === shop).length
+                        return (
+                          <button
+                            key={shop}
+                            type="button"
+                            onClick={() => {
+                              setShopFilter(active ? null : shop)
+                              if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
+                            }}
+                            style={{
+                              padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                              cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                              border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
+                              background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
+                              color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                            }}
+                          >
+                            {shop}
+                            {count > 0 && (
+                              <span style={{
+                                fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                                background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
+                                color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
+                                padding: '0 4px', borderRadius: 'var(--radius-xs)', minWidth: 16, textAlign: 'center',
+                              }}>{count}</span>
+                            )}
+                          </button>
+                        )
+                      })}
+                      {allItems.some(d => d.status === 'open' && !d.assigned_shop) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const active = shopFilter === '__unassigned'
+                            setShopFilter(active ? null : '__unassigned')
+                            if (!active) { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }
+                          }}
+                          style={{
+                            padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                            border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
+                            background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
+                            color: shopFilter === '__unassigned' ? 'var(--color-danger)' : 'var(--color-text-3)',
+                          }}
+                        >Unassigned</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Type */}
+                {typesWithMatches.length > 0 && (
+                  <div>
+                    <div style={{
+                      fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                      letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4,
+                    }}>Type</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {typesWithMatches.map((t) => {
+                        const active = typeFilter === t.value
+                        return (
+                          <button
+                            key={t.value}
+                            type="button"
+                            onClick={() => setTypeFilter(active ? null : t.value)}
+                            style={{
+                              padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                              cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                              border: active ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                              background: active ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
+                              color: active ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                            }}
+                          >
+                            {t.label}
+                            <span style={{
+                              fontSize: 'var(--fs-2xs)', fontWeight: 600,
+                              color: active ? 'var(--color-cyan)' : 'var(--color-text-4)',
+                            }}>{typeCountsAll[t.value]}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Active-filter chip strip */}
+            {activeCount > 0 && (
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+                marginBottom: 10,
+              }}>
+                {statusActive && (() => {
+                  const labelParts: string[] = []
+                  if (filter !== 'open') labelParts.push(FILTER_LABELS[filter])
+                  if (over30Only) labelParts.push('> 30 days')
+                  if (currentStatusFilter) {
+                    const def = KPI_DEFS.find(k => k.key === currentStatusFilter)
+                    if (def) labelParts.push(def.label)
+                  }
+                  return (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '2px 8px', borderRadius: 12,
+                      background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.30)',
+                      color: 'var(--color-cyan)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                    }}>
+                      Status: {labelParts.join(' · ') || FILTER_LABELS[filter]}
+                      <button
+                        onClick={() => { setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null) }}
+                        style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex' }}
+                      ><X size={11} strokeWidth={2.5} /></button>
+                    </span>
+                  )
+                })()}
+                {shopActive && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '2px 8px', borderRadius: 12,
+                    background: 'rgba(249,115,22,0.10)', border: '1px solid rgba(249,115,22,0.30)',
+                    color: 'var(--color-orange)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                  }}>
+                    Shop: {shopFilter === '__unassigned' ? 'Unassigned' : shopFilter}
+                    <button
+                      onClick={() => setShopFilter(null)}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex' }}
+                    ><X size={11} strokeWidth={2.5} /></button>
+                  </span>
+                )}
+                {typeActive && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '2px 8px', borderRadius: 12,
+                    background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.30)',
+                    color: 'var(--color-cyan)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                  }}>
+                    Type: {DISCREPANCY_TYPES.find(t => t.value === typeFilter)?.label || typeFilter}
+                    <button
+                      onClick={() => setTypeFilter(null)}
+                      style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, display: 'flex' }}
+                    ><X size={11} strokeWidth={2.5} /></button>
+                  </span>
+                )}
+                <button
+                  onClick={clearAll}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--color-text-3)',
+                    fontSize: 'var(--fs-2xs)', fontWeight: 700, cursor: 'pointer',
+                    fontFamily: 'inherit', letterSpacing: '0.04em', textTransform: 'uppercase',
+                    padding: '2px 4px',
+                  }}
+                >Clear all</button>
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {loading ? (
-        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
-          Loading...
+        // Skeleton rows shaped like a discrepancy entry — title bar +
+        // status pill stub + meta row. Reuses the .weather-skeleton
+        // pulse keyframe added in the / polish pass.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px', borderRadius: 'var(--radius-md)',
+              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+            }}>
+              <div className="weather-skeleton" style={{ width: 60, height: 12, borderRadius: 4, background: 'var(--color-bg-inset)', flexShrink: 0 }} />
+              <div className="weather-skeleton" style={{ flex: 1, height: 12, borderRadius: 4, background: 'var(--color-bg-inset)' }} />
+              <div className="weather-skeleton" style={{ width: 60, height: 16, borderRadius: 12, background: 'var(--color-bg-inset)', flexShrink: 0 }} />
+            </div>
+          ))}
         </div>
       ) : (
         <>
@@ -771,54 +990,7 @@ export default function DiscrepanciesPage() {
             </Suspense>
           )}
 
-          {/* Type Filters */}
-          {(() => {
-            // Count per type from items matching status/search filters but NOT type filter
-            const baseItems = (usingDemo ? DEMO_DISCREPANCIES : discrepancies)
-              .filter(d => filter === 'all' || d.status === filter)
-              .filter(d => !over30Only || (d.status === 'open' && daysOpen(d.created_at) > 30))
-              .filter(d => matchesCurrentStatus(d.current_status))
-              .filter(matchesSearch)
-            const typeCounts: Record<string, number> = {}
-            for (const d of baseItems) {
-              for (const v of d.type.split(',').map(t => t.trim())) {
-                typeCounts[v] = (typeCounts[v] || 0) + 1
-              }
-            }
-            // Only show types that have at least 1 match
-            const activeTypes = DISCREPANCY_TYPES.filter(t => typeCounts[t.value])
-            if (activeTypes.length === 0) return null
-            return (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10, marginBottom: 4 }}>
-                {activeTypes.map((t) => {
-                  const active = typeFilter === t.value
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setTypeFilter(active ? null : t.value)}
-                      style={{
-                        padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 700,
-                        cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                        border: active ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
-                        background: active ? 'rgba(34,211,238,0.12)' : 'var(--color-bg-inset)',
-                        color: active ? 'var(--color-cyan)' : 'var(--color-text-2)',
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      {t.label}
-                      <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 600,
-                        color: active ? 'var(--color-cyan)' : 'var(--color-text-4)',
-                      }}>
-                        {typeCounts[t.value]}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )
-          })()}
+          {/* Type filters moved into the Filters dropdown above. */}
 
           {/* Card list — always shown (below map when in map mode) */}
           {viewMode === 'map' && filtered.length > 0 && (
@@ -880,11 +1052,52 @@ export default function DiscrepanciesPage() {
             })}
           </div>
 
-          {filtered.length === 0 && (
-            <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--color-text-3)', fontSize: 'var(--fs-md)' }}>
-              No discrepancies match this filter
-            </div>
-          )}
+          {filtered.length === 0 && (() => {
+            const hasFilter = filter !== 'open' || over30Only || currentStatusFilter !== null
+              || shopFilter !== null || typeFilter !== null || search.trim() !== ''
+            return (
+              <div className="card" style={{
+                textAlign: 'center', padding: 24,
+                color: 'var(--color-text-3)', fontSize: 'var(--fs-md)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+              }}>
+                <div>{hasFilter ? 'No discrepancies match the current filters' : 'No discrepancies yet'}</div>
+                {hasFilter && (
+                  <button
+                    onClick={() => {
+                      setFilter('open'); setOver30Only(false); setCurrentStatusFilter(null)
+                      setShopFilter(null); setTypeFilter(null); setSearch('')
+                    }}
+                    style={{
+                      background: 'none', border: 'none', color: 'var(--color-cyan)',
+                      fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                      fontFamily: 'inherit', letterSpacing: '0.04em', textTransform: 'uppercase',
+                      padding: '4px 8px',
+                    }}
+                  >Clear all filters</button>
+                )}
+                {!hasFilter && !isCes && (
+                  <Link
+                    href="/discrepancies/new"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: 'rgba(56,189,248,0.10)',
+                      border: '1px solid rgba(56,189,248,0.40)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '6px 14px',
+                      color: 'var(--color-accent)',
+                      fontSize: 'var(--fs-sm)', fontWeight: 800,
+                      letterSpacing: '0.04em', textTransform: 'uppercase',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Plus size={13} strokeWidth={2.5} />
+                    Create Discrepancy
+                  </Link>
+                )}
+              </div>
+            )
+          })()}
         </>
       )}
 
