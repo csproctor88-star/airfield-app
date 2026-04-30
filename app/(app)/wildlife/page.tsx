@@ -19,6 +19,9 @@ import {
   WILDLIFE_ACTIONS,
   DAMAGE_LEVELS,
 } from '@/lib/constants'
+import {
+  Bird, Eye, Zap, List, Map as MapIcon, BarChart3, FileText, Pencil, Trash2,
+} from 'lucide-react'
 
 type Tab = 'log' | 'heatmap' | 'analytics' | 'reports'
 type EntryType = 'all' | 'sighting' | 'strike'
@@ -137,63 +140,85 @@ export default function WildlifePage() {
     .filter(e => filterType === 'all' || e.type === filterType)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'log', label: 'Activity Log' },
-    { key: 'heatmap', label: 'Heatmap' },
-    { key: 'analytics', label: 'Analytics' },
-    { key: 'reports', label: 'Reports' },
+  const tabs: { key: Tab; label: string; Icon: typeof List }[] = [
+    { key: 'log', label: 'Activity Log', Icon: List },
+    { key: 'heatmap', label: 'Heatmap', Icon: MapIcon },
+    { key: 'analytics', label: 'Analytics', Icon: BarChart3 },
+    { key: 'reports', label: 'Reports', Icon: FileText },
   ]
 
   return (
     <div className="page-container">
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Wildlife / BASH</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* Page header — tertiary tier label + amber accent rule
+          (BASH = Bird/Wildlife Aircraft Strike Hazard, urgency-coded). */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Bird size={16} color="var(--color-amber)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Wildlife / BASH</div>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={() => setShowSightingForm(true)}
             style={{
-              padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
-              background: 'var(--color-success)', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
+              padding: '6px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+              background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+              color: 'var(--color-success)', fontWeight: 700, fontSize: 'var(--fs-sm)',
+              fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
           >
-            + Sighting
+            <Eye size={14} /> Sighting
           </button>
           <button
             onClick={() => setShowStrikeForm(true)}
             style={{
-              padding: '8px 14px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer',
-              background: 'var(--color-danger)', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-base)',
+              padding: '6px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+              background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+              color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-sm)',
+              fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
           >
-            + Strike
+            <Zap size={14} /> Strike
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border)',
-        marginBottom: 16, overflowX: 'auto',
-      }}>
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            style={{
-              padding: '10px 18px',
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontWeight: tab === t.key ? 800 : 500,
-              color: tab === t.key ? 'var(--color-accent)' : 'var(--color-text-2)',
-              borderBottom: tab === t.key ? '2px solid var(--color-accent)' : '2px solid transparent',
-              marginBottom: -2,
-              fontSize: 'var(--fs-md)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Tabs — pill-style segmented buttons matching QRC + NOTAMs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {tabs.map(t => {
+          const selected = tab === t.key
+          const Icon = t.Icon
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              style={{
+                padding: '7px 14px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
+                border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                background: selected
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-inset)',
+                color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                transition: 'background 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Icon size={13} /> {t.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Sighting Form Modal */}
@@ -301,23 +326,26 @@ export default function WildlifePage() {
                   ? DAMAGE_LEVELS.find(d => d.value === entry.damage)
                   : null
 
+                const accentColor = isSighting ? 'var(--color-success)' : 'var(--color-danger)'
+
                 return (
                   <div
                     key={`${entry.type}-${entry.id}`}
                     style={{
                       display: 'flex', alignItems: 'flex-start', gap: 12,
                       padding: '12px 14px', borderBottom: '1px solid var(--color-border)',
+                      borderLeft: `3px solid ${accentColor}`,
                     }}
                   >
-                    {/* Type badge */}
+                    {/* Type icon — Eye (sighting) or Zap (strike) on a tinted square */}
                     <div style={{
                       width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 18,
-                      background: isSighting ? '#10B98115' : '#EF444415',
-                      border: `1px solid ${isSighting ? '#10B98130' : '#EF444430'}`,
+                      background: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                      color: accentColor,
                     }}>
-                      {isSighting ? '👁️' : '💥'}
+                      {isSighting ? <Eye size={16} /> : <Zap size={16} />}
                     </div>
 
                     {/* Details */}
@@ -327,24 +355,29 @@ export default function WildlifePage() {
                           {entry.count}x {entry.species}
                         </span>
                         <span style={{
-                          fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                          background: isSighting ? '#10B98120' : '#EF444420',
-                          color: isSighting ? 'var(--color-success)' : 'var(--color-danger)',
+                          fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                          background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                          color: accentColor, letterSpacing: '0.04em',
                         }}>
                           {isSighting ? 'SIGHTING' : 'STRIKE'}
                         </span>
                         {actionLabel && (
                           <span style={{
-                            fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                            background: '#F59E0B20', color: '#F59E0B',
+                            fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                            background: 'color-mix(in srgb, var(--color-amber) 14%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--color-amber) 35%, transparent)',
+                            color: 'var(--color-amber)',
                           }}>
                             {actionLabel}
                           </span>
                         )}
                         {damageConfig && entry.damage !== 'none' && (
                           <span style={{
-                            fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                            background: `${damageConfig.color}20`, color: damageConfig.color,
+                            fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                            background: `color-mix(in srgb, ${damageConfig.color} 14%, transparent)`,
+                            border: `1px solid color-mix(in srgb, ${damageConfig.color} 35%, transparent)`,
+                            color: damageConfig.color,
                           }}>
                             DMG: {damageConfig.label}
                           </span>
@@ -367,21 +400,20 @@ export default function WildlifePage() {
                       <button
                         onClick={() => isSighting ? handleEditSighting(entry.id) : handleEditStrike(entry.id)}
                         title="Edit"
+                        aria-label="Edit"
                         className="btn-ghost"
-                        style={{ color: 'var(--color-text-4)', fontSize: 14, padding: 4 }}
+                        style={{ color: 'var(--color-text-3)', padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                        </svg>
+                        <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
                         title="Delete"
+                        aria-label="Delete"
                         className="btn-ghost"
-                        style={{ color: 'var(--color-text-4)', fontSize: 16, padding: 4 }}
+                        style={{ color: 'var(--color-text-3)', padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        ×
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
