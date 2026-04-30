@@ -696,10 +696,10 @@ export function SidebarNav() {
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
       {/* Header with logo + tagline + collapse toggle.
-          Logo SVG sits centered with the tagline directly below it,
-          so the wordmark and the strapline read as one stacked unit.
-          Collapse toggle sits in its own row below so it doesn't
-          push the tagline off-center. */}
+          When expanded, the logo and tagline stay centered as a
+          stacked unit and the collapse toggle floats in the top-right
+          corner so it doesn't pull the wordmark off-center. When
+          collapsed, only the toggle is shown, centered. */}
       <div style={{
         padding: isOpen ? '20px 16px 12px' : '20px 0 12px',
         borderBottom: '1px solid var(--color-border)',
@@ -707,6 +707,7 @@ export function SidebarNav() {
         flexDirection: 'column',
         alignItems: 'center',
         gap: 6,
+        position: 'relative',
       }}>
         {isOpen ? (
           <>
@@ -727,26 +728,32 @@ export function SidebarNav() {
             }}>
               Guiding You to Mission Success
             </div>
+            <button
+              onClick={toggle}
+              title="Collapse sidebar"
+              style={{
+                position: 'absolute', top: 8, right: 8,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-text-3)', padding: 6, borderRadius: 'var(--radius-sm)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <PanelLeftClose size={18} />
+            </button>
           </>
-        ) : null}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-        }}>
+        ) : (
           <button
             onClick={toggle}
-            title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+            title="Expand sidebar"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: 'var(--color-text-3)', padding: 6, borderRadius: 'var(--radius-sm)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
-            {isOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+            <PanelLeftOpen size={18} />
           </button>
-        </div>
+        )}
       </div>
 
       {/* Navigation items */}
