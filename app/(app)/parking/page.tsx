@@ -1893,7 +1893,7 @@ export default function ParkingPage() {
         google.maps.event.trigger(map.current.gmap, 'resize')
       }
     }, 200)
-  }, [isFullscreen])
+  }, [isFullscreen, sidebarCollapsed])
 
   // ── Plan actions ──
 
@@ -3594,7 +3594,21 @@ export default function ParkingPage() {
       display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
       ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
     }}>
-      {/* ── Map + overlay area (full width) ── */}
+      {/* ── Left-rail panel — desktop only, sits beside the map (not over it) ── */}
+      {!isMobile && !sidebarCollapsed && (
+        <div style={{
+          width: 380, flexShrink: 0,
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--color-bg-surface)',
+          borderRight: '1px solid var(--color-border)',
+          overflow: 'hidden',
+          wordBreak: 'break-word',
+        }}>
+          {sidebarContent()}
+        </div>
+      )}
+
+      {/* ── Map + overlay area ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Placement mode indicator — above map */}
         {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType) && (
@@ -3648,19 +3662,6 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          {/* ── Floating panel — top right, desktop only ── */}
-          {!isMobile && !sidebarCollapsed && (
-            <div style={{
-              position: 'absolute', top: 10, right: 10, zIndex: 10,
-              width: 344, maxHeight: 'calc(100vh - 140px)',
-              display: 'flex', flexDirection: 'column',
-              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-              borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
-              wordBreak: 'break-word',
-            }}>
-              {sidebarContent()}
-            </div>
-          )}
           {/* Ruler removed in Google Maps version */}
           {/* Map controls — top left */}
           <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
