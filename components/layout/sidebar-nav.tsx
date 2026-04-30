@@ -695,7 +695,11 @@ export function SidebarNav() {
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
-      {/* Header with logo + tagline + collapse toggle */}
+      {/* Header with logo + tagline + collapse toggle.
+          Logo SVG sits centered with the tagline directly below it,
+          so the wordmark and the strapline read as one stacked unit.
+          Collapse toggle sits in its own row below so it doesn't
+          push the tagline off-center. */}
       <div style={{
         padding: isOpen ? '20px 16px 12px' : '20px 0 12px',
         borderBottom: '1px solid var(--color-border)',
@@ -704,21 +708,14 @@ export function SidebarNav() {
         alignItems: 'center',
         gap: 6,
       }}>
-        {isOpen && (
-          <img
-            src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
-            alt="Glidepath"
-            style={{ height: 40, objectFit: 'contain', marginBottom: 2 }}
-          />
-        )}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isOpen ? 'space-between' : 'center',
-          width: '100%',
-          gap: 8,
-        }}>
-          {isOpen && (
+        {isOpen ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={resolvedTheme === 'dark' ? '/glidepath-logo-dark.svg' : '/glidepath-logo-light.svg'}
+              alt="Glidepath"
+              style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+            />
             <div style={{
               fontSize: 'var(--fs-sm)',
               fontWeight: 300,
@@ -726,14 +723,18 @@ export function SidebarNav() {
               color: 'var(--color-text-2)',
               letterSpacing: '0.04em',
               lineHeight: 1.4,
-              flex: 1,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              paddingLeft: 4,
+              textAlign: 'center',
             }}>
               Guiding You to Mission Success
             </div>
-          )}
+          </>
+        ) : null}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+        }}>
           <button
             onClick={toggle}
             title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
