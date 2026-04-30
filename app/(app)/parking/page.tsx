@@ -2495,12 +2495,12 @@ export default function ParkingPage() {
         <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{openSections[id] ? '\u25BC' : '\u25B6'}</span>
         {label}
         {count != null && count > 0 && (
-          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: `${color || 'var(--color-cyan)'}22`, color: color || 'var(--color-cyan)' }}>
+          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: `color-mix(in srgb, ${color || 'var(--color-cyan)'} 13%, transparent)`, color: color || 'var(--color-cyan)' }}>
             {count}
           </span>
         )}
         {badge && (
-          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, marginLeft: 'auto', background: `${color || 'var(--color-danger)'}22`, color: color || 'var(--color-danger)', fontWeight: 700 }}>
+          <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, marginLeft: 'auto', background: `color-mix(in srgb, ${color || 'var(--color-danger)'} 13%, transparent)`, color: color || 'var(--color-danger)', fontWeight: 700 }}>
             {badge}
           </span>
         )}
@@ -2533,9 +2533,9 @@ export default function ParkingPage() {
             {selectedPlan && (
               <span style={{
                 fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                background: selectedPlan.is_template ? '#A855F722' : selectedPlan.is_active ? '#22C55E22' : 'var(--color-bg)',
-                color: selectedPlan.is_template ? '#A855F7' : selectedPlan.is_active ? 'var(--color-success)' : 'var(--color-text-secondary)',
-                border: `1px solid ${selectedPlan.is_template ? '#A855F744' : selectedPlan.is_active ? '#22C55E44' : 'var(--color-border)'}`,
+                background: selectedPlan.is_template ? 'color-mix(in srgb, var(--color-purple) 13%, transparent)' : selectedPlan.is_active ? 'color-mix(in srgb, var(--color-success) 13%, transparent)' : 'var(--color-bg)',
+                color: selectedPlan.is_template ? 'var(--color-purple)' : selectedPlan.is_active ? 'var(--color-success)' : 'var(--color-text-secondary)',
+                border: `1px solid ${selectedPlan.is_template ? 'color-mix(in srgb, var(--color-purple) 30%, transparent)' : selectedPlan.is_active ? 'color-mix(in srgb, var(--color-success) 30%, transparent)' : 'var(--color-border)'}`,
               }}>
                 {selectedPlan.is_template ? 'Template' : selectedPlan.is_active ? 'Active' : 'Draft'}
               </span>
@@ -2615,11 +2615,11 @@ export default function ParkingPage() {
           {selectedPlan && (
             <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
               {!selectedPlan.is_active && !selectedPlan.is_template && (
-                <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#22C55E22', border: '1px solid #22C55E44', color: 'var(--color-success)', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
+                <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-success) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)', color: 'var(--color-success)', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
               )}
-              <button onClick={() => { setDuplicateName(`${selectedPlan.plan_name} (Copy)`); setShowDuplicateModal(true) }} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 10 }}>Duplicate</button>
-              <button onClick={handleToggleTemplate} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: '#A855F711', border: '1px solid #A855F744', color: '#A855F7', cursor: 'pointer', fontSize: 10 }}>{selectedPlan.is_template ? 'Convert to Plan' : 'Save as Template'}</button>
-              <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}>Delete</button>
+              <button onClick={() => { setDuplicateName(`${selectedPlan.plan_name} (Copy)`); setShowDuplicateModal(true) }} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-cyan) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 10 }}>Duplicate</button>
+              <button onClick={handleToggleTemplate} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-purple) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)', color: 'var(--color-purple)', cursor: 'pointer', fontSize: 10 }}>{selectedPlan.is_template ? 'Convert to Plan' : 'Save as Template'}</button>
+              <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}>Delete</button>
             </div>
           )}
         </div>
@@ -2647,7 +2647,7 @@ export default function ParkingPage() {
               {'count' in tab && tab.count != null && tab.count > 0 && (
                 <span style={{
                   marginLeft: 3, fontSize: 9, padding: '0 4px', borderRadius: 6,
-                  background: `${tab.color}22`, color: tab.color,
+                  background: `color-mix(in srgb, ${tab.color} 13%, transparent)`, color: tab.color,
                 }}>
                   {tab.count}
                 </span>
@@ -2668,7 +2668,7 @@ export default function ParkingPage() {
                     onClick={() => setShowAircraftPicker(true)}
                     style={{
                       padding: '5px 12px', borderRadius: 4,
-                      background: 'var(--color-cyan)11', border: '1px dashed var(--color-cyan)',
+                      background: 'color-mix(in srgb, var(--color-cyan) 7%, transparent)', border: '1px dashed var(--color-cyan)',
                       color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)',
                     }}
                   >
@@ -2679,9 +2679,9 @@ export default function ParkingPage() {
                     title="Drag a box on the map to select multiple aircraft (ESC)"
                     style={{
                       padding: '5px 10px', borderRadius: 4,
-                      background: boxSelectActive ? '#A855F733' : 'var(--color-bg-surface)',
-                      border: `1px solid ${boxSelectActive ? '#A855F7' : 'var(--color-border)'}`,
-                      color: boxSelectActive ? '#A855F7' : 'var(--color-text-secondary)',
+                      background: boxSelectActive ? 'color-mix(in srgb, var(--color-purple) 20%, transparent)' : 'var(--color-bg-surface)',
+                      border: `1px solid ${boxSelectActive ? 'var(--color-purple)' : 'var(--color-border)'}`,
+                      color: boxSelectActive ? 'var(--color-purple)' : 'var(--color-text-secondary)',
                       cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: 600,
                     }}
                   >
@@ -2717,7 +2717,7 @@ export default function ParkingPage() {
                     borderBottom: '2px solid #A855F7', display: 'flex', flexDirection: 'column', gap: 6,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#A855F7' }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-purple)' }}>
                         {selectedSpotIds.size} aircraft selected
                       </span>
                       {selViolations.length > 0 && (
@@ -2749,7 +2749,7 @@ export default function ParkingPage() {
                           if (!isNaN(deg)) for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: deg })
                         }}
                         onFocus={e => e.target.select()}
-                        style={{ width: 50, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: '#A855F7', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
+                        style={{ width: 50, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-purple)', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
                       />
                       <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>°</span>
                     </div>
@@ -2784,7 +2784,7 @@ export default function ParkingPage() {
                           for (const sid of Array.from(selectedSpotIds)) await handleDeleteSpot(sid)
                           setSelectedSpotIds(new Set())
                         }}
-                        style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)', marginLeft: 'auto' }}
+                        style={{ padding: '4px 8px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)', marginLeft: 'auto' }}
                       >
                         Delete All
                       </button>
@@ -2838,7 +2838,7 @@ export default function ParkingPage() {
                         <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{isGroupOpen ? '\u25BC' : '\u25B6'}</span>
                         <span style={{
                           fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                          background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
+                          background: `color-mix(in srgb, ${ADG_COLORS[adg]} 13%, transparent)`, color: ADG_COLORS[adg],
                           fontWeight: 600, flexShrink: 0,
                         }}>
                           {adg}
@@ -2848,7 +2848,7 @@ export default function ParkingPage() {
                         </span>
                         <span style={{
                           fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '0 6px', borderRadius: 10,
-                          background: 'var(--color-cyan)18', color: 'var(--color-cyan)',
+                          background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)', color: 'var(--color-cyan)',
                         }}>
                           {groupSpots.length}
                         </span>
@@ -2986,7 +2986,7 @@ export default function ParkingPage() {
                                   {[null, 10, 15, 25].map(val => (
                                     <button key={val ?? 'adg'} onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })} style={{
                                       padding: '2px 6px', borderRadius: 3, fontSize: 'var(--fs-xs)', border: '1px solid var(--color-border)',
-                                      background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg-surface)',
+                                      background: s.clearance_ft === val ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg-surface)',
                                       color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
                                     }}>
                                       {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
@@ -3001,8 +3001,8 @@ export default function ParkingPage() {
                                 </div>
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   <button onClick={() => (() => { map.current?.gmap.panTo({ lat: s.latitude, lng: s.longitude }); map.current?.gmap.setZoom(19) })()} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                                  <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
-                                  <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
+                                  <button onClick={() => handleDuplicateSpot(s)} style={{ padding: '4px 8px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-cyan) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Duplicate</button>
+                                  <button onClick={() => handleDeleteSpot(s.id)} style={{ padding: '4px 8px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Remove</button>
                                 </div>
                               </div>
                             )}
@@ -3028,8 +3028,8 @@ export default function ParkingPage() {
                   onClick={() => setObstaclesLocked(l => !l)}
                   style={{
                     padding: isMobile ? '8px 12px' : '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    background: obstaclesLocked ? '#F9731622' : '#22C55E22',
-                    border: `1px solid ${obstaclesLocked ? '#F9731644' : '#22C55E44'}`,
+                    background: obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
+                    border: `1px solid ${obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
                     color: obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)',
                     cursor: 'pointer', flex: 1,
                   }}
@@ -3063,7 +3063,7 @@ export default function ParkingPage() {
                     onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
                     style={{
                       padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                      background: placingObstacle === type ? '#F5730622' : 'var(--color-bg)',
+                      background: placingObstacle === type ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'var(--color-bg)',
                       border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border)'}`,
                       color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-secondary)',
                       cursor: 'pointer', textTransform: 'capitalize',
@@ -3096,7 +3096,7 @@ export default function ParkingPage() {
                     >
                       <span style={{ fontSize: 10 }}>{groupOpen ? '\u25BC' : '\u25B6'}</span>
                       {obsType}s
-                      <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: '#F9731622', color: 'var(--color-orange)' }}>{group.length}</span>
+                      <span style={{ fontSize: 10, padding: '0 5px', borderRadius: 8, background: 'color-mix(in srgb, var(--color-orange) 13%, transparent)', color: 'var(--color-orange)' }}>{group.length}</span>
                     </div>
                     {groupOpen && group.map(obs => {
                 const isEditing = editingObstacle?.id === obs.id
@@ -3171,7 +3171,7 @@ export default function ParkingPage() {
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => (() => { map.current?.gmap.panTo({ lat: obs.latitude, lng: obs.longitude }); map.current?.gmap.setZoom(17) })()} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                          <button onClick={() => handleDeleteObstacle(obs.id)} style={{ padding: '4px 8px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -3194,7 +3194,7 @@ export default function ParkingPage() {
                   disabled={!selectedPlanId || !!drawingTaxilaneId}
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: '#3B82F611', border: '1px dashed #3B82F6',
+                    background: 'color-mix(in srgb, var(--color-blue) 7%, transparent)', border: '1px dashed #3B82F6',
                     color: 'var(--color-status-inwork)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
@@ -3206,7 +3206,7 @@ export default function ParkingPage() {
                   disabled={!selectedPlanId || !!drawingTaxilaneId}
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: '#8B5CF611', border: '1px dashed #8B5CF6',
+                    background: 'color-mix(in srgb, var(--color-violet) 7%, transparent)', border: '1px dashed #8B5CF6',
                     color: 'var(--color-purple)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
@@ -3218,7 +3218,7 @@ export default function ParkingPage() {
                   disabled={!selectedPlanId || !!drawingBoundaryId}
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: '#10B98111', border: '1px dashed #10B981',
+                    background: 'color-mix(in srgb, var(--color-success) 7%, transparent)', border: '1px dashed #10B981',
                     color: 'var(--color-success)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
@@ -3254,7 +3254,7 @@ export default function ParkingPage() {
                     >
                       <span style={{
                         fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                        background: tl.taxilane_type === 'peripheral' ? '#8B5CF622' : '#3B82F622',
+                        background: tl.taxilane_type === 'peripheral' ? 'color-mix(in srgb, var(--color-violet) 13%, transparent)' : 'color-mix(in srgb, var(--color-blue) 13%, transparent)',
                         color: tl.taxilane_type === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)',
                         textTransform: 'capitalize', flexShrink: 0,
                       }}>
@@ -3336,9 +3336,9 @@ export default function ParkingPage() {
                             onClick={() => setEditingTaxilanePoints(v => !v)}
                             style={{
                               padding: '4px 8px', borderRadius: 3,
-                              background: editingTaxilanePoints ? '#3B82F633' : 'var(--color-bg-surface)',
-                              border: `1px solid ${editingTaxilanePoints ? '#3B82F6' : 'var(--color-border)'}`,
-                              color: editingTaxilanePoints ? '#3B82F6' : 'var(--color-text-secondary)',
+                              background: editingTaxilanePoints ? 'color-mix(in srgb, var(--color-blue) 20%, transparent)' : 'var(--color-bg-surface)',
+                              border: `1px solid ${editingTaxilanePoints ? 'var(--color-blue)' : 'var(--color-border)'}`,
+                              color: editingTaxilanePoints ? 'var(--color-blue)' : 'var(--color-text-secondary)',
                               cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: editingTaxilanePoints ? 700 : 400,
                             }}
                           >
@@ -3349,7 +3349,7 @@ export default function ParkingPage() {
                               Drag blue dots to move · click white dots to insert · shift+click to delete
                             </span>
                           )}
-                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)', marginLeft: 'auto' }}>Delete</button>
+                          <button onClick={() => handleDeleteTaxilane(tl.id)} style={{ padding: '4px 8px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)', marginLeft: 'auto' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -3386,7 +3386,7 @@ export default function ParkingPage() {
                     >
                       <span style={{
                         fontSize: 10, padding: '1px 4px', borderRadius: 3,
-                        background: '#10B98122', color: 'var(--color-success)', flexShrink: 0,
+                        background: 'color-mix(in srgb, var(--color-success) 13%, transparent)', color: 'var(--color-success)', flexShrink: 0,
                       }}>
                         boundary
                       </span>
@@ -3410,7 +3410,7 @@ export default function ParkingPage() {
                         </label>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button onClick={() => { if (ab.polygon_coords?.length > 0) { map.current?.gmap.panTo({ lat: ab.polygon_coords[0][1], lng: ab.polygon_coords[0][0] }); map.current?.gmap.setZoom(17) } }} style={{ padding: '4px 8px', borderRadius: 3, background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Fly To</button>
-                          <button onClick={() => handleDeleteBoundary(ab.id)} style={{ padding: '4px 8px', borderRadius: 3, background: '#EF444422', border: '1px solid #EF444444', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
+                          <button onClick={() => handleDeleteBoundary(ab.id)} style={{ padding: '4px 8px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xs)' }}>Delete</button>
                         </div>
                       </div>
                     )}
@@ -3447,8 +3447,8 @@ export default function ParkingPage() {
                       onClick={() => setClearanceFilter(f)}
                       style={{
                         flex: 1, padding: '2px 4px', borderRadius: 3, fontSize: 10,
-                        border: `1px solid ${clearanceFilter === f ? (f === 'violations' ? '#EF444444' : f === 'warnings' ? '#F59E0B44' : f === 'ok' ? '#22C55E44' : 'var(--color-border)') : 'var(--color-border)'}`,
-                        background: clearanceFilter === f ? (f === 'violations' ? '#EF444422' : f === 'warnings' ? '#F59E0B22' : f === 'ok' ? '#22C55E22' : 'var(--color-bg)') : 'var(--color-bg)',
+                        border: `1px solid ${clearanceFilter === f ? (f === 'violations' ? 'color-mix(in srgb, var(--color-danger) 30%, transparent)' : f === 'warnings' ? 'color-mix(in srgb, var(--color-amber) 30%, transparent)' : f === 'ok' ? 'color-mix(in srgb, var(--color-success) 30%, transparent)' : 'var(--color-border)') : 'var(--color-border)'}`,
+                        background: clearanceFilter === f ? (f === 'violations' ? 'color-mix(in srgb, var(--color-danger) 13%, transparent)' : f === 'warnings' ? 'color-mix(in srgb, var(--color-amber) 13%, transparent)' : f === 'ok' ? 'color-mix(in srgb, var(--color-success) 13%, transparent)' : 'var(--color-bg)') : 'var(--color-bg)',
                         color: clearanceFilter === f ? (f === 'violations' ? 'var(--color-danger)' : f === 'warnings' ? 'var(--color-warning)' : f === 'ok' ? 'var(--color-success)' : 'var(--color-text-primary)') : 'var(--color-text-secondary)',
                         cursor: 'pointer', textTransform: 'capitalize',
                       }}
@@ -3473,7 +3473,7 @@ export default function ParkingPage() {
                     padding: isMobile ? '10px 12px' : '4px 8px', cursor: 'pointer',
                     borderBottom: '1px solid var(--color-border)',
                     borderLeft: `3px solid ${STATUS_COLORS[r.status]}`,
-                    background: r.status !== 'ok' ? `${STATUS_COLORS[r.status]}08` : 'transparent',
+                    background: r.status !== 'ok' ? `color-mix(in srgb, ${STATUS_COLORS[r.status]} 3%, transparent)` : 'transparent',
                   }}
                 >
                   <span style={{
@@ -3523,8 +3523,8 @@ export default function ParkingPage() {
                   onClick={() => setPlanLocked(l => !l)}
                   style={{
                     flex: 1, padding: isMobile ? '10px 8px' : '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: planLocked ? '#EF444422' : '#22C55E22',
-                    border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
+                    background: planLocked ? 'color-mix(in srgb, var(--color-danger) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
+                    border: `1px solid ${planLocked ? 'color-mix(in srgb, var(--color-danger) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
                     color: planLocked ? 'var(--color-danger)' : 'var(--color-success)',
                     cursor: 'pointer', fontWeight: 600,
                   }}
@@ -3535,8 +3535,8 @@ export default function ParkingPage() {
                   onClick={() => setObstaclesLocked(l => !l)}
                   style={{
                     flex: 1, padding: isMobile ? '10px 8px' : '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: obstaclesLocked ? '#F9731622' : '#22C55E22',
-                    border: `1px solid ${obstaclesLocked ? '#F9731644' : '#22C55E44'}`,
+                    background: obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
+                    border: `1px solid ${obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
                     color: obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)',
                     cursor: 'pointer', fontWeight: 600,
                   }}
@@ -3565,7 +3565,7 @@ export default function ParkingPage() {
                 >
                   <span style={{
                     fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                    background: item.applicable_to_2d ? 'var(--color-cyan)22' : 'var(--color-bg)',
+                    background: item.applicable_to_2d ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg)',
                     color: item.applicable_to_2d ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
                     fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap',
                   }}>
@@ -3611,8 +3611,8 @@ export default function ParkingPage() {
         {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType) && (
           <div style={{
             padding: '6px 12px',
-            background: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF622' : '#3B82F622') : drawingBoundaryId ? '#10B98122' : drawingObsType ? '#F9731622' : '#F59E0B22',
-            borderBottom: `1px solid ${drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? '#8B5CF644' : '#3B82F644') : drawingBoundaryId ? '#10B98144' : '#F59E0B44'}`,
+            background: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? 'color-mix(in srgb, var(--color-violet) 13%, transparent)' : 'color-mix(in srgb, var(--color-blue) 13%, transparent)') : drawingBoundaryId ? 'color-mix(in srgb, var(--color-success) 13%, transparent)' : drawingObsType ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'color-mix(in srgb, var(--color-amber) 13%, transparent)',
+            borderBottom: `1px solid ${drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? 'color-mix(in srgb, var(--color-violet) 30%, transparent)' : 'color-mix(in srgb, var(--color-blue) 30%, transparent)') : drawingBoundaryId ? 'color-mix(in srgb, var(--color-success) 30%, transparent)' : 'color-mix(in srgb, var(--color-amber) 30%, transparent)'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             fontSize: 'var(--fs-sm)',
             color: drawingTaxilaneId ? (drawingTaxilaneType === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)') : drawingBoundaryId ? 'var(--color-success)' : drawingObsType ? 'var(--color-orange)' : 'var(--color-warning)',
@@ -3751,8 +3751,8 @@ export default function ParkingPage() {
               style={{
                 padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
                 background: 'var(--color-bg-surface)',
-                border: `1px solid ${rulerActive ? '#22D3EE' : 'var(--color-border)'}`,
-                color: rulerActive ? '#22D3EE' : 'var(--color-text-primary)',
+                border: `1px solid ${rulerActive ? 'var(--color-cyan)' : 'var(--color-border)'}`,
+                color: rulerActive ? 'var(--color-cyan)' : 'var(--color-text-primary)',
                 cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
               }}
             >
@@ -3802,7 +3802,7 @@ export default function ParkingPage() {
                 onClick={() => setShowAircraftPicker(true)}
                 style={{
                   padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: 'var(--color-cyan)11', border: '1px solid var(--color-cyan)44',
+                  background: 'color-mix(in srgb, var(--color-cyan) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
                   color: 'var(--color-cyan)', cursor: 'pointer',
                 }}
               >
@@ -3814,7 +3814,7 @@ export default function ParkingPage() {
                   onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: placingObstacle === type ? '#F9731622' : 'transparent',
+                    background: placingObstacle === type ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'transparent',
                     border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border)'}`,
                     color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-secondary)',
                     cursor: 'pointer', textTransform: 'capitalize',
@@ -3829,7 +3829,7 @@ export default function ParkingPage() {
                 disabled={!!drawingTaxilaneId}
                 style={{
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: '#3B82F611', border: '1px solid #3B82F644',
+                  background: 'color-mix(in srgb, var(--color-blue) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 30%, transparent)',
                   color: 'var(--color-status-inwork)', cursor: 'pointer',
                 }}
               >
@@ -3840,7 +3840,7 @@ export default function ParkingPage() {
                 disabled={!!drawingBoundaryId}
                 style={{
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: '#10B98111', border: '1px solid #10B98144',
+                  background: 'color-mix(in srgb, var(--color-success) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
                   color: 'var(--color-success)', cursor: 'pointer',
                 }}
               >
@@ -3852,8 +3852,8 @@ export default function ParkingPage() {
                 title={planLocked ? 'Unlock dragging' : 'Lock positions'}
                 style={{
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: planLocked ? '#EF444422' : '#22C55E22',
-                  border: `1px solid ${planLocked ? '#EF444444' : '#22C55E44'}`,
+                  background: planLocked ? 'color-mix(in srgb, var(--color-danger) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
+                  border: `1px solid ${planLocked ? 'color-mix(in srgb, var(--color-danger) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
                   color: planLocked ? 'var(--color-danger)' : 'var(--color-success)',
                   cursor: 'pointer',
                 }}
@@ -3983,7 +3983,7 @@ export default function ParkingPage() {
                   {[null, 10, 15, 25].map(val => (
                     <button key={val ?? 'adg'} onClick={() => handleUpdateSpot(s.id, { clearance_ft: val as any })} style={{
                       padding: '2px 5px', borderRadius: 3, fontSize: 'var(--fs-2xs)', border: '1px solid var(--color-border)',
-                      background: s.clearance_ft === val ? 'var(--color-cyan)22' : 'var(--color-bg-inset)',
+                      background: s.clearance_ft === val ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg-inset)',
                       color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
                     }}>
                       {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
@@ -4094,7 +4094,7 @@ export default function ParkingPage() {
                     style={{
                       flex: 1, padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                       border: `1px solid ${aircraftCategoryFilter === cat ? 'var(--color-cyan)' : 'var(--color-border)'}`,
-                      background: aircraftCategoryFilter === cat ? 'var(--color-cyan)11' : 'var(--color-bg)',
+                      background: aircraftCategoryFilter === cat ? 'color-mix(in srgb, var(--color-cyan) 7%, transparent)' : 'var(--color-bg)',
                       color: aircraftCategoryFilter === cat ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
                       cursor: 'pointer', textTransform: 'capitalize',
                     }}
@@ -4126,7 +4126,7 @@ export default function ParkingPage() {
                     style={{
                       display: 'flex', alignItems: 'center', width: '100%',
                       borderBottom: '1px solid var(--color-border)',
-                      background: isFav ? 'var(--color-cyan)08' : 'transparent',
+                      background: isFav ? 'color-mix(in srgb, var(--color-cyan) 3%, transparent)' : 'transparent',
                     }}
                   >
                     <button
@@ -4165,7 +4165,7 @@ export default function ParkingPage() {
                       {adg && (
                         <span style={{
                           fontSize: 10, padding: '1px 6px', borderRadius: 3,
-                          background: `${ADG_COLORS[adg]}22`, color: ADG_COLORS[adg],
+                          background: `color-mix(in srgb, ${ADG_COLORS[adg]} 13%, transparent)`, color: ADG_COLORS[adg],
                           fontWeight: 600,
                         }}>
                           ADG {adg}
@@ -4233,9 +4233,9 @@ export default function ParkingPage() {
                 onClick={() => setNewPlanIsTemplate(!newPlanIsTemplate)}
                 style={{
                   width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1px solid ${newPlanIsTemplate ? '#A855F7' : 'var(--color-border)'}`,
-                  background: newPlanIsTemplate ? '#A855F722' : 'var(--color-bg)',
-                  color: '#A855F7', fontSize: 12, fontWeight: 700,
+                  border: `1px solid ${newPlanIsTemplate ? 'var(--color-purple)' : 'var(--color-border)'}`,
+                  background: newPlanIsTemplate ? 'color-mix(in srgb, var(--color-purple) 13%, transparent)' : 'var(--color-bg)',
+                  color: 'var(--color-purple)', fontSize: 12, fontWeight: 700,
                 }}
               >
                 {newPlanIsTemplate ? '\u2713' : ''}
@@ -4256,7 +4256,7 @@ export default function ParkingPage() {
                 disabled={!newPlanName.trim()}
                 style={{
                   padding: '6px 16px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                  background: newPlanName.trim() ? (newPlanIsTemplate ? '#A855F7' : 'var(--color-cyan)') : 'var(--color-border)',
+                  background: newPlanName.trim() ? (newPlanIsTemplate ? 'var(--color-purple)' : 'var(--color-cyan)') : 'var(--color-border)',
                   color: newPlanName.trim() ? '#fff' : 'var(--color-text-secondary)',
                   fontWeight: 500,
                 }}
@@ -4318,9 +4318,9 @@ export default function ParkingPage() {
                 onClick={() => setDuplicateAsTemplate(!duplicateAsTemplate)}
                 style={{
                   width: 18, height: 18, borderRadius: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  border: `1px solid ${duplicateAsTemplate ? '#A855F7' : 'var(--color-border)'}`,
-                  background: duplicateAsTemplate ? '#A855F722' : 'var(--color-bg)',
-                  color: '#A855F7', fontSize: 12, fontWeight: 700,
+                  border: `1px solid ${duplicateAsTemplate ? 'var(--color-purple)' : 'var(--color-border)'}`,
+                  background: duplicateAsTemplate ? 'color-mix(in srgb, var(--color-purple) 13%, transparent)' : 'var(--color-bg)',
+                  color: 'var(--color-purple)', fontSize: 12, fontWeight: 700,
                 }}
               >
                 {duplicateAsTemplate ? '\u2713' : ''}
