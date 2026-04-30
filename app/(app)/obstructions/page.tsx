@@ -4,6 +4,7 @@ import { Suspense, useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
+import { ArrowLeft, AlertTriangle, History, Crosshair, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
 import { getRunwayGeometry, pointToRunwayRelation, distanceFt, bearing } from '@/lib/calculations/geometry'
@@ -496,48 +497,52 @@ function ObstructionsContent() {
 
   return (
     <div className="page-container" style={{ paddingBottom: 120 }}>
-      {/* Header */}
+      {/* Back link */}
       <button
         onClick={() => router.back()}
         style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--color-cyan)',
-          fontSize: 'var(--fs-md)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          padding: 0,
-          marginBottom: 12,
-          fontFamily: 'inherit',
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit',
         }}
       >
-        ← Back
+        <ArrowLeft size={14} /> Back
       </button>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, flex: 1 }}>
-          {editId ? 'Edit Evaluation' : 'Obstruction Evaluation'}
+
+      {/* Page header — tertiary tier-label + danger accent rule (UFC
+          3-260-01 imaginary-surface clearance/violation semantic) */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 10, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AlertTriangle size={16} color="var(--color-danger)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>{editId ? 'Edit Evaluation' : 'Obstruction Evaluation'}</div>
         </div>
         <button
           onClick={() => router.push('/obstructions/history')}
           style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-accent)',
-            fontSize: 'var(--fs-base)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            padding: 0,
-            whiteSpace: 'nowrap',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 'var(--radius-md)',
+            border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+            background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+            color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
           }}
         >
-          History →
+          <History size={14} /> History
         </button>
       </div>
-      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>
+
+      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
         UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
       </div>
-      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 8, padding: '4px 8px', borderRadius: 4, background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)', lineHeight: 1.4 }}>
+      <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)', lineHeight: 1.4 }}>
         Surface overlays use FAA survey coordinates. Satellite imagery may not perfectly align with survey data due to basemap georegistration variance. All distance and surface calculations are based on published coordinates.
       </div>
 
@@ -565,28 +570,18 @@ function ObstructionsContent() {
         onClick={useMyLocation}
         disabled={gpsLoading}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          width: '100%',
-          marginTop: 8,
-          padding: '10px 16px',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border-active)',
-          background: 'var(--color-border)',
-          color: 'var(--color-accent)',
-          fontSize: 'var(--fs-md)',
-          fontWeight: 600,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', marginTop: 8,
+          padding: '10px 16px', borderRadius: 'var(--radius-md)',
+          border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+          background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+          color: 'var(--color-cyan)',
+          fontSize: 'var(--fs-md)', fontWeight: 700,
           cursor: gpsLoading ? 'wait' : 'pointer',
-          fontFamily: 'inherit',
-          opacity: gpsLoading ? 0.6 : 1,
+          fontFamily: 'inherit', opacity: gpsLoading ? 0.6 : 1,
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-        </svg>
+        <Crosshair size={16} />
         {gpsLoading ? 'Getting Location...' : 'Use My Location'}
       </button>
 
@@ -631,7 +626,8 @@ function ObstructionsContent() {
               return (
                 <div style={{
                   padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)',
+                  background: 'color-mix(in srgb, var(--color-cyan) 6%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
                 }}>
                   <span style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700 }}>NOTAM Reference</span>
                   <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 4, lineHeight: 1.5 }}>
@@ -784,8 +780,8 @@ function ObstructionsContent() {
             style={{
               marginTop: 10,
               borderColor: multiAnalysis.hasViolation
-                ? 'rgba(239, 68, 68, 0.3)'
-                : 'rgba(34, 197, 94, 0.3)',
+                ? 'color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                : 'color-mix(in srgb, var(--color-success) 35%, transparent)',
             }}
           >
             <div
@@ -798,18 +794,23 @@ function ObstructionsContent() {
             >
               <div
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   borderRadius: '50%',
-                  background: multiAnalysis.hasViolation ? '#EF444422' : '#22C55E22',
+                  background: multiAnalysis.hasViolation
+                    ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+                    : 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+                  border: multiAnalysis.hasViolation
+                    ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                    : '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                  color: multiAnalysis.hasViolation ? 'var(--color-danger)' : 'var(--color-success)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 'var(--fs-2xl)',
                   flexShrink: 0,
                 }}
               >
-                {multiAnalysis.hasViolation ? '⚠️' : '✅'}
+                {multiAnalysis.hasViolation ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
               </div>
               <div>
                 <div
@@ -875,13 +876,17 @@ function ObstructionsContent() {
                   type="button"
                   onClick={() => setShowVerify((v) => !v)}
                   style={{
-                    background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
-                    border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '3px 8px',
-                    color: showVerify ? '#fff' : 'var(--color-text-2)',
+                    background: showVerify
+                      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                      : 'var(--color-bg-inset)',
+                    border: showVerify
+                      ? '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)'
+                      : '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '3px 9px',
+                    color: showVerify ? 'var(--color-cyan)' : 'var(--color-text-2)',
                     fontSize: 'var(--fs-xs)',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     whiteSpace: 'nowrap',
@@ -899,7 +904,11 @@ function ObstructionsContent() {
                       key={s.surfaceKey}
                       style={{
                         background: 'var(--color-bg-inset)',
-                        border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${s.color}33` : 'var(--color-border)'}`,
+                        border: s.violated
+                          ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                          : isLandUseZone
+                            ? `1px solid color-mix(in srgb, ${s.color} 25%, transparent)`
+                            : '1px solid var(--color-border)',
                         borderRadius: 'var(--radius-md)',
                         padding: 10,
                         marginBottom: 6,
@@ -921,12 +930,14 @@ function ObstructionsContent() {
                         {isLandUseZone ? (
                           <span
                             style={{
-                              fontSize: 'var(--fs-xs)',
-                              fontWeight: 800,
-                              padding: '2px 6px',
-                              borderRadius: 'var(--radius-xs)',
-                              background: `${s.color}22`,
+                              fontSize: 'var(--fs-2xs)',
+                              fontWeight: 700,
+                              padding: '2px 9px',
+                              borderRadius: 'var(--radius-full)',
+                              background: `color-mix(in srgb, ${s.color} 14%, transparent)`,
+                              border: `1px solid color-mix(in srgb, ${s.color} 35%, transparent)`,
                               color: s.color,
+                              letterSpacing: '0.04em',
                             }}
                           >
                             WITHIN ZONE
@@ -934,12 +945,18 @@ function ObstructionsContent() {
                         ) : (
                           <span
                             style={{
-                              fontSize: 'var(--fs-xs)',
-                              fontWeight: 800,
-                              padding: '2px 6px',
-                              borderRadius: 'var(--radius-xs)',
-                              background: s.violated ? '#EF444422' : '#22C55E22',
-                              color: s.violated ? 'var(--color-danger)' : 'var(--color-status-pass)',
+                              fontSize: 'var(--fs-2xs)',
+                              fontWeight: 700,
+                              padding: '2px 9px',
+                              borderRadius: 'var(--radius-full)',
+                              background: s.violated
+                                ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+                                : 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+                              border: s.violated
+                                ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                                : '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                              color: s.violated ? 'var(--color-danger)' : 'var(--color-success)',
+                              letterSpacing: '0.04em',
                             }}
                           >
                             {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
@@ -1037,7 +1054,9 @@ function ObstructionsContent() {
                     key={`${r.taxiwayId}-${r.surfaceKey}-${i}`}
                     style={{
                       background: 'var(--color-bg-inset)',
-                      border: `1px solid ${r.violated ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}`,
+                      border: r.violated
+                        ? '1px solid color-mix(in srgb, var(--color-amber) 35%, transparent)'
+                        : '1px solid var(--color-border)',
                       borderRadius: 'var(--radius-md)',
                       padding: 10,
                       marginBottom: 6,
@@ -1049,9 +1068,15 @@ function ObstructionsContent() {
                         {r.surfaceName}
                       </span>
                       <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 800, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
-                        background: r.violated ? '#F59E0B22' : '#22C55E22',
-                        color: r.violated ? '#F59E0B' : 'var(--color-status-pass)',
+                        fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '2px 9px', borderRadius: 'var(--radius-full)',
+                        background: r.violated
+                          ? 'color-mix(in srgb, var(--color-amber) 14%, transparent)'
+                          : 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+                        border: r.violated
+                          ? '1px solid color-mix(in srgb, var(--color-amber) 35%, transparent)'
+                          : '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                        color: r.violated ? 'var(--color-amber)' : 'var(--color-success)',
+                        letterSpacing: '0.04em',
                       }}>
                         {r.violated ? 'WITHIN OFA' : 'CLEAR'}
                       </span>
@@ -1095,8 +1120,8 @@ function ObstructionsContent() {
               className="card"
               style={{
                 marginTop: 10,
-                borderColor: 'rgba(239, 68, 68, 0.2)',
-                background: 'rgba(239, 68, 68, 0.04)',
+                borderColor: 'color-mix(in srgb, var(--color-danger) 25%, transparent)',
+                background: 'color-mix(in srgb, var(--color-danger) 4%, var(--color-bg-surface))',
               }}
             >
               <span className="section-label" style={{ color: 'var(--color-danger)' }}>
@@ -1106,8 +1131,8 @@ function ObstructionsContent() {
                 <div
                   key={`${vs.surfaceKey}-${vs.runwayLabel ?? i}`}
                   style={{
-                    background: 'rgba(239, 68, 68, 0.06)',
-                    border: '1px solid rgba(239, 68, 68, 0.15)',
+                    background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--color-danger) 25%, transparent)',
                     borderRadius: 'var(--radius-sm)',
                     padding: '8px 10px',
                     marginBottom: 6,
