@@ -21,6 +21,9 @@ import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 import { DetailGrid } from '@/components/ui/detail-grid'
+import {
+  ArrowLeft, History, FileText, Mail, Plus, HardHat, ClipboardList, Lightbulb,
+} from 'lucide-react'
 
 export default function InspectionDetailPage() {
   const params = useParams()
@@ -880,16 +883,40 @@ export default function InspectionDetailPage() {
 
   return (
     <div style={{ padding: '8px 16px 100px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
-          &larr; Back
+      {/* Page header — tertiary "INSPECTION" tier label + Back +
+          All History Lucide nav, accent underline below. */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 8, paddingBottom: 8, marginBottom: 12,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <button
+          onClick={() => router.back()}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 8px', background: 'none', border: 'none',
+            color: 'var(--color-text-3)', cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}
+        >
+          <ArrowLeft size={14} />
+          Back
         </button>
         <Link
           href="/inspections?view=history"
-          style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none' }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 8px',
+            color: 'var(--color-accent)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
         >
-          All Inspections
+          <History size={14} />
+          All History
         </Link>
       </div>
 
@@ -942,7 +969,11 @@ export default function InspectionDetailPage() {
               padding: '5px 12px', borderRadius: 'var(--radius-md)',
               background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
             }}>
-              <span style={{ fontSize: 'var(--fs-lg)' }}>{primary.inspection_type === 'construction_meeting' ? '🏗️' : '📋'}</span>
+              {primary.inspection_type === 'construction_meeting' ? (
+                <HardHat size={16} color="var(--color-purple)" />
+              ) : (
+                <ClipboardList size={16} color="var(--color-purple)" />
+              )}
               <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-purple)' }}>
                 {primary.inspection_type === 'construction_meeting' ? 'Construction Meeting' : 'Joint Monthly'}
               </span>
@@ -955,7 +986,7 @@ export default function InspectionDetailPage() {
                   padding: '5px 12px', borderRadius: 'var(--radius-md)',
                   background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
                 }}>
-                  <span style={{ fontSize: 'var(--fs-lg)' }}>📋</span>
+                  <ClipboardList size={16} color="var(--color-green)" />
                   <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-green)' }}>Airfield</span>
                 </div>
               )}
@@ -965,7 +996,7 @@ export default function InspectionDetailPage() {
                   padding: '5px 12px', borderRadius: 'var(--radius-md)',
                   background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
                 }}>
-                  <span style={{ fontSize: 'var(--fs-lg)' }}>💡</span>
+                  <Lightbulb size={16} color="var(--color-amber)" />
                   <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-amber)' }}>Lighting</span>
                 </div>
               )}
@@ -1381,7 +1412,11 @@ export default function InspectionDetailPage() {
                     fontSize: 'var(--fs-md)', fontWeight: 800, color,
                     display: 'flex', alignItems: 'center', gap: 8,
                   }}>
-                    <span>{insp.inspection_type === 'airfield' ? '📋' : '💡'}</span>
+                    {insp.inspection_type === 'airfield' ? (
+                      <ClipboardList size={14} />
+                    ) : (
+                      <Lightbulb size={14} />
+                    )}
                     {insp.inspection_type === 'airfield' ? 'Airfield Inspection' : 'Lighting Inspection'}
                     <span style={{
                       fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-3)', marginLeft: 2,
@@ -1430,45 +1465,73 @@ export default function InspectionDetailPage() {
         </>
       )}
 
-      {/* ═══ Actions ═══ */}
-      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
+      {/* Actions — utility-tier with Lucide prefixes (matches /checks
+          detail page). Drops the inline purple/green color blocks. */}
+      <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           onClick={handleExportPdf}
           disabled={generatingPdf}
           style={{
-            flex: 1, padding: '12px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
-            background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
-            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
-            opacity: generatingPdf ? 0.7 : 1,
+            opacity: generatingPdf ? 0.5 : 1,
           }}
         >
-          {generatingPdf ? 'Generating...' : 'Export PDF'}
+          <FileText size={14} color="var(--color-accent)" />
+          {generatingPdf ? 'Generating…' : 'Export PDF'}
         </button>
         <button
           onClick={handleEmailPdf}
           disabled={generatingPdf}
           style={{
-            padding: '12px 16px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
-            background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
-            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
-            opacity: generatingPdf ? 0.7 : 1,
+            opacity: generatingPdf ? 0.5 : 1,
           }}
           title="Email PDF"
         >
-          ✉
+          <Mail size={14} color="var(--color-accent)" />
+          Email
         </button>
         <Link
-          href="/inspections?view=history"
+          href="/inspections"
           style={{
-            flex: 1, padding: '12px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
-            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
-            color: 'var(--color-green)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid rgba(56,189,248,0.40)',
+            background: 'rgba(56,189,248,0.10)', color: 'var(--color-accent)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
-          All Inspections
+          <Plus size={14} />
+          New Inspection
+        </Link>
+        <Link
+          href="/inspections?view=history"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
+        >
+          <History size={14} color="var(--color-accent)" />
+          All History
         </Link>
       </div>
 

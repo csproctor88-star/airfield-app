@@ -3,11 +3,26 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import {
+  ArrowLeft, Plus, History,
+  PlaneTakeoff, ShieldCheck, HardHat, Handshake,
+  type LucideIcon,
+} from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspections } from '@/lib/supabase/acsi-inspections'
 import type { AcsiInspection } from '@/lib/supabase/types'
+
+type TypeCard = {
+  label: string
+  Icon: LucideIcon
+  color: string
+  description: string
+  href: string | null
+  actionLabel: string
+  historyHref: string
+  onClick?: () => void
+}
 
 export default function AllInspectionsPage() {
   const router = useRouter()
@@ -15,7 +30,6 @@ export default function AllInspectionsPage() {
   const [acsiDraft, setAcsiDraft] = useState<AcsiInspection | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  // Check for most recent ACSI draft/in-progress
   useEffect(() => {
     async function checkAcsiDraft() {
       const supabase = createClient()
@@ -39,10 +53,11 @@ export default function AllInspectionsPage() {
     }
   }
 
-  const INSPECTION_TYPES = [
+  // Lucide icons inline; tier color drives the icon tile background.
+  const INSPECTION_TYPES: TypeCard[] = [
     {
       label: 'Daily Airfield Inspection',
-      icon: '✈️',
+      Icon: PlaneTakeoff,
       color: '#10B981',
       description: 'DAFMAN 13-204v2 daily airfield & lighting inspections',
       href: '/inspections?action=begin',
@@ -51,17 +66,17 @@ export default function AllInspectionsPage() {
     },
     {
       label: 'Airfield Compliance and Safety Inspection',
-      icon: '🛡️',
+      Icon: ShieldCheck,
       color: '#8B5CF6',
       description: 'DAFMAN 13-204v2, Para 5.4.3 annual compliance inspection',
-      href: null, // handled by handleAcsiStart
+      href: null,
       actionLabel: acsiDraft ? 'Continue ACSI Draft' : 'Start ACSI',
       historyHref: '/acsi',
       onClick: handleAcsiStart,
     },
     {
       label: 'Pre/Post Construction',
-      icon: '🏗️',
+      Icon: HardHat,
       color: '#F59E0B',
       description: 'Construction zone safety coordination inspections',
       href: '/inspections/construction/new',
@@ -70,7 +85,7 @@ export default function AllInspectionsPage() {
     },
     {
       label: 'Monthly Joint Inspection',
-      icon: '🤝',
+      Icon: Handshake,
       color: '#3B82F6',
       description: 'Monthly joint airfield inspection with CE & Safety',
       href: '/inspections/joint-monthly/new',
@@ -81,127 +96,143 @@ export default function AllInspectionsPage() {
 
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      {/* Header */}
+      {/* Page header — tertiary "INSPECTIONS" tier label + accent
+          underline + Back-to-More nav. */}
       <div style={{ width: '100%', maxWidth: 600 }}>
-        <Link href="/more" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          color: 'var(--color-text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)', marginBottom: 12,
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 8, paddingBottom: 8, marginBottom: 12,
+          borderBottom: '1px solid rgba(56,189,248,0.20)',
         }}>
-          <ArrowLeft size={14} /> Back to More
-        </Link>
-
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 4 }}>
-          All Inspections
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700,
+            color: 'var(--color-text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>
+            Inspections
+          </div>
+          <Link href="/more" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 8px', color: 'var(--color-text-3)',
+            textDecoration: 'none', fontFamily: 'inherit',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            <ArrowLeft size={14} /> More
+          </Link>
         </div>
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 20 }}>
-          Start a new inspection or view history
+        <div style={{
+          fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
+          marginBottom: 16, textAlign: 'left',
+        }}>
+          Start a new inspection or view history.
         </div>
       </div>
 
-      {/* Inspection type cards */}
+      {/* Inspection type cards. Bordered tile with Lucide icon + tier
+          color accent left rule, label, description, action+history
+          buttons. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 600 }}>
-        {INSPECTION_TYPES.map((type) => (
-          <div
-            key={type.label}
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 12,
-              overflow: 'hidden',
-            }}
-          >
-            {/* Card header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '14px 16px',
-              borderBottom: '1px solid var(--color-border)',
-            }}>
-              <div
-                style={{
-                  width: 48, height: 48, minWidth: 48,
+        {INSPECTION_TYPES.map((type) => {
+          const { Icon } = type
+          return (
+            <div
+              key={type.label}
+              style={{
+                background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)',
+                borderLeft: `3px solid ${type.color}`,
+                borderRadius: 12,
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 16px',
+                borderBottom: '1px solid var(--color-border)',
+              }}>
+                <div style={{
+                  width: 44, height: 44, minWidth: 44,
                   borderRadius: 10,
-                  background: `${type.color}14`,
-                  border: `1px solid ${type.color}33`,
+                  background: `color-mix(in srgb, ${type.color} 12%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${type.color} 30%, transparent)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 'var(--fs-2xl)',
-                }}
-              >
-                {type.icon}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: type.color }}>
-                  {type.label}
+                  color: type.color,
+                }}>
+                  <Icon size={22} />
                 </div>
-                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, lineHeight: 1.4 }}>
-                  {type.description}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: type.color }}>
+                    {type.label}
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, lineHeight: 1.4 }}>
+                    {type.description}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Actions row */}
-            <div style={{
-              display: 'flex', gap: 8, padding: '10px 16px', alignItems: 'center',
-            }}>
-              {type.onClick ? (
-                <button
-                  onClick={type.onClick}
-                  disabled={!loaded}
-                  style={{
-                    flex: 1,
-                    padding: '10px 20px',
-                    borderRadius: 8,
-                    textAlign: 'center',
-                    background: `${type.color}18`,
-                    border: `1px solid ${type.color}33`,
-                    color: type.color,
-                    fontSize: 'var(--fs-sm)',
-                    fontWeight: 700,
-                    cursor: loaded ? 'pointer' : 'default',
-                    opacity: loaded ? 1 : 0.6,
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  + {type.actionLabel}
-                </button>
-              ) : (
+              <div style={{
+                display: 'flex', gap: 8, padding: '10px 16px', alignItems: 'center',
+              }}>
+                {type.onClick ? (
+                  <button
+                    onClick={type.onClick}
+                    disabled={!loaded}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      flex: 1, padding: '10px 16px', borderRadius: 8,
+                      background: `color-mix(in srgb, ${type.color} 14%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${type.color} 35%, transparent)`,
+                      color: type.color,
+                      fontSize: 'var(--fs-xs)', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      cursor: loaded ? 'pointer' : 'default',
+                      opacity: loaded ? 1 : 0.6,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <Plus size={14} />
+                    {type.actionLabel}
+                  </button>
+                ) : (
+                  <Link
+                    href={type.href!}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      flex: 1, padding: '10px 16px', borderRadius: 8,
+                      background: `color-mix(in srgb, ${type.color} 14%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${type.color} 35%, transparent)`,
+                      color: type.color,
+                      fontSize: 'var(--fs-xs)', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      textDecoration: 'none', fontFamily: 'inherit',
+                    }}
+                  >
+                    <Plus size={14} />
+                    {type.actionLabel}
+                  </Link>
+                )}
                 <Link
-                  href={type.href!}
+                  href={type.historyHref}
                   style={{
-                    flex: 1,
-                    padding: '10px 20px',
-                    borderRadius: 8,
-                    textAlign: 'center',
-                    background: `${type.color}18`,
-                    border: `1px solid ${type.color}33`,
-                    color: type.color,
-                    fontSize: 'var(--fs-sm)',
-                    fontWeight: 700,
-                    textDecoration: 'none',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '10px 14px', borderRadius: 8,
+                    background: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-2)',
+                    fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    textDecoration: 'none', fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  + {type.actionLabel}
+                  <History size={14} color="var(--color-accent)" />
+                  History
                 </Link>
-              )}
-              <Link
-                href={type.historyHref}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: 8,
-                  textAlign: 'center',
-                  background: 'var(--color-bg-sunken)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                History
-              </Link>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

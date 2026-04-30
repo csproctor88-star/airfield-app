@@ -33,6 +33,11 @@ import { useInstallation } from '@/lib/installation-context'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
+import {
+  ArrowLeft, CheckCircle2, FileEdit, Lock, Sun, Moon,
+  Map as MapIcon, ClipboardList, Lightbulb,
+} from 'lucide-react'
+import { PfnToggle } from '@/components/ui/pfn-toggle'
 import { fetchLinksForTemplate, fetchTemplateId, systemIdsFromLinks, componentIdsFromLinks, type ItemLink } from '@/lib/supabase/inspection-item-links'
 import {
   loadTypeDraft,
@@ -612,21 +617,35 @@ export default function InspectionsPage() {
     setCurrentDraft((prev) => ({ ...prev, half: updater(prev.half) }))
   }, [setCurrentDraft])
 
-  const toggle = (id: string) => {
+  // Direct setter for the segmented PfnToggle — sets the response to
+  // the chosen value (no cycling). Manages the discrepancy stub the
+  // same way: auto-create on 'fail', clear when leaving 'fail'.
+  const setResponse = (id: string, next: 'pass' | 'fail' | 'na') => {
     updateHalf((h) => {
-      const current = h.responses[id] ?? 'pass'
-      let next: 'pass' | 'fail' | 'na' = 'pass'
-      if (current === 'pass') next = 'fail'
-      else if (current === 'fail') next = 'na'
-      else if (current === 'na') next = 'pass'
-
       const newDiscs = { ...h.discrepancies }
       if (next === 'fail' && !newDiscs[id]) {
         newDiscs[id] = [{ comment: '', location: null, photo_ids: [] }]
       } else if (next !== 'fail') {
         delete newDiscs[id]
       }
+      return { ...h, responses: { ...h.responses, [id]: next }, discrepancies: newDiscs }
+    })
+  }
 
+  // Legacy cycling toggle kept for any callsite that still wires it up
+  // (e.g. keyboard shortcuts) — defers to setResponse so the
+  // discrepancy management stays consistent.
+  const toggle = (id: string) => {
+    updateHalf((h) => {
+      const current = h.responses[id] ?? 'pass'
+      const next: 'pass' | 'fail' | 'na' =
+        current === 'pass' ? 'fail' : current === 'fail' ? 'na' : 'pass'
+      const newDiscs = { ...h.discrepancies }
+      if (next === 'fail' && !newDiscs[id]) {
+        newDiscs[id] = [{ comment: '', location: null, photo_ids: [] }]
+      } else if (next !== 'fail') {
+        delete newDiscs[id]
+      }
       return { ...h, responses: { ...h.responses, [id]: next }, discrepancies: newDiscs }
     })
   }
@@ -1960,24 +1979,40 @@ export default function InspectionsPage() {
 
     return (
       <div className="page-container">
-        {/* ── Header ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        {/* Page header — tertiary tier label + accent underline +
+            Lucide-prefixed action cluster. */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          gap: 8, paddingBottom: 8, marginBottom: 12,
+          borderBottom: '1px solid rgba(56,189,248,0.20)',
+        }}>
           <div>
-            <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>{formLabel}</div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            <div style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 700,
+              color: 'var(--color-text-3)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>
+              {formLabel}
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
               Started {formatZuluDate(new Date(currentDraft.createdAt))}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
             <button
               onClick={() => diagramUrl ? setShowDiagram(true) : toast.info('No airfield diagram uploaded — add one in Settings > Base Configuration')}
               style={{
-                background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 'var(--radius-md)',
-                padding: '8px 14px', color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+                fontSize: 'var(--fs-xs)', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
-              View Airfield Diagram
+              <MapIcon size={14} color="var(--color-accent)" />
+              Diagram
             </button>
             <button
               onClick={() => {
@@ -1986,11 +2021,16 @@ export default function InspectionsPage() {
                 window.scrollTo(0, 0)
               }}
               style={{
-                background: 'transparent', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
-                padding: '8px 14px', color: 'var(--color-text-2)', fontSize: 'var(--fs-base)', fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--color-border)',
+                background: 'transparent', color: 'var(--color-text-3)',
+                fontSize: 'var(--fs-xs)', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.06em',
                 fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
+              <ArrowLeft size={14} />
               Back
             </button>
           </div>
@@ -2227,11 +2267,23 @@ export default function InspectionsPage() {
 
           return (
             <div key={section.id} style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: sectionComplete ? 'var(--color-status-pass)' : 'var(--color-text-2)' }}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                paddingBottom: 6, marginBottom: 8,
+                borderBottom: '1px solid rgba(56,189,248,0.20)',
+              }}>
+                <div style={{
+                  fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  color: sectionComplete ? 'var(--color-status-pass)' : 'var(--color-text-3)',
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                }}>
                   {section.title}
                 </div>
-                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{done}/{section.items.length}</div>
+                <div style={{
+                  fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                  color: 'var(--color-text-3)',
+                  letterSpacing: '0.06em',
+                }}>{done}/{section.items.length}</div>
               </div>
 
               {section.guidance && (
@@ -2244,40 +2296,36 @@ export default function InspectionsPage() {
                 // Skip BWC/RSC/RCR — rendered in top card
                 if (item.type === 'bwc' || item.type === 'rsc' || item.type === 'rcr') return null
 
-                // Standard pass/fail/na item
+                // Standard pass/fail/na item \u2014 segmented PfnToggle on the
+                // right of the item label. Maps 'pass'/'fail'/'na' to
+                // the toggle's 'P'/'F'/'N/A'.
                 const state = currentHalf?.responses[item.id] ?? 'pass'
-                const borderColor = state === 'pass' ? 'var(--color-status-pass)' : state === 'fail' ? 'var(--color-danger)' : state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-4)'
-                const bgColor = state === 'pass' ? 'rgba(34,197,94,0.1)' : state === 'fail' ? 'rgba(239,68,68,0.1)' : state === 'na' ? 'rgba(100,116,139,0.1)' : 'transparent'
+                const pfnValue: 'P' | 'F' | 'N/A' = state === 'pass' ? 'P' : state === 'fail' ? 'F' : 'N/A'
 
                 return (
                   <div key={item.id} style={{ borderBottom: '1px solid var(--color-bg-elevated)' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 0' }}>
-                      <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22, paddingTop: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0' }}>
+                      <span style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', fontWeight: 600, minWidth: 22 }}>
                         {item.itemNumber}.
                       </span>
-                      <button
-                        onClick={() => toggle(item.id)}
-                        style={{
-                          width: 28, height: 28, minWidth: 28, borderRadius: 'var(--radius-sm)',
-                          border: `2px solid ${borderColor}`, background: bgColor,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', padding: 0, flexShrink: 0,
-                          fontSize: state === 'na' ? 9 : 14, fontWeight: 700,
-                          color: state === 'pass' ? 'var(--color-status-pass)' : state === 'fail' ? 'var(--color-danger)' : state === 'na' ? 'var(--color-text-3)' : 'transparent',
-                          fontFamily: 'inherit',
-                        }}
-                      >
-                        {state === 'pass' ? '\u2713' : state === 'fail' ? '\u2717' : state === 'na' ? 'N/A' : ''}
-                      </button>
                       <div
                         style={{
-                          fontSize: 'var(--fs-md)', color: state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                          lineHeight: '18px', paddingTop: 4,
+                          flex: 1,
+                          fontSize: 'var(--fs-md)',
+                          color: state === 'na' ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                          lineHeight: 1.4,
                           textDecoration: state === 'na' ? 'line-through' : 'none',
                         }}
                       >
                         {item.item}
                       </div>
+                      <PfnToggle
+                        value={pfnValue}
+                        onChange={(next) => {
+                          const mapped: 'pass' | 'fail' | 'na' = next === 'P' ? 'pass' : next === 'F' ? 'fail' : 'na'
+                          setResponse(item.id, mapped)
+                        }}
+                      />
                     </div>
 
                     {/* Uploaded photos badge — shows when resuming a draft with previously uploaded photos */}
@@ -2561,13 +2609,26 @@ export default function InspectionsPage() {
   // ══════════════════════════════════════════════
   return (
     <div className="page-container">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Inspections</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-            Daily airfield &amp; lighting inspections
-          </div>
+      {/* Page header — tertiary "INSPECTIONS" tier label + accent
+          underline. */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        gap: 8, paddingBottom: 8, marginBottom: 12,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <div style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700,
+          color: 'var(--color-text-3)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          Inspections
+        </div>
+        <div style={{
+          fontSize: 'var(--fs-2xs)', fontWeight: 600,
+          color: 'var(--color-text-3)',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}>
+          DAFMAN 13-204v2
         </div>
       </div>
 
@@ -2613,8 +2674,11 @@ export default function InspectionsPage() {
             opacity: todayAirfieldByOther ? 0.7 : 1,
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 6 }}>
-            {todayAirfieldFiled ? '\u2705' : airfieldDraft ? '\uD83D\uDCDD' : todayAirfieldByOther ? '\uD83D\uDD12' : '\u2600\uFE0F'}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, height: 36, marginBottom: 6, color: todayAirfieldFiled ? 'var(--color-status-pass)' : airfieldDraft ? 'var(--color-status-inwork)' : todayAirfieldByOther ? 'var(--color-orange)' : 'var(--color-text-2)',
+          }}>
+            {todayAirfieldFiled ? <CheckCircle2 size={28} /> : airfieldDraft ? <FileEdit size={28} /> : todayAirfieldByOther ? <Lock size={28} /> : <Sun size={28} />}
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
@@ -2676,8 +2740,11 @@ export default function InspectionsPage() {
             opacity: todayLightingByOther ? 0.7 : 1,
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 6 }}>
-            {todayLightingFiled ? '\u2705' : lightingDraft ? '\uD83D\uDCDD' : todayLightingByOther ? '\uD83D\uDD12' : '\uD83C\uDF19'}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 36, height: 36, marginBottom: 6, color: todayLightingFiled ? 'var(--color-status-pass)' : lightingDraft ? 'var(--color-status-inwork)' : todayLightingByOther ? 'var(--color-orange)' : 'var(--color-text-2)',
+          }}>
+            {todayLightingFiled ? <CheckCircle2 size={28} /> : lightingDraft ? <FileEdit size={28} /> : todayLightingByOther ? <Lock size={28} /> : <Moon size={28} />}
           </div>
           <div style={{
             fontSize: 'var(--fs-md)', fontWeight: 700,
