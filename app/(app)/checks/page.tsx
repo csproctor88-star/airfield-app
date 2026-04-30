@@ -862,6 +862,14 @@ export default function AirfieldChecksPage() {
                 onClick={async () => {
                   if (selected) return
                   const newType = key as CheckType
+                  // Confirm before starting — clicking a tile silently
+                  // logs the user "on the airfield" for an audited
+                  // check, so make the consequence explicit.
+                  if (!checkStarted) {
+                    if (!confirm(`Start ${cfg.label} and log yourself on the airfield?`)) {
+                      return
+                    }
+                  }
                   setCheckType(newType)
                   resetTypeFields()
                   if (newType === 'rsc') {
@@ -885,7 +893,7 @@ export default function AirfieldChecksPage() {
                   }
                 }}
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
+                  display: 'flex', alignItems: 'center', gap: 10,
                   padding: '12px 14px',
                   borderRadius: 'var(--radius-md)',
                   border: selected ? `2px solid ${cfg.color}` : '1px solid var(--color-border)',
@@ -905,6 +913,7 @@ export default function AirfieldChecksPage() {
                   width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                   background: `color-mix(in srgb, ${cfg.color} 14%, transparent)`,
                   color: cfg.color,
+                  flexShrink: 0,
                 }}>
                   <Icon size={18} />
                 </span>
@@ -912,6 +921,7 @@ export default function AirfieldChecksPage() {
                   fontSize: 'var(--fs-sm)', fontWeight: 700,
                   color: selected ? cfg.color : 'var(--color-text-1)',
                   letterSpacing: '0.02em',
+                  lineHeight: 1.25,
                 }}>
                   {cfg.label}
                 </span>
@@ -1314,63 +1324,10 @@ export default function AirfieldChecksPage() {
         </button>
       )}
 
-      {/* Remarks Section (skip for BASH — remarks are inline in BASH card) */}
-      {checkType && checkType !== 'bash' && (
-        <div style={{ marginBottom: 8, maxWidth: 720, width: '100%', marginLeft: 'auto', marginRight: 'auto' }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-            Remarks
-          </div>
-
-          <div style={{ marginBottom: remarks.length > 0 ? 10 : 0 }}>
-            <ExpandableTextarea
-              className="input-dark"
-              rows={6}
-              placeholder="Add a remark..."
-              value={remarkText}
-              onChange={(val) => setRemarkText(val)}
-              label="Remarks"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  addRemark()
-                }
-              }}
-              style={{ resize: 'vertical', width: '100%', minHeight: 120, boxSizing: 'border-box' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-              <button
-                type="button"
-                onClick={addRemark}
-                disabled={!remarkText.trim()}
-                style={{
-                  padding: '8px 20px', borderRadius: 'var(--radius-md)', border: 'none',
-                  background: remarkText.trim() ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-elevated)',
-                  color: remarkText.trim() ? 'var(--color-cyan-btn-text)' : 'var(--color-text-4)',
-                  fontSize: 'var(--fs-base)', fontWeight: 700, cursor: remarkText.trim() ? 'pointer' : 'default',
-                  fontFamily: 'inherit',
-                }}
-              >
-                Save Remark
-              </button>
-            </div>
-          </div>
-
-          {remarks.length > 0 && (
-            <div style={{ borderTop: '1px solid var(--color-bg-elevated)', paddingTop: 8 }}>
-              {remarks.map((remark) => (
-                <div key={remark.id} style={{ borderLeft: '2px solid var(--color-text-4)', paddingLeft: 10, marginBottom: 8 }}>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{remark.user_name}</span>
-                    {' — '}
-                    {formatZuluDateTime(new Date(remark.created_at))}
-                  </div>
-                  <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>{remark.comment}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Standalone remarks box removed — if there's something worth
+          recording on a check, it lives inside an Issue Found panel
+          (which captures the comment, location, and photos together).
+          BASH still has its own internal remarks card above. */}
 
       {/* Issue Found Toggle */}
       {checkType && (
