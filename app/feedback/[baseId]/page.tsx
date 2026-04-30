@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { fetchPublicFeedbackConfig, submitFeedback, type FeedbackFormConfig, type FeedbackFormField, DEFAULT_FEEDBACK_CONFIG } from '@/lib/supabase/feedback'
+import { CheckCircle2, Star } from 'lucide-react'
+
+const WORDMARK_STYLE: React.CSSProperties = {
+  fontWeight: 800,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  background: 'linear-gradient(135deg, var(--color-logo-start), var(--color-logo-end))',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+}
 
 const STAR_LABELS = ['Poor', 'Fair', 'Good', 'Very Good', 'Excellent']
 
@@ -74,18 +84,18 @@ export default function FeedbackFormPage() {
 
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
-    border: '1px solid #334155', background: '#0F172A', color: '#E2E8F0',
+    border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
     fontSize: 16, fontFamily: 'inherit', outline: 'none',
   }
 
   const labelStyle: React.CSSProperties = {
-    display: 'block', fontSize: 14, fontWeight: 600, color: '#94A3B8', marginBottom: 4,
+    display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 4,
   }
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0B1120', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#94A3B8', fontSize: 16 }}>Loading...</div>
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--color-text-3)', fontSize: 16 }}>Loading...</div>
       </div>
     )
   }
@@ -104,13 +114,13 @@ export default function FeedbackFormPage() {
           ? `The feedback form for ${baseName} is not active right now. Please check back later or contact airfield management.`
           : 'This feedback form is not active right now. Please check back later.'
     return (
-      <div style={{ minHeight: '100vh', background: '#0B1120', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+          <div style={{ ...WORDMARK_STYLE, fontSize: 11, marginBottom: 12 }}>
             GLIDEPATH
           </div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 10 }}>{heading}</div>
-          <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>{body}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 10 }}>{heading}</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-3)', lineHeight: 1.5 }}>{body}</div>
         </div>
       </div>
     )
@@ -118,10 +128,10 @@ export default function FeedbackFormPage() {
 
   if (rateLimited) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0B1120', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 8 }}>Thank You</div>
-          <div style={{ fontSize: 14, color: '#64748B' }}>You have already submitted feedback recently. Please wait a few minutes before submitting again.</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>Thank You</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-3)' }}>You have already submitted feedback recently. Please wait a few minutes before submitting again.</div>
         </div>
       </div>
     )
@@ -129,11 +139,11 @@ export default function FeedbackFormPage() {
 
   if (submitted) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0B1120', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ minHeight: '100vh', background: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>&#10003;</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#22C55E', marginBottom: 8 }}>Submitted</div>
-          <div style={{ fontSize: 16, color: '#E2E8F0', lineHeight: 1.5 }}>{config.thank_you_message}</div>
+          <CheckCircle2 size={48} color="var(--color-success)" style={{ marginBottom: 16 }} />
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success)', marginBottom: 8 }}>Submitted</div>
+          <div style={{ fontSize: 16, color: 'var(--color-text-1)', lineHeight: 1.5 }}>{config.thank_you_message}</div>
         </div>
       </div>
     )
@@ -146,7 +156,7 @@ export default function FeedbackFormPage() {
     return (
       <div key={field.id}>
         <label style={labelStyle}>
-          {field.label}{field.required && <span style={{ color: '#EF4444' }}> *</span>}
+          {field.label}{field.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
         </label>
         {field.type === 'text' && (
           <input value={value} onChange={e => setValue(e.target.value)} style={inputStyle} />
@@ -156,36 +166,50 @@ export default function FeedbackFormPage() {
         )}
         {field.type === 'rating' && (
           <div style={{ display: 'flex', gap: 6 }}>
-            {[1, 2, 3, 4, 5].map(n => (
-              <button
-                key={n}
-                onClick={() => setValue(String(n))}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 6, fontSize: 18, fontWeight: 700,
-                  border: value === String(n) ? '2px solid #22D3EE' : '1px solid #334155',
-                  background: value === String(n) ? 'rgba(34,211,238,0.15)' : '#0F172A',
-                  color: value === String(n) ? '#22D3EE' : '#94A3B8',
-                  cursor: 'pointer',
-                }}
-              >{n}</button>
-            ))}
+            {[1, 2, 3, 4, 5].map(n => {
+              const selected = value === String(n)
+              return (
+                <button
+                  key={n}
+                  onClick={() => setValue(String(n))}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 6, fontSize: 18, fontWeight: 700,
+                    border: selected
+                      ? '1px solid color-mix(in srgb, var(--color-cyan) 50%, transparent)'
+                      : '1px solid var(--color-border-mid)',
+                    background: selected
+                      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                      : 'var(--color-bg-inset)',
+                    color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                    cursor: 'pointer',
+                  }}
+                >{n}</button>
+              )
+            })}
           </div>
         )}
         {field.type === 'yes_no' && (
           <div style={{ display: 'flex', gap: 8 }}>
-            {['Yes', 'No'].map(opt => (
-              <button
-                key={opt}
-                onClick={() => setValue(opt)}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 6, fontSize: 14, fontWeight: 600,
-                  border: value === opt ? '2px solid #22D3EE' : '1px solid #334155',
-                  background: value === opt ? 'rgba(34,211,238,0.15)' : '#0F172A',
-                  color: value === opt ? '#22D3EE' : '#94A3B8',
-                  cursor: 'pointer',
-                }}
-              >{opt}</button>
-            ))}
+            {['Yes', 'No'].map(opt => {
+              const selected = value === opt
+              return (
+                <button
+                  key={opt}
+                  onClick={() => setValue(opt)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 6, fontSize: 14, fontWeight: 600,
+                    border: selected
+                      ? '1px solid color-mix(in srgb, var(--color-cyan) 50%, transparent)'
+                      : '1px solid var(--color-border-mid)',
+                    background: selected
+                      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                      : 'var(--color-bg-inset)',
+                    color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                    cursor: 'pointer',
+                  }}
+                >{opt}</button>
+              )
+            })}
           </div>
         )}
         {field.type === 'dropdown' && (
@@ -201,18 +225,18 @@ export default function FeedbackFormPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0B1120', padding: '24px 16px' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)', padding: '24px 16px' }}>
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#22D3EE', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ ...WORDMARK_STYLE, fontSize: 11, marginBottom: 6 }}>
             GLIDEPATH
           </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#E2E8F0', marginBottom: 8 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 8 }}>
             {config.title}
           </div>
           {config.description && (
-            <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 14, color: 'var(--color-text-3)', lineHeight: 1.5 }}>
               {config.description}
             </div>
           )}
@@ -220,10 +244,13 @@ export default function FeedbackFormPage() {
 
         {/* Form */}
         <div style={{
-          background: '#1E293B', border: '1px solid #334155', borderRadius: 12,
+          background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-mid)', borderRadius: 12,
           padding: 20, display: 'flex', flexDirection: 'column', gap: 16,
         }}>
-          {/* Standard fields */}
+          {/* Identity fields */}
+          {(config.show_name || config.show_organization || config.show_email) && (
+            <span className="section-label" style={{ marginBottom: 0 }}>About You</span>
+          )}
           {config.show_name && (
             <div>
               <label style={labelStyle}>Name</label>
@@ -243,27 +270,40 @@ export default function FeedbackFormPage() {
             </div>
           )}
 
+          {/* Feedback fields */}
+          {(config.show_overall_rating || config.fields.length > 0) && (
+            <span className="section-label" style={{ marginBottom: 0, marginTop: 4 }}>Your Feedback</span>
+          )}
+
           {/* Overall rating */}
           {config.show_overall_rating && (
             <div>
               <label style={labelStyle}>Overall Experience</label>
               <div style={{ display: 'flex', gap: 6 }}>
-                {[1, 2, 3, 4, 5].map(n => (
-                  <button
-                    key={n}
-                    onClick={() => setRating(n)}
-                    style={{
-                      flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 20,
-                      border: rating === n ? '2px solid #FBBF24' : '1px solid #334155',
-                      background: rating === n ? 'rgba(251,191,36,0.15)' : '#0F172A',
-                      color: rating === n ? '#FBBF24' : '#475569',
-                      cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                    }}
-                  >
-                    <span>{rating != null && n <= rating ? '\u2605' : '\u2606'}</span>
-                    <span style={{ fontSize: 9, fontWeight: 600 }}>{STAR_LABELS[n - 1]}</span>
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5].map(n => {
+                  const selected = rating === n
+                  const filled = rating != null && n <= rating
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setRating(n)}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 8,
+                        border: selected
+                          ? '1px solid color-mix(in srgb, var(--color-amber) 50%, transparent)'
+                          : '1px solid var(--color-border-mid)',
+                        background: selected
+                          ? 'color-mix(in srgb, var(--color-amber) 14%, transparent)'
+                          : 'var(--color-bg-inset)',
+                        color: selected ? 'var(--color-amber)' : 'var(--color-text-4)',
+                        cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                      }}
+                    >
+                      <Star size={20} fill={filled ? 'var(--color-amber)' : 'transparent'} color={filled ? 'var(--color-amber)' : 'currentColor'} />
+                      <span style={{ fontSize: 9, fontWeight: 600 }}>{STAR_LABELS[n - 1]}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -284,24 +324,32 @@ export default function FeedbackFormPage() {
           </div>
 
           {error && (
-            <div style={{ fontSize: 13, color: '#EF4444', fontWeight: 600 }}>{error}</div>
+            <div
+              style={{
+                background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
+                borderRadius: 6,
+                padding: '8px 12px',
+                fontSize: 13,
+                color: 'var(--color-danger)',
+                fontWeight: 600,
+              }}
+            >
+              {error}
+            </div>
           )}
 
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            style={{
-              padding: '12px 0', borderRadius: 8, border: 'none',
-              background: submitting ? '#334155' : 'linear-gradient(135deg, #0369A1, #22D3EE)',
-              color: '#FFF', fontSize: 16, fontWeight: 700,
-              cursor: submitting ? 'wait' : 'pointer', fontFamily: 'inherit',
-            }}
+            className="btn-primary"
+            style={{ opacity: submitting ? 0.7 : 1, cursor: submitting ? 'wait' : 'pointer' }}
           >
             {submitting ? 'Submitting...' : 'Submit Feedback'}
           </button>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: '#475569' }}>
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: 'var(--color-text-4)' }}>
           Powered by Glidepath
         </div>
       </div>
