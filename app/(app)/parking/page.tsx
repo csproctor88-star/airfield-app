@@ -382,6 +382,12 @@ export default function ParkingPage() {
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [railWidth, setRailWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 280
+    const saved = parseInt(localStorage.getItem('glidepath_parking_rail_width') || '', 10)
+    return Number.isFinite(saved) && saved >= 220 && saved <= 480 ? saved : 280
+  })
+  const railResizeRef = useRef<{ startX: number; startW: number } | null>(null)
   const [clearanceFilter, setClearanceFilter] = useState<'all' | 'violations' | 'warnings' | 'ok'>('all')
   const [favoriteAircraft, setFavoriteAircraft] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
@@ -3597,14 +3603,48 @@ export default function ParkingPage() {
       {/* ── Left-rail panel — desktop only, sits beside the map (not over it) ── */}
       {!isMobile && !sidebarCollapsed && (
         <div style={{
-          width: 380, flexShrink: 0,
+          width: railWidth, flexShrink: 0,
           display: 'flex', flexDirection: 'column',
           background: 'var(--color-bg-surface)',
           borderRight: '1px solid var(--color-border)',
           overflow: 'hidden',
           wordBreak: 'break-word',
+          position: 'relative',
         }}>
           {sidebarContent()}
+          {/* Drag-resize handle on the right edge */}
+          <div
+            onMouseDown={(e) => {
+              e.preventDefault()
+              railResizeRef.current = { startX: e.clientX, startW: railWidth }
+              const onMove = (ev: MouseEvent) => {
+                const ref = railResizeRef.current
+                if (!ref) return
+                const next = Math.min(480, Math.max(220, ref.startW + (ev.clientX - ref.startX)))
+                setRailWidth(next)
+              }
+              const onUp = () => {
+                window.removeEventListener('mousemove', onMove)
+                window.removeEventListener('mouseup', onUp)
+                setRailWidth(w => {
+                  try { localStorage.setItem('glidepath_parking_rail_width', String(w)) } catch { /* noop */ }
+                  return w
+                })
+                if (map.current) {
+                  try { google.maps.event.trigger(map.current.gmap, 'resize') } catch { /* noop */ }
+                }
+                railResizeRef.current = null
+              }
+              window.addEventListener('mousemove', onMove)
+              window.addEventListener('mouseup', onUp)
+            }}
+            title="Drag to resize panel"
+            style={{
+              position: 'absolute', top: 0, right: 0, width: 6, height: '100%',
+              cursor: 'col-resize', zIndex: 5,
+              background: 'transparent',
+            }}
+          />
         </div>
       )}
 
