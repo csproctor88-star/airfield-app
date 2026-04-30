@@ -7,7 +7,7 @@ import { createInstallation } from '@/lib/supabase/installations'
 import { USER_ROLES } from '@/lib/constants'
 import { BASE_DIRECTORY, type BaseDirectoryEntry } from '@/lib/base-directory'
 import type { UserRole } from '@/lib/supabase/types'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ArrowLeft } from 'lucide-react'
 
 // Military ranks: A1C through Lt Col
 const RANK_OPTIONS = [
@@ -451,7 +451,7 @@ function LoginContent() {
                                 }}
                                 style={{
                                   display: 'block', width: '100%', padding: '10px 14px',
-                                  background: entry.name === selectedBase.name ? 'rgba(56,189,248,0.08)' : 'transparent',
+                                  background: entry.name === selectedBase.name ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
                                   border: 'none',
                                   borderBottom: '1px solid var(--color-border)',
                                   cursor: 'pointer', textAlign: 'left',
@@ -491,11 +491,13 @@ function LoginContent() {
                         type="button"
                         onClick={() => setAddingNewInstallation(false)}
                         style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
                           background: 'none', border: 'none', cursor: 'pointer',
                           color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', padding: 0,
                         }}
                       >
-                        ← Select from list
+                        <ArrowLeft size={12} />
+                        Select from list
                       </button>
                     </div>
                   )}
@@ -580,8 +582,8 @@ function LoginContent() {
             {error && (
               <div
                 style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.2)',
+                  background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
                   borderRadius: 6,
                   padding: '8px 12px',
                   marginBottom: 12,
@@ -596,13 +598,13 @@ function LoginContent() {
             {success && (
               <div
                 style={{
-                  background: 'rgba(34,197,94,0.1)',
-                  border: '1px solid rgba(34,197,94,0.2)',
+                  background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
                   borderRadius: 6,
                   padding: '8px 12px',
                   marginBottom: 12,
                   fontSize: 'var(--fs-base)',
-                  color: '#22C55E',
+                  color: 'var(--color-success)',
                 }}
               >
                 {success}
