@@ -114,7 +114,7 @@ ALTER TABLE notams ADD CONSTRAINT fk_notams_discrepancy
 CREATE TABLE airfield_checks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   display_id TEXT NOT NULL UNIQUE,
-  check_type TEXT NOT NULL CHECK (check_type IN ('fod', 'rsc', 'ife', 'ground_emergency', 'heavy_aircraft', 'bash', 'rcr')),
+  check_type TEXT NOT NULL CHECK (check_type IN ('fod', 'rsc', 'ife', 'ground_emergency', 'heavy_aircraft', 'bash', 'rcr', 'construction', 'other')),
   areas TEXT[] NOT NULL DEFAULT '{}',
   data JSONB NOT NULL DEFAULT '{}',
   completed_by TEXT,
