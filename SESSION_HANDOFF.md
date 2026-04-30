@@ -2,139 +2,204 @@
 
 **Date:** 2026-04-30
 **Branch:** `main`
-**Build:** Clean — `npx tsc --noEmit` ✓, `npx vitest run` ✓ (253 pass), `npm run build` ✓
-**HEAD:** `83cda74`
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
+**HEAD:** `9d32a58`
 
 ---
 
 ## What shipped this session
 
-**1 commit** on `main`. Single-sweep refresh of the QRC module — `/qrc`
-page + dashboard QRC dialog get the established design language, the
-checkbox step model gains a Done / N/A two-state toggle (operationally
-necessary for emergency response checklists), the QRC PDF gets a
-ground-up visual rebuild, and two durable lessons land in `pdf-utils.ts`
-+ memory so future PDF refreshes don't re-discover the bugs we hit
-along the way.
+A long, dense session. **20 commits** on `main` carrying the
+distinctive-design-language sweep across the rest of the app — the
+inspections / wildlife / notams / scn / contractors / obstructions /
+waivers modules — plus a clutch of smaller fixes (Other-check resume
+bug, sidebar collapse toggle, discrepancy detail layout, DetailGrid
+upgrade). The campaign that started in late April is now functionally
+complete across every primary user-facing route. The remaining
+untouched pages are admin / reports / public-auth (catalogued in the
+"Next session tasks" section below).
 
-The session arc was iterative — three rounds of UI feedback (white text
-on amber → black text on amber → outlined-pill recipe) and three rounds
-of PDF feedback (broken Unicode glyphs → bland wall of text → header
-chip overlap → step row spacing overlap → sub-step indent overlap)
-shaped the final form. Two memories saved to bake the rules in.
+The sweep landed three cross-cutting wins beyond chrome refresh:
 
-### QRC distinctive refresh + Done/N/A toggle + amber unification + PDF rewrite (`83cda74`)
+1. **Caught a latent bug in /scn** — `${SCN_STATUS_COLORS[s]}55`
+   shadow concat silently broke when the source map was tokenized to
+   `var(--color-*)`. The outlined-pill rebuild fixes a broken active
+   state that had been shipping since the token migration landed.
+2. **Migrated 3 shared constant maps** in `lib/constants.ts`:
+   `CONTRACTOR_STATUS_CONFIG`, `WAIVER_STATUS_CONFIG`,
+   `WAIVER_HAZARD_RATINGS`. All hex pairs swap to `var(--color-*)` +
+   `color-mix()` so light mode now adapts. `WAIVER_CLASSIFICATIONS`
+   gains an `iconKey` field consumed by the detail/new/edit pages
+   (Lock / Clock / Construction / Calendar / RefreshCw / FileEdit
+   replace 🔒 ⏳ 🏗️ 📅 🔄 📝).
+3. **Discovered + fixed a wall-of-text regression** in
+   `/waivers/[id]` Overview by upgrading the shared `DetailGrid`
+   component to bordered tile chrome. Six detail pages benefit.
 
-The QRC sweep was the next module on the distinctive-refresh backlog.
-Three concerns shaped the scope:
+### Inspections forms refresh + Other-check resume bug (`407ce03`, `5549cc6`)
 
-1. **Color was inconsistent across surfaces.** `#D97706` was hardcoded
-   four times in `/qrc` while the dashboard QRC dialog used
-   `var(--color-cyan)` for the same QRC-NN badge. Status pills used raw
-   `rgba(...)` calls that didn't adapt to light mode (the same banner-
-   class pattern the OOO/Closed fix from `dd0cfb8` documented). Decision
-   per AskUserQuestion: **amber is the QRC brand color** (urgency-
-   coded for emergency response), routed through `var(--color-amber)`
-   so light mode adapts.
+Carryover from the prior session. `/inspections/construction/new` +
+`/inspections/joint-monthly/new` got the established design language
+in `407ce03` — tertiary header (HardHat for construction,
+ClipboardCheck for joint), `var(--color-amber)` / `var(--color-blue)`
+replacing hardcoded hex, `color-mix()` recipe replacing
+`rgba(56,189,248,...)` for personnel selection rows.
 
-2. **Binary checkboxes don't model real emergency workflows.** Audit of
-   the 25 seed QRCs found numerous steps where N/A is operationally
-   meaningful (QRC-6 evac kit items, QRC-14 bird remains, QRC-15 BWC
-   repeat-until logic, QRC-22 agency jurisdiction, QRC-4 reopening
-   steps). An unchecked step today meant *both* "not yet done" AND
-   "intentionally not applicable" — auditors couldn't distinguish.
+`5549cc6` fixed a real bug surfaced during smoke-testing: the
+"Other" check Reason wasn't persisting on resume. Root cause was
+`buildDraftSnapshot()` in `app/(app)/checks/page.tsx` omitting
+`constructionItems` and `otherSubject` from the returned object,
+even though both were in the dependency array. TS missed it because
+both fields are `?` optional in `CheckDraft`. Same bug had been
+silently dropping Construction-check checklist state on auto-save.
+The b007aea belt-and-suspenders save still ran — but the next
+auto-save tick overwrote localStorage with a stripped snapshot. One-
+line fix: add both fields to the snapshot literal.
 
-3. **Base setup is out of scope.** Per user direction mid-plan, the two
-   `#D97706` hardcodes in `settings/base-setup/page.tsx` stay until the
-   future base-setup full sweep.
+### Discrepancy detail 2-col stretched grid (`20688a8`)
 
-**Schema** — `QrcStepResponse` (in `lib/supabase/types.ts`) gains
-optional `status: 'completed' | 'not_applicable'` and `agencies_na:
-string[]`. No DB migration — `step_responses` is JSONB. Back-compat via
-`getStepStatus()` / `getAgencyStatus()` in new `lib/qrc-step-status.ts`:
-legacy executions with only `completed: boolean` continue to render as
-Done. The bridge functions read `status` first and fall back to the
-boolean.
+Inner detail grid was using `auto-fit minmax(160px, 1fr)` which
+produced 3-4 narrow columns on a typical viewport — long labels
+("Work Order Assigned to") wrapped, and the whole left section
+ended up shorter than the map+photos column. Changed to fixed 2-col
+with `gridAutoRows: 1fr`, `alignItems: stretch`, plus
+`whiteSpace: nowrap + ellipsis` on labels. The recipe was reused on
+this session's later DetailGrid upgrade.
 
-**New component** — `components/ui/qrc-step-toggle.tsx` mirrors
-`PfnToggle`'s visual contract (segmented border, `color-mix()` button
-backgrounds, `aria-pressed`) but with a nullable state model: neither
-button selected = incomplete (the default empty state). Click a selected
-button again to clear back to incomplete. `QrcStepStatusPill` is the
-read-only counterpart for closed QRCs. Used by both `/qrc` and the
-dashboard dialog renderer. Did NOT extend or replace `PfnToggle` because
-the state models are different (PfnToggle is always-selected; QRC needs
-nullable). The progress denominator now subtracts N/A steps so 100%
-remains reachable when half a checklist is N/A.
+### Sidebar collapse toggle (`7c8fc4c`)
 
-**`/qrc` page rewrite** — Tertiary "QUICK REACTION CHECKLISTS" header
-with cyan accent rule + `Zap` icon, tightened tab pills with chip-style
-count badges, bordered tile grid for available templates with amber
-left rule + Lucide review-status icons (`CheckCircle2` for current,
-`AlertCircle` for overdue/never), Active/History list rows with amber
-left accent for OPEN + slate for CLOSED + colored status pills via
-`color-mix()`, execution view header with `ArrowLeft` back link + amber
-QRC chip + status pill + opened/closed metadata, banner-tier warning
-block (4px danger left rule + `AlertOctagon` icon) for template notes,
-progress bar with `CheckCircle2` accent at 100%, bordered cyan-rule
-SCN form section, bordered tile for the Annual Review block with
-`Calendar` + `CheckCircle2`/`AlertCircle` status icons, action button
-cluster with Lucide everywhere (`CheckCircle2`/`X`/`RotateCcw`/
-`FileDown`/`Mail`). The `✉` glyph is finally gone.
+The collapse toggle was orphaned in its own row below the logo +
+tagline. Floated it absolutely in the top-right corner of the
+sidebar header when expanded; collapsed state unchanged.
 
-**Dashboard QRC dialog** — Same color tokens applied (amber QRC-NN
-badges, `color-mix()` warning + active row backgrounds), same step-
-toggle integration. The dialog stays a slim modal (no full visual
-refresh — different presentation than the full page). The `AlertOctagon`
-icon was added to the warning block to match the on-page treatment.
+### NOTAMs module sweep (`3f8f40e`)
 
-**PDF generator rewrite** (`lib/qrc-pdf.ts`) — The previous `[✓]` /
-`[☐]` glyphs didn't render in jsPDF's default Helvetica (the screenshot
-showed empty brackets / random `&` characters). Swapped for filled
-rounded rect status pills drawn directly with `roundedRect()` + text
-inside (DONE green / N/A gray / outlined empty). Added cyan accent
-header band with base name, amber QRC chip + bold `EXECUTION REPORT`
-title, mini progress bar in the info box, color-coded per-row left
-rules (green for done, light gray for incomplete or N/A), italic amber
-warning blocks for conditional steps (no fake checkbox — they were
-rendering with broken `[& ]` symbols before), cyan-rule narrative
-blocks for `text` / `textarea` step types, boxed step notes with subtle
-gray fill, split Notified vs N/A agency lists with `getTextWidth()`-
-based prefix offsets so labels don't crash into values, footer
-separator line.
+All three NOTAM routes (list / detail / new) on the design language.
+List page: tertiary `Megaphone` header + cyan rule, FAA feed status
+card color-codes by connection state (success / danger), refresh
+swapped to Lucide `RefreshCw`, source-coded card left rules (cyan
+FAA / purple LOCAL / gray expired / danger expiring), the `✉`
+envelope glyph + `↻` refresh glyph are gone. Detail page: source-
+tracking accent rule, theme-token colors, tile-style info grid.
+New page: tertiary header + ArrowLeft + CheckCircle2 on Save Draft.
 
-### Lessons captured to memory + pdf-utils.ts
+### Wildlife/BASH module sweep (5 commits — `e319f17` through `b497480`)
 
-Two rounds of color feedback narrowed the QRC-NN badge to the
-**outlined-pill recipe** — amber-tinted bg via `color-mix()` + amber
-border + amber text. Filled amber backgrounds read poorly with any text
-color (white fails contrast at ~2.0:1, black passes on paper but reads
-chromatically muddy in browser). Saved as
-`feedback_amber_text_contrast.md` so the next sweep knows.
+Five-commit arc covering the page chrome, the heatmap (chrome only
+— Mapbox layers untouched), analytics + report panels, sighting +
+strike forms + species picker, plus a card-grouped restructure of
+both forms after user feedback that the flat field stack felt
+congested.
 
-Two rounds of PDF spacing feedback narrowed to a **y-coordinate
-convention** — jsPDF text uses baseline y, rects use top y, mixing them
-without care produces silent overlap. Three constants exported from
-`lib/pdf-utils.ts` (`STEP_ROW_GAP_MM = 6`, `BLOCK_POST_SPACING_MM = 6`,
-`TEXT_CAP_HEIGHT_9PT_MM = 3`, `ROW_INNER_GAP_MM = 2`) plus a documented
-convention block at the top of the file. Saved as
-`feedback_pdf_y_coords.md` so future PDF refreshes inherit the rule
-instead of re-discovering it. The QRC PDF imports the constants
-in-file as the first concrete adopter.
+`e319f17` did the page chrome: tertiary `Bird` header + amber rule
+(BASH = bird hazard, urgency-coded), outlined-pill `+ Sighting` /
+`+ Strike` action buttons (Eye / Zap icons), pill-style segmented
+tabs matching QRC + NOTAMs, activity log rows with type-coded left
+rule + Lucide-iconed tinted squares replacing 👁️ / 💥 emoji.
 
-The on-screen sub-step indent moved from `depth * 20` to `depth * 44`
-+ `marginTop: 6` because the parent's number column (12 padding + 30
-minWidth = 42px) was wider than the indent — sub-step card borders
-visually cut through where the parent's "N." stamp was, AND the first
-sub-step had no top gap so its border merged with the parent card's
-bottom border.
+`f9356a9` did the forms + species picker — tertiary headers
+(Eye for sighting, Zap for strike), GPS / Map button SVG → Lucide
+`Crosshair` / `MapPin`, action toggles + parts-struck / parts-
+damaged pills on outlined-pill recipe, classification star → Lucide
+`Star`. Filed mode (BASH alert + risk pill + submit button) all
+moved to outlined-pill recipe.
+
+`956af94` did the analytics + report tabs. `BWC_COLORS` map values
+routed through tokens (semantic tier mapping preserved). Four
+KPI cards on color-coded outlined-pill chrome with Lucide icons
+replacing 👁️💥📢✓. Section headers tertiary tier-label
+(BarChart3 / Award / Layers / Clock / FileText / Map).
+
+`5d9f123` did the heatmap chrome — filter bar tertiary header,
+density legend gradient routed through theme tokens (Mapbox paint
+config explicitly preserved with comment), tertiary footer. Bonus:
+deleted `wildlife-heatmap-google.tsx` (191 LOC) — confirmed dead
+code, leftover from the half-done Google Maps migration.
+
+`c284eb9` moved Pin Location to the top of both forms after the
+user noted the embedded map mid-form looked weird.
+
+`b497480` was the polish pass. The user's exact feedback: "looks
+too congested for a polish and professional looking input form."
+Six (sighting) / seven (strike) bordered cards group related fields
+with Lucide-iconed bold uppercase headers; field labels relax to
+sentence-case `text-3` for two-tier hierarchy. Field rendering /
+validation / submit logic unchanged.
+
+### Batch sweep — /scn, /contractors, /obstructions, /waivers (8 commits)
+
+8-commit slice plan executed cleanly:
+
+- `3b8e731` /scn — fixed the latent `${color}55` shadow concat bug
+  via outlined-pill rebuild. Backup vs Daily check chips gain
+  purple/cyan tokens.
+- `0955bf1` /contractors + `CONTRACTOR_STATUS_CONFIG` constants
+  migration. Active count badge, Mark Completed, Save Template all
+  on outlined-pill recipe.
+- `5677cee` /obstructions list — tertiary `AlertTriangle` header,
+  GPS inline SVG → Lucide `Crosshair`, `⚠️/✅` violation/clear
+  emojis → Lucide `AlertCircle`/`CheckCircle2`, surface result
+  badges and taxiway WITHIN OFA pill on `color-mix()`. Google Maps
+  + `s.color` overlay coloring untouched per plan.
+- `06d9037` /obstructions detail + history — `📄/✉/🔍` →
+  `FileDown/Mail/Search`, history page Map/List toggle on outlined-
+  pill cyan, evaluation cards get type-coded left rule (3px
+  danger/success). Critical preservation: the `SURFACE_COLORS` map
+  in `[id]/page.tsx` (UFC 3-260-01 imaginary-surface legend)
+  stays verbatim hex — semantic + backend-mapped + reference-tied.
+- `d6b9f78` /waivers list — `FileWarning` header, KPI cards
+  (Permanent/Temporary/Expiring/Overdue) gain outlined-pill chrome
+  with token colors, `+ New Waiver` filled gradient → outlined cyan
+  with `Plus` icon.
+- `01d3d8d` /waivers detail + `WAIVER_STATUS_CONFIG` /
+  `WAIVER_HAZARD_RATINGS` / `WAIVER_CLASSIFICATIONS` constants
+  migration. Constants migration is the load-bearing piece — every
+  consumer (list page Badge component, detail page status pill,
+  hazard pills, classification chip) keeps working transparently
+  because the shape stays identical and the Badge component already
+  auto-applies `color-mix()` when given `var(--color-*)`. The
+  `iconKey` field on WAIVER_CLASSIFICATIONS gets resolved through
+  small `CLASSIFICATION_ICON` maps at each rendering site to keep
+  `lib/constants.ts` free of React imports.
+- `cb75a45` /waivers new + edit — both forms get tertiary headers,
+  classification dropdown picks up Lucide icons via `iconKey`,
+  Action Requested pills + + Add Criteria buttons on outlined-pill
+  recipe.
+- `eb55da5` /waivers annual-review — tertiary `Calendar` header,
+  KPI cards with outlined-pill chrome, year nav arrows replace
+  `&larr;/&rarr;` HTML entities with Lucide `ChevronLeft/Right`,
+  per-waiver classification chip uses Lucide icon, Remove Review
+  button on outlined-pill danger.
+
+### DetailGrid bordered tile upgrade (`9d32a58`)
+
+User fed back that `/waivers/[id]` Overview read as a wall of text —
+16 label/value pairs in a 2-col grid with no visual separation.
+Fix: lift the tile chrome from the discrepancy detail (`20688a8`)
+into the shared `DetailGrid` component. Each cell now renders as
+its own bordered tile with `color-mix()` cyan left rule + `bg-inset`
+interior + `whiteSpace: nowrap` clipped uppercase label + `weight-
+500 fs-md` value. Six detail pages benefit at once: `/waivers/[id]`,
+`/obstructions/[id]`, `/discrepancies/[id]` (already had its own
+inline tiled grid — unchanged), `/inspections/[id]`, `/checks/[id]`,
+`/aircraft`. Default `gap` 10 → 8 for tighter rhythm.
+
+### Sweep audit + handoff backlog
+
+End-of-session: explored every untouched page-level file across
+`app/(app)/`, `app/(public)/`, `app/feedback/`, scoring each by
+"refresh signal count" (HTML entity back-arrows, `var(--fs-2xl)`
+page titles, raw `rgba()`, hex literals, emoji-as-icon, inline
+SVGs, filled-bright buttons). The result is in **Next session
+tasks** below — about 19 commits of work remaining across 14
+single-page modules + 5 report subpages + held multi-session work.
 
 ---
 
 ## Migrations status
 
-No new migrations this session. Migration `2026042907` from the prior
-session is the latest applied to prod.
+No new migrations this session. Migration `2026042907` from the
+prior session is still the latest applied to prod.
 
 | Migration | Status | What it does |
 |---|---|---|
@@ -143,54 +208,53 @@ session is the latest applied to prod.
 
 ---
 
-## Bugs / friction fixed during the session
+## Bugs fixed during the session
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| QRC PDF rendered `[✓]` / `[☐]` as empty brackets, sometimes `[& ]` | jsPDF's default Helvetica doesn't carry the `✓` (check mark) or `☐` (ballot box) glyphs — silent missing-glyph fallback | `83cda74` (replaced text symbols with rendered status pills) |
-| White text on amber QRC-NN badge had ~2.0:1 contrast (fails WCAG AA) | Filled `var(--color-amber)` background pairs poorly with any text color regardless of theme | `83cda74` (outlined-pill recipe — tinted bg + amber border + amber text) |
-| QRC PDF header chip overlapped the cyan accent rule above it | The cyan rule was 14mm tall, then `y += 16`, then chip drawn at `y - 4` — chip top landed at `margin + 12`, inside the rule's vertical range (margin to margin + 14) | `83cda74` (chip drawn with `y` as top edge, header advance bumped) |
-| Sub-step row left rule landed at the same y as the previous conditional/text block's bottom edge | `y += blockH + 3` post-spacing was too tight — next row's rule starts at `(y) - 3`, so anything < 5mm of post-spacing causes the rule to touch | `83cda74` (`+ BLOCK_POST_SPACING_MM` = 6mm; codified the rule in `pdf-utils.ts`) |
-| `/qrc` sub-step card border visually cut through the parent's "N." stamp | Sub-step indent of `depth * 20` was less than the parent's number column width (12 padding + 30 minWidth = 42), AND first sub-step had no `marginTop` so its border merged with parent card's bottom | `83cda74` (`depth * 44` + `marginTop: 6`) |
+| Other-check Reason vanished on resume | `buildDraftSnapshot()` returned object missing `constructionItems` + `otherSubject`; both were in deps array but not in the literal. TS missed it because both fields are `?` optional in `CheckDraft`. Auto-save tick overwrote the immediate-save belt-and-suspenders write. Same bug silently dropped Construction-check checklist state. | `5549cc6` |
+| `/scn` AgencyRow status grid active state showed nothing | `${SCN_STATUS_COLORS[s]}55` box-shadow string concat broke after `SCN_STATUS_COLORS` values were tokenized to `var(--color-*)` — concatenating "55" to "var(--color-success)" gives invalid CSS. Had been shipping broken since the token migration. | `3b8e731` |
+| Discrepancy detail tiles wrapped labels + left side shorter than right | Inner grid `auto-fit minmax(160px, 1fr)` produced 3-4 narrow columns on a typical viewport; outer grid `alignItems: 'start'` left columns mis-matched in height. | `20688a8` |
+| Waiver Overview read as wall of text | DetailGrid component had no per-cell chrome — just flat label/value pairs in a `gap: 10` grid. | `9d32a58` |
 
 ---
 
 ## Lessons from this session
 
-- **`color-mix()` + outlined-pill > filled brand color for branded chips
-  on bright-yellow-range fills.** Filled amber backgrounds have bad
-  contrast with white (fails AA) and read muddy with black. The
-  established `StatusPill` recipe (tinted bg + matching border + colored
-  text) reads cleanly in both themes and matches the existing visual
-  language. Tile/row prominence comes from the accent left rule, not
-  the chip. Saved as feedback memory.
-- **jsPDF coordinate convention is a footgun.** Text APIs use baseline
-  y, rect APIs use top y. The transition between them is invisible in
-  the source and silent in the output — overlaps just appear in the PDF
-  with no warning. Always treat `y` as "next element's top edge" and
-  add cap-height when drawing text. Always verify post-element spacing
-  is ≥ 5mm when the next element extends above its cursor for cap-
-  height alignment. Saved as feedback memory + spacing constants in
-  `pdf-utils.ts`.
-- **Type checks pass overlap bugs through.** `tsc --noEmit` and
-  `vitest` are blind to PDF geometry — only visual smoke catches it.
-  In auto mode, ship the change and ask for a screenshot rather than
-  claiming the PDF is verified.
-- **Tri-state semantic > binary checkbox for audit forms.** The QRC
-  `Done / N/A` decision matched the same logic that drove the
-  `/inspections` `PfnToggle` extraction last session. When operators
-  need to distinguish "not yet done" from "deliberately skipped,"
-  binary state encodes ambiguity that auditors can't resolve later.
-  This pattern is now in three places (Construction Check, Daily
-  Inspections, QRC) — next time it shows up, default to tri-state.
-- **Sub-component indent must clear the parent's content column.** When
-  rendering a tree (sub-steps under steps), the indent in pixels must
-  exceed the parent's leftmost content column width so the child's
-  outline doesn't visually intersect the parent's stamp area. For a
-  parent with `padding-left: 12` + `minWidth: 30` number column, the
-  child's `marginLeft` must be ≥ 42px. AND the first child needs a
-  small `marginTop` so its border doesn't merge with the parent's
-  bottom border.
+- **String concatenation onto CSS-token values is a silent footgun.**
+  The `${SCN_STATUS_COLORS[s]}55` pattern works for hex literals
+  (yields `#XXXXXX55`) and breaks for `var()` (yields invalid CSS
+  with no console warning). Same trap snared the
+  `${classInfo.color}14` pattern in waivers list pre-refresh. Anywhere
+  a config map gets tokenized, sweep callsites for hex-alpha concat
+  first. The fix is always `color-mix(in srgb, ${val} X%, transparent)`
+  which works against either input.
+- **Optional fields + spread literals + dependency arrays = silent
+  drops.** `buildDraftSnapshot()` had the right deps but the wrong
+  spread. The TS contract (`CheckDraft` with `?` optional fields)
+  accepts both correct and broken outputs as valid. When auto-save
+  state drops on a single field, look for spread/dep mismatches in
+  the snapshot builder.
+- **Shared component upgrades cascade for free.** Lifting tile chrome
+  into `DetailGrid` improved 6 detail pages with one commit. When
+  fixing visual issues on one page, ask whether the underlying
+  primitive is shared and whether the fix belongs there. (Same
+  principle applied earlier when `Badge` started auto-applying
+  `color-mix()` — every consumer adapted instantly.)
+- **Constants migrations are transparent when the shape doesn't
+  change.** `WAIVER_STATUS_CONFIG` consumers all kept working through
+  the hex → token swap because `{ color, bg, label }` shape stayed
+  identical and the `Badge` component already accepted `var()`
+  values. The hidden risk is hex-alpha string concat (above) — if
+  you're considering a migration like this, grep for
+  `\$\{.*\.color\}` first.
+- **Card grouping > flat stack for forms with > ~8 fields.** The
+  wildlife forms feedback was unambiguous: a stack of similar-weight
+  field labels reads as a wall, even when the chrome is otherwise
+  clean. The fix is two-tier hierarchy — bold uppercase tier-label
+  card headers above, lighter sub-labels inside. This pattern is now
+  proven on QRC, NOTAMs, the wildlife forms, and the waiver
+  forms; codify it as the default for any form ≥ 8 fields.
 
 ---
 
@@ -198,56 +262,89 @@ session is the latest applied to prod.
 
 | Item | Severity | Notes |
 |---|---|---|
-| **`/inspections/construction/new` + `/inspections/joint-monthly/new` pre-refresh** | Open (next session candidate) | Carryover from 2026-04-29. Personnel-attendance forms; lower daily traffic. ~520 LOC combined. |
-| **Base setup QRC tab still on `#D97706` hardcodes** | Open (deferred) | Two badge sites at `settings/base-setup/page.tsx:3493, 3606`. Will land in the future base-setup full sweep — not worth a one-off PR. |
+| **Audit identified ~14 untouched single-page modules** | Low | See Next Session Tasks. Smaller chrome work each, but cumulatively a 2-session sweep. |
+| **`/login` filled-cyan gradient + white text** | Low (cosmetic) | 657 LOC. Highest-impact public surface (every user). Top of next-session tier 1. |
+| **`/regulations` is the single-largest unrefreshed page** | Low | 800 LOC, 5 refresh signals (highest count). |
+| **/infrastructure, /parking, /settings/base-setup** | Held | All 4K+ LOC. Multi-session each. Held until customer or rollout asks. |
 | **Untracked `dark logo.jpg`** | Low | 2.4MB JPG sits in `/public` from prior logo experiment. Carryover. |
-| **Untracked `docs/DEMO_LOGINS.md`** | Low | Carryover. User to decide whether to commit. |
+| **Untracked `docs/DEMO_LOGINS.md`** | Low | Carryover. |
 | **Untracked `.claude/`** | Low | Local Claude Code settings (gitignored expectation). Carryover. |
-| **Three+ zombie node processes hold ports 3000–3003** | Low (user-side) | Dev server landed on port 3004 today. Sandbox can't kill PIDs. Suggest `taskkill /F /IM node.exe` at session start tomorrow. |
+| **Trademark** | Low | CDW holds live "GLIDEPATH" Class 42 (SaaS) registration — risk for commercial use. |
 | **Discrepancy "Notes History" backfill** | Optional (carryover) | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; rendering rewrites on display. |
-| **Visual NAVAIDs further perf** | Deferred (carryover) | Layer-toggle full-rebuild, health-ring `Circle` volume when "Color by health" is on, audit-mode panel. |
+| **Visual NAVAIDs further perf** | Deferred (carryover) | Layer-toggle full-rebuild, health-ring `Circle` volume, audit-mode panel. |
 | **Sequential PPR coordination** | Deferred (carryover) | All assigned agencies see their work in parallel; no ordering. |
 | **Public PPR form file uploads** | Deferred (carryover) | Out of scope unless requested. |
 | **"Advisories" → "WWA Notifications" UI sweep** | Deferred (carryover) | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
+| **~124 `as any` casts project-wide** | Low | Was 182. Mostly residual; codebase shape gradually getting tighter. |
+| **PDF boilerplate duplication in 11 generators** | Low | 5 already on `pdf-utils.ts`. Not worth forcing — see `feedback_pdf_utility.md`. |
+| **Check draft real-time sync deferred** | Low | Two users could create duplicate drafts. |
 
 ---
 
 ## Next session tasks
 
-The distinctive-refresh sweep continues. Modules done so far:
-`/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections`
-(daily-ops set), `/qrc`.
+**The distinctive-refresh sweep is functionally complete across every
+high-traffic user-facing route.** What remains is admin / reports /
+public-auth chrome — lower traffic but still worth bringing onto
+the design language. Audit grouping below, with refresh-signal counts
+in parens (higher = more out-of-spec):
 
-**Recommended next pick — `/inspections/construction/new` +
-`/inspections/joint-monthly/new`** (carryover from 2026-04-29, ~520
-LOC combined). Finishes the inspections module. Personnel-attendance
-forms with no checklist UI; the established design language applies
-straightforwardly.
+### Tier 1 — Public-facing auth (every user sees these)
 
-After that:
+1. **`/login`** (657 LOC, signal: 3) — filled-cyan-gradient sign-in
+   button + `#fff` text. The single most-seen page in the app and
+   still on the pre-sweep aesthetic.
+2. **`/reset-password`** (240 LOC, signal: 2) + **`/setup-account`**
+   (242 LOC, signal: 2) — paired auth forms. Bundle in one commit.
+3. **`/feedback/[baseId]`** (~100 LOC, signal: 1) — public QR form.
 
-- `/notams` — shorter module, good variety
-- `/wildlife` — sighting/strike forms; the BASH heatmap is a Mapbox
-  holdout (out of scope for visual refresh)
-- Batch sweep: `/waivers`, `/contractors`, `/obstructions`, `/scn` —
-  smaller modules, polish together
+### Tier 2 — Daily-traffic operations
 
-Held until later (multi-session work each):
+4. **`/regulations`** (800 LOC, signal: 5) — top signal count of
+   any untouched page; filled-gradient tabs + `#fff`, `var(--fs-2xl)`,
+   inline SVG in PDF viewer toggle.
+5. **`/aircraft`** (500 LOC, signal: 4) — `#34D399`/`#EF4444` hex
+   literals, `var(--fs-2xl)` headers. The DetailGrid upgrade in
+   `9d32a58` already lifted parts of this; rest is page chrome.
+6. **`/ces`** (400 LOC, signal: 3) — CES role landing.
+   `rgba(34,211,238,0.12)` + `var(--fs-2xl)`.
+7. **`/shift-checklist`** (350 LOC, signal: 3) — minimal chrome,
+   inline checkbox SVG in button.
+8. **`/recent-activity`** (600 LOC, signal: 3) — `#FBBF24`/`#334155`
+   hex for stars, filled-bright filter pills.
 
-- `/infrastructure` (~4.1k LOC) — Visual NAVAIDs
-- `/parking` (~4.3k LOC) — multi-select editor + map + clearance sidebar
-- `/settings/base-setup` (~4.7k LOC) — 15-step wizard (will pick up the
-  two QRC `#D97706` hardcodes during this sweep)
+### Tier 3 — Lower-traffic / smaller chrome
 
-The new `<QrcStepToggle>` from `components/ui/qrc-step-toggle.tsx` is
-ready for any other audit form that needs a nullable Done/N/A
-semantic — distinct from `PfnToggle` (always-selected three-state).
+9. **`/training`** (1,100 LOC, signal: 4) — `var(--fs-2xl)` +
+   filled-bright buttons. Already uses `ArrowLeft`. Largest of the
+   untouched non-held set.
+10. **`/acsi/page.tsx`** (300 LOC) + **`acsi/[id]`** (499 LOC) +
+    **`acsi/new`** (806 LOC) — 1.6K LOC across 3 files. Mostly clean
+    already; just `var(--fs-2xl)` headers.
+11. **`/daily-reviews`** (170 LOC, signal: 1) — header only.
+12. **`/users`** (555 LOC, signal: 1) — header only.
+13. **`/more`** (292 LOC, signal: 2) — replace 📡 / 📊 / etc. emoji
+    nav icons with Lucide.
+14. **`/feedback`** staff page (400 LOC, signal: 1) — `#FBBF24` star
+    cosmetic + filled buttons.
 
-The `STEP_ROW_GAP_MM` / `BLOCK_POST_SPACING_MM` / `TEXT_CAP_HEIGHT_9PT_MM`
-constants from `lib/pdf-utils.ts` are now the canonical PDF spacing
-values. Use them when refreshing or writing any new generator. The
-y-coord convention block at the top of `pdf-utils.ts` documents the
-trap to avoid.
+### Tier 4 — Reports module (small chrome each)
+
+15. **`/reports/daily`** + **`reports/aging`** + **`reports/discrepancies`**
+    + **`reports/trends`** + **`reports/lighting`** — 327–470 LOC each.
+    Most already use `ArrowLeft` and color-mix; just header + minor
+    chrome. Bundle as one commit.
+
+### Held — explicitly out of scope (multi-session each)
+
+- **`/infrastructure`** (~4.1K LOC) — Visual NAVAIDs.
+- **`/parking`** (~4.3K LOC) — multi-select editor + map + clearance
+  sidebar.
+- **`/settings/base-setup`** (~4.7K LOC) — 15-step config wizard.
+  Includes the `#D97706` QRC tab hardcodes flagged from the QRC sweep.
+- **`/settings/page.tsx`** (~1.5K LOC) — already largely on the
+  language; just `var(--fs-2xl)` header to fix. Bundle with the
+  base-setup pass when that ships.
 
 ### Long-running carryover from prior sessions
 
@@ -258,6 +355,7 @@ Pick from these only when bandwidth allows or a customer asks:
   `infrastructure`).
 - CAC/PIV authentication (blocked on Platform One).
 - Outage analytics, training management, Part 139 civilian template.
+- "Advisories" → "WWA Notifications" UI sweep.
 
 ---
 
@@ -270,10 +368,25 @@ Build: npm run build clean — no warnings, no errors.
 No new migrations.
 
 Notable First Load JS (changed routes this session):
-  /qrc                     9.08 kB / 184 kB  (was ~10.5 kB / 184 kB)
-  /dashboard              13.9 kB / 205 kB   (slight +0.8 kB from QRC dialog refresh)
+  /scn                      9.94 kB / 181 kB
+  /contractors             10.6 kB  / 191 kB
+  /obstructions            17.8 kB  / 182 kB
+  /obstructions/[id]       11.8 kB  / 328 kB
+  /obstructions/history     9.52 kB / 163 kB
+  /waivers                  3.67 kB / 187 kB
+  /waivers/[id]            10.3 kB  / 207 kB
+  /waivers/[id]/edit        7.73 kB / 191 kB
+  /waivers/new              8.65 kB / 184 kB
+  /waivers/annual-review/[year]  4.83 kB / 197 kB
+  /notams                   6.84 kB / 177 kB
+  /notams/[id]              4.86 kB / 104 kB
+  /notams/new               2.36 kB / 113 kB
+  /wildlife               458 kB    / 793 kB
+  /inspections/construction/new  6.26 kB / 191 kB
+  /inspections/joint-monthly/new 6.23 kB / 191 kB
+  /discrepancies/[id]       8.28 kB / 213 kB
 
-Largest static page (unchanged): /wildlife 454 kB / 788 kB.
+Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
 ```
 
@@ -283,9 +396,10 @@ Middleware: 74.5 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-30 (this session) | QRC distinctive refresh: amber-unified colors via outlined-pill recipe, Done/N/A two-state step toggle + schema bridge for back-compat, full PDF rewrite (status pills replace broken Unicode glyphs, color-coded row rules, italic warning blocks for conditional steps, mini progress bar). pdf-utils.ts gains spacing constants + y-coord convention. Two feedback memories pinned. 1 commit. |
-| **Unreleased** | 2026-04-29 | Distinctive-refresh sweep across `/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections` daily-ops set. Construction + Other check types added (FAA 11-item P/F/N/A checklist; required Reason for Other). Shared `<PfnToggle>` extracted between Checks and Inspections. Light-mode fixes for OOO/Closed banners. PPR spine ETA dropped (custom time columns now). 16 commits, two migrations applied. |
-| **Unreleased** | 2026-04-29 (prior) | PPR per-surface visibility (3 flags replace `is_public`), per-column `time_display`, public form ETA optional, Airfield Status base-local-today filter, type-scale shrink (desktop + tablet headings), PPR Columns row redesign (chip clusters, drop redundant arrows). 4 commits. |
+| **Unreleased** | 2026-04-30 (this session) | Distinctive-refresh sweep finished across every high-traffic route: Inspections (construction + joint monthly), NOTAMs (3 routes), Wildlife (5-commit arc covering page + heatmap + analytics + report + forms), /scn, /contractors, /obstructions (3 routes), /waivers (5 routes + constants migration). DetailGrid upgraded to bordered tiles — 6 detail pages benefit. Bug fixes: Other-check Reason resume, /scn AgencyRow active state, discrepancy detail layout. 20 commits. |
+| **Unreleased** | 2026-04-30 (prior, same day) | QRC distinctive refresh: amber-unified colors via outlined-pill recipe, Done/N/A two-state step toggle + schema bridge for back-compat, full PDF rewrite (status pills replace broken Unicode glyphs, color-coded row rules, italic warning blocks for conditional steps, mini progress bar). pdf-utils.ts gains spacing constants + y-coord convention. Two feedback memories pinned. 1 commit. |
+| **Unreleased** | 2026-04-29 | Distinctive-refresh sweep across `/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections` daily-ops set. Construction + Other check types added. Shared `<PfnToggle>` extracted. Light-mode fixes for OOO/Closed banners. PPR spine ETA dropped. 16 commits, two migrations applied. |
+| **Unreleased** | 2026-04-29 (prior) | PPR per-surface visibility, per-column `time_display`, public form ETA optional, Airfield Status base-local-today filter, type-scale shrink. 4 commits. |
 | **Unreleased** | 2026-04-28 (cont.) | Capabilities doc v2.32 + FOD Check terminology, discrepancy notes humanization, Visual NAVAIDs zoom stabilization, Training nav rename, CLAUDE.md drift fixes. 6 commits. |
 | **Unreleased** | 2026-04-28 | PPR commercial phone + ETA Zulu spine, soft-cancel + email, AMOPS delete/approve perms, manual-coord-pending, slim Log, ACSI per-member signature toggle, sidebar badge polling cuts. Four migrations. |
 | **Unreleased** | 2026-04-27 (cont.) | Denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord triage warning, OI refresh, public form date echo, atomic PPR# counter, storage RLS path scoping, sidebar badge fixes. |
@@ -303,36 +417,32 @@ See `CHANGELOG.md` for full history.
 
 ## Key docs / files touched this session
 
-### New files
-
-- `components/ui/qrc-step-toggle.tsx` — Done/N/A 2-button segmented
-  toggle + read-only status pill, mirrors PfnToggle visual contract
-  with nullable state model
-- `lib/qrc-step-status.ts` — `getStepStatus()` + `getAgencyStatus()`
-  helpers bridging legacy `completed: boolean` ↔ new
-  `status: 'completed' | 'not_applicable'`
-
 ### Modified files
 
-- `app/(app)/qrc/page.tsx` — full distinctive refresh, amber outlined-
-  pill QRC-NN badges, color-mix() status pills, Lucide icons throughout,
-  Done/N/A toggle integration, sub-step indent + gap fixes
-- `app/(app)/dashboard/page.tsx` — QRC dialog: amber badges, color-mix
-  warning + active row, AlertOctagon, Done/N/A toggle parity
-- `lib/qrc-pdf.ts` — full rewrite: filled rounded-rect status pills
-  replace broken Unicode glyphs, color-coded per-row left rules, italic
-  amber warning blocks for conditional steps, cyan-rule narrative
-  blocks, boxed step notes, split Notified/N/A agency lists, header
-  band + amber chip + mini progress bar
-- `lib/pdf-utils.ts` — added Y-coord convention doc block + four
-  spacing constants (`STEP_ROW_GAP_MM`, `BLOCK_POST_SPACING_MM`,
-  `TEXT_CAP_HEIGHT_9PT_MM`, `ROW_INNER_GAP_MM`)
-- `lib/supabase/types.ts` — `QrcStepResponse` gains optional `status`
-  + `agencies_na` fields
+- `app/(app)/checks/page.tsx` — `buildDraftSnapshot` resume bug fix
+- `app/(app)/contractors/page.tsx` — distinctive refresh
+- `app/(app)/discrepancies/[id]/page.tsx` — 2-col stretched detail grid
+- `app/(app)/inspections/construction/new/page.tsx` — distinctive refresh
+- `app/(app)/inspections/joint-monthly/new/page.tsx` — distinctive refresh
+- `app/(app)/notams/page.tsx` + `[id]/page.tsx` + `new/page.tsx` — distinctive refresh
+- `app/(app)/obstructions/page.tsx` + `[id]/page.tsx` + `history/page.tsx` — distinctive refresh
+- `app/(app)/scn/page.tsx` — distinctive refresh + latent bug fix
+- `app/(app)/waivers/page.tsx` + `[id]/page.tsx` + `[id]/edit/page.tsx` + `new/page.tsx` + `annual-review/[year]/page.tsx` — distinctive refresh
+- `app/(app)/wildlife/page.tsx` — distinctive refresh
+- `components/wildlife/sighting-form.tsx` + `strike-form.tsx` + `species-picker.tsx` + `wildlife-analytics.tsx` + `wildlife-heatmap.tsx` + `wildlife-report.tsx` — distinctive refresh
+- `components/layout/sidebar-nav.tsx` — collapse toggle position
+- `components/ui/detail-grid.tsx` — bordered tile chrome upgrade
+- `lib/constants.ts` — `CONTRACTOR_STATUS_CONFIG`, `WAIVER_STATUS_CONFIG`,
+  `WAIVER_HAZARD_RATINGS`, `WAIVER_CLASSIFICATIONS` (+`iconKey` field)
+
+### Deleted files
+
+- `components/wildlife/wildlife-heatmap-google.tsx` — confirmed dead
+  code, leftover from half-done Google Maps migration.
 
 ---
 
-*All changes pushed to `origin/main`. No new migrations. Two feedback
-memories saved (`feedback_amber_text_contrast.md`,
-`feedback_pdf_y_coords.md`) so the QRC color and PDF spacing lessons
-carry into future sessions.*
+*All changes pushed to `origin/main`. No new migrations. The
+distinctive-refresh sweep across high-traffic routes is now
+complete; what remains is the audit-derived backlog of admin /
+reports / auth pages catalogued in Next Session Tasks.*
