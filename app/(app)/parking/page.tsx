@@ -65,6 +65,7 @@ import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@
 import { generateParkingPdf } from '@/lib/parking-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { MoreVertical, Star } from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
 
@@ -393,6 +394,7 @@ export default function ParkingPage() {
     return Number.isFinite(saved) && saved >= 240 ? saved : null
   })
   const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; dir: 'w' | 'h' | 'wh' } | null>(null)
+  const [showActionMenu, setShowActionMenu] = useState(false)
   const [clearanceFilter, setClearanceFilter] = useState<'all' | 'violations' | 'warnings' | 'ok'>('all')
   const [favoriteAircraft, setFavoriteAircraft] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
@@ -2613,13 +2615,59 @@ export default function ParkingPage() {
             </button>
           </div>
           {selectedPlan && (
-            <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', display: 'flex', gap: 4, marginTop: 4 }}>
               {!selectedPlan.is_active && !selectedPlan.is_template && (
-                <button onClick={handleSetActive} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-success) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)', color: 'var(--color-success)', cursor: 'pointer', fontSize: 10 }}>Set Active</button>
+                <button onClick={handleSetActive} title="Make this the active parking plan" style={{
+                  flex: 1, padding: '5px 8px', borderRadius: 4,
+                  background: 'var(--color-success)', border: 'none', color: '#fff',
+                  cursor: 'pointer', fontSize: 10, fontWeight: 700, fontFamily: 'inherit',
+                }}>Set Active</button>
               )}
-              <button onClick={() => { setDuplicateName(`${selectedPlan.plan_name} (Copy)`); setShowDuplicateModal(true) }} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-cyan) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)', color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 10 }}>Duplicate</button>
-              <button onClick={handleToggleTemplate} style={{ flex: 1, padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-purple) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)', color: 'var(--color-purple)', cursor: 'pointer', fontSize: 10 }}>{selectedPlan.is_template ? 'Convert to Plan' : 'Save as Template'}</button>
-              <button onClick={handleDeletePlan} style={{ padding: '3px 6px', borderRadius: 3, background: 'color-mix(in srgb, var(--color-danger) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 10 }}>Delete</button>
+              <button onClick={() => { setDuplicateName(`${selectedPlan.plan_name} (Copy)`); setShowDuplicateModal(true) }} title="Duplicate this plan" style={{
+                flex: 1, padding: '5px 8px', borderRadius: 4,
+                background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--color-cyan) 40%, transparent)',
+                color: 'var(--color-cyan)', cursor: 'pointer', fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
+              }}>Duplicate</button>
+              <button onClick={() => setShowActionMenu(s => !s)} title="More actions" style={{
+                padding: '5px 6px', borderRadius: 4,
+                background: showActionMenu ? 'color-mix(in srgb, var(--color-cyan) 10%, transparent)' : 'transparent',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-secondary)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <MoreVertical size={14} />
+              </button>
+              {showActionMenu && (
+                <>
+                  <div onClick={() => setShowActionMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 14 }} />
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 15,
+                    minWidth: 170, background: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)', borderRadius: 6,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)', overflow: 'hidden',
+                  }}>
+                    <button onClick={() => { handleToggleTemplate(); setShowActionMenu(false) }} style={{
+                      width: '100%', padding: '8px 12px', textAlign: 'left',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: 'var(--color-purple)', fontSize: 11, fontWeight: 600,
+                      fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <Star size={12} fill="currentColor" />
+                      {selectedPlan.is_template ? 'Convert to Plan' : 'Save as Template'}
+                    </button>
+                    <button onClick={() => { handleDeletePlan(); setShowActionMenu(false) }} style={{
+                      width: '100%', padding: '8px 12px', textAlign: 'left',
+                      background: 'transparent', border: 'none',
+                      borderTop: '1px solid var(--color-border)', cursor: 'pointer',
+                      color: 'var(--color-danger)', fontSize: 11, fontWeight: 600,
+                      fontFamily: 'inherit',
+                    }}>
+                      Delete plan
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
