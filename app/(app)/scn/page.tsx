@@ -204,20 +204,28 @@ export default function ScnPage() {
 
   return (
     <div className="page-container">
-      <Link href="/more" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--color-text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)', marginBottom: 10 }}>
+      <Link href="/more" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--color-text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)', marginBottom: 12 }}>
         <ArrowLeft size={14} /> Back
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 10, background: 'var(--color-warning)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-        }}>
-          <Radio size={22} />
+      {/* Page header — tertiary tier-label + cyan accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14,
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Radio size={16} color="var(--color-cyan)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Secondary Crash Net</div>
         </div>
-        <div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Secondary Crash Net</div>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Daily check log — {formatZuluDate(todayZuluDate())}</div>
+        <div style={{
+          fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}>
+          {formatZuluDate(todayZuluDate())}Z
         </div>
       </div>
 
@@ -225,7 +233,8 @@ export default function ScnPage() {
       {agencies.length === 0 && (
         <div style={{
           marginTop: 14, padding: '12px 14px', borderRadius: 'var(--radius-md)',
-          background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.35)',
+          background: 'color-mix(in srgb, var(--color-warning) 8%, var(--color-bg-surface))',
+          border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)',
           fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)',
         }}>
           <strong style={{ color: 'var(--color-warning)' }}>No agencies configured.</strong>{' '}
@@ -367,7 +376,7 @@ export default function ScnPage() {
             <button
               onClick={() => setModal(null)}
               style={{
-                flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                flex: 1, padding: '10px 14px', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
                 color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -379,13 +388,18 @@ export default function ScnPage() {
               disabled={saving}
               onClick={handleSaveModal}
               style={{
-                flex: 2, padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
-                background: 'linear-gradient(135deg, var(--color-cyan), var(--color-accent))',
-                color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+                flex: 2, padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                border: '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+                background: saving
+                  ? 'var(--color-bg-elevated)'
+                  : 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+                color: saving ? 'var(--color-text-4)' : 'var(--color-cyan)',
+                fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                opacity: saving ? 0.6 : 1,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
+              <CheckCircle2 size={16} />
               {saving ? 'Saving…' : 'Log Check'}
             </button>
           </div>
@@ -433,10 +447,15 @@ export default function ScnPage() {
                 onClick={() => setModal(m => m ? { ...m, oosDialog: null } : m)}
                 disabled={!d.notes.trim()}
                 style={{
-                  flex: 2, padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: 'none',
-                  background: 'var(--color-danger)', color: '#fff',
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: d.notes.trim() ? 'pointer' : 'not-allowed',
-                  opacity: d.notes.trim() ? 1 : 0.5, fontFamily: 'inherit',
+                  flex: 2, padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)',
+                  background: d.notes.trim()
+                    ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+                    : 'var(--color-bg-elevated)',
+                  color: d.notes.trim() ? 'var(--color-danger)' : 'var(--color-text-4)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: d.notes.trim() ? 'pointer' : 'not-allowed',
+                  fontFamily: 'inherit',
                 }}
               >
                 Save Notes
@@ -529,9 +548,11 @@ function TodayCheckCard({
               onClick={onStart}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
-                background: 'linear-gradient(135deg, var(--color-cyan), var(--color-accent))',
-                color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                padding: '8px 14px', borderRadius: 'var(--radius-md)',
+                border: '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+                background: 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+                color: 'var(--color-cyan)',
+                fontSize: 'var(--fs-sm)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -567,13 +588,16 @@ function AgencyRow({ draft, onChange, onOpenOosNotes }: {
               key={s}
               onClick={() => onChange(s)}
               style={{
-                padding: '14px 10px', borderRadius: 10, minHeight: 60,
-                background: active ? color : 'transparent',
-                border: `2px solid ${active ? color : 'var(--color-border)'}`,
-                color: active ? '#fff' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-sm)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                padding: '14px 10px', borderRadius: 'var(--radius-md)', minHeight: 60,
+                background: active
+                  ? `color-mix(in srgb, ${color} 18%, transparent)`
+                  : 'transparent',
+                border: active
+                  ? `1px solid color-mix(in srgb, ${color} 50%, transparent)`
+                  : '1px solid var(--color-border)',
+                color: active ? color : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                 textTransform: 'uppercase', letterSpacing: '0.04em',
-                boxShadow: active ? `0 2px 8px ${color}55` : 'none',
                 transition: 'all 0.12s',
               }}
             >
@@ -611,9 +635,13 @@ function SummaryPreview({ draft, type }: { draft: AgencyDraft[]; type: ScnCheckT
     : `${label} — all loud & clear except ${exceptions.map(e => `${e.agency_name} (${SCN_STATUS_LABELS[e.status]}${e.notes ? `: ${e.notes}` : ''})`).join(', ')}`
   return (
     <div style={{
-      padding: '10px 12px', borderRadius: 'var(--radius-sm)',
-      background: exceptions.length === 0 ? 'rgba(34,197,94,0.06)' : 'rgba(234,179,8,0.06)',
-      border: `1px solid ${exceptions.length === 0 ? 'rgba(34,197,94,0.25)' : 'rgba(234,179,8,0.28)'}`,
+      padding: '10px 12px', borderRadius: 'var(--radius-md)',
+      background: exceptions.length === 0
+        ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
+        : 'color-mix(in srgb, var(--color-warning) 8%, transparent)',
+      border: exceptions.length === 0
+        ? '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)'
+        : '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)',
     }}>
       <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
         Events Log preview
@@ -646,9 +674,14 @@ function HistoryRow({ check, onEdit, onDelete }: { check: ScnCheckWithResults; o
           {formatZuluDate(check.check_date)}Z
         </div>
         <div style={{
-          padding: '2px 8px', borderRadius: 4, fontSize: 'var(--fs-2xs)', fontWeight: 700,
-          background: check.check_type === 'backup' ? 'rgba(167,139,250,0.15)' : 'rgba(56,189,248,0.12)',
-          color: check.check_type === 'backup' ? '#A78BFA' : '#38BDF8',
+          padding: '2px 9px', borderRadius: 'var(--radius-full)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+          background: check.check_type === 'backup'
+            ? 'color-mix(in srgb, var(--color-purple) 14%, transparent)'
+            : 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+          border: check.check_type === 'backup'
+            ? '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)'
+            : '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+          color: check.check_type === 'backup' ? 'var(--color-purple)' : 'var(--color-cyan)',
           textTransform: 'uppercase', letterSpacing: '0.06em',
         }}>
           {label}
@@ -715,8 +748,10 @@ function DisplayRow({ name, status, notes }: { name: string; status: ScnAgencySt
       </div>
       <div style={{ padding: '3px 0', textAlign: 'right' }}>
         <span style={{
-          display: 'inline-block', padding: '2px 8px', borderRadius: 4,
-          background: `${SCN_STATUS_COLORS[status]}22`, color: SCN_STATUS_COLORS[status],
+          display: 'inline-block', padding: '2px 9px', borderRadius: 'var(--radius-full)',
+          background: `color-mix(in srgb, ${SCN_STATUS_COLORS[status]} 14%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${SCN_STATUS_COLORS[status]} 35%, transparent)`,
+          color: SCN_STATUS_COLORS[status],
           fontSize: 'var(--fs-2xs)', fontWeight: 700,
         }}>
           {SCN_STATUS_LABELS[status]}
@@ -730,7 +765,8 @@ function ScriptBlock({ title, children }: { title: string; children: React.React
   return (
     <div style={{
       marginBottom: 14, padding: '10px 12px', borderRadius: 'var(--radius-md)',
-      background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.25)',
+      background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
     }}>
       <div style={{
         fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-cyan)',
