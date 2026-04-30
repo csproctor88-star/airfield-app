@@ -14,6 +14,20 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { WaiverReviewRecommendation } from '@/lib/supabase/types'
+import {
+  ArrowLeft, Calendar as CalendarIcon, FileSpreadsheet,
+  ChevronLeft, ChevronRight, Trash2,
+  Lock, Clock, Construction, Calendar, RefreshCw, FileEdit,
+} from 'lucide-react'
+
+const CLASSIFICATION_ICON: Record<string, typeof Lock> = {
+  lock: Lock,
+  clock: Clock,
+  construction: Construction,
+  calendar: Calendar,
+  refresh: RefreshCw,
+  edit: FileEdit,
+}
 
 type ReviewFormState = {
   recommendation: WaiverReviewRecommendation
@@ -173,26 +187,65 @@ export default function AnnualReviewYearPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <Link href="/waivers" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, textDecoration: 'none' }}>
-          &larr; Waivers
-        </Link>
+      {/* Back link */}
+      <Link href="/waivers" style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+        textDecoration: 'none', marginBottom: 12,
+      }}>
+        <ArrowLeft size={14} /> Waivers
+      </Link>
+
+      {/* Page header — tertiary tier-label + amber accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <CalendarIcon size={16} color="var(--color-amber)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Annual Review</div>
+        </div>
         <button onClick={handleExport}
-          style={{ background: 'color-mix(in srgb, var(--color-green) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 'var(--radius-md)', padding: '6px 10px', color: 'var(--color-green)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          Export Year Review
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+            borderRadius: 'var(--radius-md)', padding: '6px 12px',
+            color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+          <FileSpreadsheet size={14} /> Export Year Review
         </button>
       </div>
 
-      {/* Year Header with Nav */}
+      {/* Year nav — outlined-pill arrows + cyan year label */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, justifyContent: 'center' }}>
         <button onClick={() => { router.push(`/waivers/annual-review/${year - 1}`); setKpiFilter(null) }}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
-          &larr;
+          aria-label="Previous year"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)', padding: '6px 10px',
+            color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+          <ChevronLeft size={16} />
         </button>
-        <span style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{year} Review</span>
+        <span style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{year} Review</span>
         <button onClick={() => { router.push(`/waivers/annual-review/${year + 1}`); setKpiFilter(null) }} disabled={year >= currentYear}
-          style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
-          &rarr;
+          aria-label="Next year"
+          style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)', padding: '6px 10px',
+            color: year >= currentYear ? 'var(--color-text-4)' : 'var(--color-text-2)',
+            cursor: year >= currentYear ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            opacity: year >= currentYear ? 0.5 : 1,
+          }}>
+          <ChevronRight size={16} />
         </button>
       </div>
 
@@ -200,8 +253,8 @@ export default function AnnualReviewYearPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
         {[
           { label: 'ACTIVE', key: 'active', value: activeWaivers.length, color: 'var(--color-purple)' },
-          { label: 'REVIEWED', key: 'reviewed', value: reviewedCount, color: 'var(--color-green)' },
-          { label: 'NOT REVIEWED', key: 'not_reviewed', value: notReviewedCount, color: notReviewedCount > 0 ? 'var(--color-red)' : 'var(--color-green)' },
+          { label: 'REVIEWED', key: 'reviewed', value: reviewedCount, color: 'var(--color-success)' },
+          { label: 'NOT REVIEWED', key: 'not_reviewed', value: notReviewedCount, color: notReviewedCount > 0 ? 'var(--color-danger)' : 'var(--color-success)' },
           { label: 'TO BOARD', key: 'to_board', value: boardCount, color: 'var(--color-blue)' },
         ].map(k => {
           const active = kpiFilter === k.key
@@ -211,8 +264,13 @@ export default function AnnualReviewYearPage() {
               className="kpi-badge"
               onClick={() => setKpiFilter(active ? null : k.key)}
               style={{
-                background: active ? `color-mix(in srgb, ${k.color} 8%, transparent)` : undefined,
-                border: `1px solid ${active ? `color-mix(in srgb, ${k.color} 27%, transparent)` : 'var(--color-border)'}`,
+                background: active
+                  ? `color-mix(in srgb, ${k.color} 14%, transparent)`
+                  : undefined,
+                border: active
+                  ? `1px solid color-mix(in srgb, ${k.color} 45%, transparent)`
+                  : '1px solid var(--color-border)',
+                cursor: 'pointer',
               }}
             >
               <div className="kpi-label" style={{ color: active ? k.color : 'var(--color-text-3)' }}>{k.label}</div>
@@ -244,7 +302,7 @@ export default function AnnualReviewYearPage() {
             const form = getForm(w.id)
 
             return (
-              <div key={w.id} className="card" style={{ marginBottom: 8, borderLeft: `3px solid ${reviewed ? 'var(--color-green)' : 'var(--color-red)'}` }}>
+              <div key={w.id} className="card" style={{ marginBottom: 8, borderLeft: `3px solid ${reviewed ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
                 <button
                   type="button"
                   onClick={() => setExpandedWaiver(isExpanded ? null : w.id)}
@@ -252,9 +310,24 @@ export default function AnnualReviewYearPage() {
                 >
                   <div>
                     <div style={{ fontSize: 'var(--fs-base)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                      {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="var(--color-text-3)" />}
-                      <Badge label={reviewed ? 'Reviewed' : 'Not Reviewed'} color={reviewed ? 'var(--color-green)' : 'var(--color-red)'} />
+                    <div style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {classInfo && (() => {
+                        const Icon = CLASSIFICATION_ICON[classInfo.iconKey]
+                        return (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                            background: 'color-mix(in srgb, var(--color-text-3) 12%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--color-text-3) 30%, transparent)',
+                            color: 'var(--color-text-2)',
+                            fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.04em',
+                          }}>
+                            {Icon && <Icon size={10} />}
+                            {classInfo.label.toUpperCase()}
+                          </span>
+                        )
+                      })()}
+                      <Badge label={reviewed ? 'Reviewed' : 'Not Reviewed'} color={reviewed ? 'var(--color-success)' : 'var(--color-danger)'} />
                     </div>
                     <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, maxWidth: 280 }}>
                       {w.description.slice(0, 100)}{w.description.length > 100 ? '...' : ''}
@@ -271,14 +344,29 @@ export default function AnnualReviewYearPage() {
                 {isExpanded && (
                   <div style={{ marginTop: 12, borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
                     {reviewed && (
-                      <div style={{ marginBottom: 8, padding: '6px 8px', background: 'color-mix(in srgb, var(--color-green) 7%, transparent)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', color: 'var(--color-green)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{
+                        marginBottom: 8, padding: '6px 10px',
+                        background: 'color-mix(in srgb, var(--color-success) 8%, transparent)',
+                        border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--fs-sm)', color: 'var(--color-success)',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      }}>
                         <span>Reviewed for {year}</span>
                         <button
                           onClick={() => review && handleDeleteReview(review.id, w.id)}
                           disabled={saving === w.id}
-                          style={{ background: 'color-mix(in srgb, var(--color-red) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-red) 20%, transparent)', borderRadius: 'var(--radius-xs)', padding: '2px 8px', color: 'var(--color-red)', fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: '3px 9px', color: 'var(--color-danger)',
+                            fontSize: 'var(--fs-2xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                            letterSpacing: '0.04em',
+                          }}
                         >
-                          Remove Review
+                          <Trash2 size={11} /> REMOVE
                         </button>
                       </div>
                     )}
