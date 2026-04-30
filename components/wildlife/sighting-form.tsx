@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import {
   Eye, X, Crosshair, MapPin, AlertTriangle, CheckCircle2,
+  Cloud, Megaphone, MessageSquare,
 } from 'lucide-react'
 import { createSighting, updateSighting, type WildlifeSightingRow } from '@/lib/supabase/wildlife'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
@@ -240,9 +241,27 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     fontSize: 'var(--fs-base)',
   }
 
+  // Field-level label — sentence case, dim, lighter weight. Sits under
+  // a card's section header so the two-tier hierarchy reads clean:
+  // bold uppercase section title above, lighter sub-label below.
   const labelStyle: React.CSSProperties = {
-    fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
-    marginBottom: 4, display: 'block',
+    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+    marginBottom: 4, display: 'block', letterSpacing: '0.02em',
+  }
+
+  // Card chrome — matches the recipe used on /inspections/construction/new
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--color-bg-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: 12, marginBottom: 10,
+  }
+
+  // Section header — bold uppercase tier label with a Lucide icon prefix
+  const sectionHeaderStyle: React.CSSProperties = {
+    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+    marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
   }
 
   const riskColor = (risk: string) => {
@@ -295,12 +314,12 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           </div>
           )}
 
-          {/* GPS + Map Location — anchored at the top of the form so
-              the user pins the sighting location first; the rest of
-              the fields (species, count, conditions, action, notes)
-              flow under it. */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Pin Location</label>
+          {/* PIN LOCATION card — anchored at the top so the user pins
+              the sighting first. */}
+          <div style={cardStyle}>
+            <div style={sectionHeaderStyle}>
+              <MapPin size={12} /> Pin Location
+            </div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <button
                 type="button"
@@ -314,7 +333,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                     : '1px solid var(--color-border)',
                   background: latitude
                     ? 'color-mix(in srgb, var(--color-success) 12%, transparent)'
-                    : 'var(--color-bg-surface)',
+                    : 'var(--color-bg-inset)',
                   color: latitude ? 'var(--color-success)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
                   opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
@@ -334,7 +353,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                     : '1px solid var(--color-border)',
                   background: showMap
                     ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
-                    : 'var(--color-bg-surface)',
+                    : 'var(--color-bg-inset)',
                   color: showMap ? 'var(--color-cyan)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -362,6 +381,12 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
               />
             )}
           </div>
+
+          {/* WILDLIFE OBSERVED card — species, time, count, behavior */}
+          <div style={cardStyle}>
+            <div style={sectionHeaderStyle}>
+              <Eye size={12} /> Wildlife Observed
+            </div>
 
           {/* Species selector — tap to open full picker */}
           <div style={{ marginBottom: 14 }}>
@@ -436,130 +461,146 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             </div>
           </div>
 
-          {/* Count + Behavior */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
-            <div>
-              <label style={labelStyle}>Count *</label>
-              <input
-                type="number" min={1} value={countObserved}
-                onChange={e => {
-                  const v = e.target.value
-                  setCountObserved(v === '' ? '' : Math.max(1, parseInt(v) || 1))
-                }}
-                style={selectStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Behavior</label>
-              <select value={behavior} onChange={e => setBehavior(e.target.value)} style={selectStyle}>
-                <option value="">— Select —</option>
-                {WILDLIFE_BEHAVIORS.map(b => <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Location */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Location</label>
-            <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
-              <option value="">— Select —</option>
-              {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-
-          {/* Conditions */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
-            <div>
-              <label style={labelStyle}>Time of Day</label>
-              <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
-                <option value="">—</option>
-                {TIME_OF_DAY_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Sky</label>
-              <select value={skyCondition} onChange={e => setSkyCondition(e.target.value)} style={selectStyle}>
-                <option value="">—</option>
-                {SKY_CONDITIONS.map(s => <option key={s} value={s}>{s.replace('_', ' ').charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Precip</label>
-              <select value={precipitation} onChange={e => setPrecipitation(e.target.value)} style={selectStyle}>
-                <option value="">—</option>
-                {PRECIPITATION_OPTIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>BWC</label>
-              <select value={bwcAtTime} onChange={e => setBwcAtTime(e.target.value)} style={selectStyle}>
-                <option value="">—</option>
-                {BWC_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Action taken */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Action Taken</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {WILDLIFE_ACTIONS.filter(a => a.value !== 'none').map(a => {
-                const selected = actionsTaken.includes(a.value)
-                return (
-                  <button
-                    key={a.value}
-                    type="button"
-                    onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
-                    style={{
-                      padding: '6px 14px', borderRadius: 'var(--radius-full)',
-                      border: selected
-                        ? '1px solid color-mix(in srgb, var(--color-success) 50%, transparent)'
-                        : '1px solid var(--color-border)',
-                      background: selected
-                        ? 'color-mix(in srgb, var(--color-success) 14%, transparent)'
-                        : 'var(--color-bg-surface)',
-                      color: selected ? 'var(--color-success)' : 'var(--color-text-2)',
-                      fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {a.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {actionsTaken.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+            {/* Count + Behavior */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <label style={labelStyle}>Method</label>
-                <select value={dispersalMethod} onChange={e => setDispersalMethod(e.target.value)} style={selectStyle}>
-                  <option value="">— Select —</option>
-                  {DISPERSAL_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Effective?</label>
-                <select
-                  value={dispersalEffective === null ? '' : dispersalEffective ? 'yes' : 'no'}
-                  onChange={e => setDispersalEffective(e.target.value === 'yes' ? true : e.target.value === 'no' ? false : null)}
+                <label style={labelStyle}>Count *</label>
+                <input
+                  type="number" min={1} value={countObserved}
+                  onChange={e => {
+                    const v = e.target.value
+                    setCountObserved(v === '' ? '' : Math.max(1, parseInt(v) || 1))
+                  }}
                   style={selectStyle}
-                >
-                  <option value="">—</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Behavior</label>
+                <select value={behavior} onChange={e => setBehavior(e.target.value)} style={selectStyle}>
+                  <option value="">— Select —</option>
+                  {WILDLIFE_BEHAVIORS.map(b => <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>)}
                 </select>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Notes */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Notes</label>
+          {/* WHERE & CONDITIONS card — airfield zone + 4-col conditions */}
+          <div style={cardStyle}>
+            <div style={sectionHeaderStyle}>
+              <Cloud size={12} /> Where & Conditions
+            </div>
+
+            {/* Location */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={labelStyle}>Location</label>
+              <select value={airfieldZone} onChange={e => setAirfieldZone(e.target.value)} style={selectStyle}>
+                <option value="">— Select —</option>
+                {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+
+            {/* Conditions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={labelStyle}>Time of Day</label>
+                <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
+                  <option value="">—</option>
+                  {TIME_OF_DAY_OPTIONS.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Sky</label>
+                <select value={skyCondition} onChange={e => setSkyCondition(e.target.value)} style={selectStyle}>
+                  <option value="">—</option>
+                  {SKY_CONDITIONS.map(s => <option key={s} value={s}>{s.replace('_', ' ').charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Precip</label>
+                <select value={precipitation} onChange={e => setPrecipitation(e.target.value)} style={selectStyle}>
+                  <option value="">—</option>
+                  {PRECIPITATION_OPTIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>BWC</label>
+                <select value={bwcAtTime} onChange={e => setBwcAtTime(e.target.value)} style={selectStyle}>
+                  <option value="">—</option>
+                  {BWC_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* RESPONSE card — action taken + dispersal method/effective */}
+          <div style={cardStyle}>
+            <div style={sectionHeaderStyle}>
+              <Megaphone size={12} /> Response
+            </div>
+
+            <div style={{ marginBottom: actionsTaken.length > 0 ? 12 : 0 }}>
+              <label style={labelStyle}>Action Taken</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {WILDLIFE_ACTIONS.filter(a => a.value !== 'none').map(a => {
+                  const selected = actionsTaken.includes(a.value)
+                  return (
+                    <button
+                      key={a.value}
+                      type="button"
+                      onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
+                      style={{
+                        padding: '6px 14px', borderRadius: 'var(--radius-full)',
+                        border: selected
+                          ? '1px solid color-mix(in srgb, var(--color-success) 50%, transparent)'
+                          : '1px solid var(--color-border)',
+                        background: selected
+                          ? 'color-mix(in srgb, var(--color-success) 14%, transparent)'
+                          : 'var(--color-bg-inset)',
+                        color: selected ? 'var(--color-success)' : 'var(--color-text-2)',
+                        fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {a.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {actionsTaken.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Method</label>
+                  <select value={dispersalMethod} onChange={e => setDispersalMethod(e.target.value)} style={selectStyle}>
+                    <option value="">— Select —</option>
+                    {DISPERSAL_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Effective?</label>
+                  <select
+                    value={dispersalEffective === null ? '' : dispersalEffective ? 'yes' : 'no'}
+                    onChange={e => setDispersalEffective(e.target.value === 'yes' ? true : e.target.value === 'no' ? false : null)}
+                    style={selectStyle}
+                  >
+                    <option value="">—</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* NOTES card */}
+          <div style={cardStyle}>
+            <div style={sectionHeaderStyle}>
+              <MessageSquare size={12} /> Notes
+            </div>
             <textarea
               value={notes} onChange={e => setNotes(e.target.value)}
-              rows={2} placeholder="Additional observations..."
+              rows={3} placeholder="Additional observations..."
               style={{ ...selectStyle, resize: 'vertical' }}
             />
           </div>

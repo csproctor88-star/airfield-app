@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import {
   Zap, X, Crosshair, MapPin, Plane, Wrench, Bird as BirdIcon,
+  ClipboardList, Cloud, MessageSquare,
 } from 'lucide-react'
 import { createStrike, updateStrike, type WildlifeStrikeRow } from '@/lib/supabase/wildlife'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
@@ -275,17 +276,26 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     fontSize: 'var(--fs-base)',
   }
 
+  // Field-level label — sentence case, dim, lighter weight. Sits under
+  // a card's section header so the two-tier hierarchy reads clean.
   const labelStyle: React.CSSProperties = {
-    fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
-    marginBottom: 4, display: 'block',
+    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+    marginBottom: 4, display: 'block', letterSpacing: '0.02em',
   }
 
-  const sectionStyle: React.CSSProperties = {
+  // Card chrome wrapping each section
+  const cardStyle: React.CSSProperties = {
+    background: 'var(--color-bg-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: 12, marginBottom: 10,
+  }
+
+  // In-card section header — bold uppercase tier label with Lucide icon
+  const sectionHeaderStyle: React.CSSProperties = {
     fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
     textTransform: 'uppercase', letterSpacing: '0.08em',
-    marginTop: 18, marginBottom: 8, paddingBottom: 6,
-    borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
-    display: 'flex', alignItems: 'center', gap: 8,
+    marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
   }
 
   const formContent = (
@@ -315,12 +325,12 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         </div>
         )}
 
-        {/* GPS + Map Location — anchored at the top of the form so
-            the user pins the strike location first; the rest of the
-            fields (species, count, aircraft, damage, etc.) flow
-            under it. */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Pin Location</label>
+        {/* PIN LOCATION card — anchored at the top so the user pins
+            the strike first. */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <MapPin size={12} /> Pin Location
+          </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <button
               type="button"
@@ -382,6 +392,12 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
             />
           )}
         </div>
+
+        {/* STRIKE DETAILS card — species, count, location, time */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <ClipboardList size={12} /> Strike Details
+          </div>
 
         {/* Species */}
         <div style={{ marginBottom: 14 }}>
@@ -471,8 +487,14 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
             {formatZuluTime(new Date(strikeTime + 'Z'))}Z — all times in UTC/Zulu
           </div>
         </div>
+        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+        {/* CONDITIONS card */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <Cloud size={12} /> Conditions
+          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
           <div>
             <label style={labelStyle}>Time</label>
             <select value={timeOfDay} onChange={e => setTimeOfDay(e.target.value)} style={selectStyle}>
@@ -503,8 +525,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           </div>
         </div>
 
-        {/* Aircraft Info */}
-        <div style={sectionStyle}><Plane size={13} /> Aircraft Information</div>
+        </div>
+
+        {/* AIRCRAFT INFORMATION card */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <Plane size={12} /> Aircraft Information
+          </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div>
             <label style={labelStyle}>Aircraft Type</label>
@@ -559,8 +586,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           </div>
         </div>
 
-        {/* Damage Assessment */}
-        <div style={sectionStyle}><Wrench size={13} /> Damage Assessment</div>
+        </div>
+
+        {/* DAMAGE ASSESSMENT card */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <Wrench size={12} /> Damage Assessment
+          </div>
         <div style={{ marginBottom: 10 }}>
           <label style={labelStyle}>Parts Struck</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -657,8 +689,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
             onChange={e => setHoursOutOfService(e.target.value ? parseInt(e.target.value) : null)} style={selectStyle} />
         </div>
 
-        {/* Remains */}
-        <div style={sectionStyle}><BirdIcon size={13} /> Remains</div>
+        </div>
+
+        {/* REMAINS card */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <BirdIcon size={12} /> Remains
+          </div>
         <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
             <input type="checkbox" checked={remainsCollected} onChange={e => setRemainsCollected(e.target.checked)} />
@@ -670,11 +707,15 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           </label>
         </div>
 
-        {/* Notes */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Notes</label>
+        </div>
+
+        {/* NOTES card */}
+        <div style={cardStyle}>
+          <div style={sectionHeaderStyle}>
+            <MessageSquare size={12} /> Notes
+          </div>
           <textarea value={notes} onChange={e => setNotes(e.target.value)}
-            rows={2} placeholder="Additional details..." style={{ ...selectStyle, resize: 'vertical' }} />
+            rows={3} placeholder="Additional details..." style={{ ...selectStyle, resize: 'vertical' }} />
         </div>
 
         {/* Submit */}
