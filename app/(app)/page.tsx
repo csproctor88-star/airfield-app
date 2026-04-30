@@ -484,13 +484,14 @@ export default function HomePage() {
 
       {/* AFM Out of Office banner — informational tier. Calmer than
           Closed; left accent rule keeps the affordance scannable
-          without dominating the page when also-Closed. */}
+          without dominating the page when also-Closed. Uses theme
+          surface tokens so it reads cleanly in both light and dark. */}
       {afmOutOfOffice && !oooMinimized && (
         <div style={{
           position: 'sticky', top: 0, zIndex: 100,
-          background: 'rgba(15, 23, 42, 0.92)',
+          background: 'var(--color-bg-surface)',
           backdropFilter: 'blur(8px)',
-          border: '1px solid var(--color-border-mid)',
+          border: '1px solid var(--color-border)',
           borderLeft: '2px solid var(--color-accent)',
           borderRadius: 'var(--radius-lg)',
           padding: '14px 18px',
@@ -540,7 +541,8 @@ export default function HomePage() {
           onClick={() => setOooMinimized(false)}
           style={{
             position: 'sticky', top: 0, zIndex: 100,
-            background: 'rgba(15, 23, 42, 0.9)',
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
             borderLeft: '2px solid var(--color-accent)',
             borderRadius: 'var(--radius-md)',
             padding: '6px 12px',
@@ -599,13 +601,16 @@ export default function HomePage() {
 
       {/* AFM Closed banner — blocking-state tier. Thick danger rule
           + larger title. No minimize: a closed airfield is not
-          background information. */}
+          background information. Uses a danger-tinted surface that
+          adapts to both themes (red tint in light, deeper tint in
+          dark) so the severity carries without breaking the page
+          color story. */}
       {afmClosed && (
         <div style={{
           position: 'sticky', top: 0, zIndex: 100,
-          background: 'rgba(15, 23, 42, 0.96)',
+          background: 'color-mix(in srgb, var(--color-danger) 6%, var(--color-bg-surface))',
           backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(239, 68, 68, 0.45)',
+          border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
           borderLeft: '4px solid var(--color-danger)',
           borderRadius: 'var(--radius-lg)',
           padding: '18px 22px',
@@ -614,14 +619,14 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <AlertOctagon size={26} color="var(--color-danger)" strokeWidth={2.5} />
             <span style={{
-              fontSize: 'var(--fs-2xl)', fontWeight: 800, color: '#FECACA',
+              fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-danger)',
               textTransform: 'uppercase', letterSpacing: '0.04em',
             }}>
               Airfield Management Closed
             </span>
           </div>
           <div style={{
-            fontSize: 'var(--fs-md)', color: '#CBD5E1', lineHeight: 1.5,
+            fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.5,
             marginTop: 8, whiteSpace: 'pre-wrap',
           }}>
             {afmClosedMessage || 'Airfield Management is closed for the day.'}

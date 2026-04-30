@@ -575,10 +575,11 @@ export default function AMDashboardPage() {
                 }}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: 'pointer', border: '1px solid rgba(100,116,139,0.6)',
-                  background: 'rgba(100,116,139,0.25)', color: '#CBD5E1',
+                  cursor: 'pointer', border: '1px solid var(--color-danger)',
+                  background: 'var(--color-danger)', color: '#fff',
+                  fontFamily: 'inherit',
                 }}
-              >Activate</button>
+              >Close Airfield</button>
               <button
                 onClick={() => setShowClosedDialog(false)}
                 style={{
