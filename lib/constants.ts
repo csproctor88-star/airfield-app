@@ -24,9 +24,20 @@ export const STATUS_CONFIG = {
   cancelled: { color: '#9CA3AF', bg: '#E5E7EB', label: 'Cancelled' },
 } as const
 
+// Status colors route through theme tokens so light mode adapts.
+// `bg` uses color-mix() so it tints the surface with the fg color at
+// low opacity — same recipe used everywhere else in the design system.
 export const CONTRACTOR_STATUS_CONFIG = {
-  active:    { color: '#22C55E', bg: '#D1FAE5', label: 'Active' },
-  completed: { color: '#64748B', bg: '#E2E8F0', label: 'Completed' },
+  active:    {
+    color: 'var(--color-success)',
+    bg: 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+    label: 'Active',
+  },
+  completed: {
+    color: 'var(--color-text-3)',
+    bg: 'color-mix(in srgb, var(--color-text-3) 14%, transparent)',
+    label: 'Completed',
+  },
 } as const
 
 // === Current Status Options (workflow tracking field) ===

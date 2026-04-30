@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import type jsPDF from 'jspdf'
+import { HardHat, Plus, FileDown, Mail, CheckCircle2, Pencil, Trash2 } from 'lucide-react'
 
 type FilterTab = 'active' | 'all' | 'completed'
 
@@ -397,40 +398,55 @@ export default function ContractorsPage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 40px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 style={{ fontSize: 'var(--fs-3xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
-            Personnel on Airfield
-          </h1>
+      {/* Page header — tertiary tier-label + cyan accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 16, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <HardHat size={16} color="var(--color-cyan)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Personnel on Airfield</div>
           {activeCount > 0 && (
             <span style={{
-              background: '#D1FAE5',
-              color: '#22C55E',
-              fontSize: 'var(--fs-sm)',
+              background: 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+              color: 'var(--color-success)',
+              fontSize: 'var(--fs-2xs)',
               fontWeight: 700,
-              padding: '2px 10px',
-              borderRadius: 'var(--radius-lg)',
+              padding: '2px 9px',
+              borderRadius: 'var(--radius-full)',
+              marginLeft: 4,
+              letterSpacing: '0.04em',
             }}>
-              {activeCount} Active
+              {activeCount} ACTIVE
             </span>
           )}
         </div>
         <button
           onClick={() => { setShowForm(prev => !prev); if (showForm) resetForm() }}
           style={{
-            background: showForm ? 'var(--color-border)' : 'var(--color-cyan-btn-bg)',
-            color: showForm ? 'var(--color-text-1)' : 'var(--color-cyan-btn-text)',
-            border: 'none',
+            background: showForm
+              ? 'var(--color-bg-inset)'
+              : 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+            border: showForm
+              ? '1px solid var(--color-border)'
+              : '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+            color: showForm ? 'var(--color-text-2)' : 'var(--color-cyan)',
             borderRadius: 'var(--radius-md)',
-            padding: '8px 16px',
+            padding: '7px 14px',
             fontWeight: 700,
-            fontSize: 'var(--fs-base)',
+            fontSize: 'var(--fs-sm)',
             cursor: 'pointer',
             fontFamily: 'inherit',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
         >
-          {showForm ? 'Cancel' : '+ Add Personnel'}
+          <Plus size={14} />
+          {showForm ? 'Cancel' : 'Add Personnel'}
         </button>
       </div>
 
@@ -453,7 +469,12 @@ export default function ContractorsPage() {
 
           {/* Save/edit template mini-form */}
           {showSaveTemplate && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px', borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
+            <div style={{
+              display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px',
+              borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-cyan) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+            }}>
               <input
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
@@ -462,10 +483,14 @@ export default function ContractorsPage() {
                 autoFocus
               />
               <button onClick={editingTemplateIdx !== null ? handleUpdateTemplate : handleSaveAsTemplate} disabled={!templateName.trim()} style={{
-                padding: '6px 14px', borderRadius: 'var(--radius-md)', border: 'none',
-                background: 'var(--color-cyan)', color: '#FFFFFF', fontSize: 'var(--fs-xs)',
-                fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                opacity: templateName.trim() ? 1 : 0.5,
+                padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                border: '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+                background: templateName.trim()
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                  : 'var(--color-bg-elevated)',
+                color: templateName.trim() ? 'var(--color-cyan)' : 'var(--color-text-4)',
+                fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'inherit',
+                cursor: templateName.trim() ? 'pointer' : 'not-allowed',
               }}>{editingTemplateIdx !== null ? 'Update' : 'Save'}</button>
               {editingTemplateIdx !== null && (
                 <button onClick={() => { setEditingTemplateIdx(null); setShowSaveTemplate(false); setTemplateName('') }} style={{
@@ -505,21 +530,25 @@ export default function ContractorsPage() {
                     const idx = templates.findIndex(t => t.name === usingTemplate.name)
                     if (idx >= 0) handleEditTemplate(idx)
                   }} style={{
-                    padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.1)',
+                    padding: '8px 10px', borderRadius: 'var(--radius-md)',
+                    border: '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+                    background: 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
                     color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  }}>Edit</button>
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}><Pencil size={11} />Edit</button>
                   {canDeleteTemplates && (
                     <button onClick={() => {
                       const idx = templates.findIndex(t => t.name === usingTemplate.name)
                       if (idx >= 0) handleDeleteTemplate(idx)
                     }} style={{
-                      padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-danger)', background: 'rgba(239,68,68,0.1)',
+                      padding: '8px 10px', borderRadius: 'var(--radius-md)',
+                      border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)',
+                      background: 'color-mix(in srgb, var(--color-danger) 14%, transparent)',
                       color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                       cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                    }}>Delete</button>
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}><Trash2 size={11} />Delete</button>
                   )}
                 </>
               )}
@@ -528,7 +557,12 @@ export default function ContractorsPage() {
 
           {/* Template summary (read-only) when using a template */}
           {usingTemplate && (
-            <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)', marginBottom: 10 }}>
+            <div style={{
+              padding: '10px 14px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-cyan) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+              marginBottom: 10,
+            }}>
               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 4 }}>Template: {usingTemplate.name}</div>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
                 <strong>Company:</strong> {usingTemplate.company}
@@ -629,26 +663,28 @@ export default function ContractorsPage() {
       )}
 
       {/* Filters + Search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        {(['active', 'all', 'completed'] as FilterTab[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setFilter(tab)}
-            style={{
-              background: filter === tab ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-surface)',
-              color: filter === tab ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '6px 14px',
-              fontWeight: 600,
-              fontSize: 'var(--fs-sm)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        {(['active', 'all', 'completed'] as FilterTab[]).map(tab => {
+          const selected = filter === tab
+          return (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              style={{
+                padding: '6px 13px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
+                border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                background: selected
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-inset)',
+                color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                transition: 'background 0.15s',
+              }}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          )
+        })}
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -659,27 +695,34 @@ export default function ContractorsPage() {
           onClick={handleExportPdf}
           disabled={generatingPdf || filtered.length === 0}
           style={{
-            padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-            border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-            color: 'var(--color-text-2)', fontFamily: 'inherit',
+            padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+            border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+            color: 'var(--color-purple)', fontFamily: 'inherit',
             cursor: generatingPdf || filtered.length === 0 ? 'not-allowed' : 'pointer',
-            opacity: generatingPdf || filtered.length === 0 ? 0.6 : 1,
+            opacity: generatingPdf || filtered.length === 0 ? 0.5 : 1,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
         >
+          <FileDown size={14} />
           {generatingPdf ? 'Generating…' : 'Export PDF'}
         </button>
         <button
           onClick={handleEmailPdf}
           disabled={generatingPdf || filtered.length === 0}
+          aria-label="Email PDF"
+          title="Email PDF"
           style={{
-            padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-            border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-            color: 'var(--color-text-2)', fontFamily: 'inherit',
+            padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+            border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+            color: 'var(--color-purple)', fontFamily: 'inherit',
             cursor: generatingPdf || filtered.length === 0 ? 'not-allowed' : 'pointer',
-            opacity: generatingPdf || filtered.length === 0 ? 0.6 : 1,
+            opacity: generatingPdf || filtered.length === 0 ? 0.5 : 1,
+            display: 'inline-flex', alignItems: 'center',
           }}
         >
-          Email PDF
+          <Mail size={14} />
         </button>
       </div>
 
@@ -770,8 +813,11 @@ export default function ContractorsPage() {
                             fontWeight: 700,
                             color: cfg.color,
                             background: cfg.bg,
-                            padding: '1px 8px',
-                            borderRadius: 'var(--radius-md)',
+                            border: `1px solid color-mix(in srgb, ${cfg.color} 35%, transparent)`,
+                            padding: '1px 9px',
+                            borderRadius: 'var(--radius-full)',
+                            letterSpacing: '0.04em',
+                            textTransform: 'uppercase',
                           }}>
                             {cfg.label}
                           </span>
@@ -842,8 +888,18 @@ export default function ContractorsPage() {
                           <button
                             onClick={() => handleMarkCompleted(c.id)}
                             disabled={saving}
-                            style={{ background: 'var(--color-success)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', padding: '6px 12px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: 'inherit' }}
+                            style={{
+                              background: 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+                              border: '1px solid color-mix(in srgb, var(--color-success) 45%, transparent)',
+                              color: 'var(--color-success)',
+                              borderRadius: 'var(--radius-md)',
+                              padding: '6px 12px', fontWeight: 700, fontSize: 'var(--fs-sm)',
+                              cursor: saving ? 'not-allowed' : 'pointer',
+                              opacity: saving ? 0.5 : 1, fontFamily: 'inherit',
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                            }}
                           >
+                            <CheckCircle2 size={14} />
                             Mark Completed
                           </button>
                         )}
