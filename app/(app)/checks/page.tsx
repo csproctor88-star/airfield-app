@@ -808,7 +808,11 @@ export default function AirfieldChecksPage() {
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
                 You have an unfinished <span style={{ fontWeight: 700 }}>
                   {CHECK_TYPE_CONFIG[pendingDraft.checkType as keyof typeof CHECK_TYPE_CONFIG]?.label || pendingDraft.checkType}
-                </span> check{pendingDraft.savedAt ? ` saved ${formatZuluDateShort(new Date(pendingDraft.savedAt))}` : ''}
+                </span>
+                {pendingDraft.checkType === 'other' && pendingDraft.otherSubject && (
+                  <span> — &ldquo;{pendingDraft.otherSubject}&rdquo;</span>
+                )}
+                {' '}check{pendingDraft.savedAt ? ` saved ${formatZuluDateShort(new Date(pendingDraft.savedAt))}` : ''}
               </div>
             </div>
           </div>
@@ -878,7 +882,7 @@ export default function AirfieldChecksPage() {
                   if (!checkStarted) {
                     if (newType === 'other') {
                       const r = window.prompt(
-                        'Reason for this Other Check?\n\n(Will appear in the Events Log as "AFLD3 ON THE AFLD FOR AN OTHER CHECK FOR <reason>".)',
+                        'Reason for this Other Check?\n\n(Will appear in the Events Log as "AFLD3 ON THE AFLD. <REASON>".)',
                       )
                       if (r === null || !r.trim()) return
                       otherReason = r.trim()
@@ -890,8 +894,42 @@ export default function AirfieldChecksPage() {
                   resetTypeFields()
                   if (newType === 'other') {
                     // Pre-fill the inline Reason input so the user can
-                    // edit it later without re-typing.
+                    // edit it later without re-typing. Also force-save
+                    // the draft to localStorage immediately so the
+                    // reason persists even if the user navigates away
+                    // before the auto-save useEffect flushes — React
+                    // batches the setState calls and the snapshot ref
+                    // doesn't update until the next render tick.
                     setOtherSubject(otherReason)
+                    const immediateDraft: CheckDraft = {
+                      checkType: newType,
+                      // Other checks always default to 'Entire Airfield';
+                      // the RSC runway-area defaulting only applies to
+                      // RSC type. Inside this `newType === 'other'`
+                      // branch we know it's not RSC.
+                      areas: ['Entire Airfield'],
+                      issueFound: false,
+                      issues: [],
+                      remarks: [],
+                      remarkText: '',
+                      rscCondition: '',
+                      reportRcr: false,
+                      rcrValue: '',
+                      rcrConditionType: '',
+                      bashCondition: '',
+                      aircraftType: '',
+                      callsign: '',
+                      emergencyNature: '',
+                      checkedActions: [],
+                      notifiedAgencies: [],
+                      heavyAircraftType: '',
+                      constructionItems: DEFAULT_CONSTRUCTION_ITEM_STATE,
+                      otherSubject: otherReason,
+                      savedAt: '',
+                      startedAt: new Date().toISOString(),
+                      dbRowId: draftDbRowId,
+                    }
+                    saveCheckDraft(immediateDraft, installationId)
                   }
                   if (newType === 'rsc') {
                     setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
@@ -905,9 +943,10 @@ export default function AirfieldChecksPage() {
                     const checkLabel = CHECK_TYPE_CONFIG[newType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || newType.toUpperCase()
                     // For Other, the Reason itself is the descriptor —
                     // dropping the redundant "OTHER CHECK FOR" prefix
-                    // keeps the Events Log line tight.
+                    // and the leading "FOR" preposition keeps the
+                    // Events Log line tight: "AFLD3/OI ON THE AFLD. <REASON>".
                     const startDetails = newType === 'other'
-                      ? `AFLD3${oiStr} ON THE AFLD FOR ${otherReason.toUpperCase()}`
+                      ? `AFLD3${oiStr} ON THE AFLD. ${otherReason.toUpperCase()}`
                       : `AFLD3${oiStr} ON THE AFLD FOR A ${checkLabel}`
                     logActivity(
                       'started',
