@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
+import {
+  Zap, X, Crosshair, MapPin, Plane, Wrench, Bird as BirdIcon,
+} from 'lucide-react'
 import { createStrike, updateStrike, type WildlifeStrikeRow } from '@/lib/supabase/wildlife'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { createClient } from '@/lib/supabase/client'
@@ -278,17 +281,37 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
   }
 
   const sectionStyle: React.CSSProperties = {
-    fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-text)',
-    marginTop: 16, marginBottom: 8, paddingBottom: 4,
-    borderBottom: '1px solid var(--color-border)',
+    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+    marginTop: 18, marginBottom: 8, paddingBottom: 6,
+    borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+    display: 'flex', alignItems: 'center', gap: 8,
   }
 
   const formContent = (
     <>
         {!inline && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-danger)' }}>{isEdit ? 'Edit Strike Report' : 'Report Wildlife Strike'}</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 8, paddingBottom: 8, marginBottom: 14,
+          borderBottom: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Zap size={16} color="var(--color-danger)" />
+            <div style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>{isEdit ? 'Edit Strike Report' : 'Report Wildlife Strike'}</div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--color-text-3)', padding: 4,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          ><X size={18} /></button>
         </div>
         )}
 
@@ -315,8 +338,13 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               </div>
               <button
                 onClick={() => setSelectedSpecies(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', fontSize: 18, padding: 4 }}
-              >×</button>
+                aria-label="Clear species"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-text-3)', padding: 4,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              ><X size={16} /></button>
             </div>
           ) : (
             <button
@@ -386,18 +414,19 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               disabled={gpsLoading}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+                padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                border: latitude
+                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: latitude
+                  ? 'color-mix(in srgb, var(--color-danger) 12%, transparent)'
+                  : 'var(--color-bg-surface)',
                 color: latitude ? 'var(--color-danger)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
-                opacity: gpsLoading ? 0.6 : 1,
+                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
+                opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
-                <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" />
-                <line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" />
-              </svg>
+              <Crosshair size={14} />
               {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
             </button>
             <button
@@ -405,17 +434,19 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
               onClick={() => setShowMap(!showMap)}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)',
-                background: showMap ? 'var(--color-danger)' : 'var(--color-bg-surface)',
-                color: showMap ? '#fff' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+                padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                border: showMap
+                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: showMap
+                  ? 'color-mix(in srgb, var(--color-danger) 12%, transparent)'
+                  : 'var(--color-bg-surface)',
+                color: showMap ? 'var(--color-danger)' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'inherit',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                <line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" />
-              </svg>
+              <MapPin size={14} />
               {showMap ? 'Hide Map' : 'Pin on Map'}
             </button>
           </div>
@@ -470,7 +501,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         </div>
 
         {/* Aircraft Info */}
-        <div style={sectionStyle}>Aircraft Information</div>
+        <div style={sectionStyle}><Plane size={13} /> Aircraft Information</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
           <div>
             <label style={labelStyle}>Aircraft Type</label>
@@ -526,41 +557,57 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         </div>
 
         {/* Damage Assessment */}
-        <div style={sectionStyle}>Damage Assessment</div>
+        <div style={sectionStyle}><Wrench size={13} /> Damage Assessment</div>
         <div style={{ marginBottom: 10 }}>
           <label style={labelStyle}>Parts Struck</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {AIRCRAFT_PARTS_STRIKE.map(part => (
-              <button key={part}
-                onClick={() => togglePart(part, partsStruck, setPartsStruck)}
-                style={{
-                  padding: '4px 8px', borderRadius: 'var(--radius-xs)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  border: '1px solid var(--color-border)', cursor: 'pointer',
-                  background: partsStruck.includes(part) ? '#EF444420' : 'var(--color-bg-surface)',
-                  color: partsStruck.includes(part) ? 'var(--color-danger)' : 'var(--color-text-2)',
-                }}
-              >
-                {formatPartLabel(part)}
-              </button>
-            ))}
+            {AIRCRAFT_PARTS_STRIKE.map(part => {
+              const selected = partsStruck.includes(part)
+              return (
+                <button key={part}
+                  onClick={() => togglePart(part, partsStruck, setPartsStruck)}
+                  style={{
+                    padding: '4px 9px', borderRadius: 'var(--radius-full)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    border: selected
+                      ? '1px solid color-mix(in srgb, var(--color-danger) 50%, transparent)'
+                      : '1px solid var(--color-border)',
+                    background: selected
+                      ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+                      : 'var(--color-bg-surface)',
+                    color: selected ? 'var(--color-danger)' : 'var(--color-text-2)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  {formatPartLabel(part)}
+                </button>
+              )
+            })}
           </div>
         </div>
         <div style={{ marginBottom: 10 }}>
           <label style={labelStyle}>Parts Damaged</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {partsStruck.map(part => (
-              <button key={part}
-                onClick={() => togglePart(part, partsDamaged, setPartsDamaged)}
-                style={{
-                  padding: '4px 8px', borderRadius: 'var(--radius-xs)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  border: '1px solid var(--color-border)', cursor: 'pointer',
-                  background: partsDamaged.includes(part) ? '#F9731620' : 'var(--color-bg-surface)',
-                  color: partsDamaged.includes(part) ? 'var(--color-orange)' : 'var(--color-text-2)',
-                }}
-              >
-                {formatPartLabel(part)}
-              </button>
-            ))}
+            {partsStruck.map(part => {
+              const selected = partsDamaged.includes(part)
+              return (
+                <button key={part}
+                  onClick={() => togglePart(part, partsDamaged, setPartsDamaged)}
+                  style={{
+                    padding: '4px 9px', borderRadius: 'var(--radius-full)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                    border: selected
+                      ? '1px solid color-mix(in srgb, var(--color-orange) 50%, transparent)'
+                      : '1px solid var(--color-border)',
+                    background: selected
+                      ? 'color-mix(in srgb, var(--color-orange) 14%, transparent)'
+                      : 'var(--color-bg-surface)',
+                    color: selected ? 'var(--color-orange)' : 'var(--color-text-2)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  {formatPartLabel(part)}
+                </button>
+              )
+            })}
             {partsStruck.length === 0 && (
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>Select parts struck first</span>
             )}
@@ -608,7 +655,7 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         </div>
 
         {/* Remains */}
-        <div style={sectionStyle}>Remains</div>
+        <div style={sectionStyle}><BirdIcon size={13} /> Remains</div>
         <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
             <input type="checkbox" checked={remainsCollected} onChange={e => setRemainsCollected(e.target.checked)} />
@@ -632,11 +679,19 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           onClick={handleSubmit}
           disabled={saving}
           style={{
-            width: '100%', padding: '12px', borderRadius: 'var(--radius-md)', border: 'none',
-            background: saving ? 'var(--color-text-4)' : 'var(--color-danger)',
-            color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
+            width: '100%', padding: '12px', borderRadius: 'var(--radius-md)',
+            border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)',
+            background: saving
+              ? 'var(--color-bg-elevated)'
+              : 'color-mix(in srgb, var(--color-danger) 18%, transparent)',
+            color: saving ? 'var(--color-text-4)' : 'var(--color-danger)',
+            fontWeight: 700, fontSize: 'var(--fs-md)',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
+          <Zap size={16} />
           {saving ? 'Saving...' : isEdit ? 'Update Strike' : 'Report Strike'}
         </button>
     </>

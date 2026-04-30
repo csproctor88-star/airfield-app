@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
+import {
+  Eye, X, Crosshair, MapPin, AlertTriangle, CheckCircle2,
+} from 'lucide-react'
 import { createSighting, updateSighting, type WildlifeSightingRow } from '@/lib/supabase/wildlife'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import {
@@ -256,17 +259,38 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           {required && !inline && (
             <div style={{
               padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-md)',
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              background: 'color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface))',
+              border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
               fontSize: 'var(--fs-sm)', color: 'var(--color-danger)', fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: 8,
             }}>
+              <AlertTriangle size={14} />
               BASH issue found — log the wildlife sighting before continuing.
             </div>
           )}
           {!inline && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{isEdit ? 'Edit Sighting' : required ? 'Log BASH Sighting' : 'Log Wildlife Sighting'}</div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, paddingBottom: 8, marginBottom: 14,
+            borderBottom: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Eye size={16} color="var(--color-success)" />
+              <div style={{
+                fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>{isEdit ? 'Edit Sighting' : required ? 'Log BASH Sighting' : 'Log Wildlife Sighting'}</div>
+            </div>
             {!required && (
-              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-text-3)', padding: 4,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              ><X size={18} /></button>
             )}
           </div>
           )}
@@ -294,9 +318,10 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                   <div style={{ fontSize: 'var(--fs-xs)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ color: 'var(--color-text-3)' }}>{selectedSpecies.group} · {selectedSpecies.size_category}</span>
                     <span style={{
-                      display: 'inline-block', padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                      fontSize: '10px', fontWeight: 700, color: '#fff',
-                      background: riskColor(selectedSpecies.strike_risk),
+                      display: 'inline-block', padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                      fontSize: '10px', fontWeight: 700, color: riskColor(selectedSpecies.strike_risk),
+                      background: `color-mix(in srgb, ${riskColor(selectedSpecies.strike_risk)} 14%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${riskColor(selectedSpecies.strike_risk)} 35%, transparent)`,
                     }}>
                       {selectedSpecies.strike_risk}
                     </span>
@@ -304,8 +329,13 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                 </div>
                 <button
                   onClick={() => setSelectedSpecies(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', fontSize: 18, padding: 4 }}
-                >×</button>
+                  aria-label="Clear species"
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--color-text-3)', padding: 4,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                ><X size={16} /></button>
               </div>
             ) : (
               <button
@@ -379,18 +409,19 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                 disabled={gpsLoading}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+                  padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                  border: latitude
+                    ? '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)'
+                    : '1px solid var(--color-border)',
+                  background: latitude
+                    ? 'color-mix(in srgb, var(--color-success) 12%, transparent)'
+                    : 'var(--color-bg-surface)',
                   color: latitude ? 'var(--color-success)' : 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: gpsLoading ? 'wait' : 'pointer',
-                  opacity: gpsLoading ? 0.6 : 1,
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
+                  opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
-                  <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" />
-                  <line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" />
-                </svg>
+                <Crosshair size={14} />
                 {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
               </button>
               <button
@@ -398,17 +429,19 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                 onClick={() => setShowMap(!showMap)}
                 style={{
                   flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border)',
-                  background: showMap ? 'var(--color-cyan-btn-bg)' : 'var(--color-bg-surface)',
-                  color: showMap ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+                  padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                  border: showMap
+                    ? '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)'
+                    : '1px solid var(--color-border)',
+                  background: showMap
+                    ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
+                    : 'var(--color-bg-surface)',
+                  color: showMap ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit',
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-                  <line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" />
-                </svg>
+                <MapPin size={14} />
                 {showMap ? 'Hide Map' : 'Pin on Map'}
               </button>
             </div>
@@ -476,10 +509,15 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                     onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
                     style={{
                       padding: '6px 14px', borderRadius: 'var(--radius-full)',
-                      border: selected ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
-                      background: selected ? 'rgba(16,185,129,0.15)' : 'var(--color-bg-surface)',
+                      border: selected
+                        ? '1px solid color-mix(in srgb, var(--color-success) 50%, transparent)'
+                        : '1px solid var(--color-border)',
+                      background: selected
+                        ? 'color-mix(in srgb, var(--color-success) 14%, transparent)'
+                        : 'var(--color-bg-surface)',
                       color: selected ? 'var(--color-success)' : 'var(--color-text-2)',
-                      fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer',
+                      fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                      fontFamily: 'inherit',
                     }}
                   >
                     {a.label}
@@ -528,11 +566,19 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
             onClick={handleSubmit}
             disabled={saving || !selectedSpecies}
             style={{
-              width: '100%', padding: '12px', borderRadius: 'var(--radius-md)', border: 'none',
-              background: saving || !selectedSpecies ? 'var(--color-text-4)' : 'var(--color-success)',
-              color: '#fff', fontWeight: 800, fontSize: 'var(--fs-md)', cursor: 'pointer',
+              width: '100%', padding: '12px', borderRadius: 'var(--radius-md)',
+              border: '1px solid color-mix(in srgb, var(--color-success) 45%, transparent)',
+              background: saving || !selectedSpecies
+                ? 'var(--color-bg-elevated)'
+                : 'color-mix(in srgb, var(--color-success) 18%, transparent)',
+              color: saving || !selectedSpecies ? 'var(--color-text-4)' : 'var(--color-success)',
+              fontWeight: 700, fontSize: 'var(--fs-md)',
+              cursor: saving || !selectedSpecies ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
+            <CheckCircle2 size={16} />
             {saving ? 'Saving...' : isEdit ? 'Update Sighting' : 'Log Sighting'}
           </button>
     </>

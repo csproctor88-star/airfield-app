@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { Bird, X, Star } from 'lucide-react'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 
 type Props = {
@@ -88,7 +89,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
   const riskColor = (risk: string) => {
     switch (risk) {
       case 'critical': return 'var(--color-red)'
-      case 'high': return '#F97316'
+      case 'high': return 'var(--color-orange)'
       case 'medium': return 'var(--color-amber)'
       default: return 'var(--color-green)'
     }
@@ -124,9 +125,27 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
       }}>
         {/* Header */}
         <div style={{ padding: '16px 16px 0', flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Select Species</div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-3)' }}>×</button>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, paddingBottom: 8, marginBottom: 12,
+            borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Bird size={16} color="var(--color-cyan)" />
+              <div style={{
+                fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>Select Species</div>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-text-3)', padding: 4,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            ><X size={18} /></button>
           </div>
 
           {/* Search + Group tabs row */}
@@ -149,29 +168,46 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 <button
                   onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                   style={{
-                    padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
+                    padding: '6px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
-                    background: showFavoritesOnly ? 'var(--color-amber)' : 'var(--color-bg-surface)',
-                    color: showFavoritesOnly ? '#000' : 'var(--color-amber)',
+                    fontFamily: 'inherit',
+                    border: showFavoritesOnly
+                      ? '1px solid color-mix(in srgb, var(--color-amber) 50%, transparent)'
+                      : '1px solid var(--color-border)',
+                    background: showFavoritesOnly
+                      ? 'color-mix(in srgb, var(--color-amber) 14%, transparent)'
+                      : 'var(--color-bg-surface)',
+                    color: 'var(--color-amber)',
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
                   }}
                 >
-                  ★ Favorites ({favCount})
+                  <Star size={12} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
+                  Favorites ({favCount})
                 </button>
               )}
-              {GROUPS.map(g => (
-                <button
-                  key={g.key}
-                  onClick={() => setActiveGroup(g.key)}
-                  style={{
-                    padding: '6px 12px', borderRadius: 'var(--radius-full)', border: 'none', cursor: 'pointer',
-                    fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
-                    background: activeGroup === g.key ? 'var(--color-cyan)' : 'var(--color-bg-surface)',
-                    color: activeGroup === g.key ? '#000' : 'var(--color-text-2)',
-                  }}
-                >
-                  {g.label} ({groupCounts[g.key] || 0})
-                </button>
-              ))}
+              {GROUPS.map(g => {
+                const selected = activeGroup === g.key
+                return (
+                  <button
+                    key={g.key}
+                    onClick={() => setActiveGroup(g.key)}
+                    style={{
+                      padding: '6px 12px', borderRadius: 'var(--radius-full)', cursor: 'pointer',
+                      fontSize: 'var(--fs-sm)', fontWeight: 700, whiteSpace: 'nowrap',
+                      fontFamily: 'inherit',
+                      border: selected
+                        ? '1px solid color-mix(in srgb, var(--color-cyan) 50%, transparent)'
+                        : '1px solid var(--color-border)',
+                      background: selected
+                        ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                        : 'var(--color-bg-surface)',
+                      color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                    }}
+                  >
+                    {g.label} ({groupCounts[g.key] || 0})
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -186,7 +222,7 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-red)', display: 'inline-block' }} /> Critical
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F97316', display: 'inline-block' }} /> High
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-orange)', display: 'inline-block' }} /> High
               </span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-amber)', display: 'inline-block' }} /> Med
@@ -264,8 +300,11 @@ export function SpeciesPicker({ onSelect, onClose, allowedSpecies, favoriteSpeci
                   {isFav && (
                     <div style={{
                       position: 'absolute', top: 2, left: 3,
-                      fontSize: 12, color: 'var(--color-amber)', lineHeight: 1,
-                    }}>★</div>
+                      color: 'var(--color-amber)', lineHeight: 1,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Star size={12} fill="currentColor" />
+                    </div>
                   )}
                 </div>
                 <div style={{
