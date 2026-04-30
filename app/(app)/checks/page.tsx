@@ -516,7 +516,7 @@ export default function AirfieldChecksPage() {
       return
     }
     if (checkType === 'other' && !otherSubject.trim()) {
-      toast.error('Enter a Subject for the Other check (what did you check?)')
+      toast.error('Enter a Reason for the Other check (what did you check?)')
       return
     }
 
@@ -706,7 +706,12 @@ export default function AirfieldChecksPage() {
     } else {
       cDiscStr = 'NO NEW DISCREPANCIES'
     }
-    let cDetails = `${cLabel} CHECK CMPLT, ${cDiscStr}`
+    // For Other, drop the type label entirely on the off-airfield
+    // entry — the Reason was named on the on-airfield entry, so the
+    // off-airfield side just confirms completion + any findings.
+    let cDetails = checkType === 'other'
+      ? `CK CMPLT, ${cDiscStr}`
+      : `${cLabel} CHECK CMPLT, ${cDiscStr}`
     const cBwc = (data.condition_code as string) || ''
     const cRsc = (data.condition as string) || (data.runway_condition as string) || ''
     if (cRsc && cBwc) cDetails += `. ADVISES RSC/${cRsc.toUpperCase()} & BWC/${cBwc.toUpperCase()}`
@@ -865,13 +870,29 @@ export default function AirfieldChecksPage() {
                   // Confirm before starting — clicking a tile silently
                   // logs the user "on the airfield" for an audited
                   // check, so make the consequence explicit.
+                  // For 'other', the on-airfield Events Log entry needs
+                  // a Reason. Capture it here rather than later so the
+                  // first log entry is meaningful (back-filling would
+                  // mean two log rows or rewriting one).
+                  let otherReason = ''
                   if (!checkStarted) {
-                    if (!confirm(`Start ${cfg.label} and log yourself on the airfield?`)) {
+                    if (newType === 'other') {
+                      const r = window.prompt(
+                        'Reason for this Other Check?\n\n(Will appear in the Events Log as "AFLD3 ON THE AFLD FOR AN OTHER CHECK FOR <reason>".)',
+                      )
+                      if (r === null || !r.trim()) return
+                      otherReason = r.trim()
+                    } else if (!confirm(`Start ${cfg.label} and log yourself on the airfield?`)) {
                       return
                     }
                   }
                   setCheckType(newType)
                   resetTypeFields()
+                  if (newType === 'other') {
+                    // Pre-fill the inline Reason input so the user can
+                    // edit it later without re-typing.
+                    setOtherSubject(otherReason)
+                  }
                   if (newType === 'rsc') {
                     setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
                   } else {
@@ -882,12 +903,18 @@ export default function AirfieldChecksPage() {
                     setCheckStartedAt(new Date().toISOString())
                     const oiStr = userOI ? `/${userOI}` : ''
                     const checkLabel = CHECK_TYPE_CONFIG[newType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || newType.toUpperCase()
+                    // For Other, the Reason itself is the descriptor —
+                    // dropping the redundant "OTHER CHECK FOR" prefix
+                    // keeps the Events Log line tight.
+                    const startDetails = newType === 'other'
+                      ? `AFLD3${oiStr} ON THE AFLD FOR ${otherReason.toUpperCase()}`
+                      : `AFLD3${oiStr} ON THE AFLD FOR A ${checkLabel}`
                     logActivity(
                       'started',
                       'airfield_check',
                       installationId || crypto.randomUUID(),
                       undefined,
-                      { details: `AFLD3${oiStr} ON THE AFLD FOR A ${checkLabel}` },
+                      { details: startDetails },
                       installationId,
                     )
                   }
@@ -1274,7 +1301,9 @@ export default function AirfieldChecksPage() {
             </div>
           )}
 
-          {/* Other — required Subject so History rows are distinguishable. */}
+          {/* Other — required Reason so History rows are distinguishable
+              and the Events Log entry reads meaningfully. Pre-filled
+              from the start-check prompt; editable afterwards. */}
           {checkType === 'other' && (
             <div>
               <div style={{
@@ -1282,7 +1311,7 @@ export default function AirfieldChecksPage() {
                 fontWeight: 600, letterSpacing: '0.08em',
                 textTransform: 'uppercase', marginBottom: 6,
               }}>
-                Subject <span style={{ color: 'var(--color-danger)' }}>*</span>
+                Reason for Check <span style={{ color: 'var(--color-danger)' }}>*</span>
               </div>
               <input
                 className="input-dark"

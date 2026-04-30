@@ -476,7 +476,7 @@ export default function CheckDetailPage() {
               fontWeight: 600, letterSpacing: '0.08em',
               textTransform: 'uppercase', marginBottom: 4,
             }}>
-              Subject
+              Reason for Check
             </div>
             <div style={{
               fontSize: 'var(--fs-lg)', fontWeight: 700,

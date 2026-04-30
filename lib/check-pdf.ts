@@ -261,11 +261,11 @@ export async function generateCheckPdf(input: CheckPdfInput) {
     }
 
     case 'other': {
-      const subject = (data.other_subject as string) || ''
-      if (subject) {
-        const subjLines = doc.splitTextToSize(`Subject: ${subject}`, contentWidth)
-        doc.text(subjLines, margin, y)
-        y += subjLines.length * 4 + 2
+      const reason = (data.other_subject as string) || ''
+      if (reason) {
+        const reasonLines = doc.splitTextToSize(`Reason for Check: ${reason}`, contentWidth)
+        doc.text(reasonLines, margin, y)
+        y += reasonLines.length * 4 + 2
       } else {
         doc.text('Other check — see remarks for details.', margin, y)
         y += 6
