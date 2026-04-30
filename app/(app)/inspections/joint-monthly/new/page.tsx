@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, Users, MessageSquare, Camera, X, CheckCircle2 } from 'lucide-react'
 import { INSPECTION_PERSONNEL } from '@/lib/constants'
 import { createInspection, uploadInspectionPhoto, getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
@@ -14,6 +14,14 @@ import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { createClient } from '@/lib/supabase/client'
 
 type PhotoEntry = { file: File; url: string; name: string }
+
+const SECTION_LABEL: React.CSSProperties = {
+  fontSize: 'var(--fs-xs)',
+  color: 'var(--color-text-3)',
+  fontWeight: 600,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+}
 
 export default function JointMonthlyInspectionPage() {
   const router = useRouter()
@@ -99,14 +107,12 @@ export default function JointMonthlyInspectionPage() {
       return
     }
 
-    // Upload photos
     if (data?.id && photos.length > 0) {
       for (const photo of photos) {
         await uploadInspectionPhoto(data.id, photo.file, null, null, null, installationId)
       }
     }
 
-    // Clean up
     photos.forEach((p) => URL.revokeObjectURL(p.url))
 
     setFiling(false)
@@ -122,7 +128,7 @@ export default function JointMonthlyInspectionPage() {
   return (
     <div className="page-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ width: '100%', maxWidth: 600 }}>
-        {/* Header */}
+        {/* Back link */}
         <Link href="/inspections/all" style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           color: 'var(--color-text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)', marginBottom: 12,
@@ -130,19 +136,34 @@ export default function JointMonthlyInspectionPage() {
           <ArrowLeft size={14} /> Back to All Inspections
         </Link>
 
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: '#3B82F6' }}>
-            Monthly Joint Inspection
+        {/* Page header — tertiary tier label + blue accent rule */}
+        <div style={{
+          display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+          gap: 8, paddingBottom: 8, marginBottom: 16,
+          borderBottom: '1px solid color-mix(in srgb, var(--color-blue) 35%, transparent)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ClipboardCheck size={16} color="var(--color-blue)" />
+            <div style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>
+              Monthly Joint Inspection
+            </div>
           </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-            Record personnel present, comments, and photos
+          <div style={{
+            fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}>
+            Personnel · Comments · Photos
           </div>
         </div>
 
         {/* Personnel Multi-Select */}
         <div className="card" style={{ marginBottom: 12, padding: 14, borderRadius: 12 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Personnel / Offices Present
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Users size={12} color="var(--color-text-3)" />
+            <div style={SECTION_LABEL}>Personnel / Offices Present</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {INSPECTION_PERSONNEL.map((person) => {
@@ -152,20 +173,29 @@ export default function JointMonthlyInspectionPage() {
                 <div key={person}>
                   <label
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
+                      display: 'flex', alignItems: 'center', gap: 8,
                       padding: '8px 12px', borderRadius: selected ? '8px 8px 0 0' : 8, cursor: 'pointer',
-                      border: `1px solid ${selected ? 'rgba(56,189,248,0.5)' : 'var(--color-text-4)'}`,
+                      border: `1px solid ${selected
+                        ? 'color-mix(in srgb, var(--color-cyan) 50%, transparent)'
+                        : 'var(--color-border)'}`,
                       borderBottom: selected ? 'none' : undefined,
-                      background: selected ? 'var(--color-border-mid)' : 'transparent',
+                      background: selected
+                        ? 'color-mix(in srgb, var(--color-cyan) 10%, var(--color-bg-surface))'
+                        : 'transparent',
+                      transition: 'background 0.15s, border-color 0.15s',
                     }}
                   >
                     <input
                       type="checkbox"
                       checked={selected}
                       onChange={() => togglePersonnel(person)}
-                      style={{ accentColor: 'var(--color-accent)', width: 14, height: 14 }}
+                      style={{ accentColor: 'var(--color-cyan)', width: 14, height: 14 }}
                     />
-                    <span style={{ fontSize: 'var(--fs-md)', color: selected ? 'var(--color-accent)' : 'var(--color-text-2)', fontWeight: selected ? 600 : 400 }}>
+                    <span style={{
+                      fontSize: 'var(--fs-md)',
+                      color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                      fontWeight: selected ? 600 : 400,
+                    }}>
                       {person}
                     </span>
                   </label>
@@ -173,9 +203,9 @@ export default function JointMonthlyInspectionPage() {
                     <div style={{
                       padding: '6px 12px 8px',
                       borderRadius: '0 0 8px 8px',
-                      border: '1px solid rgba(56,189,248,0.5)',
+                      border: '1px solid color-mix(in srgb, var(--color-cyan) 50%, transparent)',
                       borderTop: 'none',
-                      background: 'rgba(56,189,248,0.05)',
+                      background: 'color-mix(in srgb, var(--color-cyan) 5%, transparent)',
                     }}>
                       <input
                         type="text"
@@ -195,8 +225,9 @@ export default function JointMonthlyInspectionPage() {
 
         {/* Comments */}
         <div className="card" style={{ marginBottom: 12, padding: 14, borderRadius: 12 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-            Comments
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <MessageSquare size={12} color="var(--color-text-3)" />
+            <div style={SECTION_LABEL}>Comments</div>
           </div>
           <ExpandableTextarea
             className="input-dark"
@@ -211,25 +242,30 @@ export default function JointMonthlyInspectionPage() {
 
         {/* Photos */}
         <div className="card" style={{ marginBottom: 16, padding: 14, borderRadius: 12 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Photos / Attachments
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <Camera size={12} color="var(--color-text-3)" />
+            <div style={SECTION_LABEL}>Photos / Attachments</div>
           </div>
 
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
               {photos.map((photo, idx) => (
-                <div key={idx} style={{ position: 'relative', width: 64, height: 64, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border-mid)' }}>
+                <div key={idx} style={{
+                  position: 'relative', width: 64, height: 64, borderRadius: 8,
+                  overflow: 'hidden', border: '1px solid var(--color-border)',
+                }}>
                   <img src={photo.url} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                   <button
                     type="button"
                     onClick={() => removePhoto(idx)}
+                    aria-label="Remove photo"
                     style={{
-                      position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%',
+                      position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%',
                       background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', cursor: 'pointer',
-                      fontSize: 'var(--fs-xs)', lineHeight: '18px', textAlign: 'center', padding: 0,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
                     }}
                   >
-                    x
+                    <X size={12} />
                   </button>
                 </div>
               ))}
@@ -249,8 +285,10 @@ export default function JointMonthlyInspectionPage() {
             color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: filing ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: filing ? 0.7 : 1, marginBottom: 16,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
           }}
         >
+          <CheckCircle2 size={18} />
           {filing ? 'Filing...' : 'Complete & File'}
         </button>
 
