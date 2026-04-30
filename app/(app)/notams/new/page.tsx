@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Megaphone, CheckCircle2 } from 'lucide-react'
 import { NOTAM_TYPES } from '@/lib/constants'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
   background: 'var(--color-bg-surface-solid)',
-  border: '1px solid var(--color-text-4)',
+  border: '1px solid var(--color-border)',
   borderRadius: 8,
   padding: '10px 12px',
   color: 'var(--color-text-1)',
@@ -19,9 +19,11 @@ const inputStyle: React.CSSProperties = {
 }
 
 const labelStyle: React.CSSProperties = {
-  fontSize: 'var(--fs-base)',
+  fontSize: 'var(--fs-2xs)',
   fontWeight: 600,
-  color: 'var(--color-text-2)',
+  color: 'var(--color-text-3)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
   marginBottom: 6,
   display: 'block',
 }
@@ -51,21 +53,29 @@ export default function NewNotamPage() {
       <button
         onClick={() => router.back()}
         style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--color-cyan)',
-          fontSize: 'var(--fs-md)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          padding: 0,
-          marginBottom: 12,
-          fontFamily: 'inherit',
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: 0,
+          marginBottom: 12, fontFamily: 'inherit',
         }}
       >
-        ← Back
+        <ArrowLeft size={14} /> Back
       </button>
 
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 16 }}>Draft NOTAM</div>
+      {/* Page header — tertiary tier label + cyan accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 16,
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Megaphone size={16} color="var(--color-cyan)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Draft NOTAM</div>
+        </div>
+      </div>
 
       {/* Type select */}
       <div style={{ marginBottom: 14 }}>
@@ -155,9 +165,10 @@ export default function NewNotamPage() {
           cursor: 'pointer',
           marginTop: 8,
           fontFamily: 'inherit',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
         }}
       >
-        Save Draft
+        <CheckCircle2 size={18} /> Save Draft
       </button>
     </div>
   )

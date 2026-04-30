@@ -10,6 +10,9 @@ import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
 import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
 import { EmptyState } from '@/components/ui/empty-state'
+import {
+  Megaphone, Search, RefreshCw, FileDown, Mail, AlertTriangle, AlertCircle,
+} from 'lucide-react'
 
 type FilterType = 'all' | 'faa' | 'local' | 'active' | 'expired'
 
@@ -286,49 +289,55 @@ export default function NotamsPage() {
 
   return (
     <div className="page-container">
-      {/* Header row */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-        }}
-      >
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>NOTAMs</div>
+      {/* Page header — tertiary tier label + cyan accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14,
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Megaphone size={16} color="var(--color-cyan)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>NOTAMs</div>
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={handleDownloadPdf}
             style={{
-              background: 'rgba(168,85,247,0.12)',
-              border: '1px solid rgba(168,85,247,0.3)',
+              background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
               borderRadius: 'var(--radius-md)',
-              padding: '7px 14px',
+              padding: '6px 12px',
               color: 'var(--color-purple)',
-              fontSize: 'var(--fs-md)',
+              fontSize: 'var(--fs-sm)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
           >
-            Export PDF
+            <FileDown size={14} /> Export PDF
           </button>
           <button
             onClick={handleEmailPdf}
             style={{
-              background: 'rgba(168,85,247,0.12)',
-              border: '1px solid rgba(168,85,247,0.3)',
+              background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
               borderRadius: 'var(--radius-md)',
-              padding: '7px 10px',
+              padding: '6px 10px',
               color: 'var(--color-purple)',
-              fontSize: 'var(--fs-md)',
+              fontSize: 'var(--fs-sm)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center',
             }}
             title="Email PDF"
+            aria-label="Email PDF"
           >
-            ✉
+            <Mail size={14} />
           </button>
         </div>
       </div>
@@ -352,7 +361,7 @@ export default function NotamsPage() {
             style={{
               flex: 1,
               background: 'var(--color-bg-surface-solid)',
-              border: '1px solid var(--color-bg-elevated)',
+              border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-md)',
               padding: '8px 12px',
               fontSize: 'var(--fs-lg)',
@@ -366,28 +375,37 @@ export default function NotamsPage() {
             onClick={handleSearch}
             disabled={loading}
             style={{
-              background: 'var(--color-bg-elevated)',
-              border: '1px solid var(--color-text-4)',
-              color: 'var(--color-text-1)',
-              fontSize: 'var(--fs-md)',
+              background: 'color-mix(in srgb, var(--color-cyan) 12%, var(--color-bg-surface))',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+              color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-sm)',
               fontWeight: 700,
-              padding: '8px 16px',
+              padding: '8px 14px',
               borderRadius: 'var(--radius-md)',
               cursor: loading ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: loading ? 0.6 : 1,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
           >
-            Search
+            <Search size={14} /> Search
           </button>
         </div>
       )}
 
-      {/* FAA Feed status card */}
+      {/* FAA Feed status card — color-coded by connection state */}
       <div
         style={{
-          background: 'var(--color-bg-surface-solid)',
-          border: '1px solid var(--color-bg-elevated)',
+          background: feedConnected
+            ? 'color-mix(in srgb, var(--color-success) 8%, var(--color-bg-surface))'
+            : error
+              ? 'color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface))'
+              : 'var(--color-bg-surface-solid)',
+          border: feedConnected
+            ? '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)'
+            : error
+              ? '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)'
+              : '1px solid var(--color-border)',
           borderRadius: 'var(--radius-md)',
           padding: '10px 14px',
           display: 'flex',
@@ -404,9 +422,9 @@ export default function NotamsPage() {
               borderRadius: '50%',
               background: feedConnected ? 'var(--color-success)' : error ? 'var(--color-danger)' : 'var(--color-text-3)',
               boxShadow: feedConnected
-                ? '0 0 6px rgba(34,197,94,0.5)'
+                ? '0 0 6px color-mix(in srgb, var(--color-success) 50%, transparent)'
                 : error
-                  ? '0 0 6px rgba(239,68,68,0.5)'
+                  ? '0 0 6px color-mix(in srgb, var(--color-danger) 50%, transparent)'
                   : 'none',
             }}
           />
@@ -436,16 +454,16 @@ export default function NotamsPage() {
                 background: 'none',
                 border: 'none',
                 color: 'var(--color-text-3)',
-                fontSize: 'var(--fs-2xl)',
                 cursor: loading || !activeIcao ? 'not-allowed' : 'pointer',
-                padding: '0 4px',
+                padding: 4,
                 opacity: loading ? 0.4 : 1,
-                transition: 'transform 0.3s',
-                transform: loading ? 'rotate(360deg)' : 'none',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 'var(--radius-sm)',
               }}
               title="Refresh"
+              aria-label="Refresh"
             >
-              ↻
+              <RefreshCw size={16} style={{ animation: loading ? 'spin 0.8s linear infinite' : 'none' }} />
             </button>
           )}
         </div>
@@ -455,40 +473,44 @@ export default function NotamsPage() {
       {error && !isDemoMode && (
         <div
           style={{
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.25)',
+            background: 'color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface))',
+            border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
             borderRadius: 'var(--radius-md)',
             padding: '10px 14px',
             marginBottom: 12,
             fontSize: 'var(--fs-md)',
             color: 'var(--color-danger)',
+            display: 'flex', alignItems: 'center', gap: 8,
           }}
         >
+          <AlertTriangle size={16} />
           {error}
         </div>
       )}
 
       {/* Filter chips */}
-      <div className="filter-bar" style={{ marginBottom: 14 }}>
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            style={{
-              background: filter === f.key ? 'var(--color-bg-elevated)' : 'transparent',
-              border: `1px solid ${filter === f.key ? 'var(--color-text-4)' : 'var(--color-bg-elevated)'}`,
-              color: filter === f.key ? 'var(--color-text-1)' : 'var(--color-text-3)',
-              fontSize: 'var(--fs-base)',
-              fontWeight: 600,
-              padding: '5px 12px',
-              borderRadius: 'var(--radius-full)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+        {FILTERS.map((f) => {
+          const selected = filter === f.key
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              style={{
+                padding: '6px 13px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
+                border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                background: selected
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-inset)',
+                color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                transition: 'background 0.15s',
+              }}
+            >
+              {f.label}
+            </button>
+          )
+        })}
       </div>
 
       {/* Loading spinner */}
@@ -523,18 +545,33 @@ export default function NotamsPage() {
           {filtered.map((notam) => {
             const isExpired = notam.status === 'expired'
             const expiringSoon = !isExpired && isExpiringSoon(notam.effective_end)
+            const isSafety = notam.notam_number.charAt(0).toUpperCase() === 'M'
+            // Color-coded left rule communicates urgency at a glance:
+            // red for expiring or safety, gray for expired, source color
+            // (cyan/purple) for normal active.
+            const leftRuleColor = expiringSoon || isSafety
+              ? 'var(--color-danger)'
+              : isExpired
+                ? 'var(--color-text-4)'
+                : notam.source === 'local' ? 'var(--color-purple)' : 'var(--color-cyan)'
 
             return (
               <div
                 key={notam.id}
                 style={{
-                  background: expiringSoon ? 'rgba(239,68,68,0.10)' : 'var(--color-bg-surface-solid)',
-                  border: expiringSoon ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--color-bg-elevated)',
-                  borderLeft: expiringSoon ? '3px solid var(--color-danger)' : '3px solid var(--color-text-4)',
+                  background: expiringSoon
+                    ? 'color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface))'
+                    : 'var(--color-bg-surface-solid)',
+                  border: expiringSoon
+                    ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                    : '1px solid var(--color-border)',
+                  borderLeft: `3px solid ${leftRuleColor}`,
                   borderRadius: 'var(--radius-md)',
                   padding: '12px 14px',
-                  opacity: isExpired ? 0.5 : 1,
-                  boxShadow: expiringSoon ? '0 0 12px rgba(239,68,68,0.15)' : 'none',
+                  opacity: isExpired ? 0.55 : 1,
+                  boxShadow: expiringSoon
+                    ? '0 0 12px color-mix(in srgb, var(--color-danger) 15%, transparent)'
+                    : 'none',
                 }}
               >
                 {/* Top row: source + type badges, status badge */}
@@ -552,7 +589,7 @@ export default function NotamsPage() {
                       color={SOURCE_COLORS[notam.source] || 'var(--color-text-3)'}
                     />
                     <Badge label={notam.notam_type} color="var(--color-text-3)" />
-                    {notam.notam_number.charAt(0).toUpperCase() === 'M' && (
+                    {isSafety && (
                       <Badge label="SAFETY" color="var(--color-danger)" />
                     )}
                     {expiringSoon && (
@@ -566,13 +603,18 @@ export default function NotamsPage() {
                 </div>
 
                 {/* NOTAM number + Effective dates */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
                   {notam.notam_number && (
                     <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
                       {notam.notam_number}
                     </span>
                   )}
-                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    fontSize: 'var(--fs-sm)', color: expiringSoon ? 'var(--color-danger)' : 'var(--color-text-3)',
+                    fontWeight: expiringSoon ? 600 : 400,
+                  }}>
+                    {expiringSoon && <AlertCircle size={12} />}
                     {formatDate(notam.effective_start)} — {formatDate(notam.effective_end)}
                   </span>
                 </div>
