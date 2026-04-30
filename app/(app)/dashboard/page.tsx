@@ -19,6 +19,8 @@ import {
   ClipboardList, Bird, DoorOpen, AlertOctagon, Moon,
   CheckCircle2, Sunrise, ChevronRight,
 } from 'lucide-react'
+import { QrcStepToggle, QrcStepStatusPill } from '@/components/ui/qrc-step-toggle'
+import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-step-status'
 
 export default function AMDashboardPage() {
   const router = useRouter()
@@ -1138,14 +1140,17 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     setStarting(null)
   }
 
-  async function handleStepToggle(stepId: string) {
+  async function handleStepStatus(stepId: string, next: QrcStepStatus) {
     if (!activeExecId) return
     const { updateStepResponse } = await import('@/lib/supabase/qrc')
-    const current = responses[stepId] || {}
+    const current = responses[stepId] || ({ completed: false } as QrcStepResponse)
     const newResp: QrcStepResponse = {
-      ...current, completed: !current.completed,
-      completed_at: !current.completed ? new Date().toISOString() : undefined,
+      ...current,
+      status: next,
+      completed: next === 'completed',
+      completed_at: next === 'completed' ? new Date().toISOString() : current.completed_at,
     }
+    if (next === undefined) delete (newResp as Partial<QrcStepResponse>).status
     setResponses(prev => ({ ...prev, [stepId]: newResp }))
     await updateStepResponse(activeExecId, stepId, newResp)
   }
@@ -1153,19 +1158,34 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
   async function handleFieldChange(stepId: string, value: string) {
     if (!activeExecId) return
     const { updateStepResponse } = await import('@/lib/supabase/qrc')
-    const current = responses[stepId] || {}
-    const newResp: QrcStepResponse = { ...current, value, completed: !!value }
+    const current = responses[stepId] || ({ completed: false } as QrcStepResponse)
+    const newResp: QrcStepResponse = {
+      ...current, value, completed: !!value,
+      status: value ? 'completed' : undefined,
+    }
+    if (!value) delete (newResp as Partial<QrcStepResponse>).status
     setResponses(prev => ({ ...prev, [stepId]: newResp }))
     await updateStepResponse(activeExecId, stepId, newResp)
   }
 
-  async function handleAgencyToggle(stepId: string, agency: string) {
+  async function handleAgencyStatus(stepId: string, agency: string, next: QrcStepStatus) {
     if (!activeExecId) return
     const { updateStepResponse } = await import('@/lib/supabase/qrc')
-    const current = responses[stepId] || {}
-    const checked = current.agencies_checked || []
-    const next = checked.includes(agency) ? checked.filter((a: string) => a !== agency) : [...checked, agency]
-    const newResp: QrcStepResponse = { ...current, agencies_checked: next, completed: next.length > 0 }
+    const current = responses[stepId] || ({ completed: false } as QrcStepResponse)
+    const checked = (current.agencies_checked || []).filter(a => a !== agency)
+    const na = (current.agencies_na || []).filter(a => a !== agency)
+    if (next === 'completed') checked.push(agency)
+    else if (next === 'not_applicable') na.push(agency)
+    const anyMarked = checked.length + na.length > 0
+    const newResp: QrcStepResponse = {
+      ...current,
+      agencies_checked: checked, agencies_na: na,
+      completed: checked.length > 0,
+      status: anyMarked && checked.length === 0 && na.length > 0
+        ? 'not_applicable'
+        : (checked.length > 0 ? 'completed' : undefined),
+    }
+    if (!anyMarked) delete (newResp as Partial<QrcStepResponse>).status
     setResponses(prev => ({ ...prev, [stepId]: newResp }))
     await updateStepResponse(activeExecId, stepId, newResp)
   }
@@ -1228,8 +1248,8 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
   const steps = (activeTemplate?.steps as unknown as QrcStep[] | null) || []
 
   function renderStep(step: QrcStep) {
-    const resp = responses[step.id] || {}
-    const checked = resp.completed ?? false
+    const resp = responses[step.id]
+    const status = getStepStatus(resp)
 
     if (step.type === 'conditional') {
       return (
@@ -1240,86 +1260,88 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
       )
     }
 
+    const isToggleType = step.type === 'checkbox' || step.type === 'checkbox_with_note'
+    const rowBg = status === 'completed'
+      ? 'color-mix(in srgb, var(--color-success) 6%, transparent)'
+      : status === 'not_applicable'
+        ? 'color-mix(in srgb, var(--color-text-3) 5%, transparent)'
+        : 'transparent'
+
     return (
       <div key={step.id} style={{
         padding: '8px 10px', marginBottom: 6, borderRadius: 'var(--radius-md)',
         border: '1px solid var(--color-border)',
-        background: checked ? 'rgba(34,197,94,0.04)' : 'transparent',
+        background: rowBg,
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-text-3)', minWidth: 28, paddingTop: 2 }}>{step.id}.</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Checkbox / checkbox_with_note */}
-            {(step.type === 'checkbox' || step.type === 'checkbox_with_note') && (
+            {isToggleType && (
               <div>
-                <button onClick={() => handleStepToggle(step.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
-                  cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left', width: '100%',
-                }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, justifyContent: 'space-between' }}>
                   <span style={{
-                    width: 22, height: 22, borderRadius: 'var(--radius-xs)', flexShrink: 0,
-                    border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                    background: checked ? 'var(--color-status-pass)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{checked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>&#10003;</span>}</span>
-                  <span style={{
-                    fontSize: 'var(--fs-base)', fontWeight: 600,
-                    color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                    textDecoration: checked ? 'line-through' : 'none',
+                    fontSize: 'var(--fs-base)', fontWeight: 600, flex: 1, minWidth: 0, paddingTop: 2,
+                    color: status === 'completed' ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                    textDecoration: status === 'completed' ? 'line-through' : 'none',
                   }}>{step.label}</span>
-                </button>
+                  <QrcStepToggle
+                    value={status}
+                    onChange={next => handleStepStatus(step.id, next)}
+                    size="sm"
+                  />
+                </div>
                 {step.note && (
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 3, marginLeft: 26, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
                     {step.note}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Notify agencies */}
             {step.type === 'notify_agencies' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
-                {(step.agencies || []).map(agency => {
-                  const agencyChecked = (resp.agencies_checked || []).includes(agency)
-                  return (
-                    <button key={agency} onClick={() => handleAgencyToggle(step.id, agency)} style={{
-                      display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none',
-                      cursor: 'pointer', padding: '3px 0', fontFamily: 'inherit', textAlign: 'left', width: '100%',
-                    }}>
-                      <span style={{
-                        width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
-                        border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
-                        background: agencyChecked ? 'var(--color-status-pass)' : 'transparent',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>{agencyChecked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                      <span style={{ fontSize: 'var(--fs-sm)', color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)', textDecoration: agencyChecked ? 'line-through' : 'none' }}>{agency}</span>
-                    </button>
-                  )
-                })}
+                <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 6 }}>{step.label}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {(step.agencies || []).map(agency => {
+                    const agencyStatus = getAgencyStatus(resp, agency)
+                    return (
+                      <div key={agency} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+                        <span style={{
+                          fontSize: 'var(--fs-sm)',
+                          color: agencyStatus === 'completed' ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                          textDecoration: agencyStatus === 'completed' ? 'line-through' : 'none',
+                        }}>{agency}</span>
+                        <QrcStepToggle
+                          value={agencyStatus}
+                          onChange={next => handleAgencyStatus(step.id, agency, next)}
+                          size="sm"
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Fill field */}
             {step.type === 'fill_field' && (
               <div>
                 <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
                 <input className="input-dark" placeholder={step.field_label || 'Enter value'}
-                  value={resp.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
+                  value={resp?.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
                   style={{ width: '100%', fontSize: 'var(--fs-sm)' }} />
               </div>
             )}
 
-            {/* Time field */}
             {step.type === 'time_field' && (
               <div>
                 <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>{step.label}</div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <input className="input-dark" placeholder={step.field_label || 'HHmm'}
-                    value={resp.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
+                    value={resp?.value || ''} onChange={e => handleFieldChange(step.id, e.target.value)}
                     style={{ width: 100, fontSize: 'var(--fs-sm)', textAlign: 'center' }} />
                   <button onClick={() => handleFieldChange(step.id, zuluNow())} style={{
-                    background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
+                    background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+                    border: '1px solid var(--color-cyan)',
                     borderRadius: 'var(--radius-sm)', padding: '4px 10px', color: 'var(--color-cyan)',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                   }}>Now (Z)</button>
@@ -1328,8 +1350,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
             )}
 
           </div>
-          {/* Timestamp */}
-          {checked && resp.completed_at && (
+          {status === 'completed' && resp?.completed_at && (
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', whiteSpace: 'nowrap', flexShrink: 0 }}>
               {new Date(resp.completed_at).toISOString().slice(11, 16)}Z
             </span>
@@ -1362,8 +1383,10 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {activeExec && (
                   <span style={{
-                    fontSize: 'var(--fs-base)', fontWeight: 800, color: '#FFFFFF',
-                    background: 'var(--color-cyan)', padding: '3px 10px', borderRadius: 'var(--radius-sm)',
+                    fontSize: 'var(--fs-base)', fontWeight: 800, color: 'var(--color-amber)',
+                    background: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+                    border: '1px solid color-mix(in srgb, var(--color-amber) 45%, transparent)',
+                    padding: '3px 10px', borderRadius: 'var(--radius-sm)',
                   }}>QRC-{activeExec.qrc_number}</span>
                 )}
                 <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
@@ -1392,9 +1415,17 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               {/* Warning note */}
               {activeTemplate.notes && (
                 <div style={{
-                  padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: 10,
-                  background: 'rgba(239,68,68,0.08)', fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-danger)',
-                }}>{activeTemplate.notes}</div>
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)', marginBottom: 10,
+                  background: 'color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface))',
+                  borderLeft: '3px solid var(--color-danger)',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 25%, transparent)',
+                  display: 'flex', alignItems: 'flex-start', gap: 8,
+                }}>
+                  <AlertOctagon size={14} color="var(--color-danger)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-danger)' }}>
+                    {activeTemplate.notes}
+                  </div>
+                </div>
               )}
 
               {/* References */}
@@ -1408,7 +1439,9 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               {activeTemplate.has_scn_form && activeTemplate.scn_fields && (
                 <div style={{
                   padding: 14, borderRadius: 'var(--radius-md)', marginBottom: 12,
-                  background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
+                  background: 'var(--color-bg-surface)',
+                  border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+                  borderLeft: '3px solid var(--color-cyan)',
                 }}>
                   <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Secondary Crash Net (SCN) Form
@@ -1446,11 +1479,17 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                   {openExecs.map(ex => (
                     <button key={ex.id} onClick={() => setActiveExecId(ex.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                      background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)',
+                      background: 'color-mix(in srgb, var(--color-amber) 8%, var(--color-bg-surface))',
+                      border: '1px solid color-mix(in srgb, var(--color-amber) 25%, transparent)',
                       borderRadius: 'var(--radius-md)', padding: '8px 12px', cursor: 'pointer', fontFamily: 'inherit',
                       textAlign: 'left', marginBottom: 4,
                     }}>
-                      <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#FFFFFF', background: 'var(--color-cyan)', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>QRC-{ex.qrc_number}</span>
+                      <span style={{
+                        fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-amber)',
+                        background: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+                        border: '1px solid color-mix(in srgb, var(--color-amber) 45%, transparent)',
+                        padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+                      }}>QRC-{ex.qrc_number}</span>
                       <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
                     </button>
                   ))}
@@ -1465,7 +1504,12 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                       borderRadius: 'var(--radius-md)', padding: '8px 10px', cursor: 'pointer',
                       fontFamily: 'inherit', textAlign: 'left',
                     }}>
-                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: '#FFFFFF', background: 'var(--color-cyan)', padding: '2px 8px', borderRadius: 'var(--radius-xs)' }}>
+                    <span style={{
+                      fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-amber)',
+                      background: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+                      border: '1px solid color-mix(in srgb, var(--color-amber) 45%, transparent)',
+                      padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+                    }}>
                       {tmpl.qrc_number}
                     </span>
                     <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginTop: 4, lineHeight: 1.3 }}>
@@ -1513,7 +1557,8 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                 }}>Close QRC</button>
                 <button onClick={handleCancel} style={{
                   padding: '10px 14px', borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
                   color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}>Cancel</button>

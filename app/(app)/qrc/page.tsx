@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import {
+  ArrowLeft, Zap, AlertOctagon, CheckCircle2, AlertCircle,
+  Clock, Calendar, FileDown, Mail, RotateCcw, X,
+} from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import {
   fetchQrcTemplates,
@@ -19,12 +23,37 @@ import {
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
 import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-step-status'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
+import { QrcStepToggle, QrcStepStatusPill } from '@/components/ui/qrc-step-toggle'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 type Tab = 'available' | 'active' | 'history'
+
+const PILL = {
+  open: {
+    bg: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+    border: 'color-mix(in srgb, var(--color-amber) 35%, transparent)',
+    color: 'var(--color-amber)',
+  },
+  closed: {
+    bg: 'color-mix(in srgb, var(--color-success) 14%, var(--color-bg-surface))',
+    border: 'color-mix(in srgb, var(--color-success) 35%, transparent)',
+    color: 'var(--color-success)',
+  },
+  overdue: {
+    bg: 'color-mix(in srgb, var(--color-danger) 14%, var(--color-bg-surface))',
+    border: 'color-mix(in srgb, var(--color-danger) 35%, transparent)',
+    color: 'var(--color-danger)',
+  },
+  current: {
+    bg: 'color-mix(in srgb, var(--color-success) 14%, var(--color-bg-surface))',
+    border: 'color-mix(in srgb, var(--color-success) 35%, transparent)',
+    color: 'var(--color-success)',
+  },
+} as const
 
 function zuluNow(): string {
   return new Date().toISOString().slice(11, 16).replace(':', '')
@@ -38,6 +67,33 @@ function isReviewOverdue(lastReviewed: string | null): boolean {
 
 function formatReviewDate(iso: string): string {
   return formatZuluDate(new Date(iso))
+}
+
+function QrcBadge({ number, size = 'md' }: { number: number; size?: 'sm' | 'md' | 'lg' }) {
+  const padding = size === 'lg' ? '4px 12px' : size === 'sm' ? '2px 8px' : '3px 10px'
+  const fs = size === 'lg' ? 'var(--fs-lg)' : size === 'sm' ? 'var(--fs-sm)' : 'var(--fs-base)'
+  return (
+    <span style={{
+      fontSize: fs, fontWeight: 800, color: 'var(--color-amber)',
+      background: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+      border: '1px solid color-mix(in srgb, var(--color-amber) 45%, transparent)',
+      padding, borderRadius: 'var(--radius-sm)',
+      letterSpacing: '0.02em', flexShrink: 0,
+    }}>QRC-{number}</span>
+  )
+}
+
+function StatusPill({ kind, children }: { kind: keyof typeof PILL; children: React.ReactNode }) {
+  const tier = PILL[kind]
+  return (
+    <span style={{
+      fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '3px 9px',
+      borderRadius: 12, background: tier.bg, color: tier.color,
+      border: `1px solid ${tier.border}`,
+      textTransform: 'uppercase', letterSpacing: '0.06em',
+      whiteSpace: 'nowrap',
+    }}>{children}</span>
+  )
 }
 
 export default function QrcPage() {
@@ -62,9 +118,6 @@ export default function QrcPage() {
     setOpenExecs(o)
     setHistory(h)
     setLoaded(true)
-    // Nudge the sidebar badge — every QRC mutation calls load()
-    // afterward, so this single dispatch covers open/close/cancel
-    // without depending on realtime (which is unreliable on prod).
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('glidepath:badges-refresh'))
     }
@@ -72,10 +125,8 @@ export default function QrcPage() {
 
   useEffect(() => { load() }, [load])
 
-  // Auto-switch to active tab when loaded
   useEffect(() => {
     if (!loaded) return
-    // If we have a deep-link exec param, switch to active tab
     if (activeExecId) {
       const inOpen = openExecs.some(e => e.id === activeExecId)
       const inHistory = history.some(e => e.id === activeExecId)
@@ -84,7 +135,6 @@ export default function QrcPage() {
         return
       }
     }
-    // Otherwise auto-switch if there are open executions
     if (openExecs.length > 0 && tab === 'available') {
       setTab('active')
       setActiveExecId(openExecs[0].id)
@@ -121,92 +171,136 @@ export default function QrcPage() {
 
   return (
     <div className="page-container">
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 16 }}>Quick Reaction Checklists</div>
+      {/* Page header — tertiary + accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+        paddingBottom: 8, marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Zap size={16} color="var(--color-amber)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Quick Reaction Checklists</div>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            onClick={() => { setTab(t.key); setActiveExecId(null) }}
-            style={{
-              padding: '8px 16px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
-              border: tab === t.key ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
-              cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700,
-              background: tab === t.key ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
-              color: tab === t.key ? 'var(--color-accent)' : 'var(--color-text-2)',
-            }}
-          >
-            {t.label}{t.count !== undefined ? ` (${t.count})` : ''}
-          </button>
-        ))}
+        {TABS.map(t => {
+          const selected = tab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => { setTab(t.key); setActiveExecId(null) }}
+              style={{
+                padding: '7px 14px', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
+                border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                background: selected
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-inset)',
+                color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                transition: 'background 0.15s',
+              }}
+            >
+              {t.label}
+              {t.count !== undefined && (
+                <span style={{
+                  fontSize: 'var(--fs-2xs)', fontWeight: 800,
+                  padding: '1px 7px', borderRadius: 10,
+                  background: selected
+                    ? 'color-mix(in srgb, var(--color-cyan) 22%, transparent)'
+                    : 'var(--color-bg-elevated)',
+                  color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                  minWidth: 20, textAlign: 'center',
+                }}>{t.count}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {!loaded ? (
         <LoadingState />
       ) : tab === 'available' && !activeExecId ? (
-        /* Available Templates Grid */
         templates.filter(t => t.is_active).length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginBottom: 8 }}>No QRC templates configured.</div>
+            <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-3)', marginBottom: 8 }}>
+              No QRC templates configured.
+            </div>
             <Link href="/settings/base-setup" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 600 }}>
               Configure in Settings → Base Configuration
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
-            {templates.filter(t => t.is_active).map(tmpl => (
-              <button
-                key={tmpl.id}
-                onClick={() => handleStart(tmpl)}
-                disabled={startingId === tmpl.id}
-                style={{
-                  background: 'var(--color-bg-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '14px 16px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontFamily: 'inherit',
-                  transition: 'border-color 0.15s',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{
-                    fontSize: 'var(--fs-base)', fontWeight: 800,
-                    color: '#fff', background: '#D97706',
-                    padding: '3px 10px', borderRadius: 'var(--radius-sm)', minWidth: 48, textAlign: 'center',
-                  }}>
-                    QRC-{tmpl.qrc_number}
-                  </span>
-                </div>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
-                  {tmpl.title}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                    {((tmpl.steps as unknown as QrcStep[] | null) || []).length} steps
-                  </span>
-                  {tmpl.last_reviewed_at ? (
-                    <span style={{
-                      fontSize: 'var(--fs-xs)', fontWeight: 600,
-                      color: isReviewOverdue(tmpl.last_reviewed_at) ? 'var(--color-red)' : 'var(--color-green)',
-                    }}>
-                      {isReviewOverdue(tmpl.last_reviewed_at) ? 'Review overdue' : `Reviewed ${formatReviewDate(tmpl.last_reviewed_at)}`}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10,
+          }}>
+            {templates.filter(t => t.is_active).map(tmpl => {
+              const overdue = isReviewOverdue(tmpl.last_reviewed_at)
+              return (
+                <button
+                  key={tmpl.id}
+                  onClick={() => handleStart(tmpl)}
+                  disabled={startingId === tmpl.id}
+                  style={{
+                    background: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderLeft: '3px solid var(--color-amber)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 14px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <QrcBadge number={tmpl.qrc_number} size="sm" />
+                    <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', marginLeft: 'auto' }}>
+                      {((tmpl.steps as unknown as QrcStep[] | null) || []).length} steps
                     </span>
-                  ) : (
-                    <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-red)' }}>
-                      Never reviewed
-                    </span>
-                  )}
-                </div>
-              </button>
-            ))}
+                  </div>
+                  <div style={{
+                    fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)',
+                    lineHeight: 1.3, marginBottom: 8,
+                  }}>{tmpl.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {tmpl.last_reviewed_at ? (
+                      overdue ? (
+                        <>
+                          <AlertCircle size={12} color="var(--color-danger)" />
+                          <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-danger)' }}>
+                            Review overdue
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={12} color="var(--color-success)" />
+                          <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-success)' }}>
+                            Reviewed {formatReviewDate(tmpl.last_reviewed_at)}
+                          </span>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <AlertCircle size={12} color="var(--color-danger)" />
+                        <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-danger)' }}>
+                          Never reviewed
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         )
       ) : tab === 'active' ? (
         activeExecId && activeExec ? (
-          /* Active Execution View */
           <QrcExecutionView
             execution={activeExec}
             template={activeTemplate}
@@ -214,7 +308,6 @@ export default function QrcPage() {
             onUpdate={load}
           />
         ) : (
-          /* Active Executions List */
           openExecs.length === 0 ? (
             <EmptyState message="No active QRCs. Start one from the Available tab." />
           ) : (
@@ -225,7 +318,8 @@ export default function QrcPage() {
                   onClick={() => setActiveExecId(ex.id)}
                   style={{
                     background: 'var(--color-bg-surface)',
-                    border: '1px solid rgba(234,179,8,0.3)',
+                    border: '1px solid var(--color-border)',
+                    borderLeft: '3px solid var(--color-amber)',
                     borderRadius: 'var(--radius-md)',
                     padding: '12px 16px',
                     cursor: 'pointer',
@@ -236,22 +330,21 @@ export default function QrcPage() {
                     gap: 12,
                   }}
                 >
-                  <span style={{
-                    fontSize: 'var(--fs-base)', fontWeight: 800,
-                    color: '#fff', background: '#D97706',
-                    padding: '3px 10px', borderRadius: 'var(--radius-sm)',
-                  }}>QRC-{ex.qrc_number}</span>
+                  <QrcBadge number={ex.qrc_number} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
-                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>
+                      {ex.title}
+                    </div>
+                    <div style={{
+                      fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 2,
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <Clock size={11} />
                       Opened {new Date(ex.opened_at).toISOString().slice(11, 16)}Z
                       {ex.open_initials && ` by ${ex.open_initials}`}
                     </div>
                   </div>
-                  <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
-                    background: 'rgba(234,179,8,0.12)', color: 'var(--color-amber)',
-                  }}>OPEN</span>
+                  <StatusPill kind="open">Open</StatusPill>
                 </button>
               ))}
             </div>
@@ -262,42 +355,44 @@ export default function QrcPage() {
           <EmptyState message="No QRC history." />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {history.map(ex => (
-              <button
-                key={ex.id}
-                onClick={() => { setActiveExecId(ex.id); setTab('active') }}
-                style={{
-                  background: 'var(--color-bg-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontFamily: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
-                <span style={{
-                  fontSize: 'var(--fs-base)', fontWeight: 800,
-                  color: '#fff', background: ex.status === 'open' ? '#D97706' : 'var(--color-green)',
-                  padding: '3px 10px', borderRadius: 'var(--radius-sm)',
-                }}>QRC-{ex.qrc_number}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>{ex.title}</div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                    {formatZuluDateTime(new Date(ex.opened_at))}
-                    {ex.closed_at && ` — Closed ${formatZuluDateTime(new Date(ex.closed_at))}`}
+            {history.map(ex => {
+              const isOpen = ex.status === 'open'
+              return (
+                <button
+                  key={ex.id}
+                  onClick={() => { setActiveExecId(ex.id); setTab('active') }}
+                  style={{
+                    background: 'var(--color-bg-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderLeft: `3px solid ${isOpen ? 'var(--color-amber)' : 'var(--color-border-mid)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
+                  <QrcBadge number={ex.qrc_number} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>
+                      {ex.title}
+                    </div>
+                    <div style={{
+                      fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 2,
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <Clock size={11} />
+                      {formatZuluDateTime(new Date(ex.opened_at))}
+                      {ex.closed_at && ` — Closed ${formatZuluDateTime(new Date(ex.closed_at))}`}
+                    </div>
                   </div>
-                </div>
-                <span style={{
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
-                  background: ex.status === 'open' ? 'rgba(234,179,8,0.12)' : 'rgba(34,197,94,0.12)',
-                  color: ex.status === 'open' ? 'var(--color-amber)' : 'var(--color-green)',
-                }}>{ex.status === 'open' ? 'OPEN' : 'CLOSED'}</span>
-              </button>
-            ))}
+                  <StatusPill kind={isOpen ? 'open' : 'closed'}>{isOpen ? 'Open' : 'Closed'}</StatusPill>
+                </button>
+              )
+            })}
           </div>
         )
       ) : null}
@@ -335,7 +430,6 @@ function QrcExecutionView({
   const [reviewing, setReviewing] = useState(false)
   const [reviewerName, setReviewerName] = useState<string | null>(null)
 
-  // PDF export state
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -345,7 +439,6 @@ function QrcExecutionView({
   const isClosed = execution.status === 'closed'
   const steps = (template?.steps as unknown as QrcStep[] | null) || []
 
-  // Load reviewer name
   useEffect(() => {
     if (!template?.last_reviewed_by) return
     const supabase = (async () => {
@@ -353,12 +446,14 @@ function QrcExecutionView({
       const sb = createClient()
       if (!sb || !template.last_reviewed_by) return
       const { data } = await sb.from('profiles').select('name, rank').eq('id', template.last_reviewed_by).single()
-      if (data) setReviewerName((data as { name: string; rank: string | null }).rank ? `${(data as { name: string; rank: string | null }).rank} ${(data as { name: string; rank: string | null }).name}` : (data as { name: string }).name)
+      if (data) {
+        const r = data as { name: string; rank: string | null }
+        setReviewerName(r.rank ? `${r.rank} ${r.name}` : r.name)
+      }
     })()
     void supabase
   }, [template?.last_reviewed_by])
 
-  // Flatten steps for counting
   function flattenSteps(s: QrcStep[]): QrcStep[] {
     const flat: QrcStep[] = []
     for (const step of s) {
@@ -369,47 +464,71 @@ function QrcExecutionView({
   }
   const allSteps = flattenSteps(steps)
   const checkableSteps = allSteps.filter(s => s.type !== 'conditional' && s.type !== 'text' && s.type !== 'textarea')
-  const completedSteps = checkableSteps.filter(s => responses[s.id]?.completed)
-  const progress = checkableSteps.length > 0 ? (completedSteps.length / checkableSteps.length) * 100 : 0
+  const naSteps = checkableSteps.filter(s => getStepStatus(responses[s.id]) === 'not_applicable')
+  const completedSteps = checkableSteps.filter(s => getStepStatus(responses[s.id]) === 'completed')
+  const denominator = checkableSteps.length - naSteps.length
+  const progress = denominator > 0 ? (completedSteps.length / denominator) * 100 : 0
 
-  async function handleStepToggle(stepId: string) {
+  async function handleStepStatus(stepId: string, next: QrcStepStatus) {
     if (isClosed) return
-    const current = responses[stepId]
+    const current = responses[stepId] || { completed: false }
     const newResp: QrcStepResponse = {
-      completed: !current?.completed,
-      completed_at: !current?.completed ? new Date().toISOString() : undefined,
+      ...current,
+      status: next,
+      completed: next === 'completed',
+      completed_at: next === 'completed' ? new Date().toISOString() : current.completed_at,
     }
-    const updated = { ...responses, [stepId]: { ...current, ...newResp } }
+    if (next === undefined) {
+      delete (newResp as Partial<QrcStepResponse>).status
+    }
+    const updated = { ...responses, [stepId]: newResp }
     setResponses(updated)
-    await updateStepResponse(execution.id, stepId, updated[stepId])
+    await updateStepResponse(execution.id, stepId, newResp)
   }
 
   async function handleFieldChange(stepId: string, value: string) {
     if (isClosed) return
-    const current = responses[stepId] || {}
-    const updated = { ...responses, [stepId]: { ...current, value, completed: !!value } }
+    const current = responses[stepId] || { completed: false }
+    const newResp: QrcStepResponse = {
+      ...current,
+      value,
+      completed: !!value,
+      status: value ? 'completed' : undefined,
+    }
+    if (!value) delete (newResp as Partial<QrcStepResponse>).status
+    const updated = { ...responses, [stepId]: newResp }
     setResponses(updated)
-    await updateStepResponse(execution.id, stepId, updated[stepId])
+    await updateStepResponse(execution.id, stepId, newResp)
   }
 
-  async function handleAgencyToggle(stepId: string, agency: string) {
+  async function handleAgencyStatus(stepId: string, agency: string, next: QrcStepStatus) {
     if (isClosed) return
-    const current = responses[stepId] || {}
-    const checked = current.agencies_checked || []
-    const next = checked.includes(agency)
-      ? checked.filter((a: string) => a !== agency)
-      : [...checked, agency]
-    const updated = { ...responses, [stepId]: { ...current, agencies_checked: next, completed: next.length > 0 } }
+    const current = responses[stepId] || { completed: false }
+    const checked = (current.agencies_checked || []).filter(a => a !== agency)
+    const na = (current.agencies_na || []).filter(a => a !== agency)
+    if (next === 'completed') checked.push(agency)
+    else if (next === 'not_applicable') na.push(agency)
+    const anyMarked = checked.length + na.length > 0
+    const newResp: QrcStepResponse = {
+      ...current,
+      agencies_checked: checked,
+      agencies_na: na,
+      completed: checked.length > 0,
+      status: anyMarked && checked.length === 0 && na.length > 0 ? 'not_applicable' : (checked.length > 0 ? 'completed' : undefined),
+    }
+    if (!anyMarked) delete (newResp as Partial<QrcStepResponse>).status
+    const updated = { ...responses, [stepId]: newResp }
     setResponses(updated)
-    await updateStepResponse(execution.id, stepId, updated[stepId])
+    await updateStepResponse(execution.id, stepId, newResp)
   }
 
   async function handleNotes(stepId: string, notes: string) {
     if (isClosed) return
-    const current = responses[stepId] || {}
-    const updated = { ...responses, [stepId]: { ...current, notes } }
+    const current = responses[stepId] || { completed: false }
+    const newResp = { ...current, notes }
+    const updated = { ...responses, [stepId]: newResp }
     setResponses(updated)
-    await updateStepResponse(execution.id, stepId, updated[stepId])
+    await updateStepResponse(execution.id, stepId, newResp)
   }
 
   async function handleScnField(key: string, value: string) {
@@ -520,15 +639,31 @@ function QrcExecutionView({
   }
 
   function renderStep(step: QrcStep, depth = 0) {
-    const resp = responses[step.id] || {}
-    const checked = resp.completed ?? false
+    const resp = responses[step.id]
+    const status = getStepStatus(resp)
 
+    const isToggleType = step.type === 'checkbox' || step.type === 'checkbox_with_note'
+    const rowBg = status === 'completed'
+      ? 'color-mix(in srgb, var(--color-success) 6%, transparent)'
+      : status === 'not_applicable'
+        ? 'color-mix(in srgb, var(--color-text-3) 5%, transparent)'
+        : 'transparent'
+
+    // Sub-step indent must clear the parent's number column (padding 12 + minWidth 30 = 42)
+    // so the sub-step card's left border doesn't visually cut through the parent's "N." stamp.
+    // marginTop on sub-steps separates them from the parent's bottom border (without a gap they
+    // visually merge into one card and the indented child looks "embedded" in the parent).
     return (
-      <div key={step.id} style={{ marginLeft: depth * 20, marginBottom: 8 }}>
+      <div key={step.id} style={{
+        marginLeft: depth * 44,
+        marginTop: depth > 0 ? 6 : 0,
+        marginBottom: 8,
+      }}>
         <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px',
-          background: checked ? 'rgba(34,197,94,0.04)' : 'transparent',
-          borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+          display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
+          background: rowBg,
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border)',
         }}>
           {/* Step number */}
           <span style={{
@@ -537,81 +672,77 @@ function QrcExecutionView({
           }}>{step.id}.</span>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            {/* Checkbox types */}
-            {(step.type === 'checkbox' || step.type === 'checkbox_with_note') && (
+            {isToggleType && (
               <div>
-                <button
-                  onClick={() => handleStepToggle(step.id)}
-                  disabled={isClosed}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    background: 'none', border: 'none', cursor: isClosed ? 'default' : 'pointer',
-                    padding: 0, fontFamily: 'inherit', textAlign: 'left', width: '100%',
-                  }}
-                >
-                  <span style={{
-                    width: 24, height: 24, borderRadius: 'var(--radius-sm)', flexShrink: 0,
-                    border: checked ? 'none' : '2px solid var(--color-border-mid)',
-                    background: checked ? 'var(--color-green)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, justifyContent: 'space-between' }}>
                   <span style={{
                     fontSize: 'var(--fs-md)', fontWeight: 600,
-                    color: checked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                    textDecoration: checked ? 'line-through' : 'none',
+                    color: status === 'completed' ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                    textDecoration: status === 'completed' ? 'line-through' : 'none',
+                    flex: 1, minWidth: 0, paddingTop: 2,
                   }}>{step.label}</span>
-                </button>
+                  {isClosed ? (
+                    <QrcStepStatusPill status={status} />
+                  ) : (
+                    <QrcStepToggle
+                      value={status}
+                      onChange={next => handleStepStatus(step.id, next)}
+                    />
+                  )}
+                </div>
                 {step.note && (
-                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, marginLeft: 28, fontStyle: 'italic' }}>
-                    {step.note}
-                  </div>
+                  <div style={{
+                    fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+                    marginTop: 4, fontStyle: 'italic',
+                  }}>{step.note}</div>
+                )}
+                {step.type === 'checkbox_with_note' && (
+                  <input
+                    className="input-dark"
+                    placeholder="Add note (optional)"
+                    value={resp?.notes || ''}
+                    onChange={e => handleNotes(step.id, e.target.value)}
+                    disabled={isClosed}
+                    style={{ width: '100%', fontSize: 'var(--fs-sm)', marginTop: 6 }}
+                  />
                 )}
               </div>
             )}
 
-            {/* Notify agencies */}
             {step.type === 'notify_agencies' && (
               <div>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 6 }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 8 }}>
                   {step.label}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginLeft: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {(step.agencies || []).map(agency => {
-                    const agencyChecked = (resp.agencies_checked || []).includes(agency)
+                    const agencyStatus = getAgencyStatus(resp, agency)
                     return (
-                      <button
-                        key={agency}
-                        onClick={() => handleAgencyToggle(step.id, agency)}
-                        disabled={isClosed}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          background: 'none', border: 'none', cursor: isClosed ? 'default' : 'pointer',
-                          padding: '3px 0', fontFamily: 'inherit', textAlign: 'left',
-                        }}
-                      >
-                        <span style={{
-                          width: 20, height: 20, borderRadius: 'var(--radius-xs)', flexShrink: 0,
-                          border: agencyChecked ? 'none' : '2px solid var(--color-border-mid)',
-                          background: agencyChecked ? 'var(--color-green)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {agencyChecked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 800 }}>&#10003;</span>}
-                        </span>
+                      <div key={agency} style={{
+                        display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between',
+                        padding: '4px 0',
+                      }}>
                         <span style={{
                           fontSize: 'var(--fs-base)',
-                          color: agencyChecked ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                          textDecoration: agencyChecked ? 'line-through' : 'none',
+                          color: agencyStatus === 'completed' ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                          textDecoration: agencyStatus === 'completed' ? 'line-through' : 'none',
                         }}>{agency}</span>
-                      </button>
+                        {isClosed ? (
+                          <QrcStepStatusPill status={agencyStatus} />
+                        ) : (
+                          <QrcStepToggle
+                            value={agencyStatus}
+                            onChange={next => handleAgencyStatus(step.id, agency, next)}
+                            size="sm"
+                          />
+                        )}
+                      </div>
                     )
                   })}
                 </div>
               </div>
             )}
 
-            {/* Fill field */}
             {step.type === 'fill_field' && (
               <div>
                 <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
@@ -620,7 +751,7 @@ function QrcExecutionView({
                 <input
                   className="input-dark"
                   placeholder={step.field_label || 'Enter value'}
-                  value={resp.value || ''}
+                  value={resp?.value || ''}
                   onChange={e => handleFieldChange(step.id, e.target.value)}
                   disabled={isClosed}
                   style={{ width: '100%', fontSize: 'var(--fs-base)' }}
@@ -628,7 +759,6 @@ function QrcExecutionView({
               </div>
             )}
 
-            {/* Time field */}
             {step.type === 'time_field' && (
               <div>
                 <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 4 }}>
@@ -638,7 +768,7 @@ function QrcExecutionView({
                   <input
                     className="input-dark"
                     placeholder={step.field_label || 'HHmm'}
-                    value={resp.value || ''}
+                    value={resp?.value || ''}
                     onChange={e => handleFieldChange(step.id, e.target.value)}
                     disabled={isClosed}
                     style={{ width: 110, fontSize: 'var(--fs-base)', textAlign: 'center' }}
@@ -647,7 +777,8 @@ function QrcExecutionView({
                     <button
                       onClick={() => handleFieldChange(step.id, zuluNow())}
                       style={{
-                        background: 'rgba(34,211,238,0.1)', border: '1px solid var(--color-cyan)',
+                        background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+                        border: '1px solid var(--color-cyan)',
                         borderRadius: 'var(--radius-sm)', padding: '5px 12px', color: 'var(--color-cyan)',
                         fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                       }}
@@ -657,14 +788,11 @@ function QrcExecutionView({
               </div>
             )}
 
-            {/* Conditional */}
             {step.type === 'conditional' && (
               <div style={{
                 fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-warning)',
                 fontStyle: 'italic',
-              }}>
-                {step.label}
-              </div>
+              }}>{step.label}</div>
             )}
 
             {step.type === 'text' && (
@@ -672,9 +800,7 @@ function QrcExecutionView({
                 fontSize: 'var(--fs-md)', color: 'var(--color-text-2)',
                 padding: '6px 10px', background: 'var(--color-bg-inset)',
                 borderLeft: '3px solid var(--color-cyan)', borderRadius: 4,
-              }}>
-                {step.label}
-              </div>
+              }}>{step.label}</div>
             )}
 
             {step.type === 'textarea' && (
@@ -683,22 +809,18 @@ function QrcExecutionView({
                 padding: '10px 12px', background: 'var(--color-bg-inset)',
                 borderLeft: '3px solid var(--color-cyan)', borderRadius: 4,
                 lineHeight: 1.5,
-              }}>
-                {step.label}
-              </div>
+              }}>{step.label}</div>
             )}
-
           </div>
 
-          {/* Timestamp */}
-          {checked && resp.completed_at && (
-            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {new Date(resp.completed_at).toISOString().slice(11, 16)}Z
-            </span>
+          {status === 'completed' && resp?.completed_at && (
+            <span style={{
+              fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)',
+              whiteSpace: 'nowrap', flexShrink: 0, paddingTop: 4,
+            }}>{new Date(resp.completed_at).toISOString().slice(11, 16)}Z</span>
           )}
         </div>
 
-        {/* Sub-steps */}
         {step.sub_steps?.map(sub => renderStep(sub, depth + 1))}
       </div>
     )
@@ -707,61 +829,74 @@ function QrcExecutionView({
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        marginBottom: 14, gap: 12,
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <button onClick={onBack} style={{
             background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, padding: 0, marginBottom: 6,
-          }}>&larr; Back</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{
-              fontSize: 'var(--fs-lg)', fontWeight: 800,
-              color: '#fff', background: isClosed ? 'var(--color-green)' : '#D97706',
-              padding: '4px 12px', borderRadius: 'var(--radius-sm)',
-            }}>QRC-{execution.qrc_number}</span>
+            fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, padding: 0, marginBottom: 8,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}>
+            <ArrowLeft size={14} />
+            Back
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <QrcBadge number={execution.qrc_number} size="lg" />
             <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
               {execution.title}
             </span>
           </div>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+          <div style={{
+            fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap',
+          }}>
+            <Clock size={11} />
             Opened {new Date(execution.opened_at).toISOString().slice(11, 16)}Z
             {execution.open_initials && ` by ${execution.open_initials}`}
-            {execution.closed_at && ` | Closed ${new Date(execution.closed_at).toISOString().slice(11, 16)}Z`}
+            {execution.closed_at && ` · Closed ${new Date(execution.closed_at).toISOString().slice(11, 16)}Z`}
             {execution.close_initials && ` by ${execution.close_initials}`}
           </div>
         </div>
-        <span style={{
-          fontSize: 'var(--fs-sm)', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-md)',
-          background: isClosed ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
-          color: isClosed ? 'var(--color-green)' : 'var(--color-amber)',
-        }}>{isClosed ? 'CLOSED' : 'OPEN'}</span>
+        <StatusPill kind={isClosed ? 'closed' : 'open'}>{isClosed ? 'Closed' : 'Open'}</StatusPill>
       </div>
 
-      {/* Warning note */}
+      {/* Warning note — banner-tier */}
       {template?.notes && (
         <div style={{
-          padding: '8px 12px', borderRadius: 'var(--radius-md)', marginBottom: 12,
-          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-red)',
+          padding: '10px 14px', borderRadius: 'var(--radius-md)', marginBottom: 14,
+          background: 'color-mix(in srgb, var(--color-danger) 8%, var(--color-bg-surface))',
+          borderLeft: '4px solid var(--color-danger)',
+          border: '1px solid color-mix(in srgb, var(--color-danger) 25%, transparent)',
+          display: 'flex', alignItems: 'flex-start', gap: 10,
         }}>
-          {template.notes}
+          <AlertOctagon size={18} color="var(--color-danger)" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-danger)',
+          }}>{template.notes}</div>
         </div>
       )}
 
       {/* Progress bar */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-            Progress: {completedSteps.length}/{checkableSteps.length} steps
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, alignItems: 'center' }}>
+          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)' }}>
+            Progress: {completedSteps.length}/{denominator} steps
+            {naSteps.length > 0 && ` (${naSteps.length} N/A)`}
           </span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+          <span style={{
+            fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}>
             {Math.round(progress)}%
+            {progress === 100 && <CheckCircle2 size={12} color="var(--color-success)" />}
           </span>
         </div>
         <div style={{ height: 4, borderRadius: 2, background: 'var(--color-bg-elevated)', overflow: 'hidden' }}>
           <div style={{
             height: '100%', width: `${progress}%`,
-            background: progress === 100 ? 'var(--color-green)' : 'var(--color-cyan)',
+            background: progress === 100 ? 'var(--color-success)' : 'var(--color-cyan)',
             borderRadius: 2, transition: 'width 0.3s',
           }} />
         </div>
@@ -769,26 +904,32 @@ function QrcExecutionView({
 
       {/* References */}
       {template?.references && (
-        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', marginBottom: 14 }}>
           Ref: {template.references}
         </div>
       )}
 
-      {/* SCN Form — data entry at top for quick capture */}
+      {/* SCN Form */}
       {template?.has_scn_form && template.scn_fields && (
         <div style={{
           padding: 16, borderRadius: 'var(--radius-md)', marginBottom: 16,
-          background: 'var(--color-bg-surface)', border: '1px solid rgba(34,211,238,0.2)',
+          background: 'var(--color-bg-surface)',
+          border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+          borderLeft: '3px solid var(--color-cyan)',
         }}>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{
+            fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)',
+            marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>
             Secondary Crash Net (SCN) Form
           </div>
           {((template.scn_fields as { fields?: { key: string; label: string; type: string }[] }).fields || []).map(
-            (field: { key: string; label: string; type: string }) => (
+            (field) => (
               <div key={field.key} style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 3 }}>
-                  {field.label}
-                </label>
+                <label style={{
+                  fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-2)',
+                  display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em',
+                }}>{field.label}</label>
                 {field.type === 'textarea' ? (
                   <textarea
                     className="input-dark"
@@ -818,29 +959,31 @@ function QrcExecutionView({
         {steps.map(step => renderStep(step))}
       </div>
 
-      {/* Annual Review Section */}
+      {/* Annual Review */}
       {template && (
         <div style={{
           padding: 14, borderRadius: 'var(--radius-md)', marginBottom: 16,
-          background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+          background: 'var(--color-bg-surface)',
+          border: '1px solid var(--color-border)',
+          borderLeft: '3px solid var(--color-cyan)',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8,
+          }}>
+            <div style={{
+              fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <Calendar size={12} />
               Annual Review
             </div>
             {template.last_reviewed_at ? (
-              <span style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-                background: isReviewOverdue(template.last_reviewed_at) ? 'rgba(239,68,68,0.12)' : 'rgba(34,197,94,0.12)',
-                color: isReviewOverdue(template.last_reviewed_at) ? 'var(--color-red)' : 'var(--color-green)',
-              }}>
-                {isReviewOverdue(template.last_reviewed_at) ? 'OVERDUE' : 'CURRENT'}
-              </span>
+              isReviewOverdue(template.last_reviewed_at)
+                ? <StatusPill kind="overdue">Overdue</StatusPill>
+                : <StatusPill kind="current">Current</StatusPill>
             ) : (
-              <span style={{
-                fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-                background: 'rgba(239,68,68,0.12)', color: 'var(--color-red)',
-              }}>NEVER REVIEWED</span>
+              <StatusPill kind="overdue">Never reviewed</StatusPill>
             )}
           </div>
           {template.last_reviewed_at && (
@@ -850,9 +993,10 @@ function QrcExecutionView({
             </div>
           )}
           {template.review_notes && !showReview && (
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginBottom: 6 }}>
-              {template.review_notes}
-            </div>
+            <div style={{
+              fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+              fontStyle: 'italic', marginBottom: 6,
+            }}>{template.review_notes}</div>
           )}
           {showReview ? (
             <div>
@@ -877,7 +1021,8 @@ function QrcExecutionView({
                 <button
                   onClick={() => setShowReview(false)}
                   style={{
-                    padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+                    padding: '8px 14px', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--color-border)',
                     background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
                     fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
                   }}
@@ -889,11 +1034,16 @@ function QrcExecutionView({
               onClick={() => setShowReview(true)}
               style={{
                 padding: '6px 14px', borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.06)',
+                border: '1px solid var(--color-cyan)',
+                background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
                 color: 'var(--color-cyan)', fontWeight: 700, fontSize: 'var(--fs-sm)',
                 cursor: 'pointer', fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
-            >Mark as Reviewed</button>
+            >
+              <CheckCircle2 size={14} />
+              Mark as Reviewed
+            </button>
           )}
         </div>
       )}
@@ -921,7 +1071,7 @@ function QrcExecutionView({
                 disabled={closing}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                  background: 'var(--color-green)', color: '#fff', fontWeight: 700,
+                  background: 'var(--color-success)', color: '#fff', fontWeight: 700,
                   fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >{closing ? 'Closing...' : 'Confirm Close'}</button>
@@ -942,19 +1092,28 @@ function QrcExecutionView({
               onClick={() => setShowCloseConfirm(true)}
               style={{
                 flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                background: 'var(--color-green)', color: '#fff', fontWeight: 700,
+                background: 'var(--color-success)', color: '#fff', fontWeight: 700,
                 fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               }}
-            >Close QRC</button>
+            >
+              <CheckCircle2 size={16} />
+              Close QRC
+            </button>
             <button
               onClick={handleCancel}
               style={{
                 padding: '12px 16px', borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.06)',
-                color: 'var(--color-red)', fontWeight: 700, fontSize: 'var(--fs-base)',
+                border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+                background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
+                color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
                 cursor: 'pointer', fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
               }}
-            >Cancel QRC</button>
+            >
+              <X size={16} />
+              Cancel QRC
+            </button>
           </div>
         )
       ) : (
@@ -965,39 +1124,48 @@ function QrcExecutionView({
             border: '1px solid var(--color-border-mid)', background: 'transparent',
             color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
             cursor: 'pointer', fontFamily: 'inherit',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}
-        >Reopen QRC</button>
+        >
+          <RotateCcw size={14} />
+          Reopen QRC
+        </button>
       )}
 
-      {/* Export actions — shown for closed QRCs */}
+      {/* Export actions */}
       {isClosed && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button
             onClick={handleExportPdf}
             disabled={generatingPdf}
             style={{
-              flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-              background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+              flex: 1, padding: '12px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 25%, transparent)',
               color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
               opacity: generatingPdf ? 0.7 : 1,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
           >
+            <FileDown size={16} />
             {generatingPdf ? 'Generating...' : 'Export PDF'}
           </button>
           <button
             onClick={handleEmailPdf}
             disabled={generatingPdf}
             style={{
-              padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-              background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+              padding: '12px 16px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 25%, transparent)',
               color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
               fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
               opacity: generatingPdf ? 0.7 : 1,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
             }}
             title="Email PDF"
           >
-            ✉
+            <Mail size={16} />
           </button>
         </div>
       )}

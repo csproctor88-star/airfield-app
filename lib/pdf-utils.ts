@@ -11,7 +11,34 @@ import { sanitizePdfText } from '@/lib/pdf-config'
 // footer. Generators still own their body content; this just
 // lets a fix to (e.g.) the header line happen once instead of
 // 19 times.
+//
+// ── Y-COORDINATE CONVENTION ──
+// jsPDF text APIs (`doc.text`) draw with the y-coord as the text
+// BASELINE. Box APIs (`doc.rect`, `doc.roundedRect`) draw with
+// the y-coord as the TOP edge. Mixing these without care causes
+// silent overlap: text drawn at y=10 occupies roughly y=7.5..y=11,
+// while a rect drawn at y=10 starts AT y=10. To stay consistent
+// across all generators, treat the running `y` cursor as
+// "the top edge of the next element to draw", and:
+//
+//   • For text: draw at `y + caphHeight` (≈ 3mm at 9pt), then
+//     advance `y += textHeight + spacing`.
+//   • For boxes: draw at `y` directly, then `y += boxH + spacing`.
+//
+// Always advance y AFTER drawing a colored left-rule that extends
+// above the cursor (e.g. status row rules drawn from rowStart - 3
+// for cap-height alignment). The next row's rule top must clear
+// the previous element's bottom by at least STEP_ROW_GAP_MM /2.
 // ─────────────────────────────────────────────────────────────
+
+/** Min gap (mm) between row content and the next row's left-rule top edge. */
+export const STEP_ROW_GAP_MM = 6
+/** Min gap (mm) between a banner/info block (warning, conditional, text card) and the next element. */
+export const BLOCK_POST_SPACING_MM = 6
+/** Approximate cap-height for 9pt Helvetica in mm — use as text-baseline offset. */
+export const TEXT_CAP_HEIGHT_9PT_MM = 3
+/** Thin spacing (mm) used between a label and a sub-element within the same row. */
+export const ROW_INNER_GAP_MM = 2
 
 export interface PdfContext {
   doc: jsPDF

@@ -5112,10 +5112,15 @@ export type QrcStep = {
 
 export type QrcStepResponse = {
   completed: boolean
+  // Tri-state. When present, takes precedence over `completed`. Legacy executions
+  // only set `completed`; `lib/qrc-step-status.ts` bridges the two.
+  status?: 'completed' | 'not_applicable'
   completed_by?: string
   completed_at?: string
   value?: string
   agencies_checked?: string[]
+  // Per-agency N/A list for notify_agencies steps; same semantic as `status`.
+  agencies_na?: string[]
   notes?: string
 }
 
