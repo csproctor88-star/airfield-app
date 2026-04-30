@@ -153,6 +153,29 @@ export const DEMO_CHECKS = [
     latitude: null as number | null, longitude: null as number | null,
     photo_count: 0, created_at: '2026-02-02T11:15:00Z', updated_at: '2026-02-02T11:15:00Z',
   },
+  {
+    id: 'demo-check-8', display_id: 'AC-0091', check_type: 'construction' as const,
+    areas: ['TWY B Construction Site'],
+    data: {
+      construction_items: {
+        // Mixed P/F/N/A so demo users can see all 3 status pills.
+        barricades: 'P', fencing: 'P', fod_mgmt: 'F', stockpile: 'P',
+        movement: 'P', rwy_taxi: 'P', markings: 'P', obstruction: 'N/A',
+        notams: 'P', vehicles: 'P', signage: 'F',
+      },
+    },
+    completed_by: 'MSgt Proctor', completed_at: '2026-02-01T15:30:00Z',
+    latitude: null as number | null, longitude: null as number | null,
+    photo_count: 0, created_at: '2026-02-01T15:30:00Z', updated_at: '2026-02-01T15:30:00Z',
+  },
+  {
+    id: 'demo-check-9', display_id: 'AC-0090', check_type: 'other' as const,
+    areas: ['North Perimeter Road'],
+    data: { other_subject: 'Perimeter fence integrity walk after high-wind event' },
+    completed_by: 'TSgt Williams', completed_at: '2026-01-30T08:15:00Z',
+    latitude: null as number | null, longitude: null as number | null,
+    photo_count: 0, created_at: '2026-01-30T08:15:00Z', updated_at: '2026-01-30T08:15:00Z',
+  },
 ]
 
 export const DEMO_INSPECTIONS = [

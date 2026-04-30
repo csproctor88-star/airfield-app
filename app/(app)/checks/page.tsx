@@ -12,6 +12,15 @@ import {
   BASH_CONDITION_CODES,
   EMERGENCY_ACTIONS,
 } from '@/lib/constants'
+import { getCheckIcon } from '@/lib/check-icons'
+import { ConstructionChecklist } from '@/components/checks/construction-checklist'
+import {
+  DEFAULT_CONSTRUCTION_ITEM_STATE,
+  type ConstructionItemStatus,
+} from '@/lib/check-construction-items'
+import {
+  AlertTriangle, CheckCircle2, FileText, Trash2, Map as MapIcon,
+} from 'lucide-react'
 import type { CheckType } from '@/lib/supabase/types'
 import { uploadCheckPhoto, fetchRecentChecks, saveCheckDraftToDb, loadCheckDraftFromDb, deleteCheckDraft, type CheckRow } from '@/lib/supabase/checks'
 import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
@@ -136,6 +145,8 @@ export default function AirfieldChecksPage() {
     setCheckedActions(saved.checkedActions)
     setNotifiedAgencies(saved.notifiedAgencies)
     setHeavyAircraftType(saved.heavyAircraftType)
+    setConstructionItems(saved.constructionItems ?? DEFAULT_CONSTRUCTION_ITEM_STATE)
+    setOtherSubject(saved.otherSubject ?? '')
     if (saved.dbRowId) setDraftDbRowId(saved.dbRowId)
     if (saved.savedAt) setDraftSavedAt(saved.savedAt)
     if (saved.issueFound && saved.issues.length > 0) {
@@ -331,6 +342,8 @@ export default function AirfieldChecksPage() {
   const [checkedActions, setCheckedActions] = useState<string[]>([])
   const [notifiedAgencies, setNotifiedAgencies] = useState<string[]>([])
   const [heavyAircraftType, setHeavyAircraftType] = useState('')
+  const [constructionItems, setConstructionItems] = useState<Record<string, ConstructionItemStatus>>(DEFAULT_CONSTRUCTION_ITEM_STATE)
+  const [otherSubject, setOtherSubject] = useState('')
 
   // ── Save Draft handler (manual, not auto-save) ──
   const handleSaveDraft = async () => {
@@ -343,7 +356,7 @@ export default function AirfieldChecksPage() {
       checkType, areas, issueFound, issues, remarks, remarkText,
       rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
       aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
-      heavyAircraftType, savedAt: '', startedAt: checkStartedAt, dbRowId: draftDbRowId,
+      heavyAircraftType, constructionItems, otherSubject, savedAt: '', startedAt: checkStartedAt, dbRowId: draftDbRowId,
     }
 
     const { data: saved, error } = await saveCheckDraftToDb({
@@ -378,7 +391,7 @@ export default function AirfieldChecksPage() {
   }), [checkType, areas, issueFound, issues, remarks, remarkText,
     rscCondition, reportRcr, rcrValue, rcrConditionType, bashCondition,
     aircraftType, callsign, emergencyNature, checkedActions, notifiedAgencies,
-    heavyAircraftType, checkStartedAt, draftDbRowId])
+    heavyAircraftType, constructionItems, otherSubject, checkStartedAt, draftDbRowId])
 
   // Keep a ref to the latest snapshot for beforeunload (can't use state in event handlers)
   const draftSnapshotRef = useRef<CheckDraft | null>(null)
@@ -483,6 +496,10 @@ export default function AirfieldChecksPage() {
         }
       case 'heavy_aircraft':
         return { ...base, aircraft_type: heavyAircraftType }
+      case 'construction':
+        return { ...base, construction_items: constructionItems }
+      case 'other':
+        return { ...base, other_subject: otherSubject.trim() }
       case 'fod':
       default:
         return base
@@ -496,6 +513,10 @@ export default function AirfieldChecksPage() {
     }
     if (checkType === 'bash' && issueFound && !bashFormSaved) {
       toast.error('Complete the wildlife sighting or strike form before submitting')
+      return
+    }
+    if (checkType === 'other' && !otherSubject.trim()) {
+      toast.error('Enter a Subject for the Other check (what did you check?)')
       return
     }
 
@@ -726,6 +747,8 @@ export default function AirfieldChecksPage() {
     setCheckedActions([])
     setNotifiedAgencies([])
     setHeavyAircraftType('')
+    setConstructionItems(DEFAULT_CONSTRUCTION_ITEM_STATE)
+    setOtherSubject('')
     setSelectedLat(null)
     setSelectedLng(null)
     setIssueFound(false)
@@ -741,23 +764,40 @@ export default function AirfieldChecksPage() {
 
   return (
     <div className="page-container">
-      {/* Header */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Airfield Check</div>
-        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>DAFI 13-213 / UFC 3-260-01</div>
+      {/* Page header — tertiary "AIRFIELD CHECK" label + reg subtitle,
+          accent underline below. */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        gap: 8, paddingBottom: 8, marginBottom: 12,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <div style={{
+          fontSize: 'var(--fs-sm)', fontWeight: 700,
+          color: 'var(--color-text-3)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          Airfield Check
+        </div>
+        <div style={{
+          fontSize: 'var(--fs-2xs)', fontWeight: 600,
+          color: 'var(--color-text-3)',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}>
+          DAFI 13-213 · UFC 3-260-01
+        </div>
       </div>
 
-      {/* Resume / Discard Prompt */}
+      {/* Resume / Discard Prompt — banner-tier 4px warning left border. */}
       {showResumePrompt && pendingDraft && (
         <div className="card" style={{
           marginBottom: 8,
-          border: '2px solid #D97706',
+          borderLeft: '4px solid var(--color-warning, #D97706)',
           background: 'rgba(217, 119, 6, 0.06)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 20 }}>⚠️</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <AlertTriangle size={20} color="var(--color-warning, #D97706)" />
             <div>
-              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: '#D97706' }}>
+              <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-warning, #D97706)' }}>
                 Check In Progress
               </div>
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
@@ -798,59 +838,87 @@ export default function AirfieldChecksPage() {
         </div>
       )}
 
-      {/* Check Type Dropdown */}
+      {/* Check Type — tile grid (3-col desktop, 2-col tablet, 1-col
+          mobile). Each tile: Lucide icon, type label, click selects.
+          Disabled while a check is in progress so users don't switch
+          types mid-walk. */}
       <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+        <div style={{
+          fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+          fontWeight: 700, letterSpacing: '0.08em',
+          textTransform: 'uppercase', marginBottom: 10,
+        }}>
           Check Type
         </div>
-        <select
-          className="input-dark"
-          value={checkType}
-          disabled={checkStarted}
-          onChange={async (e) => {
-            const newType = e.target.value as CheckType | ''
-            setCheckType(newType)
-            resetTypeFields()
-            // Auto-select areas based on type
-            if (newType === 'rsc') {
-              setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
-            } else if (newType) {
-              setAreas(['Entire Airfield'])
-            } else {
-              setAreas(['Entire Airfield'])
-            }
-            // Log "on the AFLD" when check starts
-            if (newType && !checkStarted) {
-              setCheckStarted(true)
-              setCheckStartedAt(new Date().toISOString())
-              const oiStr = userOI ? `/${userOI}` : ''
-              const checkLabel = CHECK_TYPE_CONFIG[newType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || newType.toUpperCase()
-              logActivity(
-                'started',
-                'airfield_check',
-                installationId || crypto.randomUUID(),
-                undefined,
-                { details: `AFLD3${oiStr} ON THE AFLD FOR A ${checkLabel}` },
-                installationId,
-              )
-            }
-          }}
-          style={{ fontSize: 'var(--fs-lg)' }}
-        >
-          <option value="">Select check type...</option>
-          {Object.entries(CHECK_TYPE_CONFIG).map(([key, cfg]) => (
-            <option key={key} value={key}>
-              {cfg.icon} {cfg.label}
-            </option>
-          ))}
-        </select>
-
-        {typeConfig && (
-          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 'var(--radius-xs)', background: typeConfig.color }} />
-            <span style={{ fontSize: 'var(--fs-base)', color: typeConfig.color, fontWeight: 600 }}>{typeConfig.label}</span>
-          </div>
-        )}
+        <div className="check-type-grid">
+          {Object.entries(CHECK_TYPE_CONFIG).map(([key, cfg]) => {
+            const Icon = getCheckIcon(cfg.icon)
+            const selected = checkType === key
+            return (
+              <button
+                key={key}
+                type="button"
+                disabled={checkStarted && !selected}
+                onClick={async () => {
+                  if (selected) return
+                  const newType = key as CheckType
+                  setCheckType(newType)
+                  resetTypeFields()
+                  if (newType === 'rsc') {
+                    setAreas(installationAreas.filter(a => a.toUpperCase().startsWith('RWY')))
+                  } else {
+                    setAreas(['Entire Airfield'])
+                  }
+                  if (!checkStarted) {
+                    setCheckStarted(true)
+                    setCheckStartedAt(new Date().toISOString())
+                    const oiStr = userOI ? `/${userOI}` : ''
+                    const checkLabel = CHECK_TYPE_CONFIG[newType as keyof typeof CHECK_TYPE_CONFIG]?.label?.toUpperCase() || newType.toUpperCase()
+                    logActivity(
+                      'started',
+                      'airfield_check',
+                      installationId || crypto.randomUUID(),
+                      undefined,
+                      { details: `AFLD3${oiStr} ON THE AFLD FOR A ${checkLabel}` },
+                      installationId,
+                    )
+                  }
+                }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8,
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  border: selected ? `2px solid ${cfg.color}` : '1px solid var(--color-border)',
+                  background: selected
+                    ? `color-mix(in srgb, ${cfg.color} 10%, transparent)`
+                    : 'var(--color-bg)',
+                  color: selected ? cfg.color : 'var(--color-text-2)',
+                  cursor: (checkStarted && !selected) ? 'not-allowed' : 'pointer',
+                  opacity: (checkStarted && !selected) ? 0.4 : 1,
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                  background: `color-mix(in srgb, ${cfg.color} 14%, transparent)`,
+                  color: cfg.color,
+                }}>
+                  <Icon size={18} />
+                </span>
+                <span style={{
+                  fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  color: selected ? cfg.color : 'var(--color-text-1)',
+                  letterSpacing: '0.02em',
+                }}>
+                  {cfg.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Recent Checks */}
@@ -861,6 +929,7 @@ export default function AirfieldChecksPage() {
           </div>
           {recentChecks.map((rc) => {
             const cfg = CHECK_TYPE_CONFIG[rc.check_type as keyof typeof CHECK_TYPE_CONFIG]
+            const Icon = cfg ? getCheckIcon(cfg.icon) : null
             return (
               <Link
                 key={rc.id}
@@ -873,7 +942,7 @@ export default function AirfieldChecksPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{cfg?.icon}</span>
+                  {Icon && <Icon size={14} color={cfg?.color} />}
                   <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{rc.display_id}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>{cfg?.label}</span>
                 </div>
@@ -928,7 +997,7 @@ export default function AirfieldChecksPage() {
                           : 'var(--color-text-3)',
                       }}
                     >
-                      {c === 'Dry' ? '☀️' : '💧'} {c}
+                      {c}
                     </button>
                   ))}
                 </div>
@@ -1194,6 +1263,35 @@ export default function AirfieldChecksPage() {
               Document FOD items found in the remarks section below.
             </div>
           )}
+
+          {/* Other — required Subject so History rows are distinguishable. */}
+          {checkType === 'other' && (
+            <div>
+              <div style={{
+                fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+                fontWeight: 600, letterSpacing: '0.08em',
+                textTransform: 'uppercase', marginBottom: 6,
+              }}>
+                Subject <span style={{ color: 'var(--color-danger)' }}>*</span>
+              </div>
+              <input
+                className="input-dark"
+                placeholder="What did you check? (e.g., Perimeter fence walk after wind event)"
+                value={otherSubject}
+                onChange={(e) => setOtherSubject(e.target.value)}
+                style={{ fontSize: 'var(--fs-md)' }}
+              />
+            </div>
+          )}
+
+          {/* Construction — FAA 11-item P/F/N/A checklist. Items
+              default to P; user only flips items that aren't passing. */}
+          {checkType === 'construction' && (
+            <ConstructionChecklist
+              state={constructionItems}
+              onChange={setConstructionItems}
+            />
+          )}
         </div>
       )}
 
@@ -1211,7 +1309,7 @@ export default function AirfieldChecksPage() {
             color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: 'inherit',
           }}
         >
-          <span style={{ fontSize: 'var(--fs-3xl)' }}>🗺️</span>
+          <MapIcon size={18} color="var(--color-accent)" />
           View Airfield Diagram
         </button>
       )}
@@ -1328,7 +1426,7 @@ export default function AirfieldChecksPage() {
               borderRadius: 'var(--radius-md)', background: 'rgba(16,185,129,0.08)',
               border: '1px solid rgba(16,185,129,0.3)',
             }}>
-              <span style={{ fontSize: 20 }}>✓</span>
+              <CheckCircle2 size={20} color="#10B981" />
               <div>
                 <div style={{ fontWeight: 700, color: '#10B981' }}>
                   Wildlife {bashFormType === 'sighting' ? 'sighting' : 'strike'} logged
@@ -1434,47 +1532,86 @@ export default function AirfieldChecksPage() {
 
       {/* Photos section removed — photos now inside issue panels */}
 
-      {/* Save Draft Button */}
+      {/* Tiered action cluster: primary cyan Complete · utility Save
+          Draft · blocking left-border Discard. Replaces the old
+          stacked green/blue buttons. */}
       {checkType && (
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <button
+            type="button"
+            onClick={handleComplete}
+            disabled={saving || !checkType}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              flex: '2 1 200px', padding: '14px 16px', borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(56,189,248,0.40)',
+              background: 'rgba(56,189,248,0.12)',
+              color: 'var(--color-accent)',
+              fontSize: 'var(--fs-md)', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            <CheckCircle2 size={18} />
+            {saving ? 'Saving…' : 'Complete Check'}
+          </button>
           <button
             type="button"
             onClick={handleSaveDraft}
             disabled={draftSaving}
             style={{
-              width: '100%', padding: '14px', borderRadius: 'var(--radius-md)',
-              border: '1.5px solid rgba(59,130,246,0.5)',
-              background: 'rgba(59,130,246,0.08)',
-              color: 'var(--color-accent)', fontSize: 'var(--fs-xl)', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              flex: '1 1 140px', padding: '14px 16px', borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-surface)',
+              color: 'var(--color-text-2)',
+              fontSize: 'var(--fs-xs)', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
               cursor: draftSaving ? 'default' : 'pointer', fontFamily: 'inherit',
-              opacity: draftSaving ? 0.7 : 1,
+              opacity: draftSaving ? 0.5 : 1,
             }}
           >
-            {draftSaving ? 'Saving...' : draftDbRowId ? 'Update Draft' : 'Save Draft'}
+            <FileText size={14} color="var(--color-accent)" />
+            {draftSaving ? 'Saving…' : draftDbRowId ? 'Update Draft' : 'Save Draft'}
           </button>
-          {draftSavedAt && (
-            <div style={{ textAlign: 'center', marginTop: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-              Last saved {formatZuluDateTime(new Date(draftSavedAt))}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (!confirm('Discard this check? Unsaved progress will be lost.')) return
+              if (draftDbRowId) deleteCheckDraft(draftDbRowId)
+              clearCheckDraft(installationId)
+              resetTypeFields()
+              setCheckType('')
+              setCheckStarted(false)
+              setCheckStartedAt(null)
+              setDraftDbRowId(null)
+              setDraftSavedAt(null)
+              toast.success('Check discarded')
+            }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              flex: '0 1 110px', padding: '14px 12px', borderRadius: 'var(--radius-md)',
+              borderLeft: '4px solid var(--color-danger)',
+              border: '1px solid var(--color-border)',
+              borderLeftWidth: 4, borderLeftColor: 'var(--color-danger)',
+              background: 'var(--color-bg-surface)',
+              color: 'var(--color-text-2)',
+              fontSize: 'var(--fs-xs)', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <Trash2 size={14} color="var(--color-danger)" />
+            Discard
+          </button>
         </div>
       )}
 
-      {/* Complete Check Button */}
-      {checkType && (
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleComplete}
-          disabled={saving || !checkType}
-          style={{
-            width: '100%', opacity: saving ? 0.7 : 1,
-            background: 'var(--color-success)', fontSize: 'var(--fs-xl)', fontWeight: 800,
-            padding: '14px', borderRadius: 'var(--radius-md)',
-          }}
-        >
-          {saving ? 'Saving...' : '✓ Complete Check'}
-        </button>
+      {checkType && draftSavedAt && (
+        <div style={{ textAlign: 'center', marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+          Draft last saved {formatZuluDateTime(new Date(draftSavedAt))}
+        </div>
       )}
 
       {checkType && (

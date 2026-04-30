@@ -293,13 +293,19 @@ export const LIGHTING_INSPECTION_SECTIONS: InspectionSection[] = [
 
 // === Check Type Configuration ===
 
+// Icon stores a Lucide component name (string). Resolve to a component
+// at render time via `getCheckIcon()` from `lib/check-icons.tsx`. Storing
+// a string here keeps `lib/constants.ts` free of React imports so it
+// stays usable from non-component code (PDF, draft persistence, etc).
 export const CHECK_TYPE_CONFIG = {
-  fod:              { label: 'FOD Check', color: '#EAB308', icon: '🔍' },
-  rsc:              { label: 'RSC/RCR Check', color: '#3B82F6', icon: '🌧️' },
-  ife:              { label: 'In-Flight Emergency', color: '#EF4444', icon: '🚨' },
-  ground_emergency: { label: 'Ground Emergency', color: '#F97316', icon: '🚒' },
-  heavy_aircraft:   { label: 'Heavy Aircraft Check', color: '#8B5CF6', icon: '✈️' },
-  bash:             { label: 'BASH Check', color: '#A78BFA', icon: '🦅' },
+  fod:              { label: 'FOD Check',           color: '#EAB308', icon: 'Search' },
+  rsc:              { label: 'RSC/RCR Check',       color: '#3B82F6', icon: 'CloudRain' },
+  ife:              { label: 'In-Flight Emergency', color: '#EF4444', icon: 'Siren' },
+  ground_emergency: { label: 'Ground Emergency',    color: '#F97316', icon: 'Truck' },
+  heavy_aircraft:   { label: 'Heavy Aircraft Check',color: '#8B5CF6', icon: 'Plane' },
+  bash:             { label: 'BASH Check',          color: '#A78BFA', icon: 'Bird' },
+  construction:     { label: 'Construction Check',  color: '#F59E0B', icon: 'HardHat' },
+  other:            { label: 'Other',               color: '#94A3B8', icon: 'ClipboardList' },
 } as const
 
 // === RSC Conditions ===

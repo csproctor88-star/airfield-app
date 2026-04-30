@@ -6,6 +6,12 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
+import { getCheckIcon } from '@/lib/check-icons'
+import { ConstructionChecklist } from '@/components/checks/construction-checklist'
+import type { ConstructionItemStatus } from '@/lib/check-construction-items'
+import {
+  ArrowLeft, FileText, Mail, Plus, History, Check as LCheck,
+} from 'lucide-react'
 import { DEMO_CHECKS, DEMO_CHECK_COMMENTS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, deleteCheck, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
@@ -259,17 +265,44 @@ export default function CheckDetailPage() {
   const checkAreas: string[] = Array.isArray(check.areas) ? check.areas.map(String) : []
   const checkTypeStr = String(check.check_type)
 
+  const TypeIcon = typeConfig ? getCheckIcon(typeConfig.icon) : null
+
   return (
     <div className="page-container">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
-          ← Back
+      {/* Page header — tertiary "CHECK" tier label + back/history nav,
+          accent underline below. */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 8, paddingBottom: 8, marginBottom: 12,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <button
+          onClick={() => router.back()}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+            background: 'none', border: 'none',
+            color: 'var(--color-text-3)', cursor: 'pointer',
+            fontFamily: 'inherit',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+          }}
+        >
+          <ArrowLeft size={14} />
+          Back
         </button>
         <Link
           href="/checks/history"
-          style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none' }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 8px',
+            color: 'var(--color-accent)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
+            textDecoration: 'none', fontFamily: 'inherit',
+          }}
         >
+          <History size={14} />
           All History
         </Link>
       </div>
@@ -283,11 +316,26 @@ export default function CheckDetailPage() {
           <Badge label="COMPLETED" color="var(--color-success)" />
         </div>
 
-        {/* Check Type */}
-        {typeConfig && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 'var(--fs-4xl)' }}>{typeConfig.icon}</span>
-            <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: typeConfig.color }}>{typeConfig.label}</span>
+        {/* Check Type — Lucide icon in tier color, label demoted to
+            tertiary so the icon + color do the lifting. */}
+        {typeConfig && TypeIcon && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 36, height: 36, borderRadius: 'var(--radius-sm)',
+              background: `color-mix(in srgb, ${typeConfig.color} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${typeConfig.color} 35%, transparent)`,
+              color: typeConfig.color,
+            }}>
+              <TypeIcon size={20} />
+            </span>
+            <span style={{
+              fontSize: 'var(--fs-md)', fontWeight: 700,
+              color: typeConfig.color,
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+            }}>
+              {typeConfig.label}
+            </span>
           </div>
         )}
 
@@ -395,7 +443,7 @@ export default function CheckDetailPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {(data.actions as string[]).map((action, i) => (
                     <div key={i} style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span>✓</span> {action}
+                      <LCheck size={13} /> {action}
                     </div>
                   ))}
                 </div>
@@ -418,6 +466,34 @@ export default function CheckDetailPage() {
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Aircraft Type / MDS</div>
             <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-purple)' }}>{data.aircraft_type as string}</div>
+          </div>
+        )}
+
+        {checkTypeStr === 'other' && !!data.other_subject && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{
+              fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+              fontWeight: 600, letterSpacing: '0.08em',
+              textTransform: 'uppercase', marginBottom: 4,
+            }}>
+              Subject
+            </div>
+            <div style={{
+              fontSize: 'var(--fs-lg)', fontWeight: 700,
+              color: 'var(--color-text-1)', lineHeight: 1.4,
+            }}>
+              {data.other_subject as string}
+            </div>
+          </div>
+        )}
+
+        {checkTypeStr === 'construction' && (
+          <div style={{ marginBottom: 12 }}>
+            <ConstructionChecklist
+              state={(data.construction_items as Record<string, ConstructionItemStatus>) || {}}
+              onChange={() => {}}
+              readOnly
+            />
           </div>
         )}
       </div>
@@ -679,14 +755,18 @@ export default function CheckDetailPage() {
           }}
           disabled={generatingPdf}
           style={{
-            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
-            opacity: generatingPdf ? 0.7 : 1,
+            opacity: generatingPdf ? 0.5 : 1,
           }}
         >
-          {generatingPdf ? 'Generating...' : 'Export PDF'}
+          <FileText size={14} color="var(--color-accent)" />
+          {generatingPdf ? 'Generating…' : 'Export PDF'}
         </button>
         <button
           type="button"
@@ -743,36 +823,48 @@ export default function CheckDetailPage() {
           }}
           disabled={generatingPdf}
           style={{
-            padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-            background: '#A78BFA14', border: '1px solid #A78BFA33',
-            color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             fontFamily: 'inherit', cursor: generatingPdf ? 'default' : 'pointer',
-            opacity: generatingPdf ? 0.7 : 1,
+            opacity: generatingPdf ? 0.5 : 1,
           }}
           title="Email PDF"
         >
-          ✉
+          <Mail size={14} color="var(--color-accent)" />
+          Email
         </button>
         <Link
           href="/checks"
           style={{
-            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-            background: '#22C55E14', border: '1px solid #22C55E33',
-            color: 'var(--color-success)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid rgba(56,189,248,0.40)',
+            background: 'rgba(56,189,248,0.10)', color: 'var(--color-accent)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
-          + New Check
+          <Plus size={14} />
+          New Check
         </Link>
         <Link
           href="/checks/history"
           style={{
-            flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-            background: '#22D3EE14', border: '1px solid #22D3EE33',
-            color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-surface)', color: 'var(--color-text-2)',
+            fontSize: 'var(--fs-xs)', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.06em',
             textDecoration: 'none', fontFamily: 'inherit',
           }}
         >
+          <History size={14} color="var(--color-accent)" />
           View History
         </Link>
       </div>

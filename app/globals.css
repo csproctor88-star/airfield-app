@@ -1183,6 +1183,21 @@ html, body {
   background: var(--color-bg-elevated);
 }
 
+/* /checks new-check form — type tile grid. 3 cols desktop, 2 cols
+   tablet, 1 col mobile. Buttons are unstyled by default; the Lucide
+   icon + tier color do the lifting. */
+.check-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (max-width: 768px) {
+  .check-type-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .check-type-grid { grid-template-columns: 1fr; }
+}
+
 /* On narrow phones the operational cluster in the app-shell header
    collapses — chips and the spelled-out calendar date would crowd
    the base name + Z clock, so they hide. The Z clock + JD stay as

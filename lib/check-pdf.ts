@@ -2,6 +2,11 @@ import jsPDF from 'jspdf'
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import type { CheckCommentRow } from '@/lib/supabase/checks'
 import { fetchMapImageDataUrl, formatZuluTime, formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import {
+  CONSTRUCTION_CHECKLIST,
+  summarizeConstructionItems,
+  type ConstructionItemStatus,
+} from '@/lib/check-construction-items'
 
 interface CheckPdfInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -221,6 +226,52 @@ export async function generateCheckPdf(input: CheckPdfInput) {
       doc.text(`Aircraft Type / MDS: ${(data.aircraft_type as string) || 'N/A'}`, margin, y)
       y += 6
       break
+
+    case 'construction': {
+      const items = (data.construction_items as Record<string, ConstructionItemStatus>) || {}
+      const counts = summarizeConstructionItems(items)
+      doc.text(`Items: ${counts.P} Pass · ${counts.F} Fail · ${counts['N/A']} N/A`, margin, y)
+      y += 6
+
+      for (const section of CONSTRUCTION_CHECKLIST) {
+        checkPageBreak(14)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(0)
+        doc.text(section.title.toUpperCase(), margin, y)
+        y += 5
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(40)
+
+        for (const item of section.items) {
+          checkPageBreak(6)
+          const status = items[item.id] ?? 'P'
+          const labelLines = doc.splitTextToSize(item.label, contentWidth - 18)
+          // Status pill at the right
+          if (status === 'P') doc.setTextColor(34, 139, 34)
+          else if (status === 'F') doc.setTextColor(200, 0, 0)
+          else doc.setTextColor(120)
+          doc.text(status, margin, y)
+          doc.setTextColor(40)
+          doc.text(labelLines, margin + 14, y)
+          y += Math.max(4, labelLines.length * 4) + 1
+        }
+        y += 2
+      }
+      break
+    }
+
+    case 'other': {
+      const subject = (data.other_subject as string) || ''
+      if (subject) {
+        const subjLines = doc.splitTextToSize(`Subject: ${subject}`, contentWidth)
+        doc.text(subjLines, margin, y)
+        y += subjLines.length * 4 + 2
+      } else {
+        doc.text('Other check — see remarks for details.', margin, y)
+        y += 6
+      }
+      break
+    }
 
     default:
       doc.text('Check completed.', margin, y)

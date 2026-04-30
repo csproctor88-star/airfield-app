@@ -2,6 +2,7 @@
 // Survives page refreshes and browser closes until explicitly completed or cleared
 
 import type { SimpleDiscrepancy, CheckType } from '@/lib/supabase/types'
+import type { ConstructionItemStatus } from '@/lib/check-construction-items'
 
 const DRAFT_KEY_PREFIX = 'airfield_check_draft'
 
@@ -28,6 +29,12 @@ export interface CheckDraft {
   checkedActions: string[]
   notifiedAgencies: string[]
   heavyAircraftType: string
+  // Construction check — FAA 11-item P/F/N/A checklist. Optional so
+  // older drafts loaded from localStorage don't trip type guards.
+  constructionItems?: Record<string, ConstructionItemStatus>
+  // Other check — required free-form Subject so the History row reads
+  // meaningfully ("Perimeter fence walk after high-wind event" etc).
+  otherSubject?: string
   savedAt: string
   startedAt: string | null
   dbRowId: string | null
@@ -52,6 +59,8 @@ export function createEmptyCheckDraft(): CheckDraft {
     checkedActions: [],
     notifiedAgencies: [],
     heavyAircraftType: '',
+    constructionItems: undefined,
+    otherSubject: '',
     savedAt: '',
     startedAt: null,
     dbRowId: null,
