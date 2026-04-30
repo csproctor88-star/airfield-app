@@ -5,6 +5,7 @@ import { fetchHeatmapData } from '@/lib/supabase/wildlife'
 import { isMapboxConfigured } from '@/lib/utils'
 import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { useInstallation } from '@/lib/installation-context'
+import { Filter, Info } from 'lucide-react'
 
 type Props = {
   baseId?: string | null
@@ -153,7 +154,7 @@ export function WildlifeHeatmap({ baseId }: Props) {
     return (
       <div style={{
         textAlign: 'center', padding: 40, background: 'var(--color-bg-surface)',
-        borderRadius: 12, border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)',
       }}>
         <div style={{ fontSize: 'var(--fs-xl)', marginBottom: 8 }}>🗺️</div>
         <div style={{ fontWeight: 700 }}>Mapbox not configured</div>
@@ -164,19 +165,32 @@ export function WildlifeHeatmap({ baseId }: Props) {
     )
   }
 
+  const selectStyle: React.CSSProperties = {
+    padding: '6px 10px', borderRadius: 'var(--radius-md)',
+    border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+    background: 'color-mix(in srgb, var(--color-cyan) 8%, var(--color-bg-surface))',
+    color: 'var(--color-cyan)',
+    fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+    cursor: 'pointer',
+  }
+
   return (
     <div>
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* Filters — tertiary header + token-styled selects */}
+      <div style={{
+        fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        marginBottom: 6, paddingBottom: 4,
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <Filter size={13} /> Filters
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={filterDays}
           onChange={e => setFilterDays(Number(e.target.value))}
-          style={{
-            padding: '6px 10px', borderRadius: 6,
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-surface)', color: 'var(--color-text)',
-            fontSize: 'var(--fs-base)',
-          }}
+          style={selectStyle}
         >
           <option value={7}>7 days</option>
           <option value={30}>30 days</option>
@@ -186,12 +200,7 @@ export function WildlifeHeatmap({ baseId }: Props) {
         <select
           value={dataType}
           onChange={e => setDataType(e.target.value as 'all' | 'sightings' | 'strikes')}
-          style={{
-            padding: '6px 10px', borderRadius: 6,
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-surface)', color: 'var(--color-text)',
-            fontSize: 'var(--fs-base)',
-          }}
+          style={selectStyle}
         >
           <option value="all">All Activity</option>
           <option value="sightings">Sightings Only</option>
@@ -202,16 +211,23 @@ export function WildlifeHeatmap({ baseId }: Props) {
         </span>
       </div>
 
-      {/* Legend */}
+      {/* Legend — density gradient routed through theme tokens so light
+          mode adapts. The Mapbox heatmap-color paint config above (line
+          57–65) keeps its hex literals because Mapbox paint props don't
+          resolve CSS vars — but the on-screen legend can. Both must
+          stay in semantic sync (low→high). */}
       <div style={{
         display: 'flex', gap: 12, marginBottom: 10, fontSize: 'var(--fs-xs)',
         color: 'var(--color-text-3)', alignItems: 'center',
       }}>
-        <span>Density:</span>
+        <span style={{
+          fontSize: 'var(--fs-2xs)', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}>Density:</span>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 2,
-          background: 'linear-gradient(to right, #10B981, #22D3EE, #FBBF24, #F97316, #EF4444)',
-          width: 120, height: 10, borderRadius: 4,
+          background: 'linear-gradient(to right, var(--color-success), var(--color-cyan), var(--color-amber), var(--color-orange), var(--color-danger))',
+          width: 140, height: 10, borderRadius: 4,
+          border: '1px solid var(--color-border)',
         }} />
         <span>Low → High</span>
       </div>
@@ -221,13 +237,17 @@ export function WildlifeHeatmap({ baseId }: Props) {
         ref={mapContainer}
         style={{
           width: '100%', aspectRatio: '3/4', maxHeight: '70vh',
-          borderRadius: 12, border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
           overflow: 'hidden',
         }}
       />
 
-      <div style={{ marginTop: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)' }}>
-        DAFI 91-212 Wildlife Hazard Depiction — Concentrated activity areas shown via heatmap overlay
+      <div style={{
+        marginTop: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)',
+        display: 'flex', alignItems: 'center', gap: 6,
+      }}>
+        <Info size={12} />
+        DAFI 91-212 Wildlife Hazard Depiction — concentrated activity areas shown via heatmap overlay
       </div>
     </div>
   )
