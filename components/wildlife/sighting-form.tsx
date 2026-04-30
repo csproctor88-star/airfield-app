@@ -295,6 +295,74 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
           </div>
           )}
 
+          {/* GPS + Map Location — anchored at the top of the form so
+              the user pins the sighting location first; the rest of
+              the fields (species, count, conditions, action, notes)
+              flow under it. */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Pin Location</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={captureLocation}
+                disabled={gpsLoading}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                  border: latitude
+                    ? '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)'
+                    : '1px solid var(--color-border)',
+                  background: latitude
+                    ? 'color-mix(in srgb, var(--color-success) 12%, transparent)'
+                    : 'var(--color-bg-surface)',
+                  color: latitude ? 'var(--color-success)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
+                  opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
+                }}
+              >
+                <Crosshair size={14} />
+                {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMap(!showMap)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                  border: showMap
+                    ? '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)'
+                    : '1px solid var(--color-border)',
+                  background: showMap
+                    ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
+                    : 'var(--color-bg-surface)',
+                  color: showMap ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <MapPin size={14} />
+                {showMap ? 'Hide Map' : 'Pin on Map'}
+              </button>
+            </div>
+            {latitude != null && longitude != null && !showMap && (
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)', fontFamily: 'monospace' }}>
+                {latitude.toFixed(5)}, {longitude.toFixed(5)}
+              </div>
+            )}
+            {showMap && (
+              <LocationPickerMap
+                onPointSelected={handlePointSelected}
+                selectedLat={latitude}
+                selectedLng={longitude}
+                flyToPoint={flyToPoint}
+                markerColor="#10B981"
+                promptText="Tap map to mark sighting location"
+                aspectRatio="16 / 9"
+                maxHeight="240px"
+              />
+            )}
+          </div>
+
           {/* Species selector — tap to open full picker */}
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Species *</label>
@@ -397,71 +465,6 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
               <option value="">— Select —</option>
               {(installationAreas || []).map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-          </div>
-
-          {/* GPS + Map Location */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={labelStyle}>Pin Location</label>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <button
-                type="button"
-                onClick={captureLocation}
-                disabled={gpsLoading}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                  border: latitude
-                    ? '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)'
-                    : '1px solid var(--color-border)',
-                  background: latitude
-                    ? 'color-mix(in srgb, var(--color-success) 12%, transparent)'
-                    : 'var(--color-bg-surface)',
-                  color: latitude ? 'var(--color-success)' : 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
-                  opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
-                }}
-              >
-                <Crosshair size={14} />
-                {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowMap(!showMap)}
-                style={{
-                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                  border: showMap
-                    ? '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)'
-                    : '1px solid var(--color-border)',
-                  background: showMap
-                    ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
-                    : 'var(--color-bg-surface)',
-                  color: showMap ? 'var(--color-cyan)' : 'var(--color-text-2)',
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                <MapPin size={14} />
-                {showMap ? 'Hide Map' : 'Pin on Map'}
-              </button>
-            </div>
-            {latitude != null && longitude != null && !showMap && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)', fontFamily: 'monospace' }}>
-                {latitude.toFixed(5)}, {longitude.toFixed(5)}
-              </div>
-            )}
-            {showMap && (
-              <LocationPickerMap
-                onPointSelected={handlePointSelected}
-                selectedLat={latitude}
-                selectedLng={longitude}
-                flyToPoint={flyToPoint}
-                markerColor="#10B981"
-                promptText="Tap map to mark sighting location"
-                aspectRatio="16 / 9"
-                maxHeight="240px"
-              />
-            )}
           </div>
 
           {/* Conditions */}

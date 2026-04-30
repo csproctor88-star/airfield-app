@@ -315,6 +315,74 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
         </div>
         )}
 
+        {/* GPS + Map Location — anchored at the top of the form so
+            the user pins the strike location first; the rest of the
+            fields (species, count, aircraft, damage, etc.) flow
+            under it. */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Pin Location</label>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={captureLocation}
+              disabled={gpsLoading}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                border: latitude
+                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: latitude
+                  ? 'color-mix(in srgb, var(--color-danger) 12%, transparent)'
+                  : 'var(--color-bg-surface)',
+                color: latitude ? 'var(--color-danger)' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
+                opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
+              }}
+            >
+              <Crosshair size={14} />
+              {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMap(!showMap)}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '8px 12px', borderRadius: 'var(--radius-md)',
+                border: showMap
+                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: showMap
+                  ? 'color-mix(in srgb, var(--color-danger) 12%, transparent)'
+                  : 'var(--color-bg-surface)',
+                color: showMap ? 'var(--color-danger)' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <MapPin size={14} />
+              {showMap ? 'Hide Map' : 'Pin on Map'}
+            </button>
+          </div>
+          {latitude != null && longitude != null && !showMap && (
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontFamily: 'monospace' }}>
+              {latitude.toFixed(5)}, {longitude.toFixed(5)}
+            </div>
+          )}
+          {showMap && (
+            <LocationPickerMap
+              onPointSelected={handlePointSelected}
+              selectedLat={latitude}
+              selectedLng={longitude}
+              flyToPoint={flyToPoint}
+              markerColor="#EF4444"
+              promptText="Tap map to mark strike location"
+              aspectRatio="16 / 9"
+              maxHeight="240px"
+            />
+          )}
+        </div>
+
         {/* Species */}
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Species</label>
@@ -402,71 +470,6 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
             {formatZuluTime(new Date(strikeTime + 'Z'))}Z — all times in UTC/Zulu
           </div>
-        </div>
-
-        {/* GPS + Map Location */}
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Pin Location</label>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <button
-              type="button"
-              onClick={captureLocation}
-              disabled={gpsLoading}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                border: latitude
-                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
-                  : '1px solid var(--color-border)',
-                background: latitude
-                  ? 'color-mix(in srgb, var(--color-danger) 12%, transparent)'
-                  : 'var(--color-bg-surface)',
-                color: latitude ? 'var(--color-danger)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: gpsLoading ? 'wait' : 'pointer',
-                opacity: gpsLoading ? 0.6 : 1, fontFamily: 'inherit',
-              }}
-            >
-              <Crosshair size={14} />
-              {gpsLoading ? 'Getting Location...' : latitude ? 'Update GPS' : 'Use My Location'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowMap(!showMap)}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                border: showMap
-                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
-                  : '1px solid var(--color-border)',
-                background: showMap
-                  ? 'color-mix(in srgb, var(--color-danger) 12%, transparent)'
-                  : 'var(--color-bg-surface)',
-                color: showMap ? 'var(--color-danger)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              <MapPin size={14} />
-              {showMap ? 'Hide Map' : 'Pin on Map'}
-            </button>
-          </div>
-          {latitude != null && longitude != null && !showMap && (
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontFamily: 'monospace' }}>
-              {latitude.toFixed(5)}, {longitude.toFixed(5)}
-            </div>
-          )}
-          {showMap && (
-            <LocationPickerMap
-              onPointSelected={handlePointSelected}
-              selectedLat={latitude}
-              selectedLng={longitude}
-              flyToPoint={flyToPoint}
-              markerColor="#EF4444"
-              promptText="Tap map to mark strike location"
-              aspectRatio="16 / 9"
-              maxHeight="240px"
-            />
-          )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
