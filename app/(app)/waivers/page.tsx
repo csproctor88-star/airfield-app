@@ -8,7 +8,7 @@ import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA, DEMO_WAIVER_REVIEWS } from '@/lib/d
 import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import { Map, List } from 'lucide-react'
+import { Map, List, FileWarning, Calendar, FileSpreadsheet, Plus } from 'lucide-react'
 import { formatZuluDate } from '@/lib/utils'
 
 const WaiverMapView = lazy(() => import('@/components/waivers/waiver-map-view-google'))
@@ -111,66 +111,81 @@ export default function WaiversPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Waivers</div>
+      {/* Page header — tertiary tier-label + amber accent rule (waiver
+          = exception/risk semantic). */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FileWarning size={16} color="var(--color-amber)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Waivers</div>
+        </div>
         <div style={{ display: 'flex', gap: 6 }}>
           <Link
             href={`/waivers/annual-review/${new Date().getFullYear()}`}
             style={{
-              background: '#F59E0B14',
-              border: '1px solid #F59E0B33',
-              borderRadius: 8,
-              padding: '7px 10px',
-              color: '#F59E0B',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'color-mix(in srgb, var(--color-amber) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-amber) 35%, transparent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '6px 12px',
+              color: 'var(--color-amber)',
               fontSize: 'var(--fs-sm)',
               fontWeight: 700,
               cursor: 'pointer',
               textDecoration: 'none',
             }}
           >
-            Annual Review
+            <Calendar size={14} /> Annual Review
           </Link>
           <button
             onClick={handleExport}
             style={{
-              background: '#10B98114',
-              border: '1px solid #10B98133',
-              borderRadius: 8,
-              padding: '7px 10px',
-              color: '#10B981',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '6px 12px',
+              color: 'var(--color-success)',
               fontSize: 'var(--fs-sm)',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
           >
-            Export Excel
+            <FileSpreadsheet size={14} /> Export Excel
           </button>
           <Link
             href="/waivers/new"
             style={{
-              background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-              border: 'none',
-              borderRadius: 8,
-              padding: '7px 12px',
-              color: '#fff',
-              fontSize: 'var(--fs-base)',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '6px 12px',
+              color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-sm)',
               fontWeight: 700,
               cursor: 'pointer',
               textDecoration: 'none',
             }}
           >
-            + New Waiver
+            <Plus size={14} /> New Waiver
           </Link>
         </div>
       </div>
 
       <div className="kpi-grid-2" style={{ marginBottom: 12 }}>
         {[
-          { label: 'PERMANENT', key: 'permanent', value: permanentCount, color: '#8B5CF6' },
-          { label: 'TEMPORARY', key: 'temporary', value: temporaryCount, color: '#3B82F6' },
-          { label: 'EXPIRING ≤12MO', key: 'expiring', value: expiringCount, color: expiringCount > 0 ? '#F59E0B' : '#34D399' },
-          { label: 'OVERDUE REVIEW', key: 'overdue', value: overdueReviewCount, color: overdueReviewCount > 0 ? '#EF4444' : '#34D399' },
+          { label: 'PERMANENT', key: 'permanent', value: permanentCount, color: 'var(--color-purple)' },
+          { label: 'TEMPORARY', key: 'temporary', value: temporaryCount, color: 'var(--color-blue)' },
+          { label: 'EXPIRING ≤12MO', key: 'expiring', value: expiringCount, color: expiringCount > 0 ? 'var(--color-amber)' : 'var(--color-success)' },
+          { label: 'OVERDUE REVIEW', key: 'overdue', value: overdueReviewCount, color: overdueReviewCount > 0 ? 'var(--color-danger)' : 'var(--color-success)' },
         ].map((k) => {
           const active = kpiFilter === k.key
           return (
@@ -179,8 +194,13 @@ export default function WaiversPage() {
               className="kpi-badge"
               onClick={() => { setKpiFilter(active ? null : k.key); setFilter('all') }}
               style={{
-                background: active ? `${k.color}14` : undefined,
-                border: `1px solid ${active ? `${k.color}44` : 'var(--color-border)'}`,
+                background: active
+                  ? `color-mix(in srgb, ${k.color} 14%, transparent)`
+                  : undefined,
+                border: active
+                  ? `1px solid color-mix(in srgb, ${k.color} 45%, transparent)`
+                  : '1px solid var(--color-border)',
+                cursor: 'pointer',
               }}
             >
               <div className="kpi-label" style={{ color: active ? k.color : 'var(--color-text-3)' }}>
@@ -194,39 +214,49 @@ export default function WaiversPage() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <div className="filter-bar" style={{ flex: 1 }}>
-          {FILTERS.map((v) => (
-            <button
-              key={v}
-              onClick={() => { setFilter(v); setKpiFilter(null) }}
-              style={{
-                background: filter === v ? 'rgba(34,211,238,0.12)' : 'transparent',
-                border: `1px solid ${filter === v ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-                borderRadius: 5,
-                padding: '4px 8px',
-                color: filter === v ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                fontSize: 'var(--fs-xs)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {FILTER_LABELS[v]}
-            </button>
-          ))}
+          {FILTERS.map((v) => {
+            const selected = filter === v
+            return (
+              <button
+                key={v}
+                onClick={() => { setFilter(v); setKpiFilter(null) }}
+                style={{
+                  background: selected
+                    ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                    : 'var(--color-bg-inset)',
+                  border: selected
+                    ? '1px solid var(--color-cyan)'
+                    : '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '5px 11px',
+                  color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {FILTER_LABELS[v]}
+              </button>
+            )
+          })}
         </div>
-        <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+        <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
           <button
             onClick={() => setViewMode('map')}
             title="Map view"
+            aria-label="Map view"
             style={{
-              background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
+              background: viewMode === 'map'
+                ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                : 'transparent',
               border: 'none',
               borderRight: '1px solid var(--color-border)',
-              padding: '4px 8px',
+              padding: '6px 10px',
               color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
             }}
           >
@@ -235,13 +265,16 @@ export default function WaiversPage() {
           <button
             onClick={() => setViewMode('list')}
             title="List view"
+            aria-label="List view"
             style={{
-              background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+              background: viewMode === 'list'
+                ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                : 'transparent',
               border: 'none',
-              padding: '4px 8px',
+              padding: '6px 10px',
               color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
             }}
           >
@@ -320,7 +353,7 @@ export default function WaiversPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap' }}>
-                  {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="#64748B" />}
+                  {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="var(--color-text-3)" />}
                 </div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {w.description}
