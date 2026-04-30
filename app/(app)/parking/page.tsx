@@ -382,6 +382,17 @@ export default function ParkingPage() {
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [panelWidth, setPanelWidth] = useState<number>(() => {
+    if (typeof window === 'undefined') return 344
+    const saved = parseInt(localStorage.getItem('glidepath_parking_panel_width') || '', 10)
+    return Number.isFinite(saved) && saved >= 260 && saved <= 640 ? saved : 344
+  })
+  const [panelHeight, setPanelHeight] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null
+    const saved = parseInt(localStorage.getItem('glidepath_parking_panel_height') || '', 10)
+    return Number.isFinite(saved) && saved >= 240 ? saved : null
+  })
+  const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; dir: 'w' | 'h' | 'wh' } | null>(null)
   const [clearanceFilter, setClearanceFilter] = useState<'all' | 'violations' | 'warnings' | 'ok'>('all')
   const [favoriteAircraft, setFavoriteAircraft] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
@@ -1893,7 +1904,7 @@ export default function ParkingPage() {
         google.maps.event.trigger(map.current.gmap, 'resize')
       }
     }, 200)
-  }, [isFullscreen, sidebarCollapsed])
+  }, [isFullscreen])
 
   // ── Plan actions ──
 
@@ -3594,21 +3605,7 @@ export default function ParkingPage() {
       display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
       ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
     }}>
-      {/* ── Left-rail panel — desktop only, sits beside the map (not over it) ── */}
-      {!isMobile && !sidebarCollapsed && (
-        <div style={{
-          width: 380, flexShrink: 0,
-          display: 'flex', flexDirection: 'column',
-          background: 'var(--color-bg-surface)',
-          borderRight: '1px solid var(--color-border)',
-          overflow: 'hidden',
-          wordBreak: 'break-word',
-        }}>
-          {sidebarContent()}
-        </div>
-      )}
-
-      {/* ── Map + overlay area ── */}
+      {/* ── Map + overlay area (full width) ── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Placement mode indicator — above map */}
         {(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType) && (
@@ -3662,6 +3659,61 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          {/* ── Floating panel — top right, desktop only ── */}
+          {!isMobile && !sidebarCollapsed && (() => {
+            const startResize = (dir: 'w' | 'h' | 'wh') => (e: React.MouseEvent) => {
+              e.preventDefault()
+              e.stopPropagation()
+              panelResizeRef.current = {
+                startX: e.clientX, startY: e.clientY,
+                startW: panelWidth,
+                startH: panelHeight ?? (typeof window !== 'undefined' ? window.innerHeight - 140 : 600),
+                dir,
+              }
+              const onMove = (ev: MouseEvent) => {
+                const ref = panelResizeRef.current
+                if (!ref) return
+                if (ref.dir === 'w' || ref.dir === 'wh') {
+                  // Anchor is right edge; drag left to widen, right to narrow
+                  const next = Math.min(640, Math.max(260, ref.startW - (ev.clientX - ref.startX)))
+                  setPanelWidth(next)
+                }
+                if (ref.dir === 'h' || ref.dir === 'wh') {
+                  const next = Math.min(typeof window !== 'undefined' ? window.innerHeight - 60 : 1000, Math.max(240, ref.startH + (ev.clientY - ref.startY)))
+                  setPanelHeight(next)
+                }
+              }
+              const onUp = () => {
+                window.removeEventListener('mousemove', onMove)
+                window.removeEventListener('mouseup', onUp)
+                setPanelWidth(w => { try { localStorage.setItem('glidepath_parking_panel_width', String(w)) } catch { /* noop */ } return w })
+                setPanelHeight(h => { try { if (h != null) localStorage.setItem('glidepath_parking_panel_height', String(h)) } catch { /* noop */ } return h })
+                panelResizeRef.current = null
+              }
+              window.addEventListener('mousemove', onMove)
+              window.addEventListener('mouseup', onUp)
+            }
+            return (
+              <div style={{
+                position: 'absolute', top: 10, right: 10, zIndex: 10,
+                width: panelWidth,
+                maxHeight: panelHeight != null ? panelHeight : 'calc(100vh - 140px)',
+                display: 'flex', flexDirection: 'column',
+                background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
+                wordBreak: 'break-word',
+              }}>
+                {sidebarContent()}
+                {/* Resize handles — left edge for width, bottom edge for height, bottom-left corner for both */}
+                <div onMouseDown={startResize('w')} title="Drag to resize width"
+                  style={{ position: 'absolute', top: 8, left: 0, width: 6, bottom: 14, cursor: 'ew-resize', zIndex: 11 }} />
+                <div onMouseDown={startResize('h')} title="Drag to resize height"
+                  style={{ position: 'absolute', bottom: 0, left: 8, right: 14, height: 6, cursor: 'ns-resize', zIndex: 11 }} />
+                <div onMouseDown={startResize('wh')} title="Drag to resize"
+                  style={{ position: 'absolute', bottom: 0, left: 0, width: 14, height: 14, cursor: 'nesw-resize', zIndex: 12 }} />
+              </div>
+            )
+          })()}
           {/* Ruler removed in Google Maps version */}
           {/* Map controls — top left */}
           <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
