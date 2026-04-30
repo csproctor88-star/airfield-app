@@ -712,9 +712,9 @@ export function SidebarNav() {
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={resolvedTheme === 'dark' ? '/glidepath-logo-dark.svg' : '/glidepath-logo-light.svg'}
+              src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
               alt="Glidepath"
-              style={{ height: 40, width: 'auto', objectFit: 'contain' }}
+              style={{ height: 40, objectFit: 'contain', marginBottom: 2 }}
             />
             <div style={{
               fontSize: 'var(--fs-sm)',
