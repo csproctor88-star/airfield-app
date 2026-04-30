@@ -388,28 +388,34 @@ export default function DiscrepancyDetailPage() {
               gridTemplateColumns: hasRightContent
                 ? 'repeat(auto-fit, minmax(260px, 1fr))'
                 : '1fr',
-              gap: 16, alignItems: 'start',
+              gap: 16, alignItems: 'stretch',
             }}>
-              {/* Detail items — each cell is its own bordered tile so
-                  label/value pairs are visually contained. Labels are
-                  tiny dim uppercase; values pop in larger weight-700
-                  text-1. The accent-colored left rule on each tile
-                  reinforces "this label belongs to this value". */}
+              {/* Detail items — fixed 2-column grid that stretches to
+                  match the right column's height (map + photos). Each
+                  cell is its own bordered tile; labels stay on a
+                  single line; tile content centers vertically so
+                  label/value pairs read balanced when rows are
+                  stretched. */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gridAutoRows: '1fr',
                 gap: 8,
+                height: '100%',
               }}>
                 {detailItems.map((item, i) => (
                   <div key={i} style={{
-                    padding: '6px 10px',
+                    padding: '8px 12px',
                     borderRadius: 'var(--radius-sm)',
                     background: 'var(--color-bg-inset)',
                     borderLeft: '2px solid rgba(56,189,248,0.35)',
+                    display: 'flex', flexDirection: 'column', justifyContent: 'center',
+                    minHeight: 0,
                   }}>
                     <div style={{
                       fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
                       letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2,
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>{item.label}</div>
                     <div style={{
                       fontSize: 'var(--fs-md)', fontWeight: 500, color: 'var(--color-text-1)',
