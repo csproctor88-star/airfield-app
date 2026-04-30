@@ -14,6 +14,19 @@ import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import type { WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
+import {
+  ArrowLeft, FileWarning, Plus,
+  Lock, Clock, Construction, Calendar, RefreshCw, FileEdit,
+} from 'lucide-react'
+
+const CLASSIFICATION_ICON: Record<string, typeof Lock> = {
+  lock: Lock,
+  clock: Clock,
+  construction: Construction,
+  calendar: Calendar,
+  refresh: RefreshCw,
+  edit: FileEdit,
+}
 
 const WaiverLocationMap = dynamic(
   () => import('@/components/ui/location-picker-map-google'),
@@ -329,13 +342,35 @@ export default function EditWaiverPage() {
 
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-          &larr; Back
-        </button>
+      <button
+        onClick={() => router.back()}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          padding: 0, marginBottom: 12, fontFamily: 'inherit',
+        }}
+      >
+        <ArrowLeft size={14} /> Back
+      </button>
+
+      {/* Page header — tertiary tier-label + amber accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FileWarning size={16} color="var(--color-amber)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Edit Waiver</div>
+        </div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontFamily: 'monospace' }}>
+          {formData.waiver_number}
+        </div>
       </div>
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 4 }}>Edit Waiver</div>
-      <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-cyan)', fontFamily: 'monospace', marginBottom: 12 }}>{formData.waiver_number}</div>
 
       {/* Section 1: Basic Info */}
       <div className="card" style={{ marginBottom: 8 }}>
@@ -346,35 +381,53 @@ export default function EditWaiverPage() {
               <span className="section-label">Classification *</span>
               <button type="button" className="input-dark" onClick={() => setClassDropdownOpen(v => !v)}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {selectedClassInfo ? `${selectedClassInfo.emoji} ${selectedClassInfo.label}` : 'Select classification...'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {selectedClassInfo ? (() => {
+                    const Icon = CLASSIFICATION_ICON[selectedClassInfo.iconKey]
+                    return <>
+                      {Icon && <Icon size={14} />}
+                      {selectedClassInfo.label}
+                    </>
+                  })() : 'Select classification...'}
                 </span>
                 <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{classDropdownOpen ? '▲' : '▼'}</span>
               </button>
               {classDropdownOpen && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 'var(--z-nav)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 'var(--radius-md)', marginTop: 4, maxHeight: 280, overflowY: 'auto' }}>
-                  {WAIVER_CLASSIFICATIONS.map(c => (
-                    <button key={c.value} type="button" onClick={() => { setFormData(p => ({ ...p, classification: c.value })); setClassDropdownOpen(false) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', background: formData.classification === c.value ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                      <span>{c.emoji} {c.label}</span>
-                    </button>
-                  ))}
+                  {WAIVER_CLASSIFICATIONS.map(c => {
+                    const Icon = CLASSIFICATION_ICON[c.iconKey]
+                    return (
+                      <button key={c.value} type="button" onClick={() => { setFormData(p => ({ ...p, classification: c.value })); setClassDropdownOpen(false) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px', background: formData.classification === c.value ? 'var(--color-text-4)' : 'transparent', border: 'none', color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                        {Icon && <Icon size={14} />}
+                        <span>{c.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Action Requested</span>
               <div style={{ display: 'flex', gap: 6 }}>
-                {['new', 'extension', 'amendment'].map(a => (
-                  <button key={a} type="button" onClick={() => setFormData(p => ({ ...p, action_requested: a }))}
-                    style={{ flex: 1, padding: '8px 4px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                      background: formData.action_requested === a ? 'rgba(34,211,238,0.12)' : 'transparent',
-                      border: `1px solid ${formData.action_requested === a ? 'rgba(34,211,238,0.3)' : 'var(--color-border)'}`,
-                      color: formData.action_requested === a ? 'var(--color-cyan)' : 'var(--color-text-3)',
-                    }}>
-                    {a.charAt(0).toUpperCase() + a.slice(1)}
-                  </button>
-                ))}
+                {['new', 'extension', 'amendment'].map(a => {
+                  const selected = formData.action_requested === a
+                  return (
+                    <button key={a} type="button" onClick={() => setFormData(p => ({ ...p, action_requested: a }))}
+                      style={{ flex: 1, padding: '8px 4px', borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                        background: selected
+                          ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                          : 'var(--color-bg-inset)',
+                        border: selected
+                          ? '1px solid color-mix(in srgb, var(--color-cyan) 50%, transparent)'
+                          : '1px solid var(--color-border)',
+                        color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                      }}>
+                      {a.charAt(0).toUpperCase() + a.slice(1)}
+                    </button>
+                  )
+                })}
               </div>
             </div>
             <div style={{ marginBottom: 12 }}>
@@ -423,8 +476,16 @@ export default function EditWaiverPage() {
               </div>
             ))}
             <button type="button" onClick={addCriteria}
-              style={{ width: '100%', padding: 8, borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-              + Add Criteria
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                width: '100%', padding: 8, borderRadius: 'var(--radius-md)',
+                border: '1px dashed color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+                background: 'color-mix(in srgb, var(--color-cyan) 6%, transparent)',
+                color: 'var(--color-cyan)',
+                fontSize: 'var(--fs-base)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+              <Plus size={14} /> Add Criteria
             </button>
           </>
         )}
