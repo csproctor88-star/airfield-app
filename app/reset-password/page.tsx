@@ -100,7 +100,7 @@ export default function ResetPasswordPage() {
               width: 56,
               height: 56,
               borderRadius: 14,
-              background: 'linear-gradient(135deg, #0C4A6E, #38BDF8)',
+              background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent))',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -133,12 +133,12 @@ export default function ResetPasswordPage() {
             <div style={{ textAlign: 'center' }}>
               <div
                 style={{
-                  background: 'rgba(34,197,94,0.1)',
-                  border: '1px solid rgba(34,197,94,0.2)',
+                  background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
                   borderRadius: 6,
                   padding: '12px 16px',
                   fontSize: 'var(--fs-md)',
-                  color: '#22C55E',
+                  color: 'var(--color-success)',
                   marginBottom: 12,
                 }}
               >
@@ -192,8 +192,8 @@ export default function ResetPasswordPage() {
                 {error && (
                   <div
                     style={{
-                      background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.2)',
+                      background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
                       borderRadius: 6,
                       padding: '8px 12px',
                       marginBottom: 12,
