@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { fetchObstructionEvaluations, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { useInstallation } from '@/lib/installation-context'
 import { formatDistanceToNow } from 'date-fns'
-import { Map, List } from 'lucide-react'
+import { Map, List, History as HistoryIcon, ArrowLeft, Search, X, Trash2 } from 'lucide-react'
 import { formatZuluDate } from '@/lib/utils'
 
 const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view-google'))
@@ -75,41 +75,43 @@ export default function ObstructionHistoryPage() {
 
   return (
     <div className="page-container" style={{ paddingBottom: 120 }}>
-      {/* Header */}
+      {/* Back link */}
       <button
         onClick={() => router.push('/obstructions')}
         style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--color-cyan)',
-          fontSize: 'var(--fs-md)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          padding: 0,
-          marginBottom: 12,
-          fontFamily: 'inherit',
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          padding: 0, marginBottom: 12, fontFamily: 'inherit',
         }}
       >
-        ← New Evaluation
+        <ArrowLeft size={14} /> New Evaluation
       </button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, flex: 1 }}>
-          Evaluation History
+
+      {/* Page header — tertiary tier-label + cyan accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <HistoryIcon size={16} color="var(--color-cyan)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Evaluation History</div>
+          {!loading && (
+            <span style={{
+              fontSize: 'var(--fs-2xs)', fontWeight: 700,
+              padding: '2px 9px', borderRadius: 'var(--radius-full)',
+              background: 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+              color: 'var(--color-cyan)', letterSpacing: '0.04em',
+            }}>
+              {search.trim() ? `${filtered.length} / ${evaluations.length}` : evaluations.length}
+            </span>
+          )}
         </div>
-        {!loading && (
-          <span
-            style={{
-              fontSize: 'var(--fs-sm)',
-              fontWeight: 700,
-              color: 'var(--color-text-2)',
-              background: 'var(--color-border-mid)',
-              padding: '2px 8px',
-              borderRadius: 10,
-            }}
-          >
-            {search.trim() ? `${filtered.length} / ${evaluations.length}` : evaluations.length}
-          </span>
-        )}
       </div>
 
       {/* Search + Map/List toggle */}
@@ -124,24 +126,16 @@ export default function ObstructionHistoryPage() {
               onChange={(e) => setSearch(e.target.value)}
               style={{ paddingLeft: 32, paddingRight: search ? 32 : undefined, height: '100%' }}
             />
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--color-text-3)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <Search
+              size={14}
+              color="var(--color-text-3)"
               style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
+                aria-label="Clear search"
                 style={{
                   position: 'absolute',
                   right: 8,
@@ -150,29 +144,32 @@ export default function ObstructionHistoryPage() {
                   background: 'none',
                   border: 'none',
                   color: 'var(--color-text-3)',
-                  fontSize: 'var(--fs-2xl)',
                   cursor: 'pointer',
-                  padding: '0 4px',
+                  padding: 4,
                   lineHeight: 1,
                   fontFamily: 'inherit',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                ×
+                <X size={14} />
               </button>
             )}
           </div>
-          <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
             <button
               onClick={() => setViewMode('map')}
               title="Map view"
+              aria-label="Map view"
               style={{
-                background: viewMode === 'map' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                background: viewMode === 'map'
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                  : 'transparent',
                 border: 'none',
                 borderRight: '1px solid var(--color-border)',
-                padding: '4px 8px',
+                padding: '6px 10px',
                 color: viewMode === 'map' ? 'var(--color-cyan)' : 'var(--color-text-3)',
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
               }}
             >
@@ -181,13 +178,16 @@ export default function ObstructionHistoryPage() {
             <button
               onClick={() => setViewMode('list')}
               title="List view"
+              aria-label="List view"
               style={{
-                background: viewMode === 'list' ? 'rgba(34,211,238,0.15)' : 'transparent',
+                background: viewMode === 'list'
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                  : 'transparent',
                 border: 'none',
-                padding: '4px 8px',
+                padding: '6px 10px',
                 color: viewMode === 'list' ? 'var(--color-cyan)' : 'var(--color-text-3)',
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
               }}
             >
@@ -272,8 +272,11 @@ export default function ObstructionHistoryPage() {
                 cursor: 'pointer',
                 marginBottom: 8,
                 borderColor: ev.has_violation
-                  ? 'rgba(239,68,68,0.15)'
+                  ? 'color-mix(in srgb, var(--color-danger) 25%, transparent)'
                   : 'var(--color-border)',
+                borderLeft: ev.has_violation
+                  ? '3px solid var(--color-danger)'
+                  : '3px solid var(--color-success)',
                 fontFamily: 'inherit',
               }}
             >
@@ -290,12 +293,18 @@ export default function ObstructionHistoryPage() {
                 </span>
                 <span
                   style={{
-                    fontSize: 'var(--fs-xs)',
-                    fontWeight: 800,
-                    padding: '1px 6px',
-                    borderRadius: 4,
-                    background: ev.has_violation ? '#EF444422' : '#22C55E22',
-                    color: ev.has_violation ? '#EF4444' : '#22C55E',
+                    fontSize: 'var(--fs-2xs)',
+                    fontWeight: 700,
+                    padding: '1px 9px',
+                    borderRadius: 'var(--radius-full)',
+                    background: ev.has_violation
+                      ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+                      : 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+                    border: ev.has_violation
+                      ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                      : '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                    color: ev.has_violation ? 'var(--color-danger)' : 'var(--color-success)',
+                    letterSpacing: '0.04em',
                   }}
                 >
                   {ev.has_violation ? 'VIOLATION' : 'CLEAR'}
@@ -335,7 +344,7 @@ export default function ObstructionHistoryPage() {
                   ft from CL
                 </span>
                 {ev.has_violation && (
-                  <span style={{ color: '#EF4444' }}>
+                  <span style={{ color: 'var(--color-danger)' }}>
                     {violatedCount} surface{violatedCount !== 1 ? 's' : ''} violated
                   </span>
                 )}
@@ -353,12 +362,13 @@ export default function ObstructionHistoryPage() {
                     <span
                       key={i}
                       style={{
-                        fontSize: 'var(--fs-xs)',
-                        background: '#EF444414',
-                        color: '#EF4444',
-                        padding: '1px 6px',
-                        borderRadius: 4,
-                        border: '1px solid #EF444422',
+                        fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                        background: 'color-mix(in srgb, var(--color-danger) 10%, transparent)',
+                        color: 'var(--color-danger)',
+                        padding: '1px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        border: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
+                        letterSpacing: '0.04em',
                       }}
                     >
                       {s}
@@ -413,8 +423,9 @@ export default function ObstructionHistoryPage() {
                   tabIndex={0}
                   onClick={(e) => handleDelete(e, ev.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleDelete(e as unknown as React.MouseEvent, ev.id) }}
-                  style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: '#EF4444', cursor: 'pointer', opacity: deletingId === ev.id ? 0.5 : 1 }}
+                  style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-danger)', cursor: 'pointer', opacity: deletingId === ev.id ? 0.5 : 1, display: 'inline-flex', alignItems: 'center', gap: 4 }}
                 >
+                  <Trash2 size={12} />
                   {deletingId === ev.id ? 'Deleting...' : 'Delete'}
                 </span>
               </div>
@@ -480,17 +491,18 @@ export default function ObstructionHistoryPage() {
                 style={{
                   flex: 1,
                   padding: '10px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: '#EF4444',
-                  color: '#fff',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-danger) 18%, transparent)',
+                  color: 'var(--color-danger)',
                   fontSize: 'var(--fs-md)',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}
               >
-                Delete
+                <Trash2 size={14} /> Delete
               </button>
             </div>
           </div>

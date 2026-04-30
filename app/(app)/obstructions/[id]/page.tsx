@@ -13,6 +13,7 @@ import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DetailGrid } from '@/components/ui/detail-grid'
 import { toast } from 'sonner'
+import { ArrowLeft, AlertTriangle, FileDown, Mail, Pencil, Trash2 } from 'lucide-react'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -158,8 +159,13 @@ export default function ObstructionDetailPage() {
   if (!evaluation) {
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 12, fontFamily: 'inherit' }}>
-          ← Back
+        <button onClick={() => router.back()} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          padding: 0, marginBottom: 12, fontFamily: 'inherit',
+        }}>
+          <ArrowLeft size={14} /> Back
         </button>
         <EmptyState message="Evaluation not found" icon="🔍" />
       </div>
@@ -181,91 +187,99 @@ export default function ObstructionDetailPage() {
 
   return (
     <div style={{ padding: 16, paddingBottom: 120 }}>
-      {/* Header */}
+      {/* Back link */}
       <button
         onClick={() => router.back()}
         style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--color-cyan)',
-          fontSize: 'var(--fs-md)',
-          fontWeight: 600,
-          cursor: 'pointer',
-          padding: 0,
-          marginBottom: 12,
-          fontFamily: 'inherit',
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          padding: 0, marginBottom: 12, fontFamily: 'inherit',
         }}
       >
-        ← Back
+        <ArrowLeft size={14} /> Back
       </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontFamily: 'monospace', fontSize: 'var(--fs-base)', color: 'var(--color-text-3)' }}>
-          {evaluation.display_id}
-        </span>
-        <span
-          style={{
-            fontSize: 'var(--fs-xs)',
-            fontWeight: 800,
-            padding: '2px 8px',
-            borderRadius: 'var(--radius-xs)',
-            background: evaluation.has_violation ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-green) 13%, transparent)',
-            color: evaluation.has_violation ? 'var(--color-red)' : 'var(--color-green)',
-          }}
-        >
-          {evaluation.has_violation ? 'VIOLATION' : 'CLEAR'}
-        </span>
-        <span style={{ flex: 1 }} />
-        <button
-          onClick={handleExportPdf}
-          disabled={exporting}
-          style={{
-            padding: '4px 12px', borderRadius: 'var(--radius-sm)',
-            background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
-            color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 700,
-            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
-            opacity: exporting ? 0.6 : 1,
-          }}
-          title="Export PDF"
-        >
-          📄
-        </button>
-        <button
-          onClick={handleEmailPdf}
-          disabled={exporting}
-          style={{
-            padding: '4px 12px', borderRadius: 'var(--radius-sm)',
-            background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
-            color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 700,
-            cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
-            opacity: exporting ? 0.7 : 1,
-          }}
-          title="Email PDF"
-        >
-          ✉
-        </button>
-        <button
-          onClick={() => router.push(`/obstructions?edit=${evaluation.id}`)}
-          style={{
-            background: 'var(--color-border-mid)',
-            border: '1px solid var(--color-border-active)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '4px 12px',
-            color: 'var(--color-accent)',
-            fontSize: 'var(--fs-base)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Edit
-        </button>
+      {/* Page header — tertiary tier-label + danger accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 6, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AlertTriangle size={16} color="var(--color-danger)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Obstruction Evaluation</div>
+          <span style={{
+            fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '2px 9px',
+            borderRadius: 'var(--radius-full)', letterSpacing: '0.04em',
+            background: evaluation.has_violation
+              ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+              : 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+            border: evaluation.has_violation
+              ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+              : '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+            color: evaluation.has_violation ? 'var(--color-danger)' : 'var(--color-success)',
+          }}>
+            {evaluation.has_violation ? 'VIOLATION' : 'CLEAR'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button
+            onClick={handleExportPdf}
+            disabled={exporting}
+            aria-label="Export PDF"
+            title="Export PDF"
+            style={{
+              padding: '6px 12px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+              color: 'var(--color-purple)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: exporting ? 0.5 : 1,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <FileDown size={14} /> Export
+          </button>
+          <button
+            onClick={handleEmailPdf}
+            disabled={exporting}
+            aria-label="Email PDF"
+            title="Email PDF"
+            style={{
+              padding: '6px 10px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+              color: 'var(--color-purple)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: exporting ? 0.5 : 1,
+              display: 'inline-flex', alignItems: 'center',
+            }}
+          >
+            <Mail size={14} />
+          </button>
+          <button
+            onClick={() => router.push(`/obstructions?edit=${evaluation.id}`)}
+            style={{
+              padding: '6px 12px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+              color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Pencil size={14} /> Edit
+          </button>
+        </div>
       </div>
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 4 }}>
-        Obstruction Evaluation
-      </div>
-      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 14 }}>
-        {formatZuluDateTime(createdAt)}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
+        <span style={{ fontFamily: 'monospace' }}>{evaluation.display_id}</span>
+        <span>·</span>
+        <span>{formatZuluDateTime(createdAt)}</span>
       </div>
 
       {/* Photos — hero + thumbnail gallery */}
@@ -368,13 +382,17 @@ export default function ObstructionDetailPage() {
             type="button"
             onClick={() => setShowVerify((v) => !v)}
             style={{
-              background: showVerify ? 'var(--color-accent)' : 'var(--color-border)',
-              border: `1px solid ${showVerify ? 'var(--color-accent)' : 'var(--color-border-active)'}`,
-              borderRadius: 'var(--radius-sm)',
-              padding: '3px 8px',
-              color: showVerify ? '#fff' : 'var(--color-text-2)',
+              background: showVerify
+                ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                : 'var(--color-bg-inset)',
+              border: showVerify
+                ? '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)'
+                : '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              padding: '3px 9px',
+              color: showVerify ? 'var(--color-cyan)' : 'var(--color-text-2)',
               fontSize: 'var(--fs-xs)',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
               whiteSpace: 'nowrap',
@@ -391,7 +409,11 @@ export default function ObstructionDetailPage() {
               key={s.surfaceKey}
               style={{
                 background: 'var(--color-bg-inset)',
-                border: `1px solid ${s.violated ? 'rgba(239,68,68,0.3)' : isLandUseZone ? `${surfaceColor}33` : 'var(--color-border)'}`,
+                border: s.violated
+                  ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                  : isLandUseZone
+                    ? `1px solid color-mix(in srgb, ${surfaceColor} 25%, transparent)`
+                    : '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-md)',
                 padding: 10,
                 marginBottom: 6,
@@ -413,12 +435,14 @@ export default function ObstructionDetailPage() {
                 {isLandUseZone ? (
                   <span
                     style={{
-                      fontSize: 'var(--fs-xs)',
-                      fontWeight: 800,
-                      padding: '2px 6px',
-                      borderRadius: 'var(--radius-xs)',
-                      background: `${surfaceColor}22`,
+                      fontSize: 'var(--fs-2xs)',
+                      fontWeight: 700,
+                      padding: '2px 9px',
+                      borderRadius: 'var(--radius-full)',
+                      background: `color-mix(in srgb, ${surfaceColor} 14%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${surfaceColor} 35%, transparent)`,
                       color: surfaceColor,
+                      letterSpacing: '0.04em',
                     }}
                   >
                     WITHIN ZONE
@@ -426,12 +450,18 @@ export default function ObstructionDetailPage() {
                 ) : (
                   <span
                     style={{
-                      fontSize: 'var(--fs-xs)',
-                      fontWeight: 800,
-                      padding: '2px 6px',
-                      borderRadius: 'var(--radius-xs)',
-                      background: s.violated ? 'color-mix(in srgb, var(--color-red) 13%, transparent)' : 'color-mix(in srgb, var(--color-green) 13%, transparent)',
-                      color: s.violated ? 'var(--color-red)' : 'var(--color-green)',
+                      fontSize: 'var(--fs-2xs)',
+                      fontWeight: 700,
+                      padding: '2px 9px',
+                      borderRadius: 'var(--radius-full)',
+                      background: s.violated
+                        ? 'color-mix(in srgb, var(--color-danger) 14%, transparent)'
+                        : 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+                      border: s.violated
+                        ? '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)'
+                        : '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                      color: s.violated ? 'var(--color-danger)' : 'var(--color-success)',
+                      letterSpacing: '0.04em',
                     }}
                   >
                     {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
@@ -504,8 +534,8 @@ export default function ObstructionDetailPage() {
         <div
           className="card"
           style={{
-            borderColor: 'rgba(239, 68, 68, 0.2)',
-            background: 'rgba(239, 68, 68, 0.04)',
+            borderColor: 'color-mix(in srgb, var(--color-danger) 25%, transparent)',
+            background: 'color-mix(in srgb, var(--color-danger) 4%, var(--color-bg-surface))',
           }}
         >
           <span className="section-label" style={{ color: 'var(--color-red)' }}>
@@ -540,17 +570,17 @@ export default function ObstructionDetailPage() {
           onClick={() => setShowDeleteConfirm(true)}
           disabled={deleting}
           style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-red)',
-            fontSize: 'var(--fs-base)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            opacity: deleting ? 0.5 : 0.7,
-            padding: '8px 16px',
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 'var(--radius-md)',
+            border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+            background: 'color-mix(in srgb, var(--color-danger) 10%, transparent)',
+            color: 'var(--color-danger)',
+            fontSize: 'var(--fs-sm)', fontWeight: 700,
+            cursor: deleting ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit', opacity: deleting ? 0.5 : 1,
           }}
         >
+          <Trash2 size={14} />
           {deleting ? 'Deleting...' : 'Delete Evaluation'}
         </button>
       </div>
@@ -629,16 +659,17 @@ export default function ObstructionDetailPage() {
                   flex: 1,
                   padding: '10px 16px',
                   borderRadius: 'var(--radius-md)',
-                  border: 'none',
-                  background: 'var(--color-red)',
-                  color: '#fff',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 45%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-danger) 18%, transparent)',
+                  color: 'var(--color-danger)',
                   fontSize: 'var(--fs-md)',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}
               >
-                Delete
+                <Trash2 size={14} /> Delete
               </button>
             </div>
           </div>
