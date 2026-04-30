@@ -486,25 +486,61 @@ export const REGULATION_SOURCE_SECTIONS = [
 
 // === Waiver Classifications (AF Form 505) ===
 
+// `iconKey` maps each classification to a Lucide icon name. Consumers
+// look up the icon via a small dictionary in the rendering site (the
+// constants file stays runtime-safe by exporting the *name* only, not
+// the React component, so the lucide-react import cost is paid only
+// where rendered).
 export const WAIVER_CLASSIFICATIONS = [
-  { value: 'permanent', label: 'Permanent', emoji: '🔒', description: 'Permanent waiver — no corrective action planned' },
-  { value: 'temporary', label: 'Temporary', emoji: '⏳', description: 'Temporary waiver — corrective action programmed' },
-  { value: 'construction', label: 'Construction', emoji: '🏗️', description: 'Construction-period waiver' },
-  { value: 'event', label: 'Event', emoji: '📅', description: 'Single event or exercise waiver' },
-  { value: 'extension', label: 'Extension', emoji: '🔄', description: 'Extension of existing waiver' },
-  { value: 'amendment', label: 'Amendment', emoji: '📝', description: 'Amendment to existing waiver' },
+  { value: 'permanent', label: 'Permanent', emoji: '🔒', iconKey: 'lock', description: 'Permanent waiver — no corrective action planned' },
+  { value: 'temporary', label: 'Temporary', emoji: '⏳', iconKey: 'clock', description: 'Temporary waiver — corrective action programmed' },
+  { value: 'construction', label: 'Construction', emoji: '🏗️', iconKey: 'construction', description: 'Construction-period waiver' },
+  { value: 'event', label: 'Event', emoji: '📅', iconKey: 'calendar', description: 'Single event or exercise waiver' },
+  { value: 'extension', label: 'Extension', emoji: '🔄', iconKey: 'refresh', description: 'Extension of existing waiver' },
+  { value: 'amendment', label: 'Amendment', emoji: '📝', iconKey: 'edit', description: 'Amendment to existing waiver' },
 ] as const
 
 // === Waiver Status Styling ===
 
+// Status colors route through theme tokens so light mode adapts.
+// `bg` uses color-mix() at low opacity matching the outlined-pill
+// recipe used everywhere else in the design system.
 export const WAIVER_STATUS_CONFIG = {
-  draft:     { color: '#9CA3AF', bg: '#E5E7EB', label: 'Draft' },
-  pending:   { color: '#3B82F6', bg: '#DBEAFE', label: 'Pending' },
-  approved:  { color: '#10B981', bg: '#D1FAE5', label: 'Approved' },
-  active:    { color: '#8B5CF6', bg: '#EDE9FE', label: 'Active' },
-  completed: { color: '#22C55E', bg: '#DCFCE7', label: 'Closed' },
-  cancelled: { color: '#EF4444', bg: '#FEE2E2', label: 'Cancelled' },
-  expired:   { color: '#F59E0B', bg: '#FEF3C7', label: 'Expired' },
+  draft:     {
+    color: 'var(--color-text-3)',
+    bg: 'color-mix(in srgb, var(--color-text-3) 14%, transparent)',
+    label: 'Draft',
+  },
+  pending:   {
+    color: 'var(--color-blue)',
+    bg: 'color-mix(in srgb, var(--color-blue) 14%, transparent)',
+    label: 'Pending',
+  },
+  approved:  {
+    color: 'var(--color-success)',
+    bg: 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+    label: 'Approved',
+  },
+  active:    {
+    color: 'var(--color-purple)',
+    bg: 'color-mix(in srgb, var(--color-purple) 14%, transparent)',
+    label: 'Active',
+  },
+  completed: {
+    color: 'var(--color-success)',
+    bg: 'color-mix(in srgb, var(--color-success) 14%, transparent)',
+    label: 'Closed',
+  },
+  cancelled: {
+    color: 'var(--color-danger)',
+    bg: 'color-mix(in srgb, var(--color-danger) 14%, transparent)',
+    label: 'Cancelled',
+  },
+  expired:   {
+    color: 'var(--color-amber)',
+    bg: 'color-mix(in srgb, var(--color-amber) 14%, transparent)',
+    label: 'Expired',
+  },
 } as const
 
 // === Waiver Status Transitions ===
@@ -522,10 +558,10 @@ export const WAIVER_TRANSITIONS: Record<string, string[]> = {
 // === Waiver Hazard Ratings ===
 
 export const WAIVER_HAZARD_RATINGS = [
-  { value: 'low', label: 'Low', color: '#3B82F6', bg: '#DBEAFE' },
-  { value: 'medium', label: 'Medium', color: '#F59E0B', bg: '#FEF3C7' },
-  { value: 'high', label: 'High', color: '#F97316', bg: '#FED7AA' },
-  { value: 'extremely_high', label: 'Extremely High', color: '#EF4444', bg: '#FEE2E2' },
+  { value: 'low',            label: 'Low',             color: 'var(--color-blue)',    bg: 'color-mix(in srgb, var(--color-blue) 14%, transparent)' },
+  { value: 'medium',         label: 'Medium',          color: 'var(--color-amber)',   bg: 'color-mix(in srgb, var(--color-amber) 14%, transparent)' },
+  { value: 'high',           label: 'High',            color: 'var(--color-orange)',  bg: 'color-mix(in srgb, var(--color-orange) 14%, transparent)' },
+  { value: 'extremely_high', label: 'Extremely High',  color: 'var(--color-danger)',  bg: 'color-mix(in srgb, var(--color-danger) 14%, transparent)' },
 ] as const
 
 // === Waiver Criteria Sources ===

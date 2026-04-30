@@ -6,6 +6,21 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
 import {
+  ArrowLeft, FileWarning, FileDown, Mail, Pencil,
+  Lock, Clock, Construction, Calendar, RefreshCw, FileEdit,
+} from 'lucide-react'
+
+// Maps the WAIVER_CLASSIFICATIONS iconKey to a Lucide component. Kept
+// at the rendering site so lib/constants.ts stays free of React imports.
+const CLASSIFICATION_ICON: Record<string, typeof Lock> = {
+  lock: Lock,
+  clock: Clock,
+  construction: Construction,
+  calendar: Calendar,
+  refresh: RefreshCw,
+  edit: FileEdit,
+}
+import {
   fetchWaiver, updateWaiverStatus, deleteWaiver,
   fetchWaiverCriteria, fetchWaiverAttachments, fetchWaiverReviews, fetchWaiverCoordination,
   uploadWaiverAttachment, createWaiverReview, deleteWaiverReview, upsertWaiverCoordination,
@@ -526,8 +541,13 @@ export default function WaiverDetailPage() {
   if (!w) {
     return (
       <div className="page-container">
-        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0, marginBottom: 12 }}>
-          &larr; Back
+        <button onClick={() => router.back()} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          padding: 0, marginBottom: 12, fontFamily: 'inherit',
+        }}>
+          <ArrowLeft size={14} /> Back
         </button>
         <EmptyState message="Waiver not found" />
       </div>
@@ -570,62 +590,110 @@ export default function WaiverDetailPage() {
     </div>
   )
 
+  // Resolve the classification's Lucide icon at render time
+  const ClassIcon = classInfo ? CLASSIFICATION_ICON[classInfo.iconKey] : null
+
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
-          &larr; Back
-        </button>
-        <div style={{ display: 'flex', gap: 6 }}>
+      {/* Back link */}
+      <button
+        onClick={() => router.back()}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)',
+          padding: 0, marginBottom: 12, fontFamily: 'inherit',
+        }}
+      >
+        <ArrowLeft size={14} /> Back
+      </button>
+
+      {/* Page header — tertiary tier-label + amber accent rule */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FileWarning size={16} color="var(--color-amber)" />
+          <div style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Waiver Detail</div>
+          {statusConf && <Badge label={statusConf.label} color={statusConf.color} bg={statusConf.bg} />}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button
             onClick={handleExportPdf}
             disabled={exporting}
             style={{
-              background: 'color-mix(in srgb, var(--color-green) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-green) 20%, transparent)', borderRadius: 'var(--radius-md)', padding: '6px 12px',
-              color: 'var(--color-green)', fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              opacity: exporting ? 0.6 : 1,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+              color: 'var(--color-purple)',
+              fontSize: 'var(--fs-sm)', fontWeight: 700,
+              cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: exporting ? 0.5 : 1,
             }}
           >
+            <FileDown size={14} />
             {exporting ? 'Exporting...' : 'Export PDF'}
           </button>
           <button
             onClick={handleEmailPdf}
             disabled={exporting}
-            style={{
-              padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-              background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
-              color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
-              fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
-              opacity: exporting ? 0.7 : 1,
-            }}
+            aria-label="Email PDF"
             title="Email PDF"
+            style={{
+              padding: '6px 10px', borderRadius: 'var(--radius-md)',
+              background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+              color: 'var(--color-purple)',
+              fontSize: 'var(--fs-sm)', fontWeight: 700,
+              cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: exporting ? 0.5 : 1,
+              display: 'inline-flex', alignItems: 'center',
+            }}
           >
-            ✉
+            <Mail size={14} />
           </button>
           {(w.status === 'draft' || w.status === 'pending') && (
             <Link
               href={`/waivers/${params.id}/edit`}
               style={{
-                background: 'color-mix(in srgb, var(--color-blue) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 20%, transparent)', borderRadius: 'var(--radius-md)', padding: '6px 12px',
-                color: 'var(--color-blue)', fontSize: 'var(--fs-base)', fontWeight: 600, textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 'var(--radius-md)',
+                background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+                color: 'var(--color-cyan)',
+                fontSize: 'var(--fs-sm)', fontWeight: 700, textDecoration: 'none',
               }}
             >
-              Edit
+              <Pencil size={14} /> Edit
             </Link>
           )}
         </div>
       </div>
 
-      {/* Header Card */}
+      {/* Header Card — waiver number + classification + hazard + description */}
       <div className="card" style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</span>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {statusConf && <Badge label={statusConf.label} color={statusConf.color} bg={statusConf.bg} />}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
-          {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="var(--color-text-3)" />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace' }}>{w.waiver_number}</span>
+          {classInfo && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '2px 9px', borderRadius: 'var(--radius-full)',
+              background: 'color-mix(in srgb, var(--color-text-3) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-text-3) 30%, transparent)',
+              color: 'var(--color-text-2)',
+              fontSize: 'var(--fs-2xs)', fontWeight: 700,
+              letterSpacing: '0.04em',
+            }}>
+              {ClassIcon && <ClassIcon size={11} />}
+              {classInfo.label.toUpperCase()}
+            </span>
+          )}
           {hazardConf && <Badge label={hazardConf.label} color={hazardConf.color} bg={hazardConf.bg} />}
         </div>
         <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.6 }}>{w.description}</div>
