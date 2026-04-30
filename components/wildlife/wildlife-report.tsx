@@ -4,9 +4,18 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { generateWildlifeReportPdf } from '@/lib/reports/wildlife-report-pdf'
+import { FileText, Map as MapIcon, FileDown, Info } from 'lucide-react'
 
 type Props = {
   baseId?: string | null
+}
+
+const SECTION_HEADER: React.CSSProperties = {
+  fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+  textTransform: 'uppercase', letterSpacing: '0.08em',
+  marginBottom: 14, paddingBottom: 6,
+  borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
+  display: 'flex', alignItems: 'center', gap: 8,
 }
 
 export function WildlifeReport({ baseId }: Props) {
@@ -50,10 +59,10 @@ export function WildlifeReport({ baseId }: Props) {
   return (
     <div>
       <div style={{
-        background: 'var(--color-bg-surface)', borderRadius: 12,
+        background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)',
         border: '1px solid var(--color-border)', padding: 20,
       }}>
-        <div style={{ fontWeight: 800, fontSize: 'var(--fs-lg)', marginBottom: 14 }}>Monthly BASH Summary Report</div>
+        <div style={SECTION_HEADER}><FileText size={13} /> Monthly BASH Summary Report</div>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 16 }}>
           Generate a comprehensive PDF report of wildlife activity, strike data, BWC history,
           and dispersal effectiveness for the selected month. Compliant with DAFI 91-212 monthly
@@ -62,7 +71,11 @@ export function WildlifeReport({ baseId }: Props) {
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div>
-            <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 4 }}>
+            <label style={{
+              fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
+              textTransform: 'uppercase', letterSpacing: '0.06em',
+              display: 'block', marginBottom: 4,
+            }}>
               Report Month
             </label>
             <input
@@ -70,10 +83,10 @@ export function WildlifeReport({ baseId }: Props) {
               value={reportMonth}
               onChange={e => setReportMonth(e.target.value)}
               style={{
-                padding: '8px 10px', borderRadius: 6,
+                padding: '8px 10px', borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-surface)', color: 'var(--color-text)',
-                fontSize: 'var(--fs-base)',
+                background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
+                fontSize: 'var(--fs-base)', fontFamily: 'inherit',
               }}
             />
           </div>
@@ -81,22 +94,29 @@ export function WildlifeReport({ baseId }: Props) {
             onClick={handleGenerate}
             disabled={generating}
             style={{
-              padding: '10px 20px', borderRadius: 8, border: 'none',
-              background: generating ? 'var(--color-text-4)' : '#3B82F6',
-              color: '#fff', fontWeight: 700, cursor: 'pointer',
-              fontSize: 'var(--fs-base)',
+              padding: '9px 18px', borderRadius: 'var(--radius-md)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 45%, transparent)',
+              background: generating
+                ? 'var(--color-bg-elevated)'
+                : 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+              color: generating ? 'var(--color-text-4)' : 'var(--color-cyan)',
+              fontWeight: 700, fontSize: 'var(--fs-sm)',
+              cursor: generating ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 8,
             }}
           >
+            <FileDown size={14} />
             {generating ? 'Generating...' : 'Generate PDF'}
           </button>
         </div>
 
         <div style={{
-          marginTop: 16, padding: 12, borderRadius: 8,
+          marginTop: 16, padding: 12, borderRadius: 'var(--radius-md)',
           background: 'var(--color-bg)', border: '1px solid var(--color-border)',
           fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)',
         }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Report Contents:</div>
+          <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--color-text-2)' }}>Report Contents:</div>
           <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
             <li>Executive summary with KPIs</li>
             <li>BWC history timeline</li>
@@ -110,21 +130,27 @@ export function WildlifeReport({ baseId }: Props) {
 
       {/* Hazard Depiction Map export */}
       <div style={{
-        background: 'var(--color-bg-surface)', borderRadius: 12,
+        background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)',
         border: '1px solid var(--color-border)', padding: 20, marginTop: 14,
       }}>
-        <div style={{ fontWeight: 800, fontSize: 'var(--fs-lg)', marginBottom: 8 }}>Hazard Depiction Map</div>
+        <div style={SECTION_HEADER}><MapIcon size={13} /> Hazard Depiction Map</div>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 12 }}>
           Per DAFI 91-212, installations must maintain a depiction of local bird/wildlife hazards.
           Use the Heatmap tab to view the current hazard depiction, which is also included in the
           monthly PDF report.
         </div>
         <div style={{
-          padding: 10, borderRadius: 8, background: '#F59E0B10', border: '1px solid #F59E0B30',
-          fontSize: 'var(--fs-sm)', color: '#F59E0B', fontWeight: 600,
+          padding: 10, borderRadius: 'var(--radius-md)',
+          background: 'color-mix(in srgb, var(--color-amber) 8%, var(--color-bg-surface))',
+          border: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
+          fontSize: 'var(--fs-sm)', color: 'var(--color-amber)', fontWeight: 600,
+          display: 'flex', alignItems: 'flex-start', gap: 8,
         }}>
-          Tip: The heatmap visualization on the Heatmap tab serves as the DAFI 91-212 required
-          wildlife hazard depiction for your installation.
+          <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div>
+            Tip: The heatmap visualization on the Heatmap tab serves as the DAFI 91-212 required
+            wildlife hazard depiction for your installation.
+          </div>
         </div>
       </div>
     </div>
