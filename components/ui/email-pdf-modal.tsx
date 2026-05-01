@@ -117,8 +117,10 @@ export default function EmailPdfModal({ open, onClose, onSend, sending, filename
             disabled={sending || !email.trim()}
             style={{
               flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-              background: sending || !email.trim() ? '#A78BFA33' : 'var(--color-purple)',
-              border: '1px solid #A78BFA55',
+              background: sending || !email.trim()
+                ? 'color-mix(in srgb, var(--color-purple) 20%, transparent)'
+                : 'var(--color-purple)',
+              border: '1px solid color-mix(in srgb, var(--color-purple) 33%, transparent)',
               color: '#fff', fontSize: 'var(--fs-md, 15px)', fontWeight: 700,
               fontFamily: 'inherit', cursor: sending || !email.trim() ? 'default' : 'pointer',
             }}
