@@ -3981,7 +3981,7 @@ export default function ParkingPage() {
             <div style={{
               position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
               display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 10px', borderRadius: 6,
-              background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-surface-solid)', border: '1px solid var(--color-border)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
               maxWidth: 'calc(100vw - 20px)',
             }}>
@@ -3989,7 +3989,7 @@ export default function ParkingPage() {
                 onClick={() => setShowAircraftPicker(true)}
                 style={{
                   padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: 'color-mix(in srgb, var(--color-cyan) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 40%, transparent)',
                   color: 'var(--color-cyan)', cursor: 'pointer',
                 }}
               >
@@ -4000,10 +4000,10 @@ export default function ParkingPage() {
                   key={type}
                   onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
                   style={{
-                    padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: placingObstacle === type ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'transparent',
-                    border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border)'}`,
-                    color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-secondary)',
+                    padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    background: placingObstacle === type ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'var(--color-bg-inset)',
+                    border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border-mid)'}`,
+                    color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-1)',
                     cursor: 'pointer', textTransform: 'capitalize',
                   }}
                 >
