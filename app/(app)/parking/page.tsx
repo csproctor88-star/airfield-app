@@ -3869,11 +3869,11 @@ export default function ParkingPage() {
           </div>
 
           {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile.
-              Sits below the top-left app-controls toolbar (Panel/Fullscreen/Ruler/PDF/Email)
-              so they read as a vertical stack of controls anchored to the top-left. */}
+              Anchored top-center so it doesn't overlap the floating panel
+              (which lives top-left under the controls). */}
           {(sidebarCollapsed || isMobile) && selectedPlanId && (
             <div style={{
-              position: 'absolute', top: 50, left: 10, zIndex: 5,
+              position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
               display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 10px', borderRadius: 6,
               background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
