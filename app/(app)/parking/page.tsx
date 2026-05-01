@@ -2959,12 +2959,12 @@ export default function ParkingPage() {
               })()}
 
               {spots.length === 0 && !selectedPlanId && (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', padding: '4px 0', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-sm)', padding: '6px 12px', margin: 0, lineHeight: 1.5 }}>
                   Select or create a plan to add aircraft
                 </p>
               )}
               {spots.length === 0 && selectedPlanId && (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '6px 12px', margin: 0, lineHeight: 1.5 }}>
                   No aircraft placed yet.
                 </p>
               )}
@@ -3259,7 +3259,7 @@ export default function ParkingPage() {
               </div>
 
               {obstacles.length === 0 && (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '6px 12px', margin: 0, lineHeight: 1.5 }}>
                   No obstacles defined.
                 </p>
               )}
@@ -3643,7 +3643,7 @@ export default function ParkingPage() {
                 </div>
               )}
               {allResults.length === 0 && (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '6px 12px', margin: 0, lineHeight: 1.5 }}>
                   Place at least 2 aircraft or 1 aircraft + 1 obstacle to see clearance checks.
                 </p>
               )}
