@@ -255,11 +255,21 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
         />
       </div>
 
-      {/* Area chips */}
+      {/* Area chips — chip cluster pattern (feedback_chip_cluster_pattern.md):
+          one bordered container holds all area pills so 15+ runway/taxiway
+          chips read as one widget rather than fifteen independently-bordered
+          decisions. Selected items get a tinted bg pill + bold weight,
+          unselected items render as dim letter-style text. */}
       {installationAreas.length > 0 && (
         <div style={{ marginBottom: 10 }}>
           <label style={labelStyle}>Affected Areas</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 4,
+            padding: 4,
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+          }}>
             {installationAreas.map(area => {
               const selected = (detail.areas || []).includes(area)
               return (
@@ -268,22 +278,23 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
                   type="button"
                   onClick={() => toggleArea(area)}
                   style={{
-                    padding: '6px 12px',
-                    borderRadius: 8,
-                    border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                    padding: '5px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: 'none',
                     background: selected
-                      ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
+                      ? 'color-mix(in srgb, var(--color-cyan) 18%, transparent)'
                       : 'transparent',
-                    color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                    color: selected ? 'var(--color-cyan)' : 'var(--color-text-4)',
                     fontSize: 'var(--fs-xs)',
-                    fontWeight: 600,
+                    fontWeight: selected ? 700 : 500,
                     cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
+                    transition: 'background 0.15s, color 0.15s',
                   }}
                 >
-                  {selected && <Check size={12} />}
+                  {selected && <Check size={11} strokeWidth={3} />}
                   {area}
                 </button>
               )

@@ -254,19 +254,30 @@ export default function AcsiListPage() {
                   </div>
                 </Link>
 
-                {/* Secondary metadata */}
+                {/* Secondary metadata. For drafts with zero responses
+                    the 0% / 0P 0F 0NA cluster is visual noise — render
+                    a single 'Not started' anchor instead so the row
+                    reads cleanly until work begins. */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
                     {insp.inspection_date}
                   </div>
-                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap', minWidth: 40, textAlign: 'right' }}>
-                    {pct}%
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
-                    <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{insp.passed_count}P</span>
-                    <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{insp.failed_count}F</span>
-                    <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{insp.na_count}NA</span>
-                  </div>
+                  {total === 0 ? (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                      Not started
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', whiteSpace: 'nowrap', minWidth: 40, textAlign: 'right' }}>
+                        {pct}%
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, fontSize: 'var(--fs-xs)' }}>
+                        <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{insp.passed_count}P</span>
+                        <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{insp.failed_count}F</span>
+                        <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{insp.na_count}NA</span>
+                      </div>
+                    </>
+                  )}
                   <Badge label={statusCfg.label} color={statusCfg.color} />
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                     {insp.inspector_name || '—'}
