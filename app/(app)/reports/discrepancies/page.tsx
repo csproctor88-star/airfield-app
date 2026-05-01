@@ -180,7 +180,8 @@ export default function DiscrepancyReportPage() {
         disabled={exporting}
         style={{
           width: '100%', padding: '12px 0', borderRadius: 8, marginBottom: 14,
-          border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)',
+          border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
+          background: 'color-mix(in srgb, var(--color-success) 8%, transparent)',
           color: 'var(--color-status-pass)', fontSize: 'var(--fs-md)', fontWeight: 700,
           cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
           opacity: exporting ? 0.7 : 1,
@@ -192,7 +193,7 @@ export default function DiscrepancyReportPage() {
       </button>
 
       {/* Filter Card */}
-      <div className="card" style={{ padding: 14, marginBottom: 14 }}>
+      <div className="card" style={{ padding: 14, marginBottom: 14, borderLeft: '3px solid var(--color-cyan)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Filter size={14} color="var(--color-text-3)" />
@@ -271,7 +272,8 @@ export default function DiscrepancyReportPage() {
           disabled={loading}
           style={{
             width: '100%', padding: '10px 0', borderRadius: 8, marginTop: 12,
-            border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.08)',
+            border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+            background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
             color: 'var(--color-cyan)', fontSize: 'var(--fs-md)', fontWeight: 700,
             cursor: loading ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: loading ? 0.7 : 1,
@@ -337,8 +339,9 @@ export default function DiscrepancyReportPage() {
               disabled={exporting || summary.total === 0}
               style={{
                 flex: 1, padding: '12px 0', borderRadius: 8,
-                border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.08)',
-                color: '#A855F7', fontSize: 'var(--fs-md)', fontWeight: 700,
+                border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+                background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+                color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: (exporting || summary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
                 opacity: (exporting || summary.total === 0) ? 0.5 : 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -352,8 +355,9 @@ export default function DiscrepancyReportPage() {
               disabled={exporting || summary.total === 0}
               style={{
                 padding: '12px 16px', borderRadius: 8,
-                border: '1px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.08)',
-                color: '#A855F7', fontSize: 'var(--fs-md)', fontWeight: 700,
+                border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+                background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+                color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: (exporting || summary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
                 opacity: (exporting || summary.total === 0) ? 0.5 : 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
