@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { X } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { fetchFeedback, fetchFeedbackStats, fetchFeedbackConfig, deleteFeedback, type CustomerFeedback, type FeedbackFormField } from '@/lib/supabase/feedback'
@@ -127,61 +128,79 @@ export default function FeedbackPage() {
 
   const renderStars = (n: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <span key={i} style={{ color: i < n ? '#FBBF24' : '#334155', fontSize: 'var(--fs-lg)' }}>
+      <span key={i} style={{ color: i < n ? 'var(--color-warning)' : 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>
         {i < n ? STAR : STAR_EMPTY}
       </span>
     ))
   }
 
+  // Map a rating to its row-rail color: 4-5★ pass, 3★ warn, 1-2★ danger, none → text-3
+  const ratingRailColor = (rating: number | null | undefined): string => {
+    if (!rating) return 'var(--color-text-3)'
+    if (rating >= 4) return 'var(--color-success)'
+    if (rating === 3) return 'var(--color-warning)'
+    return 'var(--color-danger)'
+  }
+
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, margin: 0 }}>Customer Feedback</h2>
+          <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, margin: 0 }}>Customer Feedback</h2>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
             {stats.total} total submissions
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {(['7d', '30d', 'all'] as const).map(f => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Time filter cluster */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(['7d', '30d', 'all'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                  border: filter === f ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                  background: filter === f
+                    ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                    : 'var(--color-bg-inset)',
+                  color: filter === f ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >{f === 'all' ? 'All' : f === '30d' ? '30 Days' : '7 Days'}</button>
+            ))}
+          </div>
+          {/* Output cluster */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              onClick={handleExportPdf}
+              disabled={generatingPdf || feedback.length === 0}
               style={{
-                padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-                border: filter === f ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
-                background: filter === f ? 'rgba(34,211,238,0.1)' : 'var(--color-bg-surface)',
-                color: filter === f ? 'var(--color-cyan)' : 'var(--color-text-2)',
-                cursor: 'pointer', fontFamily: 'inherit',
+                padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
+                background: 'color-mix(in srgb, var(--color-success) 8%, transparent)',
+                color: 'var(--color-status-pass)', fontFamily: 'inherit',
+                cursor: generatingPdf || feedback.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: generatingPdf || feedback.length === 0 ? 0.5 : 1,
               }}
-            >{f === 'all' ? 'All' : f === '30d' ? '30 Days' : '7 Days'}</button>
-          ))}
-          <button
-            onClick={handleExportPdf}
-            disabled={generatingPdf || feedback.length === 0}
-            style={{
-              padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-              color: 'var(--color-text-2)', fontFamily: 'inherit',
-              cursor: generatingPdf || feedback.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: generatingPdf || feedback.length === 0 ? 0.6 : 1,
-            }}
-          >
-            {generatingPdf ? 'Generating…' : 'Export PDF'}
-          </button>
-          <button
-            onClick={handleEmailPdf}
-            disabled={generatingPdf || feedback.length === 0}
-            style={{
-              padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 600,
-              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
-              color: 'var(--color-text-2)', fontFamily: 'inherit',
-              cursor: generatingPdf || feedback.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: generatingPdf || feedback.length === 0 ? 0.6 : 1,
-            }}
-          >
-            Email PDF
-          </button>
+            >
+              {generatingPdf ? 'Generating…' : 'Export PDF'}
+            </button>
+            <button
+              onClick={handleEmailPdf}
+              disabled={generatingPdf || feedback.length === 0}
+              style={{
+                padding: '6px 14px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+                background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+                color: 'var(--color-purple)', fontFamily: 'inherit',
+                cursor: generatingPdf || feedback.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: generatingPdf || feedback.length === 0 ? 0.5 : 1,
+              }}
+            >
+              Email PDF
+            </button>
+          </div>
         </div>
       </div>
 
@@ -195,7 +214,7 @@ export default function FeedbackPage() {
           {stats.avgRating != null && (
             <div className="card" style={{ padding: '12px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Rating</div>
-              <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: '#FBBF24' }}>{stats.avgRating.toFixed(1)}</div>
+              <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-warning)' }}>{stats.avgRating.toFixed(1)}</div>
               <div>{renderStars(Math.round(stats.avgRating))}</div>
             </div>
           )}
@@ -207,9 +226,9 @@ export default function FeedbackPage() {
                 const pct = stats.total > 0 ? (count / stats.total) * 100 : 0
                 return (
                   <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <span style={{ fontSize: 'var(--fs-xs)', color: '#FBBF24', width: 12 }}>{n}</span>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', width: 12 }}>{n}</span>
                     <div style={{ flex: 1, height: 6, background: 'var(--color-bg-inset)', borderRadius: 3 }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: '#FBBF24', borderRadius: 3 }} />
+                      <div style={{ width: `${pct}%`, height: '100%', background: 'var(--color-warning)', borderRadius: 3 }} />
                     </div>
                     <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', width: 20, textAlign: 'right' }}>{count}</span>
                   </div>
@@ -233,7 +252,14 @@ export default function FeedbackPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {feedback.map(fb => (
-            <div key={fb.id} className="card" style={{ padding: '14px 16px' }}>
+            <div
+              key={fb.id}
+              className="card"
+              style={{
+                padding: '14px 16px',
+                borderLeft: `3px solid ${ratingRailColor(fb.overall_rating)}`,
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -262,10 +288,17 @@ export default function FeedbackPage() {
                   </div>
                 </div>
                 {canDelete && (
-                  <button onClick={() => handleDelete(fb.id)} style={{
-                    background: 'none', border: 'none', color: 'var(--color-danger)',
-                    cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: 0, flexShrink: 0,
-                  }}>&times;</button>
+                  <button
+                    onClick={() => handleDelete(fb.id)}
+                    title="Delete feedback"
+                    style={{
+                      background: 'none', border: 'none', color: 'var(--color-danger)',
+                      cursor: 'pointer', padding: 4, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
                 )}
               </div>
             </div>
