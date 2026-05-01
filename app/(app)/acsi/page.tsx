@@ -92,7 +92,7 @@ export default function AcsiListPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
+          <h1 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
             Airfield Compliance and Safety Inspection
           </h1>
           <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', margin: '4px 0 0' }}>
@@ -103,15 +103,16 @@ export default function AcsiListPage() {
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          padding: '10px 18px',
+          padding: '8px 16px',
           borderRadius: 'var(--radius-md)',
-          background: 'var(--color-accent)',
-          color: '#fff',
+          border: '1px solid var(--color-cyan)',
+          background: 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))',
+          color: 'var(--color-cyan)',
           textDecoration: 'none',
-          fontWeight: 600,
-          fontSize: 'var(--fs-base)',
+          fontWeight: 700,
+          fontSize: 'var(--fs-sm)',
         }}>
-          <Plus size={16} /> Start New ACSI
+          <Plus size={14} /> Start New ACSI
         </Link>
       </div>
 
@@ -159,25 +160,32 @@ export default function AcsiListPage() {
             minWidth: 200,
           }}
         />
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {FILTERS.map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: 'var(--radius-sm)',
-                border: filter === f ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
-                background: filter === f ? 'var(--color-accent-glow)' : 'transparent',
-                color: filter === f ? 'var(--color-accent)' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-sm)',
-                fontWeight: filter === f ? 600 : 400,
-                cursor: 'pointer',
-              }}
-            >
-              {FILTER_LABELS[f]}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {FILTERS.map(f => {
+            const selected = filter === f
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: '6px 13px',
+                  borderRadius: 'var(--radius-md)',
+                  fontFamily: 'inherit',
+                  border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                  background: selected
+                    ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                    : 'var(--color-bg-inset)',
+                  color: selected ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-sm)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {FILTER_LABELS[f]}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -228,7 +236,8 @@ export default function AcsiListPage() {
                   padding: '14px 18px',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--color-border)',
-                  background: 'var(--color-bg-surface)',
+                  borderLeft: `3px solid ${statusCfg.color}`,
+                  background: 'var(--color-bg-surface-solid)',
                   flexWrap: 'wrap',
                 }}
               >
@@ -274,8 +283,8 @@ export default function AcsiListPage() {
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         padding: '4px 10px', borderRadius: 'var(--radius-sm)',
-                        border: '1px solid var(--color-accent)', background: 'transparent',
-                        color: 'var(--color-accent)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        border: '1px solid var(--color-cyan)', background: 'transparent',
+                        color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                         cursor: 'pointer', opacity: isBusy ? 0.5 : 1,
                       }}
                     >
