@@ -59,9 +59,21 @@ const STATUS_HEX: Record<string, string> = {
 const DEFAULT_NAVAIDS: NavaidStatus[] = []
 
 const ADVISORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  WATCH: { bg: 'rgba(251,191,36,0.18)', border: 'rgba(251,191,36,0.50)', text: 'var(--color-warning)' },
-  WARNING: { bg: 'rgba(239,68,68,0.18)', border: 'rgba(239,68,68,0.50)', text: 'var(--color-danger)' },
-  ADVISORY: { bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.50)', text: 'var(--color-accent)' },
+  WATCH: {
+    bg: 'color-mix(in srgb, var(--color-warning) 18%, transparent)',
+    border: 'color-mix(in srgb, var(--color-warning) 50%, transparent)',
+    text: 'var(--color-warning)',
+  },
+  WARNING: {
+    bg: 'color-mix(in srgb, var(--color-danger) 18%, transparent)',
+    border: 'color-mix(in srgb, var(--color-danger) 50%, transparent)',
+    text: 'var(--color-danger)',
+  },
+  ADVISORY: {
+    bg: 'color-mix(in srgb, var(--color-cyan) 18%, transparent)',
+    border: 'color-mix(in srgb, var(--color-cyan) 50%, transparent)',
+    text: 'var(--color-cyan)',
+  },
 }
 
 // Render order so a red is never visually buried under a yellow.
@@ -1525,7 +1537,9 @@ export default function HomePage() {
                     style={{
                       padding: '12px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-lg)', fontWeight: 700,
                       cursor: 'pointer', border: bwcDraftValue === opt ? `2px solid ${c}` : '1px solid var(--color-border-mid)',
-                      background: bwcDraftValue === opt ? `${c}15` : 'var(--color-bg-inset)',
+                      background: bwcDraftValue === opt
+                        ? `color-mix(in srgb, ${c} 12%, transparent)`
+                        : 'var(--color-bg-inset)',
                       color: bwcDraftValue === opt ? c : 'var(--color-text-2)',
                     }}
                   >{opt}</button>
@@ -1742,14 +1756,19 @@ export default function HomePage() {
           rwyEntries.push({ label: `${activeRunway}`, end1: activeRunway, end2: activeRunway, status: runwayStatus, active_end: activeRunway })
         }
 
-        const getColors = (s: 'open' | 'suspended' | 'closed') => ({
-          color: s === 'closed' ? 'var(--color-danger)' : s === 'suspended' ? 'var(--color-warning)' : 'var(--color-success)',
-          bg: s === 'closed' ? 'rgba(239,68,68,0.08)' : s === 'suspended' ? 'rgba(251,191,36,0.08)' : 'rgba(52,211,153,0.08)',
-          border: s === 'closed' ? 'rgba(239,68,68,0.2)' : s === 'suspended' ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)',
-          btnBorder: s === 'closed' ? 'rgba(239,68,68,0.25)' : s === 'suspended' ? 'rgba(251,191,36,0.25)' : 'rgba(52,211,153,0.25)',
-          btnBg: s === 'closed' ? 'rgba(239,68,68,0.1)' : s === 'suspended' ? 'rgba(251,191,36,0.1)' : 'rgba(52,211,153,0.1)',
-          selectBorder: s === 'closed' ? 'rgba(239,68,68,0.4)' : s === 'suspended' ? 'rgba(251,191,36,0.4)' : 'rgba(52,211,153,0.4)',
-        })
+        const getColors = (s: 'open' | 'suspended' | 'closed') => {
+          const tok = s === 'closed' ? 'var(--color-danger)'
+            : s === 'suspended' ? 'var(--color-warning)'
+            : 'var(--color-success)'
+          return {
+            color: tok,
+            bg: `color-mix(in srgb, ${tok} 8%, transparent)`,
+            border: `color-mix(in srgb, ${tok} 20%, transparent)`,
+            btnBorder: `color-mix(in srgb, ${tok} 25%, transparent)`,
+            btnBg: `color-mix(in srgb, ${tok} 10%, transparent)`,
+            selectBorder: `color-mix(in srgb, ${tok} 40%, transparent)`,
+          }
+        }
 
         return (<>
             {rwyEntries.map((rwy) => {
