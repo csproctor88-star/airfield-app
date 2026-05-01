@@ -257,9 +257,12 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
     padding: 12, marginBottom: 10,
   }
 
-  // Section header — bold uppercase tier label with a Lucide icon prefix
+  // Section header — bold uppercase tier label with a Lucide icon
+  // prefix. Bumped from --fs-2xs/text-3 to --fs-xs/text-2 so the
+  // section cards have a clear visual anchor instead of competing
+  // with the field labels at the same tier.
   const sectionHeaderStyle: React.CSSProperties = {
-    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)',
     textTransform: 'uppercase', letterSpacing: '0.08em',
     marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6,
   }
@@ -540,7 +543,19 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
 
             <div style={{ marginBottom: actionsTaken.length > 0 ? 12 : 0 }}>
               <label style={labelStyle}>Action Taken</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {/* Chip cluster pattern (feedback_chip_cluster_pattern.md):
+                  one bordered container holds the multi-select chips;
+                  selected items get a tinted bg pill, unselected items
+                  read as dim letter-style text. Treats Action Taken
+                  as one decision (the response) rather than six
+                  independent yes/no toggles. */}
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', gap: 4,
+                padding: 4,
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-inset)',
+              }}>
                 {WILDLIFE_ACTIONS.filter(a => a.value !== 'none').map(a => {
                   const selected = actionsTaken.includes(a.value)
                   return (
@@ -549,16 +564,17 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
                       type="button"
                       onClick={() => setActionsTaken(prev => selected ? prev.filter(v => v !== a.value) : [...prev, a.value])}
                       style={{
-                        padding: '6px 14px', borderRadius: 'var(--radius-full)',
-                        border: selected
-                          ? '1px solid color-mix(in srgb, var(--color-success) 50%, transparent)'
-                          : '1px solid var(--color-border)',
+                        padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                        border: 'none',
                         background: selected
-                          ? 'color-mix(in srgb, var(--color-success) 14%, transparent)'
-                          : 'var(--color-bg-inset)',
-                        color: selected ? 'var(--color-success)' : 'var(--color-text-2)',
-                        fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
+                          ? 'color-mix(in srgb, var(--color-success) 18%, transparent)'
+                          : 'transparent',
+                        color: selected ? 'var(--color-success)' : 'var(--color-text-4)',
+                        fontSize: 'var(--fs-sm)',
+                        fontWeight: selected ? 700 : 500,
+                        cursor: 'pointer',
                         fontFamily: 'inherit',
+                        transition: 'background 0.15s, color 0.15s',
                       }}
                     >
                       {a.label}
