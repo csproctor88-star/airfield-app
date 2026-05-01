@@ -3412,7 +3412,7 @@ export default function ParkingPage() {
               </div>
 
               {taxilanes.length === 0 && apronBoundaries.length === 0 && (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '4px 0', margin: 0 }}>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--fs-xs)', padding: '6px 12px', margin: 0, lineHeight: 1.5 }}>
                   No taxilanes or boundaries defined. Draw centerlines to verify clearance envelopes.
                 </p>
               )}
