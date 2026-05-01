@@ -118,7 +118,7 @@ export default function CESDashboardPage() {
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>CES Work Orders</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>CES Work Orders</div>
           {currentInstallation && (
             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
               {currentInstallation.name} ({currentInstallation.icao})
@@ -128,7 +128,8 @@ export default function CESDashboardPage() {
         <Link
           href="/discrepancies"
           style={{
-            background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.3)',
+            background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
             borderRadius: 'var(--radius-md)', padding: '7px 12px', color: 'var(--color-cyan)',
             fontSize: 'var(--fs-base)', fontWeight: 700, textDecoration: 'none',
           }}
@@ -146,14 +147,14 @@ export default function CESDashboardPage() {
             padding: '5px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
             cursor: 'pointer', fontFamily: 'inherit',
             border: activeShop === '__all' ? '1.5px solid var(--color-cyan)' : '1px solid var(--color-border)',
-            background: activeShop === '__all' ? 'rgba(34,211,238,0.12)' : 'transparent',
+            background: activeShop === '__all' ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)' : 'transparent',
             color: activeShop === '__all' ? 'var(--color-cyan)' : 'var(--color-text-2)',
           }}
         >
           All Shops
           <span style={{
             marginLeft: 6, fontSize: 'var(--fs-xs)', fontWeight: 600,
-            background: activeShop === '__all' ? 'rgba(34,211,238,0.2)' : 'var(--color-border)',
+            background: activeShop === '__all' ? 'color-mix(in srgb, var(--color-cyan) 20%, transparent)' : 'var(--color-border)',
             color: activeShop === '__all' ? 'var(--color-cyan)' : 'var(--color-text-3)',
             padding: '0 5px', borderRadius: 'var(--radius-xs)',
           }}>
@@ -172,7 +173,7 @@ export default function CESDashboardPage() {
                 padding: '5px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 border: active ? '1.5px solid var(--color-orange)' : '1px solid var(--color-border)',
-                background: active ? 'rgba(249,115,22,0.12)' : 'transparent',
+                background: active ? 'color-mix(in srgb, var(--color-orange) 12%, transparent)' : 'transparent',
                 color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
               }}
             >
@@ -180,7 +181,7 @@ export default function CESDashboardPage() {
               {count > 0 && (
                 <span style={{
                   marginLeft: 6, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: active ? 'rgba(249,115,22,0.2)' : 'var(--color-border)',
+                  background: active ? 'color-mix(in srgb, var(--color-orange) 20%, transparent)' : 'var(--color-border)',
                   color: active ? 'var(--color-orange)' : 'var(--color-text-3)',
                   padding: '0 5px', borderRadius: 'var(--radius-xs)',
                 }}>
@@ -247,7 +248,7 @@ export default function CESDashboardPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '10px 12px', background: 'var(--color-bg-surface)',
-                        borderRadius: 'var(--radius-md)', border: `1px solid ${days > 30 ? 'rgba(239,68,68,0.3)' : 'var(--color-border)'}`,
+                        borderRadius: 'var(--radius-md)', border: `1px solid ${days > 30 ? 'color-mix(in srgb, var(--color-danger) 30%, transparent)' : 'var(--color-border)'}`,
                         fontSize: 'var(--fs-sm)',
                       }}
                     >
@@ -273,7 +274,8 @@ export default function CESDashboardPage() {
                           </span>
                           <span style={{
                             fontSize: 'var(--fs-xs)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                            background: `${statusColor}18`, color: statusColor, flexShrink: 0,
+                            background: `color-mix(in srgb, ${statusColor} 12%, transparent)`,
+                            color: statusColor, flexShrink: 0,
                           }}>
                             {CURRENT_STATUS_LABELS[d.current_status] || d.current_status}
                           </span>
@@ -298,7 +300,8 @@ export default function CESDashboardPage() {
                         type="button"
                         onClick={() => setStatusModal(d)}
                         style={{
-                          background: 'rgba(34,211,238,0.1)', border: '1px solid rgba(34,211,238,0.3)',
+                          background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+                          border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
                           borderRadius: 'var(--radius-sm)', padding: '4px 10px', color: 'var(--color-cyan)',
                           fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                           flexShrink: 0, whiteSpace: 'nowrap',
