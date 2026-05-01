@@ -47,6 +47,7 @@ import {
   getAllClearanceResults,
   generateClearanceZonePolygon,
   getWingtipPositions,
+  getNoseTailPositions,
   APRON_CONTEXT_LABELS,
   TABLE_6_1A_ITEMS,
   getTaxilaneEnvelopeHalfWidth,
@@ -1459,10 +1460,33 @@ export default function ParkingPage() {
         if (draggedSpot) {
           const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
 
-          const addLabel = (otherLat: number, otherLng: number, text: string, color: string) => {
+          // Compute the moved aircraft's four edge anchors (nose tip, tail tip,
+          // left wingtip, right wingtip) so distance lines attach to the side
+          // closest to whatever is being measured — not the nose-gear pivot.
+          const movedCenter = spotCenter(movedSpot)
+          const movedWings = getWingtipPositions(movedCenter, movedSpot.heading_deg, movedSpot.wingspan_ft)
+          const movedNoseTail = getNoseTailPositions(movedCenter, movedSpot.heading_deg, movedSpot.length_ft)
+          const movedAnchors = [movedNoseTail.nose, movedNoseTail.tail, movedWings.left, movedWings.right]
+
+          // Pick the anchor in `anchors` closest to a target lat/lng. Uses
+          // squared planar distance — fine at the scales we care about.
+          const closestAnchor = (anchors: { lat: number; lon: number }[], target: { lat: number; lng: number }) => {
+            const cosLat = Math.cos(target.lat * Math.PI / 180)
+            let best = anchors[0]
+            let bestSq = Infinity
+            for (const a of anchors) {
+              const dx = (a.lon - target.lng) * cosLat
+              const dy = a.lat - target.lat
+              const sq = dx * dx + dy * dy
+              if (sq < bestSq) { best = a; bestSq = sq }
+            }
+            return best
+          }
+
+          const addLabel = (fromLat: number, fromLng: number, toLat: number, toLng: number, text: string, color: string) => {
             // Connecting line
             const line = new google.maps.Polyline({
-              path: [{ lat, lng }, { lat: otherLat, lng: otherLng }],
+              path: [{ lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng }],
               strokeColor: color, strokeWeight: 1.5, strokeOpacity: 0.6,
               map: gmap, clickable: false, zIndex: 9998,
             })
@@ -1470,7 +1494,7 @@ export default function ParkingPage() {
 
             // Distance label at midpoint with dark background for readability
             const lbl = new google.maps.Marker({
-              position: { lat: (lat + otherLat) / 2, lng: (lng + otherLng) / 2 },
+              position: { lat: (fromLat + toLat) / 2, lng: (fromLng + toLng) / 2 },
               map: gmap,
               label: { text, color: '#FFFFFF', fontWeight: 'bold', fontSize: '12px', className: 'parking-drag-label' },
               icon: {
@@ -1494,11 +1518,22 @@ export default function ParkingPage() {
             if (result.length > 0) {
               const r = result[0]
               const color = r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E'
-              addLabel(other.latitude, other.longitude, `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color)
+              // Compute the OTHER aircraft's edge anchors so the line attaches
+              // to its closest side as well.
+              const otherCenter = spotCenter(other)
+              const otherWings = getWingtipPositions(otherCenter, other.heading_deg, other.wingspan_ft)
+              const otherNoseTail = getNoseTailPositions(otherCenter, other.heading_deg, other.length_ft)
+              const otherAnchors = [otherNoseTail.nose, otherNoseTail.tail, otherWings.left, otherWings.right]
+              // Anchor on each side: closest moved-side to other's center,
+              // then closest other-side to the moved anchor we just picked.
+              const fromA = closestAnchor(movedAnchors, { lat: otherCenter.lat, lng: otherCenter.lon })
+              const toA = closestAnchor(otherAnchors, { lat: fromA.lat, lng: fromA.lon })
+              addLabel(fromA.lat, fromA.lon, toA.lat, toA.lon, `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color)
             }
           }
 
-          // Check distances to obstacles
+          // Check distances to obstacles (single-point target — pick closest
+          // moved-aircraft side)
           for (const obs of obstaclesRef.current) {
             const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
             const dy = (lat - obs.latitude) * 364567
@@ -1507,7 +1542,8 @@ export default function ParkingPage() {
             if (result.length > 0) {
               const r2 = result[0]
               const color = r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E'
-              addLabel(obs.latitude, obs.longitude, `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color)
+              const fromA = closestAnchor(movedAnchors, { lat: obs.latitude, lng: obs.longitude })
+              addLabel(fromA.lat, fromA.lon, obs.latitude, obs.longitude, `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color)
             }
           }
         }
