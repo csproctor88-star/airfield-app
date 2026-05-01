@@ -8,7 +8,36 @@ import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA, DEMO_WAIVER_REVIEWS } from '@/lib/d
 import { WAIVER_STATUS_CONFIG, WAIVER_CLASSIFICATIONS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import { Map, List, FileWarning, Calendar, FileSpreadsheet, Plus } from 'lucide-react'
+import { Map, List, FileWarning, Calendar, FileSpreadsheet, Plus, AlertCircle } from 'lucide-react'
+
+// Classification → color map. Operationally the two big categories
+// are temporary (time-bounded, requires annual review + corrective
+// action) and permanent (stable, no review needed). Color them
+// differently so the type is scannable at row level. Other
+// classifications stay neutral.
+const CLASSIFICATION_COLORS: Record<string, string> = {
+  permanent: 'var(--color-success)',
+  temporary: 'var(--color-warning)',
+  construction: 'var(--color-cyan)',
+  event: 'var(--color-purple)',
+  extension: 'var(--color-text-3)',
+  amendment: 'var(--color-text-3)',
+}
+
+// Expiration proximity → date color. Surfaces rows approaching
+// their expiration without the user having to scan dates.
+function expirationColor(expirationDate: string | null, status: string): string {
+  if (!expirationDate || !['active', 'approved'].includes(status)) {
+    return 'var(--color-text-3)'
+  }
+  const daysToExpire = Math.floor(
+    (new Date(expirationDate).getTime() - Date.now()) / 86400000
+  )
+  if (daysToExpire <= 30) return 'var(--color-danger)'
+  if (daysToExpire <= 90) return 'var(--color-warning)'
+  if (daysToExpire <= 365) return 'var(--color-text-2)'
+  return 'var(--color-text-3)'
+}
 import { formatZuluDate } from '@/lib/utils'
 
 const WaiverMapView = lazy(() => import('@/components/waivers/waiver-map-view-google'))
@@ -331,6 +360,21 @@ export default function WaiversPage() {
           {filtered.map((w) => {
             const classInfo = getClassInfo(w.classification)
             const statusConf = getStatusConfig(w.status)
+            // Days-to-expire: drives both the rail color (urgency
+            // override) and the inline expiration date color.
+            const daysToExpire = w.expiration_date && ['active', 'approved'].includes(w.status)
+              ? Math.floor((new Date(w.expiration_date).getTime() - Date.now()) / 86400000)
+              : null
+            // Rail color: urgency override (within 90 days) takes
+            // precedence over status, matching the NOTAMs precedent.
+            const railColor = daysToExpire != null && daysToExpire <= 30
+              ? 'var(--color-danger)'
+              : daysToExpire != null && daysToExpire <= 90
+                ? 'var(--color-warning)'
+                : statusConf?.color ?? 'var(--color-text-4)'
+            const expColor = expirationColor(w.expiration_date, w.status)
+            const expiringWithin30 = daysToExpire != null && daysToExpire <= 30
+            const classColor = CLASSIFICATION_COLORS[w.classification] ?? 'var(--color-text-3)'
             return (
               <Link
                 key={w.id}
@@ -342,6 +386,7 @@ export default function WaiversPage() {
                   marginBottom: 8,
                   textDecoration: 'none',
                   color: 'inherit',
+                  borderLeft: `3px solid ${railColor}`,
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -353,7 +398,7 @@ export default function WaiversPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 4, flexWrap: 'wrap' }}>
-                  {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color="var(--color-text-3)" />}
+                  {classInfo && <Badge label={`${classInfo.emoji} ${classInfo.label}`} color={classColor} />}
                 </div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', lineHeight: 1.5, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {w.description}
@@ -363,7 +408,14 @@ export default function WaiversPage() {
                   {w.expiration_date && (
                     <>
                       {w.location_description && <span>&bull;</span>}
-                      <span>Expires {formatDate(w.expiration_date)}</span>
+                      <span style={{
+                        color: expColor,
+                        fontWeight: expiringWithin30 ? 700 : 400,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                      }}>
+                        {expiringWithin30 && <AlertCircle size={12} />}
+                        Expires {formatDate(w.expiration_date)}
+                      </span>
                     </>
                   )}
                   {w.period_valid && !w.expiration_date && (
