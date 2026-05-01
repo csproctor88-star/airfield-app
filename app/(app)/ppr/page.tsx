@@ -1205,56 +1205,68 @@ export default function PprPage() {
               </p>
             )}
 
-            <label style={labelStyle}>
-              Arrival Date *
-              <input
-                type="date"
-                value={formDate}
-                onChange={e => setFormDate(e.target.value)}
-                style={textInputStyle}
-              />
-            </label>
-
-            {columns.map(col => (
-              <PprFieldInput
-                key={col.id}
-                columnId={col.id}
-                columnName={col.column_name}
-                columnType={col.column_type || 'text'}
-                isRequired={col.is_required}
-                value={formValues[col.id] || ''}
-                onChange={(v) => setFormValues(prev => ({ ...prev, [col.id]: v }))}
-                infoText={col.info_text}
-                timeDisplay={col.time_display}
-              />
-            ))}
-
-            <label style={{ ...labelStyle, marginBottom: 12 }}>
-              Notes
-              <textarea
-                value={formNotes}
-                onChange={e => setFormNotes(e.target.value)}
-                rows={2}
-                style={{ ...textInputStyle, resize: 'vertical' as const }}
-              />
-            </label>
-
-            {editingEntry && canApprove && editingEntry.status === 'approved' && (
-              <label style={{ ...labelStyle, marginBottom: 12 }}>
-                Approver OI
+            {/* Form fields in a 2-col grid. Arrival Date / Notes /
+                Approver OI span both columns; the dynamic
+                PprFieldInput cells naturally fill the grid one per
+                cell. Modal widened to 720px to give the columns
+                breathing room (~330px each after padding). */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              columnGap: 12,
+              rowGap: 0,
+            }}>
+              <label style={{ ...labelStyle, gridColumn: '1 / -1' }}>
+                Arrival Date *
                 <input
-                  type="text"
-                  value={formApproverOi}
-                  onChange={e => setFormApproverOi(e.target.value.toUpperCase().slice(0, 4))}
-                  maxLength={4}
-                  placeholder={editingEntry.approver_oi || 'XX'}
+                  type="date"
+                  value={formDate}
+                  onChange={e => setFormDate(e.target.value)}
                   style={textInputStyle}
                 />
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 'normal' }}>
-                  Changing this rewrites the OI segment of the PPR# (e.g. {editingEntry.ppr_number}).
-                </span>
               </label>
-            )}
+
+              {columns.map(col => (
+                <PprFieldInput
+                  key={col.id}
+                  columnId={col.id}
+                  columnName={col.column_name}
+                  columnType={col.column_type || 'text'}
+                  isRequired={col.is_required}
+                  value={formValues[col.id] || ''}
+                  onChange={(v) => setFormValues(prev => ({ ...prev, [col.id]: v }))}
+                  infoText={col.info_text}
+                  timeDisplay={col.time_display}
+                />
+              ))}
+
+              <label style={{ ...labelStyle, marginBottom: 12, gridColumn: '1 / -1' }}>
+                Notes
+                <textarea
+                  value={formNotes}
+                  onChange={e => setFormNotes(e.target.value)}
+                  rows={2}
+                  style={{ ...textInputStyle, resize: 'vertical' as const }}
+                />
+              </label>
+
+              {editingEntry && canApprove && editingEntry.status === 'approved' && (
+                <label style={{ ...labelStyle, marginBottom: 12, gridColumn: '1 / -1' }}>
+                  Approver OI
+                  <input
+                    type="text"
+                    value={formApproverOi}
+                    onChange={e => setFormApproverOi(e.target.value.toUpperCase().slice(0, 4))}
+                    maxLength={4}
+                    placeholder={editingEntry.approver_oi || 'XX'}
+                    style={textInputStyle}
+                  />
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontWeight: 'normal' }}>
+                    Changing this rewrites the OI segment of the PPR# (e.g. {editingEntry.ppr_number}).
+                  </span>
+                </label>
+              )}
+            </div>
 
             {/* Save-mode picker (create only) — three mutually
                 exclusive outcomes. Card-based segmented control so
@@ -2223,7 +2235,7 @@ function chipBtn(selected: boolean): React.CSSProperties {
 }
 
 const modalCardStyle: React.CSSProperties = {
-  width: 520, maxHeight: '85vh', overflow: 'auto',
+  width: 720, maxWidth: '92vw', maxHeight: '85vh', overflow: 'auto',
   background: 'var(--color-bg-surface)', borderRadius: 8,
   border: '1px solid var(--color-border)', padding: 20,
 }
