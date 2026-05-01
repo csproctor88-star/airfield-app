@@ -2973,6 +2973,7 @@ export default function ParkingPage() {
                         return (
                           <div key={s.id}>
                             <div
+                              title={s.spot_name || acName}
                               onClick={e => {
                                 if (e.shiftKey) {
                                   setSelectedSpotIds(prev => {
@@ -3005,7 +3006,7 @@ export default function ParkingPage() {
                                       : '3px solid transparent',
                               }}
                             >
-                              <span title={s.spot_name || acName} style={{ fontSize: 'var(--fs-xs)', fontWeight: isEditing ? 600 : 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: isEditing ? 600 : 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                                 {s.spot_name || acName}
                               </span>
                               {s.tail_number && (
