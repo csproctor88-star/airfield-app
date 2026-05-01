@@ -65,7 +65,7 @@ import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@
 import { generateParkingPdf } from '@/lib/parking-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { MoreVertical, Star } from 'lucide-react'
+import { MoreVertical, Star, RotateCw, Triangle, RefreshCw } from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
 
@@ -646,6 +646,11 @@ export default function ParkingPage() {
       center: { lat: centerLat, lng: centerLng },
       zoom: 15,
       scaleControl: true,
+      // Override the global flat-only defaults: parking laydown benefits from
+      // being able to align heading with the runway and tilt for perspective.
+      tilt: 0, // start flat; user can request 45° via the tilt button
+      rotateControl: true,
+      heading: 0,
     })
 
     const wrapper = createGMapWrapper(gmap)
@@ -3835,6 +3840,46 @@ export default function ParkingPage() {
               }}
             >
               📏 {rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Ruler'}
+            </button>
+            {/* Rotate map heading by 15° */}
+            <button
+              onClick={() => { const g = map.current?.gmap; if (g) g.setHeading(((g.getHeading() ?? 0) + 15) % 360) }}
+              title="Rotate map 15° clockwise (Shift+click for 90°)"
+              onMouseDown={e => { if (e.shiftKey) { const g = map.current?.gmap; if (g) { e.preventDefault(); g.setHeading(((g.getHeading() ?? 0) + 90) % 360) } } }}
+              style={{
+                padding: '6px 8px', borderRadius: 4, background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)', color: 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <RotateCw size={13} />
+            </button>
+            {/* Toggle tilt 0 ↔ 45 */}
+            <button
+              onClick={() => { const g = map.current?.gmap; if (g) g.setTilt(((g.getTilt() ?? 0) > 0) ? 0 : 45) }}
+              title="Toggle 45° tilt"
+              style={{
+                padding: '6px 8px', borderRadius: 4, background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)', color: 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <Triangle size={13} />
+            </button>
+            {/* Reset map heading + tilt to defaults */}
+            <button
+              onClick={() => { const g = map.current?.gmap; if (g) { g.setHeading(0); g.setTilt(0) } }}
+              title="Reset rotation and tilt"
+              style={{
+                padding: '6px 8px', borderRadius: 4, background: 'var(--color-bg-surface)',
+                border: '1px solid var(--color-border)', color: 'var(--color-text-primary)',
+                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <RefreshCw size={13} />
             </button>
             {selectedPlan && (
               <>
