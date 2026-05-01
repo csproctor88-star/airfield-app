@@ -648,6 +648,9 @@ export default function ParkingPage() {
       scaleControl: true,
       // Override the global flat-only defaults: parking laydown benefits from
       // being able to align heading with the runway and tilt for perspective.
+      // Vector Map ID enables interactive heading rotation (Ctrl+drag) and
+      // arbitrary tilt at any zoom — required for non-45°-imagery locations.
+      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
       tilt: 0, // start flat; user can request 45° via the tilt button
       rotateControl: true,
       heading: 0,
