@@ -1931,6 +1931,16 @@ export default function ParkingPage() {
 
     let active = false
     let startX = 0, startY = 0, startHeading = 0, startTilt = 0
+    let pending: { heading: number; tilt: number } | null = null
+    let rafId: number | null = null
+
+    const flush = () => {
+      rafId = null
+      if (pending) {
+        gmap.moveCamera(pending)
+        pending = null
+      }
+    }
 
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0) return
@@ -1949,16 +1959,17 @@ export default function ParkingPage() {
       if (!active) return
       const dx = e.clientX - startX
       const dy = e.clientY - startY
-      // 1° per 2px horizontal drag = comfortable rotation speed
-      const newHeading = (startHeading + dx / 2 + 360) % 360
-      // 1° per 4px vertical drag, clamped 0..67
-      const newTilt = Math.max(0, Math.min(67, startTilt + dy / 4))
-      gmap.setHeading(newHeading)
-      gmap.setTilt(newTilt)
+      pending = {
+        heading: (startHeading + dx / 2 + 360) % 360,
+        tilt: Math.max(0, Math.min(67, startTilt + dy / 4)),
+      }
+      if (rafId == null) rafId = requestAnimationFrame(flush)
     }
     const onUp = () => {
       if (!active) return
       active = false
+      if (rafId != null) { cancelAnimationFrame(rafId); rafId = null }
+      if (pending) { gmap.moveCamera(pending); pending = null }
       gmap.setOptions({ draggable: true })
       mapDiv.style.cursor = ''
     }
@@ -1971,6 +1982,7 @@ export default function ParkingPage() {
       mapDiv.removeEventListener('mousedown', onDown)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
+      if (rafId != null) cancelAnimationFrame(rafId)
       gmap.setOptions({ draggable: true })
     }
   }, [mapLoaded])
