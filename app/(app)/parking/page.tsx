@@ -46,8 +46,6 @@ import {
   findAllViolations,
   getAllClearanceResults,
   generateClearanceZonePolygon,
-  getWingtipPositions,
-  getNoseTailPositions,
   APRON_CONTEXT_LABELS,
   TABLE_6_1A_ITEMS,
   getTaxilaneEnvelopeHalfWidth,
@@ -1459,28 +1457,38 @@ export default function ParkingPage() {
         const draggedSpot = spotsWithAircraftRef.current.find(s => s.id === sid)
         if (draggedSpot) {
           const movedSpot = { ...draggedSpot, longitude: lng, latitude: lat }
-
-          // Compute the moved aircraft's four edge anchors (nose tip, tail tip,
-          // left wingtip, right wingtip) so distance lines attach to the side
-          // closest to whatever is being measured — not the nose-gear pivot.
           const movedCenter = spotCenter(movedSpot)
-          const movedWings = getWingtipPositions(movedCenter, movedSpot.heading_deg, movedSpot.wingspan_ft)
-          const movedNoseTail = getNoseTailPositions(movedCenter, movedSpot.heading_deg, movedSpot.length_ft)
-          const movedAnchors = [movedNoseTail.nose, movedNoseTail.tail, movedWings.left, movedWings.right]
 
-          // Pick the anchor in `anchors` closest to a target lat/lng. Uses
-          // squared planar distance — fine at the scales we care about.
-          const closestAnchor = (anchors: { lat: number; lon: number }[], target: { lat: number; lng: number }) => {
-            const cosLat = Math.cos(target.lat * Math.PI / 180)
-            let best = anchors[0]
-            let bestSq = Infinity
-            for (const a of anchors) {
-              const dx = (a.lon - target.lng) * cosLat
-              const dy = a.lat - target.lat
-              const sq = dx * dx + dy * dy
-              if (sq < bestSq) { best = a; bestSq = sq }
+          // Where does a ray from an aircraft's center toward a target exit
+          // the aircraft's bounding rectangle? Returns that exit point so
+          // distance lines attach to the wingtip / nose / tail edge in line
+          // with the target — not a fixed cardinal anchor.
+          const rectExitPoint = (
+            cLat: number, cLon: number, headingDeg: number,
+            halfLenFt: number, halfSpanFt: number,
+            tLat: number, tLng: number,
+          ): { lat: number; lon: number } => {
+            const cosCenterLat = Math.cos(cLat * Math.PI / 180)
+            const dEast = (tLng - cLon) * 364567 * cosCenterLat
+            const dNorth = (tLat - cLat) * 364567
+            const hRad = headingDeg * Math.PI / 180
+            const sinH = Math.sin(hRad)
+            const cosH = Math.cos(hRad)
+            // Body frame: forward (along nose) and lateral (right of nose)
+            const fwd = dEast * sinH + dNorth * cosH
+            const lat = dEast * cosH - dNorth * sinH
+            if (fwd === 0 && lat === 0) return { lat: cLat, lon: cLon }
+            const tLatHit = lat === 0 ? Infinity : halfSpanFt / Math.abs(lat)
+            const tFwdHit = fwd === 0 ? Infinity : halfLenFt / Math.abs(fwd)
+            const tEdge = Math.min(tLatHit, tFwdHit, 1)
+            const eFwd = fwd * tEdge
+            const eLat = lat * tEdge
+            const eEast = eFwd * sinH + eLat * cosH
+            const eNorth = eFwd * cosH - eLat * sinH
+            return {
+              lat: cLat + eNorth / 364567,
+              lon: cLon + eEast / (364567 * cosCenterLat),
             }
-            return best
           }
 
           const addLabel = (fromLat: number, fromLng: number, toLat: number, toLng: number, text: string, color: string) => {
@@ -1518,22 +1526,25 @@ export default function ParkingPage() {
             if (result.length > 0) {
               const r = result[0]
               const color = r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E'
-              // Compute the OTHER aircraft's edge anchors so the line attaches
-              // to its closest side as well.
+              // Exit point of moved aircraft toward the other's center, and
+              // exit point of the other aircraft toward the moved center.
               const otherCenter = spotCenter(other)
-              const otherWings = getWingtipPositions(otherCenter, other.heading_deg, other.wingspan_ft)
-              const otherNoseTail = getNoseTailPositions(otherCenter, other.heading_deg, other.length_ft)
-              const otherAnchors = [otherNoseTail.nose, otherNoseTail.tail, otherWings.left, otherWings.right]
-              // Anchor on each side: closest moved-side to other's center,
-              // then closest other-side to the moved anchor we just picked.
-              const fromA = closestAnchor(movedAnchors, { lat: otherCenter.lat, lng: otherCenter.lon })
-              const toA = closestAnchor(otherAnchors, { lat: fromA.lat, lng: fromA.lon })
+              const fromA = rectExitPoint(
+                movedCenter.lat, movedCenter.lon, movedSpot.heading_deg,
+                movedSpot.length_ft / 2, movedSpot.wingspan_ft / 2,
+                otherCenter.lat, otherCenter.lon,
+              )
+              const toA = rectExitPoint(
+                otherCenter.lat, otherCenter.lon, other.heading_deg,
+                other.length_ft / 2, other.wingspan_ft / 2,
+                movedCenter.lat, movedCenter.lon,
+              )
               addLabel(fromA.lat, fromA.lon, toA.lat, toA.lon, `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color)
             }
           }
 
-          // Check distances to obstacles (single-point target — pick closest
-          // moved-aircraft side)
+          // Check distances to obstacles (single-point target — find the
+          // moved-aircraft rectangle's exit point along the line to the obs)
           for (const obs of obstaclesRef.current) {
             const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
             const dy = (lat - obs.latitude) * 364567
@@ -1542,7 +1553,11 @@ export default function ParkingPage() {
             if (result.length > 0) {
               const r2 = result[0]
               const color = r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E'
-              const fromA = closestAnchor(movedAnchors, { lat: obs.latitude, lng: obs.longitude })
+              const fromA = rectExitPoint(
+                movedCenter.lat, movedCenter.lon, movedSpot.heading_deg,
+                movedSpot.length_ft / 2, movedSpot.wingspan_ft / 2,
+                obs.latitude, obs.longitude,
+              )
               addLabel(fromA.lat, fromA.lon, obs.latitude, obs.longitude, `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color)
             }
           }
