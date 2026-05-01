@@ -156,9 +156,12 @@ export default function LightingReportPage() {
   const typeEntries = Object.entries(data.featuresByType).sort((a, b) => b[1].total - a[1].total)
 
   const sortBtnStyle = (active: boolean): React.CSSProperties => ({
-    padding: '3px 8px', borderRadius: 4, fontSize: 'var(--fs-2xs)', fontWeight: 600,
-    cursor: 'pointer', fontFamily: 'inherit', border: 'none',
-    background: active ? 'rgba(34,211,238,0.12)' : 'transparent',
+    padding: '3px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+    cursor: 'pointer', fontFamily: 'inherit',
+    border: active ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+    background: active
+      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+      : 'var(--color-bg-inset)',
     color: active ? 'var(--color-cyan)' : 'var(--color-text-3)',
   })
 
@@ -179,17 +182,26 @@ export default function LightingReportPage() {
 
       {/* Summary Bar */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        <div className="card" style={{ flex: 1, padding: '10px 14px', textAlign: 'center' }}>
+        <div className="card" style={{
+          flex: 1, padding: '10px 14px', textAlign: 'center',
+          borderTop: '3px solid var(--color-text-3)',
+        }}>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{data.totalFeatures}</div>
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>TOTAL</div>
         </div>
-        <div className="card" style={{ flex: 1, padding: '10px 14px', textAlign: 'center' }}>
+        <div className="card" style={{
+          flex: 1, padding: '10px 14px', textAlign: 'center',
+          borderTop: `3px solid ${data.totalInoperative > 0 ? 'var(--color-danger)' : 'var(--color-status-pass)'}`,
+        }}>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: data.totalInoperative > 0 ? 'var(--color-danger)' : 'var(--color-status-pass)' }}>
             {data.totalInoperative}
           </div>
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>INOP ({inopPct}%)</div>
         </div>
-        <div className="card" style={{ flex: 1, padding: '10px 14px', textAlign: 'center' }}>
+        <div className="card" style={{
+          flex: 1, padding: '10px 14px', textAlign: 'center',
+          borderTop: `3px solid ${outageCount > 0 ? 'var(--color-orange)' : 'var(--color-status-pass)'}`,
+        }}>
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: outageCount > 0 ? 'var(--color-orange)' : 'var(--color-status-pass)' }}>
             {outageCount}
           </div>
@@ -388,8 +400,10 @@ export default function LightingReportPage() {
             disabled={exporting || selectedSystem === '__all'}
             style={{
               padding: '7px 10px', borderRadius: 6, border: 'none',
-              background: selectedSystem !== '__all' ? 'rgba(168,85,247,0.12)' : 'var(--color-bg-inset)',
-              color: selectedSystem !== '__all' ? '#A855F7' : 'var(--color-text-4)',
+              background: selectedSystem !== '__all'
+                ? 'color-mix(in srgb, var(--color-purple) 12%, transparent)'
+                : 'var(--color-bg-inset)',
+              color: selectedSystem !== '__all' ? 'var(--color-purple)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: selectedSystem !== '__all' ? 'pointer' : 'default',
               fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
             }}
@@ -401,8 +415,10 @@ export default function LightingReportPage() {
             disabled={exporting || selectedSystem === '__all'}
             style={{
               padding: '7px 10px', borderRadius: 6, border: 'none',
-              background: selectedSystem !== '__all' ? 'rgba(168,85,247,0.12)' : 'var(--color-bg-inset)',
-              color: selectedSystem !== '__all' ? '#A855F7' : 'var(--color-text-4)',
+              background: selectedSystem !== '__all'
+                ? 'color-mix(in srgb, var(--color-purple) 12%, transparent)'
+                : 'var(--color-bg-inset)',
+              color: selectedSystem !== '__all' ? 'var(--color-purple)' : 'var(--color-text-4)',
               fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: selectedSystem !== '__all' ? 'pointer' : 'default',
               fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
             }}
@@ -445,7 +461,8 @@ function ExportRow({ label, desc, color, onPdf, onEmail, exporting }: {
           disabled={exporting}
           style={{
             padding: '5px 10px', borderRadius: 6, border: 'none',
-            background: 'rgba(168,85,247,0.12)', color: '#A855F7',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+            color: 'var(--color-purple)',
             fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: exporting ? 'default' : 'pointer',
             fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
           }}
@@ -457,7 +474,8 @@ function ExportRow({ label, desc, color, onPdf, onEmail, exporting }: {
           disabled={exporting}
           style={{
             padding: '5px 10px', borderRadius: 6, border: 'none',
-            background: 'rgba(168,85,247,0.12)', color: '#A855F7',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
+            color: 'var(--color-purple)',
             fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: exporting ? 'default' : 'pointer',
             fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4,
           }}
