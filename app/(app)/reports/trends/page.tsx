@@ -95,22 +95,29 @@ export default function DiscrepancyTrendsPage() {
           </div>
         </div>
 
-        {/* Period Selector */}
-        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 14 }}>
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              style={{
-                flex: 1, padding: '10px 0', border: 'none',
-                background: period === p.value ? 'var(--color-purple)' : 'transparent',
-                color: period === p.value ? '#fff' : 'var(--color-text-2)',
-                fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
+        {/* Period Selector — outlined-pill cluster */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+          {PERIODS.map((p) => {
+            const selected = period === p.value
+            return (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontFamily: 'inherit',
+                  border: selected ? '1px solid var(--color-purple)' : '1px solid var(--color-border)',
+                  background: selected
+                    ? 'color-mix(in srgb, var(--color-purple) 14%, var(--color-bg-surface))'
+                    : 'var(--color-bg-inset)',
+                  color: selected ? 'var(--color-purple)' : 'var(--color-text-2)',
+                  fontSize: 'var(--fs-base)', fontWeight: 700, cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {p.label}
+              </button>
+            )
+          })}
         </div>
 
         <button
@@ -199,7 +206,7 @@ export default function DiscrepancyTrendsPage() {
             <div key={b.label} style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)' }}>{b.label}</span>
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
                   <span style={{ color: 'var(--color-danger)' }}>{b.opened}</span>
                   {' / '}
                   <span style={{ color: 'var(--color-status-pass)' }}>{b.closed}</span>
@@ -241,7 +248,8 @@ export default function DiscrepancyTrendsPage() {
               <div key={a.area} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 padding: '8px 14px', borderRadius: 10,
-                background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)',
+                background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--color-purple) 15%, transparent)',
                 minWidth: 64,
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-purple)' }}>{a.count}</div>
@@ -263,7 +271,8 @@ export default function DiscrepancyTrendsPage() {
               <div key={t.type} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 padding: '8px 14px', borderRadius: 10,
-                background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.15)',
+                background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--color-purple) 15%, transparent)',
                 minWidth: 64,
               }}>
                 <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-purple)' }}>{t.count}</div>
@@ -286,8 +295,8 @@ export default function DiscrepancyTrendsPage() {
           disabled={exporting}
           style={{
             flex: 1, padding: '14px 0', borderRadius: 10,
-            border: '1px solid rgba(34,197,94,0.4)',
-            background: 'rgba(34,197,94,0.1)',
+            border: '1px solid color-mix(in srgb, var(--color-success) 40%, transparent)',
+            background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
             color: 'var(--color-status-pass)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
@@ -302,8 +311,8 @@ export default function DiscrepancyTrendsPage() {
           disabled={exporting}
           style={{
             padding: '14px 18px', borderRadius: 10,
-            border: '1px solid #A78BFA33',
-            background: '#A78BFA14',
+            border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
             color: 'var(--color-purple)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
