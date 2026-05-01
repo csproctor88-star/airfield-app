@@ -202,7 +202,7 @@ export default function AcsiDetailPage() {
             <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
               {insp.display_id}
             </h1>
-            <Badge label={statusCfg.label} color={statusCfg.color} bg={statusCfg.bg} />
+            <Badge label={statusCfg.label} color={statusCfg.color} />
           </div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
             {insp.airfield_name} — {insp.fiscal_year} — {insp.inspection_date}

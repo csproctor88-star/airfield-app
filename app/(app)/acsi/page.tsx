@@ -258,7 +258,7 @@ export default function AcsiListPage() {
                     <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{insp.failed_count}F</span>
                     <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{insp.na_count}NA</span>
                   </div>
-                  <Badge label={statusCfg.label} color={statusCfg.color} bg={statusCfg.bg} />
+                  <Badge label={statusCfg.label} color={statusCfg.color} />
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
                     {insp.inspector_name || '—'}
                   </div>

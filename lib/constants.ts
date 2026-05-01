@@ -898,11 +898,14 @@ export const ACSI_CHECKLIST_SECTIONS: AcsiChecklistSection[] = [
   },
 ]
 
+// Status colors moved to CSS variables so Badge auto-derives the tinted
+// bg via color-mix at 10% (explicit hex bgs were dropped — see
+// components/ui/badge.tsx for the var(...)-aware autoBg path).
 export const ACSI_STATUS_CONFIG = {
-  draft:       { color: '#9CA3AF', bg: '#E5E7EB', label: 'Draft' },
-  in_progress: { color: '#3B82F6', bg: '#DBEAFE', label: 'In Progress' },
-  completed:   { color: '#10B981', bg: '#D1FAE5', label: 'Completed' },
-  staffed:     { color: '#8B5CF6', bg: '#EDE9FE', label: 'Staffed' },
+  draft:       { color: 'var(--color-text-3)', label: 'Draft' },
+  in_progress: { color: 'var(--color-blue)',   label: 'In Progress' },
+  completed:   { color: 'var(--color-success)', label: 'Completed' },
+  staffed:     { color: 'var(--color-violet)', label: 'Staffed' },
 } as const
 
 export const ACSI_TEAM_ROLES = [
