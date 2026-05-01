@@ -1,6 +1,6 @@
 'use client'
 
-import { RoleBadge } from './role-badge'
+import { RoleBadge, getRoleRailColor } from './role-badge'
 import { UserStatusBadge } from './status-badge'
 import { formatRelativeTime } from '@/lib/utils'
 
@@ -49,6 +49,7 @@ export function UserCard({ user, showInstallation, onSelect }: UserCardProps) {
         flexDirection: 'column',
         gap: 4,
         border: '1px solid var(--color-border)',
+        borderLeft: `3px solid ${getRoleRailColor(user.role)}`,
         fontFamily: 'inherit',
       }}
     >

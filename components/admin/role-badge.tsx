@@ -13,6 +13,20 @@ const ROLE_CLASSES: Record<string, { className: string; label: string }> = {
   observer:         { className: 'badge-role-user', label: 'READ ONLY' },
 }
 
+/**
+ * Role rail color for the user card's 3px left border. Mirrors the
+ * 3-tier classification in ROLE_CLASSES — same visual story as the
+ * RoleBadge but exposed as a CSS-var string so it can drive
+ * non-class style properties (borderLeft, etc).
+ */
+export function getRoleRailColor(role: string): string {
+  if (role === 'sys_admin') return 'var(--color-danger)'
+  if (role === 'base_admin' || role === 'airfield_manager' || role === 'namo') {
+    return 'var(--color-cyan)'
+  }
+  return 'var(--color-text-3)'
+}
+
 export function RoleBadge({ role }: { role: string }) {
   const config = ROLE_CLASSES[role] || ROLE_CLASSES.read_only
   return (
