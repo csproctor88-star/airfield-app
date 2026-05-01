@@ -1918,6 +1918,63 @@ export default function ParkingPage() {
     }
   }, [boxSelectActive, mapLoaded])
 
+  // ── Ctrl+drag heading rotation (Vector Map) ──
+  // gestureHandling: 'greedy' suppresses the built-in rotation gesture, so
+  // we implement it explicitly: hold Ctrl (or Shift) and drag horizontally
+  // to rotate; vertical drag tilts (0-67° clamp matches Vector Maps behavior).
+  useEffect(() => {
+    if (!mapLoaded) return
+    const w = map.current
+    if (!w) return
+    const gmap = w.gmap
+    const mapDiv = gmap.getDiv()
+
+    let active = false
+    let startX = 0, startY = 0, startHeading = 0, startTilt = 0
+
+    const onDown = (e: MouseEvent) => {
+      if (e.button !== 0) return
+      if (!e.ctrlKey && !e.shiftKey) return
+      active = true
+      startX = e.clientX
+      startY = e.clientY
+      startHeading = gmap.getHeading() ?? 0
+      startTilt = gmap.getTilt() ?? 0
+      gmap.setOptions({ draggable: false })
+      mapDiv.style.cursor = 'grabbing'
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    const onMove = (e: MouseEvent) => {
+      if (!active) return
+      const dx = e.clientX - startX
+      const dy = e.clientY - startY
+      // 1° per 2px horizontal drag = comfortable rotation speed
+      const newHeading = (startHeading + dx / 2 + 360) % 360
+      // 1° per 4px vertical drag, clamped 0..67
+      const newTilt = Math.max(0, Math.min(67, startTilt + dy / 4))
+      gmap.setHeading(newHeading)
+      gmap.setTilt(newTilt)
+    }
+    const onUp = () => {
+      if (!active) return
+      active = false
+      gmap.setOptions({ draggable: true })
+      mapDiv.style.cursor = ''
+    }
+
+    mapDiv.addEventListener('mousedown', onDown)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+
+    return () => {
+      mapDiv.removeEventListener('mousedown', onDown)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      gmap.setOptions({ draggable: true })
+    }
+  }, [mapLoaded])
+
   // Resize map when sidebar collapses/expands or fullscreen toggles
   useEffect(() => {
     setTimeout(() => {
