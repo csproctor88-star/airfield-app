@@ -135,8 +135,8 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
   return (
     <div style={{
       padding: '12px 14px',
-      background: 'rgba(239, 68, 68, 0.04)',
-      border: '1px solid rgba(239, 68, 68, 0.15)',
+      background: 'color-mix(in srgb, var(--color-danger) 4%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--color-danger) 18%, transparent)',
       borderRadius: 8,
     }}>
 
@@ -145,7 +145,8 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 8,
           padding: '4px 10px', borderRadius: 6,
-          background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)',
+          background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
           fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-cyan)',
         }}>
           <Link2 size={12} />
@@ -226,7 +227,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       {/* Risk Control Measure — required on N items */}
       <div style={{ marginBottom: 12 }}>
         <label style={labelStyle}>
-          Risk Control Measure <span style={{ color: '#EF4444' }}>*</span>
+          Risk Control Measure <span style={{ color: 'var(--color-danger)' }}>*</span>
         </label>
         <textarea
           value={detail.risk_control_measure || ''}
@@ -249,7 +250,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
             overflow: 'hidden',
             borderColor: (detail.risk_control_measure || '').trim()
               ? 'var(--color-border)'
-              : 'rgba(239, 68, 68, 0.6)',
+              : 'color-mix(in srgb, var(--color-danger) 60%, transparent)',
           }}
         />
       </div>
@@ -269,9 +270,11 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
                   style={{
                     padding: '6px 12px',
                     borderRadius: 8,
-                    border: selected ? '1px solid var(--color-accent)' : '1px solid var(--color-border)',
-                    background: selected ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
-                    color: selected ? 'var(--color-accent)' : 'var(--color-text-3)',
+                    border: selected ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
+                    background: selected
+                      ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
+                      : 'transparent',
+                    color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
                     fontSize: 'var(--fs-xs)',
                     fontWeight: 600,
                     cursor: 'pointer',

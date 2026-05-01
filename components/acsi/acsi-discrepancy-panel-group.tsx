@@ -56,7 +56,7 @@ export function AcsiDiscrepancyPanelGroup({
       <div style={{
         fontSize: 'var(--fs-xs)',
         fontWeight: 700,
-        color: '#EF4444',
+        color: 'var(--color-danger)',
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
         marginBottom: 8,
@@ -67,8 +67,8 @@ export function AcsiDiscrepancyPanelGroup({
       {/* Shared location map */}
       <div style={{
         padding: '10px 14px',
-        background: 'rgba(239, 68, 68, 0.04)',
-        border: '1px solid rgba(239, 68, 68, 0.15)',
+        background: 'color-mix(in srgb, var(--color-danger) 4%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--color-danger) 18%, transparent)',
         borderRadius: 8,
         marginBottom: 8,
       }}>
@@ -89,7 +89,7 @@ export function AcsiDiscrepancyPanelGroup({
               <div style={{
                 fontSize: 'var(--fs-xs)',
                 fontWeight: 700,
-                color: '#EF4444',
+                color: 'var(--color-danger)',
               }}>
                 Discrepancy {i + 1} of {discrepancies.length}
               </div>
@@ -102,9 +102,9 @@ export function AcsiDiscrepancyPanelGroup({
                   gap: 4,
                   padding: '4px 8px',
                   borderRadius: 6,
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  color: '#EF4444',
+                  border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-danger) 10%, transparent)',
+                  color: 'var(--color-danger)',
                   fontSize: 'var(--fs-xs)',
                   cursor: 'pointer',
                 }}
@@ -133,9 +133,9 @@ export function AcsiDiscrepancyPanelGroup({
             flex: 1,
             padding: '10px',
             borderRadius: 8,
-            border: '2px dashed rgba(239, 68, 68, 0.3)',
+            border: '2px dashed color-mix(in srgb, var(--color-danger) 35%, transparent)',
             background: 'transparent',
-            color: '#EF4444',
+            color: 'var(--color-danger)',
             fontSize: 'var(--fs-sm)',
             fontWeight: 600,
             cursor: 'pointer',
@@ -156,7 +156,7 @@ export function AcsiDiscrepancyPanelGroup({
               flex: 1,
               padding: '10px',
               borderRadius: 8,
-              border: '2px dashed rgba(56, 189, 248, 0.3)',
+              border: '2px dashed color-mix(in srgb, var(--color-cyan) 35%, transparent)',
               background: 'transparent',
               color: 'var(--color-cyan)',
               fontSize: 'var(--fs-sm)',

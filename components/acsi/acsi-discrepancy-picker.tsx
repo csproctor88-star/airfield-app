@@ -140,17 +140,27 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
 
   const isLinked = (d: DiscrepancyRow) => alreadyLinkedIds?.has(d.id)
 
-  const chipStyle = (active: boolean, color?: string): React.CSSProperties => ({
-    padding: '5px 10px',
-    borderRadius: 6,
-    border: active ? `1px solid ${color || 'var(--color-cyan)'}` : '1px solid var(--color-border)',
-    background: active ? `${color || 'var(--color-cyan)'}18` : 'transparent',
-    color: active ? (color || 'var(--color-cyan)') : 'var(--color-text-3)',
-    fontSize: 'var(--fs-xs)',
-    fontWeight: 600,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  })
+  const chipStyle = (active: boolean, color?: string): React.CSSProperties => {
+    // STATUS_OPTIONS feeds CSS variable strings like 'var(--color-orange)'
+    // into this helper, so the historical `${color}18` hex-alpha concat
+    // produced invalid CSS (`var(--color-orange)18`) and the bg silently
+    // dropped. color-mix accepts both hex literals and var(...) values.
+    // Same footgun pinned in feedback_amber_text_contrast.md.
+    const c = color || 'var(--color-cyan)'
+    return {
+      padding: '5px 10px',
+      borderRadius: 6,
+      border: active ? `1px solid ${c}` : '1px solid var(--color-border)',
+      background: active
+        ? `color-mix(in srgb, ${c} 12%, transparent)`
+        : 'transparent',
+      color: active ? c : 'var(--color-text-3)',
+      fontSize: 'var(--fs-xs)',
+      fontWeight: 600,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+    }
+  }
 
   return (
     <div
@@ -220,7 +230,9 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
                 display: 'flex', alignItems: 'center', gap: 4,
                 padding: '8px 12px', borderRadius: 8,
                 border: activeFilterCount > 0 ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
-                background: activeFilterCount > 0 ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                background: activeFilterCount > 0
+                  ? 'color-mix(in srgb, var(--color-cyan) 10%, transparent)'
+                  : 'transparent',
                 color: activeFilterCount > 0 ? 'var(--color-cyan)' : 'var(--color-text-3)',
                 cursor: 'pointer', fontSize: 'var(--fs-sm)', fontWeight: 600,
               }}
@@ -292,12 +304,12 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
                   border: isSelected
                     ? '1px solid var(--color-cyan)'
                     : linked
-                      ? '1px solid rgba(16, 185, 129, 0.4)'
+                      ? '1px solid color-mix(in srgb, var(--color-success) 40%, transparent)'
                       : '1px solid var(--color-border)',
                   background: isSelected
-                    ? 'rgba(56, 189, 248, 0.10)'
+                    ? 'color-mix(in srgb, var(--color-cyan) 12%, transparent)'
                     : linked
-                      ? 'rgba(16, 185, 129, 0.06)'
+                      ? 'color-mix(in srgb, var(--color-success) 6%, transparent)'
                       : 'var(--color-bg-elevated)',
                   cursor: disabled ? 'default' : 'pointer',
                   opacity: linked ? 0.6 : 1,
@@ -315,7 +327,7 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
                   background: isSelected ? 'var(--color-cyan)' : 'transparent',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {isSelected && <Check size={12} strokeWidth={3} color="#0b1117" />}
+                  {isSelected && <Check size={12} strokeWidth={3} color="var(--color-cyan-btn-text)" />}
                 </span>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -330,8 +342,8 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 3,
                           padding: '2px 6px', borderRadius: 4,
-                          background: 'rgba(16, 185, 129, 0.15)',
-                          color: '#10B981',
+                          background: 'color-mix(in srgb, var(--color-success) 15%, transparent)',
+                          color: 'var(--color-success)',
                           fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em',
                         }}>
                           <Check size={10} />
@@ -398,8 +410,10 @@ export function AcsiDiscrepancyPicker({ onSelect, onClose, alreadyLinkedIds }: A
             style={{
               padding: '8px 16px', borderRadius: 8,
               border: '1px solid var(--color-cyan)',
-              background: selected.size === 0 ? 'rgba(56, 189, 248, 0.15)' : 'var(--color-cyan)',
-              color: selected.size === 0 ? 'var(--color-cyan)' : '#0b1117',
+              background: selected.size === 0
+                ? 'color-mix(in srgb, var(--color-cyan) 15%, transparent)'
+                : 'var(--color-cyan)',
+              color: selected.size === 0 ? 'var(--color-cyan)' : 'var(--color-cyan-btn-text)',
               fontSize: 'var(--fs-sm)', fontWeight: 700,
               cursor: (selected.size === 0 || submitting) ? 'default' : 'pointer',
               opacity: selected.size === 0 ? 0.5 : 1,
