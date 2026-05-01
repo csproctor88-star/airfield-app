@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { LogOut } from 'lucide-react'
+import { LogOut, ChevronRight } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
@@ -14,52 +14,52 @@ type ModuleItem = { name: string; icon: string; color: string; href: string; adm
 
 // Pinned — same items visible on bottom nav
 const pinnedItems: ModuleItem[] = [
-  { name: 'Airfield Status', icon: '📡', color: '#38BDF8', href: '/' },
-  { name: 'Dashboard', icon: '📊', color: '#38BDF8', href: '/dashboard' },
+  { name: 'Airfield Status', icon: '📡', color: 'var(--color-accent)', href: '/' },
+  { name: 'Dashboard', icon: '📊', color: 'var(--color-accent)', href: '/dashboard' },
 ]
 
 // Operations
 const opsItems: ModuleItem[] = [
-  { name: 'Events Log', icon: '📝', color: '#34D399', href: '/activity' },
-  { name: 'QRC', icon: '⚡', color: '#EAB308', href: '/qrc' },
-  { name: 'Secondary Crash Net', icon: '📻', color: '#EAB308', href: '/scn' },
-  { name: 'Shift Checklist', icon: '☑️', color: '#38BDF8', href: '/shift-checklist' },
-  { name: 'Airfield Checks', icon: '✅', color: '#22D3EE', href: '/checks' },
-  { name: 'All Inspections', icon: '📋', color: '#22D3EE', href: '/inspections/all' },
-  { name: 'Wildlife / BASH', icon: '🦅', color: '#10B981', href: '/wildlife' },
-  { name: 'PPR Log', icon: '📝', color: '#38BDF8', href: '/ppr' },
-  { name: 'Personnel on Airfield', icon: '🚧', color: '#F59E0B', href: '/contractors' },
+  { name: 'Events Log', icon: '📝', color: 'var(--color-success)', href: '/activity' },
+  { name: 'QRC', icon: '⚡', color: 'var(--color-warning)', href: '/qrc' },
+  { name: 'Secondary Crash Net', icon: '📻', color: 'var(--color-warning)', href: '/scn' },
+  { name: 'Shift Checklist', icon: '☑️', color: 'var(--color-accent)', href: '/shift-checklist' },
+  { name: 'Airfield Checks', icon: '✅', color: 'var(--color-cyan)', href: '/checks' },
+  { name: 'All Inspections', icon: '📋', color: 'var(--color-cyan)', href: '/inspections/all' },
+  { name: 'Wildlife / BASH', icon: '🦅', color: 'var(--color-success)', href: '/wildlife' },
+  { name: 'PPR Log', icon: '📝', color: 'var(--color-accent)', href: '/ppr' },
+  { name: 'Personnel on Airfield', icon: '🚧', color: 'var(--color-amber)', href: '/contractors' },
 ]
 
 // Airfield Management
 const mgmtItems: ModuleItem[] = [
-  { name: 'Discrepancies', icon: '⚠️', color: '#FBBF24', href: '/discrepancies' },
-  { name: 'Obstruction Eval Tool', icon: '📍', color: '#F97316', href: '/obstructions' },
-  { name: 'Visual NAVAIDs', icon: '💡', color: '#FBBF24', href: '/infrastructure' },
-  { name: 'Aircraft Parking', icon: '🛬', color: '#38BDF8', href: '/parking' },
+  { name: 'Discrepancies', icon: '⚠️', color: 'var(--color-warning)', href: '/discrepancies' },
+  { name: 'Obstruction Eval Tool', icon: '📍', color: 'var(--color-orange)', href: '/obstructions' },
+  { name: 'Visual NAVAIDs', icon: '💡', color: 'var(--color-warning)', href: '/infrastructure' },
+  { name: 'Aircraft Parking', icon: '🛬', color: 'var(--color-accent)', href: '/parking' },
 ]
 
 // Reference
 const refItems: ModuleItem[] = [
-  { name: 'Aircraft Database', icon: '✈️', color: '#38BDF8', href: '/aircraft' },
-  { name: 'Reference Library', icon: '📚', color: '#22D3EE', href: '/regulations' },
-  { name: 'NOTAMs', icon: '📡', color: '#22D3EE', href: '/notams' },
+  { name: 'Aircraft Database', icon: '✈️', color: 'var(--color-accent)', href: '/aircraft' },
+  { name: 'Reference Library', icon: '📚', color: 'var(--color-cyan)', href: '/regulations' },
+  { name: 'NOTAMs', icon: '📡', color: 'var(--color-cyan)', href: '/notams' },
 ]
 
 // Admin
 const adminItems: ModuleItem[] = [
-  { name: 'Activity Log', icon: '🕘', color: '#34D399', href: '/recent-activity' },
-  { name: 'Daily Reviews', icon: '🗓️', color: '#A78BFA', href: '/daily-reviews' },
-  { name: 'Waivers', icon: '📄', color: '#A78BFA', href: '/waivers' },
-  { name: 'Reports & Analytics', icon: '📈', color: '#22D3EE', href: '/reports' },
-  { name: 'Glidepath Training', icon: '🎓', color: '#38BDF8', href: '/training' },
-  { name: 'PDF Library', icon: '📖', color: '#A855F7', href: '/library', adminOnly: true },
-  { name: 'User Management', icon: '👥', color: '#64748B', href: '/users', adminOnly: true },
+  { name: 'Activity Log', icon: '🕘', color: 'var(--color-success)', href: '/recent-activity' },
+  { name: 'Daily Reviews', icon: '🗓️', color: 'var(--color-purple)', href: '/daily-reviews' },
+  { name: 'Waivers', icon: '📄', color: 'var(--color-purple)', href: '/waivers' },
+  { name: 'Reports & Analytics', icon: '📈', color: 'var(--color-cyan)', href: '/reports' },
+  { name: 'Glidepath Training', icon: '🎓', color: 'var(--color-accent)', href: '/training' },
+  { name: 'PDF Library', icon: '📖', color: 'var(--color-purple)', href: '/library', adminOnly: true },
+  { name: 'User Management', icon: '👥', color: 'var(--color-text-3)', href: '/users', adminOnly: true },
 ]
 
 // Settings
 const settingsItems: ModuleItem[] = [
-  { name: 'Settings', icon: '⚙️', color: '#64748B', href: '/settings' },
+  { name: 'Settings', icon: '⚙️', color: 'var(--color-text-3)', href: '/settings' },
 ]
 
 function NavItem({ item }: { item: ModuleItem }) {
@@ -81,8 +81,8 @@ function NavItem({ item }: { item: ModuleItem }) {
           width: 36,
           height: 36,
           borderRadius: 'var(--radius-md)',
-          background: `${item.color}10`,
-          border: `1px solid ${item.color}22`,
+          background: `color-mix(in srgb, ${item.color} 10%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${item.color} 18%, transparent)`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -95,7 +95,7 @@ function NavItem({ item }: { item: ModuleItem }) {
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{item.name}</div>
       </div>
-      <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
+      <ChevronRight size={16} style={{ color: 'var(--color-text-4)', flexShrink: 0 }} />
     </Link>
   )
 }
