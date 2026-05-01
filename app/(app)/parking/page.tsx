@@ -3737,7 +3737,7 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          {/* ── Floating panel — top right, desktop only ── */}
+          {/* ── Floating panel — anchored top-left under the controls toolbar, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (() => {
             const startResize = (dir: 'w' | 'h' | 'wh') => (e: React.MouseEvent) => {
               e.preventDefault()
@@ -3752,8 +3752,8 @@ export default function ParkingPage() {
                 const ref = panelResizeRef.current
                 if (!ref) return
                 if (ref.dir === 'w' || ref.dir === 'wh') {
-                  // Anchor is right edge; drag left to widen, right to narrow
-                  const next = Math.min(640, Math.max(260, ref.startW - (ev.clientX - ref.startX)))
+                  // Anchor is left edge; drag right to widen, left to narrow
+                  const next = Math.min(640, Math.max(260, ref.startW + (ev.clientX - ref.startX)))
                   setPanelWidth(next)
                 }
                 if (ref.dir === 'h' || ref.dir === 'wh') {
@@ -3773,7 +3773,7 @@ export default function ParkingPage() {
             }
             return (
               <div style={{
-                position: 'absolute', top: 10, right: 10, zIndex: 10,
+                position: 'absolute', top: 50, left: 10, zIndex: 10,
                 width: panelWidth,
                 maxHeight: panelHeight != null ? panelHeight : 'calc(100vh - 140px)',
                 display: 'flex', flexDirection: 'column',
@@ -3782,13 +3782,13 @@ export default function ParkingPage() {
                 wordBreak: 'break-word',
               }}>
                 {sidebarContent()}
-                {/* Resize handles — left edge for width, bottom edge for height, bottom-left corner for both */}
+                {/* Resize handles — right edge for width, bottom edge for height, bottom-right corner for both */}
                 <div onMouseDown={startResize('w')} title="Drag to resize width"
-                  style={{ position: 'absolute', top: 8, left: 0, width: 6, bottom: 14, cursor: 'ew-resize', zIndex: 11 }} />
+                  style={{ position: 'absolute', top: 8, right: 0, width: 6, bottom: 14, cursor: 'ew-resize', zIndex: 11 }} />
                 <div onMouseDown={startResize('h')} title="Drag to resize height"
                   style={{ position: 'absolute', bottom: 0, left: 8, right: 14, height: 6, cursor: 'ns-resize', zIndex: 11 }} />
                 <div onMouseDown={startResize('wh')} title="Drag to resize"
-                  style={{ position: 'absolute', bottom: 0, left: 0, width: 14, height: 14, cursor: 'nesw-resize', zIndex: 12 }} />
+                  style={{ position: 'absolute', bottom: 0, right: 0, width: 14, height: 14, cursor: 'nwse-resize', zIndex: 12 }} />
               </div>
             )
           })()}
