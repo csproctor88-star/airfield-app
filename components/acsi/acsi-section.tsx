@@ -54,7 +54,9 @@ export function AcsiSection({
           gap: 12,
           width: '100%',
           padding: '16px 18px',
-          background: allDone ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+          background: allDone
+            ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
+            : 'transparent',
           border: 'none',
           borderBottom: expanded ? '1px solid var(--color-border)' : 'none',
           cursor: 'pointer',
@@ -116,9 +118,9 @@ export function AcsiSection({
                 onClick={(e) => { e.stopPropagation(); onMarkAllPass() }}
                 style={{
                   padding: '4px 12px', borderRadius: 6,
-                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  color: 'var(--color-green)',
+                  border: '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+                  color: 'var(--color-success)',
                   fontSize: 'var(--fs-xs)', fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}

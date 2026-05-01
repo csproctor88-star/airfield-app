@@ -36,9 +36,9 @@ function ResponseButtons({
       {(['pass', 'fail', 'na'] as const).map((val) => {
         const active = response === val
         const colors: Record<string, { activeBg: string }> = {
-          pass: { activeBg: '#10B981' },
-          fail: { activeBg: '#EF4444' },
-          na:   { activeBg: '#6B7280' },
+          pass: { activeBg: 'var(--color-success)' },
+          fail: { activeBg: 'var(--color-danger)' },
+          na:   { activeBg: 'var(--color-text-3)' },
         }
         const c = colors[val]
         const labels: Record<string, string> = { pass: 'Y', fail: 'N', na: 'N/A' }
@@ -98,7 +98,7 @@ export function AcsiItem({
         <div style={{
           fontSize: 'var(--fs-sm)',
           fontWeight: 700,
-          color: 'var(--color-accent)',
+          color: 'var(--color-cyan)',
           lineHeight: 1.5,
         }}>
           {question}
@@ -119,14 +119,16 @@ export function AcsiItem({
           padding: '12px 10px',
           borderRadius: 6,
           background: anyFail
-            ? 'rgba(239, 68, 68, 0.06)'
-            : isEven ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+            ? 'color-mix(in srgb, var(--color-danger) 6%, transparent)'
+            : isEven
+              ? 'color-mix(in srgb, var(--color-text-1) 2%, transparent)'
+              : 'color-mix(in srgb, var(--color-text-1) 6%, transparent)',
         }}>
           {subsection && (
             <div style={{
               fontSize: 'var(--fs-sm)',
               fontWeight: 700,
-              color: 'var(--color-accent)',
+              color: 'var(--color-cyan)',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
               marginBottom: 3,
@@ -160,7 +162,9 @@ export function AcsiItem({
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '4px 8px',
                         borderRadius: 4,
-                        background: subResp === 'fail' ? 'rgba(239,68,68,0.05)' : 'transparent',
+                        background: subResp === 'fail'
+                          ? 'color-mix(in srgb, var(--color-danger) 5%, transparent)'
+                          : 'transparent',
                       }}>
                         <div style={{
                           flex: 1,
@@ -194,8 +198,10 @@ export function AcsiItem({
         padding: '12px 10px',
         borderRadius: 6,
         background: response === 'fail'
-          ? 'rgba(239, 68, 68, 0.06)'
-          : isEven ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+          ? 'color-mix(in srgb, var(--color-danger) 6%, transparent)'
+          : isEven
+            ? 'color-mix(in srgb, var(--color-text-1) 2%, transparent)'
+            : 'color-mix(in srgb, var(--color-text-1) 6%, transparent)',
       }}>
         <div style={{
           fontSize: 'var(--fs-base)',
@@ -211,7 +217,7 @@ export function AcsiItem({
             <div style={{
               fontSize: 'var(--fs-sm)',
               fontWeight: 700,
-              color: 'var(--color-accent)',
+              color: 'var(--color-cyan)',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
               marginBottom: 3,
