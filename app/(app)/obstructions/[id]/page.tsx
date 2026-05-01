@@ -8,7 +8,28 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { formatZuluDateTime, fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
+import { fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
+
+// Compact relative-aware date for the saved-evaluation subtitle.
+// Today / Yesterday / 'Mar 9 HHMMZ' (drop year same-year) /
+// 'Mar 9, 2027 HHMMZ' (keep year cross-year). Same recipe used by
+// /notams; most evaluations are recently created so the relative
+// anchor lands often.
+function compactObstructionDate(d: Date): string {
+  const hhmm = d.toISOString().slice(11, 16).replace(':', '')
+  const now = new Date()
+  const dDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  const todayDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const diffDays = Math.round((dDay - todayDay) / 86400000)
+  if (diffDays === 0) return `Today ${hhmm}Z`
+  if (diffDays === 1) return `Tomorrow ${hhmm}Z`
+  if (diffDays === -1) return `Yesterday ${hhmm}Z`
+  const sameYear = d.getUTCFullYear() === now.getUTCFullYear()
+  const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return sameYear
+    ? `${monthDay} ${hhmm}Z`
+    : `${monthDay}, ${d.getUTCFullYear()} ${hhmm}Z`
+}
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DetailGrid } from '@/components/ui/detail-grid'
@@ -277,9 +298,15 @@ export default function ObstructionDetailPage() {
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
-        <span style={{ fontFamily: 'monospace' }}>{evaluation.display_id}</span>
+        <span style={{
+          fontFamily: 'monospace',
+          fontWeight: 700,
+          color: 'var(--color-cyan)',
+          fontSize: 'var(--fs-sm)',
+          letterSpacing: '0.02em',
+        }}>{evaluation.display_id}</span>
         <span>·</span>
-        <span>{formatZuluDateTime(createdAt)}</span>
+        <span>{compactObstructionDate(createdAt)}</span>
       </div>
 
       {/* Photos — hero + thumbnail gallery */}
@@ -556,11 +583,20 @@ export default function ObstructionDetailPage() {
           <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
             4. Coordinate with BCE or Installation Community Planner to process a temporary or permanent waiver as required.
           </div>
-          {violatedResults.map((v, i) => (
-            <div key={i} style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8, marginTop: 2 }}>
-              5. {v.surfaceName} violation ({v.penetrationFt.toFixed(1)} ft) — {v.ufcReference}
-            </div>
-          ))}
+          {violatedResults.length > 0 && (
+            <>
+              <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-1)', lineHeight: 1.6, paddingLeft: 8 }}>
+                5. Address each violated surface:
+              </div>
+              <ul style={{ margin: '4px 0 0 32px', padding: 0, color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', lineHeight: 1.6 }}>
+                {violatedResults.map((v, i) => (
+                  <li key={i}>
+                    {v.surfaceName} violation ({v.penetrationFt.toFixed(1)} ft) — {v.ufcReference}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       )}
 
