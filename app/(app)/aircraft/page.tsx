@@ -284,7 +284,9 @@ function AircraftDetailCard({
       style={{
         padding: 0,
         overflow: 'hidden',
-        border: isFavorite ? '1px solid rgba(250,204,21,0.2)' : undefined,
+        border: isFavorite
+          ? '1px solid color-mix(in srgb, var(--color-warning) 25%, transparent)'
+          : undefined,
       }}
     >
       {/* Card Header */}
@@ -453,8 +455,12 @@ function AircraftDetailCard({
                 gap: 5,
                 padding: '7px 0',
                 borderRadius: 6,
-                border: isFavorite ? '1px solid rgba(250,204,21,0.3)' : '1px solid var(--color-border-mid)',
-                background: isFavorite ? 'rgba(250,204,21,0.08)' : 'transparent',
+                border: isFavorite
+                  ? '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)'
+                  : '1px solid var(--color-border-mid)',
+                background: isFavorite
+                  ? 'color-mix(in srgb, var(--color-warning) 10%, transparent)'
+                  : 'transparent',
                 color: isFavorite ? 'var(--color-warning)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-md)',
                 fontWeight: 600,
@@ -474,8 +480,12 @@ function AircraftDetailCard({
                 gap: 5,
                 padding: '7px 0',
                 borderRadius: 6,
-                border: showAcn ? '1px solid rgba(34,211,153,0.3)' : '1px solid var(--color-border-mid)',
-                background: showAcn ? 'rgba(34,211,153,0.08)' : 'transparent',
+                border: showAcn
+                  ? '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)'
+                  : '1px solid var(--color-border-mid)',
+                background: showAcn
+                  ? 'color-mix(in srgb, var(--color-success) 10%, transparent)'
+                  : 'transparent',
                 color: showAcn ? 'var(--color-success)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-md)',
                 fontWeight: 600,
@@ -590,14 +600,16 @@ function AircraftDetailCard({
 
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div style={{ marginBottom: 14 }}>
       <div style={{
         fontSize: 'var(--fs-md)',
-        color: 'var(--color-accent)',
+        color: 'var(--color-cyan)',
         fontWeight: 700,
         letterSpacing: '0.08em',
-        marginBottom: 6,
+        marginBottom: 8,
+        paddingBottom: 4,
         textTransform: 'uppercase',
+        borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
       }}>
         {title}
       </div>
