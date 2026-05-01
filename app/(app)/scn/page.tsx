@@ -22,6 +22,22 @@ import {
 } from '@/lib/supabase/scn'
 import { fetchScnAgencies, type ScnAgency } from '@/lib/supabase/scn-agencies'
 import { formatZuluDate, formatZuluTime } from '@/lib/utils'
+import { Check } from 'lucide-react'
+
+// History-row date format. Today / Yesterday / 'Mon, Apr 21'.
+// Same shape used in /daily-reviews, /recent-activity, /wildlife,
+// /checks/history. SCN check_date is a YYYY-MM-DD Zulu date.
+function formatScnHistoryDate(iso: string, todayIso: string): { primary: string; secondary: string | null } {
+  const date = new Date(`${iso}T12:00:00Z`)
+  const longLabel = date.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  })
+  const today = new Date(`${todayIso}T12:00:00Z`)
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000)
+  if (diffDays === 0) return { primary: 'Today', secondary: longLabel }
+  if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
+  return { primary: longLabel, secondary: null }
+}
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 
@@ -225,7 +241,7 @@ export default function ScnPage() {
           fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
           textTransform: 'uppercase', letterSpacing: '0.06em',
         }}>
-          {formatZuluDate(todayZuluDate())}Z
+          {formatZuluDate(todayZuluDate())}
         </div>
       </div>
 
@@ -330,6 +346,32 @@ export default function ScnPage() {
               Crash Phone check. All agencies respond with line clarity and initials when your agency
               is called.
             </ScriptBlock>
+          )}
+
+          {/* Quick-fill — most days are all-clear, so a one-tap
+              shortcut saves 12+ taps per check. The exception flow
+              (manually flipping individual agencies to no_response /
+              oos) still works after this. Hidden once every agency
+              is already loud_clear. */}
+          {modal.draft.some(d => d.status !== 'loud_clear') && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button
+                onClick={() => setModal(m => m
+                  ? { ...m, draft: m.draft.map(d => ({ ...d, status: 'loud_clear' as ScnAgencyStatus })) }
+                  : m)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid color-mix(in srgb, var(--color-success) 35%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+                  color: 'var(--color-success)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <Check size={13} strokeWidth={3} /> Mark All Loud &amp; Clear
+              </button>
+            </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
@@ -656,6 +698,8 @@ function HistoryRow({ check, onEdit, onDelete }: { check: ScnCheckWithResults; o
   const exceptions = check.results.filter(r => r.status !== 'loud_clear')
   const label = check.check_type === 'backup' ? 'Monthly' : 'Daily'
   const allClear = exceptions.length === 0
+  const todayIso = todayZuluDate()
+  const dateLabel = formatScnHistoryDate(check.check_date, todayIso)
 
   return (
     <div style={{
@@ -670,8 +714,17 @@ function HistoryRow({ check, onEdit, onDelete }: { check: ScnCheckWithResults; o
           background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', color: 'inherit', textAlign: 'left',
         }}
       >
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)', minWidth: 90 }}>
-          {formatZuluDate(check.check_date)}Z
+        <div style={{
+          display: 'flex', alignItems: 'baseline', gap: 6,
+          fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)',
+          minWidth: 130, flexShrink: 0,
+        }}>
+          <span>{dateLabel.primary}</span>
+          {dateLabel.secondary && (
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+              {dateLabel.secondary}
+            </span>
+          )}
         </div>
         <div style={{
           padding: '2px 9px', borderRadius: 'var(--radius-full)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
