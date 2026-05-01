@@ -6,11 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import {
   fetchRecentReviews,
   fetchSignersForRows,
-  formatSigner,
   requiredSlotsForShifts,
   isFullyCertified,
   getEffectiveReviewDate,
-  SLOT_LABELS,
   type DailyReviewRow,
   type DailyReviewSlot,
   type SignerInfo,
@@ -20,6 +18,99 @@ import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import { Check } from 'lucide-react'
+
+// Slot labels shrunk so all 4 (or 5, on 3-shift bases) tile headers
+// fit on one line in the grid layout. The "Shift" word is redundant
+// inside an AMSL pill; "AFM" matches the slot key + the rest of the
+// codebase nomenclature for Airfield Manager.
+const SLOT_LABELS_SHORT: Record<DailyReviewSlot, string> = {
+  day_amsl: 'Day AMSL',
+  swing_amsl: 'Swing AMSL',
+  mid_amsl: 'Mid AMSL',
+  namo: 'NAMO',
+  afm: 'AFM',
+}
+
+// "Today" / "Yesterday" / "Wed, May 1" — the user's mental model is
+// day-of-week, not ISO. The secondary line carries the absolute date
+// for the relative anchors so it's always unambiguous in screenshots.
+function formatRowDate(iso: string, todayIso: string | null): { primary: string; secondary: string | null } {
+  // Use noon to dodge any DST/TZ edge that could flip the day.
+  const date = new Date(`${iso}T12:00:00`)
+  const longLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  if (todayIso) {
+    const today = new Date(`${todayIso}T12:00:00`)
+    const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000)
+    if (diffDays === 0) return { primary: 'Today', secondary: longLabel }
+    if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
+  }
+  return { primary: longLabel, secondary: null }
+}
+
+function signerCompact(s: SignerInfo): string {
+  // Last name + operating initials when present — fits the tile.
+  const last = (s.name || '').trim().split(/\s+/).slice(-1)[0] || 'Unknown'
+  return s.operating_initials ? `${last} (${s.operating_initials})` : last
+}
+
+interface SlotTileProps {
+  label: string
+  signed: boolean
+  signer: SignerInfo | null
+}
+
+function SlotTile({ label, signed, signer }: SlotTileProps) {
+  return (
+    <div style={{
+      padding: '6px 8px',
+      borderRadius: 'var(--radius-sm)',
+      border: `1px solid ${signed
+        ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
+        : 'var(--color-border)'}`,
+      background: signed
+        ? 'color-mix(in srgb, var(--color-success) 10%, transparent)'
+        : 'transparent',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+      minWidth: 0,
+    }}>
+      <div style={{
+        fontSize: 'var(--fs-2xs)',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: signed ? 'var(--color-success)' : 'var(--color-text-3)',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize: 'var(--fs-xs)',
+        color: signed ? 'var(--color-text-1)' : 'var(--color-text-4)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {signed ? (
+          <>
+            <Check size={11} strokeWidth={3} color="var(--color-success)" />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {signer ? signerCompact(signer) : 'Signed'}
+            </span>
+          </>
+        ) : (
+          <span>—</span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function DailyReviewsPage() {
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
@@ -84,6 +175,15 @@ export default function DailyReviewsPage() {
   const rowByDate = new Map(rows.map((r) => [r.review_date, r] as const))
 
   const required = requiredSlotsForShifts(shiftCount)
+  const todayIso = visibleDates[0] ?? null
+
+  // Tally counts across the visible window so the header gives an
+  // at-a-glance read before scrolling. "No row yet" counts as pending.
+  const reviewedCount = visibleDates.reduce((n, d) => {
+    const row = rowByDate.get(d)
+    return row && isFullyCertified(row, shiftCount) ? n + 1 : n
+  }, 0)
+  const pendingCount = visibleDates.length - reviewedCount
 
   const openSign = (date: string) => {
     setSelectedDate(date)
@@ -95,8 +195,20 @@ export default function DailyReviewsPage() {
       <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
         Daily Reviews
       </div>
-      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
-        DAFMAN 13-204v1 Para 2.5.2.10.3 & 10.4 — shift turnover + daily review.
+      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+        <span>DAFMAN 13-204v1 Para 2.5.2.10.3 &amp; 10.4 — shift turnover + daily review.</span>
+        {loaded && installationId && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: 'var(--color-text-4)' }}>·</span>
+            <span style={{ color: pendingCount > 0 ? 'var(--color-amber)' : 'var(--color-text-3)', fontWeight: 700 }}>
+              {pendingCount} pending
+            </span>
+            <span style={{ color: 'var(--color-text-4)' }}>·</span>
+            <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>
+              {reviewedCount} reviewed
+            </span>
+          </span>
+        )}
       </div>
 
       {!loaded ? (
@@ -108,47 +220,72 @@ export default function DailyReviewsPage() {
           {visibleDates.map((date) => {
             const row = rowByDate.get(date) ?? null
             const certified = row ? isFullyCertified(row, shiftCount) : false
+            const isToday = date === todayIso
+            const dateLabel = formatRowDate(date, todayIso)
+            // Left rail communicates state at a glance:
+            //   reviewed → success, today + pending → amber (your turn),
+            //   past + pending → text-4 (quiet).
+            const railColor = certified
+              ? 'var(--color-success)'
+              : isToday
+                ? 'var(--color-amber)'
+                : 'var(--color-text-4)'
+            const statusLabel = certified ? 'REVIEWED' : 'PENDING'
+            const statusColor = certified
+              ? 'var(--color-success)'
+              : isToday
+                ? 'var(--color-amber)'
+                : 'var(--color-text-3)'
             return (
               <div
                 key={date}
                 onClick={() => openSign(date)}
                 style={{
-                  padding: 12, borderRadius: 'var(--radius-md)',
+                  padding: '12px 14px', borderRadius: 'var(--radius-md)',
                   background: certified
-                    ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
-                    : 'var(--color-bg-surface)',
-                  border: `1px solid ${certified
-                    ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
-                    : 'var(--color-border)'}`,
+                    ? 'color-mix(in srgb, var(--color-success) 6%, transparent)'
+                    : isToday
+                      ? 'color-mix(in srgb, var(--color-amber) 5%, transparent)'
+                      : 'var(--color-bg-surface-solid)',
+                  border: '1px solid var(--color-border)',
+                  borderLeft: `3px solid ${railColor}`,
                   cursor: 'pointer',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>{date}</div>
-                  <div style={{ fontSize: 'var(--fs-xs)', color: certified ? 'var(--color-success)' : 'var(--color-text-3)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {certified ? 'Reviewed' : 'Pending'}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                      {dateLabel.primary}
+                    </span>
+                    {dateLabel.secondary && (
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+                        {dateLabel.secondary}
+                      </span>
+                    )}
                   </div>
+                  <span style={{
+                    fontSize: 'var(--fs-2xs)', color: statusColor, fontWeight: 700,
+                    letterSpacing: '0.1em', whiteSpace: 'nowrap',
+                  }}>
+                    {statusLabel}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${required.length}, minmax(0, 1fr))`,
+                  gap: 6,
+                }}>
                   {required.map((slot) => {
                     const signedAt = row?.[`${slot}_signed_at` as keyof DailyReviewRow] as string | null
                     const signedById = row?.[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
                     const signer = signedById ? signerMap.get(signedById) : null
                     return (
-                      <div key={slot} style={{
-                        fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 999,
-                        background: signedAt
-                          ? 'color-mix(in srgb, var(--color-success) 15%, transparent)'
-                          : 'var(--color-bg-inset)',
-                        color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)',
-                        border: `1px solid ${signedAt
-                          ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
-                          : 'var(--color-border)'}`,
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                      }}>
-                        {signedAt && <Check size={11} strokeWidth={3} />}
-                        <span>{SLOT_LABELS[slot as DailyReviewSlot]}{signer ? ` — ${formatSigner(signer)}` : ''}</span>
-                      </div>
+                      <SlotTile
+                        key={slot}
+                        label={SLOT_LABELS_SHORT[slot as DailyReviewSlot]}
+                        signed={!!signedAt}
+                        signer={signer ?? null}
+                      />
                     )
                   })}
                 </div>
