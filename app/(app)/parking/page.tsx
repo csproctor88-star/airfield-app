@@ -347,6 +347,8 @@ export default function ParkingPage() {
   const [plans, setPlans] = useState<ParkingPlan[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [spots, setSpots] = useState<ParkingSpot[]>([])
+  const spotsRef = useRef<ParkingSpot[]>([])
+  spotsRef.current = spots
   const [obstacles, setObstacles] = useState<ParkingObstacle[]>([])
   const [taxilanes, setTaxilanes] = useState<ParkingTaxilane[]>([])
   const [apronBoundaries, setApronBoundaries] = useState<ParkingApronBoundary[]>([])
@@ -737,8 +739,17 @@ export default function ParkingPage() {
         const clearance = getWingtipClearance(ws, apronContext, placingAircraft.aircraft)
         const acName = placingAircraft.aircraft
 
-        // Compute sequential number for this aircraft type
-        const existingCount = spots.filter(s => s.aircraft_name === acName).length
+        // Compute sequential number for this aircraft type — read via ref so
+        // rapid successive clicks see prior placements before React's state
+        // commits (the click listener captures `spots` stale from its useEffect deps).
+        const currentSpots = spotsRef.current
+        const existingSeqs = currentSpots
+          .filter(s => s.aircraft_name === acName)
+          .map(s => {
+            const m = (s.spot_name || '').match(/#(\d+)$/)
+            return m ? parseInt(m[1], 10) : 0
+          })
+        const nextStart = existingSeqs.length > 0 ? Math.max(...existingSeqs) + 1 : 1
         const placedSpots: ParkingSpot[] = []
         const count = (typeof bulkAddCount === 'number' && bulkAddCount > 1) ? bulkAddCount : 1
 
@@ -749,7 +760,7 @@ export default function ParkingPage() {
         const perpBearing = (placementHeading + 90) % 360
 
         for (let i = 0; i < count; i++) {
-          const seqNum = existingCount + i + 1
+          const seqNum = nextStart + i
           // First aircraft at click point, subsequent spaced perpendicular to heading
           const origin = i === 0
             ? { lat, lon: lng }
@@ -1828,7 +1839,7 @@ export default function ParkingPage() {
       startY = ev.clientY - rect.top
       active = true
       boxDiv = document.createElement('div')
-      boxDiv.style.cssText = `position:absolute;left:${startX}px;top:${startY}px;width:0;height:0;border:2px dashed #A855F7;background:rgba(168,85,247,0.1);pointer-events:none;z-index:9999;`
+      boxDiv.style.cssText = `position:absolute;left:${startX}px;top:${startY}px;width:0;height:0;border:2px dashed var(--color-purple);background:color-mix(in srgb, var(--color-purple) 10%, transparent);pointer-events:none;z-index:9999;`
       mapDiv.appendChild(boxDiv)
     }
 
@@ -2672,13 +2683,13 @@ export default function ParkingPage() {
           )}
         </div>
 
-        {/* Tab bar */}
+        {/* Tab bar — active indicator unified to cyan; count badges reserve danger/warning for Clearance only when there's something wrong */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           {([
-            { key: 'aircraft' as const, label: 'Aircraft', count: spots.length, color: 'var(--color-cyan)' },
-            { key: 'environment' as const, label: 'Environment', count: obstacles.length + taxilanes.length + apronBoundaries.length, color: 'var(--color-orange)' },
-            { key: 'clearance' as const, label: 'Clearance', count: violations.length + warnings.length, color: violations.length > 0 ? 'var(--color-danger)' : 'var(--color-warning)' },
-            { key: 'settings' as const, label: 'Settings', color: 'var(--color-text-secondary)' },
+            { key: 'aircraft' as const, label: 'Aircraft', count: spots.length, color: 'var(--color-cyan)', countColor: 'var(--color-cyan)' },
+            { key: 'environment' as const, label: 'Environment', count: obstacles.length + taxilanes.length + apronBoundaries.length, color: 'var(--color-cyan)', countColor: 'var(--color-cyan)' },
+            { key: 'clearance' as const, label: 'Clearance', count: violations.length + warnings.length, color: 'var(--color-cyan)', countColor: violations.length > 0 ? 'var(--color-danger)' : warnings.length > 0 ? 'var(--color-warning)' : 'var(--color-cyan)' },
+            { key: 'settings' as const, label: 'Settings', color: 'var(--color-cyan)', countColor: 'var(--color-cyan)' },
           ] as const).map(tab => (
             <button
               key={tab.key}
@@ -2695,7 +2706,7 @@ export default function ParkingPage() {
               {'count' in tab && tab.count != null && tab.count > 0 && (
                 <span style={{
                   marginLeft: 3, fontSize: 9, padding: '0 4px', borderRadius: 6,
-                  background: `color-mix(in srgb, ${tab.color} 13%, transparent)`, color: tab.color,
+                  background: `color-mix(in srgb, ${tab.countColor} 13%, transparent)`, color: tab.countColor,
                 }}>
                   {tab.count}
                 </span>
@@ -2761,8 +2772,8 @@ export default function ParkingPage() {
                 )
                 return (
                   <div style={{
-                    padding: '8px 10px', background: 'rgba(168,85,247,0.08)',
-                    borderBottom: '2px solid #A855F7', display: 'flex', flexDirection: 'column', gap: 6,
+                    padding: '8px 10px', background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)',
+                    borderBottom: '2px solid var(--color-purple)', display: 'flex', flexDirection: 'column', gap: 6,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-purple)' }}>
@@ -2873,49 +2884,57 @@ export default function ParkingPage() {
 
                   return (
                     <div key={acName}>
-                      {/* Group header */}
+                      {/* Group header — tertiary section header tier */}
                       <div
                         onClick={() => setExpandedGroups(prev => ({ ...prev, [groupKey]: !isGroupOpen }))}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          padding: isMobile ? '8px 12px' : '5px 8px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: isMobile ? '10px 12px' : '8px 10px', cursor: 'pointer',
                           background: 'var(--color-bg-inset)',
-                          borderBottom: '1px solid var(--color-border)',
+                          borderTop: '1px solid var(--color-border)',
+                          borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 20%, transparent)',
                         }}
                       >
                         <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{isGroupOpen ? '\u25BC' : '\u25B6'}</span>
                         <span style={{
-                          fontSize: 10, padding: '1px 4px', borderRadius: 3,
+                          fontSize: 10, padding: '1px 5px', borderRadius: 3,
                           background: `color-mix(in srgb, ${ADG_COLORS[adg]} 13%, transparent)`, color: ADG_COLORS[adg],
-                          fontWeight: 600, flexShrink: 0,
+                          fontWeight: 700, flexShrink: 0, letterSpacing: '0.04em',
                         }}>
                           {adg}
                         </span>
-                        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-primary)', flex: 1 }}>
+                        <span style={{
+                          fontSize: 'var(--fs-xs)', fontWeight: 700,
+                          color: 'var(--color-text-primary)',
+                          textTransform: 'uppercase', letterSpacing: '0.04em',
+                          flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
                           {acName}
                         </span>
                         <span style={{
                           fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '0 6px', borderRadius: 10,
-                          background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)', color: 'var(--color-cyan)',
+                          background: 'color-mix(in srgb, var(--color-cyan) 13%, transparent)', color: 'var(--color-cyan)',
+                          flexShrink: 0,
                         }}>
                           {groupSpots.length}
                         </span>
                         {groupViolations.length > 0 && (
-                          <span style={{ color: 'var(--color-danger)', fontSize: 11, fontWeight: 700 }}>!</span>
+                          <span title={`${groupViolations.length} clearance issue${groupViolations.length !== 1 ? 's' : ''}`} style={{ color: 'var(--color-danger)', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>!</span>
                         )}
                       </div>
 
-                      {/* Group heading control — rotate all at once */}
+                      {/* Group heading control — de-emphasized sub-control under the group header */}
                       {isGroupOpen && groupSpots.length > 1 && (
                         <div
                           onClick={e => e.stopPropagation()}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 6,
-                            padding: isMobile ? '6px 12px 6px 24px' : '4px 8px 4px 20px',
-                            background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)',
+                            padding: isMobile ? '5px 12px 5px 28px' : '3px 8px 3px 24px',
+                            background: 'transparent', borderBottom: '1px solid var(--color-border)',
+                            opacity: 0.85,
                           }}
                         >
-                          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>All {groupSpots.length} hdg:</span>
+                          <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.04em' }}>All {groupSpots.length} hdg</span>
                           <input
                             type="range" min={0} max={360} step={1}
                             value={groupSpots[0]?.heading_deg ?? 0}
@@ -2970,13 +2989,23 @@ export default function ParkingPage() {
                               }}
                               style={{
                                 display: 'flex', alignItems: 'center', gap: 6,
-                                padding: isMobile ? '8px 12px 8px 24px' : '3px 8px 3px 20px', cursor: 'pointer',
-                                background: selectedSpotIds.has(s.id) ? 'rgba(168,85,247,0.15)' : isEditing ? 'var(--color-bg)' : 'transparent',
+                                padding: isMobile ? '8px 12px 8px 24px' : '4px 8px 4px 20px', cursor: 'pointer',
+                                background: selectedSpotIds.has(s.id)
+                                  ? 'color-mix(in srgb, var(--color-purple) 14%, transparent)'
+                                  : isEditing
+                                    ? 'color-mix(in srgb, var(--color-cyan) 8%, transparent)'
+                                    : 'transparent',
                                 borderBottom: '1px solid var(--color-border)',
-                                borderLeft: selectedSpotIds.has(s.id) ? '3px solid #A855F7' : spotViolations.length > 0 ? '3px solid var(--color-danger)' : '3px solid transparent',
+                                borderLeft: selectedSpotIds.has(s.id)
+                                  ? '3px solid var(--color-purple)'
+                                  : isEditing
+                                    ? '3px solid var(--color-cyan)'
+                                    : spotViolations.length > 0
+                                      ? '3px solid var(--color-danger)'
+                                      : '3px solid transparent',
                               }}
                             >
-                              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
+                              <span title={s.spot_name || acName} style={{ fontSize: 'var(--fs-xs)', fontWeight: isEditing ? 600 : 500, color: isEditing ? 'var(--color-cyan)' : 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
                                 {s.spot_name || acName}
                               </span>
                               {s.tail_number && (
@@ -4065,7 +4094,7 @@ export default function ParkingPage() {
                 </button>
                 <button onClick={() => { handleDeleteSpot(s.id); setContextMenuSpot(null); setEditingSpot(null) }}
                   style={{ flex: 1, padding: '8px 0', border: 'none', background: 'transparent', color: 'var(--color-danger)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--color-danger) 8%, transparent)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   Remove
                 </button>
               </div>
