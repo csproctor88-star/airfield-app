@@ -385,6 +385,10 @@ export default function ParkingPage() {
   const [editingBoundary, setEditingBoundary] = useState<ParkingApronBoundary | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  // Map heading — drives counter-rotation of aircraft icons so they stay
+  // visually screen-anchored (West always points the same way on screen
+  // regardless of how the map is rotated).
+  const [mapHeadingDeg, setMapHeadingDeg] = useState(0)
   const [panelWidth, setPanelWidth] = useState<number>(() => {
     if (typeof window === 'undefined') return 344
     const saved = parseInt(localStorage.getItem('glidepath_parking_panel_width') || '', 10)
@@ -1063,12 +1067,15 @@ export default function ParkingPage() {
       return
     }
 
-    // Detect position-only update
+    // Detect position-only update. We compare EFFECTIVE heading (compass minus
+    // map heading, rounded) so that map rotation invalidates the fast path and
+    // forces an icon re-render with the new counter-rotation.
     const prevRendered = renderedSpotsRef.current
     const isPositionOnlyUpdate = spotsWithAircraft.length === prevRendered.size &&
       spotsWithAircraft.every(s => {
         const prev = prevRendered.get(s.id)
-        return prev && prev.heading === (s.heading_deg || 0) && prev.name === (s.aircraft_name || '')
+        const effective = Math.round(((s.heading_deg || 0) - mapHeadingDeg + 360) % 360)
+        return prev && prev.heading === effective && prev.name === (s.aircraft_name || '')
       })
 
     if (isPositionOnlyUpdate && spotMarkersMapRef.current.size > 0) {
@@ -1083,7 +1090,8 @@ export default function ParkingPage() {
         if (noseGearMarkersRef.current[i]) noseGearMarkersRef.current[i].setPosition({ lat: spot.latitude, lng: spot.longitude })
       })
       for (const s of spotsWithAircraft) {
-        renderedSpotsRef.current.set(s.id, { lat: s.latitude, lng: s.longitude, heading: s.heading_deg || 0, name: s.aircraft_name || '' })
+        const effective = Math.round(((s.heading_deg || 0) - mapHeadingDeg + 360) % 360)
+        renderedSpotsRef.current.set(s.id, { lat: s.latitude, lng: s.longitude, heading: effective, name: s.aircraft_name || '' })
       }
       return
     }
@@ -1104,8 +1112,11 @@ export default function ParkingPage() {
       for (const spot of spotsWithAircraft) {
         if (renderCancelRef.current !== renderToken) return
         const c = spotCenter(spot)
-        const heading = spot.heading_deg || 0
-        const cacheKey = `${spot.id}-${heading}`
+        // Effective rotation = aircraft compass heading MINUS map heading.
+        // Google Maps applies map.heading on top of our pre-rotated canvas,
+        // so subtracting it here cancels out and the icon stays screen-fixed.
+        const effectiveHeading = ((spot.heading_deg || 0) - mapHeadingDeg + 360) % 360
+        const cacheKey = `${spot.id}-${Math.round(effectiveHeading)}`
 
         // Use computeIconScale — same formula that worked in Mapbox
         const iconScale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
@@ -1129,13 +1140,13 @@ export default function ParkingPage() {
           rotCanvas.height = fixedDim
           const rotCtx = rotCanvas.getContext('2d')!
           rotCtx.translate(fixedDim / 2, fixedDim / 2)
-          rotCtx.rotate(heading * Math.PI / 180)
+          rotCtx.rotate(effectiveHeading * Math.PI / 180)
           const img = new Image()
           img.src = dataUrl
           await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
           rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
 
-          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, heading }
+          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, heading: effectiveHeading }
           silhouetteCacheRef.current.set(cacheKey, cached)
         }
 
@@ -1163,7 +1174,7 @@ export default function ParkingPage() {
         spotMarkersMapRef.current.set(spot.id, marker)
         spotMetaRef.current.set(spot.id, { fixedDim: cached.fixedDim, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
         w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
-        renderedSpotsRef.current.set(spot.id, { lat: spot.latitude, lng: spot.longitude, heading, name: spot.aircraft_name || '' })
+        renderedSpotsRef.current.set(spot.id, { lat: spot.latitude, lng: spot.longitude, heading: Math.round(effectiveHeading), name: spot.aircraft_name || '' })
       }
 
       // Nose gear markers
@@ -1179,7 +1190,7 @@ export default function ParkingPage() {
       }
     }
     renderAircraft()
-  }, [mapLoaded, spotsWithAircraft, visibleLayers.aircraft])
+  }, [mapLoaded, spotsWithAircraft, visibleLayers.aircraft, mapHeadingDeg])
 
   // ── Layer 3: Zoom rescaling — fires on 'idle' (after zoom animation settles),
   // not on 'zoom_changed' (which fires during animation and causes flicker).
@@ -1995,6 +2006,24 @@ export default function ParkingPage() {
       }
     }, 200)
   }, [isFullscreen])
+
+  // ── Sync mapHeadingDeg with the gmap's heading ──
+  // Listens to heading_changed; updates state so renderAircraft can
+  // counter-rotate icons. We sync on every change (cheap state update);
+  // the icon regeneration is what's debounced via React's render batching.
+  useEffect(() => {
+    if (!mapLoaded) return
+    const w = map.current
+    if (!w) return
+    const gmap = w.gmap
+    const listener = gmap.addListener('heading_changed', () => {
+      const h = gmap.getHeading() ?? 0
+      setMapHeadingDeg(prev => (Math.abs(prev - h) > 0.5 ? h : prev))
+    })
+    // Initialize from current gmap state
+    setMapHeadingDeg(gmap.getHeading() ?? 0)
+    return () => { google.maps.event.removeListener(listener) }
+  }, [mapLoaded])
 
   // ── Plan actions ──
 
