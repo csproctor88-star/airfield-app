@@ -141,15 +141,15 @@ export default function DailyOpsPage() {
         </div>
 
         {/* Date Mode Toggle */}
-        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 14 }}>
+        <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--color-border)', marginBottom: 14 }}>
           {(['single', 'range'] as DateMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => setDateMode(mode)}
               style={{
                 flex: 1, padding: '10px 0', border: 'none',
-                background: dateMode === mode ? 'var(--color-accent-secondary)' : 'transparent',
-                color: dateMode === mode ? '#FFF' : 'var(--color-text-2)',
+                background: dateMode === mode ? 'var(--color-cyan)' : 'transparent',
+                color: dateMode === mode ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}
             >
@@ -161,7 +161,7 @@ export default function DailyOpsPage() {
         {/* Date Inputs */}
         <div className="card" style={{ marginBottom: 14, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <Calendar size={16} color="var(--color-accent-secondary)" />
+            <Calendar size={16} color="var(--color-cyan)" />
             <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)' }}>
               {dateMode === 'single' ? 'Date' : 'Start Date'}
             </span>
@@ -176,7 +176,7 @@ export default function DailyOpsPage() {
             }}
             style={{
               width: '100%', padding: '10px 12px', borderRadius: 8,
-              border: '1px solid var(--color-text-4)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
               fontSize: 'var(--fs-lg)', fontFamily: 'inherit',
             }}
           />
@@ -184,7 +184,7 @@ export default function DailyOpsPage() {
           {dateMode === 'range' && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 14 }}>
-                <Calendar size={16} color="var(--color-accent-secondary)" />
+                <Calendar size={16} color="var(--color-cyan)" />
                 <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)' }}>End Date</span>
               </div>
               <input
@@ -195,7 +195,7 @@ export default function DailyOpsPage() {
                 onChange={(e) => setEndDate(e.target.value)}
                 style={{
                   width: '100%', padding: '10px 12px', borderRadius: 8,
-                  border: '1px solid var(--color-text-4)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg-surface-solid)', color: 'var(--color-text-1)',
                   fontSize: 'var(--fs-lg)', fontFamily: 'inherit',
                 }}
               />
@@ -208,8 +208,8 @@ export default function DailyOpsPage() {
           onClick={handleGenerate}
           style={{
             width: '100%', padding: '14px 0', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #0EA5E9, #22D3EE)',
-            color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            background: 'var(--color-cyan)',
+            color: 'var(--color-cyan-btn-text)', fontSize: 'var(--fs-xl)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
           Generate Report
@@ -229,7 +229,7 @@ export default function DailyOpsPage() {
           <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Daily Operations Summary</div>
         </div>
         <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <Loader2 size={32} color="var(--color-accent-secondary)" style={{ animation: 'spin 1s linear infinite' }} />
+          <Loader2 size={32} color="var(--color-cyan)" style={{ animation: 'spin 1s linear infinite' }} />
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginTop: 12 }}>Fetching report data for {dateLabel}...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
@@ -256,7 +256,7 @@ export default function DailyOpsPage() {
       detail: data.checks.length > 0
         ? data.checks.map((c) => CHECK_TYPE_LABELS[c.check_type] || c.check_type).join(', ')
         : 'No checks recorded',
-      color: '#0EA5E9',
+      color: 'var(--color-cyan)',
     },
     {
       label: 'New Discrepancies',
@@ -303,7 +303,7 @@ export default function DailyOpsPage() {
             return parts.join(', ')
           })()
         : 'No QRC executions',
-      color: '#EAB308',
+      color: 'var(--color-warning)',
     },
     {
       label: 'Events Log',
@@ -311,7 +311,7 @@ export default function DailyOpsPage() {
       detail: data.activityEntries.length > 0
         ? `${data.activityEntries.length} entr${data.activityEntries.length !== 1 ? 'ies' : 'y'} logged`
         : 'No events logged',
-      color: '#8B5CF6',
+      color: 'var(--color-purple)',
     },
   ]
 
@@ -330,7 +330,7 @@ export default function DailyOpsPage() {
 
       {/* Report Icon */}
       <div className="card" style={{ textAlign: 'center', padding: '16px 20px', marginBottom: 12 }}>
-        <FileText size={28} color="var(--color-accent-secondary)" style={{ marginBottom: 8 }} />
+        <FileText size={28} color="var(--color-cyan)" style={{ marginBottom: 8 }} />
         <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>Report Preview</div>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>Generated by {generatorName}</div>
       </div>
@@ -341,19 +341,20 @@ export default function DailyOpsPage() {
           <div
             key={s.label}
             className="card"
-            style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}
+            style={{
+              padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12,
+              borderLeft: `3px solid ${s.color}`,
+            }}
           >
-            <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: `${s.color}14`, border: `1px solid ${s.color}33`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 'var(--fs-lg)', fontWeight: 800, color: s.color,
-            }}>
-              {s.count}
-            </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)' }}>{s.label}</div>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{s.detail}</div>
+            </div>
+            <div style={{
+              fontSize: 'var(--fs-xl)', fontWeight: 800, color: s.color,
+              minWidth: 28, textAlign: 'right',
+            }}>
+              {s.count}
             </div>
           </div>
         ))}
@@ -366,8 +367,8 @@ export default function DailyOpsPage() {
           disabled={exporting}
           style={{
             flex: 1, padding: '14px 0', borderRadius: 10,
-            border: '1px solid rgba(34,197,94,0.4)',
-            background: 'rgba(34,197,94,0.1)',
+            border: '1px solid color-mix(in srgb, var(--color-success) 40%, transparent)',
+            background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
             color: 'var(--color-status-pass)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
@@ -382,8 +383,8 @@ export default function DailyOpsPage() {
           disabled={exporting}
           style={{
             padding: '14px 18px', borderRadius: 10,
-            border: '1px solid #A78BFA33',
-            background: '#A78BFA14',
+            border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
             color: 'var(--color-purple)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: exporting ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: exporting ? 0.7 : 1,
