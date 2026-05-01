@@ -97,7 +97,7 @@ export default function RegulationsPage() {
     <div className="page-container">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>References</div>
+        <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>References</div>
       </div>
 
       {/* Tabs */}
@@ -113,18 +113,18 @@ export default function RegulationsPage() {
               flex: 1,
               padding: '8px 0',
               background: tab === t.key
-                ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))'
-                : 'rgba(14,165,233,0.08)',
+                ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                : 'var(--color-bg-inset)',
               border: tab === t.key
-                ? '1px solid var(--color-accent-secondary)'
-                : '1px solid rgba(14,165,233,0.2)',
+                ? '1px solid var(--color-cyan)'
+                : '1px solid var(--color-border)',
               borderRadius: 'var(--radius-md)',
-              color: tab === t.key ? '#fff' : 'var(--color-text-3)',
+              color: tab === t.key ? 'var(--color-cyan)' : 'var(--color-text-2)',
               fontSize: 'var(--fs-md)',
               fontWeight: 700,
               fontFamily: 'inherit',
               cursor: 'pointer',
-              transition: 'all 0.15s',
+              transition: 'background 0.15s',
             }}
           >
             {t.label}
@@ -603,11 +603,13 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4,
                       background: cachedCount === regulations.length
-                        ? 'transparent' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                        ? 'transparent'
+                        : 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))',
                       border: cachedCount === regulations.length
-                        ? '1px solid rgba(52,211,153,0.3)' : 'none',
+                        ? '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)'
+                        : '1px solid var(--color-cyan)',
                       borderRadius: 'var(--radius-sm)', padding: '5px 10px', cursor: 'pointer',
-                      color: cachedCount === regulations.length ? 'var(--color-success)' : 'var(--color-text-1)',
+                      color: cachedCount === regulations.length ? 'var(--color-success)' : 'var(--color-cyan)',
                       fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                       whiteSpace: 'nowrap',
                       opacity: cachedCount === regulations.length ? 0.8 : 1,
@@ -729,9 +731,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
             onClick={() => setShowAddModal(true)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
-              background: 'linear-gradient(135deg, #059669, var(--color-success))',
-              border: 'none', borderRadius: 'var(--radius-sm)', padding: '5px 12px',
-              color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+              background: 'color-mix(in srgb, var(--color-success) 14%, var(--color-bg-surface))',
+              border: '1px solid var(--color-success)',
+              borderRadius: 'var(--radius-sm)', padding: '5px 12px',
+              color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 700,
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
@@ -868,10 +871,10 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
                       onClick={e => { e.stopPropagation(); onViewReg(reg) }}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
-                        background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                        color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', fontWeight: 700,
+                        background: 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))',
+                        color: 'var(--color-cyan)', fontSize: 'var(--fs-base)', fontWeight: 700,
                         padding: '6px 14px', borderRadius: 'var(--radius-sm)', textDecoration: 'none',
-                        border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                        border: '1px solid var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >
                       <FileText size={12} />
@@ -966,7 +969,9 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
                           disabled={deletingRegId === reg.reg_id}
                           style={{
                             padding: '5px 14px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-sm)', fontWeight: 700,
-                            background: deletingRegId === reg.reg_id ? '#7F1D1D' : 'var(--color-danger)',
+                            background: deletingRegId === reg.reg_id
+                              ? 'color-mix(in srgb, var(--color-danger) 70%, black)'
+                              : 'var(--color-danger)',
                             border: 'none', color: 'var(--color-text-1)', cursor: deletingRegId === reg.reg_id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit', opacity: deletingRegId === reg.reg_id ? 0.6 : 1,
                           }}
@@ -1400,8 +1405,10 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
             disabled={saving}
             style={{
               padding: '8px 20px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-md)', fontWeight: 700,
-              background: saving ? '#064E3B' : 'linear-gradient(135deg, #059669, var(--color-success))',
-              border: 'none', color: 'var(--color-text-1)',
+              background: saving
+                ? 'color-mix(in srgb, var(--color-success) 70%, black)'
+                : 'var(--color-success)',
+              border: 'none', color: '#fff',
               cursor: saving ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
               opacity: saving ? 0.7 : 1,
@@ -1567,8 +1574,12 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
         <label
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: uploading ? 'var(--color-bg-elevated)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-            color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
+            background: uploading
+              ? 'var(--color-bg-elevated)'
+              : 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))',
+            border: uploading ? '1px solid var(--color-border)' : '1px solid var(--color-cyan)',
+            color: uploading ? 'var(--color-text-2)' : 'var(--color-cyan)',
+            fontSize: 'var(--fs-base)', fontWeight: 700,
             padding: '6px 14px', borderRadius: 'var(--radius-sm)',
             cursor: uploading ? 'not-allowed' : 'pointer',
             opacity: uploading ? 0.6 : 1,
@@ -1703,10 +1714,10 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
                 onClick={() => onViewDoc(doc, userId)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-                  color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  background: 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))',
+                  color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   padding: '5px 10px', borderRadius: 'var(--radius-sm)',
-                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  border: '1px solid var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
                 <FileText size={10} />
