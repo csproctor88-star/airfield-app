@@ -13,7 +13,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
-import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, RotateCcw } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronRight, Trash2, Edit, FileText, RotateCcw, Mail } from 'lucide-react'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
@@ -199,7 +199,7 @@ export default function AcsiDetailPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
+            <h1 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
               {insp.display_id}
             </h1>
             <Badge label={statusCfg.label} color={statusCfg.color} />
@@ -227,16 +227,18 @@ export default function AcsiDetailPage() {
               <button
                 onClick={handleEmailPdf}
                 disabled={exporting}
+                title="Email PDF"
                 style={{
-                  padding: '12px 16px', borderRadius: 'var(--radius-md)', textAlign: 'center',
-                  background: 'color-mix(in srgb, var(--color-purple) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--color-purple) 20%, transparent)',
-                  color: 'var(--color-purple)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid color-mix(in srgb, var(--color-purple) 35%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-purple) 10%, transparent)',
+                  color: 'var(--color-purple)', fontSize: 'var(--fs-sm)', fontWeight: 600,
                   fontFamily: 'inherit', cursor: exporting ? 'default' : 'pointer',
                   opacity: exporting ? 0.7 : 1,
                 }}
-                title="Email PDF"
               >
-                ✉
+                <Mail size={14} /> Email PDF
               </button>
             </>
           )}
@@ -258,8 +260,8 @@ export default function AcsiDetailPage() {
           {canEdit && !isFiled && (
             <Link href={`/acsi/new?resume=${insp.id}`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-accent)',
-              background: 'transparent', color: 'var(--color-accent)', textDecoration: 'none',
+              padding: '8px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-cyan)',
+              background: 'transparent', color: 'var(--color-cyan)', textDecoration: 'none',
               fontSize: 'var(--fs-sm)', fontWeight: 600,
             }}>
               <Edit size={14} /> Edit Form
@@ -290,7 +292,7 @@ export default function AcsiDetailPage() {
           { label: 'Passed', value: computedPassed, color: 'var(--color-green)' },
           { label: 'Failed', value: computedFailed, color: 'var(--color-red)' },
           { label: 'N/A', value: computedNa, color: 'var(--color-text-3)' },
-          { label: 'Completion', value: `${pct}%`, color: 'var(--color-accent)' },
+          { label: 'Completion', value: `${pct}%`, color: 'var(--color-cyan)' },
         ].map(kpi => (
           <div key={kpi.label} style={{
             padding: '12px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
@@ -323,7 +325,9 @@ export default function AcsiDetailPage() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                   padding: '12px 16px',
-                  background: allDone ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                  background: allDone
+                    ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
+                    : 'transparent',
                   border: 'none',
                   borderBottom: expanded ? '1px solid var(--color-border)' : 'none',
                   cursor: 'pointer', textAlign: 'left', color: 'var(--color-text-1)',
@@ -355,8 +359,10 @@ export default function AcsiDetailPage() {
                         padding: '10px 8px',
                         borderRadius: 'var(--radius-sm)',
                         background: item.response === 'fail'
-                          ? 'rgba(239, 68, 68, 0.06)'
-                          : idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+                          ? 'color-mix(in srgb, var(--color-danger) 6%, transparent)'
+                          : idx % 2 === 0
+                            ? 'color-mix(in srgb, var(--color-text-1) 2%, transparent)'
+                            : 'color-mix(in srgb, var(--color-text-1) 6%, transparent)',
                       }}>
                         <div style={{ minWidth: 48, fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>
                           {item.item_number}
@@ -378,8 +384,9 @@ export default function AcsiDetailPage() {
                         return discs.map((disc, di) => (
                           <div key={di} style={{
                             margin: '4px 0 8px 54px', padding: '8px 12px',
-                            background: 'rgba(239, 68, 68, 0.04)',
-                            border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: 'var(--radius-sm)',
+                            background: 'color-mix(in srgb, var(--color-danger) 4%, transparent)',
+                            border: '1px solid color-mix(in srgb, var(--color-danger) 18%, transparent)',
+                            borderRadius: 'var(--radius-sm)',
                             fontSize: 'var(--fs-sm)',
                           }}>
                             {discs.length > 1 && (
