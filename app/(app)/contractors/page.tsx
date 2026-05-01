@@ -580,7 +580,10 @@ export default function ContractorsPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* 2-col grid — matches the inline edit-form layout for
+              consistency. Single-column flex was too tall on desktop
+              (~12 stacked input rows for ~half the screen height). */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {(!usingTemplate || editingTemplateIdx !== null) && (
               <>
                 <div>
@@ -600,14 +603,14 @@ export default function ContractorsPage() {
                   <input value={formLocation} onChange={e => setFormLocation(e.target.value)} placeholder="e.g. TWY A/B Intersection" style={inputStyle} />
                 </div>
                 <div>
-                  <div style={labelStyle}>Work Description *</div>
-                  <input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Joint sealing and pavement repair" style={inputStyle} />
-                </div>
-                <div>
                   <div style={labelStyle}>Start Date</div>
                   <input type="date" value={formStartDate} onChange={e => setFormStartDate(e.target.value)} style={inputStyle} />
                 </div>
-                <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={labelStyle}>Work Description *</div>
+                  <input value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="e.g. Joint sealing and pavement repair" style={inputStyle} />
+                </div>
+                <div style={{ gridColumn: '1 / -1', height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
                 <div>
                   <div style={labelStyle}>Radio Number Issued</div>
                   <input value={formRadio} onChange={e => setFormRadio(e.target.value)} placeholder="e.g. Radio 12" style={inputStyle} />
@@ -620,7 +623,7 @@ export default function ContractorsPage() {
             )}
             {(!usingTemplate || editingTemplateIdx !== null) && (
               <>
-                <div style={{ height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
+                <div style={{ gridColumn: '1 / -1', height: 1, background: 'var(--color-border)', margin: '2px 0' }} />
                 <div>
                   <div style={labelStyle}>Callsign</div>
                   <input value={formCallsign} onChange={e => setFormCallsign(e.target.value)} placeholder="e.g. Bravo-1" style={inputStyle} />
@@ -640,7 +643,7 @@ export default function ContractorsPage() {
                   <div style={labelStyle}>Contact Phone Number</div>
                   <input value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="e.g. 555-123-4567" style={inputStyle} />
                 </div>
-                <div>
+                <div style={{ gridColumn: '1 / -1' }}>
                   <div style={labelStyle}>Notes</div>
                   <textarea value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Additional details..." rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
@@ -735,6 +738,18 @@ export default function ContractorsPage() {
             const cfg = CONTRACTOR_STATUS_CONFIG[c.status]
             const isEditing = editingId === c.id
             const daysSinceStart = Math.max(1, Math.ceil((Date.now() - new Date(c.start_date).getTime()) / 86400000))
+            // Day N urgency hierarchy — AF Form 483 escort credentials
+            // are time-bounded so personnel lingering past ~2 weeks
+            // should surface for AFM attention without a manual date
+            // scan. 1-3 default, 4-7 slight emphasis, 8-13 amber,
+            // 14+ danger.
+            const dayColor = daysSinceStart >= 14
+              ? 'var(--color-danger)'
+              : daysSinceStart >= 8
+                ? 'var(--color-warning)'
+                : daysSinceStart >= 4
+                  ? 'var(--color-text-2)'
+                  : 'var(--color-text-3)'
 
             return (
               <div key={c.id} className="card" style={{ padding: 14 }}>
@@ -822,53 +837,43 @@ export default function ContractorsPage() {
                             {cfg.label}
                           </span>
                           {c.status === 'active' && (
-                            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>
+                            <span style={{ fontSize: 'var(--fs-xs)', color: dayColor, fontWeight: 700 }}>
                               Day {daysSinceStart}
                             </span>
                           )}
                         </div>
-                        {/* Labeled fields */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Company: </span>
-                            {c.company_name}
-                          </div>
+                        {/* 2-column field grid — labels stay (operationally
+                            important during ops) but compacted to inline
+                            "LABEL value" rows so each pair fits on one line
+                            and the card height halves. Each col is 1fr;
+                            full-width rows (Notes, end_date) span both. */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          rowGap: 4,
+                          columnGap: 18,
+                          marginTop: 2,
+                        }}>
+                          <FieldCell label="Company" value={c.company_name} />
+                          <FieldCell label="Work" value={c.work_description} />
                           {c.contact_name && (
-                            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                              <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Contact: </span>
-                              {c.contact_name}
-                            </div>
+                            <FieldCell label="Contact" value={c.contact_name} />
                           )}
-                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Location: </span>
-                            {c.location}
-                          </div>
-                          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Work: </span>
-                            {c.work_description}
-                          </div>
                           {(c.radio_number || c.flag_number) && (
-                            <div style={{ display: 'flex', gap: 16, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', flexWrap: 'wrap' }}>
-                              {c.radio_number && (
-                                <span>
-                                  <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Radio: </span>
-                                  {c.radio_number}
-                                </span>
-                              )}
-                              {c.flag_number && (
-                                <span>
-                                  <span style={{ fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.03em' }}>Flag: </span>
-                                  {c.flag_number}
-                                </span>
-                              )}
-                            </div>
+                            <FieldCell
+                              label={c.radio_number && c.flag_number ? 'Radio · Flag' : c.radio_number ? 'Radio' : 'Flag'}
+                              value={[c.radio_number, c.flag_number].filter(Boolean).join(' · ')}
+                            />
                           )}
-                        </div>
-                        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                          Started: {formatZuluDate(new Date(c.start_date))}
-                          {c.end_date && (
-                            <> &middot; Ended: {formatZuluDate(new Date(c.end_date))}</>
-                          )}
+                          <FieldCell label="Location" value={c.location} />
+                          <FieldCell
+                            label="Started"
+                            value={
+                              c.end_date
+                                ? `${formatZuluDate(new Date(c.start_date))} — ${formatZuluDate(new Date(c.end_date))}`
+                                : formatZuluDate(new Date(c.start_date))
+                            }
+                          />
                         </div>
                         {c.notes && (
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic', marginTop: 4 }}>
@@ -921,6 +926,41 @@ export default function ContractorsPage() {
         filename={emailPdfData?.filename || 'personnel.pdf'}
         defaultEmail={defaultPdfEmail}
       />
+    </div>
+  )
+}
+
+// Compact "LABEL value" cell used inside the 2-column card body
+// grid. Label is inline, uppercase letter-spaced --fs-2xs in
+// text-4 so the value reads as the primary content and labels
+// recede to typographic chrome.
+function FieldCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'baseline',
+      gap: 6,
+      fontSize: 'var(--fs-sm)',
+      color: 'var(--color-text-2)',
+      minWidth: 0,
+    }}>
+      <span style={{
+        fontSize: 'var(--fs-2xs)',
+        fontWeight: 700,
+        color: 'var(--color-text-4)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        flexShrink: 0,
+      }}>
+        {label}
+      </span>
+      <span style={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}>
+        {value}
+      </span>
     </div>
   )
 }
