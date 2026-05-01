@@ -3868,13 +3868,16 @@ export default function ParkingPage() {
             )}
           </div>
 
-          {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile */}
+          {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile.
+              Sits below the top-left app-controls toolbar (Panel/Fullscreen/Ruler/PDF/Email)
+              so they read as a vertical stack of controls anchored to the top-left. */}
           {(sidebarCollapsed || isMobile) && selectedPlanId && (
             <div style={{
-              position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
-              display: 'flex', gap: 4, padding: '6px 10px', borderRadius: 6,
+              position: 'absolute', top: 50, left: 10, zIndex: 5,
+              display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 10px', borderRadius: 6,
               background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
               boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+              maxWidth: 'calc(100vw - 20px)',
             }}>
               <button
                 onClick={() => setShowAircraftPicker(true)}
@@ -3905,13 +3908,28 @@ export default function ParkingPage() {
               <button
                 onClick={() => handleStartTaxilane('interior')}
                 disabled={!!drawingTaxilaneId}
+                title="Draw an interior taxilane"
                 style={{
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                   background: 'color-mix(in srgb, var(--color-blue) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 30%, transparent)',
                   color: 'var(--color-status-inwork)', cursor: 'pointer',
+                  opacity: drawingTaxilaneId ? 0.5 : 1,
                 }}
               >
-                Taxilane
+                + Interior Taxilane
+              </button>
+              <button
+                onClick={() => handleStartTaxilane('peripheral')}
+                disabled={!!drawingTaxilaneId}
+                title="Draw a peripheral taxilane"
+                style={{
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                  background: 'color-mix(in srgb, var(--color-violet) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-violet) 30%, transparent)',
+                  color: 'var(--color-violet)', cursor: 'pointer',
+                  opacity: drawingTaxilaneId ? 0.5 : 1,
+                }}
+              >
+                + Peripheral Taxilane
               </button>
               <button
                 onClick={handleStartBoundary}
@@ -3920,23 +3938,37 @@ export default function ParkingPage() {
                   padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                   background: 'color-mix(in srgb, var(--color-success) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
                   color: 'var(--color-success)', cursor: 'pointer',
+                  opacity: drawingBoundaryId ? 0.5 : 1,
                 }}
               >
-                Boundary
+                + Boundary
               </button>
               <div style={{ width: 1, background: 'var(--color-border)', margin: '0 2px' }} />
               <button
                 onClick={() => setPlanLocked(l => !l)}
-                title={planLocked ? 'Unlock dragging' : 'Lock positions'}
+                title={planLocked ? 'Aircraft locked — click to enable dragging' : 'Aircraft unlocked — click to lock'}
                 style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
                   background: planLocked ? 'color-mix(in srgb, var(--color-danger) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
                   border: `1px solid ${planLocked ? 'color-mix(in srgb, var(--color-danger) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
                   color: planLocked ? 'var(--color-danger)' : 'var(--color-success)',
                   cursor: 'pointer',
                 }}
               >
-                {planLocked ? 'Locked' : 'Unlocked'}
+                {planLocked ? 'AC Locked' : 'AC Unlocked'}
+              </button>
+              <button
+                onClick={() => setObstaclesLocked(l => !l)}
+                title={obstaclesLocked ? 'Obstacles locked — click to enable dragging' : 'Obstacles unlocked — click to lock'}
+                style={{
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
+                  background: obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
+                  border: `1px solid ${obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
+                  color: obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)',
+                  cursor: 'pointer',
+                }}
+              >
+                {obstaclesLocked ? 'OB Locked' : 'OB Unlocked'}
               </button>
             </div>
           )}
