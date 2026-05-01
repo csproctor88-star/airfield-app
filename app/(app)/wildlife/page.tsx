@@ -9,7 +9,28 @@ import {
   fetchSighting, fetchStrike,
   type WildlifeSightingRow, type WildlifeStrikeRow,
 } from '@/lib/supabase/wildlife'
-import { formatZuluDateTime } from '@/lib/utils'
+// Day-group date format — "Today / Yesterday / Wed, May 1" with the
+// long form below the relative anchor. Mirrors the recent-activity
+// + daily-reviews recipe. "today" is Zulu today (wildlife events
+// store observed_at + strike_date as Zulu timestamps).
+function formatGroupDate(iso: string, todayIso: string): { primary: string; secondary: string | null } {
+  const date = new Date(`${iso}T12:00:00Z`)
+  const longLabel = date.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  })
+  const today = new Date(`${todayIso}T12:00:00Z`)
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000)
+  if (diffDays === 0) return { primary: 'Today', secondary: longLabel }
+  if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
+  return { primary: longLabel, secondary: null }
+}
+
+// "11:42Z" — readable colon-separated form. The shared
+// formatZuluTime helper strips the colon (military "1142" form);
+// for an audit log row a colon is easier to scan.
+function formatTimeColon(iso: string): string {
+  return `${new Date(iso).toISOString().slice(11, 16)}Z`
+}
 import { SightingForm } from '@/components/wildlife/sighting-form'
 import { StrikeForm } from '@/components/wildlife/strike-form'
 import { WildlifeHeatmap } from '@/components/wildlife/wildlife-heatmap'
@@ -312,115 +333,163 @@ export default function WildlifePage() {
               <div style={{ fontWeight: 700, marginBottom: 4 }}>No wildlife activity recorded</div>
               <div style={{ fontSize: 'var(--fs-sm)' }}>Use "+ Sighting" or "+ Strike" to log wildlife observations</div>
             </div>
-          ) : (
-            <div style={{
-              background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)', overflow: 'hidden',
-            }}>
-              {timeline.map(entry => {
-                const isSighting = entry.type === 'sighting'
-                const actionLabel = entry.action && entry.action !== 'none'
-                  ? WILDLIFE_ACTIONS.find(a => a.value === entry.action)?.label || entry.action
-                  : null
-                const damageConfig = entry.damage
-                  ? DAMAGE_LEVELS.find(d => d.value === entry.damage)
-                  : null
-
-                const accentColor = isSighting ? 'var(--color-success)' : 'var(--color-danger)'
-
-                return (
-                  <div
-                    key={`${entry.type}-${entry.id}`}
-                    style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 12,
-                      padding: '12px 14px', borderBottom: '1px solid var(--color-border)',
-                      borderLeft: `3px solid ${accentColor}`,
-                    }}
-                  >
-                    {/* Type icon — Eye (sighting) or Zap (strike) on a tinted square */}
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
-                      border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
-                      color: accentColor,
-                    }}>
-                      {isSighting ? <Eye size={16} /> : <Zap size={16} />}
-                    </div>
-
-                    {/* Details */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, fontSize: 'var(--fs-md)' }}>
-                          {entry.count}x {entry.species}
+          ) : (() => {
+            // Group timeline by Zulu date so the day-group headers
+            // share the recent-activity / daily-reviews relative-date
+            // pattern and counts surface at a glance.
+            const groups = timeline.reduce<Record<string, typeof timeline>>((acc, e) => {
+              const day = new Date(e.date).toISOString().slice(0, 10)
+              if (!acc[day]) acc[day] = []
+              acc[day].push(e)
+              return acc
+            }, {})
+            const todayIso = new Date().toISOString().slice(0, 10)
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {Object.entries(groups).map(([day, entries]) => {
+                  const dateLabel = formatGroupDate(day, todayIso)
+                  return (
+                    <div key={day}>
+                      <div style={{
+                        display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8,
+                        paddingBottom: 4, borderBottom: '1px solid var(--color-border)',
+                      }}>
+                        <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                          {dateLabel.primary}
                         </span>
-                        <span style={{
-                          fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
-                          background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
-                          border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
-                          color: accentColor, letterSpacing: '0.04em',
-                        }}>
-                          {isSighting ? 'SIGHTING' : 'STRIKE'}
-                        </span>
-                        {actionLabel && (
-                          <span style={{
-                            fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
-                            background: 'color-mix(in srgb, var(--color-amber) 14%, transparent)',
-                            border: '1px solid color-mix(in srgb, var(--color-amber) 35%, transparent)',
-                            color: 'var(--color-amber)',
-                          }}>
-                            {actionLabel}
+                        {dateLabel.secondary && (
+                          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+                            {dateLabel.secondary}
                           </span>
                         )}
-                        {damageConfig && entry.damage !== 'none' && (
-                          <span style={{
-                            fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
-                            background: `color-mix(in srgb, ${damageConfig.color} 14%, transparent)`,
-                            border: `1px solid color-mix(in srgb, ${damageConfig.color} 35%, transparent)`,
-                            color: damageConfig.color,
-                          }}>
-                            DMG: {damageConfig.label}
-                          </span>
-                        )}
+                        <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 500 }}>
+                          {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+                        </span>
                       </div>
-                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                        {entry.location && <span>{entry.location} · </span>}
-                        <span>{formatZuluDateTime(entry.date)}</span>
-                        <span style={{ marginLeft: 6, color: 'var(--color-text-4)' }}>{entry.displayId}</span>
-                      </div>
-                      {entry.notes && (
-                        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 4, fontStyle: 'italic' }}>
-                          {entry.notes}
-                        </div>
-                      )}
-                    </div>
+                      <div style={{
+                        background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-border)', overflow: 'hidden',
+                      }}>
+                        {entries.map((entry, idx) => {
+                          const isSighting = entry.type === 'sighting'
+                          const actionLabel = entry.action && entry.action !== 'none'
+                            ? WILDLIFE_ACTIONS.find(a => a.value === entry.action)?.label || entry.action
+                            : null
+                          const damageConfig = entry.damage
+                            ? DAMAGE_LEVELS.find(d => d.value === entry.damage)
+                            : null
 
-                    {/* Edit + Delete */}
-                    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-                      <button
-                        onClick={() => isSighting ? handleEditSighting(entry.id) : handleEditStrike(entry.id)}
-                        title="Edit"
-                        aria-label="Edit"
-                        className="btn-ghost"
-                        style={{ color: 'var(--color-text-3)', padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
-                        title="Delete"
-                        aria-label="Delete"
-                        className="btn-ghost"
-                        style={{ color: 'var(--color-text-3)', padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                          const accentColor = isSighting ? 'var(--color-success)' : 'var(--color-danger)'
+                          const isLast = idx === entries.length - 1
+
+                          return (
+                            <div
+                              key={`${entry.type}-${entry.id}`}
+                              style={{
+                                display: 'flex', alignItems: 'flex-start', gap: 12,
+                                padding: '12px 14px',
+                                borderBottom: isLast ? 'none' : '1px solid var(--color-border)',
+                                borderLeft: `3px solid ${accentColor}`,
+                              }}
+                            >
+                              {/* Type icon — Eye (sighting) or Zap (strike) on a tinted square */}
+                              <div style={{
+                                width: 36, height: 36, borderRadius: 'var(--radius-md)', flexShrink: 0,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+                                border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                                color: accentColor,
+                              }}>
+                                {isSighting ? <Eye size={16} /> : <Zap size={16} />}
+                              </div>
+
+                              {/* Details */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <span style={{ fontWeight: 700, fontSize: 'var(--fs-md)' }}>
+                                    {entry.count}x {entry.species}
+                                  </span>
+                                  <span style={{
+                                    fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                                    background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+                                    border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                                    color: accentColor, letterSpacing: '0.04em',
+                                  }}>
+                                    {isSighting ? 'SIGHTING' : 'STRIKE'}
+                                  </span>
+                                  {actionLabel && (
+                                    <span style={{
+                                      fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                                      background: 'color-mix(in srgb, var(--color-amber) 14%, transparent)',
+                                      border: '1px solid color-mix(in srgb, var(--color-amber) 35%, transparent)',
+                                      color: 'var(--color-amber)',
+                                    }}>
+                                      {actionLabel}
+                                    </span>
+                                  )}
+                                  {damageConfig && entry.damage !== 'none' && (
+                                    <span style={{
+                                      fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+                                      background: `color-mix(in srgb, ${damageConfig.color} 14%, transparent)`,
+                                      border: `1px solid color-mix(in srgb, ${damageConfig.color} 35%, transparent)`,
+                                      color: damageConfig.color,
+                                    }}>
+                                      DMG: {damageConfig.label}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  {entry.location && (
+                                    <span style={{
+                                      fontFamily: 'monospace', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                                      color: 'var(--color-cyan)',
+                                      padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+                                      background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+                                    }}>
+                                      {entry.location}
+                                    </span>
+                                  )}
+                                  <span style={{ fontFamily: 'monospace' }}>{formatTimeColon(entry.date)}</span>
+                                  <span style={{ color: 'var(--color-text-4)' }}>{entry.displayId}</span>
+                                </div>
+                                {entry.notes && (
+                                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 4, fontStyle: 'italic' }}>
+                                    {entry.notes}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Edit + Delete */}
+                              <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                                <button
+                                  onClick={() => isSighting ? handleEditSighting(entry.id) : handleEditStrike(entry.id)}
+                                  title="Edit"
+                                  aria-label="Edit"
+                                  className="btn-ghost"
+                                  style={{ color: 'var(--color-text-3)', padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={() => isSighting ? handleDeleteSighting(entry.id) : handleDeleteStrike(entry.id)}
+                                  title="Delete"
+                                  aria-label="Delete"
+                                  className="btn-ghost"
+                                  style={{ color: 'var(--color-text-3)', padding: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )
+          })()}
 
           {/* Summary footer */}
           {!loading && timeline.length > 0 && (
