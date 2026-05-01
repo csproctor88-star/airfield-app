@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Check } from 'lucide-react'
+import { Check, ChevronRight } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -249,7 +249,7 @@ export default function ShiftChecklistPage() {
             fontSize: 'var(--fs-xs)',
             fontWeight: 700,
             color: FREQ_COLORS[item.frequency],
-            background: `${FREQ_COLORS[item.frequency]}15`,
+            background: `color-mix(in srgb, ${FREQ_COLORS[item.frequency]} 12%, transparent)`,
             padding: '2px 8px',
             borderRadius: 'var(--radius-md)',
             flexShrink: 0,
@@ -481,7 +481,7 @@ export default function ShiftChecklistPage() {
                       }}>
                         {h.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
                       </span>
-                      <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
+                      <ChevronRight size={16} style={{ color: 'var(--color-text-4)' }} />
                     </div>
                   </button>
                 )
