@@ -54,12 +54,39 @@ function formatDate(str: string) {
   if (faaMatch) {
     const [, month, day, year, hour, minute] = faaMatch
     const d = new Date(Date.UTC(+year, +month - 1, +day, +hour, +minute))
-    return formatZuluDate(d) + ' ' + hour + minute + 'Z'
+    return compactNotamDate(d, hour + minute)
   }
   // Try ISO format
   const d = new Date(str)
   if (isNaN(d.getTime())) return str // fallback: show raw string
   return formatZuluDate(d)
+}
+
+/**
+ * Compact a Zulu date+time for the NOTAM list. Saves horizontal
+ * width in the 2-column card grid where each card renders both
+ * effective_start and effective_end:
+ *   - within ±1 day → 'Today HHMMZ' / 'Tomorrow HHMMZ' / 'Yesterday HHMMZ'
+ *   - same Zulu year → 'Mar 9 HHMMZ' (drop year)
+ *   - different year → 'Mar 9, 2027 HHMMZ' (keep year for unambiguity)
+ * The expiringSoon red glow + AlertCircle prefix on the row
+ * provides the urgency cue, so this anchor doesn't compete.
+ */
+function compactNotamDate(d: Date, hhmm: string): string {
+  const now = new Date()
+  // Compare on Zulu calendar day (NOTAMs are Zulu).
+  const dDay = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  const todayDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const diffDays = Math.round((dDay - todayDay) / 86400000)
+  if (diffDays === 0) return `Today ${hhmm}Z`
+  if (diffDays === 1) return `Tomorrow ${hhmm}Z`
+  if (diffDays === -1) return `Yesterday ${hhmm}Z`
+  // Drop the year on same-year dates; keep it across years.
+  const sameYear = d.getUTCFullYear() === now.getUTCFullYear()
+  const monthDay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  return sameYear
+    ? `${monthDay} ${hhmm}Z`
+    : `${monthDay}, ${d.getUTCFullYear()} ${hhmm}Z`
 }
 
 function formatTime(iso: string) {
@@ -605,7 +632,13 @@ export default function NotamsPage() {
                 {/* NOTAM number + Effective dates */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
                   {notam.notam_number && (
-                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
+                    <span style={{
+                      fontSize: 'var(--fs-md)',
+                      fontWeight: 700,
+                      color: 'var(--color-cyan)',
+                      fontFamily: 'monospace',
+                      letterSpacing: '0.02em',
+                    }}>
                       {notam.notam_number}
                     </span>
                   )}
