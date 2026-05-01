@@ -24,6 +24,9 @@ export interface GMapWrapper {
   iconCache: Map<string, string>
   /** Natural dimensions of cached icons (width, height) */
   iconSizes: Map<string, { w: number; h: number }>
+  /** Hidden OverlayView whose only job is to expose a MapCanvasProjection
+   *  that handles heading + tilt for pixel↔latLng conversion. */
+  projectionOverlay: google.maps.OverlayView
 }
 
 /** Convert canvas ImageData to a data URL for use as marker icon */
@@ -38,6 +41,15 @@ export function imageDataToDataUrl(imageData: ImageData): string {
 
 /** Create a GMapWrapper around a Google Maps instance */
 export function createGMapWrapper(gmap: google.maps.Map): GMapWrapper {
+  // Hidden OverlayView — gives us a MapCanvasProjection that's heading +
+  // tilt aware (vs. the naive bounding-box projection from getBounds()).
+  // No actual DOM rendering; we just need .getProjection() to be live.
+  const overlay = new google.maps.OverlayView()
+  overlay.onAdd = () => { /* noop */ }
+  overlay.draw = () => { /* noop */ }
+  overlay.onRemove = () => { /* noop */ }
+  overlay.setMap(gmap)
+
   return {
     gmap,
     markers: new Map(),
@@ -48,6 +60,7 @@ export function createGMapWrapper(gmap: google.maps.Map): GMapWrapper {
     featureIndex: new Map(),
     iconCache: new Map(),
     iconSizes: new Map(),
+    projectionOverlay: overlay,
   }
 }
 
@@ -208,24 +221,31 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-/** Convert pixel coordinates to LatLng using the map's overlay projection */
+/** Convert container-pixel coordinates to LatLng. Uses the OverlayView's
+ *  MapCanvasProjection so it handles map heading + tilt correctly.
+ *  Falls back to a naive bounds-rectangle interpolation if the projection
+ *  isn't ready yet (e.g. before the first draw). */
 export function pixelToLatLng(
   wrapper: GMapWrapper,
   x: number,
   y: number,
 ): { lat: number; lng: number } | null {
+  const projection = wrapper.projectionOverlay.getProjection()
+  if (projection) {
+    const point = new google.maps.Point(x, y)
+    const ll = projection.fromContainerPixelToLatLng(point)
+    if (ll) return { lat: ll.lat(), lng: ll.lng() }
+  }
+  // Fallback for the first frame before the overlay has drawn
   const bounds = wrapper.gmap.getBounds()
   const div = wrapper.gmap.getDiv()
   if (!bounds || !div) return null
-
   const ne = bounds.getNorthEast()
   const sw = bounds.getSouthWest()
   const width = div.clientWidth
   const height = div.clientHeight
-
   const lng = sw.lng() + (x / width) * (ne.lng() - sw.lng())
   const lat = ne.lat() - (y / height) * (ne.lat() - sw.lat())
-
   return { lat, lng }
 }
 
