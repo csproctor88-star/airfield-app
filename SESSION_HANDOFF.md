@@ -1,319 +1,186 @@
 # Session Handoff
 
 **Date:** 2026-05-01
-**Branch:** `tweaks` (not yet merged to `main`)
+**Branch:** `main` (pushed)
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `d08f06d` (local; `tweaks` branch not pushed)
+**HEAD:** `84cecb1` (origin/main)
 
 ---
 
 ## What shipped this session
 
-**The structure-first audit.** A long-running session — 31 commits
-across 22+ surfaces — that started as a continuation of the
-2026-04-30 token sweep and pivoted mid-session into structural UX
-work after the user pointed out the prior week's "distinctive
-refresh" had been color-only and never reviewed actual
-structural ergonomics. The new pattern: screenshot every page,
-enter plan mode, propose specific structural changes, get
-ExitPlanMode approval, execute. Saved as
-`feedback_screenshot_then_plan_mode.md` so it sticks across
-sessions.
+**Three blocks of work** off the prior session's backlog: the deferred
+`/reports*` sweep (Tier-3 from 2026-04-30), a `/parking` toolbar
+restructure that iterated through three different layouts before
+landing, and the dormant `/feedback` staff view. Plus a real
+production bug surfaced from a Vercel error log — the `/library`
+server gate was importing helpers transitively from a `'use client'`
+module and throwing `TypeError: u is not a function` for any user
+who tried to open it. Fix landed across two commits and a perm-lockdown
+migration. 16 commits total, all on `main` and pushed.
 
-The work breaks into three phases:
+### `/reports*` structure-first sweep (`7980999` → `3aea92a`)
 
-1. **ACSI module** (commits `3c5d59c` → `1165d77`, then
-   `82fdc96`) — six commits across the constants file, list
-   page, detail page, new/edit page, shared section/item
-   components, and discrepancy panels (panel-group, panel,
-   picker). Token-only at first, then a follow-up pass for the
-   draft row "Not started" state and the Affected Areas chip
-   cluster after screenshots came in.
+Six commits, one per page. All five sub-pages (`daily`, `discrepancies`,
+`trends`, `aging`, `lighting`) plus the `/reports` index were carried
+over from the prior session's Tier-3 list and never got a structural
+review.
 
-2. **Structure-first restructures** (`6a9a6a4` → `c12ea81` →
-   `75a0f76` → `804904a` → `d7cff23` → `9786d98` → `b5f0497`
-   → `0ad0d98` → `cb044a9` → `82fdc96`) — `/daily-reviews`,
-   `/recent-activity`, `/wildlife` (list + sighting form),
-   `/aircraft` (list + detail + manufacturer-drop iteration),
-   `/contractors`, ACSI list + discrepancy-panel polish. Each
-   one screenshot-driven, plan-mode-gated.
+The most material fix was on `/reports/aging` (`dc6d914`): the By
+Aging Tier badges had been concating `${tier.color}28 / 14 / 33`,
+which is the same hex-alpha-concat footgun pinned in
+`feedback_amber_text_contrast.md`. It was working *only* because the
+tier colors were still raw hex — the moment any tier color got
+tokenized to a CSS variable (the same migration done on
+`ACSI_STATUS_CONFIG` in the prior session), the badges would
+silently drop bg + border. Migrated all three concats to color-mix
+preemptively. Rest of the page got a per-tier 3px row rail mirroring
+the `/waivers` and `/discrepancies` list patterns.
 
-3. **Tier 3 sweep + bug fixes** (`abd5f55` → `6973641` →
-   `1ae099e` → `de32a1a` → `db7a8a8` → `5e858f2` → `ec6811c`
-   → `0ee7d0b` → `c28eb9d` → `58cf007` → `d08f06d`) —
-   `/shift-checklist`, `/checks/history`, `/scn`, `/waivers`,
-   `/obstructions/[id]`, `/ppr`, `/dashboard`,
-   `/` (Airfield Status), `/users`, `/more` (twice — token
-   then emoji-to-Lucide). NOTAMs canonical-card polish in the
-   middle (`a90d64b`).
+`/reports/daily` (`03ced01`) shipped the only `linear-gradient(135deg,
+#0EA5E9, #22D3EE)` button left in the running app — the rest had
+been converted to solid `var(--color-cyan)` during v2.32. Dropped.
+The preview-view section icon-tile was using the same hex-alpha
+concat (`${s.color}14`/`${s.color}33`) and breaking for `var(...)`
+section colors — replaced with a 3px left rail and a count promoted
+to the right edge.
 
-A handful of real bugs surfaced and got fixed alongside the
-structural work — see the **Bugs fixed** table below. The
-hex-alpha-concat footgun (`${var(--color-X)}NN` produces
-invalid CSS and silently drops bg/border) keeps reappearing —
-it's been pinned in `feedback_amber_text_contrast.md` since
-last week but kept biting because shared components
-(`ActionButton`, FREQ_COLORS chip helper, BWC option chip,
-`/more` icon tile, etc.) had been doing it for months. This
-session fixed each instance found.
+`/reports/trends` (`69ad3b9`) converted the period selector from
+solid filled-purple tabs to the canonical outlined-pill cluster
+(QRC l.194 recipe), and bumped the bar-chart count column to
+`fontVariantNumeric: tabular-nums` + `--fs-sm` so columns line up.
 
-### ACSI module sweep (`3c5d59c` → `1165d77`)
+`/reports/lighting` (`3aea92a`) sort tabs converted to outlined-pill,
+summary cards got per-card colored top rails (matching
+`StyledCard`-on-`/reports`), and the four purple PDF/Email buttons
+moved off raw `rgba(168,85,247,…)` to color-mix on
+`var(--color-purple)`.
 
-Six commits in sequence. `ACSI_STATUS_CONFIG` raw hex
-(`#9CA3AF`, `#3B82F6`, `#10B981`, `#8B5CF6`) migrated to CSS
-variable tokens; `Badge` component auto-derives the tinted bg
-via color-mix when color starts with `var(`, so the explicit
-`bg` hex literals were dropped. Subsequent commits hit the
-list page (outlined-pill cyan filter chips, status-colored
-3px left rail using the now-tokenized `statusCfg.color`,
-`--fs-2xl` → `--fs-xl`), detail page (Mail icon replacing the
-✉ glyph, all rgba tints to color-mix, `--color-accent` →
-`--color-cyan` on the Edit Form button), new/edit page
-(progress bar accent → cyan, Complete & File button moved to
-`--color-success` for finalization semantic), shared
-components (response-button hex literals to tokens, all row
-tints to color-mix, `--color-accent` → `--color-cyan` on
-subsection labels), and the three discrepancy-panel
-components — including hardening `chipStyle` against the
-hex-alpha-concat footgun preemptively.
+The `/reports` index (`7980999`) dropped its title from `--fs-2xl` to
+`--fs-xl`, replaced the `${card.color}22` border-tint concat (which
+had been silently broken — the border was effectively invisible) with
+a 3px left rail per card, swapped the `›` Unicode chevron for
+Lucide ChevronRight, and stacked title-over-description instead of
+inlining them on a single span.
 
-Follow-up commit (`82fdc96`) after screenshots: list rows for
-drafts no longer show `0% / 0P 0F 0NA` clutter (now show
-`Not started` until any response is recorded), and the
-Affected Areas pill row in the discrepancy panel was wrapped
-in a single bordered chip-cluster container per
-`feedback_chip_cluster_pattern.md`.
+`/reports/discrepancies` (`289244f`) was the smallest delta: filter
+card got a 3px cyan left rail to read as "this is the filter section,"
+all three button styles migrated from raw rgba to color-mix.
 
-### `/daily-reviews` (`6a9a6a4`, `6e5de8d`, `c12ea81`)
+### `/parking` left-rail toolbar (`5c8355b` → `cf7327a`)
 
-Three commits, escalating scope. First (`6a9a6a4`) was the
-token-sweep pass — title tier drop, all rgba success tints to
-color-mix, ✓/✕ HTML entities to Lucide, Sign Review button
-contrast text to `var(--color-cyan-btn-text)`. The shared
-`EmailPdfModal` got a sibling commit (`6e5de8d`) for its
-hex-alpha purple `#A78BFA33`/`#A78BFA55` (8-digit hex
-hardcoding the dark-mode purple) → color-mix on
-`--color-purple`. Then the structural restructure
-(`c12ea81`) — relative-date headers ("Today" / "Yesterday" /
-"Wed, May 1"), fixed slot grid replacing variable pills,
-status-colored 3px left rail with amber for today-pending,
-header pending/reviewed counts. The `formatGroupDate` helper
-that landed here became the recipe for four other pages this
-session.
+Five commits — the messy iteration shape is the headline. The user
+asked for a vertical left-rail to replace the two horizontal toolbars
+that wrapped at the top of the map and visually competed for the
+header. First pass (`5c8355b`) shipped the rail with "same on mobile"
+per the user's spec.
 
-### `/recent-activity` structural restructure (`75a0f76`)
+Mobile portrait viewport then clipped the bottom of the rail behind
+the iOS PWA bottom-nav (Boundary / AC / OB / PDF / Email cut off).
+User course-corrected: "this method won't work on mobile but it does
+look nice on desktop." `85ea7c5` reverted mobile to the prior
+horizontal-toolbars recipe — that turned out to wrap to multiple rows
+and eat 30% of the viewport. User course-corrected again. `1a0c19b`
+made the rail itself responsive (column on desktop, horizontal
+scroll-strip on mobile). User then asked to split mobile by purpose:
+plan-edit tools at the top, View / Ruler / PDF / Email at the
+bottom-right since they aren't core to plan creation. `cf7327a`
+landed that — single rail component branches its layout on
+`isMobile` and renders one cluster on desktop, two on mobile.
 
-Day-group headers got bigger, relative-dated, and count-augmented
-("Today · Wed, May 1 · 23 entries" with a 1px bottom rule).
-Per-row 3px entity-colored left rail keyed off the existing
-`getActionColor` helper (which had only been tinting the
-action label inline). Force-uppercase on the details line
-dropped — was `details.toUpperCase()` mangling natural casing
-for an audit log; now renders in source case at
-`--color-text-2`. Lines clamp to 2 instead of truncating
-mid-sentence at 60ch. User attribution (rank + last name)
-inlined with the action header instead of being buried as 3rd-
-line `--fs-2xs` gray. OI badge promoted from a bare letter-
-spaced span to a small color-mix cyan chip.
+The `feedback_visual_plan_brevity.md` memory got saved during this
+work after the user said "I don't really understand what you are
+explaining with the new tools, I guess proceed and we will see what
+it looks like." Lesson: for visual UI restructures, lead with an
+ASCII sketch, defer code-level tradeoffs to execution — the user
+can course-correct from a render faster than from a design doc.
 
-### `/wildlife` list + sighting form (`804904a`, `d7cff23`)
+### `/parking` clearance-line edge anchors (`2d8eedd` → `ccad75e`)
 
-List got the same date-grouping recipe, time-only rows (date
-moved to the day header), location promoted to a mono-cyan
-chip, and a `formatTimeColon` helper for the `HH:MMZ` form.
-The strike-vs-sighting 3px rail differentiation that the plan
-flagged as missing was actually already in place in the code
-— the screenshot just happened to show only sightings; noted
-in the commit body so a future inventory doesn't re-flag it.
+User noticed during the parking session that all the drag-time green/
+amber/red distance lines emanated from the dragged aircraft's
+nose-gear pivot point. With every line attaching at the nose, it
+read as if the distances were measured from the nose gear marking,
+even though the underlying clearance math was correct. Misleading
+visualization.
 
-Sighting form: section headers bumped one tier (`--fs-2xs` /
-text-3 → `--fs-xs` / text-2) so each card has a clear visual
-anchor. Action Taken pills (Hazed / Dispersed / Depredated /
-Relocated / Disposed / Given to USDA) wrapped in a single
-bordered chip-cluster container per
-`feedback_chip_cluster_pattern.md` — six independent pills
-became one "what was your response?" widget.
+`2d8eedd` first cut: compute four cardinal anchors (nose tip, tail
+tip, left wingtip, right wingtip) and pick whichever is closest to
+the target. User said "pretty close but the line looks a little off
+from the wingtip" — for swept-wing aircraft, the cardinal-side-midpoint
+isn't always at the visible wingtip.
 
-### `/aircraft` list + detail (`9786d98`, `b5f0497`, `0ad0d98`)
+`ccad75e` second cut: replaced the 4-cardinal-anchor approach with a
+ray-rectangle exit calculation. Project the ray from aircraft center
+toward the target, find where it crosses the bounding rectangle,
+anchor there. The line exits exactly along the line of measurement
+so it visibly touches the wingtip / nose / tail edge precisely
+regardless of geometry.
 
-List rows got densified: model name + a violet `GROUP-N` chip
-(military) + `Wingspan N ft` quiet secondary. Duplicate
-"127 aircraft" count dropped (now only renders when a search
-or favorite filter narrows the set). Detail page section
-labels migrated from `--color-accent` to `--color-cyan` with
-a 1px bottom rule, Pin/ACN-PCN button rgba literals
-tokenized to color-mix on `--color-warning` / `--color-success`,
-favorite-card outer border tokenized.
+For aircraft-to-aircraft pairs, the ray-exit runs on both ends. For
+obstacles, only the moved-aircraft side; the obstacle stays a
+single-point endpoint. Underlying clearance calculations unchanged.
 
-UX-iteration commit (`0ad0d98`) addressed user feedback:
-manufacturer dropped from the collapsed row (kept inside the
-expanded detail), and the discrepancy detail toolbar got
-visible 1px vertical separators between groups instead of
-relying on the 14px-vs-6px gap contrast that was too subtle.
+### `/feedback` staff view (`b9c5af7`)
 
-### `/discrepancies` list + detail (`809bc16`, `f3fd20f`)
+Tier-3 holdover from prior session — only the public QR form had been
+refreshed in Tier 1. Header restructure split the prior 5-button row
+into two clusters (time-filter pills as outlined-pill cluster, Export/
+Email PDF as a separate output cluster on success-tinted /
+purple-tinted chrome). Per-row 3px left rail keyed off
+`overall_rating`: 4-5★ green, 3★ amber, 1-2★ red, no rating gray —
+so a 5★ rave and a 1★ complaint scan distinctly. Token sweep on raw
+`#FBBF24` (stars + avg-rating digit + distribution bars) and
+`#334155` (empty-stars). HTML `&times;` delete button → Lucide X.
 
-List restructure was the biggest single-commit on the queue
-side. The list view's leading mono-cyan slot had been showing
-`work_order_number || 'Pending'` — the actual `display_id`
-(D-2026-XXX) was completely absent from the list view.
-Restructured to a single-line layout with eight slots: 3px
-status-colored left rail, display_id, title (truncated), WO
-chip when assigned (only for real WO numbers, not the
-"Pending" placeholder), compact status pill (`TO AFM`,
-`AWAIT CES`, `VERIFY`, etc. — full labels stay in the detail
-header), days-open chip with danger color when > 30. Two new
-module-scope maps mirror the `/ces` page convention:
-`CURRENT_STATUS_COLORS` and `CURRENT_STATUS_SHORT`.
+### `/library` access (`2a5c22a` → `48d59a9` → `84cecb1`)
 
-Detail commit (`f3fd20f`) grouped the action toolbar by
-intent — edit (Update + Status), media (Capture + Upload),
-output (Export PDF + Email PDF), destructive (Delete on the
-right via `marginLeft: auto`). Tokenized the per-button hex
-to CSS vars. Surfaced a real bug in the shared `ActionButton`
-component while at it: `${color}14` / `${color}33` works for
-hex literals but silently drops bg/border for var-bound
-callers. Multiple `/waivers/[id]` and `/inspections/[id]`
-buttons had been rendering with no tinted bg/border for
-months. Migrated to color-mix.
+User reported: clicking PDF Library bounces back to `/more` instead of
+loading. Three commits to land the right fix, plus a perm migration.
 
-### `/contractors` (`cb044a9`)
+`2a5c22a` first try: the `/library` server-page gate queried
+`role_permissions` directly and ignored `user_permission_overrides`,
+so any user granted `library:view` via an override (rather than via
+their role's preset) saw the link in `/more` (the client
+`usePermissions()` hook merges overrides correctly) but got bounced
+on click. Replaced inline query with the shared `getPermissionsFor()`
+helper from `lib/permissions-server.ts`. Pushed.
 
-Card body 2-col grid replacing the 6-row "LABEL: value"
-stack — card height roughly halves. Day N color hierarchy
-(1-3 default gray → 4-7 text-2 → 8-13 amber → 14+ danger)
-surfaces personnel lingering past their typical AF Form 483
-window. Add Personnel form 2-col grid matching the inline
-edit form.
+User reported same redirect-loop on prod after deploy, *plus* the
+Vercel error log showing `TypeError: u is not a function` at
+`/library/page.js`. That's the exact pattern the comment at the
+bottom of `lib/permissions.ts` warns about: importing from a
+`'use client'` module into a server component produces a
+client-reference stub that throws when invoked. `lib/permissions-server.ts`
+itself imports `resolveEffectivePermissions` from `permissions.ts`,
+so the helper transitively re-introduced the bug.
 
-### `/notams` (`a90d64b`)
+`48d59a9` second try: dropped `getPermissionsFor` and called the
+`user_has_permission(uuid, text)` SECURITY DEFINER RPC directly.
+Single round-trip, resolves role-preset + user_permission_overrides
+server-side, no cross-module import gotcha. Page loads.
 
-NOTAM number lifted from dim `--fs-sm color-text-3` mono to
-the canonical `--fs-md fw 700 color-cyan` — was metadata,
-should have been the primary identifier. New
-`compactNotamDate` helper drops the year for current-year
-dates and adds Today/Tomorrow/Yesterday relative anchors —
-saves significant width in the 2-col card grid where each
-card renders both effective_start and effective_end.
+User then clarified the actual scope: PDF Library should be
+**sys_admin only** — not visible to AFM, NAMO, base_admin, etc. The
+Phase A seed (`2026042200`) had granted `library:view` and
+`library:manage` broadly via the "all keys" inserts for sys_admin /
+airfield_manager / namo / base_admin and via the `%:view` loop for
+safety / atc; only `read_only` had been explicitly cleaned up later.
 
-### `/scn` (`1ae099e`)
-
-Real typo fix: history rows showed `Apr 30, 2026Z` — the `Z`
-designator is for times, not dates. Same typo on the page
-header. Both dropped. Plus relative-date prefix
-("Today" / "Yesterday" / "Mon, Apr 21") via a local
-`formatScnHistoryDate`. Modal got a one-tap "Mark All Loud
-& Clear" quick-fill button — most days are all-clear, this
-saves 13 taps per check. Hides once every agency is already
-loud_clear (matches the ACSI "Mark All Y" recipe).
-
-### `/checks/history` (`6973641`)
-
-Day grouping with relative-date headers + counts ("3 checks"
-right-aligned). Drop the per-row date prefix (now in the day
-header), display_id color migrated from `--color-accent` to
-`--color-cyan` for canonical alignment.
-
-### `/shift-checklist` (`abd5f55`)
-
-Real bug — FREQ_COLORS chip bg silently dropping. Weekly /
-monthly badges had been rendering with only colored text on
-the row's underlying bg (no chip) because the
-`${FREQ_COLORS[item.frequency]}15` hex-alpha-concat produced
-invalid CSS for the var-bound colors. Fixed with color-mix.
-Plus history-tab chevron `‹` Unicode → Lucide ChevronRight.
-
-### `/waivers` (`de32a1a`)
-
-Status-colored 3px left rail per row keyed off
-`WAIVER_STATUS_CONFIG.color` with urgency override:
-expiration within 30 days → danger rail, within 90 → warning,
-otherwise the status color. Classification badge migrated
-from uniform `--color-text-3` to a per-classification color
-map (Permanent → success, Temporary → warning amber, etc.).
-Expiration date proximity coloring on the date span — within
-30 days renders red + AlertCircle prefix, 90 days amber, 365
-days text-2, beyond text-3 default.
-
-### `/obstructions/[id]` (`db7a8a8`)
-
-Real bug — Required Actions list had three "5." entries in a
-row. Each violated surface was hardcoded to label `5.` instead
-of grouping under a single parent. Restructured as
-`5. Address each violated surface:` with an indented
-sub-bullet `<ul>` listing each surface. Scales cleanly to N
-violations. Plus display_id on canonical mono-cyan +
-`compactObstructionDate` helper modeled on the NOTAMs version.
-
-### `/ppr` (`5e858f2`)
-
-New PPR / Edit modal wrapped in a 2-column grid (Arrival
-Date / Notes / Approver OI span both columns; dynamic
-PprFieldInput cells fill one each). modalCardStyle widened
-from 520px → 720px with `maxWidth: '92vw'` so the columns get
-~330px after padding. The save-mode picker (Send to
-coordination / Pre-coordinated / Save pending) stays outside
-the grid. Detail modal benefits from the same width bump.
-
-### `/dashboard` + `/` (Airfield Status) (`ec6811c`, `0ee7d0b`)
-
-Dashboard: setup-banner + Out-of-Office active + Close-Airfield
-active rgba sites all migrated to color-mix; OOO migrated from
-`var(--color-accent)` to `var(--color-cyan)` for canonical
-alignment.
-
-Airfield Status: real bug — BWC option chip active bg silently
-dropping (same hex-alpha-concat footgun). LOW/MOD/SEV/PROHIB
-selector in the BWC modal had been rendering with no visible
-bg highlight. Fixed via color-mix on the resolved color
-expression. Plus runway-status `getColors` helper (10 rgba
-literals across 3 statuses) refactored to compute the token
-once and color-mix at the appropriate alpha. ADVISORY_COLORS
-weather-alert map tokenized + ADVISORY's text migrated from
-`--color-accent` to `--color-cyan`.
-
-### `/users` (`c28eb9d`)
-
-Role-colored 3px left rail per UserCard. New `getRoleRailColor`
-helper exported from `role-badge.tsx` mirrors the existing
-3-tier classification (sysadmin → danger, baseadmin / AFM /
-NAMO → cyan, others → text-3). Single source of truth so a
-future role addition updates the badge class + the rail color
-together.
-
-### `/more` (`58cf007`, `d08f06d`)
-
-Two commits on the mobile module menu. First tokenized the
-~25 raw hex literals across the 6 nav-item arrays to CSS
-vars, migrated the icon-tile concat to color-mix
-(pre-emptively — the concat worked on raw hex but would break
-the moment any color became a var; Change 1 made that
-inevitable so Change 2 was required), and swapped the Unicode
-`›` chevron for Lucide ChevronRight.
-
-Second commit was the **emoji-to-Lucide migration**. /more was
-the only place in the running UI still using emoji-as-icon at
-scale: 27 nav-tile emojis + 4 group-header emojis. Each
-migrated to a semantic Lucide component (RadioTower, BarChart3,
-ScrollText, Zap, Radio, CheckSquare, ClipboardCheck,
-ClipboardList, Bird, FileSignature, HardHat, AlertTriangle,
-MapPin, Lightbulb, PlaneLanding, Plane, Library, Clock,
-CalendarCheck, FileText, TrendingUp, GraduationCap, BookOpen,
-Users, SettingsIcon, Wrench, FolderOpen, Shield). `ModuleItem.icon`
-type changed from `string` to `LucideIcon`. Group icon tile bg
-also tokenized (was hardcoded slate rgba). The /wildlife empty
-state `🦅` glyph at `--fs-3xl` got the same Bird icon for
-single-canonical-icon-per-module consistency.
+`84cecb1` is migration `2026050100_library_perms_sys_admin_only.sql`:
+DELETEs both keys from `role_permissions` for every role
+`<> 'sys_admin'`, and DELETEs matching grants from
+`user_permission_overrides` where the override user is not a
+sys_admin. Idempotent. **User confirmed the migration was applied to
+prod this session.**
 
 ---
 
 ## Migrations status
 
-No new migrations this session. Migration `2026042907` is still
-the latest applied.
-
 | Migration | Status | What it does |
 |---|---|---|
+| `2026050100_library_perms_sys_admin_only.sql` | ✅ Applied (this session) | Locks `library:view` + `library:manage` to sys_admin only — revokes from `role_permissions` for every other role and from `user_permission_overrides` for non-sys_admin users. |
 | `2026042907_add_construction_other_check_types.sql` | ✅ Applied | (carryover) `airfield_checks_check_type_check` accepts `'construction'` and `'other'`. |
 | `2026042906_drop_ppr_arrival_eta_zulu.sql` | ✅ Applied | (carryover) Drops `ppr_entries.arrival_eta_zulu`; recreates `submit_public_ppr_request` RPC. |
 
@@ -321,73 +188,57 @@ the latest applied.
 
 ## Bugs fixed during the session
 
-The hex-alpha-concat footgun (`${var(--color-X)}NN` invalid CSS,
-silent bg/border drop) keeps surfacing in shared helpers. Each
-of these had been silently broken until this session.
-
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Required Actions on `/obstructions/[id]` rendered three `5.` entries in a row when an evaluation hit multiple violated surfaces. Looked like a typo. | The surface-violations loop hardcoded `5. {surfaceName}` instead of incrementing or grouping. Fixed by restructuring as a parent step + indented sub-bullet `<ul>`. | `db7a8a8` |
-| BWC option chip in the Airfield Status BWC modal had no visible active-state bg highlight when LOW/MOD/SEV/PROHIB was selected — only the colored text + border showed. | `${c}15` hex-alpha-concat where `c` is `var(--color-success)` etc. produces invalid CSS; the `background` declaration silently drops. Same footgun pinned in `feedback_amber_text_contrast.md`. | `0ee7d0b` |
-| FREQ_COLORS chip on `/shift-checklist` (Weekly / Monthly badge) had no visible chip bg — only colored text on the row's underlying bg. | Same hex-alpha-concat. `${FREQ_COLORS[item.frequency]}15` with var-bound colors was invalid CSS. Migrated to color-mix. | `abd5f55` |
-| Shared `ActionButton` component dropped bg + border for any caller that passed a CSS variable as `color`. Multiple `/waivers/[id]` and `/inspections/[id]` buttons had been rendering as just colored text on transparent bg. | `${color}14` / `${color}33` 8-digit hex concat works for hex but breaks for var. Migrated to color-mix(in srgb, ${color} 12% / 30%, transparent). | `f3fd20f` |
-| KPI band on `/discrepancies` "active" border state rendered with default `--color-border` instead of the per-KPI tint. | `${k.color}44` hex-alpha-concat where `k.color` was a var. Migrated to color-mix. | `809bc16` |
-| Trailing `Z` on `/scn` history-row dates and on the page header date — `Apr 30, 2026Z` instead of `Apr 30, 2026`. The `Z` time-zone designator is for times, not dates. | `formatZuluDate(...)Z` literal-Z suffix. Dropped. | `1ae099e` |
-| `/notams` `formatDate` produced verbose `Mar 9, 2026 1851Z` for every date. With both effective_start and effective_end on each card in the 2-col grid, this wrapped frequently. | New `compactNotamDate` helper handles relative anchors (Today/Yesterday) and drops year for current-year. Applied via `formatDate`. | `a90d64b` |
+| `/library` redirect-looped to `/more` for users granted `library:view` via a per-user override (not role preset). The link was visible in `/more` because the client hook merges overrides; click bounced. | The server-page gate at `app/(app)/library/page.tsx` queried `role_permissions` directly and ignored `user_permission_overrides`. Replaced with the shared helper, then with the SQL RPC after the next bug. | `2a5c22a` → `48d59a9` |
+| `/library` produced `TypeError: u is not a function` in production (Vercel logs from `/library/page.js`). Page never rendered. | `lib/permissions-server.ts` imports `resolveEffectivePermissions` from `lib/permissions.ts`, which is `'use client'`. Next.js wraps the import as a client-reference stub when called from a server component — the exact pattern the comment in `permissions.ts` explicitly warns about. The first-try fix transitively walked into the same trap. | `48d59a9` |
+| `/reports/aging` aging-tier badges silently broken pending tokenization. Worked *only* because tier colors were still raw hex; would have dropped bg + border the moment tier colors became CSS variables. | `${tier.color}28 / 14 / 33` hex-alpha concat. Same footgun pinned in `feedback_amber_text_contrast.md`. Migrated to color-mix preemptively. | `dc6d914` |
+| `/reports/daily` Generate Report was the only `linear-gradient` button still in the running app. | Pre-v2.32 styling never converted. Solid `var(--color-cyan)` + `var(--color-cyan-btn-text)` per the canonical filled-cyan recipe. | `03ced01` |
+| `/reports/daily` preview-view section icon-tile silently dropped bg+border for var-bound colors. | Same `${s.color}14 / ${s.color}33` concat (the very same `ActionButton` footgun fixed in the prior session). Replaced the colored 32×32 number-tile with a per-row 3px rail and count promoted to the right edge — same recipe used in `/daily-reviews`. | `03ced01` |
+| `/parking` clearance distance lines all anchored at the dragged aircraft's nose-gear pivot regardless of which side was being measured. | The drag-handler used `{lat,lng}` (= moved nose-gear position) for the line origin. Underlying clearance math used closest-edge geometry but the rendering didn't match. Refactored to ray-rectangle exit anchor via `spotCenter` + body-frame projection. | `2d8eedd` → `ccad75e` |
 
 ---
 
 ## Lessons from this session
 
-- **Structure-first, then tokens.** Re-saved the lesson as
-  `feedback_refresh_structure_first.md`. The prior week's
-  "distinctive refresh" sweep was tokenization-only — it
-  improved theme consistency but never touched scan hierarchy,
-  row density, status affordances, or relative-date formatting.
-  When the user pointed this out mid-session, the work pivoted
-  from token cleanup to actual UX restructure. Six pages
-  (`/daily-reviews`, `/recent-activity`, `/discrepancies`,
-  `/wildlife`, `/contractors`, `/aircraft`) got real
-  structural work this session that the prior token-only
-  sweep had skipped.
+- **Don't import from `'use client'` modules in server components, even
+  transitively.** The comment at the bottom of `lib/permissions.ts`
+  warns about this exact pattern, and `lib/permissions-server.ts`
+  was created specifically to dodge it — but the helper itself
+  imports `resolveEffectivePermissions` from the `'use client'`
+  module, so the trap re-armed transitively. For single-key
+  permission checks in server components, use the
+  `user_has_permission(uuid, text)` SECURITY DEFINER RPC directly.
+  For multi-key needs in a server route, the underlying helper
+  needs to be moved out of the `'use client'` file (`resolveEffectivePermissions`
+  is pure logic — no React, no client API — so it can live in a
+  shared `permissions-shared.ts`). Filed as known tech debt below.
 
-- **Screenshot-driven > code-only.** Saved as
-  `feedback_screenshot_then_plan_mode.md`. Before any
-  structural restructure: name the section, wait for the user's
-  screenshots, enter plan mode, propose specific changes, get
-  ExitPlanMode approval, execute. The /wildlife sighting/strike
-  rail differentiation that I flagged as broken from
-  code-reading turned out to already be in place — the
-  screenshot just happened to show only sightings. That kind
-  of false flag is exactly what screenshot-driven planning
-  prevents.
+- **Visual UI plans should lead with the visual outcome.** Saved as
+  `feedback_visual_plan_brevity.md`. The parking-toolbar plan was
+  comprehensive — exhaustive icon table, color-mix tradeoff
+  exposition, sidebar-position math — and the user said "I don't
+  really understand what you are explaining with the new tools, I
+  guess proceed and we will see what it looks like." For visual
+  changes, an ASCII sketch + plain-language behavior is enough;
+  defer code-level tradeoffs to execution. The user can course-
+  correct from a render faster than from a design doc. This
+  complements `feedback_screenshot_then_plan_mode.md` (still
+  plan-mode-gated) — the *content* of those plans should be
+  visual-first.
 
-- **Hex-alpha-concat keeps biting.** Counted 6 distinct
-  instances surfaced this session alone (`ActionButton`,
-  FREQ_COLORS, BWC option chip, KPI band, `/more` icon tile,
-  `chipStyle` in acsi-discrepancy-picker). Each was working
-  until a CSS variable replaced a hex literal in some upstream
-  callsite, then silently broke. The fix is mechanical
-  (`color-mix(in srgb, ${color} N%, transparent)`) but the
-  preventive sweep is still incomplete — every shared helper
-  that does string concatenation on a color is suspect. A
-  codebase-wide grep for `\$\{[a-z]+\}1[0-9A-F]` style
-  patterns would surface remaining cases.
+- **"Same on mobile" deserves a mid-iteration sanity check.** The
+  parking rail went through three layouts because the user's "same
+  on mobile" intent reversed once they saw the desktop rail's height
+  in a portrait viewport. Per the new memory, render the change and
+  let the user judge instead of designing for both at once.
 
-- **Real bugs ride along with structural work.** The
-  obstructions duplicate `5.` numbering, the BWC chip
-  silent-drop, the ActionButton var-color drop — none of
-  these were on anyone's bug list. Each surfaced because the
-  structural pass forced a careful read of the rendering code.
-  Worth keeping the bundle pattern: structural commit
-  includes incidental bugs found in the same scope.
-
-- **Auto mode + plan mode coexist via the
-  screenshot-then-plan-mode rule.** Auto mode says "execute
-  immediately"; the user's explicit instruction says
-  "always use plan mode for each section before execution."
-  The user's direct instruction beats the auto-mode default.
-  Memory captures the rule so it survives across sessions.
+- **Hex-alpha-concat preventive sweep is still incomplete.** Three
+  more instances surfaced this session (`/reports/aging` tier
+  badges, `/reports/daily` section icon tile, `/reports` index card
+  border). Total fixed across both sessions: ~9. Codebase-wide grep
+  for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining
+  cases. Mechanical fix.
 
 ---
 
@@ -395,10 +246,12 @@ of these had been silently broken until this session.
 
 | Item | Severity | Notes |
 |---|---|---|
-| Cyan filter-chip `rgba(56,189,248, X)` patterns in `/aircraft` | Low | (Carryover) Category tabs, sort buttons, favorites toggle — many chips, identical pattern. Visible only as "looks slightly more saturated than QRC's chips." |
-| `computeIconScale` uses `getBounds()` for px-per-degree calc | Low | (Carryover) Naive bounds rectangle expands on a rotated map; aircraft render slightly smaller than intended at non-zero map heading. |
-| Counter-rotation of aircraft icons regenerates 30+ canvases per heading change | Low–Medium | (Carryover) Smooth on developer laptops. May stutter on weaker hardware during fast Ctrl+drag rotation. Migration target: `AdvancedMarkerElement`. |
-| Largest parking page LOC (~4.4K) still monolithic | Held | (Carryover) Component extraction explicitly held out from the prior session. Visible polish is in place. |
+| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module — works on the client but transitively re-introduces the client-reference-stub bug if any server caller invokes the full helper. | Medium | Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module so server callers can use the helper without the SQL RPC dance. The `/users` page is the only remaining server-side caller of `getPermissionsFor` — `/library` now uses the RPC directly. |
+| Hex-alpha-concat sweep still incomplete | Low | A codebase-wide grep for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining cases. ~9 fixed across the last two sessions. Mechanical fix (`color-mix(in srgb, ${color} N%, transparent)`). |
+| Cyan filter-chip `rgba(56,189,248, X)` patterns in `/aircraft` | Low | (Carryover) Category tabs, sort buttons, favorites toggle. |
+| `computeIconScale` uses `getBounds()` for px-per-degree calc | Low | (Carryover) Naive bounds rectangle expands on a rotated map. |
+| Counter-rotation of aircraft icons regenerates 30+ canvases per heading change | Low–Medium | (Carryover) Smooth on developer laptops, may stutter on weaker hardware. Migration target: `AdvancedMarkerElement`. |
+| Largest parking page LOC (~4.6K) still monolithic | Held | (Carryover) Component extraction explicitly held out from prior sessions. |
 | Untracked `dark logo.jpg` (2.4MB) | Low | Sits in `/public` from a prior logo experiment. Carryover. |
 | Untracked `docs/DEMO_LOGINS.md` | Low | Carryover. |
 | Untracked `.claude/` | Low | Local Claude Code settings (gitignored expectation). Carryover. |
@@ -408,80 +261,44 @@ of these had been silently broken until this session.
 | Sequential PPR coordination | Deferred (carryover) | All assigned agencies see their work in parallel; no ordering. |
 | Public PPR form file uploads | Deferred (carryover) | Out of scope unless requested. |
 | "Advisories" → "WWA Notifications" UI sweep | Deferred (carryover) | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
-| ~124 `as any` casts project-wide | Low | (Carryover) Was 182. |
+| ~124 `as any` casts project-wide | Low | (Carryover). |
 | PDF boilerplate duplication in 11 generators | Low | (Carryover) 5 already on `pdf-utils.ts`. |
 | Check draft real-time sync deferred | Low | (Carryover) Two users could create duplicate drafts. |
-| `tweaks` branch unmerged | Action | 31 commits on `tweaks` not yet merged to `main` or pushed. User decides when. |
-| Hex-alpha-concat sweep incomplete | Low | Six instances fixed this session. A codebase-wide grep for `\$\{[a-z_]+\}[0-9A-F]{1,2}` patterns would surface remaining cases. |
-| `/feedback` (staff log view) — never reviewed | Low | On the original Tier 3 list. User sent a public-form screenshot instead and the public form was already canonical from Tier 1. The staff view at `app/(app)/feedback/page.tsx` has not been examined. |
 
 ---
 
 ## Next session tasks
 
-The structure-first audit is **complete for the surfaces with
-screenshots**. None of the items below are required next
-steps — pick whichever the user wants to focus on. Most need a
-screenshot to enter the same plan-mode flow.
+User explicitly bundled three pages for the next session: `/training`,
+`/infrastructure` (Visual NAVAIDs), and `/settings/base-setup`.
 
-### Pages explicitly NOT touched this session
+- **`/training`** (Glidepath Training) — needs a full content
+  refresh per user: "training will need to be updated significantly."
+  Screenshots needed; user will provide. ~21 kB First Load JS so
+  moderate substance. In-app guidance for using the platform.
+- **`/infrastructure`** (Visual NAVAIDs, ~4.1K LOC) — bigger
+  multi-session work. Real backlog: layer-toggle full-rebuild
+  perf, health-ring `Circle` volume, audit-mode panel.
+- **`/settings/base-setup`** (~4.7K LOC) — the largest page in the
+  app. 15-step config wizard.
 
-These were either out of screenshot scope or explicitly deferred.
-
-- **`/library`** (PDF Library) — referenced in `/more` but no
-  structural work; never screenshotted.
-- **`/training`** (Glidepath Training) — on the Tier 3 list;
-  ~21 kB First Load JS suggests moderate complexity. No
-  screenshots came in.
-- **`/feedback`** (staff log view at
-  `app/(app)/feedback/page.tsx`) — was on the Tier 3 list but
-  only the public QR form was reviewed. The staff view has not
-  been examined.
-- **`/reports` subpages** (`daily`, `aging`, `discrepancies`,
-  `lighting`, `trends`) — flagged as "Tier 4" deferred.
-  Reports tend to have minimal interactive chrome; sweep
-  targets are likely page titles, table-row tints, and the
-  export-button styles.
-- **`/settings/base-setup`** — 4.7K LOC. Explicit multi-session
-  work, not a single-pass refresh.
-- **`/infrastructure`** (Visual NAVAIDs) — 4.1K LOC. Also
-  queued. Layer-toggle perf + health-ring volume + audit-mode
-  panel are all separate concerns deferred from prior work.
-- **`/parking` page proper** — visible polish is done from the
-  prior parking-deep session. **Component extraction is
-  queued and still needs to be completed next session** —
-  4.4K LOC of stable JSX in `app/(app)/parking/page.tsx`. Per
-  prior plan: four commits to extract `parking-panel.tsx`
-  (`sidebarContent()`, ~1K LOC), then `AircraftTab` +
-  `AircraftGroup` + `AircraftSpotRow`, then `EnvironmentTab`,
-  then `ClearanceTab` + `SettingsTab` + `ParkingHeader` +
-  `ActionBar`. After all four, `parking/page.tsx` drops from
-  ~4.4K to ~1.5K (state + handlers + map init + four
-  top-level component calls).
-
-### Branch + merge
-
-`tweaks` branch has 31 commits not on `main`. User decides
-when to merge or push.
-
-### Hex-alpha-concat preventive sweep (low priority)
-
-Codebase-wide grep for the pattern would surface any remaining
-silent bg-drops. Six instances were fixed this session
-(`ActionButton`, FREQ_COLORS, BWC option chip, KPI band,
-`/more` icon tile, `chipStyle` in
-`acsi-discrepancy-picker`). The fix is mechanical
-(`color-mix(in srgb, ${color} N%, transparent)`).
+These three are likely a multi-session arc, not one session.
 
 ### Long-running carryover (bandwidth-permitting)
 
 Pick from these only when bandwidth allows or a customer asks:
 
-- Component extraction for the other 4K+ LOC pages (`base-setup`,
-  `infrastructure`).
+- `/parking/page.tsx` component extraction (~4.6K LOC → ~1.5K via
+  `parking-panel.tsx` + `AircraftTab` + `EnvironmentTab` +
+  `ClearanceTab` + `SettingsTab` + `ParkingHeader` + `ActionBar`).
+  Four-commit plan still queued.
+- Move `resolveEffectivePermissions` out of `lib/permissions.ts`
+  (`'use client'`) into a shared module so `lib/permissions-server.ts`
+  doesn't transitively re-arm the client-reference-stub bug. Pure
+  refactor; no behavior change.
+- Hex-alpha-concat preventive grep + sweep.
 - CAC/PIV authentication (blocked on Platform One).
-- Outage analytics, training management, Part 139 civilian
-  template.
+- Outage analytics, training management, Part 139 civilian template.
 - "Advisories" → "WWA Notifications" UI sweep.
 - Offline reads for QRC + Regulations.
 
@@ -493,30 +310,19 @@ Pick from these only when bandwidth allows or a customer asks:
 TypeScript clean (npx tsc --noEmit exit 0)
 Tests: 253 pass / 25 files (unchanged)
 Build: npm run build clean — no warnings, no errors.
-No new migrations.
+1 new migration this session, applied to prod.
 
 Notable First Load JS (changed routes this session):
   /                                     (Airfield Status — full-page route)
-  /acsi                            3.04 kB / 199 kB
-  /acsi/[id]                       5.53 kB / 202 kB
-  /acsi/new                        19.8 kB / 204 kB
-  /aircraft                        11.7 kB / 155 kB
-  /checks/history                  6.72 kB / 199 kB
-  /contractors                     10.7 kB / 191 kB
-  /daily-reviews                   2.67 kB / 327 kB
-  /dashboard                       14.0 kB / 205 kB
-  /discrepancies                   11.3 kB / 226 kB
-  /discrepancies/[id]              8.35 kB / 213 kB
-  /more                            8.47 kB / 180 kB   (+0.20 from Lucide imports)
-  /notams                          7.01 kB / 178 kB
-  /obstructions                    17.8 kB / 182 kB
-  /obstructions/[id]               12.0 kB / 329 kB
-  /ppr                             16.9 kB / 184 kB
-  /recent-activity                 5.37 kB / 160 kB   (+0.96 from grouping helpers)
-  /scn                             10.3 kB / 181 kB
-  /shift-checklist                 5.56 kB / 168 kB
-  /users                           18.3 kB / 183 kB
-  /waivers                         4.02 kB / 187 kB
+  /feedback                             (staff view restructure)
+  /library                              146 kB / 292 kB
+  /parking                              43.6 kB / 416 kB   (+1.9 from rail toolbar)
+  /reports                              6.26 kB / 168 kB
+  /reports/aging                        5.71 kB / 331 kB
+  /reports/daily                        3.73 kB / 322 kB   (-0 from gradient drop)
+  /reports/discrepancies                4.63 kB / 330 kB
+  /reports/lighting                     7.62 kB / 318 kB
+  /reports/trends                       4.9 kB / 316 kB
 
 Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
@@ -528,13 +334,14 @@ Middleware: 74.5 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-05-01 (this session) | Structure-first audit. 31 commits across 22+ surfaces. ACSI module sweep (7 commits), structural restructures of `/daily-reviews`, `/recent-activity`, `/wildlife` list+form, `/aircraft` list+detail, `/contractors`, `/discrepancies` list+detail. Tier 3 sweep: `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/ppr`, `/dashboard`, `/`, `/users`, `/more` (2 commits including emoji→Lucide). 6 real bugs fixed including the hex-alpha-concat silent-drops in `ActionButton`, `BWC chip`, `FREQ_COLORS`, KPI band; and the `obstructions` duplicate-`5.` Required Actions numbering. All on `tweaks` branch, 0 migrations. |
-| **Unreleased** | 2026-04-30 (prior) | Tier 2 of the audit-derived refresh backlog finished. Six commits across five pages: `/regulations` (outlined-pill tabs + card refresh with left-rail accents), `/aircraft` (PASS/EXCEEDS + Shield purple tokenized, six fs-2xl headers down a tier), `/ces` (rgba cleanup + a latent hex-alpha-concat bug fix), `/shift-checklist` (Lucide Check + pill tokenization), `/recent-activity` (entity color tokens). Plus the prior-session handoff committed. |
-| **Unreleased** | 2026-04-30 (prior) | Tier 1 of the audit refresh (login + reset-password + setup-account + public feedback) plus 25-commit deep parking polish. 28 commits. |
-| **Unreleased** | 2026-04-30 (prior) | Distinctive-refresh sweep across high-traffic routes: Inspections, NOTAMs, Wildlife, /scn, /contractors, /obstructions, /waivers. DetailGrid bordered tiles. 20 commits. |
-| **Unreleased** | 2026-04-30 (prior) | QRC distinctive refresh: amber-unified colors via outlined-pill, Done/N/A toggle + schema bridge, full PDF rewrite. 1 commit. |
-| **Unreleased** | 2026-04-29 | Distinctive-refresh sweep across `/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections`. Construction + Other check types added. PfnToggle extracted. 16 commits, two migrations applied. |
-| **Unreleased** | 2026-04-29 (prior) | PPR per-surface visibility, per-column `time_display`, public form ETA optional, Airfield Status base-local-today filter, type-scale shrink. 4 commits. |
+| **Unreleased** | 2026-05-01 (this session) | Reports & Analytics structure-first sweep (6 pages). Parking left-rail toolbar through three iterations to land on responsive desktop-vertical / mobile-split. Parking clearance lines now anchor on ray-rectangle exit per side. /feedback staff view restructure (header split + per-row rating rail + token sweep). /library access bug fixes — Vercel `TypeError: u is not a function` traced to a `'use client'` transitive import in the server gate; switched to the `user_has_permission` RPC directly. Migration `2026050100` locks `library:view` + `library:manage` to sys_admin only. 16 commits on `main`, all pushed. |
+| **Unreleased** | 2026-05-01 (prior) | Structure-first audit. 31 commits across 22+ surfaces. ACSI module sweep (7 commits), structural restructures of `/daily-reviews`, `/recent-activity`, `/wildlife` list+form, `/aircraft` list+detail, `/contractors`, `/discrepancies` list+detail. Tier 3 sweep: `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/ppr`, `/dashboard`, `/`, `/users`, `/more` (2 commits including emoji→Lucide). 6 real bugs fixed including the hex-alpha-concat silent-drops in `ActionButton`, `BWC chip`, `FREQ_COLORS`, KPI band; and the `obstructions` duplicate-`5.` Required Actions numbering. |
+| **Unreleased** | 2026-04-30 (prior) | Tier 2 of the audit-derived refresh backlog finished. Six commits across five pages. |
+| **Unreleased** | 2026-04-30 (prior) | Tier 1 of the audit refresh + 25-commit deep parking polish. 28 commits. |
+| **Unreleased** | 2026-04-30 (prior) | Distinctive-refresh sweep across high-traffic routes. 20 commits. |
+| **Unreleased** | 2026-04-30 (prior) | QRC distinctive refresh. 1 commit. |
+| **Unreleased** | 2026-04-29 | Distinctive-refresh sweep across `/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections`. 16 commits, two migrations applied. |
+| **Unreleased** | 2026-04-29 (prior) | PPR per-surface visibility, public form ETA optional, Airfield Status base-local-today filter, type-scale shrink. 4 commits. |
 | **Unreleased** | 2026-04-28 (cont.) | Capabilities doc v2.32 + FOD Check terminology, discrepancy notes humanization, Visual NAVAIDs zoom stabilization, Training nav rename, CLAUDE.md drift fixes. 6 commits. |
 | **Unreleased** | 2026-04-28 | PPR commercial phone + ETA Zulu spine, soft-cancel + email, AMOPS delete/approve perms, manual-coord-pending, slim Log, ACSI per-member signature toggle, sidebar badge polling cuts. Four migrations. |
 | **Unreleased** | 2026-04-27 (cont.) | Denial email, AMOPS reply-to format check, PPR PDF coord/status section, no-coord triage warning, OI refresh, public form date echo, atomic PPR# counter, storage RLS path scoping, sidebar badge fixes. |
@@ -554,76 +361,36 @@ See `CHANGELOG.md` for full history.
 
 ### New files
 
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_refresh_structure_first.md`
-  — feedback memory: refresh sweeps should review structure
-  before tokenization.
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_screenshot_then_plan_mode.md`
-  — feedback memory: structural restructures are
-  screenshot-gated and require plan-mode + ExitPlanMode
-  approval per section.
+- `supabase/migrations/2026050100_library_perms_sys_admin_only.sql` —
+  migration locking `library:view` + `library:manage` to sys_admin
+  only. Applied to prod this session.
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_visual_plan_brevity.md`
+  — feedback memory: visual UI plans should lead with the visual
+  outcome (ASCII sketch + behavior), defer code-level tradeoffs to
+  execution.
 
 ### Modified files
 
-- `app/(app)/page.tsx` — Airfield Status. BWC chip, runway
-  status, ADVISORY_COLORS.
-- `app/(app)/dashboard/page.tsx` — setup banner, OOO, Close
-  Airfield rgba sites.
-- `app/(app)/discrepancies/page.tsx` — list restructure.
-- `app/(app)/discrepancies/[id]/page.tsx` — toolbar grouping +
-  ActionButton fix.
-- `app/(app)/checks/history/page.tsx` — date grouping.
-- `app/(app)/notams/page.tsx` — number prominence + compact
-  date format.
-- `app/(app)/ppr/page.tsx` — modal 2-col grid + width bump.
-- `app/(app)/scn/page.tsx` — relative-date history + quick-fill.
-- `app/(app)/waivers/page.tsx` — rail + classification +
-  expiration urgency.
-- `app/(app)/obstructions/[id]/page.tsx` — Required Actions
-  sub-bullets + display_id + date.
-- `app/(app)/contractors/page.tsx` — densification + Day N +
-  Add form 2-col.
-- `app/(app)/shift-checklist/page.tsx` — FREQ_COLORS bug +
-  Lucide.
-- `app/(app)/daily-reviews/page.tsx` — token + structural
-  restructure.
-- `components/daily-reviews/sign-modal.tsx` — token sweep.
-- `app/(app)/recent-activity/page.tsx` — restructure rows +
-  day headers.
-- `app/(app)/wildlife/page.tsx` — list date grouping + Bird
-  empty state.
-- `components/wildlife/sighting-form.tsx` — section headers +
-  Action Taken chip cluster.
-- `app/(app)/aircraft/page.tsx` — list densification + detail
-  polish.
-- `app/(app)/users/page.tsx` — (no direct change; via
-  components/admin/).
-- `components/admin/role-badge.tsx` — `getRoleRailColor` helper.
-- `components/admin/user-card.tsx` — borderLeft.
-- `app/(app)/more/page.tsx` — token migration + emoji→Lucide.
-- `app/(app)/acsi/page.tsx` — list refresh + draft state.
-- `app/(app)/acsi/[id]/page.tsx` — detail refresh.
-- `app/(app)/acsi/new/page.tsx` — new/edit refresh.
-- `components/acsi/acsi-section.tsx` — token sweep.
-- `components/acsi/acsi-item.tsx` — response buttons + tints.
-- `components/acsi/acsi-discrepancy-panel-group.tsx` — token sweep.
-- `components/acsi/acsi-discrepancy-panel.tsx` — token sweep +
-  Affected Areas chip cluster.
-- `components/acsi/acsi-discrepancy-picker.tsx` — chipStyle
-  hardening.
-- `components/ui/email-pdf-modal.tsx` — hex-alpha purple
-  migration.
-- `components/ui/button.tsx` — `ActionButton` color-mix fix.
-- `lib/constants.ts` — `ACSI_STATUS_CONFIG` tokenization.
+- `app/(app)/reports/page.tsx` — index restructure.
+- `app/(app)/reports/daily/page.tsx` — gradient drop + section row rail + tokens.
+- `app/(app)/reports/discrepancies/page.tsx` — filter-card rail + token sweep.
+- `app/(app)/reports/trends/page.tsx` — outlined-pill picker + tabular bars.
+- `app/(app)/reports/aging/page.tsx` — tier color-mix preventive fix + per-row rail.
+- `app/(app)/reports/lighting/page.tsx` — outlined-pill sort + summary rails.
+- `app/(app)/parking/page.tsx` — rail toolbar (5 commits) + clearance line anchors (2 commits).
+- `app/(app)/feedback/page.tsx` — header split + per-row rating rail + tokens + Lucide X.
+- `app/(app)/library/page.tsx` — server gate via `user_has_permission` RPC.
 
 ### Reference files (read-only)
 
-- `app/(app)/qrc/page.tsx:194` + `:245` — canonical
-  outlined-pill + card recipes.
-- `app/(app)/notams/page.tsx:496` + `:558` — second canonical.
-- `feedback_amber_text_contrast.md` — hex-alpha-concat
-  footgun, cited in 6 commit bodies.
-- `feedback_chip_cluster_pattern.md` — chip cluster recipe,
-  cited in ACSI Affected Areas + Wildlife Action Taken.
+- `app/(app)/qrc/page.tsx:194` — canonical outlined-pill recipe (cited
+  in `/reports/trends` and `/reports/lighting` sort-tab refactors).
+- `lib/permissions.ts` (bottom comment) — the `'use client'` →
+  server-component import warning that the `/library` bug
+  rediscovered the hard way.
+- `feedback_screenshot_then_plan_mode.md` — cited in the parking
+  rail iteration; plan-mode-gated structural work survived even with
+  three course corrections.
 
 ### Environment changes
 
@@ -631,7 +398,8 @@ None this session.
 
 ---
 
-*All 31 commits this session are on the `tweaks` branch and have
-not been pushed. No new migrations. No version bump. Untracked
-files (`.claude/`, `docs/DEMO_LOGINS.md`, `public/dark logo.jpg`)
-remain carryover.*
+*All 16 commits this session are on the `main` branch and have been
+pushed to `origin/main`. One migration applied to prod
+(`2026050100_library_perms_sys_admin_only.sql`). No version bump.
+Untracked files (`.claude/`, `docs/DEMO_LOGINS.md`,
+`public/dark logo.jpg`) remain carryover.*
