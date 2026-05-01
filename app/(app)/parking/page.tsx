@@ -3904,7 +3904,10 @@ export default function ParkingPage() {
               </div>
             )
           })()}
-          {/* Toolbar rail — vertical at left on desktop, horizontal scrolling strip at top on mobile */}
+          {/* Toolbar rail — desktop: single vertical column at left.
+              Mobile: edit-tool strip across the top + small view/output cluster bottom-right.
+              Full / Ruler / PDF / Email aren't core to plan editing, so on mobile they
+              live in a separate cluster from the parking-edit tools. */}
           {(() => {
             const railBtnBase: React.CSSProperties = {
               width: 52, height: 48, borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
@@ -3919,180 +3922,208 @@ export default function ParkingPage() {
               background: `color-mix(in srgb, ${color} 12%, transparent)`,
               color,
             })
-            const Divider = () => (
-              <div style={{
-                background: 'var(--color-border)', flexShrink: 0,
-                ...(isMobile
-                  ? { width: 1, height: 'auto', alignSelf: 'stretch', margin: '0 4px' }
-                  : { height: 1, margin: '4px 4px' }),
-              }} />
+            const VDivider = () => (
+              <div style={{ background: 'var(--color-border)', flexShrink: 0, width: 1, alignSelf: 'stretch', margin: '0 4px' }} />
             )
+            const HDivider = () => (
+              <div style={{ background: 'var(--color-border)', flexShrink: 0, height: 1, margin: '4px 4px' }} />
+            )
+
+            // Reusable button factories so desktop and mobile render the same controls.
+            const PanelBtn = !isMobile && (
+              <button
+                key="panel"
+                onClick={() => setSidebarCollapsed(c => !c)}
+                title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
+                style={{ ...railBtnBase, ...(sidebarCollapsed ? {} : activeStyle('var(--color-cyan)')) }}
+              >
+                {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+                <span>{sidebarCollapsed ? 'Panel' : 'Hide'}</span>
+              </button>
+            )
+            const FullBtn = (
+              <button
+                key="full"
+                onClick={() => setIsFullscreen(f => !f)}
+                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                style={{ ...railBtnBase, ...(isFullscreen ? activeStyle('var(--color-cyan)') : {}) }}
+              >
+                {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                <span>{isFullscreen ? 'Exit' : 'Full'}</span>
+              </button>
+            )
+            const RulerBtn = (
+              <button
+                key="ruler"
+                onClick={() => setRulerActive(r => !r)}
+                title={rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Measure distance'}
+                style={{ ...railBtnBase, ...(rulerActive ? activeStyle('var(--color-cyan)') : {}) }}
+              >
+                <RulerIcon size={18} />
+                <span>{rulerActive && ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Ruler'}</span>
+              </button>
+            )
+            const PdfBtn = (
+              <button
+                key="pdf"
+                onClick={handleExportPdf}
+                disabled={exportingPdf}
+                title="Export PDF"
+                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
+              >
+                <Download size={18} />
+                <span>{exportingPdf ? '...' : 'PDF'}</span>
+              </button>
+            )
+            const EmailBtn = (
+              <button
+                key="email"
+                onClick={handleEmailPdf}
+                disabled={exportingPdf}
+                title="Email PDF"
+                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
+              >
+                <Mail size={18} />
+                <span>Email</span>
+              </button>
+            )
+
+            const editTools = selectedPlanId ? (
+              <>
+                <button
+                  onClick={() => setShowAircraftPicker(true)}
+                  title="Add aircraft"
+                  style={{ ...railBtnBase, ...activeStyle('var(--color-cyan)') }}
+                >
+                  <Plane size={18} />
+                  <span>Aircraft</span>
+                </button>
+                {(['point', 'building', 'line', 'circle'] as const).map(type => {
+                  const Icon = type === 'point' ? MapPin : type === 'building' ? Building2 : type === 'line' ? Minus : CircleIcon
+                  const active = placingObstacle === type
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
+                      title={`Place ${type} obstacle`}
+                      style={{ ...railBtnBase, ...(active ? activeStyle('var(--color-orange)') : {}) }}
+                    >
+                      <Icon size={18} />
+                      <span style={{ textTransform: 'capitalize' }}>{type}</span>
+                    </button>
+                  )
+                })}
+                {isMobile ? <VDivider /> : <HDivider />}
+                <button
+                  onClick={() => handleStartTaxilane('interior')}
+                  disabled={!!drawingTaxilaneId}
+                  title="Draw interior taxilane"
+                  style={{ ...railBtnBase, color: 'var(--color-blue)', opacity: drawingTaxilaneId ? 0.4 : 1, cursor: drawingTaxilaneId ? 'default' : 'pointer' }}
+                >
+                  <ArrowRight size={18} />
+                  <span>Int Tax</span>
+                </button>
+                <button
+                  onClick={() => handleStartTaxilane('peripheral')}
+                  disabled={!!drawingTaxilaneId}
+                  title="Draw peripheral taxilane"
+                  style={{ ...railBtnBase, color: 'var(--color-violet)', opacity: drawingTaxilaneId ? 0.4 : 1, cursor: drawingTaxilaneId ? 'default' : 'pointer' }}
+                >
+                  <ArrowLeftRight size={18} />
+                  <span>Per Tax</span>
+                </button>
+                <button
+                  onClick={handleStartBoundary}
+                  disabled={!!drawingBoundaryId}
+                  title="Draw apron boundary"
+                  style={{ ...railBtnBase, color: 'var(--color-success)', opacity: drawingBoundaryId ? 0.4 : 1, cursor: drawingBoundaryId ? 'default' : 'pointer' }}
+                >
+                  <Square size={18} />
+                  <span>Boundary</span>
+                </button>
+                {isMobile ? <VDivider /> : <HDivider />}
+                <button
+                  onClick={() => setPlanLocked(l => !l)}
+                  title={planLocked ? 'Aircraft locked — click to enable dragging' : 'Aircraft unlocked — click to lock'}
+                  style={{ ...railBtnBase, ...activeStyle(planLocked ? 'var(--color-danger)' : 'var(--color-success)') }}
+                >
+                  {planLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                  <span>AC</span>
+                </button>
+                <button
+                  onClick={() => setObstaclesLocked(l => !l)}
+                  title={obstaclesLocked ? 'Obstacles locked — click to enable dragging' : 'Obstacles unlocked — click to lock'}
+                  style={{ ...railBtnBase, ...activeStyle(obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)') }}
+                >
+                  {obstaclesLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                  <span>OB</span>
+                </button>
+              </>
+            ) : null
+
+            if (isMobile) {
+              return (
+                <>
+                  {/* Top strip — plan-edit tools (only when a plan is loaded) */}
+                  {selectedPlanId && (
+                    <div style={{
+                      position: 'absolute', zIndex: 5,
+                      top: 10, left: 10, right: 10,
+                      display: 'flex', flexDirection: 'row', gap: 2,
+                      padding: 6, borderRadius: 8,
+                      background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                      overflowX: 'auto', overflowY: 'hidden',
+                      maxWidth: 'calc(100vw - 20px)',
+                    }}>
+                      {editTools}
+                    </div>
+                  )}
+                  {/* Bottom-right cluster — view + output (always visible) */}
+                  <div style={{
+                    position: 'absolute', zIndex: 5,
+                    bottom: 10, right: 10,
+                    display: 'flex', flexDirection: 'row', gap: 2,
+                    padding: 6, borderRadius: 8,
+                    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                  }}>
+                    {FullBtn}
+                    {RulerBtn}
+                    {selectedPlanId && (
+                      <>
+                        <VDivider />
+                        {PdfBtn}
+                        {EmailBtn}
+                      </>
+                    )}
+                  </div>
+                </>
+              )
+            }
+
+            // Desktop — single vertical rail at left
             return (
               <div style={{
                 position: 'absolute', zIndex: 5,
-                display: 'flex', gap: 2,
+                top: 10, left: 10,
+                display: 'flex', flexDirection: 'column', gap: 2,
                 padding: 6, borderRadius: 8,
                 background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                ...(isMobile
-                  ? {
-                      top: 10, left: 10, right: 10,
-                      flexDirection: 'row',
-                      overflowX: 'auto', overflowY: 'hidden',
-                      maxWidth: 'calc(100vw - 20px)',
-                    }
-                  : {
-                      top: 10, left: 10,
-                      flexDirection: 'column',
-                      overflowY: 'auto',
-                      maxHeight: 'calc(100vh - 20px)',
-                    }),
+                overflowY: 'auto',
+                maxHeight: 'calc(100vh - 20px)',
               }}>
-                {/* Group 1: View controls */}
-                {!isMobile && (
-                  <button
-                    onClick={() => setSidebarCollapsed(c => !c)}
-                    title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
-                    style={{ ...railBtnBase, ...(sidebarCollapsed ? {} : activeStyle('var(--color-cyan)')) }}
-                  >
-                    {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-                    <span>{sidebarCollapsed ? 'Panel' : 'Hide'}</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsFullscreen(f => !f)}
-                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                  style={{ ...railBtnBase, ...(isFullscreen ? activeStyle('var(--color-cyan)') : {}) }}
-                >
-                  {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                  <span>{isFullscreen ? 'Exit' : 'Full'}</span>
-                </button>
-                <button
-                  onClick={() => setRulerActive(r => !r)}
-                  title={rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Measure distance'}
-                  style={{ ...railBtnBase, ...(rulerActive ? activeStyle('var(--color-cyan)') : {}) }}
-                >
-                  <RulerIcon size={18} />
-                  <span>{rulerActive && ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Ruler'}</span>
-                </button>
-
-                {/* Groups 2-5: Edit tools when plan selected */}
+                {PanelBtn}
+                {FullBtn}
+                {RulerBtn}
                 {selectedPlanId && (
                   <>
-                    <Divider />
-                    <button
-                      onClick={() => setShowAircraftPicker(true)}
-                      title="Add aircraft"
-                      style={{ ...railBtnBase, ...activeStyle('var(--color-cyan)') }}
-                    >
-                      <Plane size={18} />
-                      <span>Aircraft</span>
-                    </button>
-                    {(['point', 'building', 'line', 'circle'] as const).map(type => {
-                      const Icon = type === 'point' ? MapPin : type === 'building' ? Building2 : type === 'line' ? Minus : CircleIcon
-                      const active = placingObstacle === type
-                      return (
-                        <button
-                          key={type}
-                          onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
-                          title={`Place ${type} obstacle`}
-                          style={{ ...railBtnBase, ...(active ? activeStyle('var(--color-orange)') : {}) }}
-                        >
-                          <Icon size={18} />
-                          <span style={{ textTransform: 'capitalize' }}>{type}</span>
-                        </button>
-                      )
-                    })}
-
-                    <Divider />
-                    <button
-                      onClick={() => handleStartTaxilane('interior')}
-                      disabled={!!drawingTaxilaneId}
-                      title="Draw interior taxilane"
-                      style={{
-                        ...railBtnBase,
-                        color: 'var(--color-blue)',
-                        opacity: drawingTaxilaneId ? 0.4 : 1,
-                        cursor: drawingTaxilaneId ? 'default' : 'pointer',
-                      }}
-                    >
-                      <ArrowRight size={18} />
-                      <span>Int Tax</span>
-                    </button>
-                    <button
-                      onClick={() => handleStartTaxilane('peripheral')}
-                      disabled={!!drawingTaxilaneId}
-                      title="Draw peripheral taxilane"
-                      style={{
-                        ...railBtnBase,
-                        color: 'var(--color-violet)',
-                        opacity: drawingTaxilaneId ? 0.4 : 1,
-                        cursor: drawingTaxilaneId ? 'default' : 'pointer',
-                      }}
-                    >
-                      <ArrowLeftRight size={18} />
-                      <span>Per Tax</span>
-                    </button>
-                    <button
-                      onClick={handleStartBoundary}
-                      disabled={!!drawingBoundaryId}
-                      title="Draw apron boundary"
-                      style={{
-                        ...railBtnBase,
-                        color: 'var(--color-success)',
-                        opacity: drawingBoundaryId ? 0.4 : 1,
-                        cursor: drawingBoundaryId ? 'default' : 'pointer',
-                      }}
-                    >
-                      <Square size={18} />
-                      <span>Boundary</span>
-                    </button>
-
-                    <Divider />
-                    <button
-                      onClick={() => setPlanLocked(l => !l)}
-                      title={planLocked ? 'Aircraft locked — click to enable dragging' : 'Aircraft unlocked — click to lock'}
-                      style={{ ...railBtnBase, ...activeStyle(planLocked ? 'var(--color-danger)' : 'var(--color-success)') }}
-                    >
-                      {planLocked ? <Lock size={18} /> : <Unlock size={18} />}
-                      <span>AC</span>
-                    </button>
-                    <button
-                      onClick={() => setObstaclesLocked(l => !l)}
-                      title={obstaclesLocked ? 'Obstacles locked — click to enable dragging' : 'Obstacles unlocked — click to lock'}
-                      style={{ ...railBtnBase, ...activeStyle(obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)') }}
-                    >
-                      {obstaclesLocked ? <Lock size={18} /> : <Unlock size={18} />}
-                      <span>OB</span>
-                    </button>
-
-                    <Divider />
-                    <button
-                      onClick={handleExportPdf}
-                      disabled={exportingPdf}
-                      title="Export PDF"
-                      style={{
-                        ...railBtnBase,
-                        opacity: exportingPdf ? 0.5 : 1,
-                        cursor: exportingPdf ? 'wait' : 'pointer',
-                      }}
-                    >
-                      <Download size={18} />
-                      <span>{exportingPdf ? '...' : 'PDF'}</span>
-                    </button>
-                    <button
-                      onClick={handleEmailPdf}
-                      disabled={exportingPdf}
-                      title="Email PDF"
-                      style={{
-                        ...railBtnBase,
-                        opacity: exportingPdf ? 0.5 : 1,
-                        cursor: exportingPdf ? 'wait' : 'pointer',
-                      }}
-                    >
-                      <Mail size={18} />
-                      <span>Email</span>
-                    </button>
+                    <HDivider />
+                    {editTools}
+                    <HDivider />
+                    {PdfBtn}
+                    {EmailBtn}
                   </>
                 )}
               </div>
