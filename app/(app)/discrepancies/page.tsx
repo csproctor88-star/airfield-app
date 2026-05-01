@@ -43,6 +43,28 @@ const KPI_DEFS: { key: KpiKey; label: string; color: string; match: (cs: string)
   { key: 'amops', label: 'AMOPS', color: 'var(--color-status-pass)', match: (cs) => cs === 'work_completed_awaiting_verification' },
 ]
 
+// Status colors mirror /ces page convention so a row's left rail and
+// the right-side status pill speak the same visual language as the
+// CES queue. Same five enum values as CURRENT_STATUS_OPTIONS.
+const CURRENT_STATUS_COLORS: Record<string, string> = {
+  submitted_to_afm: 'var(--color-status-inwork)',
+  submitted_to_ces: 'var(--color-orange)',
+  awaiting_action_by_ces: 'var(--color-warning)',
+  waiting_for_project: 'var(--color-purple)',
+  work_completed_awaiting_verification: 'var(--color-success)',
+}
+
+// Compact status labels for the row pill — full labels overflow the
+// row at typical widths. AFM-side users still see the long form in
+// the detail header + the audit log.
+const CURRENT_STATUS_SHORT: Record<string, string> = {
+  submitted_to_afm: 'TO AFM',
+  submitted_to_ces: 'TO CES',
+  awaiting_action_by_ces: 'AWAIT CES',
+  waiting_for_project: 'PROJECT',
+  work_completed_awaiting_verification: 'VERIFY',
+}
+
 export default function DiscrepanciesPage() {
   const { installationId, currentInstallation, defaultPdfEmail, ceShops, userRole } = useInstallation()
   const isCes = userRole === 'ces'
@@ -574,7 +596,7 @@ export default function DiscrepanciesPage() {
             className="kpi-badge kpi-badge-lg"
             onClick={k.onClick}
             style={{
-              border: `1px solid ${k.active ? k.color + '44' : 'var(--color-border)'}`,
+              border: `1px solid ${k.active ? `color-mix(in srgb, ${k.color} 35%, transparent)` : 'var(--color-border)'}`,
               flex: '1 1 0',
               maxWidth: 260,
             }}
@@ -615,7 +637,7 @@ export default function DiscrepanciesPage() {
                 }
               }}
               style={{
-                border: `1px solid ${active ? kpi.color + '44' : 'var(--color-border)'}`,
+                border: `1px solid ${active ? `color-mix(in srgb, ${kpi.color} 35%, transparent)` : 'var(--color-border)'}`,
                 flex: '0 1 auto',
                 minWidth: 70,
               }}
@@ -998,36 +1020,90 @@ export default function DiscrepanciesPage() {
               All Discrepancies ({filtered.length})
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {filtered.map((d) => {
               const days = usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)
+              const isOpen = d.status === 'open'
+              const railColor = isOpen
+                ? (CURRENT_STATUS_COLORS[d.current_status] || 'var(--color-text-4)')
+                : d.status === 'completed'
+                  ? 'var(--color-success)'
+                  : 'var(--color-text-4)'
+              const wo = (d.work_order_number || '').trim()
+              const hasRealWo = wo && wo.toLowerCase() !== 'pending'
+              const showStatusPill = isOpen && CURRENT_STATUS_SHORT[d.current_status]
+              const showDays = isOpen && days > 0
+              const overdue = isOpen && days > 30
               return (
                 <div
                   key={d.id}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 10px',
+                    gap: 10,
+                    padding: '8px 10px 8px 12px',
                     background: 'var(--color-bg-surface)',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--color-border)',
+                    borderLeft: `3px solid ${railColor}`,
                     fontSize: 'var(--fs-sm)',
                   }}
                 >
                   <Link
                     href={`/discrepancies/${d.id}`}
                     style={{
-                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
+                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10,
                       textDecoration: 'none', color: 'inherit',
                     }}
                   >
-                    <span style={{ fontWeight: 800, color: 'var(--color-cyan)', fontFamily: 'monospace', flexShrink: 0, minWidth: 60 }}>
-                      {d.work_order_number || 'Pending'}
+                    <span style={{
+                      fontWeight: 800, color: 'var(--color-cyan)',
+                      fontFamily: 'monospace', flexShrink: 0,
+                      fontSize: 'var(--fs-xs)', letterSpacing: '0.02em',
+                    }}>
+                      {d.display_id}
                     </span>
-                    <span style={{ fontWeight: 600, color: 'var(--color-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    <span style={{
+                      fontWeight: 600, color: 'var(--color-text-1)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      flex: 1, minWidth: 0,
+                    }}>
                       {d.title}
                     </span>
+                    {hasRealWo && (
+                      <span style={{
+                        fontSize: 'var(--fs-2xs)', fontFamily: 'monospace', fontWeight: 700,
+                        color: 'var(--color-text-3)', flexShrink: 0,
+                        padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--color-bg-inset)',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        WO {wo}
+                      </span>
+                    )}
+                    {showStatusPill && (
+                      <span style={{
+                        fontSize: 'var(--fs-2xs)', fontWeight: 800,
+                        letterSpacing: '0.06em', flexShrink: 0,
+                        padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                        color: railColor,
+                        background: `color-mix(in srgb, ${railColor} 14%, transparent)`,
+                        border: `1px solid color-mix(in srgb, ${railColor} 32%, transparent)`,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {CURRENT_STATUS_SHORT[d.current_status]}
+                      </span>
+                    )}
+                    {showDays && (
+                      <span style={{
+                        fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                        color: overdue ? 'var(--color-danger)' : 'var(--color-text-3)',
+                        flexShrink: 0, minWidth: 32, textAlign: 'right',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {days}d
+                      </span>
+                    )}
                   </Link>
                   {!usingDemo && !isCes && (
                     <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
