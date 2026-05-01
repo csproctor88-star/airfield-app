@@ -4016,9 +4016,9 @@ export default function ParkingPage() {
                 disabled={!!drawingTaxilaneId}
                 title="Draw an interior taxilane"
                 style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: 'color-mix(in srgb, var(--color-blue) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-blue) 30%, transparent)',
-                  color: 'var(--color-status-inwork)', cursor: 'pointer',
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  background: 'var(--color-blue)', border: 'none',
+                  color: '#fff', cursor: 'pointer',
                   opacity: drawingTaxilaneId ? 0.5 : 1,
                 }}
               >
@@ -4029,9 +4029,9 @@ export default function ParkingPage() {
                 disabled={!!drawingTaxilaneId}
                 title="Draw a peripheral taxilane"
                 style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: 'color-mix(in srgb, var(--color-violet) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-violet) 30%, transparent)',
-                  color: 'var(--color-violet)', cursor: 'pointer',
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  background: 'var(--color-violet)', border: 'none',
+                  color: '#fff', cursor: 'pointer',
                   opacity: drawingTaxilaneId ? 0.5 : 1,
                 }}
               >
@@ -4041,9 +4041,9 @@ export default function ParkingPage() {
                 onClick={handleStartBoundary}
                 disabled={!!drawingBoundaryId}
                 style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                  background: 'color-mix(in srgb, var(--color-success) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
-                  color: 'var(--color-success)', cursor: 'pointer',
+                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  background: 'var(--color-success)', border: 'none',
+                  color: '#fff', cursor: 'pointer',
                   opacity: drawingBoundaryId ? 0.5 : 1,
                 }}
               >
