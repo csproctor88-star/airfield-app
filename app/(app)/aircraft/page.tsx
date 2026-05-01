@@ -343,7 +343,7 @@ function AircraftDetailCard({
           }}>
             {ac.aircraft}
           </div>
-          {(ac.manufacturer || ac.group_index || ac.wing_span_ft) && (
+          {(ac.group_index || ac.wing_span_ft) && (
             <div style={{
               fontSize: 'var(--fs-xs)',
               color: 'var(--color-text-3)',
@@ -353,7 +353,6 @@ function AircraftDetailCard({
               flexWrap: 'wrap',
               alignItems: 'baseline',
             }}>
-              {ac.manufacturer && <span>{ac.manufacturer}</span>}
               {ac.group_index && (
                 <span style={{
                   fontFamily: 'monospace',

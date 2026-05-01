@@ -617,11 +617,24 @@ export default function DiscrepancyDetailPage() {
         const groupStyle: React.CSSProperties = {
           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
         }
+        // Vertical separator between intent groups so the four-cluster
+        // grouping reads strongly even on wide viewports. The earlier
+        // 14px columnGap was too subtle to differentiate from the in-
+        // group 6px gap; an actual divider line makes the structure
+        // explicit. Hidden when wrapped (no-op visually because gap
+        // already separates rows) is acceptable.
+        const Separator = () => (
+          <div aria-hidden="true" style={{
+            width: 1, alignSelf: 'stretch',
+            minHeight: 24, marginInline: 4,
+            background: 'var(--color-border)',
+          }} />
+        )
 
         return (
           <div style={{
             display: 'flex', flexWrap: 'wrap', alignItems: 'center',
-            columnGap: 14, rowGap: 8,
+            columnGap: 6, rowGap: 8,
             marginBottom: 8,
           }}>
             <div style={groupStyle}>
@@ -632,6 +645,7 @@ export default function DiscrepancyDetailPage() {
                 <RefreshCw size={12} strokeWidth={2.25} />Status
               </ActionButton>
             </div>
+            <Separator />
             <div style={groupStyle}>
               <ActionButton color="var(--color-accent-secondary)" onClick={() => cameraInputRef.current?.click()} disabled={uploading} style={compactStyle}>
                 <Camera size={12} strokeWidth={2.25} />{uploading ? '...' : 'Capture'}
@@ -640,6 +654,7 @@ export default function DiscrepancyDetailPage() {
                 <FileUp size={12} strokeWidth={2.25} />{uploading ? '...' : `Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
               </ActionButton>
             </div>
+            <Separator />
             <div style={groupStyle}>
               <ActionButton
                 color="var(--color-purple)"
