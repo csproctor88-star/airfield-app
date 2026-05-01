@@ -1905,7 +1905,7 @@ export default function ParkingPage() {
       mapDiv.removeEventListener('mousemove', onMove, true)
       mapDiv.removeEventListener('mouseup', onUp, true)
       if (boxDiv) boxDiv.remove()
-      gmap.setOptions({ draggable: true, gestureHandling: 'auto' })
+      gmap.setOptions({ draggable: true, gestureHandling: 'greedy' })
       mapDiv.style.cursor = ''
     }
   }, [boxSelectActive, mapLoaded])
