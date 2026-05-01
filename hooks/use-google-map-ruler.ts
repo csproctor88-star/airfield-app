@@ -8,8 +8,20 @@ function formatDist(ft: number): string {
   return `${Math.round(ft)} ft`
 }
 
-/** Convert pixel coordinates on the map div to lat/lng using bounds interpolation. */
-function pixelToLatLng(gmap: google.maps.Map, x: number, y: number): RulerPoint | null {
+/** Convert container-pixel coordinates to lat/lng using a heading + tilt
+ *  aware projection from a hidden OverlayView (falls back to bounds
+ *  interpolation only if the projection isn't ready). */
+function pixelToLatLng(
+  gmap: google.maps.Map,
+  overlay: google.maps.OverlayView | null,
+  x: number,
+  y: number,
+): RulerPoint | null {
+  const projection = overlay?.getProjection()
+  if (projection) {
+    const ll = projection.fromContainerPixelToLatLng(new google.maps.Point(x, y))
+    if (ll) return { lat: ll.lat(), lng: ll.lng() }
+  }
   const bounds = gmap.getBounds()
   const div = gmap.getDiv()
   if (!bounds || !div) return null
@@ -159,6 +171,14 @@ export function useGoogleMapRuler(
     if (!gmap || !active) return
     const mapDiv = gmap.getDiv()
 
+    // Hidden OverlayView gives us a heading + tilt aware projection. Without
+    // this, pixel-to-latlng using getBounds() drifts wildly on a rotated map.
+    const overlay = new google.maps.OverlayView()
+    overlay.onAdd = () => { /* noop */ }
+    overlay.draw = () => { /* noop */ }
+    overlay.onRemove = () => { /* noop */ }
+    overlay.setMap(gmap)
+
     let downPos: { x: number; y: number } | null = null
 
     // Track mousedown position to distinguish clicks from drags
@@ -175,7 +195,7 @@ export function useGoogleMapRuler(
       downPos = null
 
       const rect = mapDiv.getBoundingClientRect()
-      const pt = pixelToLatLng(gmap, e.clientX - rect.left, e.clientY - rect.top)
+      const pt = pixelToLatLng(gmap, overlay, e.clientX - rect.left, e.clientY - rect.top)
       if (!pt) return
       const updated = [...pointsRef.current, pt]
       setPoints(updated)
@@ -187,6 +207,7 @@ export function useGoogleMapRuler(
     return () => {
       mapDiv.removeEventListener('mousedown', onDown, true)
       mapDiv.removeEventListener('mouseup', onUp, true)
+      overlay.setMap(null)
     }
   }, [active, gmapRef, render])
 
