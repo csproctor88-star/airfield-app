@@ -12,7 +12,22 @@ import { DEMO_CHECKS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchChecks, type CheckRow } from '@/lib/supabase/checks'
 import { useInstallation } from '@/lib/installation-context'
-import { formatZuluDateShort, formatZuluTime } from '@/lib/utils'
+import { formatZuluTime } from '@/lib/utils'
+
+// Day-group date format — same recipe as /recent-activity, /wildlife,
+// /daily-reviews. "today" is Zulu today (checks store completed_at /
+// created_at as Zulu timestamps).
+function formatGroupDate(iso: string, todayIso: string): { primary: string; secondary: string | null } {
+  const date = new Date(`${iso}T12:00:00Z`)
+  const longLabel = date.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  })
+  const today = new Date(`${todayIso}T12:00:00Z`)
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000)
+  if (diffDays === 0) return { primary: 'Today', secondary: longLabel }
+  if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
+  return { primary: longLabel, secondary: null }
+}
 
 export default function CheckHistoryPage() {
   const { installationId } = useInstallation()
@@ -285,10 +300,43 @@ export default function CheckHistoryPage() {
         </div>
       )}
 
-      {!loading && filtered.map((check) => {
-        const cfg = CHECK_TYPE_CONFIG[check.check_type as keyof typeof CHECK_TYPE_CONFIG]
-        const Icon = cfg ? getCheckIcon(cfg.icon) : null
-        const data = check.data as Record<string, unknown>
+      {!loading && (() => {
+        // Group by Zulu date of completed_at (or created_at fallback).
+        // Relative day headers + counts make the chronological browse
+        // far easier to scan than a flat list of 100+ rows.
+        const groups: Record<string, typeof filtered> = {}
+        for (const c of filtered) {
+          const ts = c.completed_at || c.created_at
+          if (!ts) continue
+          const day = new Date(ts).toISOString().slice(0, 10)
+          if (!groups[day]) groups[day] = []
+          groups[day].push(c)
+        }
+        const todayIso = new Date().toISOString().slice(0, 10)
+        return Object.entries(groups).map(([day, dayChecks]) => {
+          const dateLabel = formatGroupDate(day, todayIso)
+          return (
+            <div key={day} style={{ marginBottom: 18 }}>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8,
+                paddingBottom: 4, borderBottom: '1px solid var(--color-border)',
+              }}>
+                <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {dateLabel.primary}
+                </span>
+                {dateLabel.secondary && (
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+                    {dateLabel.secondary}
+                  </span>
+                )}
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 500 }}>
+                  {dayChecks.length} {dayChecks.length === 1 ? 'check' : 'checks'}
+                </span>
+              </div>
+              {dayChecks.map((check) => {
+                const cfg = CHECK_TYPE_CONFIG[check.check_type as keyof typeof CHECK_TYPE_CONFIG]
+                const Icon = cfg ? getCheckIcon(cfg.icon) : null
+                const data = check.data as Record<string, unknown>
 
         // Build a summary line based on check type
         let summary = ''
@@ -322,7 +370,7 @@ export default function CheckHistoryPage() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, gap: 8 }}>
-              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-accent)' }}>
+              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-cyan)' }}>
                 {check.display_id}
               </span>
               <span style={{
@@ -370,15 +418,19 @@ export default function CheckHistoryPage() {
                   </>
                 )}
               </div>
-              <span>
+              <span style={{ fontFamily: 'monospace' }}>
                 {check.completed_at
-                  ? formatZuluDateShort(new Date(check.completed_at)) + ' ' + formatZuluTime(new Date(check.completed_at)) + 'Z'
+                  ? formatZuluTime(new Date(check.completed_at)) + 'Z'
                   : 'N/A'}
               </span>
             </div>
           </Link>
-        )
-      })}
+                )
+              })}
+            </div>
+          )
+        })
+      })()}
     </div>
   )
 }
