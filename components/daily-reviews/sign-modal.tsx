@@ -26,6 +26,7 @@ import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { usePermissions } from '@/lib/permissions'
 import type jsPDF from 'jspdf'
+import { Check, X } from 'lucide-react'
 
 interface SignModalProps {
   open: boolean
@@ -266,18 +267,20 @@ export default function DailyReviewSignModal({
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{
-        background: 'var(--color-bg-surface-solid, #1a1a2e)',
+        background: 'var(--color-bg-surface-solid)',
         borderRadius: 'var(--radius-xl)',
         width: '100%', maxWidth: 1000, maxHeight: '92vh',
         display: 'flex', flexDirection: 'column',
-        border: '1px solid var(--color-border-mid, #333)',
+        border: '1px solid var(--color-border-mid)',
       }}>
         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--color-border-mid)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>Daily Review — {reviewDate}</div>
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{baseName}{baseIcao ? ` (${baseIcao})` : ''}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', fontSize: 20, cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: 4 }}>
+            <X size={20} />
+          </button>
         </div>
 
         <div style={{
@@ -290,7 +293,7 @@ export default function DailyReviewSignModal({
         }}>
           {/* PDF preview */}
           <div style={{
-            background: '#2a2a2a',
+            background: 'var(--color-bg-elevated)',
             borderRight: isMobile ? 'none' : '1px solid var(--color-border-mid)',
             borderBottom: isMobile ? '1px solid var(--color-border-mid)' : 'none',
             minHeight: isMobile ? 'auto' : undefined,
@@ -310,7 +313,7 @@ export default function DailyReviewSignModal({
                     style={{
                       display: 'inline-block', textAlign: 'center', padding: '10px 12px',
                       borderRadius: 'var(--radius-md)', background: 'var(--color-cyan)',
-                      color: '#000', fontWeight: 700, textDecoration: 'none',
+                      color: 'var(--color-cyan-btn-text)', fontWeight: 700, textDecoration: 'none',
                     }}
                   >Open Daily Ops PDF</a>
                 </div>
@@ -333,13 +336,17 @@ export default function DailyReviewSignModal({
                 return (
                   <div key={slot} style={{
                     padding: '6px 8px', marginBottom: 4, borderRadius: 'var(--radius-sm)',
-                    background: signedAt ? 'rgba(52,211,153,0.08)' : 'var(--color-bg-inset)',
-                    border: `1px solid ${signedAt ? 'rgba(52,211,153,0.3)' : 'var(--color-border)'}`,
+                    background: signedAt
+                      ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
+                      : 'var(--color-bg-inset)',
+                    border: `1px solid ${signedAt
+                      ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
+                      : 'var(--color-border)'}`,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{SLOT_LABELS[slot]}</span>
-                      <span style={{ fontSize: 'var(--fs-xs)', color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)' }}>
-                        {signedAt ? '✓ Signed' : 'Pending'}
+                      <span style={{ fontSize: 'var(--fs-xs)', color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        {signedAt ? <><Check size={11} strokeWidth={3} /> Signed</> : 'Pending'}
                       </span>
                     </div>
                     {signedAt && (
@@ -352,7 +359,14 @@ export default function DailyReviewSignModal({
                 )
               })}
               {row?.fully_certified_at && (
-                <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(52,211,153,0.12)', border: '1px solid var(--color-success)', borderRadius: 'var(--radius-md)', color: 'var(--color-success)', fontSize: 'var(--fs-sm)', fontWeight: 700, textAlign: 'center' }}>
+                <div style={{
+                  marginTop: 8, padding: '8px 10px',
+                  background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+                  border: '1px solid var(--color-success)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-success)',
+                  fontSize: 'var(--fs-sm)', fontWeight: 700, textAlign: 'center',
+                }}>
                   FULLY REVIEWED
                 </div>
               )}
@@ -386,7 +400,7 @@ export default function DailyReviewSignModal({
                 disabled={!selectedSlot || signing || loading}
                 style={{
                   marginTop: 10, width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-cyan)', color: '#000', fontWeight: 800, border: 'none',
+                  background: 'var(--color-cyan)', color: 'var(--color-cyan-btn-text)', fontWeight: 800, border: 'none',
                   cursor: signing || loading || !selectedSlot ? 'not-allowed' : 'pointer',
                   opacity: signing || loading || !selectedSlot ? 0.5 : 1,
                 }}
@@ -408,8 +422,10 @@ export default function DailyReviewSignModal({
                   onClick={handleDownload}
                   style={{
                     marginTop: 8, width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                    background: 'rgba(52,211,153,0.12)', color: 'var(--color-success)',
-                    border: '1px solid rgba(52,211,153,0.3)', cursor: 'pointer',
+                    background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
+                    color: 'var(--color-success)',
+                    border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
+                    cursor: 'pointer',
                     fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
                   }}
                 >Download Reviewed PDF</button>

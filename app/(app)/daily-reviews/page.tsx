@@ -19,6 +19,7 @@ import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
+import { Check } from 'lucide-react'
 
 export default function DailyReviewsPage() {
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
@@ -91,7 +92,7 @@ export default function DailyReviewsPage() {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
+      <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
         Daily Reviews
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
@@ -113,8 +114,12 @@ export default function DailyReviewsPage() {
                 onClick={() => openSign(date)}
                 style={{
                   padding: 12, borderRadius: 'var(--radius-md)',
-                  background: certified ? 'rgba(52,211,153,0.08)' : 'var(--color-bg-surface)',
-                  border: `1px solid ${certified ? 'rgba(52,211,153,0.3)' : 'var(--color-border)'}`,
+                  background: certified
+                    ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
+                    : 'var(--color-bg-surface)',
+                  border: `1px solid ${certified
+                    ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
+                    : 'var(--color-border)'}`,
                   cursor: 'pointer',
                 }}
               >
@@ -132,12 +137,17 @@ export default function DailyReviewsPage() {
                     return (
                       <div key={slot} style={{
                         fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 999,
-                        background: signedAt ? 'rgba(52,211,153,0.15)' : 'var(--color-bg-inset)',
+                        background: signedAt
+                          ? 'color-mix(in srgb, var(--color-success) 15%, transparent)'
+                          : 'var(--color-bg-inset)',
                         color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)',
-                        border: `1px solid ${signedAt ? 'rgba(52,211,153,0.3)' : 'var(--color-border)'}`,
+                        border: `1px solid ${signedAt
+                          ? 'color-mix(in srgb, var(--color-success) 30%, transparent)'
+                          : 'var(--color-border)'}`,
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
                       }}>
-                        {signedAt ? '✓ ' : ''}{SLOT_LABELS[slot as DailyReviewSlot]}
-                        {signer ? ` — ${formatSigner(signer)}` : ''}
+                        {signedAt && <Check size={11} strokeWidth={3} />}
+                        <span>{SLOT_LABELS[slot as DailyReviewSlot]}{signer ? ` — ${formatSigner(signer)}` : ''}</span>
                       </div>
                     )
                   })}
