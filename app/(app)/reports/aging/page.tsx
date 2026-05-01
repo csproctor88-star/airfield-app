@@ -241,8 +241,12 @@ export default function AgingDiscrepanciesPage() {
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                  background: isActive ? `${tier.color}28` : `${tier.color}14`,
-                  border: isActive ? `2px solid ${tier.color}` : `1px solid ${tier.color}33`,
+                  background: isActive
+                    ? `color-mix(in srgb, ${tier.color} 16%, transparent)`
+                    : `color-mix(in srgb, ${tier.color} 8%, transparent)`,
+                  border: isActive
+                    ? `2px solid ${tier.color}`
+                    : `1px solid color-mix(in srgb, ${tier.color} 20%, transparent)`,
                   minWidth: 64, opacity: count === 0 ? 0.4 : 1,
                   transition: 'border 0.15s, background 0.15s',
                 }}
@@ -271,12 +275,16 @@ export default function AgingDiscrepanciesPage() {
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                    background: isActive ? 'rgba(56,189,248,0.15)' : 'var(--color-border)',
-                    border: isActive ? '2px solid var(--color-accent)' : '1px solid rgba(56,189,248,0.15)',
+                    background: isActive
+                      ? 'color-mix(in srgb, var(--color-cyan) 16%, transparent)'
+                      : 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
+                    border: isActive
+                      ? '2px solid var(--color-cyan)'
+                      : '1px solid color-mix(in srgb, var(--color-cyan) 20%, transparent)',
                     minWidth: 64, transition: 'border 0.15s, background 0.15s',
                   }}
                 >
-                  <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-accent)' }}>{s.count}</div>
+                  <div style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-cyan)' }}>{s.count}</div>
                   <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)', fontWeight: 600, textAlign: 'center', marginTop: 2 }}>{s.shop}</div>
                 </div>
               )
@@ -301,18 +309,21 @@ export default function AgingDiscrepanciesPage() {
           <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8, color: tier.color }}>
             {tier.label} ({tier.discrepancies.length})
           </div>
-          {tier.discrepancies.map((d) => (
+          {tier.discrepancies.map((d, i) => (
             <div
               key={d.id}
               onClick={() => router.push(`/discrepancies/${d.id}`)}
               style={{
-                padding: '6px 0',
-                borderBottom: '1px solid rgba(148,163,184,0.1)',
+                padding: '8px 10px',
+                borderLeft: `3px solid ${tier.color}`,
+                borderBottom: i < tier.discrepancies.length - 1
+                  ? '1px solid color-mix(in srgb, var(--color-text-3) 12%, transparent)'
+                  : 'none',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                cursor: 'pointer',
+                cursor: 'pointer', gap: 12,
               }}
             >
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>
                   {d.display_id} — {d.title}
                 </div>
@@ -322,7 +333,7 @@ export default function AgingDiscrepanciesPage() {
               </div>
               <div style={{
                 fontSize: 'var(--fs-base)', fontWeight: 800, color: tier.color,
-                minWidth: 40, textAlign: 'right',
+                minWidth: 40, textAlign: 'right', fontVariantNumeric: 'tabular-nums',
               }}>
                 {d.days_open}d
               </div>
@@ -349,8 +360,8 @@ export default function AgingDiscrepanciesPage() {
           disabled={exporting || filteredSummary.total === 0}
           style={{
             flex: 1, padding: '14px 0', borderRadius: 10,
-            border: '1px solid rgba(34,197,94,0.4)',
-            background: 'rgba(34,197,94,0.1)',
+            border: '1px solid color-mix(in srgb, var(--color-success) 40%, transparent)',
+            background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
             color: 'var(--color-status-pass)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: (exporting || filteredSummary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: (exporting || filteredSummary.total === 0) ? 0.5 : 1,
@@ -365,8 +376,8 @@ export default function AgingDiscrepanciesPage() {
           disabled={exporting || filteredSummary.total === 0}
           style={{
             padding: '14px 18px', borderRadius: 10,
-            border: '1px solid #A78BFA33',
-            background: '#A78BFA14',
+            border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
             color: 'var(--color-purple)', fontSize: 'var(--fs-xl)', fontWeight: 700,
             cursor: (exporting || filteredSummary.total === 0) ? 'default' : 'pointer', fontFamily: 'inherit',
             opacity: (exporting || filteredSummary.total === 0) ? 0.5 : 1,
