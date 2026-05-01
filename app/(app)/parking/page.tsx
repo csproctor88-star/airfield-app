@@ -3710,10 +3710,10 @@ export default function ParkingPage() {
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               {drawingTaxilaneId && (
-                <button onClick={handleFinishTaxilane} style={{ background: drawingTaxilaneType === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)', border: 'none', color: 'var(--color-text-1)', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+                <button onClick={handleFinishTaxilane} style={{ background: drawingTaxilaneType === 'peripheral' ? 'var(--color-purple)' : 'var(--color-status-inwork)', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 700, fontSize: 'var(--fs-xs)' }}>Finish</button>
               )}
               {drawingBoundaryId && (
-                <button onClick={handleFinishBoundary} style={{ background: 'var(--color-success)', border: 'none', color: 'var(--color-text-1)', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
+                <button onClick={handleFinishBoundary} style={{ background: 'var(--color-success)', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 700, fontSize: 'var(--fs-xs)' }}>Finish</button>
               )}
               {drawingLineObsId && (
                 <button onClick={handleFinishLine} style={{ background: 'var(--color-orange)', border: 'none', color: '#000', cursor: 'pointer', padding: '2px 10px', borderRadius: 4, fontWeight: 600, fontSize: 'var(--fs-xs)' }}>Finish</button>
