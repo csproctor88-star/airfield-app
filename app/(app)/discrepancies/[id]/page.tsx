@@ -595,11 +595,18 @@ export default function DiscrepancyDetailPage() {
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
       {/* ===== Horizontal action toolbar =====
-          Sits below the detail card. Buttons wrap responsively so
-          each keeps its compact size; on desktop the whole toolbar
-          reads as one row. Delete pushes to the right with auto
-          margin so the destructive action sits visually apart from
-          the daily-ops controls. */}
+          Buttons grouped by intent so the toolbar reads as four
+          related clusters rather than seven peer-level actions:
+            - edit: Update + Status
+            - media: Capture + Upload
+            - output: Export PDF + Email PDF
+            - destructive: Delete (right-aligned via marginLeft auto)
+          Each group is a flex sub-row at gap 6; outer container at
+          gap 14 puts visible breathing room between groups. When
+          wrap kicks in on narrow viewports, each group wraps as a
+          unit so related actions stay together. Color tokens are
+          CSS vars (was raw hex); ActionButton's color-mix recipe
+          handles both forms. */}
       {(() => {
         const compactStyle: React.CSSProperties = {
           padding: '6px 12px', minHeight: 32,
@@ -607,79 +614,91 @@ export default function DiscrepancyDetailPage() {
           letterSpacing: '0.04em', textTransform: 'uppercase',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
         }
+        const groupStyle: React.CSSProperties = {
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+        }
 
         return (
           <div style={{
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+            columnGap: 14, rowGap: 8,
             marginBottom: 8,
           }}>
-            <ActionButton color="#38BDF8" onClick={() => setActiveModal('edit')} style={compactStyle}>
-              <Pencil size={12} strokeWidth={2.25} />Update
-            </ActionButton>
-            <ActionButton color="#FBBF24" onClick={() => setActiveModal('status')} style={compactStyle}>
-              <RefreshCw size={12} strokeWidth={2.25} />Status
-            </ActionButton>
-            <ActionButton color="#0EA5E9" onClick={() => cameraInputRef.current?.click()} disabled={uploading} style={compactStyle}>
-              <Camera size={12} strokeWidth={2.25} />{uploading ? '...' : 'Capture'}
-            </ActionButton>
-            <ActionButton color="#38BDF8" onClick={() => fileInputRef.current?.click()} disabled={uploading} style={compactStyle}>
-              <FileUp size={12} strokeWidth={2.25} />{uploading ? '...' : `Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
-            </ActionButton>
-            <ActionButton
-              color="#A78BFA"
-              style={compactStyle}
-              onClick={async () => {
-                setGeneratingPdf(true)
-                try {
-                  const { doc, filename } = await buildPdf()
-                  doc.save(filename)
-                  toast.success('PDF exported')
-                } catch (e) {
-                  console.error(e)
-                  toast.error('PDF export failed')
-                }
-                setGeneratingPdf(false)
-              }}
-            >
-              <FileText size={12} strokeWidth={2.25} />{generatingPdf ? '...' : 'Export PDF'}
-            </ActionButton>
-            <ActionButton
-              color="#A78BFA"
-              style={compactStyle}
-              onClick={async () => {
-                setGeneratingPdf(true)
-                try {
-                  const result = await buildPdf()
-                  setEmailPdfData(result)
-                  setEmailModalOpen(true)
-                } catch (e) {
-                  console.error(e)
-                  toast.error('PDF generation failed')
-                }
-                setGeneratingPdf(false)
-              }}
-            >
-              <Mail size={12} strokeWidth={2.25} />{generatingPdf ? '...' : 'Email PDF'}
-            </ActionButton>
-            {canDeleteDiscrepancy && !usingDemo && (
+            <div style={groupStyle}>
+              <ActionButton color="var(--color-cyan)" onClick={() => setActiveModal('edit')} style={compactStyle}>
+                <Pencil size={12} strokeWidth={2.25} />Update
+              </ActionButton>
+              <ActionButton color="var(--color-warning)" onClick={() => setActiveModal('status')} style={compactStyle}>
+                <RefreshCw size={12} strokeWidth={2.25} />Status
+              </ActionButton>
+            </div>
+            <div style={groupStyle}>
+              <ActionButton color="var(--color-accent-secondary)" onClick={() => cameraInputRef.current?.click()} disabled={uploading} style={compactStyle}>
+                <Camera size={12} strokeWidth={2.25} />{uploading ? '...' : 'Capture'}
+              </ActionButton>
+              <ActionButton color="var(--color-cyan)" onClick={() => fileInputRef.current?.click()} disabled={uploading} style={compactStyle}>
+                <FileUp size={12} strokeWidth={2.25} />{uploading ? '...' : `Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+              </ActionButton>
+            </div>
+            <div style={groupStyle}>
               <ActionButton
-                color="#EF4444"
-                style={{ ...compactStyle, marginLeft: 'auto' }}
+                color="var(--color-purple)"
+                style={compactStyle}
                 onClick={async () => {
-                  if (!confirm('Permanently delete this discrepancy and all associated photos, status updates? This cannot be undone.')) return
-                  setActionLoading(true)
-                  const { error } = await deleteDiscrepancy(d.id)
-                  if (error) {
-                    toast.error(error)
-                    setActionLoading(false)
-                  } else {
-                    toast.success('Discrepancy deleted')
-                    router.push('/discrepancies')
+                  setGeneratingPdf(true)
+                  try {
+                    const { doc, filename } = await buildPdf()
+                    doc.save(filename)
+                    toast.success('PDF exported')
+                  } catch (e) {
+                    console.error(e)
+                    toast.error('PDF export failed')
                   }
+                  setGeneratingPdf(false)
                 }}
               >
-                <Trash2 size={12} strokeWidth={2.25} />{actionLoading ? 'Deleting...' : 'Delete'}
+                <FileText size={12} strokeWidth={2.25} />{generatingPdf ? '...' : 'Export PDF'}
               </ActionButton>
+              <ActionButton
+                color="var(--color-purple)"
+                style={compactStyle}
+                onClick={async () => {
+                  setGeneratingPdf(true)
+                  try {
+                    const result = await buildPdf()
+                    setEmailPdfData(result)
+                    setEmailModalOpen(true)
+                  } catch (e) {
+                    console.error(e)
+                    toast.error('PDF generation failed')
+                  }
+                  setGeneratingPdf(false)
+                }}
+              >
+                <Mail size={12} strokeWidth={2.25} />{generatingPdf ? '...' : 'Email PDF'}
+              </ActionButton>
+            </div>
+            {canDeleteDiscrepancy && !usingDemo && (
+              <div style={{ ...groupStyle, marginLeft: 'auto' }}>
+                <ActionButton
+                  color="var(--color-danger)"
+                  style={compactStyle}
+                  onClick={async () => {
+                    if (!confirm('Permanently delete this discrepancy and all associated photos, status updates? This cannot be undone.')) return
+                    setActionLoading(true)
+                    const { error } = await deleteDiscrepancy(d.id)
+                    if (error) {
+                      toast.error(error)
+                      setActionLoading(false)
+                    } else {
+                      toast.success('Discrepancy deleted')
+                      router.push('/discrepancies')
+                    }
+                  }}
+                >
+                  <Trash2 size={12} strokeWidth={2.25} />{actionLoading ? 'Deleting...' : 'Delete'}
+                </ActionButton>
+              </div>
             )}
           </div>
         )
