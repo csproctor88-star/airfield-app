@@ -38,7 +38,7 @@ function AcnPcnPanel({
     return (
       <div style={{ padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
             <X size={16} color="var(--color-text-3)" />
           </button>
@@ -57,10 +57,10 @@ function AcnPcnPanel({
   let resultText = 'Enter your airfield PCN to compare'
   if (hasComparison) {
     if (acnValue <= pcn) {
-      resultColor = '#34D399'
+      resultColor = 'var(--color-success)'
       resultText = `PASS — ACN ${acnValue.toFixed(1)} ≤ PCN ${pcn}`
     } else {
-      resultColor = '#EF4444'
+      resultColor = 'var(--color-danger)'
       resultText = `EXCEEDS — ACN ${acnValue.toFixed(1)} > PCN ${pcn}`
     }
   }
@@ -70,7 +70,7 @@ function AcnPcnPanel({
   return (
     <div style={{ padding: 16, background: 'var(--color-detail-box-bg)', borderRadius: 10, border: '1px solid var(--color-border-mid)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
+        <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>ACN/PCN Comparison</div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <X size={16} color="var(--color-text-3)" />
         </button>
@@ -189,9 +189,17 @@ function AcnPcnPanel({
         padding: '10px 12px',
         borderRadius: 8,
         background: hasComparison
-          ? acnValue <= pcn ? 'rgba(52,211,153,0.08)' : 'rgba(239,68,68,0.08)'
-          : 'rgba(148,163,184,0.05)',
-        border: `1px solid ${hasComparison ? (acnValue <= pcn ? 'rgba(52,211,153,0.2)' : 'rgba(239,68,68,0.2)') : 'rgba(148,163,184,0.1)'}`,
+          ? acnValue <= pcn
+            ? 'color-mix(in srgb, var(--color-success) 8%, transparent)'
+            : 'color-mix(in srgb, var(--color-danger) 8%, transparent)'
+          : 'color-mix(in srgb, var(--color-text-3) 5%, transparent)',
+        border: `1px solid ${
+          hasComparison
+            ? acnValue <= pcn
+              ? 'color-mix(in srgb, var(--color-success) 20%, transparent)'
+              : 'color-mix(in srgb, var(--color-danger) 20%, transparent)'
+            : 'color-mix(in srgb, var(--color-text-3) 10%, transparent)'
+        }`,
       }}>
         <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: resultColor, marginBottom: 2 }}>
           {resultText}
@@ -296,8 +304,14 @@ function AircraftDetailCard({
             width: 34,
             height: 34,
             borderRadius: 8,
-            background: isMilitary ? 'rgba(139,92,246,0.1)' : 'rgba(56,189,248,0.1)',
-            border: `1px solid ${isMilitary ? 'rgba(139,92,246,0.2)' : 'rgba(56,189,248,0.2)'}`,
+            background: isMilitary
+              ? 'color-mix(in srgb, var(--color-violet) 10%, transparent)'
+              : 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+            border: `1px solid ${
+              isMilitary
+                ? 'color-mix(in srgb, var(--color-violet) 20%, transparent)'
+                : 'color-mix(in srgb, var(--color-cyan) 20%, transparent)'
+            }`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -305,20 +319,21 @@ function AircraftDetailCard({
           }}
         >
           {isMilitary
-            ? <Shield size={16} color="#8B5CF6" />
-            : <Plane size={16} color="var(--color-accent)" />
+            ? <Shield size={16} color="var(--color-violet)" />
+            : <Plane size={16} color="var(--color-cyan)" />
           }
         </div>
 
         {/* Name */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: 'var(--fs-2xl)',
-            fontWeight: 700,
+            fontSize: 'var(--fs-md)',
+            fontWeight: 600,
             color: 'var(--color-text-1)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            lineHeight: 1.4,
           }}>
             {ac.aircraft}
           </div>
@@ -644,7 +659,7 @@ export default function AircraftPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div>
-          <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>Aircraft Database</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>Aircraft Database</div>
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)' }}>
             {AIRCRAFT_COUNT.total} aircraft &bull; {AIRCRAFT_COUNT.military} military &bull; {AIRCRAFT_COUNT.commercial} commercial
           </div>
@@ -707,7 +722,7 @@ export default function AircraftPage() {
             background: 'transparent',
             border: 'none',
             color: 'var(--color-text-1)',
-            fontSize: 'var(--fs-2xl)',
+            fontSize: 'var(--fs-md)',
             outline: 'none',
           }}
         />
@@ -804,7 +819,7 @@ export default function AircraftPage() {
         {filtered.length === 0 && (
           <div className="card" style={{ textAlign: 'center', padding: 32 }}>
             <Search size={24} color="var(--color-text-4)" style={{ margin: '0 auto 8px' }} />
-            <div style={{ fontSize: 'var(--fs-2xl)', color: 'var(--color-text-2)', fontWeight: 600 }}>No aircraft found</div>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-2)', fontWeight: 600 }}>No aircraft found</div>
             <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginTop: 4 }}>
               {showFavoritesOnly
                 ? 'No pinned aircraft match your filters.'
