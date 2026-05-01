@@ -4,8 +4,30 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog, type ActivityEntry } from '@/lib/supabase/activity-queries'
-import { formatZuluDate } from '@/lib/utils'
-import { Download } from 'lucide-react'
+import { Download, ChevronRight } from 'lucide-react'
+
+// Group-header date format — mirrors the daily-reviews pattern.
+// "today" here is Zulu today (the audit log groups by Zulu date),
+// not base-local — matches the existing groupBy at created_at[0:10].
+function formatGroupDate(iso: string, todayIso: string): { primary: string; secondary: string | null } {
+  const date = new Date(`${iso}T12:00:00Z`)
+  const longLabel = date.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  })
+  const today = new Date(`${todayIso}T12:00:00Z`)
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000)
+  if (diffDays === 0) return { primary: 'Today', secondary: longLabel }
+  if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
+  return { primary: longLabel, secondary: null }
+}
+
+// Row attribution — rank + last name keeps the audit-relevant rank
+// without burning the row width on full first names. The OI badge
+// stays as a separate chip per the existing pattern.
+function formatRowAttribution(rank: string | null, fullName: string): string {
+  const last = (fullName || '').trim().split(/\s+/).slice(-1)[0] || fullName || 'Unknown'
+  return rank ? `${rank} ${last}` : last
+}
 
 type PeriodPreset = 'today' | '7d' | '30d' | '90d' | 'custom'
 
@@ -356,61 +378,97 @@ export default function RecentActivityPage() {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {Object.entries(grouped).map(([date, entries]) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {Object.entries(grouped).map(([date, entries]) => {
+            const dateLabel = formatGroupDate(date, today)
+            return (
             <div key={date}>
-              <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-                {formatZuluDate(new Date(date + 'T00:00:00Z'))}
+              <div style={{
+                display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8,
+                paddingBottom: 4, borderBottom: '1px solid var(--color-border)',
+              }}>
+                <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {dateLabel.primary}
+                </span>
+                {dateLabel.secondary && (
+                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+                    {dateLabel.secondary}
+                  </span>
+                )}
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', fontWeight: 500 }}>
+                  {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+                </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {entries.map(a => {
                   const time = new Date(a.created_at).toISOString().slice(11, 16)
                   const link = getEntityLink(a.entity_type, a.entity_id)
-                  const details = a.metadata?.details && typeof a.metadata.details === 'string' ? a.metadata.details.toUpperCase() : ''
-                  const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+                  const rawDetails = a.metadata?.details && typeof a.metadata.details === 'string' ? a.metadata.details : ''
+                  const userAttribution = formatRowAttribution(a.user_rank ?? null, a.user_name)
+                  const railColor = getActionColor(a.action, a.entity_type)
 
                   return (
                     <div
                       key={a.id}
                       onClick={link ? () => router.push(link) : undefined}
                       style={{
-                        display: 'flex', gap: 10, padding: '8px 10px',
-                        background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)',
+                        display: 'flex', gap: 10, padding: '8px 10px 8px 12px',
+                        background: 'var(--color-bg-surface)',
+                        borderRadius: 'var(--radius-md)',
                         border: '1px solid var(--color-border)',
+                        borderLeft: `3px solid ${railColor}`,
                         cursor: link ? 'pointer' : 'default',
                         alignItems: 'flex-start',
                       }}
                     >
-                      <span style={{ fontSize: 'var(--fs-xs)', fontFamily: 'monospace', color: 'var(--color-text-3)', flexShrink: 0, paddingTop: 2 }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', fontFamily: 'monospace', color: 'var(--color-text-3)', flexShrink: 0, paddingTop: 2, whiteSpace: 'nowrap' }}>
                         {time}Z
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: getActionColor(a.action, a.entity_type) }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', rowGap: 2 }}>
+                          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: railColor }}>
                             {formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata)}
                           </span>
+                          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                            {userAttribution}
+                          </span>
                           {a.user_operating_initials && (
-                            <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-cyan)', letterSpacing: '0.04em' }}>
+                            <span style={{
+                              fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-cyan)',
+                              letterSpacing: '0.04em',
+                              padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+                              background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+                            }}>
                               {a.user_operating_initials}
                             </span>
                           )}
                         </div>
-                        {details && (
-                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {details}
+                        {rawDetails && (
+                          <div style={{
+                            fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)',
+                            marginTop: 4, lineHeight: 1.4,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}>
+                            {rawDetails}
                           </div>
                         )}
-                        <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', marginTop: 2 }}>
-                          {userName}
-                        </div>
                       </div>
-                      {link && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', flexShrink: 0, paddingTop: 2 }}>&rarr;</span>}
+                      {link && (
+                        <ChevronRight
+                          size={14}
+                          style={{ color: 'var(--color-text-4)', flexShrink: 0, marginTop: 4 }}
+                        />
+                      )}
                     </div>
                   )
                 })}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
