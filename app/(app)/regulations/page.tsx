@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName, formatZuluDate } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -760,24 +761,29 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
           return (
             <div
               key={reg.reg_id}
-              className="card"
               onClick={() => setExpandedId(isExpanded ? null : reg.reg_id)}
               style={{
-                marginBottom: 8,
-                padding: '10px 12px',
-                cursor: 'pointer',
+                background: 'var(--color-bg-surface-solid)',
                 border: isExpanded
                   ? '1px solid var(--color-border-active)'
                   : '1px solid var(--color-border)',
-                transition: 'border-color 0.15s',
+                borderLeft: `3px solid ${catConfig?.color || 'var(--color-border)'}`,
+                borderRadius: 'var(--radius-md)',
+                marginBottom: 8,
+                padding: '12px 14px',
+                cursor: 'pointer',
+                transition: 'border-color 0.15s, background 0.15s',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-accent)', marginBottom: 2 }}>
+                  <div style={{
+                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)',
+                    fontFamily: 'monospace', letterSpacing: '0.04em', marginBottom: 4,
+                  }}>
                     {reg.reg_id}
                   </div>
-                  <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
                     {reg.title}
                   </div>
                 </div>
@@ -797,25 +803,12 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
                 </button>
               </div>
 
-              <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
-                {catConfig && (
-                  <span style={{
-                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: catConfig.color,
-                    background: catConfig.color + '18', padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                  }}>
-                    {catConfig.label}
-                  </span>
-                )}
-                <span style={{
-                  fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-2)',
-                  background: 'rgba(148,163,184,0.10)', padding: '1px 6px', borderRadius: 'var(--radius-xs)',
-                }}>
-                  {reg.pub_type}
-                </span>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {catConfig && <Badge label={catConfig.label} color={catConfig.color} />}
+                <Badge label={reg.pub_type} color="var(--color-text-3)" />
                 {reg.publication_date && (
                   <span style={{
-                    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
-                    padding: '1px 4px',
+                    fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600,
                   }}>
                     {reg.publication_date}
                   </span>
@@ -1638,45 +1631,33 @@ function MyDocumentsTab({ onViewDoc }: { onViewDoc: (doc: UserDocument, userId: 
         return (
           <div
             key={doc.id}
-            className="card"
             style={{
-              marginBottom: 8,
-              padding: '10px 12px',
+              background: 'var(--color-bg-surface-solid)',
               border: '1px solid var(--color-border)',
+              borderLeft: `3px solid ${doc.status === 'failed' ? 'var(--color-danger)' : 'var(--color-cyan)'}`,
+              borderRadius: 'var(--radius-md)',
+              marginBottom: 8,
+              padding: '12px 14px',
               opacity: isDeleting ? 0.4 : 1,
-              transition: 'opacity 0.2s',
+              transition: 'opacity 0.2s, border-color 0.15s',
             }}
           >
             {/* Title row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', lineHeight: 1.3 }}>
+                <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', lineHeight: 1.4 }}>
                   {doc.display_name}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
-                {/* Status badge (only show for non-ready states) */}
-                {doc.status !== 'ready' && (
-                  <div style={{
-                    fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.06em',
-                    background: doc.status === 'failed'
-                      ? 'rgba(239,68,68,0.15)' : 'rgba(253,230,138,0.15)',
-                    color: doc.status === 'failed'
-                      ? 'var(--color-danger)' : 'var(--color-amber)',
-                    padding: '2px 6px', borderRadius: 'var(--radius-xs)', whiteSpace: 'nowrap',
-                  }}>
-                    {doc.status === 'failed' ? 'FAILED' : 'PROCESSING'}
-                  </div>
+                {doc.status === 'failed' && (
+                  <Badge label="FAILED" color="var(--color-danger)" />
                 )}
-                {/* Cache indicator */}
+                {doc.status !== 'ready' && doc.status !== 'failed' && (
+                  <Badge label="PROCESSING" color="var(--color-amber)" />
+                )}
                 {isCached && (
-                  <div style={{
-                    fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.06em',
-                    background: 'rgba(14,165,233,0.15)', color: 'var(--color-accent)',
-                    padding: '2px 6px', borderRadius: 'var(--radius-xs)', whiteSpace: 'nowrap',
-                  }}>
-                    CACHED
-                  </div>
+                  <Badge label="CACHED" color="var(--color-cyan)" />
                 )}
               </div>
             </div>
