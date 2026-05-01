@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb, Loader2 } from 'lucide-react'
+import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb, Loader2, ChevronRight } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchAnalyticsData, type AnalyticsData } from '@/lib/reports/analytics-data'
 
@@ -65,23 +65,25 @@ export default function ReportsPage() {
 
   return (
     <div className="page-container">
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Reports & Analytics</div>
+      <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, marginBottom: 14 }}>Reports & Analytics</div>
 
       {/* Report links */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
         {REPORT_CARDS.map((card) => (
           <Link key={card.href} href={card.href} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div style={{
-              padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center',
+              padding: '10px 14px', display: 'flex', gap: 12, alignItems: 'center',
               background: 'var(--color-bg-surface)', borderRadius: 8,
-              border: `1px solid ${card.color}22`, cursor: 'pointer',
+              border: '1px solid var(--color-border)',
+              borderLeft: `3px solid ${card.color}`,
+              cursor: 'pointer',
             }}>
               <card.icon size={18} color={card.color} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{card.title}</span>
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-4)', marginLeft: 6 }}>{card.description}</span>
+                <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>{card.title}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>{card.description}</div>
               </div>
-              <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)' }}>›</span>
+              <ChevronRight size={16} color="var(--color-text-4)" style={{ flexShrink: 0 }} />
             </div>
           </Link>
         ))}
@@ -101,7 +103,7 @@ export default function ReportsPage() {
                 padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 background: mode === 'preset' && days === tf.value ? 'var(--color-cyan)' : 'transparent',
-                color: mode === 'preset' && days === tf.value ? '#fff' : 'var(--color-text-3)',
+                color: mode === 'preset' && days === tf.value ? 'var(--color-cyan-btn-text)' : 'var(--color-text-3)',
               }}
             >
               {tf.label}
@@ -113,7 +115,7 @@ export default function ReportsPage() {
               padding: '4px 10px', border: 'none', fontSize: 'var(--fs-xs)', fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
               background: mode === 'custom' ? 'var(--color-cyan)' : 'transparent',
-              color: mode === 'custom' ? '#fff' : 'var(--color-text-3)',
+              color: mode === 'custom' ? 'var(--color-cyan-btn-text)' : 'var(--color-text-3)',
               borderLeft: '1px solid var(--color-border)',
             }}
           >
@@ -206,7 +208,7 @@ export default function ReportsPage() {
                 {analytics.checks.byType.slice(0, 4).map(t => (
                   <span key={t.type} style={{
                     fontSize: 'var(--fs-2xs)', padding: '1px 6px', borderRadius: 4,
-                    background: 'rgba(34,211,238,0.08)', color: 'var(--color-text-3)',
+                    background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)', color: 'var(--color-text-3)',
                   }}>
                     {CHECK_TYPE_LABELS[t.type] || t.type} {t.count}
                   </span>
@@ -267,7 +269,7 @@ export default function ReportsPage() {
               {analytics.obstructions.violations > 0 && (
                 <span style={{
                   fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 5px', borderRadius: 3,
-                  background: 'rgba(239,68,68,0.12)', color: 'var(--color-danger)',
+                  background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)', color: 'var(--color-danger)',
                 }}>
                   {analytics.obstructions.evaluated > 0
                     ? `${Math.round((analytics.obstructions.violations / analytics.obstructions.evaluated) * 100)}%`
@@ -310,7 +312,7 @@ export default function ReportsPage() {
           </StyledCard>
 
           {/* Customer Feedback */}
-          <StyledCard accent="#FBBF24">
+          <StyledCard accent="var(--color-warning)">
             <CardHeader>Customer Feedback</CardHeader>
             <BigNumber value={analytics.feedback.recentCount} label={`submissions (${periodLabel})`} />
             <StatRow label="Total all-time" value={analytics.feedback.total} />
