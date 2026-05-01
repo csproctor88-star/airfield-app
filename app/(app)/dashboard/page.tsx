@@ -226,7 +226,8 @@ export default function AMDashboardPage() {
             display: 'flex', alignItems: 'center', gap: 6,
             marginBottom: 12, padding: '8px 12px',
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.35)',
+            background: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)',
             color: 'var(--color-text-1)', textDecoration: 'none',
             fontSize: 'var(--fs-sm)',
           }}>
@@ -348,15 +349,19 @@ export default function AMDashboardPage() {
           }} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
-            background: afmOutOfOffice ? 'rgba(56,189,248,0.10)' : 'var(--color-bg-surface)',
-            border: afmOutOfOffice ? '1px solid rgba(56,189,248,0.40)' : '1px solid var(--color-border)',
-            borderLeft: afmOutOfOffice ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+            background: afmOutOfOffice
+              ? 'color-mix(in srgb, var(--color-cyan) 10%, transparent)'
+              : 'var(--color-bg-surface)',
+            border: afmOutOfOffice
+              ? '1px solid color-mix(in srgb, var(--color-cyan) 40%, transparent)'
+              : '1px solid var(--color-border)',
+            borderLeft: afmOutOfOffice ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
             fontSize: 'var(--fs-sm)', fontWeight: 600,
-            color: afmOutOfOffice ? 'var(--color-accent)' : 'var(--color-text-1)',
+            color: afmOutOfOffice ? 'var(--color-cyan)' : 'var(--color-text-1)',
             cursor: 'pointer', fontFamily: 'inherit',
             textAlign: 'center', lineHeight: 1.2,
           }}>
-            <DoorOpen size={22} color={afmOutOfOffice ? 'var(--color-accent)' : 'var(--color-text-2)'} strokeWidth={2.25} />
+            <DoorOpen size={22} color={afmOutOfOffice ? 'var(--color-cyan)' : 'var(--color-text-2)'} strokeWidth={2.25} />
             <span>{afmOutOfOffice ? 'End Out of Office' : 'Out of Office'}</span>
           </button>
         )}
@@ -371,8 +376,12 @@ export default function AMDashboardPage() {
           }} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
-            background: afmClosed ? 'rgba(239,68,68,0.10)' : 'var(--color-bg-surface)',
-            border: afmClosed ? '1px solid rgba(239,68,68,0.40)' : '1px solid var(--color-border)',
+            background: afmClosed
+              ? 'color-mix(in srgb, var(--color-danger) 10%, transparent)'
+              : 'var(--color-bg-surface)',
+            border: afmClosed
+              ? '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)'
+              : '1px solid var(--color-border)',
             borderLeft: afmClosed ? '4px solid var(--color-danger)' : '1px solid var(--color-border)',
             fontSize: 'var(--fs-sm)', fontWeight: 600,
             color: afmClosed ? 'var(--color-danger)' : 'var(--color-text-1)',
