@@ -329,7 +329,9 @@ export default function WildlifePage() {
               background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--color-border)',
             }}>
-              <div style={{ fontSize: 'var(--fs-3xl)', marginBottom: 8 }}>🦅</div>
+              <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+                <Bird size={36} color="var(--color-text-4)" strokeWidth={1.75} />
+              </div>
               <div style={{ fontWeight: 700, marginBottom: 4 }}>No wildlife activity recorded</div>
               <div style={{ fontSize: 'var(--fs-sm)' }}>Use "+ Sighting" or "+ Strike" to log wildlife observations</div>
             </div>

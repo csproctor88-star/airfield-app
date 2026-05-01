@@ -4,65 +4,75 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { LogOut, ChevronRight } from 'lucide-react'
+import {
+  LogOut, ChevronRight,
+  RadioTower, BarChart3, ScrollText, Zap, Radio, CheckSquare,
+  ClipboardCheck, ClipboardList, Bird, FileSignature, HardHat,
+  AlertTriangle, MapPin, Lightbulb, PlaneLanding, Plane, Library,
+  Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
+  BookOpen, Users, Settings as SettingsIcon,
+  Wrench, FolderOpen, Shield,
+  type LucideIcon,
+} from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
 import { usePermissions, PERM } from '@/lib/permissions'
 
-type ModuleItem = { name: string; icon: string; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
+type ModuleItem = { name: string; icon: LucideIcon; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
 // Pinned — same items visible on bottom nav
 const pinnedItems: ModuleItem[] = [
-  { name: 'Airfield Status', icon: '📡', color: 'var(--color-accent)', href: '/' },
-  { name: 'Dashboard', icon: '📊', color: 'var(--color-accent)', href: '/dashboard' },
+  { name: 'Airfield Status', icon: RadioTower, color: 'var(--color-accent)', href: '/' },
+  { name: 'Dashboard', icon: BarChart3, color: 'var(--color-accent)', href: '/dashboard' },
 ]
 
 // Operations
 const opsItems: ModuleItem[] = [
-  { name: 'Events Log', icon: '📝', color: 'var(--color-success)', href: '/activity' },
-  { name: 'QRC', icon: '⚡', color: 'var(--color-warning)', href: '/qrc' },
-  { name: 'Secondary Crash Net', icon: '📻', color: 'var(--color-warning)', href: '/scn' },
-  { name: 'Shift Checklist', icon: '☑️', color: 'var(--color-accent)', href: '/shift-checklist' },
-  { name: 'Airfield Checks', icon: '✅', color: 'var(--color-cyan)', href: '/checks' },
-  { name: 'All Inspections', icon: '📋', color: 'var(--color-cyan)', href: '/inspections/all' },
-  { name: 'Wildlife / BASH', icon: '🦅', color: 'var(--color-success)', href: '/wildlife' },
-  { name: 'PPR Log', icon: '📝', color: 'var(--color-accent)', href: '/ppr' },
-  { name: 'Personnel on Airfield', icon: '🚧', color: 'var(--color-amber)', href: '/contractors' },
+  { name: 'Events Log', icon: ScrollText, color: 'var(--color-success)', href: '/activity' },
+  { name: 'QRC', icon: Zap, color: 'var(--color-warning)', href: '/qrc' },
+  { name: 'Secondary Crash Net', icon: Radio, color: 'var(--color-warning)', href: '/scn' },
+  { name: 'Shift Checklist', icon: CheckSquare, color: 'var(--color-accent)', href: '/shift-checklist' },
+  { name: 'Airfield Checks', icon: ClipboardCheck, color: 'var(--color-cyan)', href: '/checks' },
+  { name: 'All Inspections', icon: ClipboardList, color: 'var(--color-cyan)', href: '/inspections/all' },
+  { name: 'Wildlife / BASH', icon: Bird, color: 'var(--color-success)', href: '/wildlife' },
+  { name: 'PPR Log', icon: FileSignature, color: 'var(--color-accent)', href: '/ppr' },
+  { name: 'Personnel on Airfield', icon: HardHat, color: 'var(--color-amber)', href: '/contractors' },
 ]
 
 // Airfield Management
 const mgmtItems: ModuleItem[] = [
-  { name: 'Discrepancies', icon: '⚠️', color: 'var(--color-warning)', href: '/discrepancies' },
-  { name: 'Obstruction Eval Tool', icon: '📍', color: 'var(--color-orange)', href: '/obstructions' },
-  { name: 'Visual NAVAIDs', icon: '💡', color: 'var(--color-warning)', href: '/infrastructure' },
-  { name: 'Aircraft Parking', icon: '🛬', color: 'var(--color-accent)', href: '/parking' },
+  { name: 'Discrepancies', icon: AlertTriangle, color: 'var(--color-warning)', href: '/discrepancies' },
+  { name: 'Obstruction Eval Tool', icon: MapPin, color: 'var(--color-orange)', href: '/obstructions' },
+  { name: 'Visual NAVAIDs', icon: Lightbulb, color: 'var(--color-warning)', href: '/infrastructure' },
+  { name: 'Aircraft Parking', icon: PlaneLanding, color: 'var(--color-accent)', href: '/parking' },
 ]
 
 // Reference
 const refItems: ModuleItem[] = [
-  { name: 'Aircraft Database', icon: '✈️', color: 'var(--color-accent)', href: '/aircraft' },
-  { name: 'Reference Library', icon: '📚', color: 'var(--color-cyan)', href: '/regulations' },
-  { name: 'NOTAMs', icon: '📡', color: 'var(--color-cyan)', href: '/notams' },
+  { name: 'Aircraft Database', icon: Plane, color: 'var(--color-accent)', href: '/aircraft' },
+  { name: 'Reference Library', icon: Library, color: 'var(--color-cyan)', href: '/regulations' },
+  { name: 'NOTAMs', icon: RadioTower, color: 'var(--color-cyan)', href: '/notams' },
 ]
 
 // Admin
 const adminItems: ModuleItem[] = [
-  { name: 'Activity Log', icon: '🕘', color: 'var(--color-success)', href: '/recent-activity' },
-  { name: 'Daily Reviews', icon: '🗓️', color: 'var(--color-purple)', href: '/daily-reviews' },
-  { name: 'Waivers', icon: '📄', color: 'var(--color-purple)', href: '/waivers' },
-  { name: 'Reports & Analytics', icon: '📈', color: 'var(--color-cyan)', href: '/reports' },
-  { name: 'Glidepath Training', icon: '🎓', color: 'var(--color-accent)', href: '/training' },
-  { name: 'PDF Library', icon: '📖', color: 'var(--color-purple)', href: '/library', adminOnly: true },
-  { name: 'User Management', icon: '👥', color: 'var(--color-text-3)', href: '/users', adminOnly: true },
+  { name: 'Activity Log', icon: Clock, color: 'var(--color-success)', href: '/recent-activity' },
+  { name: 'Daily Reviews', icon: CalendarCheck, color: 'var(--color-purple)', href: '/daily-reviews' },
+  { name: 'Waivers', icon: FileText, color: 'var(--color-purple)', href: '/waivers' },
+  { name: 'Reports & Analytics', icon: TrendingUp, color: 'var(--color-cyan)', href: '/reports' },
+  { name: 'Glidepath Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/training' },
+  { name: 'PDF Library', icon: BookOpen, color: 'var(--color-purple)', href: '/library', adminOnly: true },
+  { name: 'User Management', icon: Users, color: 'var(--color-text-3)', href: '/users', adminOnly: true },
 ]
 
 // Settings
 const settingsItems: ModuleItem[] = [
-  { name: 'Settings', icon: '⚙️', color: 'var(--color-text-3)', href: '/settings' },
+  { name: 'Settings', icon: SettingsIcon, color: 'var(--color-text-3)', href: '/settings' },
 ]
 
 function NavItem({ item }: { item: ModuleItem }) {
+  const Icon = item.icon
   return (
     <Link
       href={item.href}
@@ -86,11 +96,10 @@ function NavItem({ item }: { item: ModuleItem }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 'var(--fs-2xl)',
           flexShrink: 0,
         }}
       >
-        {item.icon}
+        <Icon size={20} color={item.color} strokeWidth={2} />
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{item.name}</div>
@@ -100,8 +109,9 @@ function NavItem({ item }: { item: ModuleItem }) {
   )
 }
 
-function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; icon: string; items: ModuleItem[]; defaultOpen?: boolean }) {
+function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; icon: LucideIcon; items: ModuleItem[]; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen ?? false)
+  const Icon = icon
 
   if (items.length === 0) return null
 
@@ -128,21 +138,28 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
             width: 36,
             height: 36,
             borderRadius: 'var(--radius-md)',
-            background: 'rgba(100,116,139,0.08)',
-            border: '1px solid rgba(100,116,139,0.15)',
+            background: 'color-mix(in srgb, var(--color-text-3) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-text-3) 16%, transparent)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 'var(--fs-2xl)',
             flexShrink: 0,
           }}
         >
-          {icon}
+          <Icon size={20} color="var(--color-text-2)" strokeWidth={2} />
         </div>
         <div style={{ flex: 1, textAlign: 'left' }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{label}</div>
         </div>
-        <span style={{ color: 'var(--color-text-4)', fontSize: 'var(--fs-lg)', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none' }}>›</span>
+        <ChevronRight
+          size={16}
+          style={{
+            color: 'var(--color-text-4)',
+            flexShrink: 0,
+            transition: 'transform 0.2s',
+            transform: open ? 'rotate(90deg)' : 'none',
+          }}
+        />
       </button>
       {open && items.map(item => (
         <div key={item.href} style={{ paddingLeft: 16 }}>
@@ -259,16 +276,16 @@ export default function MorePage() {
         ))}
 
         {/* Operations */}
-        <CollapsibleGroup label="Operations" icon="🔧" items={filterItems(opsItems)} defaultOpen />
+        <CollapsibleGroup label="Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen />
 
         {/* Airfield Management */}
-        <CollapsibleGroup label="Airfield Management" icon="📂" items={filterItems(mgmtItems)} />
+        <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} />
 
         {/* Reference */}
-        <CollapsibleGroup label="Reference" icon="📚" items={filterItems(refItems)} />
+        <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} />
 
         {/* Admin */}
-        <CollapsibleGroup label="Admin" icon="🛡️" items={filterItems(adminItems)} />
+        <CollapsibleGroup label="Admin" icon={Shield} items={filterItems(adminItems)} />
 
         {/* Settings — flat at the bottom, no collapsible wrapper */}
         {filterItems(settingsItems).map(item => (
