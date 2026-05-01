@@ -497,7 +497,7 @@ export default function AcsiFormPage() {
         <ArrowLeft size={14} /> Back to ACSI List
       </Link>
 
-      <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: '0 0 20px' }}>
+      <h1 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: '0 0 20px' }}>
         {dbRowId ? 'Edit ACSI Inspection' : 'New ACSI Inspection'}
       </h1>
 
@@ -561,7 +561,7 @@ export default function AcsiFormPage() {
           <div style={{
             height: '100%', borderRadius: 'var(--radius-xs)', transition: 'width 0.3s',
             width: `${pct}%`,
-            background: pct === 100 ? 'var(--color-green)' : 'var(--color-accent)',
+            background: pct === 100 ? 'var(--color-green)' : 'var(--color-cyan)',
           }} />
         </div>
       </div>
@@ -667,8 +667,10 @@ export default function AcsiFormPage() {
                         display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px',
                         borderRadius: 'var(--radius-sm)',
                         background: draft.responses[li.id] === 'fail'
-                          ? 'rgba(239, 68, 68, 0.06)'
-                          : liIdx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.06)',
+                          ? 'color-mix(in srgb, var(--color-danger) 6%, transparent)'
+                          : liIdx % 2 === 0
+                            ? 'color-mix(in srgb, var(--color-text-1) 2%, transparent)'
+                            : 'color-mix(in srgb, var(--color-text-1) 6%, transparent)',
                       }}>
                         <span style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)', minWidth: 48 }}>
                           {li.id}
@@ -792,7 +794,7 @@ export default function AcsiFormPage() {
             display: 'inline-flex', alignItems: 'center', gap: 8,
             padding: '12px 24px', borderRadius: 'var(--radius-md)',
             border: 'none',
-            background: 'var(--color-accent)',
+            background: 'var(--color-success)',
             color: '#fff',
             fontSize: 'var(--fs-base)', fontWeight: 600, cursor: 'pointer',
             opacity: filing ? 0.5 : 1,
