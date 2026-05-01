@@ -324,7 +324,11 @@ function AircraftDetailCard({
           }
         </div>
 
-        {/* Name */}
+        {/* Name + secondary metadata stack — manufacturer + group +
+            wingspan surface inline so the collapsed row is informative
+            without clicking. Was just the name + chevron, which made
+            the alphabetical browsing flow rely entirely on memorization
+            of model designations. */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
             fontSize: 'var(--fs-md)',
@@ -333,10 +337,41 @@ function AircraftDetailCard({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            lineHeight: 1.4,
+            lineHeight: 1.3,
           }}>
             {ac.aircraft}
           </div>
+          {(ac.manufacturer || ac.group_index || ac.wing_span_ft) && (
+            <div style={{
+              fontSize: 'var(--fs-xs)',
+              color: 'var(--color-text-3)',
+              marginTop: 2,
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              alignItems: 'baseline',
+            }}>
+              {ac.manufacturer && <span>{ac.manufacturer}</span>}
+              {ac.group_index && (
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontSize: 'var(--fs-2xs)',
+                  fontWeight: 700,
+                  color: 'var(--color-violet)',
+                  padding: '1px 6px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'color-mix(in srgb, var(--color-violet) 12%, transparent)',
+                }}>
+                  GROUP {ac.group_index}
+                </span>
+              )}
+              {ac.wing_span_ft && (
+                <span style={{ color: 'var(--color-text-4)' }}>
+                  Wingspan {ac.wing_span_ft} ft
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Expand Arrow */}
@@ -808,11 +843,15 @@ export default function AircraftPage() {
         </div>
       )}
 
-      {/* Results Count */}
-      <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-3)', marginBottom: 8 }}>
-        {showFavoritesOnly ? `${filtered.length} pinned aircraft` : `${filtered.length} aircraft`}
-        {search && ` matching "${search}"`}
-      </div>
+      {/* Results count — only meaningful when a filter narrows the
+          set. Dropping it for the no-filter case removes a line that
+          duplicates the tab count below the tab row. */}
+      {(showFavoritesOnly || search) && (
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
+          {showFavoritesOnly ? `${filtered.length} pinned aircraft` : `${filtered.length} aircraft`}
+          {search && ` matching "${search}"`}
+        </div>
+      )}
 
       {/* Aircraft List */}
       <div className="card-list card-list-single">
