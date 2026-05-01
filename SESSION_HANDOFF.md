@@ -3,203 +3,261 @@
 **Date:** 2026-04-30
 **Branch:** `main`
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `9d32a58`
+**HEAD:** `1e9dd83` (28 commits ahead of `origin/main` — not pushed)
 
 ---
 
 ## What shipped this session
 
-A long, dense session. **20 commits** on `main` carrying the
-distinctive-design-language sweep across the rest of the app — the
-inspections / wildlife / notams / scn / contractors / obstructions /
-waivers modules — plus a clutch of smaller fixes (Other-check resume
-bug, sidebar collapse toggle, discrepancy detail layout, DetailGrid
-upgrade). The campaign that started in late April is now functionally
-complete across every primary user-facing route. The remaining
-untouched pages are admin / reports / public-auth (catalogued in the
-"Next session tasks" section below).
+Two distinct workstreams. **Tier 1 of the audit-derived refresh
+backlog landed cleanly** in three commits at the start —
+`/login`, the paired `/reset-password` + `/setup-account` auth
+forms, and the public `/feedback/[baseId]` QR form are now on the
+distinctive design language. The second 25 commits were a
+**user-driven deep pass on the Aircraft Parking module** — panel
+restructure, Vector Maps migration for interactive rotation,
+auto-numbering bug fix, and a thorough accessibility/contrast
+sweep. The parking work was triggered by user screenshots flagging
+specific visual and ergonomic friction; each commit is tightly
+scoped and the diffs are small.
 
-The sweep landed three cross-cutting wins beyond chrome refresh:
+The session also closed two pre-existing latent bugs (the `/scn`
+hex-alpha pattern repeated in parking, and `--color-text-primary`
+being referenced without ever being defined) and validated the
+Vector Maps mapId path end-to-end with the user's own Cloud Console
+setup. **A two-commit detour into a left-rail layout was reverted**
+when the user confirmed the floating panel is the right call —
+rejecting the rail and keeping the map full-width.
 
-1. **Caught a latent bug in /scn** — `${SCN_STATUS_COLORS[s]}55`
-   shadow concat silently broke when the source map was tokenized to
-   `var(--color-*)`. The outlined-pill rebuild fixes a broken active
-   state that had been shipping since the token migration landed.
-2. **Migrated 3 shared constant maps** in `lib/constants.ts`:
-   `CONTRACTOR_STATUS_CONFIG`, `WAIVER_STATUS_CONFIG`,
-   `WAIVER_HAZARD_RATINGS`. All hex pairs swap to `var(--color-*)` +
-   `color-mix()` so light mode now adapts. `WAIVER_CLASSIFICATIONS`
-   gains an `iconKey` field consumed by the detail/new/edit pages
-   (Lock / Clock / Construction / Calendar / RefreshCw / FileEdit
-   replace 🔒 ⏳ 🏗️ 📅 🔄 📝).
-3. **Discovered + fixed a wall-of-text regression** in
-   `/waivers/[id]` Overview by upgrading the shared `DetailGrid`
-   component to bordered tile chrome. Six detail pages benefit.
+### Tier 1 — public auth + feedback refresh (3 commits)
 
-### Inspections forms refresh + Other-check resume bug (`407ce03`, `5549cc6`)
+`760e0ca` `/login` — outline-pill recipe applied to error/success
+alerts, dropdown hover, HTML-entity arrow → Lucide ArrowLeft.
+`btn-primary` left alone (already token-based and used by every
+refreshed page). The handoff's "filled-cyan + white text" callout
+turned out to refer to the feedback form's inline-hex gradient, not
+login.
 
-Carryover from the prior session. `/inspections/construction/new` +
-`/inspections/joint-monthly/new` got the established design language
-in `407ce03` — tertiary header (HardHat for construction,
-ClipboardCheck for joint), `var(--color-amber)` / `var(--color-blue)`
-replacing hardcoded hex, `color-mix()` recipe replacing
-`rgba(56,189,248,...)` for personnel selection rows.
+`5bc61c0` `/reset-password` + `/setup-account` bundled — identical
+shape, identical edits. Icon-box hex gradient → token-based accent
+gradient. rgba alerts → color-mix on `--color-success` /
+`--color-danger`. Auth flow (`PASSWORD_RECOVERY` listener,
+`profile.status` pending → active) untouched.
 
-`5549cc6` fixed a real bug surfaced during smoke-testing: the
-"Other" check Reason wasn't persisting on resume. Root cause was
-`buildDraftSnapshot()` in `app/(app)/checks/page.tsx` omitting
-`constructionItems` and `otherSubject` from the returned object,
-even though both were in the dependency array. TS missed it because
-both fields are `?` optional in `CheckDraft`. Same bug had been
-silently dropping Construction-check checklist state on auto-save.
-The b007aea belt-and-suspenders save still ran — but the next
-auto-save tick overwrote localStorage with a stripped snapshot. One-
-line fix: add both fields to the snapshot literal.
+`596290c` `/feedback/[baseId]` — heaviest of Tier 1. ~12 hex
+literals → tokens, GLIDEPATH header text → wordmark gradient,
+`&#10003;` checkmark → Lucide `CheckCircle2`, star glyphs → Lucide
+`Star` with `fill` toggling, gradient submit button → `btn-primary`,
+outlined-pill recipe on rating + yes/no buttons. Light section
+dividers ("About You" / "Your Feedback") added inside the existing
+card — no nested cards, mobile-friendly. Rate-limit + custom-field
+config preserved.
 
-### Discrepancy detail 2-col stretched grid (`20688a8`)
+### Parking polish — layout + tokens + buttons + list (4 commits, planned)
 
-Inner detail grid was using `auto-fit minmax(160px, 1fr)` which
-produced 3-4 narrow columns on a typical viewport — long labels
-("Work Order Assigned to") wrapped, and the whole left section
-ended up shorter than the map+photos column. Changed to fixed 2-col
-with `gridAutoRows: 1fr`, `alignItems: stretch`, plus
-`whiteSpace: nowrap + ellipsis` on labels. The recipe was reused on
-this session's later DetailGrid upgrade.
+`0c49a6f` + `fa29b30` + `771bc0e` (REVERTED ARC) — Tried a left-rail
+desktop layout with a 380→280px width and a drag-resize handle.
+User came back: "the map keeps its full width" was the right call.
+Reverted to the floating overlay panel.
 
-### Sidebar collapse toggle (`7c8fc4c`)
+`fe2fb13` floating panel got drag-resize handles instead — left
+edge for width, bottom edge for height, bottom-left corner for both.
+Width 260–640, height 240px to viewport-60px. Persists to
+`localStorage` as `glidepath_parking_panel_width` /
+`_height`. Map tiles refresh on mouseup. Defaults 344 / null
+(content-driven up to `calc(100vh - 140px)`).
 
-The collapse toggle was orphaned in its own row below the logo +
-tagline. Floated it absolutely in the top-right corner of the
-sidebar header when expanded; collapsed state unchanged.
+`320e626` token aliases + color-mix migration — the C5 commit. Two
+real bugs cleared: `--color-text-primary` and
+`--color-text-secondary` were referenced ~30 times in
+`parking/page.tsx` but never defined in `globals.css` (browser
+fallback was masking it). Added aliases pointing to `-text-1` and
+`-text-2`. Plus added `--color-violet` (`#8B5CF6` / `#6D28D9`) for
+peripheral-taxilane styling. Then converted ~60 `${color}NN`
+hex-alpha-concat patterns to `color-mix(in srgb, ... N%,
+transparent)` — same footgun that hit `/scn` last session. Inline
+JSX hex literals `'#A855F7'`, `'#22D3EE'`, `'#3B82F6'` swapped to
+`var()` tokens; ADG_COLORS / STATUS_COLORS lookup tables and
+Google Maps API args (`fillColor` / `strokeColor`) stay as hex
+because those consumers don't read CSS variables.
 
-### NOTAMs module sweep (`3f8f40e`)
+`6140f64` action bar consistency + 3-dot overflow menu — the four
+inconsistently-styled buttons (Set Active filled green / Duplicate
+text-link / Save as Template filled purple / Delete filled red)
+restructured to: Set Active (filled-green primary, only when
+`!is_active && !is_template`), Duplicate (outlined-pill cyan), and
+a Lucide `MoreVertical` button that pops a small floating menu
+holding Save as Template (Convert to Plan) and Delete plan.
+Click-outside closes via full-screen invisible overlay at zIndex 14.
 
-All three NOTAM routes (list / detail / new) on the design language.
-List page: tertiary `Megaphone` header + cyan rule, FAA feed status
-card color-codes by connection state (success / danger), refresh
-swapped to Lucide `RefreshCw`, source-coded card left rules (cyan
-FAA / purple LOCAL / gray expired / danger expiring), the `✉`
-envelope glyph + `↻` refresh glyph are gone. Detail page: source-
-tracking accent rule, theme-token colors, tile-style info grid.
-New page: tertiary header + ArrowLeft + CheckCircle2 on Save Draft.
+`cfdfbbd` aircraft list hierarchy + auto-numbering bug fix — the
+C7 commit. Group headers (e.g. "C-130E/H Hercules") promoted to
+tertiary section header tier (uppercase, top border, cyan-tinted
+bottom rule, ADG badge bumped to fontWeight 700, count badge moved
+to flex-end). "All N hdg" sub-control de-emphasized (transparent
+bg, uppercase 2xs label, opacity 0.85). Expanded spot rows now
+have 3px cyan left rule + cyan tinted bg (was just bg-color shift).
+Multi-select rows: 3px purple rule + purple tint. Tab counts
+unified to cyan everywhere; `--color-danger` and `--color-warning`
+reserved for the Clearance tab when there are actual
+violations/warnings.
 
-### Wildlife/BASH module sweep (5 commits — `e319f17` through `b497480`)
+The auto-numbering bug — "I placed 4 C-130s and they're all named
+#1" — turned out to be a stale-closure issue. The Google Maps
+click listener at the parking page's main `useEffect` doesn't have
+`spots` in its deps array. The handler was reading `spots` from
+the closure captured at registration time, so each rapid click saw
+`existingCount = 0` and minted "C-130E/H Hercules #1" again. Fix:
+introduced `spotsRef` (mirrors the existing `selectedSpotIdsRef`
+pattern at line 393), kept in sync on every render. The handler
+reads `spotsRef.current`, parses existing `#N` suffixes, and
+takes `max(...) + 1` — so deletes don't reuse numbers either.
 
-Five-commit arc covering the page chrome, the heatmap (chrome only
-— Mapbox layers untouched), analytics + report panels, sighting +
-strike forms + species picker, plus a card-grouped restructure of
-both forms after user feedback that the flat field stack felt
-congested.
+### Parking polish — refinement passes (3 commits)
 
-`e319f17` did the page chrome: tertiary `Bird` header + amber rule
-(BASH = bird hazard, urgency-coded), outlined-pill `+ Sighting` /
-`+ Strike` action buttons (Eye / Zap icons), pill-style segmented
-tabs matching QRC + NOTAMs, activity log rows with type-coded left
-rule + Lucide-iconed tinted squares replacing 👁️ / 💥 emoji.
+`543d4ef` Finish buttons in placement bar lost contrast in light
+mode — `color: var(--color-text-1)` resolves to `#0F172A` (near
+black) in light mode, on top of dark-color backgrounds
+(`--color-success`, `--color-status-inwork`, `--color-purple`).
+Black on dark-green/dark-blue is unreadable. Hardcoded `#fff` +
+fontWeight 700 on the taxilane and boundary Finish buttons —
+white-on-dark-color reads in both modes. Orange line-obstacle
+button stays on `#000` (orange is bright enough that black reads).
 
-`f9356a9` did the forms + species picker — tertiary headers
-(Eye for sighting, Zap for strike), GPS / Map button SVG → Lucide
-`Crosshair` / `MapPin`, action toggles + parts-struck / parts-
-damaged pills on outlined-pill recipe, classification star → Lucide
-`Star`. Filed mode (BASH alert + risk pill + submit button) all
-moved to outlined-pill recipe.
+`af656b5` spot-name tooltip moved from the inner `<span>` to the
+row `<div>`. The native `title` attribute on the span wasn't firing
+reliably under the parent `cursor: pointer + onClick` container —
+browsers can be picky about title-attr discovery inside an
+interactive region. Title on the `<div>` fires anywhere on the row.
 
-`956af94` did the analytics + report tabs. `BWC_COLORS` map values
-routed through tokens (semantic tier mapping preserved). Four
-KPI cards on color-coded outlined-pill chrome with Lucide icons
-replacing 👁️💥📢✓. Section headers tertiary tier-label
-(BarChart3 / Award / Layers / Clock / FileText / Map).
+`cef6e28` floating tool toolbar — three changes the user flagged:
+single "Taxilane" button → "+ Interior Taxilane" (blue) and
+"+ Peripheral Taxilane" (violet); the "Locked/Unlocked" button —
+which actually only toggled `planLocked` (aircraft) — split into
+"AC Locked/Unlocked" (red/green) and "OB Locked/Unlocked"
+(orange/green). Also moved from `top: 10, left: 50%` to
+`top: 50, left: 10` — but this turned out to put it where the user
+wanted the PANEL to live, so it was reverted in `c4f7ede`.
 
-`5d9f123` did the heatmap chrome — filter bar tertiary header,
-density legend gradient routed through theme tokens (Mapbox paint
-config explicitly preserved with comment), tertiary footer. Bonus:
-deleted `wildlife-heatmap-google.tsx` (191 LOC) — confirmed dead
-code, leftover from the half-done Google Maps migration.
+### Parking polish — panel + toolbar reposition (3 commits, intent-correction arc)
 
-`c284eb9` moved Pin Location to the top of both forms after the
-user noted the embedded map mid-form looked weird.
+`e141845` floating panel anchored top-left under the controls
+toolbar (was top-right). Resize handles flipped to match new
+anchor: right edge for width (drag right widens), bottom-right
+corner. Cursor `nesw-resize` → `nwse-resize`.
 
-`b497480` was the polish pass. The user's exact feedback: "looks
-too congested for a polish and professional looking input form."
-Six (sighting) / seven (strike) bordered cards group related fields
-with Lucide-iconed bold uppercase headers; field labels relax to
-sentence-case `text-3` for two-tier hierarchy. Field rendering /
-validation / submit logic unchanged.
+`c4f7ede` floating tool toolbar back to its original top-center
+position. The earlier move to top-left was made under the
+assumption the user wanted the toolbar there, but they actually
+wanted the panel there. Now panel is top-left, toolbar is top-center
+— no overlap because they're conditional on opposite states
+(panel shown when `!sidebarCollapsed`, toolbar shown when
+`sidebarCollapsed`).
 
-### Batch sweep — /scn, /contractors, /obstructions, /waivers (8 commits)
+### Parking — gestureHandling + map rotation (5 commits)
 
-8-commit slice plan executed cleanly:
+`858f294` Box Select cleanup restored `gestureHandling: 'auto'`
+after the box-select effect tore down — but the parking map's
+default is `'greedy'`. Once a user toggled Box Select on/off
+*ever*, the map permanently switched to cooperative mode (Ctrl+drag
+to pan). One-character fix: `'auto'` → `'greedy'`. Sneaky bug.
 
-- `3b8e731` /scn — fixed the latent `${color}55` shadow concat bug
-  via outlined-pill rebuild. Backup vs Daily check chips gain
-  purple/cyan tokens.
-- `0955bf1` /contractors + `CONTRACTOR_STATUS_CONFIG` constants
-  migration. Active count badge, Mark Completed, Save Template all
-  on outlined-pill recipe.
-- `5677cee` /obstructions list — tertiary `AlertTriangle` header,
-  GPS inline SVG → Lucide `Crosshair`, `⚠️/✅` violation/clear
-  emojis → Lucide `AlertCircle`/`CheckCircle2`, surface result
-  badges and taxiway WITHIN OFA pill on `color-mix()`. Google Maps
-  + `s.color` overlay coloring untouched per plan.
-- `06d9037` /obstructions detail + history — `📄/✉/🔍` →
-  `FileDown/Mail/Search`, history page Map/List toggle on outlined-
-  pill cyan, evaluation cards get type-coded left rule (3px
-  danger/success). Critical preservation: the `SURFACE_COLORS` map
-  in `[id]/page.tsx` (UFC 3-260-01 imaginary-surface legend)
-  stays verbatim hex — semantic + backend-mapped + reference-tied.
-- `d6b9f78` /waivers list — `FileWarning` header, KPI cards
-  (Permanent/Temporary/Expiring/Overdue) gain outlined-pill chrome
-  with token colors, `+ New Waiver` filled gradient → outlined cyan
-  with `Plus` icon.
-- `01d3d8d` /waivers detail + `WAIVER_STATUS_CONFIG` /
-  `WAIVER_HAZARD_RATINGS` / `WAIVER_CLASSIFICATIONS` constants
-  migration. Constants migration is the load-bearing piece — every
-  consumer (list page Badge component, detail page status pill,
-  hazard pills, classification chip) keeps working transparently
-  because the shape stays identical and the Badge component already
-  auto-applies `color-mix()` when given `var(--color-*)`. The
-  `iconKey` field on WAIVER_CLASSIFICATIONS gets resolved through
-  small `CLASSIFICATION_ICON` maps at each rendering site to keep
-  `lib/constants.ts` free of React imports.
-- `cb75a45` /waivers new + edit — both forms get tertiary headers,
-  classification dropdown picks up Lucide icons via `iconKey`,
-  Action Requested pills + + Add Criteria buttons on outlined-pill
-  recipe.
-- `eb55da5` /waivers annual-review — tertiary `Calendar` header,
-  KPI cards with outlined-pill chrome, year nav arrows replace
-  `&larr;/&rarr;` HTML entities with Lucide `ChevronLeft/Right`,
-  per-waiver classification chip uses Lucide icon, Remove Review
-  button on outlined-pill danger.
+`bcd26fe` Added Rotate / Tilt / Reset toolbar buttons (Lucide
+`RotateCw` / `Triangle` / `RefreshCw`) — programmatic
+`setHeading()` / `setTilt()` calls. These work on raster satellite,
+so they were a stopgap before the Vector Maps wire-up.
 
-### DetailGrid bordered tile upgrade (`9d32a58`)
+`82d9ccf` Vector Maps mapId — the user added a Map ID to
+`.env.local` after I explained that Google Maps raster satellite
+doesn't support interactive heading rotation. Wired
+`mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID` into the
+parking-only map options. Falls back to raster cleanly if unset
+(CI / demo deploys).
 
-User fed back that `/waivers/[id]` Overview read as a wall of text —
-16 label/value pairs in a 2-col grid with no visual separation.
-Fix: lift the tile chrome from the discrepancy detail (`20688a8`)
-into the shared `DetailGrid` component. Each cell now renders as
-its own bordered tile with `color-mix()` cyan left rule + `bg-inset`
-interior + `whiteSpace: nowrap` clipped uppercase label + `weight-
-500 fs-md` value. Six detail pages benefit at once: `/waivers/[id]`,
-`/obstructions/[id]`, `/discrepancies/[id]` (already had its own
-inline tiled grid — unchanged), `/inspections/[id]`, `/checks/[id]`,
-`/aircraft`. Default `gap` 10 → 8 for tighter rhythm.
+`5da8bb4` + `cb04552` custom Ctrl+drag heading + tilt handler.
+`gestureHandling: 'greedy'` suppresses Vector Maps' built-in
+rotation gesture, so we implement it explicitly: hold Ctrl (or
+Shift) and drag horizontally → rotate; vertical → tilt (clamped
+0–67°). 2px/° horizontal, 4px/° vertical. The first version was
+choppy; `cb04552` switched to `gmap.moveCamera({heading, tilt})`
+(unified vector-camera API, single render pass) and rAF-throttled
+the updates so we coalesce mousemoves to one map update per paint
+frame. Smooth.
 
-### Sweep audit + handoff backlog
+### Parking — projection + icon counter-rotation (3 commits)
 
-End-of-session: explored every untouched page-level file across
-`app/(app)/`, `app/(public)/`, `app/feedback/`, scoring each by
-"refresh signal count" (HTML entity back-arrows, `var(--fs-2xl)`
-page titles, raw `rgba()`, hex literals, emoji-as-icon, inline
-SVGs, filled-bright buttons). The result is in **Next session
-tasks** below — about 19 commits of work remaining across 14
-single-page modules + 5 report subpages + held multi-session work.
+`f6246fd` `pixelToLatLng` in `lib/google-map-adapter.ts` was using
+`getBounds()` + linear interpolation between NE and SW corners.
+Correct only on a north-up flat map. Once the map rotates, the
+bounds rectangle expands to include the rotated viewport, so any
+click coord translates to a lat/lng that's way off — broke aircraft
+drag, box-select, anything that crossed the pixel↔latlng boundary.
+Fix: attach a hidden `google.maps.OverlayView` to the wrapper at
+construction (no DOM rendering, all noop methods). Use its
+`MapCanvasProjection.fromContainerPixelToLatLng()` — the official
+heading + tilt-aware conversion. Bounds-rectangle interpolation
+remains as fallback for the first frame before the overlay draws.
+
+`ae3d938` aircraft icon counter-rotation. User wants aircraft
+heading to read screen-fixed (a "West" aircraft always points the
+same screen direction regardless of map rotation). Rotated map
+content was making icons visually rotate WITH the map even though
+the underlying `heading_deg` was unchanged. Fix: track gmap heading
+via `heading_changed` listener into `mapHeadingDeg` state (rounded
+to 0.5° to suppress jitter). Canvas pre-rotation becomes
+`(spot.heading_deg - mapHeadingDeg + 360) % 360`. Vector Map's
+content rotation adds `mapHeadingDeg` back, netting `heading_deg`
+— icon's apparent rotation stays equal to the aircraft's compass
+heading. Cache key includes effective heading; the position-only
+fast-path also reads effective heading so map rotation correctly
+invalidates the cache. **Performance note**: regenerates ~30+ icons
+on every heading change. Smooth on developer laptop; could stutter
+on weaker machines. Migration to `AdvancedMarkerElement` with CSS
+transforms is the next step if it bites.
+
+`916d02b` ruler had its OWN `pixelToLatLng` — same bounds-rectangle
+approach as the adapter version. Same fix: hook owns its own
+hidden OverlayView (created on activate, torn down on deactivate)
+and uses it for projection. Wrapper-based version isn't accessible
+because the hook only receives a gmap ref, not the wrapper.
+
+### Parking — final polish (4 commits)
+
+`dcf86e3` removed the manual Rotate / Tilt / Reset toolbar buttons.
+Ctrl+drag (desktop) and two-finger gesture (mobile, native Vector
+Maps support) cover both axes; the buttons were redundant and
+covering the placement-tool toolbar.
+
+`73ce3da` floating tool toolbar contrast in dark mode. Background
+was `--color-bg-surface` = `rgba(15,23,42,0.92)` — 8% of the
+satellite map bled through, hurting overall contrast. Switched to
+`--color-bg-surface-solid` (fully opaque). Inactive obstacle-type
+buttons (Point / Building / Line / Circle) had transparent bg + dim
+secondary-text + faint border — three layers of dim. Now:
+`--color-bg-inset` bg + `--color-border-mid` + `--color-text-1` +
+fontWeight 600. Reads clearly.
+
+`78c560f` Interior / Peripheral Taxilane / Boundary buttons —
+tinted-bg + colored-text recipe works for cyan but blue/violet/green
+text was reading too dim against the dark toolbar. Switched all
+three to filled-color bg + `#fff` text + fontWeight 700. The colors
+are dark enough in BOTH modes (light: `#2563EB`, `#6D28D9`,
+`#15803D`) that white text reads cleanly. Color identity comes
+through the fill instead of text.
+
+`fea9e16` + `1e9dd83` empty-state hint padding sweep. All five
+empty-state `<p>` messages in the panel were on `padding: '4px 0'`
+— zero horizontal padding, text ran into the panel edge. Switched
+to `padding: '6px 12px'` + `lineHeight: 1.5`. Covers Aircraft tab
+(no plan, empty plan), Environment tab (no obstacles, no
+taxilanes/boundaries), Clearance tab (no checks).
 
 ---
 
 ## Migrations status
 
 No new migrations this session. Migration `2026042907` from the
-prior session is still the latest applied to prod.
+2026-04-29 session is still the latest applied to prod.
 
 | Migration | Status | What it does |
 |---|---|---|
@@ -212,49 +270,53 @@ prior session is still the latest applied to prod.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Other-check Reason vanished on resume | `buildDraftSnapshot()` returned object missing `constructionItems` + `otherSubject`; both were in deps array but not in the literal. TS missed it because both fields are `?` optional in `CheckDraft`. Auto-save tick overwrote the immediate-save belt-and-suspenders write. Same bug silently dropped Construction-check checklist state. | `5549cc6` |
-| `/scn` AgencyRow status grid active state showed nothing | `${SCN_STATUS_COLORS[s]}55` box-shadow string concat broke after `SCN_STATUS_COLORS` values were tokenized to `var(--color-*)` — concatenating "55" to "var(--color-success)" gives invalid CSS. Had been shipping broken since the token migration. | `3b8e731` |
-| Discrepancy detail tiles wrapped labels + left side shorter than right | Inner grid `auto-fit minmax(160px, 1fr)` produced 3-4 narrow columns on a typical viewport; outer grid `alignItems: 'start'` left columns mis-matched in height. | `20688a8` |
-| Waiver Overview read as wall of text | DetailGrid component had no per-cell chrome — just flat label/value pairs in a `gap: 10` grid. | `9d32a58` |
+| `/scn` AgencyRow active state was broken (carryover-style — pattern repeated in parking) | `${color}NN` hex-alpha concat. Worked for hex literals, silently broke once values became `var(--color-X)` — invalid CSS, no console warning. Migrated all ~60 such patterns in parking to `color-mix()`. | `320e626` |
+| Auto-numbering placed 4 C-130s as "#1" four times | Click listener at the main parking `useEffect` doesn't have `spots` in deps. Closure captured `spots` stale; rapid placement saw `existingCount = 0` each time. Fix: `spotsRef` updated on every render; handler reads via ref + parses existing `#N` suffixes for `max+1`. | `cfdfbbd` |
+| `--color-text-primary` and `--color-text-secondary` had no defined value despite ~30 references in `parking/page.tsx`. Browser was rendering with inherited / default colors, masking the bug. | The tokens were never defined in `globals.css`. Added aliases pointing to `--color-text-1` / `--color-text-2` in both dark and light blocks. | `320e626` |
+| Map became Ctrl+drag-to-pan after toggling Box Select once | Box Select cleanup at `lib/google-map-adapter.ts:1908` restored `gestureHandling: 'auto'` instead of the parking-page default `'greedy'`. On a scrollable page `'auto'` resolves to cooperative-mode. | `858f294` |
+| Aircraft drag, box-select, ruler clicks all landed in wrong locations after rotating the map | `pixelToLatLng` was using a naive `getBounds() + linear interpolation` that's only correct on a north-up flat map. Switched to `MapCanvasProjection.fromContainerPixelToLatLng()` via a hidden OverlayView in both the adapter and the ruler hook. | `f6246fd` + `916d02b` |
+| Light-mode "Finish" buttons in the placement-mode bar (taxilane / boundary) were unreadable — black text on dark green/blue | `color: var(--color-text-1)` resolves to `#0F172A` in light mode. The button bg is `--color-success` / `--color-status-inwork` — also dark in light mode. Hardcoded `#fff` instead. | `543d4ef` |
+| Spot-name tooltip never appeared on hover | Native `title` attribute on the inner `<span>` wasn't firing because the parent `<div>` owns the click handler. Title on the row container fires regardless of which child element the cursor is over. | `af656b5` |
 
 ---
 
 ## Lessons from this session
 
-- **String concatenation onto CSS-token values is a silent footgun.**
-  The `${SCN_STATUS_COLORS[s]}55` pattern works for hex literals
-  (yields `#XXXXXX55`) and breaks for `var()` (yields invalid CSS
-  with no console warning). Same trap snared the
-  `${classInfo.color}14` pattern in waivers list pre-refresh. Anywhere
-  a config map gets tokenized, sweep callsites for hex-alpha concat
-  first. The fix is always `color-mix(in srgb, ${val} X%, transparent)`
-  which works against either input.
-- **Optional fields + spread literals + dependency arrays = silent
-  drops.** `buildDraftSnapshot()` had the right deps but the wrong
-  spread. The TS contract (`CheckDraft` with `?` optional fields)
-  accepts both correct and broken outputs as valid. When auto-save
-  state drops on a single field, look for spread/dep mismatches in
-  the snapshot builder.
-- **Shared component upgrades cascade for free.** Lifting tile chrome
-  into `DetailGrid` improved 6 detail pages with one commit. When
-  fixing visual issues on one page, ask whether the underlying
-  primitive is shared and whether the fix belongs there. (Same
-  principle applied earlier when `Badge` started auto-applying
-  `color-mix()` — every consumer adapted instantly.)
-- **Constants migrations are transparent when the shape doesn't
-  change.** `WAIVER_STATUS_CONFIG` consumers all kept working through
-  the hex → token swap because `{ color, bg, label }` shape stayed
-  identical and the `Badge` component already accepted `var()`
-  values. The hidden risk is hex-alpha string concat (above) — if
-  you're considering a migration like this, grep for
-  `\$\{.*\.color\}` first.
-- **Card grouping > flat stack for forms with > ~8 fields.** The
-  wildlife forms feedback was unambiguous: a stack of similar-weight
-  field labels reads as a wall, even when the chrome is otherwise
-  clean. The fix is two-tier hierarchy — bold uppercase tier-label
-  card headers above, lighter sub-labels inside. This pattern is now
-  proven on QRC, NOTAMs, the wildlife forms, and the waiver
-  forms; codify it as the default for any form ≥ 8 fields.
+- **Stale-closure bugs in event listeners are easy to miss** when
+  the listener uses lots of refs but accesses state directly. The
+  parking click listener used `selectedSpotIdsRef` and others
+  correctly, but read `spots` directly — which was stale. The
+  pattern that fixed it is the same one already established at line
+  393 (`selectedSpotIdsRef`); the fix was to extend it to spots.
+  Whenever a listener depends on `state.length` or filters state,
+  always use a ref.
+- **Vector Maps requires a Map ID for interactive rotation.** Raster
+  satellite tiles fundamentally can't be rotated; only 45° aerial
+  imagery in select cities works for `setHeading`. Vector Maps
+  (`mapId` from Google Cloud Console) is the path. Setting it up is
+  ~3 minutes in the user's Cloud Console; reading it via
+  `process.env.NEXT_PUBLIC_*` is non-breaking for environments that
+  don't have it.
+- **`gestureHandling: 'greedy'` suppresses Vector Maps' built-in
+  rotation gesture.** Custom Ctrl+drag handler is required for
+  desktop. Mobile gets two-finger rotate natively. Saved as
+  `feedback_gmaps_rotation_greedy.md`.
+- **Cleanup hooks must restore the EXACT prior state, not "default."**
+  The Box Select cleanup restored `gestureHandling: 'auto'` (Maps
+  API default) instead of the parking page's `'greedy'`. Subtle
+  one-character bug that surfaced only after the user toggled the
+  feature once. Patterns: `gmap.setOptions({ gestureHandling:
+  'greedy' })` is the parking default; cleanup blocks that disable
+  gestures must restore that exact value.
+- **`title` attribute discovery on inner elements inside an
+  interactive parent is finicky.** Browsers can skip the inner
+  `title` when the parent has `cursor: pointer + onClick`. Put the
+  title on the click target itself.
+- **Counter-rotating sprite icons against map heading is the
+  pattern for "screen-fixed icons" on a rotated map** — but it
+  costs canvas regeneration per heading change. Acceptable for
+  ~30 markers; for hundreds, migrate to `AdvancedMarkerElement` +
+  CSS transforms (essentially free per frame).
 
 ---
 
@@ -262,97 +324,95 @@ prior session is still the latest applied to prod.
 
 | Item | Severity | Notes |
 |---|---|---|
-| **Audit identified ~14 untouched single-page modules** | Low | See Next Session Tasks. Smaller chrome work each, but cumulatively a 2-session sweep. |
-| **`/login` filled-cyan gradient + white text** | Low (cosmetic) | 657 LOC. Highest-impact public surface (every user). Top of next-session tier 1. |
-| **`/regulations` is the single-largest unrefreshed page** | Low | 800 LOC, 5 refresh signals (highest count). |
-| **/infrastructure, /parking, /settings/base-setup** | Held | All 4K+ LOC. Multi-session each. Held until customer or rollout asks. |
-| **Untracked `dark logo.jpg`** | Low | 2.4MB JPG sits in `/public` from prior logo experiment. Carryover. |
-| **Untracked `docs/DEMO_LOGINS.md`** | Low | Carryover. |
-| **Untracked `.claude/`** | Low | Local Claude Code settings (gitignored expectation). Carryover. |
-| **Trademark** | Low | CDW holds live "GLIDEPATH" Class 42 (SaaS) registration — risk for commercial use. |
-| **Discrepancy "Notes History" backfill** | Optional (carryover) | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; rendering rewrites on display. |
-| **Visual NAVAIDs further perf** | Deferred (carryover) | Layer-toggle full-rebuild, health-ring `Circle` volume, audit-mode panel. |
-| **Sequential PPR coordination** | Deferred (carryover) | All assigned agencies see their work in parallel; no ordering. |
-| **Public PPR form file uploads** | Deferred (carryover) | Out of scope unless requested. |
-| **"Advisories" → "WWA Notifications" UI sweep** | Deferred (carryover) | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
-| **~124 `as any` casts project-wide** | Low | Was 182. Mostly residual; codebase shape gradually getting tighter. |
-| **PDF boilerplate duplication in 11 generators** | Low | 5 already on `pdf-utils.ts`. Not worth forcing — see `feedback_pdf_utility.md`. |
-| **Check draft real-time sync deferred** | Low | Two users could create duplicate drafts. |
+| `computeIconScale` uses `getBounds()` for px-per-degree calc | Low | Naive bounds rectangle expands on a rotated map, so aircraft render slightly smaller than intended at non-zero map heading. Functional, just not pixel-accurate. Fix: use `OverlayView.MapCanvasProjection` to project two ground-fixed points and measure pixel distance. Defer until visible. |
+| Counter-rotation of aircraft icons regenerates 30+ canvases per heading change | Low–Medium | Smooth on developer laptops. May stutter on weaker hardware during fast Ctrl+drag rotation. Migration target: `AdvancedMarkerElement` with CSS `transform: rotate()` that updates per frame without canvas work. |
+| Tier 2–4 of the audit-derived refresh backlog | Low | See **Next session tasks**. ~14 single-page modules + 5 reports remain on pre-sweep aesthetics. Each smaller than parking's was. |
+| Largest parking page LOC (~4.4K) still monolithic | Held | Component extraction explicitly held out from this session per plan. Ready for follow-up; visible polish is in place to refactor against. |
+| Untracked `dark logo.jpg` (2.4MB) | Low | Sits in `/public` from a prior logo experiment. Carryover. |
+| Untracked `docs/DEMO_LOGINS.md` | Low | Carryover. |
+| Untracked `.claude/` | Low | Local Claude Code settings (gitignored expectation). Carryover. |
+| Trademark | Low | CDW holds live "GLIDEPATH" Class 42 (SaaS) registration. |
+| Discrepancy "Notes History" backfill | Optional (carryover) | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; display rewrites on render. |
+| Visual NAVAIDs further perf | Deferred (carryover) | Layer-toggle full-rebuild, health-ring `Circle` volume, audit-mode panel. |
+| Sequential PPR coordination | Deferred (carryover) | All assigned agencies see their work in parallel; no ordering. |
+| Public PPR form file uploads | Deferred (carryover) | Out of scope unless requested. |
+| "Advisories" → "WWA Notifications" UI sweep | Deferred (carryover) | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
+| ~124 `as any` casts project-wide | Low | Was 182. Mostly residual; codebase shape gradually getting tighter. |
+| PDF boilerplate duplication in 11 generators | Low | 5 already on `pdf-utils.ts`. Not worth forcing — see `feedback_pdf_utility.md`. |
+| Check draft real-time sync deferred | Low | Two users could create duplicate drafts. |
 
 ---
 
 ## Next session tasks
 
-**The distinctive-refresh sweep is functionally complete across every
-high-traffic user-facing route.** What remains is admin / reports /
-public-auth chrome — lower traffic but still worth bringing onto
-the design language. Audit grouping below, with refresh-signal counts
-in parens (higher = more out-of-spec):
+The two main threads from today have natural follow-ups:
 
-### Tier 1 — Public-facing auth (every user sees these)
+### Tier 2 — daily-traffic operations refresh (5 commits, plan already drafted)
 
-1. **`/login`** (657 LOC, signal: 3) — filled-cyan-gradient sign-in
-   button + `#fff` text. The single most-seen page in the app and
-   still on the pre-sweep aesthetic.
-2. **`/reset-password`** (240 LOC, signal: 2) + **`/setup-account`**
-   (242 LOC, signal: 2) — paired auth forms. Bundle in one commit.
-3. **`/feedback/[baseId]`** (~100 LOC, signal: 1) — public QR form.
+The plan was scoped today before the user pivoted to parking. Stays
+ready as-is. Reading order is by signal density:
 
-### Tier 2 — Daily-traffic operations
+1. **`/regulations`** (`app/(app)/regulations/page.tsx`, 1,759 LOC,
+   signal: 5 plus 3-color filled-gradient duplication) — multiple
+   tab-style filled-cyan-gradients, 2 green save-button gradients
+   with raw `#059669`, page title `var(--fs-2xl)`, deep-red on
+   delete-confirm `#7F1D1D`. Convert tabs to outlined-pill cyan
+   recipe (matches QRC + NOTAMs).
+2. **`/aircraft`** (828 LOC, signal: 4) — `#34D399` PASS / `#EF4444`
+   EXCEEDS hex literals → tokens; 7 `var(--fs-2xl)` headers;
+   military-aircraft purple Shield (`#8B5CF6`) needs a token; ACN/PCN
+   panel rgba tints.
+3. **`/ces`** (364 LOC, signal: 3) — pure rgba tint cleanup +
+   `var(--fs-2xl)` page title.
+4. **`/shift-checklist`** (606 LOC, signal: 3) — `&#10003;` checkbox
+   glyphs (2×) → Lucide `Check`; `&rarr;` and `&larr;` → Lucide;
+   `var(--fs-2xl)` page title; `#fff` text inside the all-complete
+   button.
+5. **`/recent-activity`** (418 LOC, signal: 4) — `#C084FC` (qrc) +
+   `#F97316` (wildlife) entity-color hex literals → tokens;
+   `var(--fs-2xl)` h2; `&rarr;` HTML entity arrow.
 
-4. **`/regulations`** (800 LOC, signal: 5) — top signal count of
-   any untouched page; filled-gradient tabs + `#fff`, `var(--fs-2xl)`,
-   inline SVG in PDF viewer toggle.
-5. **`/aircraft`** (500 LOC, signal: 4) — `#34D399`/`#EF4444` hex
-   literals, `var(--fs-2xl)` headers. The DetailGrid upgrade in
-   `9d32a58` already lifted parts of this; rest is page chrome.
-6. **`/ces`** (400 LOC, signal: 3) — CES role landing.
-   `rgba(34,211,238,0.12)` + `var(--fs-2xl)`.
-7. **`/shift-checklist`** (350 LOC, signal: 3) — minimal chrome,
-   inline checkbox SVG in button.
-8. **`/recent-activity`** (600 LOC, signal: 3) — `#FBBF24`/`#334155`
-   hex for stars, filled-bright filter pills.
+The Tier 2 plan file is at
+`C:\Users\cspro\.claude\plans\use-plan-mode-for-witty-fox.md`
+(though it was overwritten by the parking plan; re-derive from
+this section).
 
-### Tier 3 — Lower-traffic / smaller chrome
+### Parking — component extraction (queued, not landing today)
 
-9. **`/training`** (1,100 LOC, signal: 4) — `var(--fs-2xl)` +
-   filled-bright buttons. Already uses `ArrowLeft`. Largest of the
-   untouched non-held set.
-10. **`/acsi/page.tsx`** (300 LOC) + **`acsi/[id]`** (499 LOC) +
-    **`acsi/new`** (806 LOC) — 1.6K LOC across 3 files. Mostly clean
-    already; just `var(--fs-2xl)` headers.
-11. **`/daily-reviews`** (170 LOC, signal: 1) — header only.
-12. **`/users`** (555 LOC, signal: 1) — header only.
-13. **`/more`** (292 LOC, signal: 2) — replace 📡 / 📊 / etc. emoji
-    nav icons with Lucide.
-14. **`/feedback`** staff page (400 LOC, signal: 1) — `#FBBF24` star
-    cosmetic + filled buttons.
+`/parking/page.tsx` is now 4,400+ LOC of stable, polished JSX. The
+visible-polish work is complete; structural extraction is
+worthwhile and was originally planned as Session 2:
 
-### Tier 4 — Reports module (small chrome each)
+- **Commit 8** — `components/parking/parking-panel.tsx`: lift
+  `sidebarContent()` into its own file as a single component with
+  explicit props. ~1,000 LOC moved out of `page.tsx`. Pure refactor.
+- **Commit 9** — Extract `AircraftTab` + `AircraftGroup` +
+  `AircraftSpotRow`.
+- **Commit 10** — Extract `EnvironmentTab` (obstacles + taxilanes +
+  boundaries).
+- **Commit 11** — Extract `ClearanceTab` + `SettingsTab` +
+  `ParkingHeader` + `ActionBar`.
 
-15. **`/reports/daily`** + **`reports/aging`** + **`reports/discrepancies`**
-    + **`reports/trends`** + **`reports/lighting`** — 327–470 LOC each.
-    Most already use `ArrowLeft` and color-mix; just header + minor
-    chrome. Bundle as one commit.
+After all four, expect `app/(app)/parking/page.tsx` to drop from
+~4.4K LOC to ~1.5K (state + handlers + map init + the four
+top-level component calls).
 
-### Held — explicitly out of scope (multi-session each)
+### Parking — perf follow-ups (bandwidth-permitting)
 
-- **`/infrastructure`** (~4.1K LOC) — Visual NAVAIDs.
-- **`/parking`** (~4.3K LOC) — multi-select editor + map + clearance
-  sidebar.
-- **`/settings/base-setup`** (~4.7K LOC) — 15-step config wizard.
-  Includes the `#D97706` QRC tab hardcodes flagged from the QRC sweep.
-- **`/settings/page.tsx`** (~1.5K LOC) — already largely on the
-  language; just `var(--fs-2xl)` header to fix. Bundle with the
-  base-setup pass when that ships.
+- **`AdvancedMarkerElement` migration** for aircraft markers — eliminates
+  the per-heading-change canvas regeneration cost. Required if the
+  current counter-rotation stutters on real hardware.
+- **`computeIconScale`** uses bounds-rectangle dimensions; switch to
+  projection-based px-per-foot measurement so aircraft size stays
+  pixel-accurate at any map heading.
 
 ### Long-running carryover from prior sessions
 
 Pick from these only when bandwidth allows or a customer asks:
 
+- Tier 3 (lower-traffic chrome — `/training`, `/acsi`, `/daily-reviews`, `/users`, `/more`, staff `/feedback`) and Tier 4 (5 reports subpages) of the audit backlog.
 - Offline reads for QRC + Regulations.
-- Component extraction for 4K+ LOC pages (`base-setup`, `parking`,
-  `infrastructure`).
+- Component extraction for the other 4K+ LOC pages (`base-setup`, `infrastructure`).
 - CAC/PIV authentication (blocked on Platform One).
 - Outage analytics, training management, Part 139 civilian template.
 - "Advisories" → "WWA Notifications" UI sweep.
@@ -368,23 +428,16 @@ Build: npm run build clean — no warnings, no errors.
 No new migrations.
 
 Notable First Load JS (changed routes this session):
-  /scn                      9.94 kB / 181 kB
-  /contractors             10.6 kB  / 191 kB
-  /obstructions            17.8 kB  / 182 kB
-  /obstructions/[id]       11.8 kB  / 328 kB
-  /obstructions/history     9.52 kB / 163 kB
-  /waivers                  3.67 kB / 187 kB
-  /waivers/[id]            10.3 kB  / 207 kB
-  /waivers/[id]/edit        7.73 kB / 191 kB
-  /waivers/new              8.65 kB / 184 kB
-  /waivers/annual-review/[year]  4.83 kB / 197 kB
-  /notams                   6.84 kB / 177 kB
-  /notams/[id]              4.86 kB / 104 kB
-  /notams/new               2.36 kB / 113 kB
-  /wildlife               458 kB    / 793 kB
-  /inspections/construction/new  6.26 kB / 191 kB
-  /inspections/joint-monthly/new 6.23 kB / 191 kB
-  /discrepancies/[id]       8.28 kB / 213 kB
+  /login                    10.2 kB / 166 kB    (was uncatalogued)
+  /reset-password           4.74 kB / 151 kB    (was 4.73 / 151)
+  /setup-account            4.89 kB / 151 kB    (was 4.88 / 151)
+  /parking                 41.7 kB  / 414 kB    (was 38.9 / 412)
+
+The parking growth (+2.8 kB / +2 kB) reflects the Vector Maps
+mapId wire, the Ctrl+drag rotation handler, the OverlayView for
+heading-aware projection, the icon counter-rotation logic, the
+3-dot overflow menu, and the aircraft list hierarchy changes.
+Reasonable for the volume of behavior added.
 
 Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
@@ -396,7 +449,8 @@ Middleware: 74.5 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-04-30 (this session) | Distinctive-refresh sweep finished across every high-traffic route: Inspections (construction + joint monthly), NOTAMs (3 routes), Wildlife (5-commit arc covering page + heatmap + analytics + report + forms), /scn, /contractors, /obstructions (3 routes), /waivers (5 routes + constants migration). DetailGrid upgraded to bordered tiles — 6 detail pages benefit. Bug fixes: Other-check Reason resume, /scn AgencyRow active state, discrepancy detail layout. 20 commits. |
+| **Unreleased** | 2026-04-30 (this session) | Tier 1 of the audit-derived refresh backlog (login + reset-password + setup-account + feedback). Then a deep parking polish: floating panel drag-resize, token + color-mix migration, action bar with 3-dot overflow, list hierarchy with auto-numbering bug fix, contrast/padding sweep across all panel tabs. Vector Maps mapId wired for interactive heading rotation; custom Ctrl+drag handler; heading-aware pixelToLatLng via MapCanvasProjection (fixes drag/box-select/ruler when map is rotated); aircraft icons counter-rotate to stay screen-fixed. 28 commits. |
+| **Unreleased** | 2026-04-30 (prior, same day) | Distinctive-refresh sweep finished across every high-traffic route: Inspections (construction + joint monthly), NOTAMs (3 routes), Wildlife (5-commit arc covering page + heatmap + analytics + report + forms), /scn, /contractors, /obstructions (3 routes), /waivers (5 routes + constants migration). DetailGrid upgraded to bordered tiles — 6 detail pages benefit. Bug fixes: Other-check Reason resume, /scn AgencyRow active state, discrepancy detail layout. 20 commits. |
 | **Unreleased** | 2026-04-30 (prior, same day) | QRC distinctive refresh: amber-unified colors via outlined-pill recipe, Done/N/A two-state step toggle + schema bridge for back-compat, full PDF rewrite (status pills replace broken Unicode glyphs, color-coded row rules, italic warning blocks for conditional steps, mini progress bar). pdf-utils.ts gains spacing constants + y-coord convention. Two feedback memories pinned. 1 commit. |
 | **Unreleased** | 2026-04-29 | Distinctive-refresh sweep across `/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections` daily-ops set. Construction + Other check types added. Shared `<PfnToggle>` extracted. Light-mode fixes for OOO/Closed banners. PPR spine ETA dropped. 16 commits, two migrations applied. |
 | **Unreleased** | 2026-04-29 (prior) | PPR per-surface visibility, per-column `time_display`, public form ETA optional, Airfield Status base-local-today filter, type-scale shrink. 4 commits. |
@@ -419,30 +473,22 @@ See `CHANGELOG.md` for full history.
 
 ### Modified files
 
-- `app/(app)/checks/page.tsx` — `buildDraftSnapshot` resume bug fix
-- `app/(app)/contractors/page.tsx` — distinctive refresh
-- `app/(app)/discrepancies/[id]/page.tsx` — 2-col stretched detail grid
-- `app/(app)/inspections/construction/new/page.tsx` — distinctive refresh
-- `app/(app)/inspections/joint-monthly/new/page.tsx` — distinctive refresh
-- `app/(app)/notams/page.tsx` + `[id]/page.tsx` + `new/page.tsx` — distinctive refresh
-- `app/(app)/obstructions/page.tsx` + `[id]/page.tsx` + `history/page.tsx` — distinctive refresh
-- `app/(app)/scn/page.tsx` — distinctive refresh + latent bug fix
-- `app/(app)/waivers/page.tsx` + `[id]/page.tsx` + `[id]/edit/page.tsx` + `new/page.tsx` + `annual-review/[year]/page.tsx` — distinctive refresh
-- `app/(app)/wildlife/page.tsx` — distinctive refresh
-- `components/wildlife/sighting-form.tsx` + `strike-form.tsx` + `species-picker.tsx` + `wildlife-analytics.tsx` + `wildlife-heatmap.tsx` + `wildlife-report.tsx` — distinctive refresh
-- `components/layout/sidebar-nav.tsx` — collapse toggle position
-- `components/ui/detail-grid.tsx` — bordered tile chrome upgrade
-- `lib/constants.ts` — `CONTRACTOR_STATUS_CONFIG`, `WAIVER_STATUS_CONFIG`,
-  `WAIVER_HAZARD_RATINGS`, `WAIVER_CLASSIFICATIONS` (+`iconKey` field)
+- `app/login/page.tsx` — Tier 1 refresh
+- `app/reset-password/page.tsx` — Tier 1 refresh
+- `app/setup-account/page.tsx` — Tier 1 refresh
+- `app/feedback/[baseId]/page.tsx` — Tier 1 refresh + section dividers
+- `app/(app)/parking/page.tsx` — the bulk of the session (25 commits)
+- `app/globals.css` — `--color-text-primary` / `--color-text-secondary` aliases + `--color-violet` token
+- `lib/google-map-adapter.ts` — OverlayView-backed `pixelToLatLng`
+- `hooks/use-google-map-ruler.ts` — heading-aware projection in the ruler
 
-### Deleted files
+### Environment changes
 
-- `components/wildlife/wildlife-heatmap-google.tsx` — confirmed dead
-  code, leftover from half-done Google Maps migration.
+- `.env.local` (user-managed, not in repo) — `NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID` added by user this session. Required for parking-only Vector Maps; raster fallback works without it.
 
 ---
 
-*All changes pushed to `origin/main`. No new migrations. The
-distinctive-refresh sweep across high-traffic routes is now
-complete; what remains is the audit-derived backlog of admin /
-reports / auth pages catalogued in Next Session Tasks.*
+*All 28 commits are local-only on `main` (28 ahead of `origin/main`).
+Push when ready. No new migrations. No version bump. Untracked
+files (`.claude/`, `docs/DEMO_LOGINS.md`, `public/dark logo.jpg`)
+remain carryover and are not from this session.*
