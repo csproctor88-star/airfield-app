@@ -65,7 +65,13 @@ import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@
 import { generateParkingPdf } from '@/lib/parking-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
-import { MoreVertical, Star } from 'lucide-react'
+import {
+  MoreVertical, Star,
+  PanelLeft, PanelLeftClose, Maximize2, Minimize2, Ruler as RulerIcon,
+  Plane, MapPin, Building2, Minus, Circle as CircleIcon,
+  ArrowRight, ArrowLeftRight, Square,
+  Lock, Unlock, Download, Mail,
+} from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
 
@@ -3879,7 +3885,7 @@ export default function ParkingPage() {
             }
             return (
               <div style={{
-                position: 'absolute', top: 50, left: 10, zIndex: 10,
+                position: 'absolute', top: 10, left: 80, zIndex: 10,
                 width: panelWidth,
                 maxHeight: panelHeight != null ? panelHeight : 'calc(100vh - 140px)',
                 display: 'flex', flexDirection: 'column',
@@ -3898,186 +3904,180 @@ export default function ParkingPage() {
               </div>
             )
           })()}
-          {/* Ruler removed in Google Maps version */}
-          {/* Map controls — top left */}
-          <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 5, display: 'flex', gap: 4 }}>
-            {!isMobile && (
-              <button
-                onClick={() => setSidebarCollapsed(c => !c)}
-                title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
-                style={{
-                  padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: 'var(--color-bg-surface)',
-                  border: `1px solid ${sidebarCollapsed ? 'var(--color-border)' : 'var(--color-cyan)'}`,
-                  color: sidebarCollapsed ? 'var(--color-text-primary)' : 'var(--color-cyan)',
-                  cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-                }}
-              >
-                {sidebarCollapsed ? '\u25B6 Panel' : '\u25C0 Hide'}
-              </button>
-            )}
-            <button
-              onClick={() => setIsFullscreen(f => !f)}
-              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-              style={{
-                padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                background: 'var(--color-bg-surface)',
-                border: `1px solid ${isFullscreen ? 'var(--color-cyan)' : 'var(--color-border)'}`,
-                color: isFullscreen ? 'var(--color-cyan)' : 'var(--color-text-primary)',
-                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-              }}
-            >
-              {isFullscreen ? '\u2716 Exit' : '\u26F6'}
-            </button>
-            <button
-              onClick={() => setRulerActive(r => !r)}
-              title={rulerActive ? 'Disable ruler' : 'Measure distance'}
-              style={{
-                padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                background: 'var(--color-bg-surface)',
-                border: `1px solid ${rulerActive ? 'var(--color-cyan)' : 'var(--color-border)'}`,
-                color: rulerActive ? 'var(--color-cyan)' : 'var(--color-text-primary)',
-                cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-              }}
-            >
-              📏 {rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Ruler'}
-            </button>
-            {selectedPlan && (
-              <>
+          {/* Vertical left-rail toolbar — replaces top-left controls + top-center edit toolbar */}
+          {(() => {
+            const railBtnBase: React.CSSProperties = {
+              width: 52, height: 48, borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+              fontSize: 'var(--fs-2xs)', fontWeight: 600,
+              background: 'transparent', border: '1px solid transparent',
+              color: 'var(--color-text-1)',
+            }
+            const activeStyle = (color: string): React.CSSProperties => ({
+              border: `1px solid ${color}`,
+              background: `color-mix(in srgb, ${color} 12%, transparent)`,
+              color,
+            })
+            const Divider = () => <div style={{ height: 1, background: 'var(--color-border)', margin: '4px 4px' }} />
+            return (
+              <div style={{
+                position: 'absolute', top: 10, left: 10, zIndex: 5,
+                display: 'flex', flexDirection: 'column', gap: 2,
+                padding: 6, borderRadius: 8,
+                background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                maxHeight: 'calc(100vh - 20px)', overflowY: 'auto',
+              }}>
+                {/* Group 1: View controls */}
+                {!isMobile && (
+                  <button
+                    onClick={() => setSidebarCollapsed(c => !c)}
+                    title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
+                    style={{ ...railBtnBase, ...(sidebarCollapsed ? {} : activeStyle('var(--color-cyan)')) }}
+                  >
+                    {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+                    <span>{sidebarCollapsed ? 'Panel' : 'Hide'}</span>
+                  </button>
+                )}
                 <button
-                  onClick={handleExportPdf}
-                  disabled={exportingPdf}
-                  title="Export PDF"
-                  style={{
-                    padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-                    color: 'var(--color-text-primary)', cursor: exportingPdf ? 'wait' : 'pointer',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)', opacity: exportingPdf ? 0.5 : 1,
-                  }}
+                  onClick={() => setIsFullscreen(f => !f)}
+                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  style={{ ...railBtnBase, ...(isFullscreen ? activeStyle('var(--color-cyan)') : {}) }}
                 >
-                  {exportingPdf ? '...' : 'PDF'}
+                  {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                  <span>{isFullscreen ? 'Exit' : 'Full'}</span>
                 </button>
                 <button
-                  onClick={handleEmailPdf}
-                  disabled={exportingPdf}
-                  title="Email PDF"
-                  style={{
-                    padding: '6px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-                    color: 'var(--color-text-primary)', cursor: exportingPdf ? 'wait' : 'pointer',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.3)', opacity: exportingPdf ? 0.5 : 1,
-                  }}
+                  onClick={() => setRulerActive(r => !r)}
+                  title={rulerActive ? (ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Click to measure') : 'Measure distance'}
+                  style={{ ...railBtnBase, ...(rulerActive ? activeStyle('var(--color-cyan)') : {}) }}
                 >
-                  ✉
+                  <RulerIcon size={18} />
+                  <span>{rulerActive && ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Ruler'}</span>
                 </button>
-              </>
-            )}
-          </div>
 
-          {/* Floating toolbar — visible when sidebar is hidden, fullscreen, or mobile.
-              Anchored top-center so it doesn't overlap the floating panel
-              (which lives top-left under the controls). */}
-          {(sidebarCollapsed || isMobile) && selectedPlanId && (
-            <div style={{
-              position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
-              display: 'flex', flexWrap: 'wrap', gap: 4, padding: '6px 10px', borderRadius: 6,
-              background: 'var(--color-bg-surface-solid)', border: '1px solid var(--color-border)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-              maxWidth: 'calc(100vw - 20px)',
-            }}>
-              <button
-                onClick={() => setShowAircraftPicker(true)}
-                style={{
-                  padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cyan) 40%, transparent)',
-                  color: 'var(--color-cyan)', cursor: 'pointer',
-                }}
-              >
-                + Aircraft
-              </button>
-              {(['point', 'building', 'line', 'circle'] as const).map(type => (
-                <button
-                  key={type}
-                  onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
-                  style={{
-                    padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    background: placingObstacle === type ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'var(--color-bg-inset)',
-                    border: `1px solid ${placingObstacle === type ? 'var(--color-orange)' : 'var(--color-border-mid)'}`,
-                    color: placingObstacle === type ? 'var(--color-orange)' : 'var(--color-text-1)',
-                    cursor: 'pointer', textTransform: 'capitalize',
-                  }}
-                >
-                  {type}
-                </button>
-              ))}
-              <div style={{ width: 1, background: 'var(--color-border)', margin: '0 2px' }} />
-              <button
-                onClick={() => handleStartTaxilane('interior')}
-                disabled={!!drawingTaxilaneId}
-                title="Draw an interior taxilane"
-                style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 700,
-                  background: 'var(--color-blue)', border: 'none',
-                  color: '#fff', cursor: 'pointer',
-                  opacity: drawingTaxilaneId ? 0.5 : 1,
-                }}
-              >
-                + Interior Taxilane
-              </button>
-              <button
-                onClick={() => handleStartTaxilane('peripheral')}
-                disabled={!!drawingTaxilaneId}
-                title="Draw a peripheral taxilane"
-                style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 700,
-                  background: 'var(--color-violet)', border: 'none',
-                  color: '#fff', cursor: 'pointer',
-                  opacity: drawingTaxilaneId ? 0.5 : 1,
-                }}
-              >
-                + Peripheral Taxilane
-              </button>
-              <button
-                onClick={handleStartBoundary}
-                disabled={!!drawingBoundaryId}
-                style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 700,
-                  background: 'var(--color-success)', border: 'none',
-                  color: '#fff', cursor: 'pointer',
-                  opacity: drawingBoundaryId ? 0.5 : 1,
-                }}
-              >
-                + Boundary
-              </button>
-              <div style={{ width: 1, background: 'var(--color-border)', margin: '0 2px' }} />
-              <button
-                onClick={() => setPlanLocked(l => !l)}
-                title={planLocked ? 'Aircraft locked — click to enable dragging' : 'Aircraft unlocked — click to lock'}
-                style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: planLocked ? 'color-mix(in srgb, var(--color-danger) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
-                  border: `1px solid ${planLocked ? 'color-mix(in srgb, var(--color-danger) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
-                  color: planLocked ? 'var(--color-danger)' : 'var(--color-success)',
-                  cursor: 'pointer',
-                }}
-              >
-                {planLocked ? 'AC Locked' : 'AC Unlocked'}
-              </button>
-              <button
-                onClick={() => setObstaclesLocked(l => !l)}
-                title={obstaclesLocked ? 'Obstacles locked — click to enable dragging' : 'Obstacles unlocked — click to lock'}
-                style={{
-                  padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', fontWeight: 600,
-                  background: obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 13%, transparent)' : 'color-mix(in srgb, var(--color-success) 13%, transparent)',
-                  border: `1px solid ${obstaclesLocked ? 'color-mix(in srgb, var(--color-orange) 30%, transparent)' : 'color-mix(in srgb, var(--color-success) 30%, transparent)'}`,
-                  color: obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)',
-                  cursor: 'pointer',
-                }}
-              >
-                {obstaclesLocked ? 'OB Locked' : 'OB Unlocked'}
-              </button>
-            </div>
-          )}
+                {/* Groups 2-5: Edit tools when plan selected */}
+                {selectedPlanId && (
+                  <>
+                    <Divider />
+                    <button
+                      onClick={() => setShowAircraftPicker(true)}
+                      title="Add aircraft"
+                      style={{ ...railBtnBase, ...activeStyle('var(--color-cyan)') }}
+                    >
+                      <Plane size={18} />
+                      <span>Aircraft</span>
+                    </button>
+                    {(['point', 'building', 'line', 'circle'] as const).map(type => {
+                      const Icon = type === 'point' ? MapPin : type === 'building' ? Building2 : type === 'line' ? Minus : CircleIcon
+                      const active = placingObstacle === type
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => { setPlacingObstacle(type); setPlacingAircraft(null) }}
+                          title={`Place ${type} obstacle`}
+                          style={{ ...railBtnBase, ...(active ? activeStyle('var(--color-orange)') : {}) }}
+                        >
+                          <Icon size={18} />
+                          <span style={{ textTransform: 'capitalize' }}>{type}</span>
+                        </button>
+                      )
+                    })}
+
+                    <Divider />
+                    <button
+                      onClick={() => handleStartTaxilane('interior')}
+                      disabled={!!drawingTaxilaneId}
+                      title="Draw interior taxilane"
+                      style={{
+                        ...railBtnBase,
+                        color: 'var(--color-blue)',
+                        opacity: drawingTaxilaneId ? 0.4 : 1,
+                        cursor: drawingTaxilaneId ? 'default' : 'pointer',
+                      }}
+                    >
+                      <ArrowRight size={18} />
+                      <span>Int Tax</span>
+                    </button>
+                    <button
+                      onClick={() => handleStartTaxilane('peripheral')}
+                      disabled={!!drawingTaxilaneId}
+                      title="Draw peripheral taxilane"
+                      style={{
+                        ...railBtnBase,
+                        color: 'var(--color-violet)',
+                        opacity: drawingTaxilaneId ? 0.4 : 1,
+                        cursor: drawingTaxilaneId ? 'default' : 'pointer',
+                      }}
+                    >
+                      <ArrowLeftRight size={18} />
+                      <span>Per Tax</span>
+                    </button>
+                    <button
+                      onClick={handleStartBoundary}
+                      disabled={!!drawingBoundaryId}
+                      title="Draw apron boundary"
+                      style={{
+                        ...railBtnBase,
+                        color: 'var(--color-success)',
+                        opacity: drawingBoundaryId ? 0.4 : 1,
+                        cursor: drawingBoundaryId ? 'default' : 'pointer',
+                      }}
+                    >
+                      <Square size={18} />
+                      <span>Boundary</span>
+                    </button>
+
+                    <Divider />
+                    <button
+                      onClick={() => setPlanLocked(l => !l)}
+                      title={planLocked ? 'Aircraft locked — click to enable dragging' : 'Aircraft unlocked — click to lock'}
+                      style={{ ...railBtnBase, ...activeStyle(planLocked ? 'var(--color-danger)' : 'var(--color-success)') }}
+                    >
+                      {planLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                      <span>AC</span>
+                    </button>
+                    <button
+                      onClick={() => setObstaclesLocked(l => !l)}
+                      title={obstaclesLocked ? 'Obstacles locked — click to enable dragging' : 'Obstacles unlocked — click to lock'}
+                      style={{ ...railBtnBase, ...activeStyle(obstaclesLocked ? 'var(--color-orange)' : 'var(--color-success)') }}
+                    >
+                      {obstaclesLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                      <span>OB</span>
+                    </button>
+
+                    <Divider />
+                    <button
+                      onClick={handleExportPdf}
+                      disabled={exportingPdf}
+                      title="Export PDF"
+                      style={{
+                        ...railBtnBase,
+                        opacity: exportingPdf ? 0.5 : 1,
+                        cursor: exportingPdf ? 'wait' : 'pointer',
+                      }}
+                    >
+                      <Download size={18} />
+                      <span>{exportingPdf ? '...' : 'PDF'}</span>
+                    </button>
+                    <button
+                      onClick={handleEmailPdf}
+                      disabled={exportingPdf}
+                      title="Email PDF"
+                      style={{
+                        ...railBtnBase,
+                        opacity: exportingPdf ? 0.5 : 1,
+                        cursor: exportingPdf ? 'wait' : 'pointer',
+                      }}
+                    >
+                      <Mail size={18} />
+                      <span>Email</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Violation summary — bottom right when panel hidden or fullscreen (desktop only) */}
           {!isMobile && sidebarCollapsed && (violations.length > 0 || warnings.length > 0) && (
