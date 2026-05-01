@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Check } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
@@ -221,7 +222,7 @@ export default function ShiftChecklistPage() {
             transition: 'background 0.15s',
           }}
         >
-          {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800, lineHeight: 1 }}>&#10003;</span>}
+          {checked && <Check size={14} color="#fff" strokeWidth={3} />}
           {isNa && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1 }}>N/A</span>}
           {isSaving && !isDone && <span style={{ fontSize: 10 }}>...</span>}
         </button>
@@ -298,7 +299,7 @@ export default function ShiftChecklistPage() {
   return (
     <div className="page-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>Shift Checklist</div>
+        <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Shift Checklist</div>
       </div>
 
       {/* Tab bar */}
@@ -339,7 +340,7 @@ export default function ShiftChecklistPage() {
               fontWeight: 700,
               padding: '4px 10px',
               borderRadius: 'var(--radius-md)',
-              background: isCompleted ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+              background: isCompleted ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--color-bwc-mod) 12%, transparent)',
               color: isCompleted ? 'var(--color-success)' : 'var(--color-bwc-mod)',
             }}>
               {isCompleted ? 'FILED' : 'IN PROGRESS'}
@@ -475,7 +476,7 @@ export default function ShiftChecklistPage() {
                         fontWeight: 700,
                         padding: '3px 8px',
                         borderRadius: 'var(--radius-md)',
-                        background: h.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+                        background: h.status === 'completed' ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--color-bwc-mod) 12%, transparent)',
                         color: h.status === 'completed' ? 'var(--color-success)' : 'var(--color-bwc-mod)',
                       }}>
                         {h.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
@@ -530,7 +531,7 @@ export default function ShiftChecklistPage() {
                         background: checked ? 'var(--color-success)' : isNa ? 'var(--color-text-3)' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
-                        {checked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>&#10003;</span>}
+                        {checked && <Check size={14} color="#fff" strokeWidth={3} />}
                         {isNa && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>N/A</span>}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -582,7 +583,7 @@ export default function ShiftChecklistPage() {
               </div>
               <div style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '4px 10px', borderRadius: 'var(--radius-md)',
-                background: viewingHistory.status === 'completed' ? 'rgba(34,197,94,0.12)' : 'rgba(234,179,8,0.12)',
+                background: viewingHistory.status === 'completed' ? 'color-mix(in srgb, var(--color-success) 12%, transparent)' : 'color-mix(in srgb, var(--color-bwc-mod) 12%, transparent)',
                 color: viewingHistory.status === 'completed' ? 'var(--color-success)' : 'var(--color-bwc-mod)',
               }}>
                 {viewingHistory.status === 'completed' ? 'FILED' : 'IN PROGRESS'}
