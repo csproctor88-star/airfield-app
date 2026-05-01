@@ -73,8 +73,8 @@ function getActionColor(action: string, entityType: string): string {
   if (action === 'created') return 'var(--color-cyan)'
   if (action === 'deleted' || action === 'cancelled') return 'var(--color-danger)'
   if (action === 'updated' || action === 'status_updated') return 'var(--color-warning)'
-  if (entityType === 'qrc') return '#C084FC'
-  if (entityType === 'wildlife_sighting' || entityType === 'wildlife_strike') return '#F97316'
+  if (entityType === 'qrc') return 'var(--color-purple)'
+  if (entityType === 'wildlife_sighting' || entityType === 'wildlife_strike') return 'var(--color-orange)'
   return 'var(--color-text-2)'
 }
 
@@ -233,7 +233,7 @@ export default function RecentActivityPage() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <div>
-          <h2 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, margin: 0 }}>Activity Log</h2>
+          <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, margin: 0 }}>Activity Log</h2>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
             Every recorded action across the installation — admin audit view
           </div>
