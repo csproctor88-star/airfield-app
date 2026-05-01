@@ -306,7 +306,7 @@ function renderSnippet(snippet: string, term: string): React.ReactNode {
   while ((pos = lower.indexOf(tLower, idx)) !== -1) {
     if (pos > idx) parts.push(snippet.slice(idx, pos));
     parts.push(
-      <mark key={"m" + pos} style={{ background: "rgba(250,204,21,0.4)", color: "#FDE68A", borderRadius: 2, padding: "0 1px" }}>
+      <mark key={"m" + pos} style={{ background: "color-mix(in srgb, var(--color-amber) 40%, transparent)", color: "var(--color-amber)", borderRadius: 2, padding: "0 1px" }}>
         {snippet.slice(pos, pos + term.length)}
       </mark>
     );
@@ -360,7 +360,7 @@ function LazyPage({ pageNumber, scale, searchTerm }: LazyPageProps) {
         let result = "", i = 0, p: number;
         while ((p = lower.indexOf(term, i)) !== -1) {
           result += escapeHtml(text.slice(i, p));
-          result += '<mark style="background:rgba(250,204,21,0.5);color:inherit;border-radius:2px;padding:0 1px">' + escapeHtml(text.slice(p, p + term.length)) + "</mark>";
+          result += '<mark style="background:color-mix(in srgb, var(--color-amber) 50%, transparent);color:inherit;border-radius:2px;padding:0 1px">' + escapeHtml(text.slice(p, p + term.length)) + "</mark>";
           i = p + term.length;
         }
         result += escapeHtml(text.slice(i));
@@ -374,7 +374,7 @@ function LazyPage({ pageNumber, scale, searchTerm }: LazyPageProps) {
       <div style={{
         position: "absolute", top: 6, right: 10, zIndex: 10,
         fontSize: 'var(--fs-xs)', fontWeight: 700, color: "var(--color-text-3)",
-        background: "rgba(15,23,42,0.85)", padding: "2px 8px",
+        background: "color-mix(in srgb, var(--color-bg-surface-solid) 85%, transparent)", padding: "2px 8px",
         borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
       }}>
         {pageNumber}
@@ -809,7 +809,7 @@ export default function PDFLibrary() {
         <div style={S.headerRow}>
           <div style={S.hLeft}>
             <div style={S.logo}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-bg-surface-solid)" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             </div>
             <div>
               <h1 style={S.title}>Regulation Library</h1>
@@ -817,7 +817,7 @@ export default function PDFLibrary() {
             </div>
           </div>
           <div style={Object.assign({}, S.badge, isOnline ? S.badgeOn : S.badgeOff)}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOnline ? "#34D399" : "#FBBF24" }} />
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOnline ? "var(--color-success)" : "var(--color-amber)" }} />
             {isOnline ? "Online" : "Offline"}
           </div>
         </div>
@@ -871,7 +871,7 @@ export default function PDFLibrary() {
                 {/* Search button (react-pdf mode) */}
                 {viewMode === "react-pdf" && (
                   <button onClick={() => { setDocSearchOpen((o) => !o); setTimeout(() => searchInputRef.current && searchInputRef.current.focus(), 50); }}
-                    style={Object.assign({}, S.cb, docSearchOpen ? { background: "rgba(56,189,248,0.15)", borderColor: "rgba(56,189,248,0.3)", color: "var(--color-accent)" } : {})}
+                    style={Object.assign({}, S.cb, docSearchOpen ? { background: "color-mix(in srgb, var(--color-cyan) 14%, transparent)", borderColor: "color-mix(in srgb, var(--color-cyan) 32%, transparent)", color: "var(--color-cyan)" } : {})}
                     title="Search (Ctrl+F)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
                   </button>
@@ -919,7 +919,7 @@ export default function PDFLibrary() {
                     value={docSearchTerm} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDocSearchTerm(e.target.value)}
                     disabled={docPageTexts.length === 0} style={S.sPanelIn} />
                   {docMatches.length > 0 && <span style={S.mc}>{docMatchIdx + 1} of {docMatches.length}</span>}
-                  {docSearchTerm.length >= 2 && docMatches.length === 0 && docPageTexts.length > 0 && <span style={Object.assign({}, S.mc, { color: "#F87171" })}>No matches</span>}
+                  {docSearchTerm.length >= 2 && docMatches.length === 0 && docPageTexts.length > 0 && <span style={Object.assign({}, S.mc, { color: "var(--color-danger)" })}>No matches</span>}
                   <button onClick={() => goToDocMatch("prev")} disabled={docMatches.length === 0} style={Object.assign({}, S.nb, docMatches.length === 0 ? S.off : {})}>&uarr;</button>
                   <button onClick={() => goToDocMatch("next")} disabled={docMatches.length === 0} style={Object.assign({}, S.nb, docMatches.length === 0 ? S.off : {})}>&darr;</button>
                   <button onClick={() => { setDocSearchOpen(false); setDocSearchTerm(""); setDocMatches([]); }} style={S.nb}>&times;</button>
@@ -945,7 +945,7 @@ export default function PDFLibrary() {
             {/* Viewer body */}
             <div ref={viewerBodyRef} style={S.vBody}>
               {pdfLoading && <div style={S.ctr}><span style={S.spin} /><span style={{ color: "var(--color-text-3)", marginLeft: 8 }}>Loading&hellip;</span></div>}
-              {pdfError && <div style={S.ctr}><div style={S.eBox}><strong style={{ color: "#EF4444" }}>PDF Unavailable</strong><p style={{ margin: "8px 0 0", fontSize: 'var(--fs-md)' }}>{pdfError}</p></div></div>}
+              {pdfError && <div style={S.ctr}><div style={S.eBox}><strong style={{ color: "var(--color-danger)" }}>PDF Unavailable</strong><p style={{ margin: "8px 0 0", fontSize: 'var(--fs-md)' }}>{pdfError}</p></div></div>}
 
               {!pdfLoading && !pdfError && viewMode === "native" && blobUrl && (
 <div style={{ flex: 1, position: 'relative', minHeight: 0, width: '100%' }}>
@@ -1000,12 +1000,17 @@ export default function PDFLibrary() {
                 const cached = cachedKeys.has(file.name);
                 const extracted = extractedKeys.has(file.name);
                 const isDl = downloading.has(file.name);
+                const railColor = (cached && extracted)
+                  ? "var(--color-success)"
+                  : cached
+                    ? "var(--color-cyan)"
+                    : "var(--color-text-4)";
                 return (
-                  <div key={file.name} style={S.row}
+                  <div key={file.name} style={Object.assign({}, S.row, { boxShadow: `inset 3px 0 0 ${railColor}` })}
                     onMouseEnter={function(e: React.MouseEvent<HTMLDivElement>) { e.currentTarget.style.background = "var(--color-bg-elevated)"; e.currentTarget.style.borderColor = "var(--color-text-4)"; }}
                     onMouseLeave={function(e: React.MouseEvent<HTMLDivElement>) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--color-bg-elevated)"; }}>
                     <button onClick={() => viewPdf(file.name)} disabled={!cached && !isOnline} style={S.fBtn}>
-                      <div style={Object.assign({}, S.fIco, { borderColor: cached ? "rgba(52,211,153,0.25)" : "rgba(100,116,139,0.25)", color: cached ? "#34D399" : "var(--color-text-3)" })}>
+                      <div style={S.fIco}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
                       </div>
                       <div style={S.fInf}>
@@ -1019,8 +1024,8 @@ export default function PDFLibrary() {
                       </div>
                     </button>
                     <div style={S.fAct}>
-                      {cached && <span style={{ color: "#34D399", display: "flex" }} title="Cached"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg></span>}
-                      {extracted && <span style={{ color: "#FACC15", display: "flex", fontSize: 'var(--fs-lg)' }} title="Text indexed">{"\u2699"}</span>}
+                      {cached && <span style={{ color: "var(--color-success)", display: "flex" }} title="Cached"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg></span>}
+                      {extracted && <span style={{ color: "var(--color-amber)", display: "flex", fontSize: 'var(--fs-lg)' }} title="Text indexed">{"\u2699"}</span>}
                       {!cached && isOnline && !isDl && <button onClick={() => downloadAndCache(file.name)} style={S.aBtn}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg></button>}
                       {isDl && <span style={S.spin} />}
                       {cached && <button onClick={() => removeFromCache(file.name)} style={Object.assign({}, S.aBtn, { color: "var(--color-text-3)" })} title="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></button>}
@@ -1044,38 +1049,38 @@ export default function PDFLibrary() {
 // ─── Styles ──────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {
   root: { fontFamily: "'DM Sans', -apple-system, sans-serif", background: "var(--color-bg-surface-solid)", color: "var(--color-text-1)", minHeight: "100vh", display: "flex", flexDirection: "column" },
-  header: { background: "linear-gradient(180deg, var(--color-bg-elevated) 0%, var(--color-bg-surface-solid) 100%)", borderBottom: "1px solid var(--color-bg-elevated)", padding: "18px 24px" },
+  header: { background: "var(--color-bg-elevated)", borderBottom: "1px solid var(--color-bg-elevated)", padding: "18px 24px" },
   headerRow: { maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" },
   hLeft: { display: "flex", alignItems: "center", gap: 14 },
-  logo: { width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg, var(--color-accent), #818CF8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  logo: { width: 38, height: 38, borderRadius: 10, background: "color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))", border: "1px solid color-mix(in srgb, var(--color-cyan) 28%, transparent)", color: "var(--color-cyan)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   title: { margin: 0, fontSize: 'var(--fs-3xl)', fontWeight: 700, letterSpacing: "-0.02em", color: "var(--color-text-1)" },
   sub: { margin: 0, fontSize: 'var(--fs-md)', color: "var(--color-text-3)" },
   badge: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 'var(--fs-base)', fontWeight: 600, padding: "4px 12px", borderRadius: 20, border: "1px solid" },
-  badgeOn: { color: "#34D399", borderColor: "rgba(52,211,153,0.2)", background: "rgba(52,211,153,0.08)" },
-  badgeOff: { color: "#FBBF24", borderColor: "rgba(251,191,36,0.2)", background: "rgba(251,191,36,0.08)" },
+  badgeOn: { color: "var(--color-success)", borderColor: "color-mix(in srgb, var(--color-success) 28%, transparent)", background: "color-mix(in srgb, var(--color-success) 12%, transparent)" },
+  badgeOff: { color: "var(--color-amber)", borderColor: "color-mix(in srgb, var(--color-amber) 28%, transparent)", background: "color-mix(in srgb, var(--color-amber) 12%, transparent)" },
 
   toolbar: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", boxSizing: "border-box" },
   sWrap: { position: "relative", flex: "1 1 220px", minWidth: 180 },
   sInput: { width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 8, color: "var(--color-text-1)", fontSize: 'var(--fs-lg)', fontFamily: "inherit", outline: "none" },
   btn: { display: "inline-flex", alignItems: "center", gap: 5, padding: "8px 14px", borderRadius: 8, border: "1px solid", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", lineHeight: 1, whiteSpace: "nowrap" },
-  btnA: { background: "var(--color-border-mid)", borderColor: "rgba(56,189,248,0.25)", color: "var(--color-accent)" },
-  btnG: { background: "rgba(241,245,249,0.04)", borderColor: "var(--color-text-4)", color: "var(--color-text-2)" },
-  btnE: { background: "rgba(250,204,21,0.12)", borderColor: "rgba(250,204,21,0.25)", color: "#FACC15" },
+  btnA: { background: "var(--color-cyan)", borderColor: "var(--color-cyan)", color: "var(--color-cyan-btn-text)" },
+  btnG: { background: "var(--color-bg-inset)", borderColor: "var(--color-text-4)", color: "var(--color-text-2)" },
+  btnE: { background: "color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))", borderColor: "color-mix(in srgb, var(--color-amber) 32%, transparent)", color: "var(--color-amber)" },
   off: { opacity: 0.3, cursor: "not-allowed" },
 
   progressBar: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px", boxSizing: "border-box" },
-  progressFill: { height: 3, background: "linear-gradient(90deg, var(--color-accent), #818CF8)", borderRadius: 2, transition: "width 0.3s" },
+  progressFill: { height: 3, background: "var(--color-cyan)", borderRadius: 2, transition: "width 0.3s" },
   progressText: { fontSize: 'var(--fs-sm)', color: "var(--color-text-3)", marginTop: 4, display: "block", fontFamily: "'JetBrains Mono', monospace" },
 
-  err: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "10px 24px", boxSizing: "border-box", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, color: "#F87171", fontSize: 'var(--fs-md)', display: "flex", alignItems: "center", justifyContent: "space-between" },
-  errX: { background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 'var(--fs-2xl)', padding: 4 },
+  err: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "10px 24px", boxSizing: "border-box", background: "color-mix(in srgb, var(--color-danger) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--color-danger) 28%, transparent)", borderRadius: 8, color: "var(--color-danger)", fontSize: 'var(--fs-md)', display: "flex", alignItems: "center", justifyContent: "space-between" },
+  errX: { background: "none", border: "none", color: "var(--color-danger)", cursor: "pointer", fontSize: 'var(--fs-2xl)', padding: 4 },
 
   main: { flex: 1, maxWidth: 960, margin: "0 auto", width: "100%", padding: "0 24px 24px", boxSizing: "border-box" },
 
   list: { display: "flex", flexDirection: "column", gap: 2 },
-  row: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 8px", borderRadius: 10, border: "1px solid var(--color-bg-elevated)", transition: "all 0.15s", gap: 8 },
+  row: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 8px 4px 11px", borderRadius: 10, border: "1px solid var(--color-bg-elevated)", transition: "all 0.15s", gap: 8 },
   fBtn: { display: "flex", alignItems: "center", gap: 12, flex: 1, padding: "8px 4px", background: "none", border: "none", color: "inherit", cursor: "pointer", textAlign: "left", fontFamily: "inherit", minWidth: 0 },
-  fIco: { width: 38, height: 38, borderRadius: 8, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "var(--color-bg-surface)" },
+  fIco: { width: 38, height: 38, borderRadius: 8, border: "1px solid var(--color-text-4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "var(--color-bg-surface)", color: "var(--color-text-3)" },
   fInf: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0 },
   fNm: { fontSize: 'var(--fs-lg)', fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   fMt: { fontSize: 'var(--fs-base)', color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
@@ -1084,10 +1089,10 @@ const S: Record<string, React.CSSProperties> = {
 
   viewer: { display: "flex", flexDirection: "column", height: "calc(100vh - 140px)", minHeight: 500, background: "var(--color-bg-elevated)", borderRadius: 12, border: "1px solid var(--color-text-4)", overflow: "hidden" },
   vBar: { display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: "1px solid var(--color-text-4)", background: "var(--color-bg-surface-solid)", flexWrap: "wrap" },
-  back: { padding: "6px 12px", borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
+  back: { padding: "6px 12px", borderRadius: 6, background: "var(--color-bg-inset)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer" },
   vName: { flex: 1, fontSize: 'var(--fs-lg)', fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 },
   vCtrls: { display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" },
-  cb: { width: 30, height: 30, borderRadius: 6, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-2xl)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  cb: { width: 30, height: 30, borderRadius: 6, background: "var(--color-bg-inset)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-2xl)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   zoom: { fontSize: 'var(--fs-base)', color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace", minWidth: 40, textAlign: "center" },
   div: { width: 1, height: 20, background: "var(--color-text-4)", margin: "0 4px" },
 
@@ -1095,20 +1100,20 @@ const S: Record<string, React.CSSProperties> = {
   sPanelRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 16px" },
   sPanelIn: { flex: 1, padding: "6px 8px", background: "var(--color-bg-elevated)", border: "1px solid var(--color-text-4)", borderRadius: 6, color: "var(--color-text-1)", fontSize: 'var(--fs-md)', fontFamily: "inherit", outline: "none", minWidth: 120 },
   mc: { fontSize: 'var(--fs-base)', color: "var(--color-text-2)", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" },
-  nb: { width: 26, height: 26, borderRadius: 5, background: "rgba(241,245,249,0.05)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  nb: { width: 26, height: 26, borderRadius: 5, background: "var(--color-bg-inset)", border: "1px solid var(--color-text-4)", color: "var(--color-text-2)", fontSize: 'var(--fs-md)', fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   mList: { maxHeight: 200, overflowY: "auto", borderTop: "1px solid var(--color-bg-elevated)" },
   mItem: { display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 16px", background: "none", border: "none", borderBottom: "1px solid var(--color-bg-elevated)", color: "var(--color-text-1)", fontSize: 'var(--fs-base)', fontFamily: "inherit", cursor: "pointer", textAlign: "left" as const, width: "100%", boxSizing: "border-box" as const },
-  mItemA: { background: "var(--color-border)" },
-  mBadge: { flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-accent)", background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
+  mItemA: { background: "color-mix(in srgb, var(--color-cyan) 12%, transparent)" },
+  mBadge: { flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: "var(--color-cyan)", background: "color-mix(in srgb, var(--color-cyan) 14%, transparent)", padding: "2px 6px", borderRadius: 4, marginTop: 1 },
   mSnip: { fontSize: 'var(--fs-base)', lineHeight: 1.5, color: "var(--color-text-2)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const },
 
   vBody: { flex: 1, overflow: "auto", display: "flex", flexDirection: "column", justifyContent: "flex-start", alignItems: "center", padding: 16, background: "var(--color-bg-surface-solid)", minHeight: 0 },
 
   ctr: { display: "flex", alignItems: "center", justifyContent: "center", padding: 40 },
-  spin: { display: "inline-block", width: 16, height: 16, border: "2px solid var(--color-text-4)", borderTopColor: "var(--color-accent)", borderRadius: "50%", animation: "spin 0.6s linear infinite" },
-  miniSpin: { display: "inline-block", width: 12, height: 12, border: "2px solid var(--color-text-4)", borderTopColor: "#FACC15", borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 },
-  eBox: { maxWidth: 500, padding: 20, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, color: "var(--color-text-1)" },
-  code: { background: "var(--color-border-mid)", padding: "2px 6px", borderRadius: 4, color: "var(--color-accent)", fontSize: 'var(--fs-sm)', fontFamily: "'JetBrains Mono', monospace" },
+  spin: { display: "inline-block", width: 16, height: 16, border: "2px solid var(--color-text-4)", borderTopColor: "var(--color-cyan)", borderRadius: "50%", animation: "spin 0.6s linear infinite" },
+  miniSpin: { display: "inline-block", width: 12, height: 12, border: "2px solid var(--color-text-4)", borderTopColor: "var(--color-amber)", borderRadius: "50%", animation: "spin 0.6s linear infinite", flexShrink: 0 },
+  eBox: { maxWidth: 500, padding: 20, background: "color-mix(in srgb, var(--color-danger) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--color-danger) 28%, transparent)", borderRadius: 10, color: "var(--color-text-1)" },
+  code: { background: "color-mix(in srgb, var(--color-cyan) 14%, transparent)", padding: "2px 6px", borderRadius: 4, color: "var(--color-cyan)", fontSize: 'var(--fs-sm)', fontFamily: "'JetBrains Mono', monospace" },
   foot: { maxWidth: 960, margin: "0 auto", width: "100%", padding: "14px 24px", boxSizing: "border-box", borderTop: "1px solid var(--color-bg-elevated)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 'var(--fs-sm)', color: "var(--color-text-3)", fontFamily: "'JetBrains Mono', monospace" },
 };
 
