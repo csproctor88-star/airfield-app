@@ -258,14 +258,126 @@ expansion) and Phase 1 of base-setup (the IA split into `/base-config`).
 Remaining:
 
 - **`/base-config` Phase 2 — wizard chrome refresh.** This is the
-  headline next task. Plan already written at
-  `.claude/plans/misty-mixing-feather.md`. Replace the numbered-circle
-  step rail with a labeled stepper (status-keyed pills), add a
-  persistent right-hand Guide panel per step (what / why / required /
-  example / DAFMAN cite), inline `(?)` tooltips on every field, an
-  auto-save indicator pill, and per-step status pills. Recommend the
-  user pull a fresh round of screenshots after `npm run dev` lands the
+  headline next task. The detailed plan (with visual ASCII, file list,
+  and out-of-scope) is reproduced below so the next session has it cold.
+  Recommend a fresh round of screenshots after `npm run dev` lands the
   Phase 1 hub so the wizard visuals are fresh.
+
+  ### Phase 2 — Wizard structure refresh
+
+  The wizard at `app/(app)/base-config/setup/page.tsx` (~4.7K LOC, ex-
+  `settings/base-setup`) is functional but not intuitive enough for
+  first-time admins. The numbered-circle step rail at the top doesn't
+  show step labels, in-step help is uneven, no per-field tooltips, no
+  per-step "what does this affect?" guide, and skip/required status
+  isn't visually clear.
+
+  **Visual outcome — Wizard top chrome:**
+
+  ```
+  BEFORE
+  Base Setup
+  Demo AFB (KDMO)
+  [Kiosk Display URL ……………………… Generate Kiosk URL]
+  ─────────────────────────────────────────────────────
+  Step 6 of 15                                40% complete
+  [✓][2][3][4][5][6][7][8][9][10][11][12][13][✓][15]   ← numbered circles only
+
+  AFTER
+  Base Setup
+  Demo AFB (KDMO)                        [Kiosk URL ▾]   ← demoted to discreet header chip
+  ─────────────────────────────────────────────────────
+  Step 6 of 15 · ARFF Vehicles                40% complete
+  ┌──────────────────────────────────────────────────────────┐
+  │ ✓ Runways          ✓ Areas         ✓ Taxiways            │  ← labeled, status-keyed
+  │ ✓ NAVAIDs          ✓ Shops         ◉ ARFF Vehicles       │     pills, wraps, scrollable
+  │ · Facilities       · Templates     · Shift Checklist     │     strip on mobile
+  │ · QRC              · SCN           · Wildlife            │
+  │ ⊘ Lighting (opt)   · Status Boards · PPR Cols            │
+  └──────────────────────────────────────────────────────────┘
+  ```
+
+  Status keys: `✓` complete (green) · `◉` current (cyan) · `·` pending
+  (text-3) · `⚠` required-but-empty after touch (amber) · `⊘`
+  skipped/optional (text-4).
+
+  **Visual outcome — Step body** (two-column on desktop, stacked on
+  mobile):
+
+  ```
+  ┌─────────────────────────────────┐  ┌──────────────────────────────────┐
+  │ [6]  ARFF Vehicles              │  │  Guide                            │
+  │ ───────────────────             │  │  ───                              │
+  │                                 │  │  What this step does              │
+  │ ☑ Show CAT dropdown   (?)       │  │  Defines the crash/rescue         │
+  │                                 │  │  vehicles that appear on the      │
+  │ ARFF Aircraft           (?)     │  │  Airfield Status page ARFF        │
+  │ • A-10                          │  │  readiness panel.                 │
+  │ • K35R                          │  │                                   │
+  │ + Add aircraft…                 │  │  Why it matters                   │
+  │                                 │  │  AFM verifies ARFF readiness on   │
+  │                                 │  │  every shift sign-off (DAFMAN     │
+  │                                 │  │  13-204v2 §2.5.2.10).             │
+  │                                 │  │                                   │
+  │                                 │  │  Required? Yes                    │
+  │                                 │  │  Example: F-16, KC-135, C-17, H-60│
+  │                                 │  │  Cite: DAFMAN 13-204v2 Tbl A3.1   │
+  └─────────────────────────────────┘  └──────────────────────────────────┘
+
+  [← Back]                              [Next: Facilities →]
+  [Auto-saved 4s ago]                   [Preview Dashboard]
+  ```
+
+  Plus per-field `(?)` tooltips that pop concrete examples on
+  hover/click. Implementation: a small reusable `<FieldHint>` component;
+  content in a single config map keyed by step + field.
+
+  **Files to modify (Phase 2):**
+
+  - `app/(app)/base-config/setup/page.tsx` — top stepper redesign,
+    two-column layout, Guide panel injection point. Demote the
+    Kiosk-URL bar to a header chip dropdown so it doesn't dominate every
+    step.
+  - `lib/base-setup-guide.ts` — **new file**, single source-of-truth
+    config for per-step guide copy + per-field tooltip text + DAFMAN
+    citations. Keeps copy out of the 4.7K LOC page file.
+  - `components/base-setup/StepperRail.tsx` — **new**, labeled stepper
+    with status pills, responsive wrap.
+  - `components/base-setup/GuidePanel.tsx` — **new**, persistent
+    right-hand info panel per step.
+  - `components/base-setup/FieldHint.tsx` — **new**, tiny `(?)`
+    tooltip component.
+  - Auto-save indicator — wire into existing per-step save logic, just
+    surface a "Saved Xs ago" pill in the bottom-left.
+
+  **Reference patterns (already established this session/last):**
+
+  - Outlined-pill recipe: `app/(app)/qrc/page.tsx:194` (canonical).
+  - Per-row status rail: `/feedback` (`b9c5af7`), `/reports/aging`
+    (`dc6d914`).
+  - Per-card top rail: `/reports/lighting` (`3aea92a`).
+  - Color-mix substitution for raw rgba/hex-alpha:
+    `color-mix(in srgb, var(--color-X) NN%, transparent)`.
+
+  **Out of Phase 2 scope (deferred to Phase 3):**
+
+  - First-run onboarding overlay (popcorn-style tooltip walkthrough on
+    first visit).
+  - Live preview pane showing the running app surface a setting affects
+    (e.g. picking ARFF aircraft instantly previews the ARFF readiness
+    panel on the Airfield Status page).
+  - Animation between steps.
+  - Optional "Quick Setup" mode that auto-fills sensible defaults from
+    ICAO lookup + DAFMAN templates and surfaces only the must-edit
+    fields.
+
+  **Approach reminder:** the user has a pinned feedback memory
+  (`feedback_screenshot_then_plan_mode.md`) that says structural
+  restructures want screenshots → plan mode → ExitPlanMode approval
+  before executing, even in auto mode. The Phase 1 split landed without
+  needing fresh screenshots because the IA decision was already
+  approved, but Phase 2 visuals will benefit from a fresh look at the
+  rendered Phase 1 hub before planning the wizard chrome in detail.
 - **`/training`** (Glidepath Training) — needs a full content
   refresh per the user: "training will need to be updated significantly."
   Screenshots needed; user will provide. Still untouched.
