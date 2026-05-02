@@ -789,7 +789,7 @@ export default function PprPage() {
         const visibleAgencies = agencies.filter((a) => (pendingByAgency[a.id] ?? 0) > 0)
         if (!showTriage && !showApproval && visibleAgencies.length === 0) return null
         return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          <div data-tour="ppr-kpi-band" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
             {showTriage && (
               <KpiPill
                 count={pendingTriage}

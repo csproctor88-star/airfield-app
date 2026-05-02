@@ -169,10 +169,10 @@ export default function WildlifePage() {
   ]
 
   return (
-    <div className="page-container" data-tour="wildlife-header">
+    <div className="page-container">
       {/* Page header — tertiary tier label + amber accent rule
           (BASH = Bird/Wildlife Aircraft Strike Hazard, urgency-coded). */}
-      <div style={{
+      <div data-tour="wildlife-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: 8, paddingBottom: 8, marginBottom: 14, flexWrap: 'wrap',
         borderBottom: '1px solid color-mix(in srgb, var(--color-amber) 30%, transparent)',
@@ -184,7 +184,7 @@ export default function WildlifePage() {
             textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>Wildlife / BASH</div>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div data-tour="wildlife-actions" style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={() => setShowSightingForm(true)}
             style={{
@@ -215,7 +215,7 @@ export default function WildlifePage() {
       </div>
 
       {/* Tabs — pill-style segmented buttons matching QRC + NOTAMs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div data-tour="wildlife-tabs" style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {tabs.map(t => {
           const selected = tab === t.key
           const Icon = t.Icon
@@ -288,7 +288,7 @@ export default function WildlifePage() {
       {tab === 'log' && (
         <div>
           {/* Filters */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div data-tour="wildlife-filters" style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
             <select
               value={filterType}
               onChange={e => setFilterType(e.target.value as EntryType)}
@@ -347,7 +347,7 @@ export default function WildlifePage() {
             }, {})
             const todayIso = new Date().toISOString().slice(0, 10)
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div data-tour="wildlife-list" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 {Object.entries(groups).map(([day, entries]) => {
                   const dateLabel = formatGroupDate(day, todayIso)
                   return (

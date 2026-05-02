@@ -581,7 +581,7 @@ export default function DiscrepanciesPage() {
           OPEN/>30 first; the secondary tier recedes via smaller
           numerals + tertiary labels. > 30 DAYS gets an AlertOctagon
           prefix when non-zero so the alert reads at a glance. */}
-      <div style={{
+      <div data-tour="discrepancies-kpi-band" style={{
         display: 'flex', justifyContent: 'center', alignItems: 'stretch', gap: 8,
         marginBottom: 12, flexWrap: 'wrap',
       }}>
@@ -744,7 +744,7 @@ export default function DiscrepanciesPage() {
               </button>
 
               {/* View toggle */}
-              <div style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+              <div data-tour="discrepancies-view-toggle" style={{ display: 'flex', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
                 <button
                   onClick={() => setViewMode('map')}
                   title="Map view"
