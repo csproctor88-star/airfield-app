@@ -95,7 +95,10 @@ function LoginContent() {
     })()
   }, [searchParams])
 
-  // Surface error codes bounced here from the kiosk auto-login route.
+  // Surface error codes bounced here from the kiosk auto-login route or
+  // /auth/confirm. Recognized short codes get a friendly message; anything
+  // else (e.g. /auth/confirm's "Email link is invalid or has expired") is
+  // shown verbatim so the user isn't left staring at an empty login page.
   useEffect(() => {
     const err = searchParams.get('error')
     if (!err) return
@@ -108,8 +111,7 @@ function LoginContent() {
       kiosk_disabled: 'Kiosk mode is not enabled for this base. Contact your base administrator to generate a kiosk URL.',
       kiosk_auth_failed: 'Kiosk sign-in failed. The kiosk account may need a password reset — contact your administrator.',
     }
-    const msg = messages[err]
-    if (msg) setError(msg)
+    setError(messages[err] ?? err)
   }, [searchParams])
 
   // Load remembered email on mount
@@ -149,15 +151,20 @@ function LoginContent() {
     setSuccess(null)
     setLoading(true)
     try {
-      const supabase = createClient()
-      if (!supabase) return
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/confirm?next=/reset-password`,
+      // Routed through /api/forgot-password (admin generateLink + Resend)
+      // so the email is the branded Glidepath template instead of
+      // Supabase's default SMTP. Endpoint is enumeration-safe — it always
+      // returns success regardless of whether the email is registered.
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
-      if (resetError) {
-        setError(resetError.message)
+      const json = await res.json().catch(() => null)
+      if (!res.ok) {
+        setError(json?.error || 'Failed to send reset email')
       } else {
-        setSuccess('Password reset email sent! Check your inbox.')
+        setSuccess('If an account exists for that email, a password reset link has been sent. Check your inbox.')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send reset email')

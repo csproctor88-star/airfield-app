@@ -86,10 +86,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // generateLink with type:'invite' creates the user AND returns a magic
-    // link without sending Supabase's default email. We then embed that link
-    // in ONE branded Resend email — the user clicks it, verifies their email,
-    // and lands on /setup-account in a single step.
+    // generateLink with type:'invite' creates the user AND returns the
+    // hashed_token we need to embed in our Resend email.
+    //
+    // We deliberately do NOT use `properties.action_link` (the Supabase-
+    // hosted /auth/v1/verify URL). With PKCE flow enabled (the default
+    // for new projects), that URL redirects to `?code=...` and the
+    // exchange requires a code_verifier in the user's browser — but
+    // invites are server-generated, so the verifier never exists and
+    // the exchange fails, bouncing the user to /login.
+    //
+    // Instead we build a direct URL to our /auth/confirm route with
+    // the hashed_token + verification_type, which calls
+    // verifyOtp({type, token_hash}) and creates the session without
+    // PKCE. Pattern from Supabase SSR email-auth docs.
     const siteUrl = getSiteUrl()
     const fullName = `${firstName.trim()} ${lastName.trim()}`
     const { data: inviteData, error: inviteError } = await admin.auth.admin.generateLink({
@@ -115,13 +125,15 @@ export async function POST(request: Request) {
       )
     }
 
-    const actionLink = inviteData?.properties?.action_link
-    if (!actionLink) {
+    const hashedToken = inviteData?.properties?.hashed_token
+    const verificationType = inviteData?.properties?.verification_type
+    if (!hashedToken || !verificationType) {
       return NextResponse.json(
         { error: 'Failed to generate invite link' },
         { status: 500 },
       )
     }
+    const actionLink = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent('/setup-account')}`
 
     // Send ONE branded invite email via Resend. The magic link handles email
     // verification + redirect to /setup-account on click — no separate

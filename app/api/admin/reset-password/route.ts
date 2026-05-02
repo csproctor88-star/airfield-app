@@ -94,7 +94,15 @@ export async function POST(request: Request) {
     // Get user name for the email
     const { data: targetUser } = await admin.from('profiles').select('name, rank').eq('id', userId).single()
     const userName = targetUser?.name || email
-    const resetUrl = linkData?.properties?.action_link || `${siteUrl}/reset-password`
+    // Build a direct verify-OTP URL pointing at our /auth/confirm route
+    // (NOT properties.action_link). The hosted Supabase verify URL fails
+    // for server-generated links under PKCE — see comment in
+    // app/api/admin/invite/route.ts.
+    const hashedToken = linkData?.properties?.hashed_token
+    const verificationType = linkData?.properties?.verification_type
+    const resetUrl = (hashedToken && verificationType)
+      ? `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent('/reset-password')}`
+      : `${siteUrl}/reset-password`
 
     // Send branded email via Resend
     const resendKey = process.env.RESEND_API_KEY

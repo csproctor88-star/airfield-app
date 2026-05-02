@@ -13,8 +13,7 @@ const BETA_FORM_URL = process.env.GLIDEPATH_BETA_FORM_URL || ''
 //
 // `generateLink({type:'signup'})` creates the auth.users row (firing the
 // handle_new_user() trigger that upserts profiles with status='pending'
-// and adds a base_members row) AND returns a magic confirmation link —
-// WITHOUT sending Supabase's default email. We embed that link in a
+// and adds a base_members row) AND returns a hashed_token we embed in a
 // single branded Resend email, so the user:
 //   1. Receives one email (no more double-email confusion).
 //   2. Clicks a working button that verifies their email and lands on
@@ -22,6 +21,11 @@ const BETA_FORM_URL = process.env.GLIDEPATH_BETA_FORM_URL || ''
 //      approval message.
 // Bypassing client-side auth.signUp() also removes our dependency on
 // Supabase's rate-limited default SMTP for this flow.
+//
+// We deliberately do NOT use `properties.action_link` — see the comment
+// in app/api/admin/invite/route.ts. PKCE flow + server-generated link =
+// missing code_verifier = failed exchange. The direct verify-OTP URL
+// pattern below avoids the issue.
 export async function POST(request: Request) {
   try {
     const admin = getAdminClient()
@@ -85,14 +89,16 @@ export async function POST(request: Request) {
       },
     })
 
-    if (linkError || !linkData?.properties?.action_link) {
+    const hashedToken = linkData?.properties?.hashed_token
+    const verificationType = linkData?.properties?.verification_type
+    if (linkError || !hashedToken || !verificationType) {
       return NextResponse.json(
         { error: linkError?.message || 'Failed to create signup link' },
         { status: 400 },
       )
     }
 
-    const actionLink = linkData.properties.action_link
+    const actionLink = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent('/login?signup_verified=1')}`
 
     const resend = new Resend(resendKey)
     const html = `<!DOCTYPE html>
