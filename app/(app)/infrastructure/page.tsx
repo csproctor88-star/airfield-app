@@ -1508,7 +1508,7 @@ export default function InfrastructureMapPage() {
         const wrapper = map.current
         const placedIW = new google.maps.InfoWindow({
           content: `
-            <div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);min-width:260px;padding:4px 4px 2px;">
+            <div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);">
               <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--color-success);">Feature Placed</div>
               <div style="margin-bottom:8px;">
                 <div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Feature Type</div>
@@ -1882,7 +1882,7 @@ export default function InfrastructureMapPage() {
   const buildPopupHtml = useCallback((props: Record<string, any>, layerColor: string, layerLabel: string, lng: number, lat: number): string => {
     const isEditing = editModeRef.current
 
-    let html = `<div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);min-width:260px;padding:4px 4px 2px;">`
+    let html = `<div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);">`
     html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">`
     html += `<div style="font-weight:700;font-size:13px;color:${layerColor}">${layerLabel}</div>`
     const isInop = props.status === 'inoperative'
@@ -2267,7 +2267,7 @@ export default function InfrastructureMapPage() {
       // Click handler — build popup HTML and show InfoWindow
       marker.addListener('click', () => {
         const html = buildPopupHtml(props, layerCfg.color, layerCfg.label, lng, lat)
-        wrapper.infoWindow.setContent(`<div style="background:#1E293B;color:#E2E8F0;padding:2px;max-width:240px;">${html}</div>`)
+        wrapper.infoWindow.setContent(html)
         wrapper.infoWindow.open(wrapper.gmap, marker)
       })
 
@@ -4150,20 +4150,20 @@ export default function InfrastructureMapPage() {
       {/* Google Maps InfoWindow styles */}
       <style>{`
         .gm-style-iw {
-          background: #1E293B !important;
-          border: 1px solid #475569 !important;
-          border-radius: 8px !important;
-          padding: 2px !important;
+          background: var(--color-bg-elevated) !important;
+          border: 1px solid var(--color-border) !important;
+          border-radius: 10px !important;
+          padding: 8px 10px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
         }
         .gm-style-iw-d {
           overflow: auto !important;
         }
         .gm-style-iw button[aria-label="Close"] {
-          color: #94A3B8 !important;
+          color: var(--color-text-3) !important;
         }
         .gm-style-iw-tc::after {
-          background: #1E293B !important;
+          background: var(--color-bg-elevated) !important;
         }
       `}</style>
 
