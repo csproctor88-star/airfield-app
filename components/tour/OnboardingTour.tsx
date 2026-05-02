@@ -10,6 +10,12 @@ export type TourStep = {
   anchorIsFixed?: boolean               // anchor lives in a position:fixed ancestor
   navigateTo?: string                   // router.push to this href before showing this step
   expandSidebarGroup?: string           // sidebar group label to auto-open on this step
+  dispatchOnEnter?: { event: string; detail?: unknown }
+                                        // page-controlled UI hook: fire a CustomEvent on window
+                                        // before waiting for the anchor. Pages listen for the
+                                        // event and open a panel / switch a tab / select a row
+                                        // so the next anchor can mount. Convention: name the
+                                        // event `glidepath:tour-<page>-<action>`.
   requiresPerm?: string                 // skip step if user lacks this perm key
   waitForAnchorMs?: number              // override default 3000ms anchor-readiness timeout
   skipSubTourTo?: string                // page-intro step: id to fast-forward to
@@ -130,6 +136,13 @@ export function OnboardingTour({
         }))
       }
 
+      // 2b. Page-controlled UI hook (open a panel, switch a tab, etc.).
+      if (step.dispatchOnEnter) {
+        window.dispatchEvent(new CustomEvent(step.dispatchOnEnter.event, {
+          detail: step.dispatchOnEnter.detail,
+        }))
+      }
+
       // 3. Wait for anchor (if any). On timeout, advance to next step.
       if (step.anchor) {
         const found = await waitForAnchor(
@@ -154,7 +167,7 @@ export function OnboardingTour({
     })()
 
     return () => { cancelled = true }
-  }, [active, stepIdx, step?.id, step?.navigateTo, step?.anchor, step?.expandSidebarGroup, step?.anchorIsFixed, step?.waitForAnchorMs, tourId, onDismiss, router, visibleSteps.length])
+  }, [active, stepIdx, step?.id, step?.navigateTo, step?.anchor, step?.expandSidebarGroup, step?.dispatchOnEnter, step?.anchorIsFixed, step?.waitForAnchorMs, tourId, onDismiss, router, visibleSteps.length])
 
   // Re-read the rect on resize / scroll while the step is active.
   useEffect(() => {
@@ -186,6 +199,36 @@ export function OnboardingTour({
     const targetIdx = visibleSteps.findIndex(s => s.id === step.skipSubTourTo)
     if (targetIdx >= 0) setStepIdx(targetIdx)
   }, [step, visibleSteps])
+
+  // Keyboard navigation: arrow keys advance / regress, Escape skips.
+  // Skipped when the user is typing in an input — tour shouldn't hijack
+  // form keystrokes (defensive; tour is modal so this is rarely hit).
+  useEffect(() => {
+    if (!active) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) return
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (isLast) {
+          onDismiss(tourId, 'completed')
+        } else {
+          setStepIdx(prev => prev + 1)
+        }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (stepIdx > 0) setStepIdx(prev => Math.max(0, prev - 1))
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        onDismiss(tourId, 'skipped')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [active, stepIdx, isLast, tourId, onDismiss])
 
   if (!active || !step || transitioning) {
     // Still render the dim overlay during transitions so the user knows the
