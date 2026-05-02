@@ -3,178 +3,170 @@
 **Date:** 2026-05-01 (cont.)
 **Branch:** `main` (pushed)
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `542ffa7` (origin/main)
+**HEAD:** `2dafc52` (origin/main)
 
 ---
 
 ## What shipped this session
 
-Six commits on `main`, three logical bundles: the deferred `/library`
-structure-first refresh (the hub the load-fix earlier in the day didn't
-touch), an `/infrastructure` (Visual NAVAIDs) refresh that turned into a
-four-commit arc once the user spotted the bare post-place dialog and a
-trio of InfoWindow-spacing follow-ups landed, and Phase 1 of a base-
-configuration revamp that pulled admin work out of `/settings` into a
-dedicated `/base-config` hub. No migrations applied this session. All
-six commits on `main`, all pushed.
+Phase 2 of the `/base-config` revamp landed end-to-end. Phase 1 (last
+session) split admin work out of `/settings` into a dedicated
+`/base-config` hub but left the wizard itself untouched. This session
+rebuilt the wizard chrome, layered onboarding + Quick Setup on top of
+it, wired per-field tooltips across all 15 in-file tab functions, and
+deleted the Preview Dashboard the user vetoed as excessive. Four
+commits, all on `main`, all pushed. Two additive migrations committed
+but **not applied** — apply before next dev run or tour state and
+Quick Setup save will silently no-op.
 
-### `/library` structure-first refresh (`2d40550`)
+### Phase 2 chrome refresh + IAW Compliance guidance (`f9a26b1`)
 
-User flagged early in the session that `/library` got the load-fix in the
-prior session but never the audit-derived design pass. Lifted
-`components/PDFLibrary.tsx` (~1.1K LOC) into the same recipe family the
-sweep has been applying everywhere: dropped the indigo→purple gradient
-on the header logo tile and the vertical `linear-gradient(180deg,
---color-bg-elevated 0%, --color-bg-surface-solid 100%)` on the header
-chrome, switched to a cyan-tinted color-mix tile on solid bg-elevated.
-Toolbar buttons retargeted: Refresh stays neutral outlined, Cache All
-moves to the canonical solid-cyan filled recipe (`var(--color-cyan)` +
-`var(--color-cyan-btn-text)`), Extract All adopts the outlined-pill
-amber recipe pinned in `feedback_amber_text_contrast.md`. List rows
-gained a 3px left rail keyed off cached/indexed state — green when
-cached + indexed, cyan when cached only, neutral text-4 otherwise —
-mirroring the per-row rail pattern from `/feedback` and `/reports/aging`.
-Implemented via `box-shadow: inset 3px 0 0 <color>` so it doesn't fight
-the existing hover-borderColor handler. Token-cleaned the PDF viewer
-toolbar (active search button on `var(--color-cyan)`, snippet panel mItem
-+ mBadge off `var(--color-border)` to color-mix on cyan), the global
-`#34D399 / #FBBF24 / #FACC15 / #F87171 / #EF4444` palette, and the
-indigo `progressFill` gradient. Only `#FFF` left in the file is the PDF
-iframe background (intentional). `/library` First Load unchanged at
-146 kB / 292 kB.
+The headline commit. Rebuilt `/base-config/setup` chrome around five
+new components in `components/base-setup/` plus a single
+source-of-truth content map at `lib/base-setup-guide.ts` (~360 LOC,
+in-depth copy for all 16 steps). Internal logic of the 16 tab
+functions is untouched — only the page-level chrome that wraps them.
 
-### `/infrastructure` (Visual NAVAIDs) refresh + post-place dialog (`3a85510`)
+**StepperRail** replaces the old 28×28 numbered-circle row with
+labeled pills, status icons keyed off complete (`✓`) / current (`◉`)
+/ pending (`·`) / required-but-empty-after-touch (`⚠`) /
+optional (`⊘`). Responsive grid (`auto-fit`, 160 px min) wraps
+cleanly; the rail auto-scrolls the current pill into view on mount so
+mobile lands where the admin expects.
 
-Big commit. Tackled the LIGHTING STATUS row (per-card 3px top rail keyed
-off `worstTier`, killing the `tierColor + '40'` border-tint and
-`tierColor + '60'` dot box-shadow concats — same hex-alpha-concat
-footgun pinned in `feedback_amber_text_contrast.md`, would have silently
-dropped the moment `TIER_COLORS` got tokenized). Tokenized
-`TIER_COLORS` to `var(--color-success)` / `var(--color-warning)` /
-`var(--color-danger)`. Made "X inop" text neutralize to text-3 when
-tier=green so the green-dot-with-green-2-inop visual contradiction goes
-away. Recent Activity list got a per-row 3px left rail keyed off
-Reported (red) / Resolved (green); redundant 6px dot dropped since the
-rail carries the signal.
+**KioskUrlChip** demotes the standalone Kiosk URL panel — which ate
+40 % of the mobile viewport on every step — to a compact pill in the
+top-right of the back-link row, with the same generate / regenerate /
+disable / copy actions hidden behind a click-out dropdown. Token-set
+pill goes solid-success at rest so admins still see active state at a
+glance.
 
-The five accent-color families running in the page chrome got
-tokenized: orange `#F97316` (Import) → outlined-pill amber, purple
-`#A855F7` (Bulk Shift / Box Select) → color-mix on `var(--color-purple)`,
-amber `#F59E0B` / `#FBBF24` (Free Move + bar placements + rotation
-input) → color-mix on `var(--color-amber)` / `var(--color-warning)`,
-cyan Use My GPS → color-mix on `var(--color-cyan)`. Free Move save bar
-amber rgba → color-mix. The "16 INOP" pill at the LIGHTING STATUS
-strip switched to outlined-pill `--color-danger`. Edit Mode + Audit
-Mode active-state borders unified at 1px (was inconsistent 1px/2px mix).
+**GuidePanel** is the right-column 6-section detail that anchors the
+new redesign: What this step does · How it works · Why it matters ·
+Required? · Examples · IAW Compliance. The compliance section reads
+as an attestation, not a footnote, generated from a
+`cite: { reg, para, outcome }` triple per step so a future DAFMAN
+revision is a mechanical paragraph-number swap. Per-step collapse
+state persists to `localStorage`; the heaviest steps (Lighting,
+Runways) auto-collapse to a 56 px rail by default to give those dense
+forms breathing room.
 
-Map InfoWindow edit dialog (rendered as HTML string at
-`infrastructure/page.tsx:1820–1955`) got a full token sweep — status
-pill, Report Outage / Mark Operational, Save, Move/Grab, Delete, form
-chrome, compass needle, slider accent-color, Bar Group cyan indicator
-all on var() instead of raw hex. CSS variables work in inline `style=""`
-so the migration is mechanical.
+**AutoSavePill** in the bottom nav row surfaces the *existing*
+per-tab Supabase saves as a pill — no new auto-save logic. Each tab
+already calls `toast.success()` after a successful write; this pass
+added one `markSaved(stepKey)` call alongside it (15 wirings, no
+behavior change). Pill cycles `Saving…` → `Auto-saved Xs ago` →
+`All changes saved (Xm ago)` after 30 s.
 
-The headline workflow change: the post-place "Feature Placed" dialog
-expanded from a bare type-only dropdown (Screenshot 211037) to mirror
-the in-edit form fields. Now contains Feature Type, System / Component
-(optgroup-grouped), [Sign Text — signs only], Fixture ID, Rotation
-compass + slider with live needle, and a Save button. New
-`window.__savePlacedProps` global handler wraps `savePropsRef` and
-records the chosen System/Component + Rotation in carryover refs
-(`lastPlacedComponentRef` / `lastPlacedRotationRef`) so subsequent
-placements pre-populate those fields. Saves dropdown-clicks per fixture
-when laying down hundreds of lights in sequence.
-`createInfrastructureFeature()` extended to accept optional
-`system_component_id` + `rotation` so carryover applies at create-time,
-not via a follow-up update round-trip.
+Container widened 800 → 1200 px to give the Guide panel room. Step
+body wrapped in a 200 ms fade/slide CSS transition keyed off
+`step.key` (honors `prefers-reduced-motion`). Old gradient Next /
+Complete buttons swapped to the canonical solid cyan / success
+recipes already in use across the app.
 
-Side-find: the audit panel header was using an undefined
-`var(--color-cyan-bright)` (would render as `currentColor`) — fixed to
-`var(--color-cyan)`.
+`/base-config/setup` First Load JS 44 kB → 55.4 kB / 241 kB → 256 kB
+on this commit, within the planned ±20 kB allowance. Final state at
+end of session is 60.2 kB / 260 kB after the next two commits + the
+Preview Dashboard removal.
 
-### `/infrastructure` InfoWindow spacing — three-iteration arc (`631c60b` → `1c234eb` → `8452a64`)
+### First-run tour + Quick Setup pre-fill (`1743c80`)
 
-Painful sequence. After Phase 1 of `/infrastructure` shipped, the user
-flagged the dialogs felt cramped. First commit (`631c60b`) bumped row
-gaps 6→10px, label-to-input gaps 2→5px, input padding 4×6→6×10, button
-padding 5→7-8px, added `min-width: 260px` + `padding: 4px 4px 2px` to
-both dialog roots. That made the buttons too tall, which forced the
-edit dialog over the InfoWindow's available height — scroll appeared.
+Layered the originally-Phase-3 onboarding bits on top of the chrome
+refresh, minus the live preview pane the user vetoed.
 
-Second commit (`1c234eb`) shrunk button vertical padding back to 5px
-and tightened row gap from 10→8px, kept the label/input readability
-wins. Looked plausible but the user came back with a screenshot showing
-horizontal scroll inside the dialog AND the title clipped to "xiway
-Lights" — the dialog content was wider than the InfoWindow allowed.
+**OnboardingTour** is hand-rolled (no `react-joyride` dep). Six
+popcorn bubbles walk a fresh sys_admin through the labeled stepper,
+Guide panel, `(?)` field hints, auto-save pill, and Quick Setup
+button. Anchors via `data-tour="<id>"` attributes scattered across
+the chrome components from the prior commit; spotlight ring auto-
+positions via `getBoundingClientRect()` and re-measures on resize /
+scroll. Tour reads / writes `profiles.has_completed_setup_tour`
+(migration `2026050200`); Skip and Done both write the flag true. A
+"Replay tour" link in the wizard header re-launches without changing
+the flag.
 
-Third commit (`8452a64`) found the actual root cause: three independent
-width constraints stacked. The per-marker-click handler at
-`infrastructure/page.tsx:2270` was wrapping the popup HTML in a `<div
-style="background:#1E293B; padding:2px; max-width:240px;">` — and the
-global `.gm-style-iw` `<style>` had `padding: 2px !important`. My
-`min-width: 260px` exceeded the wrapper's `max-width: 240px` → forced
-horizontal scroll. Cleanup: dropped the wrapper entirely (was just
-duplicating the bg the global already sets), dropped width/min-width
-from both dialog roots so content sizes naturally, bumped
-`.gm-style-iw` padding `2px → 8px 10px` so all dialogs get consistent
-edge inset, tokenized the four `.gm-style-iw` rules
-(bg / border / close / tail), and bumped border-radius `8 → 10` to
-match the rest of the app. Saved as `feedback_gmap_infowindow_widths.md`
-so this doesn't repeat.
+**Quick Setup** opens a confirmation modal that calls
+`/api/airport-lookup` for the base ICAO and shapes the response into
+a `QuickSetupDraft` covering the 5 derivable steps (Runways / Areas /
+NAVAIDs / Lighting / Inspection Templates). The 11 base-specific
+steps (Shops, ARFF Vehicles, Facilities, Shift Checklist, QRC, SCN,
+Wildlife, Status Boards, PPR Cols, Feedback, Taxiways) stay manual
+and are listed in the modal so admins know what they'll still do
+themselves.
 
-### `/base-config` IA + hub redesign (`542ffa7`) — Phase 1 of a multi-session arc
+The commit semantics matter: nothing writes to live tables when the
+modal confirms. The draft stages to `bases.quick_setup_pending`
+JSONB (migration `2026050201`); the `<QuickSetupBanner>` then renders
+above the step body on each pre-filled step, and the admin clicks
+"Confirm step" on each one to commit. `commitQuickSetupStep` calls
+the same INSERT paths as manual entry (so RLS, FK constraints, and
+type-shop-mapping side-effects all behave identically) and clears the
+entry from the pending JSONB. Lighting drafts use DAFMAN A3.1
+templates per runway end (Edge, End, Threshold, PAPI). Areas derive
+from `lookup.suggested_areas` plus the runway list. Templates trigger
+`createDefaultTemplate('airfield')` + `createDefaultTemplate('lighting')`.
 
-User flagged the four full-width gradient buttons inside Settings →
-BASE CONFIGURATION expander as visually off, and asked whether base
-configuration should live under "Admin" away from personal Settings.
-Plan-mode session produced a three-phase arc; only Phase 1 ships in
-this commit.
+Both migrations are additive, no backfill, no RLS rewrites — but
+**neither is applied yet**. The dev server runs without them; the
+tour-state read silently fails (column missing) so the tour just
+doesn't fire on first load, and Quick Setup save errors out instead
+of staging. Apply via `supabase db push` or paste both `.sql` files
+into the SQL editor before testing those flows.
 
-Phase 1: split admin work out of Settings into a new top-level sidebar
-entry "Base Configuration" → `/base-config` (gated on
-`base_setup:write` via `HREF_TO_VIEW_PERM`, slotted into the Admin
-section of `DEFAULT_SIDEBAR_CONFIG`, `SlidersHorizontal` icon to
-differentiate from `/settings`' gear and `/ces`' wrench). New hub page
-at `app/(app)/base-config/page.tsx` — 2-col responsive card grid, each
-card with cyan-tinted icon tile, title + description, status pill
-(Configured / Needs Setup / Not Configured), 3px left rail keyed off
-status, and a per-card live detail line ("16 of 17 modules enabled",
-"8 of 16 wizard steps · 50% complete", etc.). Click anywhere on the
-card routes to the sub-page — no inline button. Status indicators
-reuse `enabledModules` from the installation context, `isWizardStepEnabled`
-+ `isStepDone` from `lib/modules-config.ts`, `fetchInspectionTemplate`,
-and `getAirfieldDiagram`.
+### FieldHint wiring across 15 tabs (`f122610`)
 
-Old admin pages physically moved under the new hub:
-`/settings/base-setup` → `/base-config/setup` (~4.7K LOC),
-`/settings/base-setup/modules` → `/base-config/modules`,
-`/settings/templates` → `/base-config/templates`. Internal back-links +
-cross-links retargeted; back-link labels relabeled "← Base
-Configuration". Old `/settings/*` paths become 152-byte redirect stubs
-(via `next/navigation` `redirect()`) so bookmarks keep working. The
-inline airfield-diagram upload UI extracted from `BaseConfigSectionContent`
-into `/base-config/diagram` (~115 LOC) with the canonical filled-cyan +
-outlined-pill-danger recipes in place of the gradient button. Settings
-page section list now reads Profile / Installation / Data & Storage /
-Regulations Library / Appearance / About — clean. `/settings` First
-Load JS dropped from 16.6 kB → 15.2 kB; new `/base-config` hub at
-7.42 kB / 179 kB.
+`FieldHint` shipped in `f9a26b1` as an unwired component. This pass
+added ~50 `<FieldHint stepKey=… fieldId=… />` placements across the
+15 in-file tab functions, so admins now see `(?)` hover/click
+tooltips with concrete examples on every DAFMAN-cited field.
 
-Phase 2 (next session) is the wizard chrome itself — labeled stepper
-(replacing numbered-circle row), per-step Guide panel (what / why /
-required / example / DAFMAN cite), inline `(?)` tooltips on every
-field, per-step status pills, auto-save indicator. Plan committed at
-`.claude/plans/misty-mixing-feather.md`. Phase 3 (deferred) covers
-first-run onboarding overlay + live-preview pane.
+Coverage isn't uniform: the heaviest forms get the most coverage.
+Runways picks up all 17 fields × 2 forms (the inline `RunwayEditForm`
+plus the add-runway form) plus the Established Airfield Elevation
+header — 35 `<FieldHint>` placements on the runway step alone.
+Lighting Systems wires the three new-system form fields (System Type
+/ Runway-Taxiway / System Name). QRC wires the Title field in the
+QRC editor. The remaining 11 tabs use placeholder-only inputs without
+explicit labels, so they get one `<FieldHint>` at the section header
+level (NAVAIDs, SCN Agencies, CE Shops, Facility Numbers, Wildlife
+Species, Custom Status Boards, PPR Columns, Customer Feedback Form,
+Inspection Templates, Shift Checklist Items). ARFF gets the Show CAT
+toggle hint plus the SimpleListTab title hint.
+
+`FieldHint` renders nothing if no copy is registered for the
+`stepKey.fieldId` in `lib/base-setup-guide.ts`, so adding more
+coverage later is one-line additions to the guide map.
+`/base-config/setup` First Load JS 60.3 kB → 61.2 kB.
+
+### Drop Preview Dashboard, flag citations (`2dafc52`)
+
+User pinned that live previews of running app surfaces are excessive
+for admin guidance — the Guide panel's written explanation does the
+same job better, which is why the per-step live-preview pane was cut
+from Phase 2 scope before it was ever built. The general-purpose
+"Preview Dashboard" button at the bottom of every wizard step was the
+same pattern in slightly different clothes, so it went too: ~215
+lines of `DashboardPreview` component + the toggle button + the
+`showPreview` state. `/base-config/setup` 61.2 kB → 60.2 kB.
+
+Same commit added a heads-up comment at the top of
+`lib/base-setup-guide.ts` noting that the DAFMAN / UFC / AFMAN / AF
+Form citations were authored from general knowledge and need
+verification before being relied on as compliance attestations. User
+flagged a couple that referenced the wrong document; full audit
+pending. The `cite: { reg, para, outcome }` triple per step makes the
+fix mechanical once the right paragraph numbers are in hand.
 
 ---
 
 ## Migrations status
 
-No migrations applied or written this session.
+Two new migrations this session, both committed and applied.
 
 | Migration | Status | What it does |
 |---|---|---|
+| `2026050201_bases_quick_setup_pending.sql` | ✅ Applied | Adds `quick_setup_pending JSONB NOT NULL DEFAULT '{}'` to `bases`. Stages Quick Setup pre-filled drafts per step until admin confirms. RLS unchanged — `bases` policies cover it via the permission matrix. |
+| `2026050200_profiles_setup_tour_flag.sql` | ✅ Applied | Adds `has_completed_setup_tour BOOLEAN NOT NULL DEFAULT FALSE` to `profiles`. Gates the first-run onboarding tour overlay. RLS unchanged — `profiles` policies cover user-own-row. |
 | `2026050100_library_perms_sys_admin_only.sql` | ✅ Applied (prior session) | Locks `library:view` + `library:manage` to sys_admin only. |
 | `2026042907_add_construction_other_check_types.sql` | ✅ Applied | (carryover) `airfield_checks_check_type_check` accepts `'construction'` and `'other'`. |
 | `2026042906_drop_ppr_arrival_eta_zulu.sql` | ✅ Applied | (carryover) Drops `ppr_entries.arrival_eta_zulu`. |
@@ -183,45 +175,50 @@ No migrations applied or written this session.
 
 ## Bugs fixed during the session
 
-| Symptom | Root cause | Commit |
-|---|---|---|
-| `/infrastructure` Audit panel header rendered with no color (currentColor) on the "Audit Mode" label. | The header style referenced `var(--color-cyan-bright)` — undefined in `globals.css`. Fix: switch to `var(--color-cyan)`. Caught while doing the token sweep, not user-reported. | `3a85510` |
-| `/infrastructure` LIGHTING STATUS category cards would silently lose their tier-color border tint and dot glow the moment `TIER_COLORS` got migrated to CSS vars. | `tierColor + '40'` border-tint and `tierColor + '60'` dot box-shadow — the same hex-alpha-concat footgun pinned in `feedback_amber_text_contrast.md`, kept working only because `TIER_COLORS` was raw hex. Replaced with color-mix; dropped the box-shadow entirely (rail does the work). | `3a85510` |
-| Map InfoWindow edit dialog horizontal scroll + clipped title ("xiway Lights" instead of "Taxiway Lights"). | Three independent width constraints stacked: per-dialog inline `min-width: 260px` (added during a "breathe" pass), per-marker-click wrapper `<div style="max-width: 240px; padding: 2px;">` at line 2270, and global `.gm-style-iw` `padding: 2px !important`. Min-width exceeded the wrapper's max-width → horizontal scroll. Fix: dropped the wrapper (duplicating the global bg already), dropped width constraints from dialog roots, bumped `.gm-style-iw` padding to `8px 10px` so all dialogs get consistent edge inset. | `8452a64` |
+No bugs fixed this session — Phase 2 was greenfield-on-Phase-1, no
+debug excursions. The closest thing was the stale `.next` cache that
+threw `Cannot find module './1682.js'` after the first Quick Setup
+build; `rm -rf .next && npm run build` cleared it. Worth knowing for
+the next time chunked output suddenly disappears mid-session.
 
 ---
 
 ## Lessons from this session
 
-- **Google Maps InfoWindow has 3 independent width constraints stacked.**
-  Saved as `feedback_gmap_infowindow_widths.md`. Per-dialog inline
-  styles, the per-click `setContent` wrapper, and the global
-  `.gm-style-iw` `<style>` block all influence width/padding. Adjusting
-  any one without auditing the other two causes silent overflow + scroll
-  + clipping. Cost three commits before the root cause surfaced.
+- **Citations need verification before being authoritative.** Saved
+  the IAW Compliance language as a feedback memory
+  (`feedback_dafman_compliance_language.md`) earlier in the session,
+  but the actual paragraph numbers + regulation choices in
+  `lib/base-setup-guide.ts` need a proper audit against source
+  documents. The format is right; the content is unverified. The
+  in-file comment at the top of `base-setup-guide.ts` flags this for
+  future-me / future-collaborator.
 
-- **Plan-mode plan-file path is sticky across re-entries.** When
-  re-entering plan mode after a previous ExitPlanMode, the system tracks
-  ONE plan file path. Writing to a self-named file (`infrastructure-refresh.md`
-  in our case) orphans the work — `ExitPlanMode` reads from the
-  *original* tracked path, which still had the prior plan. Cost the
-  user a confused rejection ("you sent the plan for pdf library").
-  Always use whatever path the system reports, or overwrite the
-  existing tracked file.
+- **Live previews of app surfaces are not the right shape for admin
+  guidance.** Saved as `feedback_admin_guidance_text_over_preview.md`.
+  In-depth written guidance (the 6-section Guide panel) explains
+  *why* a setting matters for compliance better than a static preview
+  of the configured surface ever could. Applies to any future config
+  UI work in Glidepath.
 
-- **Hex-alpha-concat footgun is still finding new homes.** Three more
-  instances surfaced this session: `tierColor + '40'`, `tierColor + '60'`
-  in `system-health-panel.tsx`, plus the `tier.color}28 / 14 / 33` in
-  `/reports/aging` last session. A codebase-wide grep
-  for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining
-  cases — mechanical fix (`color-mix(in srgb, ${color} N%, transparent)`).
+- **`page.tsx` at 6 K LOC is workable with surgical edits.** Phase 2
+  touched 6 distinct regions of the wizard page without rewriting any
+  of the 16 inline tab functions. Adding `markSaved` was 15 separate
+  one-line `Edit` calls; FieldHint wiring was ~50 separate `Edit`
+  calls. Stable so long as the `old_string` carries enough context
+  to be unique. Component extraction of those 16 tab functions out
+  of the page file is still tech debt, but not blocking.
 
-- **For `mv`-style renames inside Next App Router, prefer `cp` + redirect
-  stubs over destructive moves.** Phase 1 of base-config moved the 4.7K
-  LOC base-setup wizard from `/settings/base-setup` to `/base-config/setup`
-  via `cp` and replaced the original with a `redirect('/base-config/setup')`
-  Next page. Bookmarks keep working, the diff stays scoped, and there's
-  no risk of an in-flight session losing the canonical implementation.
+- **Migrations that aren't applied silently degrade features instead
+  of crashing.** Both `2026050200` and `2026050201` are
+  `ADD COLUMN ... DEFAULT ...` — the missing columns cause
+  `select … has_completed_setup_tour` and
+  `update bases set quick_setup_pending = …` to fail at the row
+  level, but the page still loads. Tour just doesn't fire; Quick
+  Setup save errors with a `column does not exist` toast. Easy to
+  miss in dev unless you're specifically looking for the tour or
+  Quick Setup. Best practice: surface "migration pending" in the
+  handoff prominently.
 
 ---
 
@@ -229,12 +226,14 @@ No migrations applied or written this session.
 
 | Item | Severity | Notes |
 |---|---|---|
-| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module — works on the client but transitively re-introduces the client-reference-stub bug if any server caller invokes the full helper. | Medium | (Carryover) Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module. Only remaining server-side caller of `getPermissionsFor` is `/users`. |
-| Hex-alpha-concat sweep still incomplete | Low | (Carryover, plus 3 new this session). Codebase-wide grep for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining cases. |
-| `audit-panel.tsx` per-row internal rows still raw / not refreshed | Low | New this session. The hub-level structural pass on `/infrastructure` skipped the dense per-row "Light, electrical light…" list. 1.6K LOC of its own — explicitly held out of the page-chrome refresh. |
+| DAFMAN / UFC / AFMAN citations in `lib/base-setup-guide.ts` need verification | Medium | New this session. User flagged a couple as referencing wrong document; full audit pending. Format is `IAW {reg} §{para}, satisfies the requirement to {outcome}` — easy fix once correct paragraphs are in hand. Comment at top of file flags it. |
+| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module | Medium | (Carryover) Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module. Only remaining server-side caller of `getPermissionsFor` is `/users`. |
+| Hex-alpha-concat sweep still incomplete | Low | (Carryover) Codebase-wide grep for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining cases. |
+| `audit-panel.tsx` per-row internal rows still raw | Low | (Carryover) The hub-level structural pass on `/infrastructure` skipped the dense per-row "Light, electrical light…" list. 1.6K LOC of its own. |
 | `/infrastructure` perf carryover (layer-toggle full-rebuild, health-ring `Circle` volume) | Low–Medium | (Carryover) Smooth on dev laptops, may stutter on weaker hardware. Migration target: `AdvancedMarkerElement`. |
-| `/base-config` Phase 2 — wizard chrome refresh | Medium | New this session. Labeled stepper, per-step Guide panel, inline `(?)` tooltips, per-step status pills, auto-save indicator. Plan committed at `.claude/plans/misty-mixing-feather.md`. |
-| Largest source files: `base-config/setup/page.tsx` (~4.7K LOC, ex-`settings/base-setup`), `parking/page.tsx` ~4.3K LOC, `infrastructure/page.tsx` ~4.2K LOC | Held | (Carryover) Component extraction explicitly multi-session. |
+| `base-config/setup/page.tsx` is now ~5.8 K LOC | Held | Was 6 K — Preview Dashboard removal trimmed ~215 lines, Phase 2 chrome regions added ~140 net. Component extraction of the 16 inline tab functions is the next big refactor; explicitly multi-session. |
+| Largest source files: `parking/page.tsx` ~4.3K LOC, `infrastructure/page.tsx` ~4.1K LOC, `base-config/setup/page.tsx` ~5.8K LOC | Held | (Carryover) Component extraction explicit multi-session work. |
+| `FieldHint` coverage skews to header-level on placeholder-only tabs | Low | New this session. NAVAIDs, SCN, Shops, Facilities, etc. each get one section-header hint instead of per-input hints. Adding inline hints to those add forms is a follow-up commit when add-form labels are reworked. |
 | Untracked `dark logo.jpg` (2.4MB) | Low | (Carryover) `/public` from a prior logo experiment. |
 | Untracked `docs/DEMO_LOGINS.md` | Low | (Carryover) |
 | Untracked `.claude/` | Low | (Carryover) Local Claude Code settings (gitignored expectation). |
@@ -251,145 +250,51 @@ No migrations applied or written this session.
 
 ## Next session tasks
 
-User explicitly bundled three pages for the multi-session arc:
-`/training`, `/infrastructure` (Visual NAVAIDs), `/settings/base-setup`.
-This session knocked out `/infrastructure` (page chrome + map InfoWindow
-expansion) and Phase 1 of base-setup (the IA split into `/base-config`).
-Remaining:
+The Phase 2 backlog is finished and migrations are applied. Two
+follow-ups remain:
 
-- **`/base-config` Phase 2 — wizard chrome refresh.** This is the
-  headline next task. The detailed plan (with visual ASCII, file list,
-  and out-of-scope) is reproduced below so the next session has it cold.
-  Recommend a fresh round of screenshots after `npm run dev` lands the
-  Phase 1 hub so the wizard visuals are fresh.
+1. **End-to-end test `/base-config/setup`.**
+   - First load as a fresh sys_admin → tour overlay launches; walk
+     all 6 bubbles; confirm anchor positions (stepper / Guide panel /
+     auto-save pill / Quick Setup button) align.
+   - Skip tour → reload → tour does not re-launch. Replay link
+     re-launches.
+   - Click Quick Setup → modal lists 5 derivable + 11 manual steps;
+     confirm; verify pre-fill banner appears on each derivable step;
+     edit a NAVAID then click Confirm step → row writes to
+     `navaid_statuses`, banner clears, status pill flips to ✓.
+   - Hover `(?)` on at least one Runways field, one Lighting field,
+     one section-header field — confirm tooltip text matches the
+     intent.
+   - Mobile viewport (<1024 px): Guide panel hides, stepper becomes
+     horizontal scroll strip, Kiosk chip + Quick Setup button still
+     fit in the header.
+   - Auto-save pill: edit a runway → pill flashes Saving → Auto-saved
+     0s ago → All changes saved (after 30 s).
 
-  ### Phase 2 — Wizard structure refresh
-
-  The wizard at `app/(app)/base-config/setup/page.tsx` (~4.7K LOC, ex-
-  `settings/base-setup`) is functional but not intuitive enough for
-  first-time admins. The numbered-circle step rail at the top doesn't
-  show step labels, in-step help is uneven, no per-field tooltips, no
-  per-step "what does this affect?" guide, and skip/required status
-  isn't visually clear.
-
-  **Visual outcome — Wizard top chrome:**
-
-  ```
-  BEFORE
-  Base Setup
-  Demo AFB (KDMO)
-  [Kiosk Display URL ……………………… Generate Kiosk URL]
-  ─────────────────────────────────────────────────────
-  Step 6 of 15                                40% complete
-  [✓][2][3][4][5][6][7][8][9][10][11][12][13][✓][15]   ← numbered circles only
-
-  AFTER
-  Base Setup
-  Demo AFB (KDMO)                        [Kiosk URL ▾]   ← demoted to discreet header chip
-  ─────────────────────────────────────────────────────
-  Step 6 of 15 · ARFF Vehicles                40% complete
-  ┌──────────────────────────────────────────────────────────┐
-  │ ✓ Runways          ✓ Areas         ✓ Taxiways            │  ← labeled, status-keyed
-  │ ✓ NAVAIDs          ✓ Shops         ◉ ARFF Vehicles       │     pills, wraps, scrollable
-  │ · Facilities       · Templates     · Shift Checklist     │     strip on mobile
-  │ · QRC              · SCN           · Wildlife            │
-  │ ⊘ Lighting (opt)   · Status Boards · PPR Cols            │
-  └──────────────────────────────────────────────────────────┘
-  ```
-
-  Status keys: `✓` complete (green) · `◉` current (cyan) · `·` pending
-  (text-3) · `⚠` required-but-empty after touch (amber) · `⊘`
-  skipped/optional (text-4).
-
-  **Visual outcome — Step body** (two-column on desktop, stacked on
-  mobile):
-
-  ```
-  ┌─────────────────────────────────┐  ┌──────────────────────────────────┐
-  │ [6]  ARFF Vehicles              │  │  Guide                            │
-  │ ───────────────────             │  │  ───                              │
-  │                                 │  │  What this step does              │
-  │ ☑ Show CAT dropdown   (?)       │  │  Defines the crash/rescue         │
-  │                                 │  │  vehicles that appear on the      │
-  │ ARFF Aircraft           (?)     │  │  Airfield Status page ARFF        │
-  │ • A-10                          │  │  readiness panel.                 │
-  │ • K35R                          │  │                                   │
-  │ + Add aircraft…                 │  │  Why it matters                   │
-  │                                 │  │  AFM verifies ARFF readiness on   │
-  │                                 │  │  every shift sign-off (DAFMAN     │
-  │                                 │  │  13-204v2 §2.5.2.10).             │
-  │                                 │  │                                   │
-  │                                 │  │  Required? Yes                    │
-  │                                 │  │  Example: F-16, KC-135, C-17, H-60│
-  │                                 │  │  Cite: DAFMAN 13-204v2 Tbl A3.1   │
-  └─────────────────────────────────┘  └──────────────────────────────────┘
-
-  [← Back]                              [Next: Facilities →]
-  [Auto-saved 4s ago]                   [Preview Dashboard]
-  ```
-
-  Plus per-field `(?)` tooltips that pop concrete examples on
-  hover/click. Implementation: a small reusable `<FieldHint>` component;
-  content in a single config map keyed by step + field.
-
-  **Files to modify (Phase 2):**
-
-  - `app/(app)/base-config/setup/page.tsx` — top stepper redesign,
-    two-column layout, Guide panel injection point. Demote the
-    Kiosk-URL bar to a header chip dropdown so it doesn't dominate every
-    step.
-  - `lib/base-setup-guide.ts` — **new file**, single source-of-truth
-    config for per-step guide copy + per-field tooltip text + DAFMAN
-    citations. Keeps copy out of the 4.7K LOC page file.
-  - `components/base-setup/StepperRail.tsx` — **new**, labeled stepper
-    with status pills, responsive wrap.
-  - `components/base-setup/GuidePanel.tsx` — **new**, persistent
-    right-hand info panel per step.
-  - `components/base-setup/FieldHint.tsx` — **new**, tiny `(?)`
-    tooltip component.
-  - Auto-save indicator — wire into existing per-step save logic, just
-    surface a "Saved Xs ago" pill in the bottom-left.
-
-  **Reference patterns (already established this session/last):**
-
-  - Outlined-pill recipe: `app/(app)/qrc/page.tsx:194` (canonical).
-  - Per-row status rail: `/feedback` (`b9c5af7`), `/reports/aging`
-    (`dc6d914`).
-  - Per-card top rail: `/reports/lighting` (`3aea92a`).
-  - Color-mix substitution for raw rgba/hex-alpha:
-    `color-mix(in srgb, var(--color-X) NN%, transparent)`.
-
-  **Out of Phase 2 scope (deferred to Phase 3):**
-
-  - First-run onboarding overlay (popcorn-style tooltip walkthrough on
-    first visit).
-  - Live preview pane showing the running app surface a setting affects
-    (e.g. picking ARFF aircraft instantly previews the ARFF readiness
-    panel on the Airfield Status page).
-  - Animation between steps.
-  - Optional "Quick Setup" mode that auto-fills sensible defaults from
-    ICAO lookup + DAFMAN templates and surfaces only the must-edit
-    fields.
-
-  **Approach reminder:** the user has a pinned feedback memory
-  (`feedback_screenshot_then_plan_mode.md`) that says structural
-  restructures want screenshots → plan mode → ExitPlanMode approval
-  before executing, even in auto mode. The Phase 1 split landed without
-  needing fresh screenshots because the IA decision was already
-  approved, but Phase 2 visuals will benefit from a fresh look at the
-  rendered Phase 1 hub before planning the wizard chrome in detail.
-- **`/training`** (Glidepath Training) — needs a full content
-  refresh per the user: "training will need to be updated significantly."
-  Screenshots needed; user will provide. Still untouched.
+2. **Audit the IAW Compliance citations in `lib/base-setup-guide.ts`.**
+   User flagged a couple as referencing wrong documents. Verify each
+   step's `cite: { reg, para, outcome }` triple against the actual
+   regulation. Comment at top of the file flags this; the structure
+   is right, the paragraph numbers and document choices need a human
+   pass.
 
 ### Long-running carryover (bandwidth-permitting)
 
-Pick from these only when bandwidth allows or a customer asks:
+Pick from these only when the Phase 2 testing + citation audit is
+complete or a customer asks:
 
-- `/base-config` Phase 3 — first-run onboarding overlay + live preview
-  pane on each wizard step. Deferred until Phase 2 lands.
+- **`/training` (Glidepath Training) content refresh** — user said
+  "training will need to be updated significantly" last session.
+  Screenshots needed; user will provide. Untouched.
+- Component extraction of the 16 inline tab functions out of
+  `base-config/setup/page.tsx` (~5.8 K LOC). Explicit multi-session
+  refactor.
+- `FieldHint` per-input coverage on the placeholder-only tabs (most
+  tabs currently get one section-header hint). Add inline hints when
+  those add forms are reworked.
 - `audit-panel.tsx` per-row internal styling refresh (1.6K LOC).
-- `/parking/page.tsx` component extraction (~4.6K LOC).
+- `/parking/page.tsx` component extraction (~4.3K LOC).
 - Move `resolveEffectivePermissions` out of `lib/permissions.ts`
   (`'use client'`) into a shared module so `lib/permissions-server.ts`
   doesn't transitively re-arm the client-reference-stub bug.
@@ -407,23 +312,18 @@ Pick from these only when bandwidth allows or a customer asks:
 TypeScript clean (npx tsc --noEmit exit 0)
 Tests: 253 pass / 25 files (unchanged)
 Build: npm run build clean — no warnings, no errors.
-0 new migrations this session.
+2 new migrations this session (both applied).
 
 Notable First Load JS (changed routes this session):
-  /library                              146 kB / 292 kB    (no LOC delta on the route itself)
-  /infrastructure                       34.4 kB / 217 kB   (-0.1 kB after token cleanup)
-  /base-config                          7.42 kB / 179 kB   (NEW — hub)
-  /base-config/setup                    44 kB / 241 kB     (was /settings/base-setup, identical)
-  /base-config/modules                  5.05 kB / 176 kB   (was /settings/base-setup/modules)
-  /base-config/templates                9.43 kB / 190 kB   (was /settings/templates)
-  /base-config/diagram                  4.96 kB / 176 kB   (NEW — extracted from settings)
-  /settings                             15.2 kB / 198 kB   (was 16.6 kB — Base Configuration expander removed)
-  /settings/base-setup                  152 B / 91.3 kB    (redirect stub → /base-config/setup)
-  /settings/base-setup/modules          152 B / 91.3 kB    (redirect stub → /base-config/modules)
-  /settings/templates                   152 B / 91.3 kB    (redirect stub → /base-config/templates)
+  /base-config/setup                    60.2 kB / 260 kB    (was 44 kB / 241 kB; +16 kB / +19 kB)
+  /base-config                          7.43 kB / 179 kB    (unchanged from Phase 1)
+  /base-config/diagram                  4.96 kB / 176 kB    (unchanged)
+  /base-config/modules                  5.05 kB / 176 kB    (unchanged)
+  /base-config/templates                9.44 kB / 190 kB    (unchanged)
 
 Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
+Shared by all: 91.2 kB.
 ```
 
 ---
@@ -432,7 +332,8 @@ Middleware: 74.5 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-05-01 (cont.) (this session) | `/library` structure-first refresh (cyan-tinted header, per-row cached/indexed rail, full token sweep). `/infrastructure` (Visual NAVAIDs) refresh: per-card top rail on LIGHTING STATUS keyed off tier, per-row left rail on Recent Activity, header / Edit Mode / Free Move / Audit Panel token sweep across 5 accent-color families, `tierColor + '40'`/`'60'` hex-alpha-concat footguns killed, `--color-cyan-bright` undefined-var bug fixed. Map InfoWindow edit dialog full token sweep + post-place dialog expanded from type-only to full edit form (Type / System+Component / Fixture ID / Rotation / Save) with carryover refs for sequential placement. Three follow-up commits to land InfoWindow spacing — root cause was three stacked width constraints (per-dialog `min-width`, per-click wrapper `max-width`, global `.gm-style-iw` `padding`); saved as `feedback_gmap_infowindow_widths.md`. Phase 1 of `/base-config` revamp: pulled admin work out of `/settings` into a new top-level sidebar entry, hub page with status-pill cards, redirect stubs at old `/settings/*` paths, airfield-diagram extracted to its own page. 6 commits on `main`, all pushed. |
+| **Unreleased** | 2026-05-01 (cont.) (this session) | Phase 2 of the `/base-config` revamp finished. Wizard chrome at `/base-config/setup` rebuilt around 5 new components in `components/base-setup/` (`StepperRail`, `GuidePanel`, `KioskUrlChip`, `AutoSavePill`, `FieldHint`) plus a new content map at `lib/base-setup-guide.ts` (~360 LOC) covering all 16 steps with the IAW Compliance attestation format. First-run onboarding tour (hand-rolled, no `react-joyride`) gated on a new `profiles.has_completed_setup_tour` boolean. Quick Setup pre-fills 5 derivable steps from `/api/airport-lookup` + DAFMAN A3.1 templates, stages drafts to a new `bases.quick_setup_pending` JSONB, commits per-step on admin review. `(?)` field hint coverage across all 15 in-file tab functions. Preview Dashboard removed (215-LOC `DashboardPreview` component + button + state) per the user's "live previews are excessive" guidance. Citations in `lib/base-setup-guide.ts` flagged for verification. 4 commits, all pushed. 2 migrations committed but not yet applied. |
+| **Unreleased** | 2026-05-01 (prior) | `/library` structure-first refresh, `/infrastructure` (Visual NAVAIDs) refresh + InfoWindow spacing arc (3 commits to find the root cause of 3 stacked width constraints), and Phase 1 of `/base-config` IA split (admin work pulled out of `/settings` into a dedicated hub). 6 commits. |
 | **Unreleased** | 2026-05-01 (prior) | Reports & Analytics structure-first sweep (6 pages). Parking left-rail toolbar through three iterations. Parking clearance lines anchor on ray-rectangle exit per side. /feedback staff view restructure. /library access bug fixes — Vercel `TypeError: u is not a function` traced to a `'use client'` transitive import; switched to the `user_has_permission` RPC directly. Migration `2026050100` locks `library:view` + `library:manage` to sys_admin only. 16 commits on `main`. |
 | **Unreleased** | 2026-05-01 (prior) | Structure-first audit. 31 commits across 22+ surfaces. ACSI module sweep (7 commits), structural restructures of `/daily-reviews`, `/recent-activity`, `/wildlife` list+form, `/aircraft` list+detail, `/contractors`, `/discrepancies` list+detail. Tier 3 sweep: `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/ppr`, `/dashboard`, `/`, `/users`, `/more`. 6 real bugs fixed including the hex-alpha-concat silent-drops in `ActionButton`, `BWC chip`, `FREQ_COLORS`, KPI band; and the `obstructions` duplicate-`5.` Required Actions numbering. |
 | **Unreleased** | 2026-04-30 (prior) | Tier 2 of the audit-derived refresh backlog finished. Six commits across five pages. |
@@ -460,30 +361,31 @@ See `CHANGELOG.md` for full history.
 
 ### New files
 
-- `app/(app)/base-config/page.tsx` — admin hub, 2-col card grid, status pills, 3px left rail per card. Replaces the four gradient buttons inside the old Settings → BASE CONFIGURATION expander.
-- `app/(app)/base-config/setup/page.tsx` — moved verbatim from `app/(app)/settings/base-setup/page.tsx` (~4.7K LOC, the wizard). Internal back-links retargeted to `/base-config`.
-- `app/(app)/base-config/modules/page.tsx` — moved from `app/(app)/settings/base-setup/modules/page.tsx`.
-- `app/(app)/base-config/templates/page.tsx` — moved from `app/(app)/settings/templates/page.tsx`.
-- `app/(app)/base-config/diagram/page.tsx` — extracted airfield-diagram upload UI from the old `BaseConfigSectionContent`.
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_gmap_infowindow_widths.md` — feedback memory: when editing dialogs inside `google.maps.InfoWindow`, audit per-dialog inline styles, the per-click `setContent` wrapper, and `.gm-style-iw` global overrides together. Indexed in `MEMORY.md`.
+- `components/base-setup/StepperRail.tsx` — labeled stepper with 5 status keys, responsive grid, mobile auto-snap-to-current.
+- `components/base-setup/GuidePanel.tsx` — right-column 6-section detail panel (What / How / Why / Required / Examples / IAW Compliance), per-step collapse persisted to localStorage, heavy steps auto-collapsed.
+- `components/base-setup/KioskUrlChip.tsx` — header dropdown extracted from the inline Kiosk URL panel (parity with all generate / regenerate / disable / copy actions).
+- `components/base-setup/AutoSavePill.tsx` — bottom-left save status pill (Saving → Saved Xs ago → All changes saved → error).
+- `components/base-setup/FieldHint.tsx` — `(?)` lucide HelpCircle tooltip; click-to-pin + hover-to-peek; renders nothing if no hint copy registered.
+- `components/base-setup/OnboardingTour.tsx` — hand-rolled 6-step popcorn walkthrough; spotlight ring + bubble; anchors via `data-tour` attributes.
+- `components/base-setup/QuickSetupModal.tsx` — pre-fill confirmation modal + per-step `<QuickSetupBanner>`; commits via `commitQuickSetupStep` (same INSERT paths as manual entry).
+- `lib/base-setup-guide.ts` — single source-of-truth content map for all 16 wizard steps. Per-step shape: `{ what, how, why, required, examples, cite: { reg, para, outcome }, fields }`. Citations need verification (comment at top of file).
+- `lib/base-setup-quick-setup.ts` — Quick Setup derivation (`derivePreFillFromIcao` calls `/api/airport-lookup`), persistence (`saveQuickSetupDraft` / `loadQuickSetupDraft` / `clearQuickSetupStep`), commit (`commitQuickSetupStep`), and DAFMAN A3.1 lighting templates.
+- `supabase/migrations/2026050200_profiles_setup_tour_flag.sql` — applied. Adds `has_completed_setup_tour BOOLEAN NOT NULL DEFAULT FALSE` to `profiles`.
+- `supabase/migrations/2026050201_bases_quick_setup_pending.sql` — applied. Adds `quick_setup_pending JSONB NOT NULL DEFAULT '{}'` to `bases`.
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_dafman_compliance_language.md` — pinned the IAW Compliance attestation format.
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_admin_guidance_text_over_preview.md` — pinned the "in-depth text > live preview" guidance for admin config UIs.
 
 ### Modified files
 
-- `app/(app)/infrastructure/page.tsx` — header buttons (Import / Edit Mode / Audit Mode), LIGHTING STATUS pill, Edit Mode toolbar (purple/amber/cyan token sweep), Free Move save bar, Import Features modal, edit InfoWindow HTML string (token sweep), post-place InfoWindow expansion (full form + carryover refs + new `__savePlacedProps` global), `.gm-style-iw` global styles tokenized + edge-inset bumped, three-iteration spacing arc.
-- `components/infrastructure/system-health-panel.tsx` — `TIER_COLORS` tokenized, per-card top rail, per-row Recent Activity rail, hex-alpha-concat footguns dropped, "16 INOP" pill recipe.
-- `components/infrastructure/audit-panel.tsx` — `--color-cyan-bright` → `--color-cyan` fix, "Generate All Fixture IDs" button color-mix on `--color-purple`.
-- `lib/supabase/infrastructure-features.ts` — `createInfrastructureFeature()` input now accepts optional `system_component_id` + `rotation`.
-- `components/PDFLibrary.tsx` — full structural refresh: header, status pill, toolbar, list-row rail, viewer toolbar, token sweep.
-- `app/(app)/settings/page.tsx` — BASE CONFIGURATION expander + entire `BaseConfigSectionContent` function (~175 LOC) removed; tree-shook `Wrench` icon import + `airfield-diagram` lib import.
-- `app/(app)/settings/base-setup/page.tsx`, `app/(app)/settings/base-setup/modules/page.tsx`, `app/(app)/settings/templates/page.tsx` — all replaced with 152-byte `next/navigation` `redirect('/base-config/...')` stubs.
-- `lib/sidebar-config.ts` — `/base-config` added to `ALL_NAV_ITEMS` + the Admin section in `DEFAULT_SIDEBAR_CONFIG`.
-- `components/layout/sidebar-nav.tsx` — `SlidersHorizontal` icon imported + registered in `ICON_MAP`; `/base-config` → `'base_setup:write'` added to `HREF_TO_VIEW_PERM`.
+- `app/(app)/base-config/setup/page.tsx` — 6 surgical regions: imports, page state, header swap, Kiosk panel deletion (now in chip), stepper swap, 2-col body wrap with Guide panel, bottom nav row with AutoSavePill. Plus 15 tab signature updates + 15 `markSaved` wirings + ~50 `<FieldHint>` placements + tour mount + Quick Setup mount + Preview Dashboard removal (~215 lines).
+- `app/globals.css` — `@keyframes baseSetupStepEnter` step body fade-in + `prefers-reduced-motion` honor + media query hiding `aside[data-tour="guide-panel"]` below 1024 px.
 
 ### Reference files (read-only)
 
-- `lib/modules-config.ts` — `isWizardStepEnabled`, `isStepDone`, `WizardStepKey` (used by hub status indicators).
-- `lib/airfield-diagram.ts` — `getAirfieldDiagram` (used by hub + new diagram page).
-- `lib/supabase/inspection-templates.ts` — `fetchInspectionTemplate` (used by hub for template item counts).
+- `lib/modules-config.ts` — `WIZARD_STEPS`, `isWizardStepEnabled`, `isStepDone` (consumed by `StepperRail` + page).
+- `app/api/airport-lookup/route.ts` — `/api/airport-lookup` endpoint (consumed by `derivePreFillFromIcao`).
+- `lib/supabase/lighting-systems.ts` — `createLightingSystem` (consumed by `commitQuickSetupStep`).
+- `lib/supabase/inspection-templates.ts` — `createDefaultTemplate` (consumed by `commitQuickSetupStep`).
 
 ### Environment changes
 
@@ -491,7 +393,7 @@ None this session.
 
 ---
 
-*All 6 commits this session are on the `main` branch and pushed to
-`origin/main`. No migrations applied. No version bump. Untracked files
-(`.claude/`, `docs/DEMO_LOGINS.md`, `public/dark logo.jpg`) remain
-carryover.*
+*All 4 commits this session are on the `main` branch and pushed to
+`origin/main` (`f9a26b1` → `1743c80` → `f122610` → `2dafc52`). Both
+migrations applied. Untracked files (`.claude/`, `docs/DEMO_LOGINS.md`,
+`public/dark logo.jpg`) remain carryover.*
