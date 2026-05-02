@@ -18,6 +18,8 @@ import ContactSupport from '@/components/ui/contact-support'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
 import { usePermissions, PERM } from '@/lib/permissions'
+import { useSidebarBadgeCounts } from '@/hooks/use-sidebar-badge-counts'
+import { useExpiringNotamCount } from '@/lib/use-expiring-notams'
 
 type ModuleItem = { name: string; icon: LucideIcon; color: string; href: string; adminOnly?: boolean; sysAdminOnly?: boolean }
 
@@ -71,7 +73,7 @@ const settingsItems: ModuleItem[] = [
   { name: 'Settings', icon: SettingsIcon, color: 'var(--color-text-3)', href: '/settings' },
 ]
 
-function NavItem({ item }: { item: ModuleItem }) {
+function NavItem({ item, badgeCount = 0 }: { item: ModuleItem; badgeCount?: number }) {
   const Icon = item.icon
   return (
     <Link
@@ -88,6 +90,7 @@ function NavItem({ item }: { item: ModuleItem }) {
     >
       <div
         style={{
+          position: 'relative',
           width: 36,
           height: 36,
           borderRadius: 'var(--radius-md)',
@@ -100,6 +103,18 @@ function NavItem({ item }: { item: ModuleItem }) {
         }}
       >
         <Icon size={20} color={item.color} strokeWidth={2} />
+        {badgeCount > 0 && (
+          <span style={{
+            position: 'absolute', top: -4, right: -4,
+            minWidth: 16, height: 16, padding: '0 4px',
+            borderRadius: 8, background: 'var(--color-danger)', color: '#fff',
+            fontSize: 9, fontWeight: 800,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+          }}>
+            {badgeCount > 9 ? '9+' : badgeCount}
+          </span>
+        )}
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{item.name}</div>
@@ -109,11 +124,15 @@ function NavItem({ item }: { item: ModuleItem }) {
   )
 }
 
-function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; icon: LucideIcon; items: ModuleItem[]; defaultOpen?: boolean }) {
+function CollapsibleGroup({ label, icon, items, defaultOpen, badgeFor }: { label: string; icon: LucideIcon; items: ModuleItem[]; defaultOpen?: boolean; badgeFor?: (href: string) => number }) {
   const [open, setOpen] = useState(defaultOpen ?? false)
   const Icon = icon
 
   if (items.length === 0) return null
+
+  const groupBadgeCount = badgeFor
+    ? items.reduce((sum, m) => sum + (badgeFor(m.href) || 0), 0)
+    : 0
 
   return (
     <>
@@ -135,6 +154,7 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
       >
         <div
           style={{
+            position: 'relative',
             width: 36,
             height: 36,
             borderRadius: 'var(--radius-md)',
@@ -147,6 +167,18 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
           }}
         >
           <Icon size={20} color="var(--color-text-2)" strokeWidth={2} />
+          {!open && groupBadgeCount > 0 && (
+            <span style={{
+              position: 'absolute', top: -4, right: -4,
+              minWidth: 16, height: 16, padding: '0 4px',
+              borderRadius: 8, background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {groupBadgeCount > 9 ? '9+' : groupBadgeCount}
+            </span>
+          )}
         </div>
         <div style={{ flex: 1, textAlign: 'left' }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>{label}</div>
@@ -163,7 +195,7 @@ function CollapsibleGroup({ label, icon, items, defaultOpen }: { label: string; 
       </button>
       {open && items.map(item => (
         <div key={item.href} style={{ paddingLeft: 16 }}>
-          <NavItem item={item} />
+          <NavItem item={item} badgeCount={badgeFor?.(item.href) ?? 0} />
         </div>
       ))}
     </>
@@ -209,6 +241,16 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
 export default function MorePage() {
   const { enabledModules } = useInstallation()
   const { has, loaded: permsLoaded } = usePermissions()
+  const badgeCounts = useSidebarBadgeCounts()
+  const expiringNotamCount = useExpiringNotamCount()
+
+  const badgeFor = (href: string): number => {
+    if (href === '/qrc') return badgeCounts.qrc
+    if (href === '/ppr') return badgeCounts.ppr
+    if (href === '/discrepancies') return badgeCounts.discrepancies
+    if (href === '/notams') return expiringNotamCount
+    return 0
+  }
 
   function filterItems(items: ModuleItem[]) {
     if (!permsLoaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
@@ -241,7 +283,7 @@ export default function MorePage() {
           borderRadius: 'var(--radius-lg)', marginBottom: 12, overflow: 'hidden',
         }}>
           {cesItems.map(item => (
-            <NavItem key={item.href} item={item} />
+            <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
           ))}
         </div>
         <ContactSupport
@@ -272,24 +314,24 @@ export default function MorePage() {
       }}>
         {/* Pinned items */}
         {pinnedItems.map(item => (
-          <NavItem key={item.href} item={item} />
+          <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
         ))}
 
         {/* Operations */}
-        <CollapsibleGroup label="Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen />
+        <CollapsibleGroup label="Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen badgeFor={badgeFor} />
 
         {/* Airfield Management */}
-        <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} />
+        <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} badgeFor={badgeFor} />
 
         {/* Reference */}
-        <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} />
+        <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} badgeFor={badgeFor} />
 
         {/* Admin */}
-        <CollapsibleGroup label="Admin" icon={Shield} items={filterItems(adminItems)} />
+        <CollapsibleGroup label="Admin" icon={Shield} items={filterItems(adminItems)} badgeFor={badgeFor} />
 
         {/* Settings — flat at the bottom, no collapsible wrapper */}
         {filterItems(settingsItems).map(item => (
-          <NavItem key={item.href} item={item} />
+          <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
         ))}
       </div>
 

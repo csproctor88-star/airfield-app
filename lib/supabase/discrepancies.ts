@@ -665,6 +665,22 @@ export async function addStatusNote(discrepancyId: string, notes: string, baseId
   }
 }
 
+// Count of discrepancies that have been marked work-complete by CES and
+// are waiting for the AMOPS Airfield Manager to verify the work and close
+// the discrepancy. Filters status='open' so closed/cancelled rows whose
+// current_status was never re-cleared don't pollute the badge.
+export async function fetchPendingVerificationCount(baseId: string): Promise<number> {
+  const supabase = createClient()
+  if (!supabase) return 0
+  const { count } = await supabase
+    .from('discrepancies')
+    .select('id', { count: 'exact', head: true })
+    .eq('base_id', baseId)
+    .eq('status', 'open')
+    .eq('current_status', 'work_completed_awaiting_verification')
+  return count ?? 0
+}
+
 export async function fetchDiscrepancyKPIs(baseId?: string | null): Promise<{
   open: number
 }> {

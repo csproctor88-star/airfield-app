@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchPendingTriageCount, fetchPendingApprovalCount } from '@/lib/supabase/ppr'
 import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-members'
 import { fetchActiveQrcCount } from '@/lib/supabase/qrc'
+import { fetchPendingVerificationCount } from '@/lib/supabase/discrepancies'
 
 /**
  * Per-module pending-action counts for sidebar badges.
@@ -23,6 +24,11 @@ import { fetchActiveQrcCount } from '@/lib/supabase/qrc'
  *           - has ppr:coordinate → pending coord rows on agencies
  *             where the current user is a member
  *   qrc   — count of currently-open qrc_executions, gated on qrc:view.
+ *   discrepancies — count of discrepancies in
+ *           current_status = work_completed_awaiting_verification (CES
+ *           marked the work done; AMOPS still needs to verify and close).
+ *           Gated on discrepancies:close — only the AFM verification
+ *           role sees the dot.
  *   total — sum across all modules tracked here. Used to drive the
  *           Operations section-header dot.
  */
@@ -35,6 +41,7 @@ export function useSidebarBadgeCounts() {
   const [pprApproval, setPprApproval] = useState(0)
   const [pprCoord, setPprCoord] = useState(0)
   const [qrcActive, setQrcActive] = useState(0)
+  const [discrepanciesPendingVerification, setDiscrepanciesPendingVerification] = useState(0)
 
   const refresh = useCallback(async () => {
     if (!installationId || !permsLoaded) return
@@ -71,6 +78,13 @@ export function useSidebarBadgeCounts() {
       tasks.push(fetchActiveQrcCount(installationId).then(setQrcActive))
     } else {
       setQrcActive(0)
+    }
+    if (has(PERM.DISCREPANCIES_CLOSE)) {
+      tasks.push(
+        fetchPendingVerificationCount(installationId).then(setDiscrepanciesPendingVerification),
+      )
+    } else {
+      setDiscrepanciesPendingVerification(0)
     }
     await Promise.all(tasks)
   }, [installationId, has, permsLoaded])
@@ -111,6 +125,11 @@ export function useSidebarBadgeCounts() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'qrc_executions', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'discrepancies', filter: `base_id=eq.${installationId}` },
         () => refresh(),
       )
       .subscribe((status) => {
@@ -171,7 +190,8 @@ export function useSidebarBadgeCounts() {
 
   const ppr = pprTriage + pprApproval + pprCoord
   const qrc = qrcActive
-  const total = ppr + qrc
+  const discrepancies = discrepanciesPendingVerification
+  const total = ppr + qrc + discrepancies
 
-  return { ppr, qrc, total }
+  return { ppr, qrc, discrepancies, total }
 }

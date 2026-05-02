@@ -397,6 +397,20 @@ export function SidebarNav() {
               {badgeCounts.qrc > 9 ? '9+' : badgeCounts.qrc}
             </span>
           )}
+          {/* Discrepancies pending-verification dot — work_completed_awaiting_verification rows
+              waiting for AMOPS final close. Same suppression rules as PPR/QRC. */}
+          {href === '/discrepancies' && badgeCounts.discrepancies > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {badgeCounts.discrepancies > 9 ? '9+' : badgeCounts.discrepancies}
+            </span>
+          )}
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
@@ -412,6 +426,11 @@ export function SidebarNav() {
         {isOpen && href === '/qrc' && badgeCounts.qrc > 0 && !active && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {badgeCounts.qrc} active
+          </span>
+        )}
+        {isOpen && href === '/discrepancies' && badgeCounts.discrepancies > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+            {badgeCounts.discrepancies} to verify
           </span>
         )}
       </Link>
@@ -487,6 +506,7 @@ export function SidebarNav() {
     const sectionPendingCount =
       (section.items.includes('/ppr') ? badgeCounts.ppr : 0)
       + (section.items.includes('/qrc') ? badgeCounts.qrc : 0)
+      + (section.items.includes('/discrepancies') ? badgeCounts.discrepancies : 0)
 
     return (
       <button
