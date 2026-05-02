@@ -1,3 +1,8 @@
+// NOTE: DAFMAN / UFC / AFMAN / AF Form citations below were authored from
+// general knowledge and need verification against the source documents
+// before relying on them as compliance attestations. Some paragraph numbers
+// or document references may be inaccurate. Update the `cite` triples per
+// step once verified.
 import type { WizardStepKey } from '@/lib/modules-config'
 
 export type GuideRequired = 'yes' | 'optional' | 'conditional'
