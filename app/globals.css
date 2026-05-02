@@ -1214,3 +1214,24 @@ html, body {
 @media (max-width: 480px) {
   .hero-summary { display: none !important; }
 }
+
+/* Base Setup wizard step body — fade/slide on step change.
+   `key={step.key}` on the wrapper unmounts/remounts when the step
+   changes, replaying this animation. Honor reduced-motion. */
+@keyframes baseSetupStepEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.base-setup-step-body {
+  animation: baseSetupStepEnter 200ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .base-setup-step-body { animation: none; }
+}
+
+/* Base Setup wizard — hide the persistent Guide panel on narrow
+   viewports; admins on phones can collapse-toggle it manually
+   from desktop preference. */
+@media (max-width: 1023px) {
+  aside[data-tour="guide-panel"] { display: none !important; }
+}

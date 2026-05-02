@@ -59,6 +59,10 @@ import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, Infra
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
 import { isWizardStepEnabled, isStepDone, type WizardStepKey } from '@/lib/modules-config'
+import { StepperRail } from '@/components/base-setup/StepperRail'
+import { GuidePanel } from '@/components/base-setup/GuidePanel'
+import { KioskUrlChip } from '@/components/base-setup/KioskUrlChip'
+import { AutoSavePill, type SaveStatus } from '@/components/base-setup/AutoSavePill'
 
 type SetupTab = WizardStepKey
 
@@ -96,67 +100,22 @@ export default function BaseSetupPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [editingBaseName, setEditingBaseName] = useState(false)
   const [baseNameDraft, setBaseNameDraft] = useState('')
-  const [kioskBusy, setKioskBusy] = useState(false)
-  const [kioskTokenReveal, setKioskTokenReveal] = useState<string | null>(null)
+  const [savedAt, setSavedAt] = useState<Record<string, number>>({})
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [touched, setTouched] = useState<Set<WizardStepKey>>(() => new Set())
 
   const canEdit = has(PERM.BASE_SETUP_WRITE)
   const baseIcao = (currentInstallation as unknown as { icao?: string | null } | null)?.icao ?? null
   const kioskTokenSet = !!((currentInstallation as unknown as { kiosk_token?: string | null } | null)?.kiosk_token)
 
-  const handleGenerateKioskToken = async () => {
-    if (!installationId || kioskBusy) return
-    setKioskBusy(true)
-    try {
-      const res = await fetch('/api/admin/kiosk-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseId: installationId }),
-      })
-      const json = await res.json().catch(() => null)
-      if (!res.ok) {
-        toast.error(json?.error || 'Failed to generate kiosk URL')
-        return
-      }
-      setKioskTokenReveal(json.token as string)
-      await refreshCurrentInstallation()
-      toast.success('Kiosk URL generated — copy it now')
-    } finally {
-      setKioskBusy(false)
-    }
-  }
-
-  const handleDisableKioskToken = async () => {
-    if (!installationId || kioskBusy) return
-    if (!confirm('Disable the kiosk URL for this base? Any bookmarked kiosk URLs will stop working.')) return
-    setKioskBusy(true)
-    try {
-      const res = await fetch(`/api/admin/kiosk-token?baseId=${encodeURIComponent(installationId)}`, {
-        method: 'DELETE',
-      })
-      const json = await res.json().catch(() => null)
-      if (!res.ok) {
-        toast.error(json?.error || 'Failed to disable kiosk URL')
-        return
-      }
-      setKioskTokenReveal(null)
-      await refreshCurrentInstallation()
-      toast.success('Kiosk URL disabled')
-    } finally {
-      setKioskBusy(false)
-    }
-  }
-
-  const copyKioskUrl = async () => {
-    if (!kioskTokenReveal || !baseIcao) return
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    const url = `${origin}/kiosk/${baseIcao.toUpperCase()}?token=${kioskTokenReveal}`
-    try {
-      await navigator.clipboard.writeText(url)
-      toast.success('Kiosk URL copied to clipboard')
-    } catch {
-      toast.error('Copy failed — select and copy manually')
-    }
-  }
+  const markSaved = useCallback((stepKey: WizardStepKey) => {
+    setSavedAt(prev => ({ ...prev, [stepKey]: Date.now() }))
+    setSaveStatus('saved')
+    setTouched(prev => prev.has(stepKey) ? prev : new Set(prev).add(stepKey))
+  }, [])
+  const markSaveError = useCallback(() => {
+    setSaveStatus('error')
+  }, [])
 
   const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
 
@@ -201,18 +160,27 @@ export default function BaseSetupPage() {
   }
 
   return (
-    <div className="page-container" style={{ maxWidth: 800, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="page-container" style={{ maxWidth: 1200, margin: '0 auto' }}>
+      {/* Top nav row: back-link, Modules link, Kiosk chip */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <Link href="/base-config" style={{ color: 'var(--color-primary)', fontSize: 'var(--fs-md)', textDecoration: 'none' }}>
           &larr; Base Configuration
         </Link>
-        <Link href="/base-config/modules" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', textDecoration: 'none', fontWeight: 600 }}>
-          Modules &rarr;
-        </Link>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <KioskUrlChip
+            installationId={installationId}
+            baseIcao={baseIcao}
+            kioskTokenSet={kioskTokenSet}
+            onTokenChanged={refreshCurrentInstallation}
+          />
+          <Link href="/base-config/modules" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', textDecoration: 'none', fontWeight: 600 }}>
+            Modules &rarr;
+          </Link>
+        </div>
       </div>
 
-      {/* Header */}
-      <div style={{ marginTop: 12, marginBottom: 8 }}>
+      {/* Header — condensed to one line */}
+      <div style={{ marginTop: 12, marginBottom: 12 }}>
         <h1 style={{ fontSize: 'var(--fs-4xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 2 }}>
           Base Setup
         </h1>
@@ -252,104 +220,16 @@ export default function BaseSetupPage() {
         </p>
       </div>
 
-      {/* ── Kiosk URL ── */}
-      <div style={{
-        marginBottom: 16,
-        padding: 14,
-        background: 'var(--color-bg-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 8,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 2 }}>
-              Kiosk Display URL
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
-              Auto-login URL for a read-only status board. Bookmark on a lobby display or kiosk — no credentials needed.
-              {' '}
-              {!baseIcao && <span style={{ color: 'var(--color-warning)' }}>Set the base ICAO first.</span>}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {kioskTokenSet ? (
-              <>
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)', fontWeight: 600 }}>
-                  ● ACTIVE
-                </span>
-                <button
-                  onClick={handleGenerateKioskToken}
-                  disabled={kioskBusy || !baseIcao}
-                  style={{
-                    padding: '6px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                    cursor: kioskBusy ? 'wait' : 'pointer', border: '1px solid var(--color-border-mid)',
-                    background: 'var(--color-bg-inset)', color: 'var(--color-text-2)',
-                  }}
-                >Regenerate</button>
-                <button
-                  onClick={handleDisableKioskToken}
-                  disabled={kioskBusy}
-                  style={{
-                    padding: '6px 12px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                    cursor: kioskBusy ? 'wait' : 'pointer', border: '1px solid rgba(239,68,68,0.3)',
-                    background: 'rgba(239,68,68,0.08)', color: 'var(--color-danger)',
-                  }}
-                >Disable</button>
-              </>
-            ) : (
-              <button
-                onClick={handleGenerateKioskToken}
-                disabled={kioskBusy || !baseIcao}
-                style={{
-                  padding: '8px 16px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 700,
-                  cursor: kioskBusy || !baseIcao ? 'not-allowed' : 'pointer',
-                  border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.1)',
-                  color: 'var(--color-cyan)', opacity: !baseIcao ? 0.5 : 1,
-                }}
-              >Generate Kiosk URL</button>
-            )}
-          </div>
-        </div>
-
-        {kioskTokenReveal && baseIcao && (
-          <div style={{
-            marginTop: 12, padding: 10,
-            background: 'var(--color-bg-inset)', border: '1px dashed var(--color-cyan)',
-            borderRadius: 6,
-          }}>
-            <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)', marginBottom: 4 }}>
-              COPY THIS URL NOW — it won&apos;t be shown again
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <code style={{
-                flex: 1, padding: '6px 10px', background: 'var(--color-bg-surface-solid)',
-                border: '1px solid var(--color-border)', borderRadius: 4,
-                fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)',
-                wordBreak: 'break-all', fontFamily: 'monospace',
-              }}>
-                {typeof window !== 'undefined' ? window.location.origin : ''}/kiosk/{baseIcao.toUpperCase()}?token={kioskTokenReveal}
-              </code>
-              <button
-                onClick={copyKioskUrl}
-                style={{
-                  padding: '6px 12px', borderRadius: 4, fontSize: 'var(--fs-sm)', fontWeight: 600,
-                  cursor: 'pointer', border: '1px solid var(--color-cyan)',
-                  background: 'var(--color-cyan)', color: 'var(--color-bg-surface-solid)',
-                }}
-              >Copy</button>
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 6 }}>
-              Regenerating replaces this token — any bookmarks with the old token stop working.
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Progress bar */}
+      {/* Step counter + progress bar */}
       <div style={{ marginBottom: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-cyan)' }}>
             Step {safeStepIndex + 1} of {visibleSteps.length}
+            {step && (
+              <span style={{ color: 'var(--color-text-2)', fontWeight: 600, marginLeft: 6 }}>
+                · {step.label}
+              </span>
+            )}
           </span>
           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
             {Math.round(progress)}% complete
@@ -367,149 +247,151 @@ export default function BaseSetupPage() {
         </div>
       </div>
 
-      {/* Step navigation pills */}
-      <div style={{
-        display: 'flex', gap: 3, marginBottom: 16, flexWrap: 'wrap',
-      }}>
-        {visibleSteps.map((s, i) => {
-          const done = isStepDone(s.key, setupProgress)
-          const isCurrent = i === safeStepIndex
-          return (
-            <button
-              key={s.key}
-              onClick={() => { setCurrentStep(i); window.scrollTo(0, 0) }}
-              title={s.label}
-              style={{
-                width: 28, height: 28, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'var(--fs-2xs)', fontWeight: 700,
-                border: isCurrent ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
-                background: isCurrent ? 'rgba(34,211,238,0.15)' : done ? 'rgba(34,197,94,0.12)' : 'var(--color-bg-inset)',
-                color: isCurrent ? 'var(--color-cyan)' : done ? 'var(--color-success)' : 'var(--color-text-3)',
-                cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-                transition: 'all 0.15s',
-              }}
-            >
-              {done && !isCurrent ? '✓' : i + 1}
-            </button>
-          )
-        })}
-      </div>
+      {/* Labeled stepper rail (replaces numbered circles) */}
+      <StepperRail
+        steps={WIZARD_STEPS}
+        currentIndex={safeStepIndex}
+        setupProgress={setupProgress}
+        enabledModules={enabledModules}
+        touched={touched}
+        onStepClick={(i) => { setCurrentStep(i); window.scrollTo(0, 0) }}
+      />
 
-      {/* Step header */}
-      <div style={{
-        padding: '14px 18px', borderRadius: 10, marginBottom: 12,
-        background: 'linear-gradient(135deg, rgba(34,211,238,0.06), rgba(56,189,248,0.03))',
-        border: '1px solid rgba(34,211,238,0.15)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* 2-col body wrap: form column + Guide panel */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Step header card — form column lead */}
           <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'var(--color-cyan)', color: '#FFFFFF',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 'var(--fs-md)', fontWeight: 800,
+            padding: '14px 18px', borderRadius: 10, marginBottom: 12,
+            background: 'linear-gradient(135deg, rgba(34,211,238,0.06), rgba(56,189,248,0.03))',
+            border: '1px solid rgba(34,211,238,0.15)',
           }}>
-            {safeStepIndex + 1}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: 'var(--color-cyan)', color: '#FFFFFF',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 'var(--fs-md)', fontWeight: 800,
+              }}>
+                {safeStepIndex + 1}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {step.label}
+                  {!step.required && (
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>
+                      (Optional)
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>
+                  {step.description}
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-              {step.label}
-              {!step.required && (
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400, marginLeft: 8 }}>
-                  (Optional)
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5, marginTop: 2 }}>
-              {step.description}
-            </div>
+
+          {/* Step content */}
+          <div
+            key={step.key}
+            className="base-setup-step-body"
+            style={{
+              background: 'var(--color-surface-1)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 16,
+            }}
+          >
+            {step.key === 'runways' && <RunwayTab runways={runways} installationId={installationId} markSaved={markSaved} markSaveError={markSaveError} />}
+            {step.key === 'taxiways' && <TaxiwayEditor />}
+            {step.key === 'navaids' && <NavaidTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} stepKey="areas" markSaved={markSaved} />}
+            {step.key === 'arff' && <ArffTab arffAircraft={arffAircraft} installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
+            {step.key === 'shops' && <ShopsTab shops={ceShops} typeShopMap={typeShopMap} installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'facilities' && <FacilitiesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'templates' && <TemplatesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
+            {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'pprcolumns' && <PprColumnsTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'feedback' && <FeedbackConfigTab installationId={installationId} markSaved={markSaved} />}
           </div>
         </div>
+
+        <GuidePanel stepKey={step.key} />
       </div>
 
-      {/* Step content */}
+      {/* Bottom row: Auto-save pill + nav buttons */}
       <div style={{
-        background: 'var(--color-surface-1)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: 16,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
         marginBottom: 12,
+        flexWrap: 'wrap',
       }}>
-        {step.key === 'runways' && <RunwayTab runways={runways} installationId={installationId} />}
-        {step.key === 'taxiways' && <TaxiwayEditor />}
-        {step.key === 'navaids' && <NavaidTab installationId={installationId} />}
-        {step.key === 'areas' && <SimpleListTab title="Airfield Areas" items={areas} tableName="base_areas" fieldName="area_name" installationId={installationId} />}
-        {step.key === 'arff' && <ArffTab arffAircraft={arffAircraft} installationId={installationId} currentInstallation={currentInstallation} />}
-        {step.key === 'shops' && <ShopsTab shops={ceShops} typeShopMap={typeShopMap} installationId={installationId} />}
-        {step.key === 'facilities' && <FacilitiesTab installationId={installationId} />}
-        {step.key === 'templates' && <TemplatesTab installationId={installationId} />}
-        {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} />}
-        {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} />}
-        {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} />}
-        {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} />}
-        {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} />}
-        {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} />}
-        {step.key === 'pprcolumns' && <PprColumnsTab installationId={installationId} />}
-        {step.key === 'feedback' && <FeedbackConfigTab installationId={installationId} />}
-      </div>
-
-      {/* Navigation buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        {safeStepIndex > 0 && (
-          <button
-            onClick={goBack}
-            style={{
-              flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-base)',
-              border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
-              color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            ← Back
-          </button>
-        )}
-        {!step.required && (
-          <button
-            onClick={goSkip}
-            style={{
-              flex: 1, padding: '12px 16px', borderRadius: 'var(--radius-base)',
-              border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
-              color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Skip for Now
-          </button>
-        )}
-        {isLastStep ? (
-          <Link
-            href="/base-config"
-            onClick={() => { if (step) markSetupStep(step.key, 'complete').catch(() => {}) }}
-            style={{
-              flex: 2, padding: '12px 16px', borderRadius: 'var(--radius-base)',
-              border: 'none',
-              background: 'linear-gradient(135deg, var(--color-success), #16A34A)',
-              color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-              textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            Complete Setup ✓
-          </Link>
-        ) : (
-          <button
-            onClick={goNext}
-            style={{
-              flex: 2, padding: '12px 16px', borderRadius: 'var(--radius-base)',
-              border: 'none',
-              background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-              color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Next: {visibleSteps[safeStepIndex + 1]?.label} →
-          </button>
-        )}
+        <div style={{ flex: '0 0 auto' }}>
+          <AutoSavePill status={saveStatus} lastSavedAt={savedAt[step.key] ?? null} />
+        </div>
+        <div style={{ flex: 1, display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          {safeStepIndex > 0 && (
+            <button
+              onClick={goBack}
+              style={{
+                padding: '10px 16px', borderRadius: 'var(--radius-base)',
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                color: 'var(--color-text-2)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              ← Back
+            </button>
+          )}
+          {!step.required && (
+            <button
+              onClick={goSkip}
+              style={{
+                padding: '10px 16px', borderRadius: 'var(--radius-base)',
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+                color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Skip for Now
+            </button>
+          )}
+          {isLastStep ? (
+            <Link
+              href="/base-config"
+              onClick={() => { if (step) markSetupStep(step.key, 'complete').catch(() => {}) }}
+              style={{
+                padding: '10px 22px', borderRadius: 'var(--radius-base)',
+                border: 'none',
+                background: 'var(--color-success)',
+                color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+                textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              Complete Setup ✓
+            </Link>
+          ) : (
+            <button
+              onClick={goNext}
+              style={{
+                padding: '10px 22px', borderRadius: 'var(--radius-base)',
+                border: 'none',
+                background: 'var(--color-cyan)',
+                color: 'var(--color-cyan-btn-text, #fff)', fontSize: 'var(--fs-md)', fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Next: {visibleSteps[safeStepIndex + 1]?.label} →
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Preview Dashboard Button */}
@@ -638,10 +520,15 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
 function RunwayTab({
   runways: initialRunways,
   installationId,
+  markSaved,
+  markSaveError,
 }: {
   runways: ReturnType<typeof useInstallation>['runways']
   installationId: string | null
+  markSaved?: (stepKey: WizardStepKey) => void
+  markSaveError?: () => void
 }) {
+  void markSaveError // reserved for future explicit error wiring
   const [runways, setRunways] = useState(initialRunways)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1016,6 +903,7 @@ function RunwayTab({
       toast.error(`Failed to add runway: ${error.message}`)
     } else {
       toast.success(`Runway ${newRunway.runway_id} added`)
+      markSaved?.('runways')
       setRunways(prev => [...prev, data as typeof prev[number]])
       setAdding(false)
       setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', end1_designator: '', end1_latitude: '', end1_longitude: '', end1_elevation_msl: '', end2_designator: '', end2_latitude: '', end2_longitude: '', end2_elevation_msl: '' })
@@ -1652,7 +1540,7 @@ const labelStyle: React.CSSProperties = {
 // NAVAID Tab — loads from DB, creates navaid_statuses entries
 // ═══════════════════════════════════════════════════════════════
 
-function NavaidTab({ installationId }: { installationId: string | null }) {
+function NavaidTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [navaids, setNavaids] = useState<{ id: string; navaid_name: string; sort_order: number }[]>([])
   const [statuses, setStatuses] = useState<NavaidStatus[]>([])
   const [newItem, setNewItem] = useState('')
@@ -1703,6 +1591,7 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
       })
 
     toast.success(`Added "${newItem.trim()}"`)
+    markSaved?.('navaids')
     setNavaids(prev => [...prev, navaidRow as typeof prev[number]])
     setNewItem('')
     // Reload to get updated statuses
@@ -1845,13 +1734,15 @@ function NavaidTab({ installationId }: { installationId: string | null }) {
 // ═══════════════════════════════════════════════════════════════
 
 function SimpleListTab({
-  title, items, tableName, fieldName, installationId,
+  title, items, tableName, fieldName, installationId, stepKey, markSaved,
 }: {
   title: string
   items: string[]
   tableName: string
   fieldName: string
   installationId: string | null
+  stepKey: WizardStepKey
+  markSaved?: (stepKey: WizardStepKey) => void
 }) {
   const [list, setList] = useState<string[]>(items)
   const [newItem, setNewItem] = useState('')
@@ -1890,6 +1781,7 @@ function SimpleListTab({
       toast.error(`Failed to add: ${error.message}`)
     } else {
       toast.success(`Added "${newItem.trim()}"`)
+      markSaved?.(stepKey)
       setList(prev => [...prev, newItem.trim()])
       setNewItem('')
     }
@@ -1981,7 +1873,7 @@ function SimpleListTab({
 // SCN Agencies tab
 // ═══════════════════════════════════════════════════════════════
 
-function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
+function ScnAgenciesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   type Row = { id: string; agency_name: string; sort_order: number }
   const [loaded, setLoaded] = useState(false)
   const [agencies, setAgencies] = useState<Row[]>([])
@@ -2023,6 +1915,7 @@ function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
     setAgencies(prev => [...prev, { id: data.id, agency_name: data.agency_name, sort_order: data.sort_order }])
     setNewName('')
     toast.success(`Added "${data.agency_name}"`)
+    markSaved?.('scnagencies')
   }
 
   const handleDelete = async (row: Row) => {
@@ -2184,7 +2077,7 @@ function ScnAgenciesTab({ installationId }: { installationId: string | null }) {
 // CE Shops tab
 // ═══════════════════════════════════════════════════════════════
 
-function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { shops: string[]; typeShopMap: Record<string, string>; installationId: string | null }) {
+function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId, markSaved }: { shops: string[]; typeShopMap: Record<string, string>; installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [list, setList] = useState<string[]>(shops)
   const [newShop, setNewShop] = useState('')
   const [typeMap, setTypeMap] = useState<Record<string, string>>(initialTypeShopMap)
@@ -2218,6 +2111,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { 
     setNewShop('')
     await saveShopsToDb(updated)
     toast.success(`Added "${newShop.trim()}"`)
+    markSaved?.('shops')
   }
 
   const handleDelete = async (shop: string) => {
@@ -2350,7 +2244,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId }: { 
 // Facilities tab
 // ═══════════════════════════════════════════════════════════════
 
-function FacilitiesTab({ installationId }: { installationId: string | null }) {
+function FacilitiesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [facilities, setFacilities] = useState<{ id: string; facility_number: string; description: string }[]>([])
   const [newNumber, setNewNumber] = useState('')
   const [newDesc, setNewDesc] = useState('')
@@ -2379,6 +2273,7 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
       toast.error(`Failed to add: ${error}`)
     } else {
       toast.success(`Added facility ${newNumber.trim()}`)
+      markSaved?.('facilities')
       setNewNumber('')
       setNewDesc('')
       load()
@@ -2562,7 +2457,7 @@ function FacilitiesTab({ installationId }: { installationId: string | null }) {
 // Templates tab
 // ═══════════════════════════════════════════════════════════════
 
-function TemplatesTab({ installationId }: { installationId: string | null }) {
+function TemplatesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [cloning, setCloning] = useState(false)
   const [hasAirfield, setHasAirfield] = useState<boolean | null>(null)
   const [hasLighting, setHasLighting] = useState<boolean | null>(null)
@@ -2585,6 +2480,7 @@ function TemplatesTab({ installationId }: { installationId: string | null }) {
     const lt = await createDefaultTemplate(installationId, 'lighting')
     if (af && lt) {
       toast.success('Default inspection templates created')
+      markSaved?.('templates')
       setHasAirfield(true)
       setHasLighting(true)
     } else {
@@ -2889,7 +2785,7 @@ const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
 
 const FREQ_TAG_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: 'var(--color-warning)' }
 
-function ShiftChecklistTab({ installationId, currentInstallation }: { installationId: string | null; currentInstallation: any }) {
+function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: { installationId: string | null; currentInstallation: any; markSaved?: (stepKey: WizardStepKey) => void }) {
   const { refreshCurrentInstallation } = useInstallation()
   const [items, setItems] = useState<ShiftChecklistItem[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -2980,6 +2876,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
       setShowForm(false)
       await load()
       toast.success('Item added')
+      markSaved?.('shiftchecklist')
     }
   }
 
@@ -3345,7 +3242,7 @@ function ShiftChecklistTab({ installationId, currentInstallation }: { installati
 
 type QrcTemplateRow = { id: string; qrc_number: number; title: string; notes: string | null; is_active: boolean; steps: unknown[]; references: string | null; has_scn_form: boolean }
 
-function QrcTemplatesTab({ installationId }: { installationId: string | null }) {
+function QrcTemplatesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [templates, setTemplates] = useState<QrcTemplateRow[]>([])
   const [loaded, setLoaded] = useState(false)
   const [showSeedPicker, setShowSeedPicker] = useState(false)
@@ -3393,6 +3290,7 @@ function QrcTemplatesTab({ installationId }: { installationId: string | null }) 
     if (error) toast.error(error)
     else {
       toast.success(`Added ${count} QRC template${count !== 1 ? 's' : ''}`)
+      markSaved?.('qrc')
       setShowSeedPicker(false)
       await load()
     }
@@ -3835,7 +3733,7 @@ function EditQrcDialog({
 // Lighting Systems Tab — define systems + clone from DAFMAN templates
 // ═══════════════════════════════════════════════════════════════
 
-function LightingSystemsTab({ installationId }: { installationId: string | null }) {
+function LightingSystemsTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [systems, setSystems] = useState<LightingSystem[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
@@ -3985,6 +3883,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
     })
     if (result) {
       toast.success(`Created "${result.name}"`)
+      markSaved?.('lighting')
       setSystems((prev) => [...prev, result])
       setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false); setAdding(false)
     } else { toast.error('Failed to create system') }
@@ -4253,7 +4152,7 @@ function LightingSystemsTab({ installationId }: { installationId: string | null 
 // Wildlife Species Tab — searchable species picker for base config
 // ═══════════════════════════════════════════════════════════════
 
-function WildlifeSpeciesTab({ installationId }: { installationId: string | null }) {
+function WildlifeSpeciesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [baseSpecies, setBaseSpecies] = useState<BaseWildlifeSpeciesRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -4343,7 +4242,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
     } else {
       const { error } = await addBaseSpecies(installationId, sp.common_name)
       if (error) toast.error(error)
-      else toast.success(`Added ${sp.common_name}`)
+      else { toast.success(`Added ${sp.common_name}`); markSaved?.('wildlife') }
     }
     await loadSpecies()
     setAdding(null)
@@ -4568,7 +4467,7 @@ function WildlifeSpeciesTab({ installationId }: { installationId: string | null 
 }
 
 // ── Status Boards Tab ──
-function StatusBoardsTab({ installationId }: { installationId: string | null }) {
+function StatusBoardsTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [boards, setBoards] = useState<CustomStatusBoard[]>([])
   const [itemsByBoard, setItemsByBoard] = useState<Record<string, CustomStatusItem[]>>({})
   const [newBoardName, setNewBoardName] = useState('')
@@ -4607,6 +4506,7 @@ function StatusBoardsTab({ installationId }: { installationId: string | null }) 
       setNewBoardName('')
       setNewBoardSection('standalone')
       toast.success(`Board "${board.board_name}" created`)
+      markSaved?.('statusboards')
     }
   }
 
@@ -4900,7 +4800,7 @@ function ChipCluster({ chips }: { chips: ChipDef[] }) {
 }
 
 // ── PPR Columns Tab ──
-function PprColumnsTab({ installationId }: { installationId: string | null }) {
+function PprColumnsTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const { currentInstallation } = useInstallation()
   const baseIcao = (currentInstallation as { icao?: string | null } | null)?.icao || null
   const [columns, setColumns] = useState<PprColumn[]>([])
@@ -5066,6 +4966,7 @@ function PprColumnsTab({ installationId }: { installationId: string | null }) {
       setNewColTimeDisplay('zulu')
       setNewColInfoText('')
       toast.success(`Added "${col.column_name}"`)
+      markSaved?.('pprcolumns')
     }
   }
 
@@ -5785,10 +5686,12 @@ function ArffTab({
   arffAircraft,
   installationId,
   currentInstallation,
+  markSaved,
 }: {
   arffAircraft: string[]
   installationId: string | null
   currentInstallation: import('@/lib/supabase/types').Installation | null
+  markSaved?: (stepKey: WizardStepKey) => void
 }) {
   const { refreshCurrentInstallation } = useInstallation()
   const initialShowCat = (() => {
@@ -5819,6 +5722,7 @@ function ArffTab({
         setShowCat(!next)
       } else {
         toast.success(next ? 'CAT dropdown enabled on Airfield Status' : 'CAT dropdown hidden on Airfield Status')
+        markSaved?.('arff')
         await refreshCurrentInstallation()
       }
     } finally {
@@ -5862,13 +5766,15 @@ function ArffTab({
         tableName="base_arff_aircraft"
         fieldName="aircraft_name"
         installationId={installationId}
+        stepKey="arff"
+        markSaved={markSaved}
       />
     </div>
   )
 }
 
 // ── Customer Feedback Config Tab ──
-function FeedbackConfigTab({ installationId }: { installationId: string | null }) {
+function FeedbackConfigTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [config, setConfig] = useState<import('@/lib/supabase/feedback').FeedbackFormConfig | null>(null)
   const [saving, setSaving] = useState(false)
   const [newFieldLabel, setNewFieldLabel] = useState('')
@@ -5892,6 +5798,7 @@ function FeedbackConfigTab({ installationId }: { installationId: string | null }
     await saveFeedbackConfig(installationId, updated)
     setSaving(false)
     toast.success('Feedback form saved')
+    markSaved?.('feedback')
   }
 
   const addField = () => {
