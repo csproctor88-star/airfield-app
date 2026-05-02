@@ -63,6 +63,10 @@ import { StepperRail } from '@/components/base-setup/StepperRail'
 import { GuidePanel } from '@/components/base-setup/GuidePanel'
 import { KioskUrlChip } from '@/components/base-setup/KioskUrlChip'
 import { AutoSavePill, type SaveStatus } from '@/components/base-setup/AutoSavePill'
+import { OnboardingTour } from '@/components/base-setup/OnboardingTour'
+import { QuickSetupModal, QuickSetupBanner } from '@/components/base-setup/QuickSetupModal'
+import { loadQuickSetupDraft, type QuickSetupDraft, type QuickSetupStepKey, QUICK_SETUP_STEPS } from '@/lib/base-setup-quick-setup'
+import { Zap } from 'lucide-react'
 
 type SetupTab = WizardStepKey
 
@@ -103,6 +107,10 @@ export default function BaseSetupPage() {
   const [savedAt, setSavedAt] = useState<Record<string, number>>({})
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [touched, setTouched] = useState<Set<WizardStepKey>>(() => new Set())
+  const [quickSetupOpen, setQuickSetupOpen] = useState(false)
+  const [quickSetupDraft, setQuickSetupDraft] = useState<QuickSetupDraft | null>(null)
+  const [tourActive, setTourActive] = useState(false)
+  const [tourLoaded, setTourLoaded] = useState(false)
 
   const canEdit = has(PERM.BASE_SETUP_WRITE)
   const baseIcao = (currentInstallation as unknown as { icao?: string | null } | null)?.icao ?? null
@@ -118,6 +126,46 @@ export default function BaseSetupPage() {
   }, [])
 
   const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
+
+  // Load any pending Quick Setup draft on mount / installation switch.
+  useEffect(() => {
+    if (!installationId) { setQuickSetupDraft(null); return }
+    loadQuickSetupDraft(installationId).then(setQuickSetupDraft).catch(() => setQuickSetupDraft(null))
+  }, [installationId])
+
+  // First-run onboarding tour: read profiles.has_completed_setup_tour once.
+  useEffect(() => {
+    if (tourLoaded) return
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      if (!supabase) { setTourLoaded(true); return }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) { setTourLoaded(true); return }
+      const { data } = await supabase
+        .from('profiles')
+        .select('has_completed_setup_tour')
+        .eq('id', user.id)
+        .single()
+      if (cancelled) return
+      const completed = (data as unknown as { has_completed_setup_tour?: boolean } | null)?.has_completed_setup_tour
+      if (!completed) setTourActive(true)
+      setTourLoaded(true)
+    })()
+    return () => { cancelled = true }
+  }, [tourLoaded])
+
+  const dismissTour = useCallback(async (_reason: 'completed' | 'skipped') => {
+    setTourActive(false)
+    const supabase = createClient()
+    if (!supabase) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase
+      .from('profiles')
+      .update({ has_completed_setup_tour: true } as any)
+      .eq('id', user.id)
+  }, [])
 
   if (!canEdit) {
     return (
@@ -167,12 +215,52 @@ export default function BaseSetupPage() {
           &larr; Base Configuration
         </Link>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            data-tour="quick-setup-button"
+            onClick={() => setQuickSetupOpen(true)}
+            disabled={!baseIcao}
+            title={baseIcao ? `Pre-fill defaults from ${baseIcao}` : 'Set the base ICAO first'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '5px 12px',
+              borderRadius: 999,
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 50%, transparent)',
+              background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+              color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-xs)',
+              fontWeight: 700,
+              cursor: baseIcao ? 'pointer' : 'not-allowed',
+              opacity: baseIcao ? 1 : 0.5,
+              fontFamily: 'inherit',
+            }}
+          >
+            <Zap size={12} />
+            Quick Setup
+          </button>
           <KioskUrlChip
             installationId={installationId}
             baseIcao={baseIcao}
             kioskTokenSet={kioskTokenSet}
             onTokenChanged={refreshCurrentInstallation}
           />
+          <button
+            onClick={() => setTourActive(true)}
+            title="Replay the onboarding tour"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--color-text-3)',
+              fontSize: 'var(--fs-xs)',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              padding: '4px 4px',
+              textDecoration: 'underline',
+            }}
+          >
+            Replay tour
+          </button>
           <Link href="/base-config/modules" style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)', textDecoration: 'none', fontWeight: 600 }}>
             Modules &rarr;
           </Link>
@@ -290,6 +378,16 @@ export default function BaseSetupPage() {
               </div>
             </div>
           </div>
+
+          {/* Quick Setup pre-fill banner — only on the 5 derivable steps when a draft exists */}
+          {quickSetupDraft && (QUICK_SETUP_STEPS as readonly string[]).includes(step.key) && (
+            <QuickSetupBanner
+              draft={quickSetupDraft}
+              stepKey={step.key as QuickSetupStepKey}
+              installationId={installationId}
+              onConfirmed={(next) => setQuickSetupDraft(Object.keys(next).length === 0 ? null : next)}
+            />
+          )}
 
           {/* Step content */}
           <div
@@ -419,6 +517,18 @@ export default function BaseSetupPage() {
 
       {/* Dashboard Preview */}
       {showPreview && <DashboardPreview installationId={installationId} currentInstallation={currentInstallation} />}
+
+      {/* Quick Setup confirmation modal */}
+      <QuickSetupModal
+        open={quickSetupOpen}
+        baseIcao={baseIcao}
+        installationId={installationId}
+        onClose={() => setQuickSetupOpen(false)}
+        onPrefillComplete={(d) => setQuickSetupDraft(d)}
+      />
+
+      {/* First-run onboarding tour overlay */}
+      <OnboardingTour active={tourActive} onDismiss={dismissTour} />
     </div>
   )
 }
