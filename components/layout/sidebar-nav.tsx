@@ -361,10 +361,10 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
-              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-success)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
             }}>
               {expiringNotamCount > 9 ? '9+' : expiringNotamCount}
             </span>
@@ -376,10 +376,10 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
-              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-success)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
             }}>
               {badgeCounts.ppr > 9 ? '9+' : badgeCounts.ppr}
             </span>
@@ -389,10 +389,10 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
-              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-success)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
             }}>
               {badgeCounts.qrc > 9 ? '9+' : badgeCounts.qrc}
             </span>
@@ -403,10 +403,10 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
-              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-success)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
             }}>
               {badgeCounts.discrepancies > 9 ? '9+' : badgeCounts.discrepancies}
             </span>
@@ -414,22 +414,22 @@ export function SidebarNav() {
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-success)', marginLeft: 'auto' }}>
             {expiringNotamCount} expiring
           </span>
         )}
         {isOpen && href === '/ppr' && badgeCounts.ppr > 0 && !active && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-success)', marginLeft: 'auto' }}>
             {badgeCounts.ppr} pending
           </span>
         )}
         {isOpen && href === '/qrc' && badgeCounts.qrc > 0 && !active && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-success)', marginLeft: 'auto' }}>
             {badgeCounts.qrc} active
           </span>
         )}
         {isOpen && href === '/discrepancies' && badgeCounts.discrepancies > 0 && !active && (
-          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-success)', marginLeft: 'auto' }}>
             {badgeCounts.discrepancies} to verify
           </span>
         )}
@@ -538,10 +538,10 @@ export function SidebarNav() {
             <span style={{
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 14 : 12, height: isOpen ? 14 : 12,
-              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              borderRadius: '50%', background: 'var(--color-success)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
             }}>
               {sectionPendingCount > 9 ? '9+' : sectionPendingCount}
             </span>

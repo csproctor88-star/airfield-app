@@ -107,10 +107,10 @@ function NavItem({ item, badgeCount = 0 }: { item: ModuleItem; badgeCount?: numb
           <span style={{
             position: 'absolute', top: -4, right: -4,
             minWidth: 16, height: 16, padding: '0 4px',
-            borderRadius: 8, background: 'var(--color-danger)', color: '#fff',
+            borderRadius: 8, background: 'var(--color-success)', color: '#fff',
             fontSize: 9, fontWeight: 800,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
           }}>
             {badgeCount > 9 ? '9+' : badgeCount}
           </span>
@@ -171,10 +171,10 @@ function CollapsibleGroup({ label, icon, items, defaultOpen, badgeFor }: { label
             <span style={{
               position: 'absolute', top: -4, right: -4,
               minWidth: 16, height: 16, padding: '0 4px',
-              borderRadius: 8, background: 'var(--color-danger)', color: '#fff',
+              borderRadius: 8, background: 'var(--color-success)', color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(52,211,153,0.5)',
             }}>
               {groupBadgeCount > 9 ? '9+' : groupBadgeCount}
             </span>
