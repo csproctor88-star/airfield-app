@@ -2662,7 +2662,7 @@ export default function InfrastructureMapPage() {
           </div>
         </div>
         {isAdmin && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div data-tour="infrastructure-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {dbFeatures.length === 0 && (
               <button
                 onClick={handleImport}
@@ -2745,7 +2745,7 @@ export default function InfrastructureMapPage() {
 
       {/* System Health Panel — collapsible */}
       {!editMode && !auditMode && (
-        <div style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 4 }}>
+        <div data-tour="infrastructure-health" style={{ flexShrink: 0, marginBottom: isFullscreen ? 0 : 4 }}>
           <button
             onClick={() => setShowHealthPanel(prev => !prev)}
             style={{
@@ -2788,7 +2788,7 @@ export default function InfrastructureMapPage() {
       )}
 
       {/* Map + Overlays */}
-      <div style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+      <div data-tour="infrastructure-map" style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
         {/* Audit panel */}

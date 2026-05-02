@@ -216,7 +216,7 @@ export default function DailyReviewsPage() {
       ) : !installationId ? (
         <EmptyState message="Select an installation to view daily reviews." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div data-tour="daily-reviews-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visibleDates.map((date) => {
             const row = rowByDate.get(date) ?? null
             const certified = row ? isFullyCertified(row, shiftCount) : false

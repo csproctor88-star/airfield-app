@@ -496,7 +496,7 @@ function ObstructionsContent() {
     : pointInfo?.surfaceName ?? null
 
   return (
-    <div className="page-container" data-tour="obstructions-header" style={{ paddingBottom: 120 }}>
+    <div className="page-container" style={{ paddingBottom: 120 }}>
       {/* Back link */}
       <button
         onClick={() => router.back()}
@@ -512,7 +512,7 @@ function ObstructionsContent() {
 
       {/* Page header — tertiary tier-label + danger accent rule (UFC
           3-260-01 imaginary-surface clearance/violation semantic) */}
-      <div style={{
+      <div data-tour="obstructions-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         gap: 8, paddingBottom: 8, marginBottom: 10, flexWrap: 'wrap',
         borderBottom: '1px solid color-mix(in srgb, var(--color-danger) 30%, transparent)',
@@ -547,22 +547,24 @@ function ObstructionsContent() {
       </div>
 
       {/* Map */}
-      <AirfieldMap
-        onPointSelected={handlePointSelected}
-        selectedPoint={pointInfo?.point ?? null}
-        surfaceAtPoint={surfaceAtPoint}
-        flyToPoint={flyToPoint}
-        taxiways={taxiwayGeometries.map(tw => ({
-          id: tw.id,
-          designator: tw.designator,
-          centerline: tw.centerline,
-          standard: tw.standard,
-          tdg: tw.tdg,
-          taxiwayType: tw.taxiwayType,
-          runwayClass: tw.runwayClass,
-          serviceBranch: tw.serviceBranch,
-        }))}
-      />
+      <div data-tour="obstructions-map">
+        <AirfieldMap
+          onPointSelected={handlePointSelected}
+          selectedPoint={pointInfo?.point ?? null}
+          surfaceAtPoint={surfaceAtPoint}
+          flyToPoint={flyToPoint}
+          taxiways={taxiwayGeometries.map(tw => ({
+            id: tw.id,
+            designator: tw.designator,
+            centerline: tw.centerline,
+            standard: tw.standard,
+            tdg: tw.tdg,
+            taxiwayType: tw.taxiwayType,
+            runwayClass: tw.runwayClass,
+            serviceBranch: tw.serviceBranch,
+          }))}
+        />
+      </div>
 
       {/* Use My Location */}
       <button

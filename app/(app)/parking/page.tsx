@@ -476,6 +476,44 @@ export default function ParkingPage() {
   // Sidebar tab navigation
   const [sidebarTab, setSidebarTab] = useState<'aircraft' | 'environment' | 'clearance' | 'settings'>('aircraft')
 
+  // Tour-driven UI hooks. The OnboardingTour engine fires
+  // glidepath:tour-parking-* events on each step's `dispatchOnEnter`;
+  // the parking module is the only consumer that actually mutates
+  // page state from a tour step (most pages just need anchors). This
+  // lets the tour walk a user through opening the panel, switching
+  // tabs, and showing the aircraft picker so they see the actual
+  // surfaces being explained instead of a static screenshot.
+  useEffect(() => {
+    const openPanel = () => setSidebarCollapsed(false)
+    const closePanel = () => setSidebarCollapsed(true)
+    const setTab = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail === 'aircraft' || detail === 'environment' || detail === 'clearance' || detail === 'settings') {
+        // Close the picker if it's open. The picker is a fullscreen modal
+        // overlay; without this, switching tabs from a step that just
+        // showed the picker leaves the modal covering the tab bar so the
+        // tour spotlight has nothing to anchor on.
+        setShowAircraftPicker(false)
+        setSidebarCollapsed(false)
+        setSidebarTab(detail)
+      }
+    }
+    const showPicker = () => { setSidebarCollapsed(false); setShowAircraftPicker(true) }
+    const hidePicker = () => setShowAircraftPicker(false)
+    window.addEventListener('glidepath:tour-parking-open-panel', openPanel)
+    window.addEventListener('glidepath:tour-parking-close-panel', closePanel)
+    window.addEventListener('glidepath:tour-parking-set-tab', setTab)
+    window.addEventListener('glidepath:tour-parking-show-picker', showPicker)
+    window.addEventListener('glidepath:tour-parking-hide-picker', hidePicker)
+    return () => {
+      window.removeEventListener('glidepath:tour-parking-open-panel', openPanel)
+      window.removeEventListener('glidepath:tour-parking-close-panel', closePanel)
+      window.removeEventListener('glidepath:tour-parking-set-tab', setTab)
+      window.removeEventListener('glidepath:tour-parking-show-picker', showPicker)
+      window.removeEventListener('glidepath:tour-parking-hide-picker', hidePicker)
+    }
+  }, [])
+
   // Placement mode
   const isPlacing = !!(placingAircraft || placingObstacle || drawingLineObsId || drawingTaxilaneId || drawingBoundaryId || drawingObsType)
   const isPlacingRef = useRef(isPlacing)
@@ -2847,7 +2885,7 @@ export default function ParkingPage() {
         </div>
 
         {/* Tab bar — active indicator unified to cyan; count badges reserve danger/warning for Clearance only when there's something wrong */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
+        <div data-tour="parking-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
           {([
             { key: 'aircraft' as const, label: 'Aircraft', count: spots.length, color: 'var(--color-cyan)', countColor: 'var(--color-cyan)' },
             { key: 'environment' as const, label: 'Environment', count: obstacles.length + taxilanes.length + apronBoundaries.length, color: 'var(--color-cyan)', countColor: 'var(--color-cyan)' },
@@ -3935,7 +3973,7 @@ export default function ParkingPage() {
               window.addEventListener('mouseup', onUp)
             }
             return (
-              <div style={{
+              <div data-tour="parking-panel" style={{
                 position: 'absolute', top: 10, left: 80, zIndex: 10,
                 width: panelWidth,
                 maxHeight: panelHeight != null ? panelHeight : 'calc(100vh - 140px)',
@@ -4155,7 +4193,7 @@ export default function ParkingPage() {
 
             // Desktop — single vertical rail at left
             return (
-              <div style={{
+              <div data-tour="parking-toolbar" style={{
                 position: 'absolute', zIndex: 5,
                 top: 10, left: 10,
                 display: 'flex', flexDirection: 'column', gap: 2,
@@ -4352,6 +4390,7 @@ export default function ParkingPage() {
         >
           <div
             onClick={e => e.stopPropagation()}
+            data-tour="parking-aircraft-picker"
             style={{
               width: 480, maxHeight: '80vh', background: 'var(--color-bg-surface)',
               borderRadius: 8, border: '1px solid var(--color-border)',
