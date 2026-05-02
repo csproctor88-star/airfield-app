@@ -64,7 +64,7 @@ export default function ReportsPage() {
     : TIME_FRAMES.find(t => t.value === days)?.label || `${days}d`
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="reports-header">
       <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, marginBottom: 14 }}>Reports & Analytics</div>
 
       {/* Report links */}

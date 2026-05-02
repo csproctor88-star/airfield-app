@@ -397,7 +397,7 @@ export default function ContractorsPage() {
   }
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 40px' }}>
+    <div data-tour="contractors-header" style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 40px' }}>
       {/* Page header — tertiary tier-label + cyan accent rule */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

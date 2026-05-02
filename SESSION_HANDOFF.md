@@ -1,224 +1,215 @@
 # Session Handoff
 
-**Date:** 2026-05-01 (cont.)
-**Branch:** `main` (pushed)
+**Date:** 2026-05-02
+**Branch:** `main`
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `2dafc52` (origin/main)
+**HEAD:** `dd0c953` (origin/main) — uncommitted tour-system work + welcome-gate
+sits on top, see `Uncommitted work` below.
 
 ---
 
 ## What shipped this session
 
-Phase 2 of the `/base-config` revamp landed end-to-end. Phase 1 (last
-session) split admin work out of `/settings` into a dedicated
-`/base-config` hub but left the wizard itself untouched. This session
-rebuilt the wizard chrome, layered onboarding + Quick Setup on top of
-it, wired per-field tooltips across all 15 in-file tab functions, and
-deleted the Preview Dashboard the user vetoed as excessive. Four
-commits, all on `main`, all pushed. Two additive migrations committed
-but **not applied** — apply before next dev run or tour state and
-Quick Setup save will silently no-op.
+Two independent threads. The first was a quick discrepancies-badge feature
+plus a dot-color polish (3 commits, all pushed). The second — and most of
+the session's footprint — was a from-scratch in-app tour system for the
+sidebar + per-page walkthrough, plus a first-login welcome dialog. The
+tour work is fully built, type-checks, builds, and tests cleanly, but
+remains uncommitted at session end pending a final commit + push.
 
-### Phase 2 chrome refresh + IAW Compliance guidance (`f9a26b1`)
+### Discrepancies pending-verification badge (`9ad5f7a`)
 
-The headline commit. Rebuilt `/base-config/setup` chrome around five
-new components in `components/base-setup/` plus a single
-source-of-truth content map at `lib/base-setup-guide.ts` (~360 LOC,
-in-depth copy for all 16 steps). Internal logic of the 16 tab
-functions is untouched — only the page-level chrome that wraps them.
+Surfaces a notification dot on the Discrepancies sidebar entry (and the
+Airfield Management section header) when discrepancies sit in
+`current_status = 'work_completed_awaiting_verification'` — the AMOPS
+verify-and-close step. Same plumbing as PPR/QRC: `fetchPendingVerificationCount`
+in `lib/supabase/discrepancies.ts`, permission gate (`discrepancies:close`,
+held by sys_admin / airfield_manager / namo / base_admin / amops),
+realtime subscription on the `discrepancies` table from
+`useSidebarBadgeCounts`, dot suppressed on the active item. The `/more`
+page picked up the same badge plumbing in the same commit so mobile
+users see the same dots — `NavItem` gained a `badgeCount` prop and
+`CollapsibleGroup` aggregates badges into a header dot when collapsed.
 
-**StepperRail** replaces the old 28×28 numbered-circle row with
-labeled pills, status icons keyed off complete (`✓`) / current (`◉`)
-/ pending (`·`) / required-but-empty-after-touch (`⚠`) /
-optional (`⊘`). Responsive grid (`auto-fit`, 160 px min) wraps
-cleanly; the rail auto-scrolls the current pill into view on mount so
-mobile lands where the admin expects.
+### Dot color split — green for "work done, awaiting ack"; red elsewhere (`bab0424` → `dd0c953`)
 
-**KioskUrlChip** demotes the standalone Kiosk URL panel — which ate
-40 % of the mobile viewport on every step — to a compact pill in the
-top-right of the back-link row, with the same generate / regenerate /
-disable / copy actions hidden behind a click-out dropdown. Token-set
-pill goes solid-success at rest so admins still see active state at a
-glance.
+The dot recipe was initially red across all four badged modules
+(`bab0424` accidentally flipped *every* dot to green per a one-line
+user request that I over-applied). `dd0c953` walked it back to a
+per-module split: Discrepancies-pending-verification + the Airfield
+Management section-header aggregate stay green (the underlying state
+is "CES finished, please acknowledge" — reads better in green); PPR
+triage / QRC active / NOTAM expiring + the Operations section-header
+aggregate stay red because they're action-required. Saved as feedback
+memory (`feedback_notification_dot_color.md`) so future badge work
+defaults to red unless the state is acknowledgement-of-completion.
 
-**GuidePanel** is the right-column 6-section detail that anchors the
-new redesign: What this step does · How it works · Why it matters ·
-Required? · Examples · IAW Compliance. The compliance section reads
-as an attestation, not a footnote, generated from a
-`cite: { reg, para, outcome }` triple per step so a future DAFMAN
-revision is a mechanical paragraph-number swap. Per-step collapse
-state persists to `localStorage`; the heaviest steps (Lighting,
-Runways) auto-collapse to a 56 px rail by default to give those dense
-forms breathing room.
+### In-app tour system — sidebar + per-page walkthrough (uncommitted)
 
-**AutoSavePill** in the bottom nav row surfaces the *existing*
-per-tab Supabase saves as a pill — no new auto-save logic. Each tab
-already calls `toast.success()` after a successful write; this pass
-added one `markSaved(stepKey)` call alongside it (15 wirings, no
-behavior change). Pill cycles `Saving…` → `Auto-saved Xs ago` →
-`All changes saved (Xm ago)` after 30 s.
+The headline work, ~85 files touched. A new tour engine at
+`components/tour/OnboardingTour.tsx` replaces the wizard's hand-rolled
+inline tour and now drives a full app walkthrough that visits every
+sidebar group, every page underneath, and every page's primary controls
+— interleaved into a single linear sequence so one Next-button press
+always advances the user forward.
 
-Container widened 800 → 1200 px to give the Guide panel room. Step
-body wrapped in a 200 ms fade/slide CSS transition keyed off
-`step.key` (honors `prefers-reduced-motion`). Old gradient Next /
-Complete buttons swapped to the canonical solid cyan / success
-recipes already in use across the app.
+The architecture is built around three contracts:
 
-`/base-config/setup` First Load JS 44 kB → 55.4 kB / 241 kB → 256 kB
-on this commit, within the planned ±20 kB allowance. Final state at
-end of session is 60.2 kB / 260 kB after the next two commits + the
-Preview Dashboard removal.
+- **`TourStep` schema** (in `OnboardingTour.tsx`) supports `anchor`,
+  `anchorIsFixed` (sidebar items vs page content), `navigateTo`
+  (`router.push` before showing the step), `expandSidebarGroup`
+  (fires a custom event the sidebar listens for), `requiresPerm`
+  (skips role-gated steps), and `skipSubTourTo` (the "Skip this page's
+  deep-dive" button on per-page intro steps fast-forwards to the next
+  sidebar item).
+- **State persists across navigation.** The launcher mounts in the
+  `(app)/` layout, which Next.js preserves across same-segment route
+  changes. The OnboardingTour component's `stepIdx` survives every
+  `router.push` the engine triggers — the original implementation lost
+  state because I keyed the component on `${tourId}:${pathname}`,
+  remounting on every navigation. Fixed mid-session: key on `tourId`
+  only.
+- **Page sub-tours are reusable.** Each of ~25 visible sidebar routes
+  has its own `lib/tours/pages/<route>.ts` exporting a `TourStep[]`.
+  The master `lib/tours/sidebar-tour.ts` and `lib/tours/mobile-tour.ts`
+  import + interleave them; the desktop tour is anchored to
+  `sidebar-item-*` and the mobile variant to `more-item-*` but they
+  invoke the *same* page-content steps. Stage 2 page-feature tours
+  drop in by adding more files to `lib/tours/pages/` and registering
+  with `lib/tours/registry.ts`.
 
-### First-run tour + Quick Setup pre-fill (`1743c80`)
+Migration `2026050202_profiles_tours_completed_jsonb.sql` adds a JSONB
+map `tours_completed` keyed by tour id. The previous
+`has_completed_setup_tour BOOLEAN` from `2026050200` was backfilled to
+`{"setup-wizard": true}` for users who'd already finished the wizard
+tour. The boolean stays in place this release as a fallback. Future
+per-page tours register a new key without a migration.
 
-Layered the originally-Phase-3 onboarding bits on top of the chrome
-refresh, minus the live preview pane the user vetoed.
+The wizard tour itself was migrated onto the new engine — its 6
+inline steps moved to `lib/tours/setup-wizard-tour.ts`, the wizard
+page (`app/(app)/base-config/setup/page.tsx`) imports from the new
+path and uses `isTourCompleted` / `markTourCompleted` against the new
+JSONB column.
 
-**OnboardingTour** is hand-rolled (no `react-joyride` dep). Six
-popcorn bubbles walk a fresh sys_admin through the labeled stepper,
-Guide panel, `(?)` field hints, auto-save pill, and Quick Setup
-button. Anchors via `data-tour="<id>"` attributes scattered across
-the chrome components from the prior commit; spotlight ring auto-
-positions via `getBoundingClientRect()` and re-measures on resize /
-scroll. Tour reads / writes `profiles.has_completed_setup_tour`
-(migration `2026050200`); Skip and Done both write the flag true. A
-"Replay tour" link in the wizard header re-launches without changing
-the flag.
+### "View App Tutorial" — explicit-launch only
 
-**Quick Setup** opens a confirmation modal that calls
-`/api/airport-lookup` for the base ICAO and shapes the response into
-a `QuickSetupDraft` covering the 5 derivable steps (Runways / Areas /
-NAVAIDs / Lighting / Inspection Templates). The 11 base-specific
-steps (Shops, ARFF Vehicles, Facilities, Shift Checklist, QRC, SCN,
-Wildlife, Status Boards, PPR Cols, Feedback, Taxiways) stay manual
-and are listed in the modal so admins know what they'll still do
-themselves.
+After a round of QA, the user vetoed first-login auto-fire of the app
+tour. A brand-new base with no data + an unfinished setup walks the
+user through 30+ empty pages — bad first experience. Switched to
+explicit-launch only: a sidebar-footer button labeled
+**"View App Tutorial"** (graduation-cap icon, mirrors the
+ContactSupport API) and a matching row near the top of the `/more`
+page. One click fires `glidepath:tour-launch` for the
+viewport-appropriate tour. The wizard tour's auto-fire on
+`/base-config/setup` for sys_admins on first visit is unchanged —
+that's the wizard page's own concern.
 
-The commit semantics matter: nothing writes to live tables when the
-modal confirms. The draft stages to `bases.quick_setup_pending`
-JSONB (migration `2026050201`); the `<QuickSetupBanner>` then renders
-above the step body on each pre-filled step, and the admin clicks
-"Confirm step" on each one to commit. `commitQuickSetupStep` calls
-the same INSERT paths as manual entry (so RLS, FK constraints, and
-type-shop-mapping side-effects all behave identically) and clears the
-entry from the pending JSONB. Lighting drafts use DAFMAN A3.1
-templates per runway end (Edge, End, Threshold, PAPI). Areas derive
-from `lookup.suggested_areas` plus the runway list. Templates trigger
-`createDefaultTemplate('airfield')` + `createDefaultTemplate('lighting')`.
+### Welcome dialog (`components/welcome-gate.tsx`, uncommitted)
 
-Both migrations are additive, no backfill, no RLS rewrites — but
-**neither is applied yet**. The dev server runs without them; the
-tour-state read silently fails (column missing) so the tour just
-doesn't fire on first load, and Quick Setup save errors out instead
-of staging. Apply via `supabase db push` or paste both `.sql` files
-into the SQL editor before testing those flows.
+To replace the auto-fire, a one-time first-login dialog gated on
+`profiles.tours_completed.welcome`. Two variants based on whether the
+user holds `base_setup:write`:
 
-### FieldHint wiring across 15 tabs (`f122610`)
+- **Base admin** (sys_admin / airfield_manager / namo / base_admin /
+  amops): wrench icon + "Let's get your base configured" copy +
+  primary button **"Go to Base Setup"** (router.push) and secondary
+  **"I'll do this later"**.
+- **Non-admin**: graduation-cap icon + "Once your base administrator
+  finishes setup, click View App Tutorial in the sidebar footer. Some
+  modules will look empty until then — that's expected." + single
+  **"Got it"** button.
 
-`FieldHint` shipped in `f9a26b1` as an unwired component. This pass
-added ~50 `<FieldHint stepKey=… fieldId=… />` placements across the
-15 in-file tab functions, so admins now see `(?)` hover/click
-tooltips with concrete examples on every DAFMAN-cited field.
+On dismiss it stamps both `tours_completed.welcome = true` AND
+`last_seen_release_version` to the latest release, so
+`WhatsNewGate` doesn't immediately stack on top for a fresh user's
+first session. WhatsNewGate also gained a guard: if
+`tours_completed.welcome !== true`, defer entirely until next session.
+That keeps the first-login surface to one dialog at a time.
 
-Coverage isn't uniform: the heaviest forms get the most coverage.
-Runways picks up all 17 fields × 2 forms (the inline `RunwayEditForm`
-plus the add-runway form) plus the Established Airfield Elevation
-header — 35 `<FieldHint>` placements on the runway step alone.
-Lighting Systems wires the three new-system form fields (System Type
-/ Runway-Taxiway / System Name). QRC wires the Title field in the
-QRC editor. The remaining 11 tabs use placeholder-only inputs without
-explicit labels, so they get one `<FieldHint>` at the section header
-level (NAVAIDs, SCN Agencies, CE Shops, Facility Numbers, Wildlife
-Species, Custom Status Boards, PPR Columns, Customer Feedback Form,
-Inspection Templates, Shift Checklist Items). ARFF gets the Show CAT
-toggle hint plus the SimpleListTab title hint.
+### QA-driven engine fixes (uncommitted)
 
-`FieldHint` renders nothing if no copy is registered for the
-`stepKey.fieldId` in `lib/base-setup-guide.ts`, so adding more
-coverage later is one-line additions to the guide map.
-`/base-config/setup` First Load JS 60.3 kB → 61.2 kB.
+Five real bugs surfaced and fixed during browser testing:
 
-### Drop Preview Dashboard, flag citations (`2dafc52`)
+- **Tour looped back to step 1 every navigation.** Caused by keying
+  `OnboardingTour` on `${tourId}:${pathname}`. Removed pathname from
+  the key; engine reads `usePathname()` internally + re-measures
+  anchors on route change, no remount needed.
+- **Bubble appeared below the entire page.** Page anchors were on the
+  `<div className="page-container">` wrapper which can be 1500+ px
+  tall; `top: rect.top + rect.height + 12` placed the bubble
+  thousands of pixels off-screen. Switched the bubble to
+  `position: fixed` for all anchors and added a "try below, fall back
+  to above, pin to viewport top if neither fits" placement strategy.
+- **Sidebar bubble too low for items at the bottom.** Initial fix
+  placed the sidebar bubble below its anchor; deep-in-list items
+  (Customize Nav / Help) ran off-screen. Switched fixed-anchor
+  bubbles to right-of-anchor placement, vertically clamped.
+- **Spotlight on the wrong sidebar element.** Items below the
+  sidebar's `overflow-y: auto` scroll line had their bounding rect
+  reported at their true (clipped) position, so the spotlight
+  rendered somewhere outside the visible nav area — visually wrapping
+  the footer. Removed the "skip scrollIntoView for fixed anchors"
+  guard; the engine now scrolls the sidebar's inner nav container to
+  bring the target item into view before measuring rect.
+- **Overlay too dark.** `rgba(0, 0, 0, 0.55)` made it impossible to
+  read the page content behind the bubble. Lightened to `0.32`. The
+  spotlight ring + bubble draw focus on their own.
 
-User pinned that live previews of running app surfaces are excessive
-for admin guidance — the Guide panel's written explanation does the
-same job better, which is why the per-step live-preview pane was cut
-from Phase 2 scope before it was ever built. The general-purpose
-"Preview Dashboard" button at the bottom of every wizard step was the
-same pattern in slightly different clothes, so it went too: ~215
-lines of `DashboardPreview` component + the toggle button + the
-`showPreview` state. `/base-config/setup` 61.2 kB → 60.2 kB.
-
-Same commit added a heads-up comment at the top of
-`lib/base-setup-guide.ts` noting that the DAFMAN / UFC / AFMAN / AF
-Form citations were authored from general knowledge and need
-verification before being relied on as compliance attestations. User
-flagged a couple that referenced the wrong document; full audit
-pending. The `cite: { reg, para, outcome }` triple per step makes the
-fix mechanical once the right paragraph numbers are in hand.
+Saved the bubble placement convention as
+`feedback_tour_bubble_placement.md` so future tour anchors stay
+consistent.
 
 ---
 
 ## Migrations status
 
-Two new migrations this session, both committed and applied.
-
 | Migration | Status | What it does |
 |---|---|---|
-| `2026050201_bases_quick_setup_pending.sql` | ✅ Applied | Adds `quick_setup_pending JSONB NOT NULL DEFAULT '{}'` to `bases`. Stages Quick Setup pre-filled drafts per step until admin confirms. RLS unchanged — `bases` policies cover it via the permission matrix. |
-| `2026050200_profiles_setup_tour_flag.sql` | ✅ Applied | Adds `has_completed_setup_tour BOOLEAN NOT NULL DEFAULT FALSE` to `profiles`. Gates the first-run onboarding tour overlay. RLS unchanged — `profiles` policies cover user-own-row. |
-| `2026050100_library_perms_sys_admin_only.sql` | ✅ Applied (prior session) | Locks `library:view` + `library:manage` to sys_admin only. |
-| `2026042907_add_construction_other_check_types.sql` | ✅ Applied | (carryover) `airfield_checks_check_type_check` accepts `'construction'` and `'other'`. |
-| `2026042906_drop_ppr_arrival_eta_zulu.sql` | ✅ Applied | (carryover) Drops `ppr_entries.arrival_eta_zulu`. |
+| `2026050202_profiles_tours_completed_jsonb.sql` | ✅ Applied | Adds `tours_completed JSONB NOT NULL DEFAULT '{}'` to `profiles`. Backfills `{"setup-wizard": true}` for users with `has_completed_setup_tour = TRUE`. The `has_completed_setup_tour` boolean stays one release as a fallback. |
+| `2026050201_bases_quick_setup_pending.sql` | ✅ Applied (prior) | (carryover) `bases.quick_setup_pending JSONB`. |
+| `2026050200_profiles_setup_tour_flag.sql` | ✅ Applied (prior) | (carryover) `profiles.has_completed_setup_tour BOOLEAN`. Now legacy. |
+| `2026050100_library_perms_sys_admin_only.sql` | ✅ Applied (prior) | (carryover) `library:view` + `library:manage` locked to sys_admin. |
+| `2026042907_add_construction_other_check_types.sql` | ✅ Applied (prior) | (carryover) check-type enum. |
 
 ---
 
 ## Bugs fixed during the session
 
-No bugs fixed this session — Phase 2 was greenfield-on-Phase-1, no
-debug excursions. The closest thing was the stale `.next` cache that
-threw `Cannot find module './1682.js'` after the first Quick Setup
-build; `rm -rf .next && npm run build` cleared it. Worth knowing for
-the next time chunked output suddenly disappears mid-session.
+| Symptom | Root cause | Commit / state |
+|---|---|---|
+| Discrepancies dot didn't appear despite rows in `work_completed_awaiting_verification` | User was reset to a stale browser bundle from earlier session — hard reload picked up new bundle. Confirmed via diagnostic console.log added then removed. | `9ad5f7a` |
+| Tour looped back to step 1 after each per-page navigation | `OnboardingTour` keyed on `${tourId}:${pathname}` — remounted on every `router.push`, resetting `stepIdx` to 0 | uncommitted (`tour-launcher.tsx`) |
+| Page-content bubble landed off-screen below the page | Bubble used `top: rect.top + rect.height + 12` against a `page-container` wrapper that could be 1500+ px tall | uncommitted (`OnboardingTour.tsx`) |
+| Sidebar spotlight wrapped the footer (Sign Out region) | Sidebar's inner nav has `overflow-y: auto`; items scrolled out of view still report their true bounding rect at the clipped position | uncommitted (`OnboardingTour.tsx`) — added `scrollIntoView` for fixed anchors too |
 
 ---
 
 ## Lessons from this session
 
-- **Citations need verification before being authoritative.** Saved
-  the IAW Compliance language as a feedback memory
-  (`feedback_dafman_compliance_language.md`) earlier in the session,
-  but the actual paragraph numbers + regulation choices in
-  `lib/base-setup-guide.ts` need a proper audit against source
-  documents. The format is right; the content is unverified. The
-  in-file comment at the top of `base-setup-guide.ts` flags this for
-  future-me / future-collaborator.
-
-- **Live previews of app surfaces are not the right shape for admin
-  guidance.** Saved as `feedback_admin_guidance_text_over_preview.md`.
-  In-depth written guidance (the 6-section Guide panel) explains
-  *why* a setting matters for compliance better than a static preview
-  of the configured surface ever could. Applies to any future config
-  UI work in Glidepath.
-
-- **`page.tsx` at 6 K LOC is workable with surgical edits.** Phase 2
-  touched 6 distinct regions of the wizard page without rewriting any
-  of the 16 inline tab functions. Adding `markSaved` was 15 separate
-  one-line `Edit` calls; FieldHint wiring was ~50 separate `Edit`
-  calls. Stable so long as the `old_string` carries enough context
-  to be unique. Component extraction of those 16 tab functions out
-  of the page file is still tech debt, but not blocking.
-
-- **Migrations that aren't applied silently degrade features instead
-  of crashing.** Both `2026050200` and `2026050201` are
-  `ADD COLUMN ... DEFAULT ...` — the missing columns cause
-  `select … has_completed_setup_tour` and
-  `update bases set quick_setup_pending = …` to fail at the row
-  level, but the page still loads. Tour just doesn't fire; Quick
-  Setup save errors with a `column does not exist` toast. Easy to
-  miss in dev unless you're specifically looking for the tour or
-  Quick Setup. Best practice: surface "migration pending" in the
-  handoff prominently.
+- **A `key` change forces a remount.** When mounting a stateful tour
+  component at the layout level, never include the pathname in the
+  React key — the layout survives navigation, but the keyed component
+  won't, and you'll lose all state on every `router.push`. Saved as
+  inline comment in `tour-launcher.tsx`.
+- **Auto-fire onboarding only when there's content to fire on.** A
+  setup-wizard tour on `/base-config/setup` makes sense for a
+  sys_admin's first visit — there's a wizard to use. An app-wide tour
+  on a brand-new base walks the user through 30+ empty pages and
+  trains them that the app is broken. Switched to explicit-launch via
+  the View App Tutorial button + a one-time Welcome dialog instead.
+- **Per-module dot color carries semantic weight.** Discrepancies
+  awaiting verification reads as "work done, please acknowledge" —
+  green. PPR / QRC / NOTAM dots are action-required — red. A blanket
+  flip across all four broke the semantic. Saved as
+  `feedback_notification_dot_color.md`.
+- **Plans for non-trivial features need implementation detail per
+  step.** The user vetoed two earlier passes of the tour plan because
+  they listed *what files would change* without saying *how each step
+  was implemented* (anchors, content, navigation, state persistence).
+  Final plan v3 included a `TourStep` schema, engine pseudocode, three
+  fully-fleshed page sub-tour examples (Discrepancies, QRC,
+  Inspections), and a 6-phase implementation order — that one
+  shipped. Saved as `feedback_thorough_plans.md`.
 
 ---
 
@@ -226,20 +217,16 @@ the next time chunked output suddenly disappears mid-session.
 
 | Item | Severity | Notes |
 |---|---|---|
-| DAFMAN / UFC / AFMAN citations in `lib/base-setup-guide.ts` need verification | Medium | New this session. User flagged a couple as referencing wrong document; full audit pending. Format is `IAW {reg} §{para}, satisfies the requirement to {outcome}` — easy fix once correct paragraphs are in hand. Comment at top of file flags it. |
-| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module | Medium | (Carryover) Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module. Only remaining server-side caller of `getPermissionsFor` is `/users`. |
-| Hex-alpha-concat sweep still incomplete | Low | (Carryover) Codebase-wide grep for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining cases. |
+| Tour system is uncommitted at session end | High (today) | ~85 files modified / created, 1 migration applied. Commit + push is the immediate next step the user asked for. |
+| Page sub-tours mostly target the whole `page-container` | Low | 24 of 28 pages got a single header anchor on the page-container wrapper. The four heaviest (Discrepancies, QRC, PPR, Inspections) got 3-4 anchors each. Engine handles tall anchors gracefully (pin-to-top fallback) so this isn't broken — but per-page tours could be tighter with anchors on individual title / button / list elements. Stage 2 work. |
+| DAFMAN / UFC / AFMAN citations in `lib/base-setup-guide.ts` need verification | Medium | (Carryover) User flagged a couple as referencing wrong document; full audit pending. Comment at top of file flags it. The doc `docs/base-setup-guide-review.md` (untracked) is the working file — edit prose + cite triples there, then sync back to `lib/base-setup-guide.ts`. |
+| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module | Medium | (Carryover) Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module. |
 | `audit-panel.tsx` per-row internal rows still raw | Low | (Carryover) The hub-level structural pass on `/infrastructure` skipped the dense per-row "Light, electrical light…" list. 1.6K LOC of its own. |
-| `/infrastructure` perf carryover (layer-toggle full-rebuild, health-ring `Circle` volume) | Low–Medium | (Carryover) Smooth on dev laptops, may stutter on weaker hardware. Migration target: `AdvancedMarkerElement`. |
-| `base-config/setup/page.tsx` is now ~5.8 K LOC | Held | Was 6 K — Preview Dashboard removal trimmed ~215 lines, Phase 2 chrome regions added ~140 net. Component extraction of the 16 inline tab functions is the next big refactor; explicitly multi-session. |
-| Largest source files: `parking/page.tsx` ~4.3K LOC, `infrastructure/page.tsx` ~4.1K LOC, `base-config/setup/page.tsx` ~5.8K LOC | Held | (Carryover) Component extraction explicit multi-session work. |
-| `FieldHint` coverage skews to header-level on placeholder-only tabs | Low | New this session. NAVAIDs, SCN, Shops, Facilities, etc. each get one section-header hint instead of per-input hints. Adding inline hints to those add forms is a follow-up commit when add-form labels are reworked. |
-| Untracked `dark logo.jpg` (2.4MB) | Low | (Carryover) `/public` from a prior logo experiment. |
-| Untracked `docs/DEMO_LOGINS.md` | Low | (Carryover) |
-| Untracked `.claude/` | Low | (Carryover) Local Claude Code settings (gitignored expectation). |
-| Trademark | Low | (Carryover) CDW holds live "GLIDEPATH" Class 42 (SaaS) registration. |
+| `/infrastructure` perf carryover | Low–Medium | (Carryover) Smooth on dev laptops, may stutter on weaker hardware. Migration target: `AdvancedMarkerElement`. |
+| Largest source files | Held | `base-config/setup/page.tsx` ~5.8K LOC, `parking/page.tsx` ~4.3K LOC, `infrastructure/page.tsx` ~4.1K LOC. (Carryover) Component extraction is explicit multi-session work. |
+| Untracked carryover files | Low | `.claude/`, `docs/DEMO_LOGINS.md`, `public/dark logo.jpg`. Plus `docs/base-setup-guide-review.md` from this session. |
 | Discrepancy "Notes History" backfill | Optional (carryover) | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; display rewrites on render. |
-| Sequential PPR coordination | Deferred (carryover) | All assigned agencies see their work in parallel; no ordering. |
+| Sequential PPR coordination | Deferred (carryover) |  |
 | Public PPR form file uploads | Deferred (carryover) |  |
 | "Advisories" → "WWA Notifications" UI sweep | Deferred (carryover) | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
 | ~124 `as any` casts project-wide | Low | (Carryover) |
@@ -248,56 +235,71 @@ the next time chunked output suddenly disappears mid-session.
 
 ---
 
+## Uncommitted work
+
+The bulk of this session's work is staged on disk but not committed.
+This is what `git status` shows beyond the carryover untracked files:
+
+- **34 modified files** — every page that picked up `data-tour`
+  anchors (~28 page files) plus the wired-up shell components
+  (`sidebar-nav.tsx`, `bottom-nav.tsx`, `more/page.tsx`, `layout.tsx`,
+  `whats-new-gate.tsx`, `base-config/setup/page.tsx`).
+- **1 deleted file** — `components/base-setup/OnboardingTour.tsx`,
+  moved to `components/tour/OnboardingTour.tsx` and generalized.
+- **2 untracked dirs / files in scope of the tour work**:
+  - `components/tour/` — new dir: `OnboardingTour.tsx`,
+    `tour-launcher.tsx`, `HelpMenu.tsx`.
+  - `components/welcome-gate.tsx`.
+  - `lib/tours/` — new dir: `state.ts`, `registry.ts`,
+    `setup-wizard-tour.ts`, `sidebar-tour.ts`, `mobile-tour.ts`, plus
+    28 files under `lib/tours/pages/`.
+  - `supabase/migrations/2026050202_profiles_tours_completed_jsonb.sql`
+    (already applied).
+
+User's stated intent at session end: "let's wrap up the session, then
+commit push." The next action after this handoff is a single tour-
+system commit + push.
+
+---
+
 ## Next session tasks
 
-The Phase 2 backlog is finished and migrations are applied. Two
-follow-ups remain:
+The active backlog is:
 
-1. **End-to-end test `/base-config/setup`.**
-   - First load as a fresh sys_admin → tour overlay launches; walk
-     all 6 bubbles; confirm anchor positions (stepper / Guide panel /
-     auto-save pill / Quick Setup button) align.
-   - Skip tour → reload → tour does not re-launch. Replay link
-     re-launches.
-   - Click Quick Setup → modal lists 5 derivable + 11 manual steps;
-     confirm; verify pre-fill banner appears on each derivable step;
-     edit a NAVAID then click Confirm step → row writes to
-     `navaid_statuses`, banner clears, status pill flips to ✓.
-   - Hover `(?)` on at least one Runways field, one Lighting field,
-     one section-header field — confirm tooltip text matches the
-     intent.
-   - Mobile viewport (<1024 px): Guide panel hides, stepper becomes
-     horizontal scroll strip, Kiosk chip + Quick Setup button still
-     fit in the header.
-   - Auto-save pill: edit a runway → pill flashes Saving → Auto-saved
-     0s ago → All changes saved (after 30 s).
-
-2. **Audit the IAW Compliance citations in `lib/base-setup-guide.ts`.**
-   User flagged a couple as referencing wrong documents. Verify each
-   step's `cite: { reg, para, outcome }` triple against the actual
-   regulation. Comment at top of the file flags this; the structure
-   is right, the paragraph numbers and document choices need a human
-   pass.
+1. **Commit + push the tour system.** Single squashed commit covering
+   the engine, the welcome gate, the View App Tutorial button rename,
+   and all the per-page anchors + sub-tour content. Migration is
+   already applied, so no DB-side coordination needed.
+2. **Page-feature tours (Stage 2).** Each page can register its own
+   `<page>-feature` tour by dropping a file in `lib/tours/pages/` and
+   calling `registerTour(...)`. The Help menu's registry filter
+   already supports this — page-tour entries would auto-appear in the
+   sidebar Help dropdown when the current pathname matches their
+   `visibleWhen`. Authoring is mechanical; pick the heaviest pages
+   first.
+3. **Tighten page sub-tour anchors.** Most page sub-tours target the
+   whole `page-container` wrapper with a single header anchor. The
+   engine's pin-to-top fallback handles tall anchors fine, but per-
+   page tours read better with anchors on the actual header / primary
+   action / list / filters elements. The pattern + canonical anchor
+   roles are already documented in §6 of the tour plan
+   (`docs/.claude/plans/can-we-create-a-whimsical-sunrise.md` —
+   actually `C:/Users/cspro/.claude/plans/`).
+4. **Audit the IAW Compliance citations in `lib/base-setup-guide.ts`.**
+   (Carryover) User flagged a couple as referencing wrong documents.
+   The doc `docs/base-setup-guide-review.md` (untracked) is the
+   working file — edit prose + cite triples there, then sync back.
 
 ### Long-running carryover (bandwidth-permitting)
 
-Pick from these only when the Phase 2 testing + citation audit is
-complete or a customer asks:
+Pick from these only when something more pressing isn't available:
 
-- **`/training` (Glidepath Training) content refresh** — user said
-  "training will need to be updated significantly" last session.
-  Screenshots needed; user will provide. Untouched.
+- `/training` (Glidepath Training) content refresh.
 - Component extraction of the 16 inline tab functions out of
-  `base-config/setup/page.tsx` (~5.8 K LOC). Explicit multi-session
-  refactor.
-- `FieldHint` per-input coverage on the placeholder-only tabs (most
-  tabs currently get one section-header hint). Add inline hints when
-  those add forms are reworked.
+  `base-config/setup/page.tsx`.
 - `audit-panel.tsx` per-row internal styling refresh (1.6K LOC).
 - `/parking/page.tsx` component extraction (~4.3K LOC).
-- Move `resolveEffectivePermissions` out of `lib/permissions.ts`
-  (`'use client'`) into a shared module so `lib/permissions-server.ts`
-  doesn't transitively re-arm the client-reference-stub bug.
+- Move `resolveEffectivePermissions` out of `lib/permissions.ts`.
 - Hex-alpha-concat preventive grep + sweep.
 - CAC/PIV authentication (blocked on Platform One).
 - Outage analytics, training management, Part 139 civilian template.
@@ -312,14 +314,15 @@ complete or a customer asks:
 TypeScript clean (npx tsc --noEmit exit 0)
 Tests: 253 pass / 25 files (unchanged)
 Build: npm run build clean — no warnings, no errors.
-2 new migrations this session (both applied).
+1 new migration this session (applied).
 
 Notable First Load JS (changed routes this session):
-  /base-config/setup                    60.2 kB / 260 kB    (was 44 kB / 241 kB; +16 kB / +19 kB)
-  /base-config                          7.43 kB / 179 kB    (unchanged from Phase 1)
-  /base-config/diagram                  4.96 kB / 176 kB    (unchanged)
-  /base-config/modules                  5.05 kB / 176 kB    (unchanged)
-  /base-config/templates                9.44 kB / 190 kB    (unchanged)
+  /more                                 7.52 kB / 201 kB    (was 7.12 kB / 200 kB; +0.4 kB / +1 kB)
+  /discrepancies                        11.4 kB / 227 kB    (was 11.3 kB / 226 kB; +0.1 kB / +1 kB)
+  /base-config/setup                    58.7 kB / 263 kB    (was 60.2 kB / 260 kB; tour engine moved out, -1.5 kB local)
+  /qrc                                  11.5 kB / 183 kB    (unchanged route size; +data-tour attrs only)
+  /ppr                                  16.9 kB / 184 kB    (unchanged)
+  /inspections/all                      5.71 kB / 168 kB    (unchanged)
 
 Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
@@ -332,7 +335,8 @@ Shared by all: 91.2 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-05-01 (cont.) (this session) | Phase 2 of the `/base-config` revamp finished. Wizard chrome at `/base-config/setup` rebuilt around 5 new components in `components/base-setup/` (`StepperRail`, `GuidePanel`, `KioskUrlChip`, `AutoSavePill`, `FieldHint`) plus a new content map at `lib/base-setup-guide.ts` (~360 LOC) covering all 16 steps with the IAW Compliance attestation format. First-run onboarding tour (hand-rolled, no `react-joyride`) gated on a new `profiles.has_completed_setup_tour` boolean. Quick Setup pre-fills 5 derivable steps from `/api/airport-lookup` + DAFMAN A3.1 templates, stages drafts to a new `bases.quick_setup_pending` JSONB, commits per-step on admin review. `(?)` field hint coverage across all 15 in-file tab functions. Preview Dashboard removed (215-LOC `DashboardPreview` component + button + state) per the user's "live previews are excessive" guidance. Citations in `lib/base-setup-guide.ts` flagged for verification. 4 commits, all pushed. 2 migrations committed but not yet applied. |
+| **Unreleased** | 2026-05-02 (this session) | In-app tour system: a new `OnboardingTour` engine in `components/tour/` drives a sidebar + per-page walkthrough that visits every nav group, every page, and every page's primary controls — interleaved into a single linear sequence. New `lib/tours/` library: `state.ts` (JSONB `profiles.tours_completed`), `registry.ts`, `sidebar-tour.ts` + `mobile-tour.ts` masters, 28 per-page sub-tour files. New "View App Tutorial" button in the sidebar footer + matching `/more` row — explicit-launch only (no first-login auto-fire). One-time `WelcomeGate` dialog gated on `tours_completed.welcome` with two variants (base admin → Go to Base Setup; non-admin → Wait for setup, then take the tour). Migration `2026050202` adds the JSONB column with backfill from the prior `has_completed_setup_tour` boolean. Plus: Discrepancies pending-verification badge on sidebar + `/more` (`9ad5f7a`); per-module dot color split — green for "work done, awaiting ack", red for action-required (`bab0424` → `dd0c953`). 3 commits pushed; tour-system commit pending. |
+| **Unreleased** | 2026-05-01 (cont.) | Phase 2 of the `/base-config` revamp finished. Wizard chrome at `/base-config/setup` rebuilt around 5 new components in `components/base-setup/` (`StepperRail`, `GuidePanel`, `KioskUrlChip`, `AutoSavePill`, `FieldHint`) plus a new content map at `lib/base-setup-guide.ts` (~360 LOC) covering all 16 steps with the IAW Compliance attestation format. First-run onboarding tour (hand-rolled, no `react-joyride`) gated on a new `profiles.has_completed_setup_tour` boolean. Quick Setup pre-fills 5 derivable steps from `/api/airport-lookup` + DAFMAN A3.1 templates, stages drafts to a new `bases.quick_setup_pending` JSONB, commits per-step on admin review. `(?)` field hint coverage across all 15 in-file tab functions. Preview Dashboard removed (215-LOC `DashboardPreview` component + button + state) per the user's "live previews are excessive" guidance. Citations in `lib/base-setup-guide.ts` flagged for verification. 4 commits, all pushed. 2 migrations committed but not yet applied. |
 | **Unreleased** | 2026-05-01 (prior) | `/library` structure-first refresh, `/infrastructure` (Visual NAVAIDs) refresh + InfoWindow spacing arc (3 commits to find the root cause of 3 stacked width constraints), and Phase 1 of `/base-config` IA split (admin work pulled out of `/settings` into a dedicated hub). 6 commits. |
 | **Unreleased** | 2026-05-01 (prior) | Reports & Analytics structure-first sweep (6 pages). Parking left-rail toolbar through three iterations. Parking clearance lines anchor on ray-rectangle exit per side. /feedback staff view restructure. /library access bug fixes — Vercel `TypeError: u is not a function` traced to a `'use client'` transitive import; switched to the `user_has_permission` RPC directly. Migration `2026050100` locks `library:view` + `library:manage` to sys_admin only. 16 commits on `main`. |
 | **Unreleased** | 2026-05-01 (prior) | Structure-first audit. 31 commits across 22+ surfaces. ACSI module sweep (7 commits), structural restructures of `/daily-reviews`, `/recent-activity`, `/wildlife` list+form, `/aircraft` list+detail, `/contractors`, `/discrepancies` list+detail. Tier 3 sweep: `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/ppr`, `/dashboard`, `/`, `/users`, `/more`. 6 real bugs fixed including the hex-alpha-concat silent-drops in `ActionButton`, `BWC chip`, `FREQ_COLORS`, KPI band; and the `obstructions` duplicate-`5.` Required Actions numbering. |
@@ -361,31 +365,80 @@ See `CHANGELOG.md` for full history.
 
 ### New files
 
-- `components/base-setup/StepperRail.tsx` — labeled stepper with 5 status keys, responsive grid, mobile auto-snap-to-current.
-- `components/base-setup/GuidePanel.tsx` — right-column 6-section detail panel (What / How / Why / Required / Examples / IAW Compliance), per-step collapse persisted to localStorage, heavy steps auto-collapsed.
-- `components/base-setup/KioskUrlChip.tsx` — header dropdown extracted from the inline Kiosk URL panel (parity with all generate / regenerate / disable / copy actions).
-- `components/base-setup/AutoSavePill.tsx` — bottom-left save status pill (Saving → Saved Xs ago → All changes saved → error).
-- `components/base-setup/FieldHint.tsx` — `(?)` lucide HelpCircle tooltip; click-to-pin + hover-to-peek; renders nothing if no hint copy registered.
-- `components/base-setup/OnboardingTour.tsx` — hand-rolled 6-step popcorn walkthrough; spotlight ring + bubble; anchors via `data-tour` attributes.
-- `components/base-setup/QuickSetupModal.tsx` — pre-fill confirmation modal + per-step `<QuickSetupBanner>`; commits via `commitQuickSetupStep` (same INSERT paths as manual entry).
-- `lib/base-setup-guide.ts` — single source-of-truth content map for all 16 wizard steps. Per-step shape: `{ what, how, why, required, examples, cite: { reg, para, outcome }, fields }`. Citations need verification (comment at top of file).
-- `lib/base-setup-quick-setup.ts` — Quick Setup derivation (`derivePreFillFromIcao` calls `/api/airport-lookup`), persistence (`saveQuickSetupDraft` / `loadQuickSetupDraft` / `clearQuickSetupStep`), commit (`commitQuickSetupStep`), and DAFMAN A3.1 lighting templates.
-- `supabase/migrations/2026050200_profiles_setup_tour_flag.sql` — applied. Adds `has_completed_setup_tour BOOLEAN NOT NULL DEFAULT FALSE` to `profiles`.
-- `supabase/migrations/2026050201_bases_quick_setup_pending.sql` — applied. Adds `quick_setup_pending JSONB NOT NULL DEFAULT '{}'` to `bases`.
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_dafman_compliance_language.md` — pinned the IAW Compliance attestation format.
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_admin_guidance_text_over_preview.md` — pinned the "in-depth text > live preview" guidance for admin config UIs.
+- `components/tour/OnboardingTour.tsx` — generalized tour engine
+  (lifted from `components/base-setup/OnboardingTour.tsx`, deleted).
+  Adds `tourId`, `steps`, `anchorIsFixed`, `requiresPerm`, `navigateTo`,
+  `expandSidebarGroup`, `skipSubTourTo`, `waitForAnchorMs` to
+  `TourStep`. Position-fixed bubble + spotlight with smart vertical
+  placement (try below → fall back above → pin to top). `scrollIntoView`
+  for fixed anchors so sidebar items scroll into view before measuring.
+  Min-step floor + `tourId`-keyed `stepIdx` reset.
+- `components/tour/tour-launcher.tsx` — client-side launcher mounted
+  in the `(app)/` layout. Listens for `glidepath:tour-launch`, no
+  longer auto-fires. Pre-registers setup-wizard / app-sidebar /
+  app-mobile-nav with the registry. Kiosk no-op.
+- `components/tour/HelpMenu.tsx` — sidebar-footer "View App Tutorial"
+  button with viewport-aware launch (desktop fires `app-sidebar`,
+  mobile fires `app-mobile-nav`).
+- `components/welcome-gate.tsx` — first-login dialog. Two variants
+  by `base_setup:write` permission. Stamps both `tours_completed.welcome`
+  and `last_seen_release_version` on dismiss.
+- `lib/tours/state.ts` — `isTourCompleted` / `markTourCompleted` /
+  `getCompletedTours` against `profiles.tours_completed`.
+- `lib/tours/registry.ts` — tour registration + visibility helpers.
+- `lib/tours/setup-wizard-tour.ts` — extracted from inline `TOUR_STEPS`
+  in the old `components/base-setup/OnboardingTour.tsx`.
+- `lib/tours/sidebar-tour.ts` — master desktop tour. Imports + composes
+  the 28 page sub-tours with sidebar-item + section-intro steps.
+  Helper `withPageWalk` patches `navigateTo` + `skipSubTourTo` onto
+  each page sub-tour's first step.
+- `lib/tours/mobile-tour.ts` — same shape, anchored to `more-item-*`.
+- `lib/tours/pages/<route>.ts` — 28 page sub-tour files (one per
+  visible sidebar route). Heavy pages (Discrepancies, QRC, PPR,
+  Inspections) have 3-4 step sub-tours; the rest are single-step
+  intros.
+- `supabase/migrations/2026050202_profiles_tours_completed_jsonb.sql`
+  — applied. JSONB `tours_completed` map with backfill from the
+  prior boolean.
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_notification_dot_color.md`
+  — green for "ack-required", red for "action-required".
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_thorough_plans.md`
+  — plans must spec implementation per step, not just file lists.
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_tour_bubble_placement.md`
+  — bubble placement convention (fixed-anchor → right; page → below;
+  overlay 0.32).
+- `C:/Users/cspro/.claude/plans/can-we-create-a-whimsical-sunrise.md`
+  — tour system plan, kept for future Stage 2 reference.
+- `docs/base-setup-guide-review.md` (untracked, prior session) — the
+  working doc for citation audit.
 
 ### Modified files
 
-- `app/(app)/base-config/setup/page.tsx` — 6 surgical regions: imports, page state, header swap, Kiosk panel deletion (now in chip), stepper swap, 2-col body wrap with Guide panel, bottom nav row with AutoSavePill. Plus 15 tab signature updates + 15 `markSaved` wirings + ~50 `<FieldHint>` placements + tour mount + Quick Setup mount + Preview Dashboard removal (~215 lines).
-- `app/globals.css` — `@keyframes baseSetupStepEnter` step body fade-in + `prefers-reduced-motion` honor + media query hiding `aside[data-tour="guide-panel"]` below 1024 px.
-
-### Reference files (read-only)
-
-- `lib/modules-config.ts` — `WIZARD_STEPS`, `isWizardStepEnabled`, `isStepDone` (consumed by `StepperRail` + page).
-- `app/api/airport-lookup/route.ts` — `/api/airport-lookup` endpoint (consumed by `derivePreFillFromIcao`).
-- `lib/supabase/lighting-systems.ts` — `createLightingSystem` (consumed by `commitQuickSetupStep`).
-- `lib/supabase/inspection-templates.ts` — `createDefaultTemplate` (consumed by `commitQuickSetupStep`).
+- `components/base-setup/OnboardingTour.tsx` — **deleted**, moved to
+  `components/tour/OnboardingTour.tsx`.
+- `app/(app)/base-config/setup/page.tsx` — switched to the new tour
+  engine import path; `tourId="setup-wizard"`; flag read/write via
+  `isTourCompleted` / `markTourCompleted`.
+- `app/(app)/layout.tsx` — mounted `<WelcomeGate />` (before
+  `<WhatsNewGate />`) and `<TourLauncher />`.
+- `components/whats-new-gate.tsx` — fires
+  `glidepath:whats-new-dismissed` on dismiss; defers entirely while
+  `tours_completed.welcome !== true`.
+- `components/layout/sidebar-nav.tsx` — `data-tour` per nav item +
+  per group header derivation; `<HelpMenu />` slot in the footer
+  above Customize Navigation; `glidepath:tour-expand-group` listener
+  drives `setOpenGroups`.
+- `components/layout/bottom-nav.tsx` — `data-tour="bottom-nav-more"`
+  on the More button.
+- `app/(app)/more/page.tsx` — `data-tour` per `NavItem` +
+  `CollapsibleGroup`; `<HelpRow />` slot near the top;
+  `glidepath:more-expand-group` listener per group.
+- **24 page files** under `app/(app)/<route>/page.tsx` — added
+  `data-tour="<route>-header"` (and where present, `-primary-action`,
+  `-filters`, `-list`, `-tabs` for the heavy pages).
+- `lib/supabase/discrepancies.ts` — `fetchPendingVerificationCount`.
+- `hooks/use-sidebar-badge-counts.ts` — added `discrepancies` count;
+  realtime subscription on `discrepancies` table.
 
 ### Environment changes
 
@@ -393,7 +446,10 @@ None this session.
 
 ---
 
-*All 4 commits this session are on the `main` branch and pushed to
-`origin/main` (`f9a26b1` → `1743c80` → `f122610` → `2dafc52`). Both
-migrations applied. Untracked files (`.claude/`, `docs/DEMO_LOGINS.md`,
-`public/dark logo.jpg`) remain carryover.*
+*Three commits this session pushed to `origin/main` (`9ad5f7a` →
+`bab0424` → `dd0c953`). Tour system + welcome gate + View App
+Tutorial button rename are uncommitted on disk pending the user's
+final commit + push at session end. Migration `2026050202` applied.
+Untracked carryover (`.claude/`, `docs/DEMO_LOGINS.md`,
+`public/dark logo.jpg`, plus this session's `docs/base-setup-guide-review.md`)
+remain.*

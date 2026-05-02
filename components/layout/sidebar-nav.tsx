@@ -12,6 +12,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
 import { usePermissions } from '@/lib/permissions'
 import ContactSupport from '@/components/ui/contact-support'
+import { HelpMenu } from '@/components/tour/HelpMenu'
 import {
   DEFAULT_SIDEBAR_CONFIG,
   NAV_ITEM_MAP,
@@ -192,6 +193,18 @@ export function SidebarNav() {
     }
   }, [pathname, config]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Tour engine asks us to open a specific group before anchoring on
+  // one of its child items. Section label arrives in the event detail.
+  useEffect(() => {
+    function onExpandGroup(e: Event) {
+      const label = (e as CustomEvent).detail
+      if (typeof label !== 'string') return
+      setOpenGroups(prev => (prev[label] ? prev : { ...prev, [label]: true }))
+    }
+    window.addEventListener('glidepath:tour-expand-group', onExpandGroup)
+    return () => window.removeEventListener('glidepath:tour-expand-group', onExpandGroup)
+  }, [])
+
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
     if (pathname === href) return true
@@ -338,6 +351,7 @@ export function SidebarNav() {
         key={href}
         href={href}
         title={!isOpen ? def.name : undefined}
+        data-tour={`sidebar-item-${href === '/' ? 'home' : href.slice(1).replace(/\//g, '-')}`}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -517,6 +531,7 @@ export function SidebarNav() {
       <button
         onClick={() => toggleGroup(section.label)}
         title={!isOpen ? section.label : undefined}
+        data-tour={`sidebar-section-${section.label.toLowerCase().replace(/\s+/g, '-')}`}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -724,7 +739,7 @@ export function SidebarNav() {
   const activeConfig = config
 
   return (
-    <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`}>
+    <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`} data-tour="sidebar">
       {/* Header with logo + tagline + collapse toggle.
           When expanded, the logo and tagline stay centered as a
           stacked unit and the collapse toggle floats in the top-right
@@ -791,7 +806,9 @@ export function SidebarNav() {
         {/* Pinned items — /settings is always rendered flat at the bottom
             of the nav list instead, so exclude it here even if a saved
             config still has it pinned at the top. */}
-        {activeConfig.pinned.filter(href => href !== '/settings').filter(href => isItemVisible(href)).map(href => renderNavItem(href))}
+        <div data-tour="sidebar-pinned">
+          {activeConfig.pinned.filter(href => href !== '/settings').filter(href => isItemVisible(href)).map(href => renderNavItem(href))}
+        </div>
 
         {/* Divider */}
         <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
@@ -827,8 +844,10 @@ export function SidebarNav() {
           flexDirection: 'column',
           gap: 6,
         }}>
+          <HelpMenu />
           <button
             onClick={enterEditMode}
+            data-tour="sidebar-customize"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               width: '100%', padding: '8px 0', borderRadius: 'var(--radius-md)',

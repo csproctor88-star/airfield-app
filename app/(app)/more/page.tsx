@@ -14,6 +14,7 @@ import {
   Wrench, FolderOpen, Shield,
   type LucideIcon,
 } from 'lucide-react'
+import { getTour } from '@/lib/tours/registry'
 import ContactSupport from '@/components/ui/contact-support'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
@@ -81,6 +82,7 @@ function NavItem({ item, badgeCount = 0 }: { item: ModuleItem; badgeCount?: numb
   return (
     <Link
       href={item.href}
+      data-tour={`more-item-${item.href === '/' ? 'home' : item.href.slice(1).replace(/\//g, '-')}`}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -134,6 +136,18 @@ function CollapsibleGroup({ label, icon, items, defaultOpen, badgeFor }: { label
   const [open, setOpen] = useState(defaultOpen ?? false)
   const Icon = icon
 
+  // Tour engine asks /more to open a specific group before anchoring
+  // on a child item. Each CollapsibleGroup listens for the event and
+  // opens itself when its label matches.
+  useEffect(() => {
+    function onExpand(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail === label) setOpen(true)
+    }
+    window.addEventListener('glidepath:more-expand-group', onExpand)
+    return () => window.removeEventListener('glidepath:more-expand-group', onExpand)
+  }, [label])
+
   if (items.length === 0) return null
 
   const groupBadgeCount = badgeFor
@@ -148,6 +162,7 @@ function CollapsibleGroup({ label, icon, items, defaultOpen, badgeFor }: { label
     <>
       <button
         onClick={() => setOpen(prev => !prev)}
+        data-tour={`more-section-${label.toLowerCase().replace(/\s+/g, '-')}`}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -212,6 +227,62 @@ function CollapsibleGroup({ label, icon, items, defaultOpen, badgeFor }: { label
         </div>
       ))}
     </>
+  )
+}
+
+function HelpRow() {
+  // Only render when the mobile tour is actually registered. Avoids a
+  // dead row before Phase 5 / on configurations where the tour bundle
+  // isn't loaded yet.
+  const [hasMobileTour, setHasMobileTour] = useState(false)
+  useEffect(() => {
+    setHasMobileTour(Boolean(getTour('app-mobile-nav')))
+  }, [])
+  if (!hasMobileTour) return null
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        window.dispatchEvent(new CustomEvent('glidepath:tour-launch', {
+          detail: { tourId: 'app-mobile-nav' },
+        }))
+      }}
+      data-tour="more-help"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 14px',
+        width: '100%',
+        background: 'none',
+        border: 'none',
+        borderBottom: '1px solid var(--color-border)',
+        cursor: 'pointer',
+        color: 'inherit',
+        fontFamily: 'inherit',
+        textAlign: 'left',
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 'var(--radius-md)',
+          background: 'color-mix(in srgb, var(--color-cyan) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--color-cyan) 18%, transparent)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <GraduationCap size={20} color="var(--color-cyan)" strokeWidth={2} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700 }}>View App Tutorial</div>
+      </div>
+      <ChevronRight size={16} style={{ color: 'var(--color-text-4)', flexShrink: 0 }} />
+    </button>
   )
 }
 
@@ -325,10 +396,15 @@ export default function MorePage() {
         marginBottom: 12,
         overflow: 'hidden',
       }}>
+        {/* Help / Take a tour (only renders when a mobile tour is registered) */}
+        <HelpRow />
+
         {/* Pinned items */}
-        {pinnedItems.map(item => (
-          <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
-        ))}
+        <div data-tour="more-pinned">
+          {pinnedItems.map(item => (
+            <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
+          ))}
+        </div>
 
         {/* Operations */}
         <CollapsibleGroup label="Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen badgeFor={badgeFor} />

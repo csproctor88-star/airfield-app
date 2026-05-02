@@ -496,7 +496,7 @@ function ObstructionsContent() {
     : pointInfo?.surfaceName ?? null
 
   return (
-    <div className="page-container" style={{ paddingBottom: 120 }}>
+    <div className="page-container" data-tour="obstructions-header" style={{ paddingBottom: 120 }}>
       {/* Back link */}
       <button
         onClick={() => router.back()}

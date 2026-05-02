@@ -252,7 +252,7 @@ export default function RecentActivityPage() {
   ]
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="recent-activity-header">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, margin: 0 }}>Activity Log</h2>

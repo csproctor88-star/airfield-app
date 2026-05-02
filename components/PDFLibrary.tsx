@@ -803,7 +803,7 @@ export default function PDFLibrary() {
   // RENDER
   // ─────────────────────────────────────────────────────────
   return (
-    <div style={S.root}>
+    <div data-tour="library-header" style={S.root}>
       {/* Header */}
       <header style={S.header}>
         <div style={S.headerRow}>

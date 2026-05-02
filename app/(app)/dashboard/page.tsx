@@ -116,7 +116,7 @@ export default function AMDashboardPage() {
   }, [installationId, loadLastCheck])
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="dashboard-header">
       {/* ===== Dashboard Header =====
           Tight single row: page label left, last-check status right.
           The accent underline matches the section-header treatment

@@ -320,7 +320,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="users-header">
       {/* Page Header */}
       <div
         style={{

@@ -3842,7 +3842,7 @@ export default function ParkingPage() {
   )
 
   return (
-    <div style={{
+    <div data-tour="parking-header" style={{
       display: 'flex', height: isFullscreen ? '100vh' : 'calc(100vh - 60px)', overflow: 'hidden', background: 'var(--color-bg)',
       ...(isFullscreen ? { position: 'fixed', inset: 0, zIndex: 9999 } : {}),
     }}>

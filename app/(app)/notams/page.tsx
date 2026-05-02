@@ -315,7 +315,7 @@ export default function NotamsPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="notams-header">
       {/* Page header — tertiary tier label + cyan accent rule */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

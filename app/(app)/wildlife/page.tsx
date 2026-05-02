@@ -169,7 +169,7 @@ export default function WildlifePage() {
   ]
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="wildlife-header">
       {/* Page header — tertiary tier label + amber accent rule
           (BASH = Bird/Wildlife Aircraft Strike Hazard, urgency-coded). */}
       <div style={{

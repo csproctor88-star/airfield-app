@@ -63,7 +63,9 @@ import { StepperRail } from '@/components/base-setup/StepperRail'
 import { GuidePanel } from '@/components/base-setup/GuidePanel'
 import { KioskUrlChip } from '@/components/base-setup/KioskUrlChip'
 import { AutoSavePill, type SaveStatus } from '@/components/base-setup/AutoSavePill'
-import { OnboardingTour } from '@/components/base-setup/OnboardingTour'
+import { OnboardingTour } from '@/components/tour/OnboardingTour'
+import { SETUP_WIZARD_TOUR_STEPS } from '@/lib/tours/setup-wizard-tour'
+import { isTourCompleted, markTourCompleted } from '@/lib/tours/state'
 import { QuickSetupModal, QuickSetupBanner } from '@/components/base-setup/QuickSetupModal'
 import { FieldHint } from '@/components/base-setup/FieldHint'
 import { loadQuickSetupDraft, type QuickSetupDraft, type QuickSetupStepKey, QUICK_SETUP_STEPS } from '@/lib/base-setup-quick-setup'
@@ -133,38 +135,22 @@ export default function BaseSetupPage() {
     loadQuickSetupDraft(installationId).then(setQuickSetupDraft).catch(() => setQuickSetupDraft(null))
   }, [installationId])
 
-  // First-run onboarding tour: read profiles.has_completed_setup_tour once.
+  // First-run onboarding tour: read profiles.tours_completed once.
   useEffect(() => {
     if (tourLoaded) return
     let cancelled = false
     ;(async () => {
-      const supabase = createClient()
-      if (!supabase) { setTourLoaded(true); return }
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user || cancelled) { setTourLoaded(true); return }
-      const { data } = await supabase
-        .from('profiles')
-        .select('has_completed_setup_tour')
-        .eq('id', user.id)
-        .single()
+      const completed = await isTourCompleted('setup-wizard')
       if (cancelled) return
-      const completed = (data as unknown as { has_completed_setup_tour?: boolean } | null)?.has_completed_setup_tour
       if (!completed) setTourActive(true)
       setTourLoaded(true)
     })()
     return () => { cancelled = true }
   }, [tourLoaded])
 
-  const dismissTour = useCallback(async (_reason: 'completed' | 'skipped') => {
+  const dismissTour = useCallback(async (_tourId: string, _reason: 'completed' | 'skipped') => {
     setTourActive(false)
-    const supabase = createClient()
-    if (!supabase) return
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase
-      .from('profiles')
-      .update({ has_completed_setup_tour: true } as any)
-      .eq('id', user.id)
+    await markTourCompleted('setup-wizard')
   }, [])
 
   if (!canEdit) {
@@ -502,7 +488,12 @@ export default function BaseSetupPage() {
       />
 
       {/* First-run onboarding tour overlay */}
-      <OnboardingTour active={tourActive} onDismiss={dismissTour} />
+      <OnboardingTour
+        tourId="setup-wizard"
+        steps={SETUP_WIZARD_TOUR_STEPS}
+        active={tourActive}
+        onDismiss={dismissTour}
+      />
     </div>
   )
 }

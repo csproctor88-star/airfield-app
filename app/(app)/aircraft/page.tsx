@@ -701,7 +701,7 @@ export default function AircraftPage() {
   }, [search, category, sortField, sortDesc, favorites, showFavoritesOnly])
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="aircraft-header">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div>

@@ -238,7 +238,7 @@ export default function BaseConfigHubPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="base-config-header">
       <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)', margin: 0, letterSpacing: '-0.02em' }}>
           Base Configuration

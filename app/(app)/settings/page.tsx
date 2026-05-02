@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const isCes = userRole === 'ces'
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="settings-header">
       <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Settings</div>
       <CollapsibleSection label="PROFILE" icon={User}>
         <ProfileSectionContent />

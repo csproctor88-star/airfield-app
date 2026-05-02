@@ -526,7 +526,7 @@ export default function DiscrepanciesPage() {
           fontFamily: 'inherit',
         }
         return (
-          <div style={{
+          <div data-tour="discrepancies-header" style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             gap: 12, flexWrap: 'wrap',
             marginBottom: 10, paddingBottom: 6,
@@ -552,6 +552,7 @@ export default function DiscrepanciesPage() {
               {!isCes && (
                 <Link
                   href="/discrepancies/new"
+                  data-tour="discrepancies-primary-action"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     background: 'rgba(56,189,248,0.10)',
@@ -691,7 +692,7 @@ export default function DiscrepanciesPage() {
         return (
           <>
             {/* Top control row */}
-            <div style={{
+            <div data-tour="discrepancies-filters" style={{
               display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap',
             }}>
               {/* Search */}
@@ -1020,7 +1021,7 @@ export default function DiscrepanciesPage() {
               All Discrepancies ({filtered.length})
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div data-tour="discrepancies-list" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {filtered.map((d) => {
               const days = usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at)
               const isOpen = d.status === 'open'

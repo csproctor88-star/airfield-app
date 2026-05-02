@@ -562,7 +562,7 @@ export default function ActivityPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="activity-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
           &larr; Back

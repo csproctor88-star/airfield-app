@@ -139,7 +139,7 @@ export default function WaiversPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="waivers-header">
       {/* Page header — tertiary tier-label + amber accent rule (waiver
           = exception/risk semantic). */}
       <div style={{

@@ -115,7 +115,7 @@ export default function CESDashboardPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="ces-header">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>CES Work Orders</div>

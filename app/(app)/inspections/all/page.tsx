@@ -99,7 +99,7 @@ export default function AllInspectionsPage() {
       {/* Page header — tertiary "INSPECTIONS" tier label + accent
           underline + Back-to-More nav. */}
       <div style={{ width: '100%', maxWidth: 600 }}>
-        <div style={{
+        <div data-tour="inspections-header" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 8, paddingBottom: 8, marginBottom: 12,
           borderBottom: '1px solid rgba(56,189,248,0.20)',
@@ -132,7 +132,7 @@ export default function AllInspectionsPage() {
       {/* Inspection type cards. Bordered tile with Lucide icon + tier
           color accent left rule, label, description, action+history
           buttons. */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 600 }}>
+      <div data-tour="inspections-list" style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 600 }}>
         {INSPECTION_TYPES.map((type) => {
           const { Icon } = type
           return (

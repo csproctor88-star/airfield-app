@@ -486,7 +486,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="home-header">
       <LoginActivityDialog />
 
       {/* The operational status strip (advisories chip / PPRs chip /

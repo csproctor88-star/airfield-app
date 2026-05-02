@@ -143,7 +143,7 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="feedback-header">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, margin: 0 }}>Customer Feedback</h2>

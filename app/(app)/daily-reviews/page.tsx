@@ -191,7 +191,7 @@ export default function DailyReviewsPage() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
+    <div data-tour="daily-reviews-header" style={{ padding: 16 }}>
       <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
         Daily Reviews
       </div>

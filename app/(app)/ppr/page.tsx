@@ -722,7 +722,7 @@ export default function PprPage() {
     <div className="page-container" style={{ maxWidth: 1200 }}>
       {/* Page header — tertiary tier label + utility/primary action cluster
           + accent underline. Mirrors /discrepancies. */}
-      <div style={{
+      <div data-tour="ppr-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', gap: 8,
         paddingBottom: 8, marginBottom: 12,
@@ -757,6 +757,7 @@ export default function PprPage() {
               onClick={handleNew}
               disabled={noColumns}
               title={noColumns ? 'Configure PPR columns in Base Setup first' : 'New PPR'}
+              data-tour="ppr-primary-action"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 12px', borderRadius: 'var(--radius-sm)',
@@ -857,7 +858,7 @@ export default function PprPage() {
       {/* Search + Filters cluster. Mirrors /discrepancies — search
           input promoted to top, filters tucked into a dropdown, and
           an active-filter chip strip below for one-click dismissal. */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', position: 'relative' }}>
+      <div data-tour="ppr-filters" style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', position: 'relative' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <Search size={14} color="var(--color-text-3)" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
           <input
@@ -1114,7 +1115,7 @@ export default function PprPage() {
           </div>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+        <div data-tour="ppr-list" style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-elevated)', borderBottom: '2px solid var(--color-border)' }}>

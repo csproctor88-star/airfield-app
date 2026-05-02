@@ -172,7 +172,7 @@ export default function QrcPage() {
   return (
     <div className="page-container">
       {/* Page header — tertiary + accent rule */}
-      <div style={{
+      <div data-tour="qrc-header" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         borderBottom: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
         paddingBottom: 8, marginBottom: 16,
@@ -187,7 +187,7 @@ export default function QrcPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div data-tour="qrc-tabs" style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {TABS.map(t => {
           const selected = tab === t.key
           return (
@@ -236,7 +236,7 @@ export default function QrcPage() {
             </Link>
           </div>
         ) : (
-          <div style={{
+          <div data-tour="qrc-list" style={{
             display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10,
           }}>
             {templates.filter(t => t.is_active).map(tmpl => {

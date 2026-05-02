@@ -95,7 +95,7 @@ export default function RegulationsPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="regulations-header">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>References</div>

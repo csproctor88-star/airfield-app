@@ -297,7 +297,7 @@ export default function ShiftChecklistPage() {
   const dateStr = formatZuluDate(today)
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="shift-checklist-header">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Shift Checklist</div>
       </div>

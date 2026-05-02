@@ -2635,6 +2635,7 @@ export default function InfrastructureMapPage() {
     <div
       ref={pageRef}
       className={isFullscreen ? '' : 'page-container'}
+      data-tour="infrastructure-header"
       style={{
         display: 'flex',
         flexDirection: 'column',

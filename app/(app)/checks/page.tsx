@@ -769,7 +769,7 @@ export default function AirfieldChecksPage() {
   const typeConfig = checkType ? CHECK_TYPE_CONFIG[checkType as keyof typeof CHECK_TYPE_CONFIG] ?? null : null
 
   return (
-    <div className="page-container">
+    <div className="page-container" data-tour="checks-header">
       {/* Page header — tertiary "AIRFIELD CHECK" label + reg subtitle,
           accent underline below. */}
       <div style={{

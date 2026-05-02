@@ -6,6 +6,8 @@ import { KioskGuard } from '@/components/layout/kiosk-guard'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { RealtimeAlertBanner } from '@/components/realtime-alert-banner'
 import { WhatsNewGate } from '@/components/whats-new-gate'
+import { WelcomeGate } from '@/components/welcome-gate'
+import { TourLauncher } from '@/components/tour/tour-launcher'
 import { WriteQueueProvider } from '@/components/sync/write-queue-provider'
 import { OfflineCacheProvider } from '@/components/sync/offline-cache-provider'
 import { DashboardProvider } from '@/lib/dashboard-context'
@@ -35,7 +37,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <ScrollToTop />
               <KioskGuard />
               <RealtimeAlertBanner />
+              <WelcomeGate />
               <WhatsNewGate />
+              <TourLauncher />
               <WriteQueueProvider />
               <OfflineCacheProvider />
               <main className="app-content">

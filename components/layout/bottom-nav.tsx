@@ -103,6 +103,7 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
+              data-tour={href === '/more' ? 'bottom-nav-more' : undefined}
               style={{
                 background: 'none',
                 border: 'none',
