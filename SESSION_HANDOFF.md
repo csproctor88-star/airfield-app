@@ -1,188 +1,183 @@
 # Session Handoff
 
-**Date:** 2026-05-01
+**Date:** 2026-05-01 (cont.)
 **Branch:** `main` (pushed)
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `84cecb1` (origin/main)
+**HEAD:** `542ffa7` (origin/main)
 
 ---
 
 ## What shipped this session
 
-**Three blocks of work** off the prior session's backlog: the deferred
-`/reports*` sweep (Tier-3 from 2026-04-30), a `/parking` toolbar
-restructure that iterated through three different layouts before
-landing, and the dormant `/feedback` staff view. Plus a real
-production bug surfaced from a Vercel error log — the `/library`
-server gate was importing helpers transitively from a `'use client'`
-module and throwing `TypeError: u is not a function` for any user
-who tried to open it. Fix landed across two commits and a perm-lockdown
-migration. 16 commits total, all on `main` and pushed.
+Six commits on `main`, three logical bundles: the deferred `/library`
+structure-first refresh (the hub the load-fix earlier in the day didn't
+touch), an `/infrastructure` (Visual NAVAIDs) refresh that turned into a
+four-commit arc once the user spotted the bare post-place dialog and a
+trio of InfoWindow-spacing follow-ups landed, and Phase 1 of a base-
+configuration revamp that pulled admin work out of `/settings` into a
+dedicated `/base-config` hub. No migrations applied this session. All
+six commits on `main`, all pushed.
 
-### `/reports*` structure-first sweep (`7980999` → `3aea92a`)
+### `/library` structure-first refresh (`2d40550`)
 
-Six commits, one per page. All five sub-pages (`daily`, `discrepancies`,
-`trends`, `aging`, `lighting`) plus the `/reports` index were carried
-over from the prior session's Tier-3 list and never got a structural
-review.
+User flagged early in the session that `/library` got the load-fix in the
+prior session but never the audit-derived design pass. Lifted
+`components/PDFLibrary.tsx` (~1.1K LOC) into the same recipe family the
+sweep has been applying everywhere: dropped the indigo→purple gradient
+on the header logo tile and the vertical `linear-gradient(180deg,
+--color-bg-elevated 0%, --color-bg-surface-solid 100%)` on the header
+chrome, switched to a cyan-tinted color-mix tile on solid bg-elevated.
+Toolbar buttons retargeted: Refresh stays neutral outlined, Cache All
+moves to the canonical solid-cyan filled recipe (`var(--color-cyan)` +
+`var(--color-cyan-btn-text)`), Extract All adopts the outlined-pill
+amber recipe pinned in `feedback_amber_text_contrast.md`. List rows
+gained a 3px left rail keyed off cached/indexed state — green when
+cached + indexed, cyan when cached only, neutral text-4 otherwise —
+mirroring the per-row rail pattern from `/feedback` and `/reports/aging`.
+Implemented via `box-shadow: inset 3px 0 0 <color>` so it doesn't fight
+the existing hover-borderColor handler. Token-cleaned the PDF viewer
+toolbar (active search button on `var(--color-cyan)`, snippet panel mItem
++ mBadge off `var(--color-border)` to color-mix on cyan), the global
+`#34D399 / #FBBF24 / #FACC15 / #F87171 / #EF4444` palette, and the
+indigo `progressFill` gradient. Only `#FFF` left in the file is the PDF
+iframe background (intentional). `/library` First Load unchanged at
+146 kB / 292 kB.
 
-The most material fix was on `/reports/aging` (`dc6d914`): the By
-Aging Tier badges had been concating `${tier.color}28 / 14 / 33`,
-which is the same hex-alpha-concat footgun pinned in
-`feedback_amber_text_contrast.md`. It was working *only* because the
-tier colors were still raw hex — the moment any tier color got
-tokenized to a CSS variable (the same migration done on
-`ACSI_STATUS_CONFIG` in the prior session), the badges would
-silently drop bg + border. Migrated all three concats to color-mix
-preemptively. Rest of the page got a per-tier 3px row rail mirroring
-the `/waivers` and `/discrepancies` list patterns.
+### `/infrastructure` (Visual NAVAIDs) refresh + post-place dialog (`3a85510`)
 
-`/reports/daily` (`03ced01`) shipped the only `linear-gradient(135deg,
-#0EA5E9, #22D3EE)` button left in the running app — the rest had
-been converted to solid `var(--color-cyan)` during v2.32. Dropped.
-The preview-view section icon-tile was using the same hex-alpha
-concat (`${s.color}14`/`${s.color}33`) and breaking for `var(...)`
-section colors — replaced with a 3px left rail and a count promoted
-to the right edge.
+Big commit. Tackled the LIGHTING STATUS row (per-card 3px top rail keyed
+off `worstTier`, killing the `tierColor + '40'` border-tint and
+`tierColor + '60'` dot box-shadow concats — same hex-alpha-concat
+footgun pinned in `feedback_amber_text_contrast.md`, would have silently
+dropped the moment `TIER_COLORS` got tokenized). Tokenized
+`TIER_COLORS` to `var(--color-success)` / `var(--color-warning)` /
+`var(--color-danger)`. Made "X inop" text neutralize to text-3 when
+tier=green so the green-dot-with-green-2-inop visual contradiction goes
+away. Recent Activity list got a per-row 3px left rail keyed off
+Reported (red) / Resolved (green); redundant 6px dot dropped since the
+rail carries the signal.
 
-`/reports/trends` (`69ad3b9`) converted the period selector from
-solid filled-purple tabs to the canonical outlined-pill cluster
-(QRC l.194 recipe), and bumped the bar-chart count column to
-`fontVariantNumeric: tabular-nums` + `--fs-sm` so columns line up.
+The five accent-color families running in the page chrome got
+tokenized: orange `#F97316` (Import) → outlined-pill amber, purple
+`#A855F7` (Bulk Shift / Box Select) → color-mix on `var(--color-purple)`,
+amber `#F59E0B` / `#FBBF24` (Free Move + bar placements + rotation
+input) → color-mix on `var(--color-amber)` / `var(--color-warning)`,
+cyan Use My GPS → color-mix on `var(--color-cyan)`. Free Move save bar
+amber rgba → color-mix. The "16 INOP" pill at the LIGHTING STATUS
+strip switched to outlined-pill `--color-danger`. Edit Mode + Audit
+Mode active-state borders unified at 1px (was inconsistent 1px/2px mix).
 
-`/reports/lighting` (`3aea92a`) sort tabs converted to outlined-pill,
-summary cards got per-card colored top rails (matching
-`StyledCard`-on-`/reports`), and the four purple PDF/Email buttons
-moved off raw `rgba(168,85,247,…)` to color-mix on
-`var(--color-purple)`.
+Map InfoWindow edit dialog (rendered as HTML string at
+`infrastructure/page.tsx:1820–1955`) got a full token sweep — status
+pill, Report Outage / Mark Operational, Save, Move/Grab, Delete, form
+chrome, compass needle, slider accent-color, Bar Group cyan indicator
+all on var() instead of raw hex. CSS variables work in inline `style=""`
+so the migration is mechanical.
 
-The `/reports` index (`7980999`) dropped its title from `--fs-2xl` to
-`--fs-xl`, replaced the `${card.color}22` border-tint concat (which
-had been silently broken — the border was effectively invisible) with
-a 3px left rail per card, swapped the `›` Unicode chevron for
-Lucide ChevronRight, and stacked title-over-description instead of
-inlining them on a single span.
+The headline workflow change: the post-place "Feature Placed" dialog
+expanded from a bare type-only dropdown (Screenshot 211037) to mirror
+the in-edit form fields. Now contains Feature Type, System / Component
+(optgroup-grouped), [Sign Text — signs only], Fixture ID, Rotation
+compass + slider with live needle, and a Save button. New
+`window.__savePlacedProps` global handler wraps `savePropsRef` and
+records the chosen System/Component + Rotation in carryover refs
+(`lastPlacedComponentRef` / `lastPlacedRotationRef`) so subsequent
+placements pre-populate those fields. Saves dropdown-clicks per fixture
+when laying down hundreds of lights in sequence.
+`createInfrastructureFeature()` extended to accept optional
+`system_component_id` + `rotation` so carryover applies at create-time,
+not via a follow-up update round-trip.
 
-`/reports/discrepancies` (`289244f`) was the smallest delta: filter
-card got a 3px cyan left rail to read as "this is the filter section,"
-all three button styles migrated from raw rgba to color-mix.
+Side-find: the audit panel header was using an undefined
+`var(--color-cyan-bright)` (would render as `currentColor`) — fixed to
+`var(--color-cyan)`.
 
-### `/parking` left-rail toolbar (`5c8355b` → `cf7327a`)
+### `/infrastructure` InfoWindow spacing — three-iteration arc (`631c60b` → `1c234eb` → `8452a64`)
 
-Five commits — the messy iteration shape is the headline. The user
-asked for a vertical left-rail to replace the two horizontal toolbars
-that wrapped at the top of the map and visually competed for the
-header. First pass (`5c8355b`) shipped the rail with "same on mobile"
-per the user's spec.
+Painful sequence. After Phase 1 of `/infrastructure` shipped, the user
+flagged the dialogs felt cramped. First commit (`631c60b`) bumped row
+gaps 6→10px, label-to-input gaps 2→5px, input padding 4×6→6×10, button
+padding 5→7-8px, added `min-width: 260px` + `padding: 4px 4px 2px` to
+both dialog roots. That made the buttons too tall, which forced the
+edit dialog over the InfoWindow's available height — scroll appeared.
 
-Mobile portrait viewport then clipped the bottom of the rail behind
-the iOS PWA bottom-nav (Boundary / AC / OB / PDF / Email cut off).
-User course-corrected: "this method won't work on mobile but it does
-look nice on desktop." `85ea7c5` reverted mobile to the prior
-horizontal-toolbars recipe — that turned out to wrap to multiple rows
-and eat 30% of the viewport. User course-corrected again. `1a0c19b`
-made the rail itself responsive (column on desktop, horizontal
-scroll-strip on mobile). User then asked to split mobile by purpose:
-plan-edit tools at the top, View / Ruler / PDF / Email at the
-bottom-right since they aren't core to plan creation. `cf7327a`
-landed that — single rail component branches its layout on
-`isMobile` and renders one cluster on desktop, two on mobile.
+Second commit (`1c234eb`) shrunk button vertical padding back to 5px
+and tightened row gap from 10→8px, kept the label/input readability
+wins. Looked plausible but the user came back with a screenshot showing
+horizontal scroll inside the dialog AND the title clipped to "xiway
+Lights" — the dialog content was wider than the InfoWindow allowed.
 
-The `feedback_visual_plan_brevity.md` memory got saved during this
-work after the user said "I don't really understand what you are
-explaining with the new tools, I guess proceed and we will see what
-it looks like." Lesson: for visual UI restructures, lead with an
-ASCII sketch, defer code-level tradeoffs to execution — the user
-can course-correct from a render faster than from a design doc.
+Third commit (`8452a64`) found the actual root cause: three independent
+width constraints stacked. The per-marker-click handler at
+`infrastructure/page.tsx:2270` was wrapping the popup HTML in a `<div
+style="background:#1E293B; padding:2px; max-width:240px;">` — and the
+global `.gm-style-iw` `<style>` had `padding: 2px !important`. My
+`min-width: 260px` exceeded the wrapper's `max-width: 240px` → forced
+horizontal scroll. Cleanup: dropped the wrapper entirely (was just
+duplicating the bg the global already sets), dropped width/min-width
+from both dialog roots so content sizes naturally, bumped
+`.gm-style-iw` padding `2px → 8px 10px` so all dialogs get consistent
+edge inset, tokenized the four `.gm-style-iw` rules
+(bg / border / close / tail), and bumped border-radius `8 → 10` to
+match the rest of the app. Saved as `feedback_gmap_infowindow_widths.md`
+so this doesn't repeat.
 
-### `/parking` clearance-line edge anchors (`2d8eedd` → `ccad75e`)
+### `/base-config` IA + hub redesign (`542ffa7`) — Phase 1 of a multi-session arc
 
-User noticed during the parking session that all the drag-time green/
-amber/red distance lines emanated from the dragged aircraft's
-nose-gear pivot point. With every line attaching at the nose, it
-read as if the distances were measured from the nose gear marking,
-even though the underlying clearance math was correct. Misleading
-visualization.
+User flagged the four full-width gradient buttons inside Settings →
+BASE CONFIGURATION expander as visually off, and asked whether base
+configuration should live under "Admin" away from personal Settings.
+Plan-mode session produced a three-phase arc; only Phase 1 ships in
+this commit.
 
-`2d8eedd` first cut: compute four cardinal anchors (nose tip, tail
-tip, left wingtip, right wingtip) and pick whichever is closest to
-the target. User said "pretty close but the line looks a little off
-from the wingtip" — for swept-wing aircraft, the cardinal-side-midpoint
-isn't always at the visible wingtip.
+Phase 1: split admin work out of Settings into a new top-level sidebar
+entry "Base Configuration" → `/base-config` (gated on
+`base_setup:write` via `HREF_TO_VIEW_PERM`, slotted into the Admin
+section of `DEFAULT_SIDEBAR_CONFIG`, `SlidersHorizontal` icon to
+differentiate from `/settings`' gear and `/ces`' wrench). New hub page
+at `app/(app)/base-config/page.tsx` — 2-col responsive card grid, each
+card with cyan-tinted icon tile, title + description, status pill
+(Configured / Needs Setup / Not Configured), 3px left rail keyed off
+status, and a per-card live detail line ("16 of 17 modules enabled",
+"8 of 16 wizard steps · 50% complete", etc.). Click anywhere on the
+card routes to the sub-page — no inline button. Status indicators
+reuse `enabledModules` from the installation context, `isWizardStepEnabled`
++ `isStepDone` from `lib/modules-config.ts`, `fetchInspectionTemplate`,
+and `getAirfieldDiagram`.
 
-`ccad75e` second cut: replaced the 4-cardinal-anchor approach with a
-ray-rectangle exit calculation. Project the ray from aircraft center
-toward the target, find where it crosses the bounding rectangle,
-anchor there. The line exits exactly along the line of measurement
-so it visibly touches the wingtip / nose / tail edge precisely
-regardless of geometry.
+Old admin pages physically moved under the new hub:
+`/settings/base-setup` → `/base-config/setup` (~4.7K LOC),
+`/settings/base-setup/modules` → `/base-config/modules`,
+`/settings/templates` → `/base-config/templates`. Internal back-links +
+cross-links retargeted; back-link labels relabeled "← Base
+Configuration". Old `/settings/*` paths become 152-byte redirect stubs
+(via `next/navigation` `redirect()`) so bookmarks keep working. The
+inline airfield-diagram upload UI extracted from `BaseConfigSectionContent`
+into `/base-config/diagram` (~115 LOC) with the canonical filled-cyan +
+outlined-pill-danger recipes in place of the gradient button. Settings
+page section list now reads Profile / Installation / Data & Storage /
+Regulations Library / Appearance / About — clean. `/settings` First
+Load JS dropped from 16.6 kB → 15.2 kB; new `/base-config` hub at
+7.42 kB / 179 kB.
 
-For aircraft-to-aircraft pairs, the ray-exit runs on both ends. For
-obstacles, only the moved-aircraft side; the obstacle stays a
-single-point endpoint. Underlying clearance calculations unchanged.
-
-### `/feedback` staff view (`b9c5af7`)
-
-Tier-3 holdover from prior session — only the public QR form had been
-refreshed in Tier 1. Header restructure split the prior 5-button row
-into two clusters (time-filter pills as outlined-pill cluster, Export/
-Email PDF as a separate output cluster on success-tinted /
-purple-tinted chrome). Per-row 3px left rail keyed off
-`overall_rating`: 4-5★ green, 3★ amber, 1-2★ red, no rating gray —
-so a 5★ rave and a 1★ complaint scan distinctly. Token sweep on raw
-`#FBBF24` (stars + avg-rating digit + distribution bars) and
-`#334155` (empty-stars). HTML `&times;` delete button → Lucide X.
-
-### `/library` access (`2a5c22a` → `48d59a9` → `84cecb1`)
-
-User reported: clicking PDF Library bounces back to `/more` instead of
-loading. Three commits to land the right fix, plus a perm migration.
-
-`2a5c22a` first try: the `/library` server-page gate queried
-`role_permissions` directly and ignored `user_permission_overrides`,
-so any user granted `library:view` via an override (rather than via
-their role's preset) saw the link in `/more` (the client
-`usePermissions()` hook merges overrides correctly) but got bounced
-on click. Replaced inline query with the shared `getPermissionsFor()`
-helper from `lib/permissions-server.ts`. Pushed.
-
-User reported same redirect-loop on prod after deploy, *plus* the
-Vercel error log showing `TypeError: u is not a function` at
-`/library/page.js`. That's the exact pattern the comment at the
-bottom of `lib/permissions.ts` warns about: importing from a
-`'use client'` module into a server component produces a
-client-reference stub that throws when invoked. `lib/permissions-server.ts`
-itself imports `resolveEffectivePermissions` from `permissions.ts`,
-so the helper transitively re-introduced the bug.
-
-`48d59a9` second try: dropped `getPermissionsFor` and called the
-`user_has_permission(uuid, text)` SECURITY DEFINER RPC directly.
-Single round-trip, resolves role-preset + user_permission_overrides
-server-side, no cross-module import gotcha. Page loads.
-
-User then clarified the actual scope: PDF Library should be
-**sys_admin only** — not visible to AFM, NAMO, base_admin, etc. The
-Phase A seed (`2026042200`) had granted `library:view` and
-`library:manage` broadly via the "all keys" inserts for sys_admin /
-airfield_manager / namo / base_admin and via the `%:view` loop for
-safety / atc; only `read_only` had been explicitly cleaned up later.
-
-`84cecb1` is migration `2026050100_library_perms_sys_admin_only.sql`:
-DELETEs both keys from `role_permissions` for every role
-`<> 'sys_admin'`, and DELETEs matching grants from
-`user_permission_overrides` where the override user is not a
-sys_admin. Idempotent. **User confirmed the migration was applied to
-prod this session.**
+Phase 2 (next session) is the wizard chrome itself — labeled stepper
+(replacing numbered-circle row), per-step Guide panel (what / why /
+required / example / DAFMAN cite), inline `(?)` tooltips on every
+field, per-step status pills, auto-save indicator. Plan committed at
+`.claude/plans/misty-mixing-feather.md`. Phase 3 (deferred) covers
+first-run onboarding overlay + live-preview pane.
 
 ---
 
 ## Migrations status
 
+No migrations applied or written this session.
+
 | Migration | Status | What it does |
 |---|---|---|
-| `2026050100_library_perms_sys_admin_only.sql` | ✅ Applied (this session) | Locks `library:view` + `library:manage` to sys_admin only — revokes from `role_permissions` for every other role and from `user_permission_overrides` for non-sys_admin users. |
+| `2026050100_library_perms_sys_admin_only.sql` | ✅ Applied (prior session) | Locks `library:view` + `library:manage` to sys_admin only. |
 | `2026042907_add_construction_other_check_types.sql` | ✅ Applied | (carryover) `airfield_checks_check_type_check` accepts `'construction'` and `'other'`. |
-| `2026042906_drop_ppr_arrival_eta_zulu.sql` | ✅ Applied | (carryover) Drops `ppr_entries.arrival_eta_zulu`; recreates `submit_public_ppr_request` RPC. |
+| `2026042906_drop_ppr_arrival_eta_zulu.sql` | ✅ Applied | (carryover) Drops `ppr_entries.arrival_eta_zulu`. |
 
 ---
 
@@ -190,55 +185,43 @@ prod this session.**
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| `/library` redirect-looped to `/more` for users granted `library:view` via a per-user override (not role preset). The link was visible in `/more` because the client hook merges overrides; click bounced. | The server-page gate at `app/(app)/library/page.tsx` queried `role_permissions` directly and ignored `user_permission_overrides`. Replaced with the shared helper, then with the SQL RPC after the next bug. | `2a5c22a` → `48d59a9` |
-| `/library` produced `TypeError: u is not a function` in production (Vercel logs from `/library/page.js`). Page never rendered. | `lib/permissions-server.ts` imports `resolveEffectivePermissions` from `lib/permissions.ts`, which is `'use client'`. Next.js wraps the import as a client-reference stub when called from a server component — the exact pattern the comment in `permissions.ts` explicitly warns about. The first-try fix transitively walked into the same trap. | `48d59a9` |
-| `/reports/aging` aging-tier badges silently broken pending tokenization. Worked *only* because tier colors were still raw hex; would have dropped bg + border the moment tier colors became CSS variables. | `${tier.color}28 / 14 / 33` hex-alpha concat. Same footgun pinned in `feedback_amber_text_contrast.md`. Migrated to color-mix preemptively. | `dc6d914` |
-| `/reports/daily` Generate Report was the only `linear-gradient` button still in the running app. | Pre-v2.32 styling never converted. Solid `var(--color-cyan)` + `var(--color-cyan-btn-text)` per the canonical filled-cyan recipe. | `03ced01` |
-| `/reports/daily` preview-view section icon-tile silently dropped bg+border for var-bound colors. | Same `${s.color}14 / ${s.color}33` concat (the very same `ActionButton` footgun fixed in the prior session). Replaced the colored 32×32 number-tile with a per-row 3px rail and count promoted to the right edge — same recipe used in `/daily-reviews`. | `03ced01` |
-| `/parking` clearance distance lines all anchored at the dragged aircraft's nose-gear pivot regardless of which side was being measured. | The drag-handler used `{lat,lng}` (= moved nose-gear position) for the line origin. Underlying clearance math used closest-edge geometry but the rendering didn't match. Refactored to ray-rectangle exit anchor via `spotCenter` + body-frame projection. | `2d8eedd` → `ccad75e` |
+| `/infrastructure` Audit panel header rendered with no color (currentColor) on the "Audit Mode" label. | The header style referenced `var(--color-cyan-bright)` — undefined in `globals.css`. Fix: switch to `var(--color-cyan)`. Caught while doing the token sweep, not user-reported. | `3a85510` |
+| `/infrastructure` LIGHTING STATUS category cards would silently lose their tier-color border tint and dot glow the moment `TIER_COLORS` got migrated to CSS vars. | `tierColor + '40'` border-tint and `tierColor + '60'` dot box-shadow — the same hex-alpha-concat footgun pinned in `feedback_amber_text_contrast.md`, kept working only because `TIER_COLORS` was raw hex. Replaced with color-mix; dropped the box-shadow entirely (rail does the work). | `3a85510` |
+| Map InfoWindow edit dialog horizontal scroll + clipped title ("xiway Lights" instead of "Taxiway Lights"). | Three independent width constraints stacked: per-dialog inline `min-width: 260px` (added during a "breathe" pass), per-marker-click wrapper `<div style="max-width: 240px; padding: 2px;">` at line 2270, and global `.gm-style-iw` `padding: 2px !important`. Min-width exceeded the wrapper's max-width → horizontal scroll. Fix: dropped the wrapper (duplicating the global bg already), dropped width constraints from dialog roots, bumped `.gm-style-iw` padding to `8px 10px` so all dialogs get consistent edge inset. | `8452a64` |
 
 ---
 
 ## Lessons from this session
 
-- **Don't import from `'use client'` modules in server components, even
-  transitively.** The comment at the bottom of `lib/permissions.ts`
-  warns about this exact pattern, and `lib/permissions-server.ts`
-  was created specifically to dodge it — but the helper itself
-  imports `resolveEffectivePermissions` from the `'use client'`
-  module, so the trap re-armed transitively. For single-key
-  permission checks in server components, use the
-  `user_has_permission(uuid, text)` SECURITY DEFINER RPC directly.
-  For multi-key needs in a server route, the underlying helper
-  needs to be moved out of the `'use client'` file (`resolveEffectivePermissions`
-  is pure logic — no React, no client API — so it can live in a
-  shared `permissions-shared.ts`). Filed as known tech debt below.
+- **Google Maps InfoWindow has 3 independent width constraints stacked.**
+  Saved as `feedback_gmap_infowindow_widths.md`. Per-dialog inline
+  styles, the per-click `setContent` wrapper, and the global
+  `.gm-style-iw` `<style>` block all influence width/padding. Adjusting
+  any one without auditing the other two causes silent overflow + scroll
+  + clipping. Cost three commits before the root cause surfaced.
 
-- **Visual UI plans should lead with the visual outcome.** Saved as
-  `feedback_visual_plan_brevity.md`. The parking-toolbar plan was
-  comprehensive — exhaustive icon table, color-mix tradeoff
-  exposition, sidebar-position math — and the user said "I don't
-  really understand what you are explaining with the new tools, I
-  guess proceed and we will see what it looks like." For visual
-  changes, an ASCII sketch + plain-language behavior is enough;
-  defer code-level tradeoffs to execution. The user can course-
-  correct from a render faster than from a design doc. This
-  complements `feedback_screenshot_then_plan_mode.md` (still
-  plan-mode-gated) — the *content* of those plans should be
-  visual-first.
+- **Plan-mode plan-file path is sticky across re-entries.** When
+  re-entering plan mode after a previous ExitPlanMode, the system tracks
+  ONE plan file path. Writing to a self-named file (`infrastructure-refresh.md`
+  in our case) orphans the work — `ExitPlanMode` reads from the
+  *original* tracked path, which still had the prior plan. Cost the
+  user a confused rejection ("you sent the plan for pdf library").
+  Always use whatever path the system reports, or overwrite the
+  existing tracked file.
 
-- **"Same on mobile" deserves a mid-iteration sanity check.** The
-  parking rail went through three layouts because the user's "same
-  on mobile" intent reversed once they saw the desktop rail's height
-  in a portrait viewport. Per the new memory, render the change and
-  let the user judge instead of designing for both at once.
-
-- **Hex-alpha-concat preventive sweep is still incomplete.** Three
-  more instances surfaced this session (`/reports/aging` tier
-  badges, `/reports/daily` section icon tile, `/reports` index card
-  border). Total fixed across both sessions: ~9. Codebase-wide grep
+- **Hex-alpha-concat footgun is still finding new homes.** Three more
+  instances surfaced this session: `tierColor + '40'`, `tierColor + '60'`
+  in `system-health-panel.tsx`, plus the `tier.color}28 / 14 / 33` in
+  `/reports/aging` last session. A codebase-wide grep
   for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining
-  cases. Mechanical fix.
+  cases — mechanical fix (`color-mix(in srgb, ${color} N%, transparent)`).
+
+- **For `mv`-style renames inside Next App Router, prefer `cp` + redirect
+  stubs over destructive moves.** Phase 1 of base-config moved the 4.7K
+  LOC base-setup wizard from `/settings/base-setup` to `/base-config/setup`
+  via `cp` and replaced the original with a `redirect('/base-config/setup')`
+  Next page. Bookmarks keep working, the diff stays scoped, and there's
+  no risk of an in-flight session losing the canonical implementation.
 
 ---
 
@@ -246,22 +229,21 @@ prod this session.**
 
 | Item | Severity | Notes |
 |---|---|---|
-| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module — works on the client but transitively re-introduces the client-reference-stub bug if any server caller invokes the full helper. | Medium | Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module so server callers can use the helper without the SQL RPC dance. The `/users` page is the only remaining server-side caller of `getPermissionsFor` — `/library` now uses the RPC directly. |
-| Hex-alpha-concat sweep still incomplete | Low | A codebase-wide grep for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining cases. ~9 fixed across the last two sessions. Mechanical fix (`color-mix(in srgb, ${color} N%, transparent)`). |
-| Cyan filter-chip `rgba(56,189,248, X)` patterns in `/aircraft` | Low | (Carryover) Category tabs, sort buttons, favorites toggle. |
-| `computeIconScale` uses `getBounds()` for px-per-degree calc | Low | (Carryover) Naive bounds rectangle expands on a rotated map. |
-| Counter-rotation of aircraft icons regenerates 30+ canvases per heading change | Low–Medium | (Carryover) Smooth on developer laptops, may stutter on weaker hardware. Migration target: `AdvancedMarkerElement`. |
-| Largest parking page LOC (~4.6K) still monolithic | Held | (Carryover) Component extraction explicitly held out from prior sessions. |
-| Untracked `dark logo.jpg` (2.4MB) | Low | Sits in `/public` from a prior logo experiment. Carryover. |
-| Untracked `docs/DEMO_LOGINS.md` | Low | Carryover. |
-| Untracked `.claude/` | Low | Local Claude Code settings (gitignored expectation). Carryover. |
+| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from a `'use client'` module — works on the client but transitively re-introduces the client-reference-stub bug if any server caller invokes the full helper. | Medium | (Carryover) Move `resolveEffectivePermissions` (pure function, no React) out of `lib/permissions.ts` into a shared module. Only remaining server-side caller of `getPermissionsFor` is `/users`. |
+| Hex-alpha-concat sweep still incomplete | Low | (Carryover, plus 3 new this session). Codebase-wide grep for `\$\{[a-zA-Z_.]+\}[0-9A-Fa-f]{1,2}\b` would surface remaining cases. |
+| `audit-panel.tsx` per-row internal rows still raw / not refreshed | Low | New this session. The hub-level structural pass on `/infrastructure` skipped the dense per-row "Light, electrical light…" list. 1.6K LOC of its own — explicitly held out of the page-chrome refresh. |
+| `/infrastructure` perf carryover (layer-toggle full-rebuild, health-ring `Circle` volume) | Low–Medium | (Carryover) Smooth on dev laptops, may stutter on weaker hardware. Migration target: `AdvancedMarkerElement`. |
+| `/base-config` Phase 2 — wizard chrome refresh | Medium | New this session. Labeled stepper, per-step Guide panel, inline `(?)` tooltips, per-step status pills, auto-save indicator. Plan committed at `.claude/plans/misty-mixing-feather.md`. |
+| Largest source files: `base-config/setup/page.tsx` (~4.7K LOC, ex-`settings/base-setup`), `parking/page.tsx` ~4.3K LOC, `infrastructure/page.tsx` ~4.2K LOC | Held | (Carryover) Component extraction explicitly multi-session. |
+| Untracked `dark logo.jpg` (2.4MB) | Low | (Carryover) `/public` from a prior logo experiment. |
+| Untracked `docs/DEMO_LOGINS.md` | Low | (Carryover) |
+| Untracked `.claude/` | Low | (Carryover) Local Claude Code settings (gitignored expectation). |
 | Trademark | Low | (Carryover) CDW holds live "GLIDEPATH" Class 42 (SaaS) registration. |
 | Discrepancy "Notes History" backfill | Optional (carryover) | Historical rows still have `CURRENT_STATUS: <enum>` in the DB; display rewrites on render. |
-| Visual NAVAIDs further perf | Deferred (carryover) | Layer-toggle full-rebuild, health-ring `Circle` volume, audit-mode panel. |
 | Sequential PPR coordination | Deferred (carryover) | All assigned agencies see their work in parallel; no ordering. |
-| Public PPR form file uploads | Deferred (carryover) | Out of scope unless requested. |
+| Public PPR form file uploads | Deferred (carryover) |  |
 | "Advisories" → "WWA Notifications" UI sweep | Deferred (carryover) | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
-| ~124 `as any` casts project-wide | Low | (Carryover). |
+| ~124 `as any` casts project-wide | Low | (Carryover) |
 | PDF boilerplate duplication in 11 generators | Low | (Carryover) 5 already on `pdf-utils.ts`. |
 | Check draft real-time sync deferred | Low | (Carryover) Two users could create duplicate drafts. |
 
@@ -269,33 +251,36 @@ prod this session.**
 
 ## Next session tasks
 
-User explicitly bundled three pages for the next session: `/training`,
-`/infrastructure` (Visual NAVAIDs), and `/settings/base-setup`.
+User explicitly bundled three pages for the multi-session arc:
+`/training`, `/infrastructure` (Visual NAVAIDs), `/settings/base-setup`.
+This session knocked out `/infrastructure` (page chrome + map InfoWindow
+expansion) and Phase 1 of base-setup (the IA split into `/base-config`).
+Remaining:
 
+- **`/base-config` Phase 2 — wizard chrome refresh.** This is the
+  headline next task. Plan already written at
+  `.claude/plans/misty-mixing-feather.md`. Replace the numbered-circle
+  step rail with a labeled stepper (status-keyed pills), add a
+  persistent right-hand Guide panel per step (what / why / required /
+  example / DAFMAN cite), inline `(?)` tooltips on every field, an
+  auto-save indicator pill, and per-step status pills. Recommend the
+  user pull a fresh round of screenshots after `npm run dev` lands the
+  Phase 1 hub so the wizard visuals are fresh.
 - **`/training`** (Glidepath Training) — needs a full content
-  refresh per user: "training will need to be updated significantly."
-  Screenshots needed; user will provide. ~21 kB First Load JS so
-  moderate substance. In-app guidance for using the platform.
-- **`/infrastructure`** (Visual NAVAIDs, ~4.1K LOC) — bigger
-  multi-session work. Real backlog: layer-toggle full-rebuild
-  perf, health-ring `Circle` volume, audit-mode panel.
-- **`/settings/base-setup`** (~4.7K LOC) — the largest page in the
-  app. 15-step config wizard.
-
-These three are likely a multi-session arc, not one session.
+  refresh per the user: "training will need to be updated significantly."
+  Screenshots needed; user will provide. Still untouched.
 
 ### Long-running carryover (bandwidth-permitting)
 
 Pick from these only when bandwidth allows or a customer asks:
 
-- `/parking/page.tsx` component extraction (~4.6K LOC → ~1.5K via
-  `parking-panel.tsx` + `AircraftTab` + `EnvironmentTab` +
-  `ClearanceTab` + `SettingsTab` + `ParkingHeader` + `ActionBar`).
-  Four-commit plan still queued.
+- `/base-config` Phase 3 — first-run onboarding overlay + live preview
+  pane on each wizard step. Deferred until Phase 2 lands.
+- `audit-panel.tsx` per-row internal styling refresh (1.6K LOC).
+- `/parking/page.tsx` component extraction (~4.6K LOC).
 - Move `resolveEffectivePermissions` out of `lib/permissions.ts`
   (`'use client'`) into a shared module so `lib/permissions-server.ts`
-  doesn't transitively re-arm the client-reference-stub bug. Pure
-  refactor; no behavior change.
+  doesn't transitively re-arm the client-reference-stub bug.
 - Hex-alpha-concat preventive grep + sweep.
 - CAC/PIV authentication (blocked on Platform One).
 - Outage analytics, training management, Part 139 civilian template.
@@ -310,19 +295,20 @@ Pick from these only when bandwidth allows or a customer asks:
 TypeScript clean (npx tsc --noEmit exit 0)
 Tests: 253 pass / 25 files (unchanged)
 Build: npm run build clean — no warnings, no errors.
-1 new migration this session, applied to prod.
+0 new migrations this session.
 
 Notable First Load JS (changed routes this session):
-  /                                     (Airfield Status — full-page route)
-  /feedback                             (staff view restructure)
-  /library                              146 kB / 292 kB
-  /parking                              43.6 kB / 416 kB   (+1.9 from rail toolbar)
-  /reports                              6.26 kB / 168 kB
-  /reports/aging                        5.71 kB / 331 kB
-  /reports/daily                        3.73 kB / 322 kB   (-0 from gradient drop)
-  /reports/discrepancies                4.63 kB / 330 kB
-  /reports/lighting                     7.62 kB / 318 kB
-  /reports/trends                       4.9 kB / 316 kB
+  /library                              146 kB / 292 kB    (no LOC delta on the route itself)
+  /infrastructure                       34.4 kB / 217 kB   (-0.1 kB after token cleanup)
+  /base-config                          7.42 kB / 179 kB   (NEW — hub)
+  /base-config/setup                    44 kB / 241 kB     (was /settings/base-setup, identical)
+  /base-config/modules                  5.05 kB / 176 kB   (was /settings/base-setup/modules)
+  /base-config/templates                9.43 kB / 190 kB   (was /settings/templates)
+  /base-config/diagram                  4.96 kB / 176 kB   (NEW — extracted from settings)
+  /settings                             15.2 kB / 198 kB   (was 16.6 kB — Base Configuration expander removed)
+  /settings/base-setup                  152 B / 91.3 kB    (redirect stub → /base-config/setup)
+  /settings/base-setup/modules          152 B / 91.3 kB    (redirect stub → /base-config/modules)
+  /settings/templates                   152 B / 91.3 kB    (redirect stub → /base-config/templates)
 
 Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
@@ -334,8 +320,9 @@ Middleware: 74.5 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-05-01 (this session) | Reports & Analytics structure-first sweep (6 pages). Parking left-rail toolbar through three iterations to land on responsive desktop-vertical / mobile-split. Parking clearance lines now anchor on ray-rectangle exit per side. /feedback staff view restructure (header split + per-row rating rail + token sweep). /library access bug fixes — Vercel `TypeError: u is not a function` traced to a `'use client'` transitive import in the server gate; switched to the `user_has_permission` RPC directly. Migration `2026050100` locks `library:view` + `library:manage` to sys_admin only. 16 commits on `main`, all pushed. |
-| **Unreleased** | 2026-05-01 (prior) | Structure-first audit. 31 commits across 22+ surfaces. ACSI module sweep (7 commits), structural restructures of `/daily-reviews`, `/recent-activity`, `/wildlife` list+form, `/aircraft` list+detail, `/contractors`, `/discrepancies` list+detail. Tier 3 sweep: `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/ppr`, `/dashboard`, `/`, `/users`, `/more` (2 commits including emoji→Lucide). 6 real bugs fixed including the hex-alpha-concat silent-drops in `ActionButton`, `BWC chip`, `FREQ_COLORS`, KPI band; and the `obstructions` duplicate-`5.` Required Actions numbering. |
+| **Unreleased** | 2026-05-01 (cont.) (this session) | `/library` structure-first refresh (cyan-tinted header, per-row cached/indexed rail, full token sweep). `/infrastructure` (Visual NAVAIDs) refresh: per-card top rail on LIGHTING STATUS keyed off tier, per-row left rail on Recent Activity, header / Edit Mode / Free Move / Audit Panel token sweep across 5 accent-color families, `tierColor + '40'`/`'60'` hex-alpha-concat footguns killed, `--color-cyan-bright` undefined-var bug fixed. Map InfoWindow edit dialog full token sweep + post-place dialog expanded from type-only to full edit form (Type / System+Component / Fixture ID / Rotation / Save) with carryover refs for sequential placement. Three follow-up commits to land InfoWindow spacing — root cause was three stacked width constraints (per-dialog `min-width`, per-click wrapper `max-width`, global `.gm-style-iw` `padding`); saved as `feedback_gmap_infowindow_widths.md`. Phase 1 of `/base-config` revamp: pulled admin work out of `/settings` into a new top-level sidebar entry, hub page with status-pill cards, redirect stubs at old `/settings/*` paths, airfield-diagram extracted to its own page. 6 commits on `main`, all pushed. |
+| **Unreleased** | 2026-05-01 (prior) | Reports & Analytics structure-first sweep (6 pages). Parking left-rail toolbar through three iterations. Parking clearance lines anchor on ray-rectangle exit per side. /feedback staff view restructure. /library access bug fixes — Vercel `TypeError: u is not a function` traced to a `'use client'` transitive import; switched to the `user_has_permission` RPC directly. Migration `2026050100` locks `library:view` + `library:manage` to sys_admin only. 16 commits on `main`. |
+| **Unreleased** | 2026-05-01 (prior) | Structure-first audit. 31 commits across 22+ surfaces. ACSI module sweep (7 commits), structural restructures of `/daily-reviews`, `/recent-activity`, `/wildlife` list+form, `/aircraft` list+detail, `/contractors`, `/discrepancies` list+detail. Tier 3 sweep: `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/ppr`, `/dashboard`, `/`, `/users`, `/more`. 6 real bugs fixed including the hex-alpha-concat silent-drops in `ActionButton`, `BWC chip`, `FREQ_COLORS`, KPI band; and the `obstructions` duplicate-`5.` Required Actions numbering. |
 | **Unreleased** | 2026-04-30 (prior) | Tier 2 of the audit-derived refresh backlog finished. Six commits across five pages. |
 | **Unreleased** | 2026-04-30 (prior) | Tier 1 of the audit refresh + 25-commit deep parking polish. 28 commits. |
 | **Unreleased** | 2026-04-30 (prior) | Distinctive-refresh sweep across high-traffic routes. 20 commits. |
@@ -361,36 +348,30 @@ See `CHANGELOG.md` for full history.
 
 ### New files
 
-- `supabase/migrations/2026050100_library_perms_sys_admin_only.sql` —
-  migration locking `library:view` + `library:manage` to sys_admin
-  only. Applied to prod this session.
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_visual_plan_brevity.md`
-  — feedback memory: visual UI plans should lead with the visual
-  outcome (ASCII sketch + behavior), defer code-level tradeoffs to
-  execution.
+- `app/(app)/base-config/page.tsx` — admin hub, 2-col card grid, status pills, 3px left rail per card. Replaces the four gradient buttons inside the old Settings → BASE CONFIGURATION expander.
+- `app/(app)/base-config/setup/page.tsx` — moved verbatim from `app/(app)/settings/base-setup/page.tsx` (~4.7K LOC, the wizard). Internal back-links retargeted to `/base-config`.
+- `app/(app)/base-config/modules/page.tsx` — moved from `app/(app)/settings/base-setup/modules/page.tsx`.
+- `app/(app)/base-config/templates/page.tsx` — moved from `app/(app)/settings/templates/page.tsx`.
+- `app/(app)/base-config/diagram/page.tsx` — extracted airfield-diagram upload UI from the old `BaseConfigSectionContent`.
+- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_gmap_infowindow_widths.md` — feedback memory: when editing dialogs inside `google.maps.InfoWindow`, audit per-dialog inline styles, the per-click `setContent` wrapper, and `.gm-style-iw` global overrides together. Indexed in `MEMORY.md`.
 
 ### Modified files
 
-- `app/(app)/reports/page.tsx` — index restructure.
-- `app/(app)/reports/daily/page.tsx` — gradient drop + section row rail + tokens.
-- `app/(app)/reports/discrepancies/page.tsx` — filter-card rail + token sweep.
-- `app/(app)/reports/trends/page.tsx` — outlined-pill picker + tabular bars.
-- `app/(app)/reports/aging/page.tsx` — tier color-mix preventive fix + per-row rail.
-- `app/(app)/reports/lighting/page.tsx` — outlined-pill sort + summary rails.
-- `app/(app)/parking/page.tsx` — rail toolbar (5 commits) + clearance line anchors (2 commits).
-- `app/(app)/feedback/page.tsx` — header split + per-row rating rail + tokens + Lucide X.
-- `app/(app)/library/page.tsx` — server gate via `user_has_permission` RPC.
+- `app/(app)/infrastructure/page.tsx` — header buttons (Import / Edit Mode / Audit Mode), LIGHTING STATUS pill, Edit Mode toolbar (purple/amber/cyan token sweep), Free Move save bar, Import Features modal, edit InfoWindow HTML string (token sweep), post-place InfoWindow expansion (full form + carryover refs + new `__savePlacedProps` global), `.gm-style-iw` global styles tokenized + edge-inset bumped, three-iteration spacing arc.
+- `components/infrastructure/system-health-panel.tsx` — `TIER_COLORS` tokenized, per-card top rail, per-row Recent Activity rail, hex-alpha-concat footguns dropped, "16 INOP" pill recipe.
+- `components/infrastructure/audit-panel.tsx` — `--color-cyan-bright` → `--color-cyan` fix, "Generate All Fixture IDs" button color-mix on `--color-purple`.
+- `lib/supabase/infrastructure-features.ts` — `createInfrastructureFeature()` input now accepts optional `system_component_id` + `rotation`.
+- `components/PDFLibrary.tsx` — full structural refresh: header, status pill, toolbar, list-row rail, viewer toolbar, token sweep.
+- `app/(app)/settings/page.tsx` — BASE CONFIGURATION expander + entire `BaseConfigSectionContent` function (~175 LOC) removed; tree-shook `Wrench` icon import + `airfield-diagram` lib import.
+- `app/(app)/settings/base-setup/page.tsx`, `app/(app)/settings/base-setup/modules/page.tsx`, `app/(app)/settings/templates/page.tsx` — all replaced with 152-byte `next/navigation` `redirect('/base-config/...')` stubs.
+- `lib/sidebar-config.ts` — `/base-config` added to `ALL_NAV_ITEMS` + the Admin section in `DEFAULT_SIDEBAR_CONFIG`.
+- `components/layout/sidebar-nav.tsx` — `SlidersHorizontal` icon imported + registered in `ICON_MAP`; `/base-config` → `'base_setup:write'` added to `HREF_TO_VIEW_PERM`.
 
 ### Reference files (read-only)
 
-- `app/(app)/qrc/page.tsx:194` — canonical outlined-pill recipe (cited
-  in `/reports/trends` and `/reports/lighting` sort-tab refactors).
-- `lib/permissions.ts` (bottom comment) — the `'use client'` →
-  server-component import warning that the `/library` bug
-  rediscovered the hard way.
-- `feedback_screenshot_then_plan_mode.md` — cited in the parking
-  rail iteration; plan-mode-gated structural work survived even with
-  three course corrections.
+- `lib/modules-config.ts` — `isWizardStepEnabled`, `isStepDone`, `WizardStepKey` (used by hub status indicators).
+- `lib/airfield-diagram.ts` — `getAirfieldDiagram` (used by hub + new diagram page).
+- `lib/supabase/inspection-templates.ts` — `fetchInspectionTemplate` (used by hub for template item counts).
 
 ### Environment changes
 
@@ -398,8 +379,7 @@ None this session.
 
 ---
 
-*All 16 commits this session are on the `main` branch and have been
-pushed to `origin/main`. One migration applied to prod
-(`2026050100_library_perms_sys_admin_only.sql`). No version bump.
-Untracked files (`.claude/`, `docs/DEMO_LOGINS.md`,
-`public/dark logo.jpg`) remain carryover.*
+*All 6 commits this session are on the `main` branch and pushed to
+`origin/main`. No migrations applied. No version bump. Untracked files
+(`.claude/`, `docs/DEMO_LOGINS.md`, `public/dark logo.jpg`) remain
+carryover.*
