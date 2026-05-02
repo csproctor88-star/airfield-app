@@ -1495,7 +1495,7 @@ export default function InfrastructureMapPage() {
         ).join('')
         const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(placementTypeRef.current)
         const signTextRow = isSign
-          ? `<div style="margin-bottom:10px;">
+          ? `<div style="margin-bottom:8px;">
               <div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Sign Text</div>
               <input id="__placed-label" type="text" placeholder="Sign text..." style="
                 width:100%;padding:6px 10px;border-radius:5px;box-sizing:border-box;
@@ -1510,7 +1510,7 @@ export default function InfrastructureMapPage() {
           content: `
             <div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);min-width:260px;padding:4px 4px 2px;">
               <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--color-success);">Feature Placed</div>
-              <div style="margin-bottom:10px;">
+              <div style="margin-bottom:8px;">
                 <div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Feature Type</div>
                 <select id="__placed-type" style="
                   width:100%;padding:6px 10px;border-radius:5px;
@@ -1518,7 +1518,7 @@ export default function InfrastructureMapPage() {
                   color:var(--color-text-1);font-size:11px;cursor:pointer;
                 ">${typeOptionsHtml}</select>
               </div>
-              <div style="margin-bottom:10px;">
+              <div style="margin-bottom:8px;">
                 <div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">System / Component</div>
                 <select id="__placed-comp" style="
                   width:100%;padding:6px 10px;border-radius:5px;
@@ -1527,7 +1527,7 @@ export default function InfrastructureMapPage() {
                 "><option value="">— None —</option>${compOptGroups}</select>
               </div>
               ${signTextRow}
-              <div style="margin-bottom:10px;">
+              <div style="margin-bottom:8px;">
                 <div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Fixture ID</div>
                 <input id="__placed-block" type="text" placeholder="e.g. TWYK-TL-001" style="
                   width:100%;padding:6px 10px;border-radius:5px;box-sizing:border-box;
@@ -1550,7 +1550,7 @@ export default function InfrastructureMapPage() {
                 </div>
               </div>
               <button onclick="window.__savePlacedProps('${result.id}',(document.getElementById('__placed-label')||{value:''}).value,parseInt(document.getElementById('__placed-rot').value),document.getElementById('__placed-type').value,document.getElementById('__placed-comp').value,document.getElementById('__placed-block').value)" style="
-                width:100%;padding:8px 0;border:none;border-radius:5px;
+                width:100%;padding:5px 0;border:none;border-radius:5px;
                 background:var(--color-success);color:white;font-size:11px;font-weight:600;cursor:pointer;
               ">Save</button>
             </div>
@@ -1915,12 +1915,12 @@ export default function InfrastructureMapPage() {
     if (props.id) {
       if (isInop) {
         html += `<button onclick="window.__markOperational('${props.id}')" style="
-          margin-top:8px;width:100%;padding:8px 0;border:none;border-radius:5px;
+          margin-top:8px;width:100%;padding:5px 0;border:none;border-radius:5px;
           background:var(--color-success);color:white;font-size:11px;font-weight:600;cursor:pointer;
         ">Mark Operational</button>`
       } else {
         html += `<button onclick="window.__reportOutage('${props.id}')" style="
-          margin-top:8px;width:100%;padding:8px 0;border:none;border-radius:5px;
+          margin-top:8px;width:100%;padding:5px 0;border:none;border-radius:5px;
           background:var(--color-danger);color:white;font-size:11px;font-weight:600;cursor:pointer;
         ">Report Outage</button>`
       }
@@ -1935,7 +1935,7 @@ export default function InfrastructureMapPage() {
       const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
         `<option value="${opt.value}" ${opt.value === props.type ? 'selected' : ''}>${opt.label}</option>`
       ).join('')
-      html += `<div style="margin-bottom:10px;">`
+      html += `<div style="margin-bottom:8px;">`
       html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Feature Type</div>`
       html += `<select id="__type-input" style="
         width:100%;padding:6px 10px;border-radius:5px;
@@ -1949,7 +1949,7 @@ export default function InfrastructureMapPage() {
           `<option value="${c.id}" ${c.id === currentCompId ? 'selected' : ''}>${c.label}</option>`
         ).join('')}</optgroup>`
       ).join('')
-      html += `<div style="margin-bottom:10px;">`
+      html += `<div style="margin-bottom:8px;">`
       html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">System / Component</div>`
       html += `<select id="__comp-input" style="
         width:100%;padding:6px 10px;border-radius:5px;
@@ -1960,7 +1960,7 @@ export default function InfrastructureMapPage() {
       // Label (signs only — shows sign face text)
       const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(props.type)
       if (isSign) {
-        html += `<div style="margin-bottom:10px;">`
+        html += `<div style="margin-bottom:8px;">`
         html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Sign Text</div>`
         html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Sign text..." style="
           width:100%;padding:6px 10px;border-radius:5px;box-sizing:border-box;
@@ -1971,7 +1971,7 @@ export default function InfrastructureMapPage() {
       }
       // Fixture ID
       const escapedBlock = (props.block || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
-      html += `<div style="margin-bottom:10px;">`
+      html += `<div style="margin-bottom:8px;">`
       html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:5px;">Fixture ID</div>`
       html += `<input id="__block-input" type="text" value="${escapedBlock}" placeholder="e.g. TWYK-TL-001" style="
         width:100%;padding:6px 10px;border-radius:5px;box-sizing:border-box;
@@ -1981,10 +1981,10 @@ export default function InfrastructureMapPage() {
       html += `</div>`
       // Bar group indicator (read-only)
       if (props.bar_group_id) {
-        html += `<div style="font-size:10px;color:var(--color-cyan);margin-bottom:10px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
+        html += `<div style="font-size:10px;color:var(--color-cyan);margin-bottom:8px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
       }
       // Rotation slider with compass
-      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">`
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">`
       html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
       html += `<circle cx="16" cy="16" r="14" fill="none" stroke="var(--color-border)" stroke-width="1"/>`
       html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="var(--color-text-3)">N</text>`
@@ -1999,7 +1999,7 @@ export default function InfrastructureMapPage() {
       html += `</div></div>`
       // Save button
       html += `<button onclick="window.__saveFeatureProps('${props.id}',(document.getElementById('__label-input')||{value:''}).value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
-        width:100%;padding:8px 0;border:none;border-radius:5px;
+        width:100%;padding:5px 0;border:none;border-radius:5px;
         background:var(--color-success);color:white;font-size:11px;font-weight:600;cursor:pointer;
       ">Save</button>`
       html += `</div>`
@@ -2008,17 +2008,17 @@ export default function InfrastructureMapPage() {
       html += `<div style="display:flex;gap:8px;margin-top:8px;">`
       if (freeMoveRef.current) {
         html += `<button onclick="window.__freeMoveFeature('${props.id}',${lng},${lat})" style="
-          flex:1;padding:7px 0;border:none;border-radius:5px;
+          flex:1;padding:5px 0;border:none;border-radius:5px;
           background:var(--color-warning);color:black;font-size:12px;font-weight:600;cursor:pointer;
         ">Grab</button>`
       } else {
         html += `<button onclick="window.__moveInfraFeature('${props.id}',${lng},${lat})" style="
-          flex:1;padding:7px 0;border:none;border-radius:5px;
+          flex:1;padding:5px 0;border:none;border-radius:5px;
           background:var(--color-blue);color:white;font-size:12px;font-weight:600;cursor:pointer;
         ">Move</button>`
       }
       html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
-        flex:1;padding:7px 0;border:none;border-radius:5px;
+        flex:1;padding:5px 0;border:none;border-radius:5px;
         background:var(--color-danger);color:white;font-size:12px;font-weight:600;cursor:pointer;
       ">Delete</button>`
       html += `</div>`
