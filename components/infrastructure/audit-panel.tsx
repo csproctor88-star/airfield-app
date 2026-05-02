@@ -669,7 +669,7 @@ export default function AuditPanel({
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan-bright)', flex: 1 }}>
+        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', flex: 1 }}>
           Audit Mode
         </span>
         <span style={{ fontSize: 10, color: 'var(--color-text-3)' }}>
@@ -719,8 +719,8 @@ export default function AuditPanel({
             width: '100%',
             padding: '6px 0',
             borderRadius: 6,
-            border: '1px solid rgba(168, 85, 247, 0.3)',
-            background: 'rgba(168, 85, 247, 0.1)',
+            border: '1px solid color-mix(in srgb, var(--color-purple) 30%, transparent)',
+            background: 'color-mix(in srgb, var(--color-purple) 12%, transparent)',
             color: 'var(--color-purple)',
             fontSize: 11,
             fontWeight: 600,

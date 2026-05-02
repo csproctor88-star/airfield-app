@@ -169,6 +169,8 @@ export async function createInfrastructureFeature(input: {
   label?: string
   notes?: string
   source?: 'import' | 'user'
+  system_component_id?: string | null
+  rotation?: number
 }): Promise<InfrastructureFeature | null> {
   const supabase = createClient()
   if (!supabase) return null
@@ -188,6 +190,8 @@ export async function createInfrastructureFeature(input: {
       notes: input.notes || null,
       source: input.source || 'user',
       created_by: user?.id || null,
+      system_component_id: input.system_component_id ?? null,
+      rotation: input.rotation ?? 0,
     })
     .select('*')
     .single()

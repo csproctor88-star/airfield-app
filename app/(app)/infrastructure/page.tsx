@@ -1427,6 +1427,14 @@ export default function InfrastructureMapPage() {
     ;(window as any).__saveFeatureProps = (id: string, label: string, rotation: number, featureType?: string, componentId?: string, block?: string) => {
       savePropsRef.current?.(id, label, rotation, featureType, componentId, block)
     }
+    ;(window as any).__savePlacedProps = (id: string, label: string, rotation: number, featureType?: string, componentId?: string, block?: string) => {
+      // Remember choices for the next placement (smoother sequential workflow).
+      lastPlacedComponentRef.current = componentId || ''
+      lastPlacedRotationRef.current = Number.isFinite(rotation) ? rotation : 0
+      savePropsRef.current?.(id, label, rotation, featureType, componentId, block)
+      placedIWRef.current?.close()
+      placedIWRef.current = null
+    }
     ;(window as any).__reportOutage = (id: string) => {
       reportOutageRef.current?.(id)
     }
@@ -1441,42 +1449,110 @@ export default function InfrastructureMapPage() {
       delete (window as any).__moveInfraFeature
       delete (window as any).__freeMoveFeature
       delete (window as any).__saveFeatureProps
+      delete (window as any).__savePlacedProps
       delete (window as any).__reportOutage
       delete (window as any).__markOperational
       delete (window as any).__assignComponent
     }
   }, [])
 
+  // Carryover: last-used System/Component and Rotation, pre-filled on the
+  // post-place dialog so a user laying down a sequence of fixtures doesn't
+  // re-pick component/rotation per placement.
+  const lastPlacedComponentRef = useRef<string>('')
+  const lastPlacedRotationRef = useRef<number>(0)
+  // Tracks the post-place InfoWindow so __savePlacedProps can close it.
+  const placedIWRef = useRef<google.maps.InfoWindow | null>(null)
+
   // Place feature handler
   const placeFeatureRef = useRef<((lng: number, lat: number) => Promise<void>) | undefined>(undefined)
   placeFeatureRef.current = async (lng: number, lat: number) => {
     if (!installationId || saving) return
     setSaving(true)
+    const carriedComponent = lastPlacedComponentRef.current || null
+    const carriedRotation = lastPlacedRotationRef.current || 0
     const result = await createInfrastructureFeature({
       baseId: installationId,
       feature_type: placementTypeRef.current,
       longitude: lng,
       latitude: lat,
+      system_component_id: carriedComponent,
+      rotation: carriedRotation,
     })
     if (result) {
       const updated = await fetchInfrastructureFeatures(installationId)
       setDbFeatures(updated)
 
-      // Show InfoWindow at placed location with type selector
+      // Show InfoWindow at placed location with full editable form
       if (map.current) {
-        const optionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
+        const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
           `<option value="${opt.value}" ${opt.value === placementTypeRef.current ? 'selected' : ''}>${opt.label}</option>`
         ).join('')
+        const compOptGroups = groupedComponentsRef.current.map(g =>
+          `<optgroup label="${g.name}">${g.components.map(c =>
+            `<option value="${c.id}" ${c.id === carriedComponent ? 'selected' : ''}>${c.label}</option>`
+          ).join('')}</optgroup>`
+        ).join('')
+        const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(placementTypeRef.current)
+        const signTextRow = isSign
+          ? `<div style="margin-bottom:6px;">
+              <div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">Sign Text</div>
+              <input id="__placed-label" type="text" placeholder="Sign text..." style="
+                width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
+                border:1px solid var(--color-border);background:var(--color-bg-inset);
+                color:var(--color-text-1);font-size:12px;outline:none;
+              " />
+            </div>`
+          : ''
 
         const wrapper = map.current
         const placedIW = new google.maps.InfoWindow({
           content: `
-            <div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">
-              <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#10B981;">Feature Placed</div>
-              <select id="__placed-type" style="
-                width:100%;background:#1E293B;border:1px solid #475569;
-                border-radius:6px;padding:5px 8px;color:#E2E8F0;font-size:12px;cursor:pointer;
-              ">${optionsHtml}</select>
+            <div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);min-width:240px;">
+              <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--color-success);">Feature Placed</div>
+              <div style="margin-bottom:6px;">
+                <div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">Feature Type</div>
+                <select id="__placed-type" style="
+                  width:100%;padding:4px 6px;border-radius:4px;
+                  border:1px solid var(--color-border);background:var(--color-bg-inset);
+                  color:var(--color-text-1);font-size:11px;cursor:pointer;
+                ">${typeOptionsHtml}</select>
+              </div>
+              <div style="margin-bottom:6px;">
+                <div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">System / Component</div>
+                <select id="__placed-comp" style="
+                  width:100%;padding:4px 6px;border-radius:4px;
+                  border:1px solid var(--color-border);background:var(--color-bg-inset);
+                  color:var(--color-text-1);font-size:11px;cursor:pointer;
+                "><option value="">— None —</option>${compOptGroups}</select>
+              </div>
+              ${signTextRow}
+              <div style="margin-bottom:6px;">
+                <div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">Fixture ID</div>
+                <input id="__placed-block" type="text" placeholder="e.g. TWYK-TL-001" style="
+                  width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
+                  border:1px solid var(--color-border);background:var(--color-bg-inset);
+                  color:var(--color-text-1);font-size:12px;outline:none;
+                " />
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">
+                  <circle cx="16" cy="16" r="14" fill="none" stroke="var(--color-border)" stroke-width="1"/>
+                  <text x="16" y="8" text-anchor="middle" font-size="7" fill="var(--color-text-3)">N</text>
+                  <line id="__placed-needle" x1="16" y1="16" x2="16" y2="5" stroke="var(--color-danger)" stroke-width="2" transform="rotate(${carriedRotation},16,16)"/>
+                </svg></div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                    <span style="font-size:10px;color:var(--color-text-3);">Rotation</span>
+                    <span id="__placed-rot-value" style="font-size:10px;color:var(--color-text-2);">${carriedRotation}°</span>
+                  </div>
+                  <input id="__placed-rot" type="range" min="0" max="359" value="${carriedRotation}" oninput="document.getElementById('__placed-rot-value').textContent=this.value+'°';document.getElementById('__placed-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:var(--color-success);cursor:pointer;" />
+                </div>
+              </div>
+              <button onclick="window.__savePlacedProps('${result.id}',(document.getElementById('__placed-label')||{value:''}).value,parseInt(document.getElementById('__placed-rot').value),document.getElementById('__placed-type').value,document.getElementById('__placed-comp').value,document.getElementById('__placed-block').value)" style="
+                width:100%;padding:6px 0;border:none;border-radius:4px;
+                background:var(--color-success);color:white;font-size:11px;font-weight:600;cursor:pointer;
+              ">Save</button>
             </div>
           `,
           position: { lat, lng },
@@ -1484,20 +1560,17 @@ export default function InfrastructureMapPage() {
         placedIW.open(wrapper.gmap)
 
         google.maps.event.addListenerOnce(placedIW, 'domready', () => {
-          const sel = document.getElementById('__placed-type') as HTMLSelectElement | null
-          sel?.addEventListener('change', async () => {
-            const newType = sel.value as InfrastructureFeatureType
-            const ok = await updateInfrastructureFeature(result.id, { feature_type: newType })
-            if (ok) {
-              const refreshed = await fetchInfrastructureFeatures(installationId)
-              setDbFeatures(refreshed)
-              setPlacementType(newType)
-              placementTypeRef.current = newType
-              toast.success(`Changed to ${FEATURE_TYPE_OPTIONS.find(o => o.value === newType)?.label}`)
-            }
-            placedIW.close()
+          // Live-update placement type pref on dropdown change so subsequent
+          // placements default to the most-recently-chosen type.
+          const typeSel = document.getElementById('__placed-type') as HTMLSelectElement | null
+          typeSel?.addEventListener('change', () => {
+            setPlacementType(typeSel.value as InfrastructureFeatureType)
+            placementTypeRef.current = typeSel.value as InfrastructureFeatureType
           })
         })
+
+        // Stash the InfoWindow so __savePlacedProps can close it.
+        placedIWRef.current = placedIW
       }
     } else {
       toast.error('Failed to place feature')
@@ -1809,17 +1882,17 @@ export default function InfrastructureMapPage() {
   const buildPopupHtml = useCallback((props: Record<string, any>, layerColor: string, layerLabel: string, lng: number, lat: number): string => {
     const isEditing = editModeRef.current
 
-    let html = `<div style="font-family:system-ui;font-size:12px;color:#E2E8F0;">`
+    let html = `<div style="font-family:system-ui;font-size:12px;color:var(--color-text-1);">`
     html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">`
     html += `<div style="font-weight:700;font-size:13px;color:${layerColor}">${layerLabel}</div>`
     const isInop = props.status === 'inoperative'
-    html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? '#EF4444' : '#10B981'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
+    html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? 'var(--color-danger)' : 'var(--color-success)'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
     html += `</div>`
     if (props.block) {
-      html += `<div style="font-size:11px;color:#CBD5E1;font-family:monospace;margin-bottom:2px;">${props.block}</div>`
+      html += `<div style="font-size:11px;color:var(--color-text-2);font-family:monospace;margin-bottom:2px;">${props.block}</div>`
     }
     if (props.text && ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)) {
-      html += `<div style="color:#CBD5E1;">Sign Text: ${props.text}</div>`
+      html += `<div style="color:var(--color-text-2);">Sign Text: ${props.text}</div>`
     }
     // System/component — show deduplicated
     if (props.id && allComponentsRef.current.length > 0 && !isEditing) {
@@ -1829,26 +1902,26 @@ export default function InfrastructureMapPage() {
         const sysName = currentComp.system_name
         const compLabel = currentComp.label
         if (sysName === compLabel || sysName.endsWith(compLabel)) {
-          html += `<div style="font-size:10px;color:#94A3B8;">${sysName}</div>`
+          html += `<div style="font-size:10px;color:var(--color-text-3);">${sysName}</div>`
         } else {
-          html += `<div style="font-size:10px;color:#94A3B8;">${sysName} &mdash; ${compLabel}</div>`
+          html += `<div style="font-size:10px;color:var(--color-text-3);">${sysName} &mdash; ${compLabel}</div>`
         }
       }
     }
     if (props.notes) {
-      html += `<div style="margin-top:4px;font-size:10px;color:#94A3B8;">${props.notes}</div>`
+      html += `<div style="margin-top:4px;font-size:10px;color:var(--color-text-3);">${props.notes}</div>`
     }
     // Status toggle button (always visible)
     if (props.id) {
       if (isInop) {
         html += `<button onclick="window.__markOperational('${props.id}')" style="
           margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
-          background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
+          background:var(--color-success);color:white;font-size:11px;font-weight:600;cursor:pointer;
         ">Mark Operational</button>`
       } else {
         html += `<button onclick="window.__reportOutage('${props.id}')" style="
           margin-top:8px;width:100%;padding:6px 0;border:none;border-radius:4px;
-          background:#EF4444;color:white;font-size:11px;font-weight:600;cursor:pointer;
+          background:var(--color-danger);color:white;font-size:11px;font-weight:600;cursor:pointer;
         ">Report Outage</button>`
       }
     }
@@ -1857,17 +1930,17 @@ export default function InfrastructureMapPage() {
       const escapedLabel = (props.text || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
       const currentRotation = props.rotation || 0
       const currentCompId = props.system_component_id || ''
-      html += `<div style="margin-top:8px;border-top:1px solid #475569;padding-top:8px;">`
+      html += `<div style="margin-top:8px;border-top:1px solid var(--color-border);padding-top:8px;">`
       // Feature type dropdown
       const typeOptionsHtml = FEATURE_TYPE_OPTIONS.map(opt =>
         `<option value="${opt.value}" ${opt.value === props.type ? 'selected' : ''}>${opt.label}</option>`
       ).join('')
       html += `<div style="margin-bottom:6px;">`
-      html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Feature Type</div>`
+      html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">Feature Type</div>`
       html += `<select id="__type-input" style="
         width:100%;padding:4px 6px;border-radius:4px;
-        border:1px solid #475569;background:#1E293B;
-        color:#E2E8F0;font-size:11px;cursor:pointer;
+        border:1px solid var(--color-border);background:var(--color-bg-inset);
+        color:var(--color-text-1);font-size:11px;cursor:pointer;
       ">${typeOptionsHtml}</select>`
       html += `</div>`
       // Component dropdown
@@ -1877,57 +1950,57 @@ export default function InfrastructureMapPage() {
         ).join('')}</optgroup>`
       ).join('')
       html += `<div style="margin-bottom:6px;">`
-      html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">System / Component</div>`
+      html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">System / Component</div>`
       html += `<select id="__comp-input" style="
         width:100%;padding:4px 6px;border-radius:4px;
-        border:1px solid #475569;background:#1E293B;
-        color:#E2E8F0;font-size:11px;cursor:pointer;
+        border:1px solid var(--color-border);background:var(--color-bg-inset);
+        color:var(--color-text-1);font-size:11px;cursor:pointer;
       "><option value="">— None —</option>${compOptGroups}</select>`
       html += `</div>`
       // Label (signs only — shows sign face text)
       const isSign = ['location_sign','directional_sign','informational_sign','mandatory_sign','runway_distance_marker'].includes(props.type)
       if (isSign) {
         html += `<div style="margin-bottom:6px;">`
-        html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Sign Text</div>`
+        html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">Sign Text</div>`
         html += `<input id="__label-input" type="text" value="${escapedLabel}" placeholder="Sign text..." style="
           width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-          border:1px solid #475569;background:#1E293B;
-          color:#E2E8F0;font-size:12px;outline:none;
+          border:1px solid var(--color-border);background:var(--color-bg-inset);
+          color:var(--color-text-1);font-size:12px;outline:none;
         " />`
         html += `</div>`
       }
       // Fixture ID
       const escapedBlock = (props.block || '').replace(/'/g, "\\'").replace(/"/g, '&quot;')
       html += `<div style="margin-bottom:6px;">`
-      html += `<div style="font-size:10px;color:#94A3B8;margin-bottom:2px;">Fixture ID</div>`
+      html += `<div style="font-size:10px;color:var(--color-text-3);margin-bottom:2px;">Fixture ID</div>`
       html += `<input id="__block-input" type="text" value="${escapedBlock}" placeholder="e.g. TWYK-TL-001" style="
         width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box;
-        border:1px solid #475569;background:#1E293B;
-        color:#E2E8F0;font-size:12px;outline:none;
+        border:1px solid var(--color-border);background:var(--color-bg-inset);
+        color:var(--color-text-1);font-size:12px;outline:none;
       " />`
       html += `</div>`
       // Bar group indicator (read-only)
       if (props.bar_group_id) {
-        html += `<div style="font-size:10px;color:#38BDF8;margin-bottom:6px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
+        html += `<div style="font-size:10px;color:var(--color-cyan);margin-bottom:6px;">Bar Group: ${(props.bar_group_id as string).slice(0, 8)}…</div>`
       }
       // Rotation slider with compass
       html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">`
       html += `<div style="flex-shrink:0;"><svg width="32" height="32" viewBox="0 0 32 32">`
-      html += `<circle cx="16" cy="16" r="14" fill="none" stroke="#475569" stroke-width="1"/>`
-      html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="#94A3B8">N</text>`
-      html += `<line id="__compass-needle" x1="16" y1="16" x2="16" y2="5" stroke="#EF4444" stroke-width="2" transform="rotate(${currentRotation},16,16)"/>`
+      html += `<circle cx="16" cy="16" r="14" fill="none" stroke="var(--color-border)" stroke-width="1"/>`
+      html += `<text x="16" y="8" text-anchor="middle" font-size="7" fill="var(--color-text-3)">N</text>`
+      html += `<line id="__compass-needle" x1="16" y1="16" x2="16" y2="5" stroke="var(--color-danger)" stroke-width="2" transform="rotate(${currentRotation},16,16)"/>`
       html += `</svg></div>`
       html += `<div style="flex:1;">`
       html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;">`
-      html += `<span style="font-size:10px;color:#94A3B8;">Rotation</span>`
-      html += `<span id="__rotation-value" style="font-size:10px;color:#CBD5E1;">${currentRotation}°</span>`
+      html += `<span style="font-size:10px;color:var(--color-text-3);">Rotation</span>`
+      html += `<span id="__rotation-value" style="font-size:10px;color:var(--color-text-2);">${currentRotation}°</span>`
       html += `</div>`
-      html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:#10B981;cursor:pointer;" />`
+      html += `<input id="__rotation-input" type="range" min="0" max="359" value="${currentRotation}" oninput="document.getElementById('__rotation-value').textContent=this.value+'°';document.getElementById('__compass-needle').setAttribute('transform','rotate('+this.value+',16,16)');" style="width:100%;accent-color:var(--color-success);cursor:pointer;" />`
       html += `</div></div>`
       // Save button
       html += `<button onclick="window.__saveFeatureProps('${props.id}',(document.getElementById('__label-input')||{value:''}).value,parseInt(document.getElementById('__rotation-input').value),document.getElementById('__type-input').value,document.getElementById('__comp-input').value,document.getElementById('__block-input').value)" style="
         width:100%;padding:5px 0;border:none;border-radius:4px;
-        background:#10B981;color:white;font-size:11px;font-weight:600;cursor:pointer;
+        background:var(--color-success);color:white;font-size:11px;font-weight:600;cursor:pointer;
       ">Save</button>`
       html += `</div>`
 
@@ -1936,17 +2009,17 @@ export default function InfrastructureMapPage() {
       if (freeMoveRef.current) {
         html += `<button onclick="window.__freeMoveFeature('${props.id}',${lng},${lat})" style="
           flex:1;padding:5px 0;border:none;border-radius:5px;
-          background:#F59E0B;color:black;font-size:12px;font-weight:600;cursor:pointer;
+          background:var(--color-warning);color:black;font-size:12px;font-weight:600;cursor:pointer;
         ">Grab</button>`
       } else {
         html += `<button onclick="window.__moveInfraFeature('${props.id}',${lng},${lat})" style="
           flex:1;padding:5px 0;border:none;border-radius:5px;
-          background:#3B82F6;color:white;font-size:12px;font-weight:600;cursor:pointer;
+          background:var(--color-blue);color:white;font-size:12px;font-weight:600;cursor:pointer;
         ">Move</button>`
       }
       html += `<button onclick="window.__deleteInfraFeature('${props.id}')" style="
         flex:1;padding:5px 0;border:none;border-radius:5px;
-        background:#EF4444;color:white;font-size:12px;font-weight:600;cursor:pointer;
+        background:var(--color-danger);color:white;font-size:12px;font-weight:600;cursor:pointer;
       ">Delete</button>`
       html += `</div>`
     }
@@ -2596,9 +2669,9 @@ export default function InfrastructureMapPage() {
                 style={{
                   padding: '8px 16px',
                   borderRadius: 8,
-                  border: '1px solid rgba(249, 115, 22, 0.3)',
-                  background: 'rgba(249, 115, 22, 0.15)',
-                  color: '#F97316',
+                  border: '1px solid color-mix(in srgb, var(--color-amber) 32%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+                  color: 'var(--color-amber)',
                   fontSize: 'var(--fs-sm)',
                   fontWeight: 700,
                   cursor: importing ? 'wait' : 'pointer',
@@ -2613,9 +2686,13 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                border: kmlImportOpen ? '2px solid #F97316' : '1px solid rgba(249, 115, 22, 0.3)',
-                background: kmlImportOpen ? 'rgba(249, 115, 22, 0.15)' : 'var(--color-bg-surface)',
-                color: kmlImportOpen ? '#F97316' : 'var(--color-text-2)',
+                border: kmlImportOpen
+                  ? '1px solid var(--color-amber)'
+                  : '1px solid color-mix(in srgb, var(--color-amber) 32%, transparent)',
+                background: kmlImportOpen
+                  ? 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-surface)',
+                color: kmlImportOpen ? 'var(--color-amber)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -2628,8 +2705,12 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                border: editMode ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
-                background: editMode ? 'rgba(16, 185, 129, 0.15)' : 'var(--color-bg-surface)',
+                border: editMode
+                  ? '1px solid var(--color-success)'
+                  : '1px solid var(--color-border)',
+                background: editMode
+                  ? 'color-mix(in srgb, var(--color-success) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-surface)',
                 color: editMode ? 'var(--color-success)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)',
                 fontWeight: 700,
@@ -2643,8 +2724,12 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                border: auditMode ? '2px solid var(--color-cyan)' : '1px solid var(--color-border)',
-                background: auditMode ? 'rgba(6, 182, 212, 0.15)' : 'var(--color-bg-surface)',
+                border: auditMode
+                  ? '1px solid var(--color-cyan)'
+                  : '1px solid var(--color-border)',
+                background: auditMode
+                  ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                  : 'var(--color-bg-surface)',
                 color: auditMode ? 'var(--color-cyan)' : 'var(--color-text-2)',
                 fontSize: 'var(--fs-sm)',
                 fontWeight: 700,
@@ -2682,7 +2767,13 @@ export default function InfrastructureMapPage() {
               LIGHTING STATUS
             </span>
             {systemHealths.reduce((s, h) => s + h.inoperativeFeatures, 0) > 0 && (
-              <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '1px 6px', borderRadius: 4 }}>
+              <span style={{
+                fontSize: 'var(--fs-xs)', fontWeight: 700,
+                color: 'var(--color-danger)',
+                background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--color-danger) 28%, transparent)',
+                padding: '1px 6px', borderRadius: 4,
+              }}>
                 {systemHealths.reduce((s, h) => s + h.inoperativeFeatures, 0)} INOP
               </span>
             )}
@@ -2830,7 +2921,7 @@ export default function InfrastructureMapPage() {
             right: auditMode ? 392 : 10,
             zIndex: 15,
             background: 'var(--color-bg-surface)',
-            border: '1px solid rgba(249, 115, 22, 0.3)',
+            border: '1px solid color-mix(in srgb, var(--color-amber) 32%, transparent)',
             borderRadius: 10,
             padding: '12px 14px',
             width: 260,
@@ -2840,7 +2931,7 @@ export default function InfrastructureMapPage() {
             gap: 8,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>Import Features</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-amber)' }}>Import Features</span>
               <button onClick={() => setKmlImportOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--color-text-3)', fontSize: 14, cursor: 'pointer' }}>✕</button>
             </div>
 
@@ -2879,7 +2970,7 @@ export default function InfrastructureMapPage() {
                 max={359}
                 value={kmlRotation}
                 onChange={(e) => setKmlRotation(parseInt(e.target.value))}
-                style={{ width: '100%', accentColor: '#F97316' }}
+                style={{ width: '100%', accentColor: 'var(--color-amber)' }}
               />
             </div>
 
@@ -2901,9 +2992,9 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '8px 0',
                 borderRadius: 6,
-                border: '1px solid rgba(249, 115, 22, 0.4)',
-                background: 'rgba(249, 115, 22, 0.2)',
-                color: '#F97316',
+                border: '1px solid color-mix(in srgb, var(--color-amber) 40%, transparent)',
+                background: 'color-mix(in srgb, var(--color-amber) 20%, transparent)',
+                color: 'var(--color-amber)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: kmlImporting ? 'wait' : 'pointer',
@@ -2924,7 +3015,7 @@ export default function InfrastructureMapPage() {
             transform: 'translateX(-50%)',
             zIndex: 10,
             background: 'var(--color-bg-surface)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            border: '1px solid color-mix(in srgb, var(--color-success) 28%, transparent)',
             borderRadius: 12,
             padding: '10px 14px',
             backdropFilter: 'blur(8px)',
@@ -2963,9 +3054,9 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: '1px solid var(--color-border-active)',
-                background: 'var(--color-border)',
-                color: 'var(--color-accent)',
+                border: '1px solid color-mix(in srgb, var(--color-cyan) 32%, transparent)',
+                background: 'color-mix(in srgb, var(--color-cyan) 14%, transparent)',
+                color: 'var(--color-cyan)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: gpsLoading ? 'wait' : 'pointer',
@@ -2983,9 +3074,13 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: bulkShiftOpen ? '1px solid rgba(168,85,247,0.5)' : '1px solid var(--color-border)',
-                background: bulkShiftOpen ? 'rgba(168,85,247,0.2)' : 'transparent',
-                color: bulkShiftOpen ? '#A855F7' : 'var(--color-text-3)',
+                border: bulkShiftOpen
+                  ? '1px solid color-mix(in srgb, var(--color-purple) 50%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: bulkShiftOpen
+                  ? 'color-mix(in srgb, var(--color-purple) 20%, transparent)'
+                  : 'transparent',
+                color: bulkShiftOpen ? 'var(--color-purple)' : 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -3005,9 +3100,13 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: boxSelectActive ? '1px solid rgba(168,85,247,0.5)' : '1px solid var(--color-border)',
-                background: boxSelectActive ? 'rgba(168,85,247,0.2)' : 'transparent',
-                color: boxSelectActive ? '#A855F7' : 'var(--color-text-3)',
+                border: boxSelectActive
+                  ? '1px solid color-mix(in srgb, var(--color-purple) 50%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: boxSelectActive
+                  ? 'color-mix(in srgb, var(--color-purple) 20%, transparent)'
+                  : 'transparent',
+                color: boxSelectActive ? 'var(--color-purple)' : 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -3027,8 +3126,12 @@ export default function InfrastructureMapPage() {
               style={{
                 padding: '5px 12px',
                 borderRadius: 6,
-                border: freeMoveActive ? '1px solid rgba(245,158,11,0.5)' : '1px solid var(--color-border)',
-                background: freeMoveActive ? 'rgba(245,158,11,0.2)' : 'transparent',
+                border: freeMoveActive
+                  ? '1px solid color-mix(in srgb, var(--color-warning) 50%, transparent)'
+                  : '1px solid var(--color-border)',
+                background: freeMoveActive
+                  ? 'color-mix(in srgb, var(--color-warning) 20%, transparent)'
+                  : 'transparent',
                 color: freeMoveActive ? 'var(--color-warning)' : 'var(--color-text-3)',
                 fontSize: 12,
                 fontWeight: 600,
@@ -3051,8 +3154,12 @@ export default function InfrastructureMapPage() {
                   style={{
                     padding: '5px 8px',
                     borderRadius: 6,
-                    border: active ? '1px solid rgba(251,191,36,0.5)' : '1px solid var(--color-border)',
-                    background: active ? 'rgba(251,191,36,0.2)' : 'transparent',
+                    border: active
+                      ? '1px solid color-mix(in srgb, var(--color-warning) 50%, transparent)'
+                      : '1px solid var(--color-border)',
+                    background: active
+                      ? 'color-mix(in srgb, var(--color-warning) 20%, transparent)'
+                      : 'transparent',
                     color: active ? 'var(--color-warning)' : 'var(--color-text-3)',
                     fontSize: 11,
                     fontWeight: 600,
@@ -3068,7 +3175,7 @@ export default function InfrastructureMapPage() {
             {/* Bar rotation input */}
             {barPlacement && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 10, color: '#FBBF24' }}>Rot:</span>
+                <span style={{ fontSize: 10, color: 'var(--color-warning)' }}>Rot:</span>
                 <input
                   type="number"
                   min={0}
@@ -3079,9 +3186,9 @@ export default function InfrastructureMapPage() {
                     width: 48,
                     padding: '3px 6px',
                     borderRadius: 4,
-                    border: '1px solid rgba(251,191,36,0.3)',
+                    border: '1px solid color-mix(in srgb, var(--color-warning) 32%, transparent)',
                     background: 'var(--color-bg-inset)',
-                    color: '#FBBF24',
+                    color: 'var(--color-warning)',
                     fontSize: 12,
                     textAlign: 'center',
                   }}
@@ -3104,7 +3211,7 @@ export default function InfrastructureMapPage() {
             right: 60,
             zIndex: 11,
             background: 'var(--color-bg-surface)',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
+            border: '1px solid color-mix(in srgb, var(--color-warning) 40%, transparent)',
             borderRadius: 10,
             padding: '8px 14px',
             backdropFilter: 'blur(8px)',

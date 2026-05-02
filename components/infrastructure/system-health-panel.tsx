@@ -54,10 +54,10 @@ type CategorySummary = {
 // ── Status colors ──
 
 const TIER_COLORS: Record<AlertTier, string> = {
-  green: '#22C55E',
-  yellow: '#F59E0B',
-  red: '#EF4444',
-  black: '#EF4444',
+  green: 'var(--color-success)',
+  yellow: 'var(--color-warning)',
+  red: 'var(--color-danger)',
+  black: 'var(--color-danger)',
 }
 
 // ── Category card ──
@@ -66,12 +66,14 @@ function CategoryCard({ category }: { category: CategorySummary }) {
   const [expanded, setExpanded] = useState(false)
   const tierColor = TIER_COLORS[category.worstTier]
   const hasIssues = category.inopFeatures > 0
+  const isElevated = category.worstTier !== 'green'
 
   return (
     <div
       style={{
         background: 'var(--color-surface-1)',
-        border: `1px solid ${hasIssues ? tierColor + '40' : 'var(--color-border)'}`,
+        border: '1px solid var(--color-border)',
+        borderTop: `3px solid ${tierColor}`,
         borderRadius: 10,
         overflow: 'hidden',
         flex: '1 1 0',
@@ -100,7 +102,6 @@ function CategoryCard({ category }: { category: CategorySummary }) {
             height: 12,
             borderRadius: '50%',
             background: tierColor,
-            boxShadow: hasIssues ? `0 0 8px ${tierColor}60` : 'none',
           }}
         />
         {/* Category label */}
@@ -109,7 +110,7 @@ function CategoryCard({ category }: { category: CategorySummary }) {
         </span>
         {/* Only show count when there are issues */}
         {hasIssues && (
-          <span style={{ fontSize: 'var(--fs-xs)', color: tierColor, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontSize: 'var(--fs-xs)', color: isElevated ? tierColor : 'var(--color-text-3)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
             {category.inopFeatures} inop
           </span>
         )}
@@ -121,13 +122,14 @@ function CategoryCard({ category }: { category: CategorySummary }) {
           {category.systems.map(sys => {
             const tier = getAlertTier(sys)
             const sysColor = TIER_COLORS[tier]
+            const sysElevated = tier !== 'green'
             return (
               <div key={sys.systemId} style={{ padding: '3px 0', fontSize: 'var(--fs-xs)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: sysColor, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontWeight: 600, color: 'var(--color-text-1)' }}>{sys.systemName}</span>
                   {sys.inoperativeFeatures > 0 && (
-                    <span style={{ fontVariantNumeric: 'tabular-nums', color: sysColor, fontWeight: 600 }}>
+                    <span style={{ fontVariantNumeric: 'tabular-nums', color: sysElevated ? sysColor : 'var(--color-text-3)', fontWeight: 600 }}>
                       {sys.inoperativeFeatures} inop
                     </span>
                   )}
@@ -238,7 +240,13 @@ export default function SystemHealthPanel({
             LIGHTING STATUS
           </span>
           {totalInop > 0 && (
-            <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#EF4444', background: 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: 4 }}>
+            <span style={{
+              fontSize: 'var(--fs-xs)', fontWeight: 700,
+              color: 'var(--color-danger)',
+              background: 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-danger) 28%, transparent)',
+              padding: '2px 8px', borderRadius: 4,
+            }}>
               {totalInop} INOP
             </span>
           )}
@@ -281,6 +289,7 @@ export default function SystemHealthPanel({
             <div style={{ padding: '0 12px 10px' }}>
               {outageEvents.map((evt) => {
                 const isResolved = evt.event_type === 'resolved'
+                const railColor = isResolved ? 'var(--color-success)' : 'var(--color-danger)'
                 const label = evt.feature_label || (evt.feature_type ? formatFeatureType(evt.feature_type) : 'Unknown feature')
                 const name = evt.reporter_rank ? `${evt.reporter_rank} ${evt.reporter_name}` : evt.reporter_name
                 return (
@@ -290,16 +299,16 @@ export default function SystemHealthPanel({
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: 8,
-                      padding: '4px 0',
+                      padding: '4px 0 4px 8px',
                       fontSize: 'var(--fs-xs)',
                       borderBottom: '1px solid var(--color-border)',
+                      borderLeft: `3px solid ${railColor}`,
                     }}
                   >
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: isResolved ? '#22C55E' : '#EF4444', flexShrink: 0, marginTop: 4 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: 'var(--color-text-2)', fontWeight: 600 }}>
                         {label}
-                        <span style={{ fontWeight: 400, color: isResolved ? '#22C55E' : '#EF4444', marginLeft: 6 }}>
+                        <span style={{ fontWeight: 400, color: railColor, marginLeft: 6 }}>
                           {isResolved ? 'Resolved' : 'Reported'}
                         </span>
                       </div>
