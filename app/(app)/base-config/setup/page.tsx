@@ -65,6 +65,7 @@ import { KioskUrlChip } from '@/components/base-setup/KioskUrlChip'
 import { AutoSavePill, type SaveStatus } from '@/components/base-setup/AutoSavePill'
 import { OnboardingTour } from '@/components/base-setup/OnboardingTour'
 import { QuickSetupModal, QuickSetupBanner } from '@/components/base-setup/QuickSetupModal'
+import { FieldHint } from '@/components/base-setup/FieldHint'
 import { loadQuickSetupDraft, type QuickSetupDraft, type QuickSetupStepKey, QUICK_SETUP_STEPS } from '@/lib/base-setup-quick-setup'
 import { Zap } from 'lucide-react'
 
@@ -570,40 +571,40 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <div><label style={labelStyle}>Runway ID</label><input value={f.runway_id} onChange={e => setF(p => ({ ...p, runway_id: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Runway Class</label>
+        <div><label style={labelStyle}>Runway ID <FieldHint stepKey="runways" fieldId="runway_id" /></label><input value={f.runway_id} onChange={e => setF(p => ({ ...p, runway_id: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
           <select value={f.runway_class} onChange={e => setF(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
             <option value="B">Class B</option><option value="Army_B">Army Class B</option>
           </select>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
-        <div><label style={labelStyle}>Length (ft)</label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Width (ft)</label><input type="number" value={f.width_ft} onChange={e => setF(p => ({ ...p, width_ft: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Surface</label>
+        <div><label style={labelStyle}>Length (ft) <FieldHint stepKey="runways" fieldId="length_ft" /></label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Width (ft) <FieldHint stepKey="runways" fieldId="width_ft" /></label><input type="number" value={f.width_ft} onChange={e => setF(p => ({ ...p, width_ft: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Surface <FieldHint stepKey="runways" fieldId="surface" /></label>
           <select value={f.surface} onChange={e => setF(p => ({ ...p, surface: e.target.value }))} style={fieldStyle}>
             <option>Asphalt</option><option>Concrete</option><option>Asphalt/Concrete</option>
           </select>
         </div>
-        <div><label style={labelStyle}>True Heading (°)</label><input type="number" value={f.true_heading} onChange={e => setF(p => ({ ...p, true_heading: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>True Heading (°) <FieldHint stepKey="runways" fieldId="true_heading" /></label><input type="number" value={f.true_heading} onChange={e => setF(p => ({ ...p, true_heading: e.target.value }))} style={fieldStyle} /></div>
       </div>
       <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1 — {f.end1_designator || '?'}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-        <div><label style={labelStyle}>Designator</label><input value={f.end1_designator} onChange={e => setF(p => ({ ...p, end1_designator: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Latitude</label><input type="number" step="0.00001" value={f.end1_latitude} onChange={e => setF(p => ({ ...p, end1_latitude: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Longitude</label><input type="number" step="0.00001" value={f.end1_longitude} onChange={e => setF(p => ({ ...p, end1_longitude: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Elev (ft MSL)</label><input type="number" step="0.1" value={f.end1_elevation_msl} onChange={e => setF(p => ({ ...p, end1_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Heading (°)</label><input type="number" value={f.end1_heading} onChange={e => setF(p => ({ ...p, end1_heading: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Approach Lighting</label><input value={f.end1_approach_lighting} onChange={e => setF(p => ({ ...p, end1_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end1_designator" /></label><input value={f.end1_designator} onChange={e => setF(p => ({ ...p, end1_designator: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Latitude <FieldHint stepKey="runways" fieldId="end1_latitude" /></label><input type="number" step="0.00001" value={f.end1_latitude} onChange={e => setF(p => ({ ...p, end1_latitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Longitude <FieldHint stepKey="runways" fieldId="end1_longitude" /></label><input type="number" step="0.00001" value={f.end1_longitude} onChange={e => setF(p => ({ ...p, end1_longitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label><input type="number" step="0.1" value={f.end1_elevation_msl} onChange={e => setF(p => ({ ...p, end1_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Heading (°) <FieldHint stepKey="runways" fieldId="end1_heading" /></label><input type="number" value={f.end1_heading} onChange={e => setF(p => ({ ...p, end1_heading: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Approach Lighting <FieldHint stepKey="runways" fieldId="end1_approach_lighting" /></label><input value={f.end1_approach_lighting} onChange={e => setF(p => ({ ...p, end1_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
       </div>
       <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 2 — {f.end2_designator || '?'}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-        <div><label style={labelStyle}>Designator</label><input value={f.end2_designator} onChange={e => setF(p => ({ ...p, end2_designator: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Latitude</label><input type="number" step="0.00001" value={f.end2_latitude} onChange={e => setF(p => ({ ...p, end2_latitude: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Longitude</label><input type="number" step="0.00001" value={f.end2_longitude} onChange={e => setF(p => ({ ...p, end2_longitude: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Elev (ft MSL)</label><input type="number" step="0.1" value={f.end2_elevation_msl} onChange={e => setF(p => ({ ...p, end2_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Heading (°)</label><input type="number" value={f.end2_heading} onChange={e => setF(p => ({ ...p, end2_heading: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Approach Lighting</label><input value={f.end2_approach_lighting} onChange={e => setF(p => ({ ...p, end2_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end2_designator" /></label><input value={f.end2_designator} onChange={e => setF(p => ({ ...p, end2_designator: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Latitude <FieldHint stepKey="runways" fieldId="end2_latitude" /></label><input type="number" step="0.00001" value={f.end2_latitude} onChange={e => setF(p => ({ ...p, end2_latitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Longitude <FieldHint stepKey="runways" fieldId="end2_longitude" /></label><input type="number" step="0.00001" value={f.end2_longitude} onChange={e => setF(p => ({ ...p, end2_longitude: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label><input type="number" step="0.1" value={f.end2_elevation_msl} onChange={e => setF(p => ({ ...p, end2_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Heading (°) <FieldHint stepKey="runways" fieldId="end2_heading" /></label><input type="number" value={f.end2_heading} onChange={e => setF(p => ({ ...p, end2_heading: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Approach Lighting <FieldHint stepKey="runways" fieldId="end2_approach_lighting" /></label><input value={f.end2_approach_lighting} onChange={e => setF(p => ({ ...p, end2_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button onClick={handleSave} disabled={saving} style={{
@@ -1073,7 +1074,7 @@ function RunwayTab({
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
       }}>
         <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
-          Established Airfield Elevation (ft MSL)
+          Established Airfield Elevation (ft MSL) <FieldHint stepKey="runways" fieldId="established_elevation" />
         </label>
         <input
           type="number"
@@ -1190,11 +1191,11 @@ function RunwayTab({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <div>
-              <label style={labelStyle}>Runway ID (e.g. 01/19)</label>
+              <label style={labelStyle}>Runway ID (e.g. 01/19) <FieldHint stepKey="runways" fieldId="runway_id" /></label>
               <input value={newRunway.runway_id} onChange={e => setNewRunway(p => ({ ...p, runway_id: e.target.value }))} placeholder="01/19" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Runway Class</label>
+              <label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
               <select value={newRunway.runway_class} onChange={e => setNewRunway(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
                 <option value="B">Class B</option>
                 <option value="Army_B">Army Class B</option>
@@ -1204,21 +1205,21 @@ function RunwayTab({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             <div>
-              <label style={labelStyle}>Length (ft)</label>
+              <label style={labelStyle}>Length (ft) <FieldHint stepKey="runways" fieldId="length_ft" /></label>
               <input type="number" value={newRunway.length_ft} onChange={e => setNewRunway(p => ({ ...p, length_ft: e.target.value }))} placeholder="9000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Width (ft)</label>
+              <label style={labelStyle}>Width (ft) <FieldHint stepKey="runways" fieldId="width_ft" /></label>
               <input type="number" value={newRunway.width_ft} onChange={e => setNewRunway(p => ({ ...p, width_ft: e.target.value }))} placeholder="150" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>True Heading (°)</label>
+              <label style={labelStyle}>True Heading (°) <FieldHint stepKey="runways" fieldId="true_heading" /></label>
               <input type="number" value={newRunway.true_heading} onChange={e => setNewRunway(p => ({ ...p, true_heading: e.target.value }))} placeholder="10" style={fieldStyle} />
             </div>
           </div>
 
           <div>
-            <label style={labelStyle}>Surface</label>
+            <label style={labelStyle}>Surface <FieldHint stepKey="runways" fieldId="surface" /></label>
             <select value={newRunway.surface} onChange={e => setNewRunway(p => ({ ...p, surface: e.target.value }))} style={fieldStyle}>
               <option>Asphalt</option>
               <option>Concrete</option>
@@ -1229,19 +1230,19 @@ function RunwayTab({
           <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             <div>
-              <label style={labelStyle}>Designator</label>
+              <label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end1_designator" /></label>
               <input value={newRunway.end1_designator} onChange={e => setNewRunway(p => ({ ...p, end1_designator: e.target.value }))} placeholder="01" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Latitude</label>
+              <label style={labelStyle}>Latitude <FieldHint stepKey="runways" fieldId="end1_latitude" /></label>
               <input type="number" step="0.00001" value={newRunway.end1_latitude} onChange={e => setNewRunway(p => ({ ...p, end1_latitude: e.target.value }))} placeholder="42.61000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Longitude</label>
+              <label style={labelStyle}>Longitude <FieldHint stepKey="runways" fieldId="end1_longitude" /></label>
               <input type="number" step="0.00001" value={newRunway.end1_longitude} onChange={e => setNewRunway(p => ({ ...p, end1_longitude: e.target.value }))} placeholder="-82.83000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Elev (ft MSL)</label>
+              <label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label>
               <input type="number" step="0.1" value={newRunway.end1_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end1_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
@@ -1249,19 +1250,19 @@ function RunwayTab({
           <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 2</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             <div>
-              <label style={labelStyle}>Designator</label>
+              <label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end2_designator" /></label>
               <input value={newRunway.end2_designator} onChange={e => setNewRunway(p => ({ ...p, end2_designator: e.target.value }))} placeholder="19" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Latitude</label>
+              <label style={labelStyle}>Latitude <FieldHint stepKey="runways" fieldId="end2_latitude" /></label>
               <input type="number" step="0.00001" value={newRunway.end2_latitude} onChange={e => setNewRunway(p => ({ ...p, end2_latitude: e.target.value }))} placeholder="42.62000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Longitude</label>
+              <label style={labelStyle}>Longitude <FieldHint stepKey="runways" fieldId="end2_longitude" /></label>
               <input type="number" step="0.00001" value={newRunway.end2_longitude} onChange={e => setNewRunway(p => ({ ...p, end2_longitude: e.target.value }))} placeholder="-82.84000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Elev (ft MSL)</label>
+              <label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label>
               <input type="number" step="0.1" value={newRunway.end2_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end2_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
@@ -1755,7 +1756,7 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>NAVAIDs</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>NAVAIDs <FieldHint stepKey="navaids" fieldId="navaid_name" /></h3>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
         NAVAIDs added here will appear on the dashboard for status tracking.
       </p>
@@ -1918,7 +1919,9 @@ function SimpleListTab({
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>{title}</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+        {title} <FieldHint stepKey={stepKey} fieldId={stepKey === 'arff' ? 'arff_aircraft' : 'area_name'} />
+      </h3>
       {list.length === 0 && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No items configured.</p>
       )}
@@ -2080,7 +2083,7 @@ function ScnAgenciesTab({ installationId, markSaved }: { installationId: string 
         badge on the daily SCN check page where the controller marks it Loud &amp; Clear, No Response,
         or Out of Service. Drag rows to reorder; click Edit to rename.
       </p>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>SCN Agencies</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>SCN Agencies <FieldHint stepKey="scnagencies" fieldId="agency_name" /></h3>
       {agencies.length === 0 && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No agencies configured.</p>
       )}
@@ -2268,7 +2271,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId, mark
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>CE Shops</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>CE Shops <FieldHint stepKey="shops" fieldId="shop_name" /></h3>
       {list.length === 0 && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No CE shops configured.</p>
       )}
@@ -2465,7 +2468,7 @@ function FacilitiesTab({ installationId, markSaved }: { installationId: string |
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Facility Numbers</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Facility Numbers <FieldHint stepKey="facilities" fieldId="facility_number" /></h3>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
         Real property facility numbers assigned to Airfield Management. Used for discrepancy tracking.
       </p>
@@ -2602,7 +2605,7 @@ function TemplatesTab({ installationId, markSaved }: { installationId: string | 
   return (
     <div>
       <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
-        Inspection Templates
+        Inspection Templates <FieldHint stepKey="templates" fieldId="template_section" />
       </h3>
       <p style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginBottom: 12 }}>
         Manage checklist items for airfield and lighting inspections.
@@ -3302,7 +3305,7 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist Items</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist Items <FieldHint stepKey="shiftchecklist" fieldId="task_name" /></div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure items for day and swing shift checklists.</div>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
@@ -3441,7 +3444,7 @@ function QrcTemplatesTab({ installationId, markSaved }: { installationId: string
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>QRC Templates</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base.</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base. <FieldHint stepKey="qrc" fieldId="qrc_step_type" /></div>
         </div>
         <button onClick={openSeedPicker} style={{
           background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
@@ -3727,7 +3730,7 @@ function EditQrcDialog({
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
           {/* Title */}
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Title</label>
+            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Title <FieldHint stepKey="qrc" fieldId="qrc_name" /></label>
             <input value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
           </div>
           {/* Notes / Warning */}
@@ -4215,7 +4218,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
           <div style={{ fontWeight: 600, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', marginBottom: 8 }}>New Lighting System</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div>
-              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Type</label>
+              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Type <FieldHint stepKey="lighting" fieldId="system_type" /></label>
               <select value={newSystemType} onChange={(e) => { setNewSystemType(e.target.value); setNewName('') }}
                 style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit' }}>
                 <option value="">Select type...</option>
@@ -4223,12 +4226,12 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Runway/Taxiway</label>
+              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Runway/Taxiway <FieldHint stepKey="lighting" fieldId="system_runway" /></label>
               <input value={newRunwayOrTaxiway} onChange={(e) => { setNewRunwayOrTaxiway(e.target.value.toUpperCase()); setNewName('') }} placeholder="e.g. RWY 01/19, TWY A"
                 style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
             </div>
             <div>
-              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Name</label>
+              <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>System Name <FieldHint stepKey="lighting" fieldId="system_name" /></label>
               <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. ALSF-1 RWY 19"
                 style={{ width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-md)' }} />
             </div>
@@ -4388,7 +4391,7 @@ function WildlifeSpeciesTab({ installationId, markSaved }: { installationId: str
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Wildlife Species</h3>
+          <h3 style={{ margin: 0, fontSize: 'var(--fs-xl)', fontWeight: 800 }}>Wildlife Species <FieldHint stepKey="wildlife" fieldId="species_name" /></h3>
           <p style={{ margin: '4px 0 0', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
             {baseSpecies.length} species configured — tap to add/remove from your base&apos;s wildlife forms
           </p>
@@ -4688,7 +4691,7 @@ function StatusBoardsTab({ installationId, markSaved }: { installationId: string
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Custom Status Boards</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Custom Status Boards <FieldHint stepKey="statusboards" fieldId="board_label" /></h3>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
         Create custom status panels that appear on the Airfield Status page with green/yellow/red toggles.
         Examples: Arresting Systems, Comm Status, ARFF Equipment.
@@ -5222,7 +5225,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>PPR Columns</h3>
+      <h3 style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 2 }}>PPR Columns <FieldHint stepKey="pprcolumns" fieldId="column_label" /></h3>
       <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
         Custom fields for the PPR table. PPR # and Arrival Date are always included.
       </p>
@@ -5850,7 +5853,7 @@ function ArffTab({
       }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-            Show CAT (Aircraft Rescue Category) dropdown on Airfield Status
+            Show CAT (Aircraft Rescue Category) dropdown on Airfield Status <FieldHint stepKey="arff" fieldId="show_cat_dropdown" />
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
             Bases that report ARFF readiness only by aircraft type can hide the CAT picker.
@@ -5947,7 +5950,7 @@ function FeedbackConfigTab({ installationId, markSaved }: { installationId: stri
 
   return (
     <div>
-      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Customer Feedback Form</h3>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Customer Feedback Form <FieldHint stepKey="feedback" fieldId="form_headline" /></h3>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16 }}>
         Configure a public feedback form accessible via QR code. Submissions are stored in your database.
       </p>
