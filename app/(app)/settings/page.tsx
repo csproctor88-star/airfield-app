@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown, Sun, Moon, Monitor, Wrench } from 'lucide-react'
+import { User, MapPin, BookOpen, HardDrive, Info, LogOut, Save, Trash2, Download, X, ExternalLink, ChevronDown, Sun, Moon, Monitor } from 'lucide-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -15,7 +15,6 @@ import { ALL_REGULATIONS } from '@/lib/regulations-data'
 import { idbGetAllKeys, idbGetAll, idbSet, idbDelete, idbClear, STORE_BLOBS, STORE_USER_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName } from '@/lib/utils'
 import { precacheTiles, getCachedTileCount, clearTileCache, type PrecacheProgress } from '@/lib/tile-precache'
-import { saveAirfieldDiagram, getAirfieldDiagram, deleteAirfieldDiagram } from '@/lib/airfield-diagram'
 import type { UserRole } from '@/lib/supabase/types'
 import ContactSupport from '@/components/ui/contact-support'
 
@@ -43,9 +42,6 @@ export default function SettingsPage() {
           </CollapsibleSection>
           <CollapsibleSection label="REGULATIONS LIBRARY" icon={BookOpen}>
             <RegulationsSectionContent />
-          </CollapsibleSection>
-          <CollapsibleSection label="BASE CONFIGURATION" icon={Wrench}>
-            <BaseConfigSectionContent />
           </CollapsibleSection>
         </>
       )}
@@ -705,182 +701,6 @@ function InstallationSectionContent() {
         />
       )}
     </>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Section: Base Configuration (templates, areas, navaids, etc.)
-// ═══════════════════════════════════════════════════════════════
-
-function BaseConfigSectionContent() {
-  const { installationId } = useInstallation()
-  const { has } = usePermissions()
-  const canManage = has(PERM.BASE_SETUP_WRITE)
-  const [diagramUrl, setDiagramUrl] = useState<string | null>(null)
-  const [diagramLoaded, setDiagramLoaded] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (!installationId) return
-    getAirfieldDiagram(installationId).then((url) => {
-      setDiagramUrl(url)
-      setDiagramLoaded(true)
-    })
-  }, [installationId])
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !installationId) return
-    setUploading(true)
-    try {
-      await saveAirfieldDiagram(installationId, file)
-      const url = await getAirfieldDiagram(installationId)
-      setDiagramUrl(url)
-      toast.success('Airfield diagram saved')
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save diagram')
-    }
-    setUploading(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  const handleRemove = async () => {
-    if (!installationId) return
-    await deleteAirfieldDiagram(installationId)
-    setDiagramUrl(null)
-    toast.success('Airfield diagram removed')
-  }
-
-  if (!canManage) return null
-
-  return (
-      <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Modules</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Pick which Glidepath features this base uses. Hidden modules keep their data.</div>
-        </div>
-        <a
-          href="/settings/base-setup/modules"
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '10px 16px', borderRadius: 'var(--radius-base)',
-            background: 'linear-gradient(135deg, var(--color-cyan), var(--color-accent))',
-            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
-            textDecoration: 'none', fontFamily: 'inherit',
-          }}
-        >
-          Manage Modules
-        </a>
-
-        <div style={{ borderTop: '1px solid var(--color-border)' }} />
-
-        <div>
-          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Runways, Areas & NAVAIDs</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure base infrastructure and CE shops</div>
-        </div>
-        <a
-          href="/settings/base-setup"
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '10px 16px', borderRadius: 'var(--radius-base)',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
-            textDecoration: 'none', fontFamily: 'inherit',
-          }}
-        >
-          Base Setup
-        </a>
-
-        <div style={{ borderTop: '1px solid var(--color-border)' }} />
-
-        <div>
-          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Inspection Templates</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Customize checklist items for airfield and lighting inspections</div>
-        </div>
-        <a
-          href="/settings/templates"
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '10px 16px', borderRadius: 'var(--radius-base)',
-            background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)',
-            color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
-            textDecoration: 'none', fontFamily: 'inherit',
-          }}
-        >
-          Manage Templates
-        </a>
-
-        <div style={{ borderTop: '1px solid var(--color-border)' }} />
-
-        {/* Airfield Diagram */}
-        <div>
-          <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>Airfield Diagram</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>
-            Upload an airfield diagram image for quick reference across the app
-          </div>
-        </div>
-
-        {diagramLoaded && diagramUrl && (
-          <div style={{ borderRadius: 'var(--radius-base)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={diagramUrl}
-              alt="Airfield Diagram"
-              style={{ width: '100%', display: 'block', maxHeight: 200, objectFit: 'contain', background: '#1a1a2e' }}
-            />
-          </div>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg"
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-        />
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            style={{
-              flex: 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '10px 16px', borderRadius: 'var(--radius-base)',
-              background: diagramUrl
-                ? 'var(--color-bg-elevated)'
-                : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
-              border: diagramUrl ? '1px solid var(--color-border-mid)' : 'none',
-              color: diagramUrl ? 'var(--color-text-1)' : '#fff',
-              fontSize: 'var(--fs-md)', fontWeight: 700,
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit',
-              opacity: uploading ? 0.6 : 1,
-            }}
-          >
-            {uploading ? 'Saving...' : diagramUrl ? 'Replace Diagram' : 'Upload Diagram'}
-          </button>
-          {diagramUrl && (
-            <button
-              onClick={handleRemove}
-              style={{
-                padding: '10px 16px', borderRadius: 'var(--radius-base)',
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                color: '#F87171',
-                fontSize: 'var(--fs-md)', fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}
-            >
-              <Trash2 size={14} />
-              Remove
-            </button>
-          )}
-        </div>
-      </div>
   )
 }
 

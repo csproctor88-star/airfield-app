@@ -50,6 +50,7 @@ import {
   Bird,
   PlaneLanding,
   Wrench,
+  SlidersHorizontal,
   FolderOpen,
   GraduationCap,
   Radio,
@@ -71,7 +72,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Home, LayoutDashboard, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, ClipboardPen,
   Bird, HardHat, AlertTriangle, MapPin, Database, Shield, Lightbulb,
   PlaneLanding, Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
-  Wrench, FolderOpen, GraduationCap, Radio, MessageSquare, History,
+  Wrench, SlidersHorizontal, FolderOpen, GraduationCap, Radio, MessageSquare, History,
 }
 
 // Group icons
@@ -116,6 +117,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/library':           'library:view',
   '/users':             'users:view',
   '/training':          'training:view',
+  '/base-config':       'base_setup:write',
 }
 
 function getIcon(iconName: string): LucideIcon {

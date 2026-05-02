@@ -50,6 +50,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'PDF Library', href: '/library', iconName: 'BookMarked' },
   { name: 'User Management', href: '/users', iconName: 'Users' },
   { name: 'Glidepath Training', href: '/training', iconName: 'GraduationCap' },
+  { name: 'Base Configuration', href: '/base-config', iconName: 'SlidersHorizontal' },
 ]
 
 export const NAV_ITEM_MAP = new Map(ALL_NAV_ITEMS.map(i => [i.href, i]))
@@ -73,7 +74,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Admin',
-      items: ['/recent-activity', '/daily-reviews', '/waivers', '/reports', '/library', '/users', '/feedback'],
+      items: ['/base-config', '/recent-activity', '/daily-reviews', '/waivers', '/reports', '/library', '/users', '/feedback'],
     },
   ],
 }
