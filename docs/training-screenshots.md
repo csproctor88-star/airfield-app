@@ -28,9 +28,8 @@ Recommended capture conditions:
 - [x] `airfield-status_2.png` — NAVAID status dialog open with status picker (green / yellow / red) + notes field visible. **Caption:** "Click any NAVAID to open the status dialog — pick green / yellow / red and add notes for shift handoff context."
 - [x] `airfield-status_3.png` — AFM Out-of-Office toggle expanded with custom message field. **Caption:** "AFM Out-of-Office toggle posts a custom away message visible to every shift."
 
-### dashboard (2 shots)
+### dashboard (1 shot)
 - [x] `dashboard_1.png` — Full KPI strip: inspection cadence, last check, open discrepancies, awaiting verification. **Caption:** "Shift-handoff KPI tiles — inspection state, last check, open discrepancies."
-- [ ] `dashboard_2.png` — Quick-launch button row + AFM toggles section. **Caption:** "Quick-launch buttons jump straight into a check, QRC, or contractor add."
 
 ### activity (3 shots)
 - [x] `activity_1.png` — Timeline grouped by day (Today / Yesterday / weekday) with relative-anchor headers and entry-count badges. **Caption:** "Day-grouped timeline with relative anchors and per-group entry counts."
@@ -132,9 +131,8 @@ Recommended capture conditions:
 - [x] `regulations_1.png` — Reference Library list with category filter active + favorite stars. **Caption:** "70+ regulations across DAFMAN, UFC, AFMAN, AF Form — searchable by content or title."
 - [x] `regulations_2.png` — In-app PDF viewer open on a regulation page. **Caption:** "In-app PDF viewer opens any reg without a download."
 
-### notams (2 shots)
+### notams (1 shot)
 - [x] `notams_1.png` — Main list with at least one expiring-within-24h NOTAM showing the red glow. **Caption:** "Expiring-within-24h NOTAMs glow red so they're unmissable on shift handoff."
-- [ ] `notams_2.png` — Add Local NOTAM form open. **Caption:** "Local NOTAMs created at base level blend with the live FAA feed for the same ICAO."
 
 ---
 
@@ -152,9 +150,8 @@ Recommended capture conditions:
 - [x] `users_1.png` — User list with mixed status pills (active / pending / deactivated) + role badges. **Caption:** "Status states — pending, active, deactivated — with role badges from the permission matrix."
 - [x] `users_2.png` — Invite User modal open with role picker showing the 12 roles. **Caption:** "Invitations send a branded email via Resend and land the user in pending status."
 
-### feedback (2 shots)
-- [x] `feedback_1.png` — Inbox with stats cards up top + several rows showing star-rating color rails. **Caption:** "Stats cards aggregate submissions and average rating with semantic color rails per row."
-- [ ] `feedback_2.png` — Detail view with full comment + custom-field responses. **Caption:** "Detail view surfaces the full comment and any custom fields configured for your base."
+### feedback (1 shot)
+- [x] `feedback_1.png` — Inbox with stats cards up top + several rows showing star-rating color rails (comment + rating + custom fields render inline on each row — no separate detail view exists). **Caption:** "Stats cards aggregate submissions and average rating with semantic color rails per row."
 
 ---
 
@@ -163,7 +160,7 @@ Recommended capture conditions:
 | Module | Shots | Module | Shots |
 |---|---|---|---|
 | airfield-status | 3 | discrepancies | 3 |
-| dashboard | 2 | ces | 2 |
+| dashboard | 1 | ces | 2 |
 | activity | 3 | ppr | 3 |
 | recent-activity | 2 | wildlife | 3 |
 | qrc | 3 | contractors | 2 |
@@ -173,10 +170,12 @@ Recommended capture conditions:
 | inspections | 2 | waivers | 3 |
 | acsi | 3 | aircraft | 2 |
 | daily-reviews | 2 | regulations | 2 |
-| | | notams | 2 |
+| | | notams | 1 |
 | | | reports | 2 |
 | | | settings | 2 |
 | | | users | 2 |
-| | | feedback | 2 |
+| | | feedback | 1 |
 
-**Total: 67 shots across 27 modules.** Captureable in roughly four sittings of 15-20 shots each — one operations sweep, one airfield-management sweep, one reference sweep, one admin sweep. Demo AFB has enough seeded data to populate every module without manual setup.
+**Total: 64 shots across 27 modules.** Captureable in roughly four sittings of 15-20 shots each — one operations sweep, one airfield-management sweep, one reference sweep, one admin sweep. Demo AFB has enough seeded data to populate every module without manual setup.
+
+(Originally planned 67 — three entries pruned after capture confirmed the corresponding UI doesn't exist: dashboard had no "Quick Launch" button row, NOTAMs has no "Add Local NOTAM" function, and Customer Feedback renders inline rather than via a detail view.)
