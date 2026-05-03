@@ -60,6 +60,12 @@ export async function fetchUserReviews(baseId: string | null | undefined): Promi
 /**
  * Every review at a base since `since` (inclusive), with reviewer profile
  * fields joined. Powers the consolidated PDF compliance report.
+ *
+ * Two-step query — review rows then a separate profiles lookup keyed by
+ * the user_ids we found. The PostgREST embed-join syntax silently fails
+ * when the schema cache hasn't refreshed after a migration; the explicit
+ * round-trip is more robust and matches the daily-reviews pattern in
+ * lib/supabase/daily-reviews.ts:219-227.
  */
 export async function fetchAllReviewsForBase(
   baseId: string,
@@ -70,42 +76,43 @@ export async function fetchAllReviewsForBase(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
-  const { data, error } = await sb
+  const { data: rows, error } = await sb
     .from('qrc_monthly_reviews')
-    .select(`
-      id, base_id, template_id, user_id, reviewed_at,
-      template_updated_at_at_review, notes, created_at,
-      profiles:user_id ( name, rank, operating_initials )
-    `)
+    .select('*')
     .eq('base_id', baseId)
     .gte('reviewed_at', since.toISOString())
     .order('reviewed_at', { ascending: false })
 
-  if (error || !data) return []
+  if (error || !rows) return []
+  const reviewRows = rows as QrcMonthlyReview[]
+  if (reviewRows.length === 0) return []
 
-  type Joined = QrcMonthlyReview & {
-    profiles: { name: string | null; rank: string | null; operating_initials: string | null } | null
-  }
+  const userIds = Array.from(new Set(reviewRows.map(r => r.user_id)))
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name, rank, operating_initials')
+    .in('id', userIds)
 
-  return (data as Joined[]).map(row => ({
-    id: row.id,
-    base_id: row.base_id,
-    template_id: row.template_id,
-    user_id: row.user_id,
-    reviewed_at: row.reviewed_at,
-    template_updated_at_at_review: row.template_updated_at_at_review,
-    notes: row.notes,
-    created_at: row.created_at,
-    reviewer_name: row.profiles?.name ?? null,
-    reviewer_rank: row.profiles?.rank ?? null,
-    reviewer_initials: row.profiles?.operating_initials ?? null,
-    reviewer_role: null,  // role lives on base_members; fetched separately by fetchEligibleReviewers
-  }))
+  type ProfileRow = { id: string; name: string | null; rank: string | null; operating_initials: string | null }
+  const byId = new Map<string, ProfileRow>()
+  for (const p of (profiles ?? []) as unknown as ProfileRow[]) byId.set(p.id, p)
+
+  return reviewRows.map(row => {
+    const p = byId.get(row.user_id)
+    return {
+      ...row,
+      reviewer_name: p?.name ?? null,
+      reviewer_rank: p?.rank ?? null,
+      reviewer_initials: p?.operating_initials ?? null,
+      reviewer_role: null,  // role lives on base_members; fetched separately by fetchEligibleReviewers
+    }
+  })
 }
 
 /**
  * Operational personnel at this base who are expected to complete monthly QRC
- * reviews (airfield_manager, namo, amops). Joins base_members → profiles.
+ * reviews (airfield_manager, namo, amops). Two-step query for the same
+ * reason as fetchAllReviewsForBase above.
  */
 export async function fetchEligibleReviewers(baseId: string): Promise<EligibleReviewer[]> {
   const supabase = createClient()
@@ -113,30 +120,36 @@ export async function fetchEligibleReviewers(baseId: string): Promise<EligibleRe
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
-  const { data, error } = await sb
+  const { data: members, error } = await sb
     .from('base_members')
-    .select(`
-      user_id, role,
-      profiles:user_id ( name, rank, operating_initials )
-    `)
+    .select('user_id, role')
     .eq('base_id', baseId)
     .in('role', ['airfield_manager', 'namo', 'amops'])
 
-  if (error || !data) return []
+  if (error || !members) return []
+  const memberRows = members as { user_id: string; role: string }[]
+  if (memberRows.length === 0) return []
 
-  type Joined = {
-    user_id: string
-    role: string
-    profiles: { name: string | null; rank: string | null; operating_initials: string | null } | null
-  }
+  const userIds = memberRows.map(m => m.user_id)
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name, rank, operating_initials')
+    .in('id', userIds)
 
-  return (data as Joined[]).map(row => ({
-    user_id: row.user_id,
-    name: row.profiles?.name ?? '(unknown)',
-    rank: row.profiles?.rank ?? null,
-    operating_initials: row.profiles?.operating_initials ?? null,
-    role: row.role,
-  })).sort((a, b) => a.name.localeCompare(b.name))
+  type ProfileRow = { id: string; name: string | null; rank: string | null; operating_initials: string | null }
+  const byId = new Map<string, ProfileRow>()
+  for (const p of (profiles ?? []) as unknown as ProfileRow[]) byId.set(p.id, p)
+
+  return memberRows.map(m => {
+    const p = byId.get(m.user_id)
+    return {
+      user_id: m.user_id,
+      name: p?.name ?? '(unknown)',
+      rank: p?.rank ?? null,
+      operating_initials: p?.operating_initials ?? null,
+      role: m.role,
+    }
+  }).sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /**

@@ -4,7 +4,6 @@ import {
   createPdf, drawBaseHeader, drawReportTitle, drawStatBox, drawFooter, tableStyles,
 } from '@/lib/pdf-utils'
 import { formatZuluDateTime } from '@/lib/utils'
-import { getMonthlyReviewStatus, STATE_LABEL, type MonthlyReviewState } from '@/lib/qrc/monthly-review-status'
 import type { QrcTemplate } from '@/lib/supabase/types'
 import type { QrcMonthlyReviewWithUser, EligibleReviewer } from '@/lib/supabase/qrc-reviews'
 
@@ -31,12 +30,21 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
-// Brand-aligned RGB tuples for status pills in the table.
-const STATE_COLOR: Record<MonthlyReviewState, [number, number, number]> = {
-  current: [34, 139, 64],   // green
-  updated: [217, 119, 6],   // amber
-  overdue: [200, 0, 0],     // red
-  never:   [200, 0, 0],     // red
+const COLOR = {
+  green: [34, 139, 64] as [number, number, number],
+  amber: [217, 119, 6] as [number, number, number],
+  red:   [200, 0, 0] as [number, number, number],
+  text2: [60, 60, 60] as [number, number, number],
+}
+
+/** Operator column header — short form so it fits in a narrow matrix column. */
+function operatorShortLabel(u: EligibleReviewer): string {
+  // Prefer initials if set (most compact); otherwise rank + last-name.
+  if (u.operating_initials) {
+    return u.rank ? `${u.rank} ${u.operating_initials}` : u.operating_initials
+  }
+  const lastName = u.name.split(/\s+/).slice(-1)[0]
+  return u.rank ? `${u.rank} ${lastName}` : lastName
 }
 
 export async function generateQrcMonthlyReviewPdf(
@@ -44,8 +52,11 @@ export async function generateQrcMonthlyReviewPdf(
 ): Promise<{ doc: jsPDF; filename: string }> {
   const { baseName, baseIcao, month, year, templates, eligibleUsers, reviews, generatedBy } = input
 
-  const ctx = createPdf({ orientation: 'portrait', format: 'letter' })
-  const { doc, margin, pageHeight } = ctx
+  // Landscape Letter so the matrix fits more operator columns. The cover
+  // summary lives at the top of page 1; autoTable breaks the matrix
+  // across pages naturally if rows overflow.
+  const ctx = createPdf({ orientation: 'landscape', format: 'letter' })
+  const { doc, margin } = ctx
 
   // ── Window the reviews to the requested calendar month ──
   const monthStart = new Date(Date.UTC(year, month - 1, 1)).getTime()
@@ -55,17 +66,14 @@ export async function generateQrcMonthlyReviewPdf(
     return t >= monthStart && t < monthEnd
   })
 
-  // ── Per-(user, template) latest review IN WINDOW ──
-  // Used to render the per-operator detail tables. Sort by reviewed_at DESC
-  // (already DESC from the fetch) and collapse.
+  // Latest review IN WINDOW per (user, template). Rows are already DESC by
+  // reviewed_at from the fetch.
   const latestByUserTemplate = new Map<string, QrcMonthlyReviewWithUser>()
   for (const r of reviewsInWindow) {
     const k = `${r.user_id}|${r.template_id}`
     if (!latestByUserTemplate.has(k)) latestByUserTemplate.set(k, r)
   }
 
-  // Active templates — reviews against inactive templates still appear, but
-  // the per-operator tables list every active template (so gaps are visible).
   const activeTemplates = templates
     .filter(t => t.is_active)
     .sort((a, b) => a.qrc_number - b.qrc_number)
@@ -73,13 +81,10 @@ export async function generateQrcMonthlyReviewPdf(
   // ── Per-operator stats for the cover roll-up ──
   const stats = eligibleUsers.map(u => {
     let reviewedCount = 0
-    let pendingCount = 0
     for (const tmpl of activeTemplates) {
-      const r = latestByUserTemplate.get(`${u.user_id}|${tmpl.id}`)
-      const status = getMonthlyReviewStatus(tmpl, r ?? null)
-      if (status.state === 'current' || status.state === 'updated') reviewedCount++
-      else pendingCount++
+      if (latestByUserTemplate.has(`${u.user_id}|${tmpl.id}`)) reviewedCount++
     }
+    const pendingCount = activeTemplates.length - reviewedCount
     const compliance = activeTemplates.length > 0
       ? Math.round((reviewedCount / activeTemplates.length) * 100)
       : 0
@@ -88,15 +93,11 @@ export async function generateQrcMonthlyReviewPdf(
 
   const fullyCurrent = stats.filter(s => s.pendingCount === 0).length
   const qrcsWithGap = activeTemplates.filter(tmpl =>
-    eligibleUsers.some(u => {
-      const r = latestByUserTemplate.get(`${u.user_id}|${tmpl.id}`)
-      const s = getMonthlyReviewStatus(tmpl, r ?? null)
-      return s.state === 'overdue' || s.state === 'never'
-    }),
+    eligibleUsers.some(u => !latestByUserTemplate.has(`${u.user_id}|${tmpl.id}`)),
   ).length
 
   // ─────────────────────────────────────────────────────────
-  // COVER PAGE
+  // PAGE 1 — Cover summary + Operator Roll-Up
   // ─────────────────────────────────────────────────────────
   let y = margin
   y = drawBaseHeader(ctx, y, { baseName, baseIcao })
@@ -119,7 +120,6 @@ export async function generateQrcMonthlyReviewPdf(
     y += 6
   }
 
-  // Cover roll-up table
   doc.setFontSize(10)
   doc.setTextColor(0)
   doc.text('Operator Roll-Up', margin, y)
@@ -127,12 +127,13 @@ export async function generateQrcMonthlyReviewPdf(
 
   autoTable(doc, {
     startY: y,
-    head: [['Rank', 'Name', 'Role', 'Reviewed', 'Pending', 'Compliance']],
+    head: [['Rank', 'Name', 'Initials', 'Role', 'Reviewed', 'Pending', 'Compliance']],
     body: stats.length === 0
-      ? [['—', '(no AMOPS-eligible operators at this base)', '', '', '', '']]
+      ? [['—', '(no AMOPS-eligible operators at this base)', '', '', '', '', '']]
       : stats.map(s => [
           s.user.rank ?? '',
           s.user.name,
+          s.user.operating_initials ?? '',
           formatRole(s.user.role),
           String(s.reviewedCount),
           String(s.pendingCount),
@@ -141,100 +142,100 @@ export async function generateQrcMonthlyReviewPdf(
     ...tableStyles(ctx),
     columnStyles: {
       0: { cellWidth: 18 },
-      3: { cellWidth: 22, halign: 'center' },
+      2: { cellWidth: 22, halign: 'center' },
+      3: { cellWidth: 38 },
       4: { cellWidth: 22, halign: 'center' },
-      5: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+      5: { cellWidth: 22, halign: 'center' },
+      6: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
     },
     didParseCell: data => {
-      // Color the compliance % cell by tier.
-      if (data.section === 'body' && data.column.index === 5 && stats[data.row.index]) {
+      if (data.section === 'body' && data.column.index === 6 && stats[data.row.index]) {
         const c = stats[data.row.index].compliance
-        if (c === 100) data.cell.styles.textColor = STATE_COLOR.current
-        else if (c >= 70) data.cell.styles.textColor = STATE_COLOR.updated
-        else data.cell.styles.textColor = STATE_COLOR.overdue
+        if (c === 100) data.cell.styles.textColor = COLOR.green
+        else if (c >= 70) data.cell.styles.textColor = COLOR.amber
+        else data.cell.styles.textColor = COLOR.red
       }
     },
   })
 
   // ─────────────────────────────────────────────────────────
-  // PER-OPERATOR DETAIL PAGES — one section per eligible user
+  // PAGE 2+ — QRC × Operator matrix
   // ─────────────────────────────────────────────────────────
-  for (let i = 0; i < eligibleUsers.length; i++) {
-    const u = eligibleUsers[i]
-    doc.addPage()
-    y = margin
-    y = drawBaseHeader(ctx, y, { baseName, baseIcao })
+  doc.addPage()
+  y = margin
+  y = drawBaseHeader(ctx, y, { baseName, baseIcao })
 
-    // Section header
-    doc.setFontSize(13)
-    doc.setTextColor(0)
-    doc.setFont('helvetica', 'bold')
-    const headerLine = u.rank ? `${u.rank} ${u.name}` : u.name
-    doc.text(headerLine, margin, y)
-    doc.setFont('helvetica', 'normal')
-    y += 6
-    doc.setFontSize(9)
-    doc.setTextColor(100)
-    const meta: string[] = [formatRole(u.role)]
-    if (u.operating_initials) meta.push(`OI: ${u.operating_initials}`)
-    doc.text(meta.join(' · '), margin, y)
-    y += 8
+  doc.setFontSize(11)
+  doc.setTextColor(0)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Compliance Matrix', margin, y)
+  doc.setFont('helvetica', 'normal')
+  y += 4
+  doc.setFontSize(8)
+  doc.setTextColor(100)
+  doc.text(
+    `Y = reviewed during ${MONTH_NAMES[month - 1]} ${year}    ·    N = not reviewed during this month`,
+    margin, y,
+  )
+  y += 6
 
-    const stat = stats.find(s => s.user.user_id === u.user_id)
-    if (stat) {
-      y = drawStatBox(ctx, y, [
-        { label: 'REVIEWED', value: `${stat.reviewedCount} of ${activeTemplates.length}` },
-        { label: 'PENDING', value: String(stat.pendingCount) },
-        { label: 'COMPLIANCE', value: `${stat.compliance}%` },
-      ])
+  if (eligibleUsers.length === 0) {
+    doc.setFontSize(10)
+    doc.setTextColor(120)
+    doc.text('No AMOPS-eligible operators at this base.', margin, y + 6)
+  } else {
+    // Build matrix rows.
+    const matrixHead = [
+      ['#', 'Title', ...eligibleUsers.map(operatorShortLabel)],
+    ]
+    const matrixBody = activeTemplates.map(tmpl => {
+      const row: (string | number)[] = [tmpl.qrc_number, tmpl.title]
+      for (const u of eligibleUsers) {
+        row.push(latestByUserTemplate.has(`${u.user_id}|${tmpl.id}`) ? 'Y' : 'N')
+      }
+      return row
+    })
+
+    // Per-operator column width — even split of the leftover after # + Title.
+    // Letter landscape with 12mm margins → ~255mm content. # = 10mm, Title
+    // = 70mm, leaving ~175mm for operators. Cap user columns at 22mm so a
+    // 1-operator report doesn't render an absurd 175mm-wide cell.
+    const operatorColWidth = Math.min(22, Math.max(11, 175 / eligibleUsers.length))
+    const operatorColumnStyles: Record<number, { cellWidth: number; halign: 'center'; fontStyle: 'bold' }> = {}
+    for (let i = 0; i < eligibleUsers.length; i++) {
+      operatorColumnStyles[i + 2] = { cellWidth: operatorColWidth, halign: 'center', fontStyle: 'bold' }
     }
 
-    // Per-template table
     autoTable(doc, {
       startY: y,
-      head: [['#', 'Title', 'Status', 'Last reviewed', 'Notes']],
-      body: activeTemplates.map(tmpl => {
-        const r = latestByUserTemplate.get(`${u.user_id}|${tmpl.id}`)
-        const status = getMonthlyReviewStatus(tmpl, r ?? null)
-        const lastReviewed = status.reviewedAt
-          ? new Date(status.reviewedAt).toISOString().slice(0, 10)
-          : '—'
-        return [
-          String(tmpl.qrc_number),
-          tmpl.title,
-          STATE_LABEL[status.state],
-          lastReviewed,
-          (r?.notes || '').slice(0, 80),
-        ]
-      }),
+      head: matrixHead,
+      body: matrixBody,
       ...tableStyles(ctx),
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        2: { cellWidth: 32, halign: 'center', fontStyle: 'bold' },
-        3: { cellWidth: 26, halign: 'center' },
+        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+        1: { cellWidth: 70 },
+        ...operatorColumnStyles,
+      },
+      headStyles: {
+        ...tableStyles(ctx).headStyles,
+        halign: 'center',
+        fontSize: 7,
       },
       didParseCell: data => {
-        if (data.section === 'body' && data.column.index === 2) {
-          const tmpl = activeTemplates[data.row.index]
-          if (!tmpl) return
-          const r = latestByUserTemplate.get(`${u.user_id}|${tmpl.id}`)
-          const s = getMonthlyReviewStatus(tmpl, r ?? null)
-          data.cell.styles.textColor = STATE_COLOR[s.state]
+        if (data.section !== 'body') return
+        // Y/N cells (column index 2+)
+        if (data.column.index >= 2) {
+          const v = String(data.cell.raw ?? '')
+          if (v === 'Y') {
+            data.cell.styles.textColor = [255, 255, 255]
+            data.cell.styles.fillColor = COLOR.green
+          } else if (v === 'N') {
+            data.cell.styles.textColor = [255, 255, 255]
+            data.cell.styles.fillColor = COLOR.red
+          }
         }
       },
     })
-
-    // Operator signature line at the bottom of the page
-    const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y
-    let sigY = finalY + 16
-    if (sigY > pageHeight - 40) sigY = pageHeight - 40
-    doc.setDrawColor(150)
-    doc.line(margin, sigY, margin + 90, sigY)
-    doc.setFontSize(8)
-    doc.setTextColor(120)
-    doc.text('Operator signature', margin, sigY + 4)
-    doc.line(margin + 110, sigY, margin + 170, sigY)
-    doc.text('Date', margin + 110, sigY + 4)
   }
 
   // ─────────────────────────────────────────────────────────
