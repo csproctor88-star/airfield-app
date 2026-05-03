@@ -5124,6 +5124,20 @@ export type QrcStepResponse = {
   notes?: string
 }
 
+// Per-user monthly review row (qrc_monthly_reviews). Defined here rather than
+// derived from Database['Tables'] because the supabase-generated types haven't
+// been regenerated against migration 2026050300 yet.
+export type QrcMonthlyReview = {
+  id: string
+  base_id: string
+  template_id: string
+  user_id: string
+  reviewed_at: string
+  template_updated_at_at_review: string | null
+  notes: string | null
+  created_at: string
+}
+
 // === ACSI (Airfield Compliance and Safety Inspection) Types ===
 
 export type AcsiStatus = 'draft' | 'in_progress' | 'completed' | 'staffed'

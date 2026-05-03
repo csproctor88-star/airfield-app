@@ -29,8 +29,10 @@ import { LoadingState } from '@/components/ui/loading-state'
 import { QrcStepToggle, QrcStepStatusPill } from '@/components/ui/qrc-step-toggle'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
+import { ReviewsTab } from '@/components/qrc/reviews-tab'
+import { useMonthlyReviews } from '@/lib/qrc/use-monthly-reviews'
 
-type Tab = 'available' | 'active' | 'history'
+type Tab = 'available' | 'reviews' | 'active' | 'history'
 
 const PILL = {
   open: {
@@ -97,7 +99,7 @@ function StatusPill({ kind, children }: { kind: keyof typeof PILL; children: Rea
 }
 
 export default function QrcPage() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const searchParams = useSearchParams()
   const execParam = searchParams.get('exec')
   const [tab, setTab] = useState<Tab>('available')
@@ -107,6 +109,15 @@ export default function QrcPage() {
   const [loaded, setLoaded] = useState(false)
   const [activeExecId, setActiveExecId] = useState<string | null>(execParam)
   const [startingId, setStartingId] = useState<string | null>(null)
+
+  // Drives the Reviews tab badge count (Due + Updated). Same hook the
+  // ReviewsTab uses internally — React de-dupes the underlying fetch.
+  const monthlyReviews = useMonthlyReviews(installationId)
+  const reviewsDueCount = templates.filter(t => {
+    if (!t.is_active) return false
+    const s = monthlyReviews.getStatus(t)
+    return s.state === 'never' || s.state === 'overdue' || s.state === 'updated'
+  }).length
 
   const load = useCallback(async () => {
     const [t, o, h] = await Promise.all([
@@ -165,6 +176,7 @@ export default function QrcPage() {
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'available', label: 'Available', count: templates.filter(t => t.is_active).length },
+    { key: 'reviews', label: 'Reviews', count: reviewsDueCount },
     { key: 'active', label: 'Active', count: openExecs.length },
     { key: 'history', label: 'History', count: history.length },
   ]
@@ -299,6 +311,14 @@ export default function QrcPage() {
             })}
           </div>
         )
+      ) : tab === 'reviews' ? (
+        <ReviewsTab
+          templates={templates}
+          baseId={installationId}
+          baseName={currentInstallation?.name}
+          baseIcao={currentInstallation?.icao}
+          monthlyReviews={monthlyReviews}
+        />
       ) : tab === 'active' ? (
         activeExecId && activeExec ? (
           <QrcExecutionView
