@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
 import { X, AlertTriangle } from 'lucide-react'
@@ -74,6 +74,18 @@ export function SimpleDiscrepancyPanel({
 
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
+  // Mobile: stack the map above the right-side controls so the map gets full
+  // container width — at 60% width in a row layout it's unusably small.
+  const [narrow, setNarrow] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(max-width: 640px)')
+    const update = () => setNarrow(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files?.length) return
@@ -102,10 +114,10 @@ export function SimpleDiscrepancyPanel({
       border: '1px solid rgba(239, 68, 68, 0.15)',
       borderRadius: 8,
     }}>
-      {/* Map (left) | Comment + Buttons (right) */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        {/* Left column: Map — takes ~60% */}
-        <div style={{ flex: '3 1 0', minWidth: 0 }}>
+      {/* Map (left) | Comment + Buttons (right) — stacks vertically on mobile so map gets full width */}
+      <div style={{ display: 'flex', flexDirection: narrow ? 'column' : 'row', gap: 10, alignItems: 'stretch' }}>
+        {/* Map column — ~60% on desktop, full-width on mobile */}
+        <div style={{ flex: narrow ? '0 0 auto' : '3 1 0', minWidth: 0, width: narrow ? '100%' : undefined }}>
           {linkedSystemIds && linkedSystemIds.length > 0 && linkedBaseId ? (
             <>
               <label style={labelStyle}>Select Inoperative Features</label>
@@ -143,8 +155,8 @@ export function SimpleDiscrepancyPanel({
           )}
         </div>
 
-        {/* Right column: Comment + Buttons — takes ~40% */}
-        <div style={{ flex: '2 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Right column: Comment + Buttons — ~40% on desktop, full-width below map on mobile */}
+        <div style={{ flex: narrow ? '0 0 auto' : '2 1 0', minWidth: 0, width: narrow ? '100%' : undefined, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div>
             <label style={labelStyle}>Comment / Description</label>
             <ExpandableTextarea
