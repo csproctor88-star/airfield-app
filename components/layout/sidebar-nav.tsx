@@ -12,7 +12,6 @@ import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
 import { usePermissions } from '@/lib/permissions'
 import ContactSupport from '@/components/ui/contact-support'
-import { HelpMenu } from '@/components/tour/HelpMenu'
 import {
   DEFAULT_SIDEBAR_CONFIG,
   NAV_ITEM_MAP,
@@ -844,7 +843,6 @@ export function SidebarNav() {
           flexDirection: 'column',
           gap: 6,
         }}>
-          <HelpMenu />
           <button
             onClick={enterEditMode}
             data-tour="sidebar-customize"

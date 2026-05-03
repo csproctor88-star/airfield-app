@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { Sheet, Search, X, ArrowRight } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
@@ -159,6 +160,23 @@ function getEntityLink(entityType: string, entityId: string | null): string | nu
     case 'parking_plan': return `/parking`
     default: return null
   }
+}
+
+/**
+ * Day-group date formatter — "Today / Yesterday / Wed, May 1" with a
+ * long-form secondary line when the date is the relative anchor. Mirrors
+ * the recipe used by /recent-activity, /daily-reviews, and /wildlife.
+ */
+function formatGroupDate(iso: string, todayIso: string): { primary: string; secondary: string | null } {
+  const date = new Date(`${iso}T12:00:00Z`)
+  const longLabel = date.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC',
+  })
+  const today = new Date(`${todayIso}T12:00:00Z`)
+  const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000)
+  if (diffDays === 0) return { primary: 'Today', secondary: longLabel }
+  if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
+  return { primary: longLabel, secondary: null }
 }
 
 function maskEdipi(edipi: string): string {
@@ -335,9 +353,11 @@ export default function ActivityPage() {
     return () => mq.removeEventListener('change', update)
   }, [])
 
-  const [filterUser, setFilterUser] = useState('')
-  const [filterAction, setFilterAction] = useState('')
-  const [filterDetails, setFilterDetails] = useState('')
+  // Unified search across actor name, OI, action label, and details text.
+  // Replaces the prior per-column inline inputs (filterUser / filterAction
+  // / filterDetails) with one top-level search bar matching the rest of
+  // the app.
+  const [search, setSearch] = useState('')
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const now = new Date()
@@ -393,38 +413,31 @@ export default function ActivityPage() {
     loadEntries()
   }, [loadEntries])
 
-  // Filter entries by search terms
-  const fu = filterUser.toLowerCase()
-  const fa = filterAction.toLowerCase()
-  const fd = filterDetails.toLowerCase()
-  const filtered = entries.filter((a) => {
-    if (fu) {
-      const userName = (a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name).toLowerCase()
-      const oi = (a.user_operating_initials || '').toLowerCase()
-      if (!userName.includes(fu) && !oi.includes(fu)) return false
-    }
-    if (fa) {
-      const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata).toLowerCase()
-      if (!actionStr.includes(fa)) return false
-    }
-    if (fd) {
-      const detailsStr = buildDetailsString(a, detailsMap).toLowerCase()
-      if (!detailsStr.includes(fd)) return false
-    }
-    return true
+  // Filter entries by the unified search query — matches against actor
+  // name + OI + action label + details text in one shot.
+  const q = search.trim().toLowerCase()
+  const filtered = !q ? entries : entries.filter((a) => {
+    const userName = (a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name).toLowerCase()
+    const oi = (a.user_operating_initials || '').toLowerCase()
+    const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata).toLowerCase()
+    const detailsStr = buildDetailsString(a, detailsMap).toLowerCase()
+    return userName.includes(q) || oi.includes(q) || actionStr.includes(q) || detailsStr.includes(q)
   })
 
-  // Group filtered entries by date
-  const grouped: { date: string; label: string; items: ActivityEntry[] }[] = []
+  // Group filtered entries by Zulu date. Header text uses the relative
+  // anchor recipe (Today / Yesterday / weekday) shared with
+  // /recent-activity, /daily-reviews, and /wildlife.
+  const todayZuluIso = new Date().toISOString().slice(0, 10)
+  const grouped: { date: string; primary: string; secondary: string | null; items: ActivityEntry[] }[] = []
   for (const entry of filtered) {
     const d = new Date(entry.created_at)
     const dateKey = d.toISOString().split('T')[0]
-    const dateLabel = formatZuluDate(d)
     const existing = grouped.find((g) => g.date === dateKey)
     if (existing) {
       existing.items.push(entry)
     } else {
-      grouped.push({ date: dateKey, label: dateLabel, items: [entry] })
+      const labels = formatGroupDate(dateKey, todayZuluIso)
+      grouped.push({ date: dateKey, primary: labels.primary, secondary: labels.secondary, items: [entry] })
     }
   }
 
@@ -561,65 +574,119 @@ export default function ActivityPage() {
     borderBottom: '1px solid var(--color-border)',
   }
 
+  // Utility-button style — matches the header pattern used by
+  // /discrepancies, /ppr, and /parking.
+  const utilityBtn: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    background: 'var(--color-bg-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: '5px 10px',
+    color: 'var(--color-text-2)',
+    fontSize: 'var(--fs-xs)',
+    fontWeight: 700,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  }
+
   return (
     <div className="page-container" data-tour="activity-header">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <button onClick={() => router.back()} className="btn-ghost" style={{ color: 'var(--color-cyan)', padding: 0 }}>
-          &larr; Back
-        </button>
-        <button
-          onClick={handleExport}
-          disabled={exporting || entries.length === 0}
-          style={{
-            background: '#A78BFA14', border: '1px solid #A78BFA33', borderRadius: 'var(--radius-md)',
-            padding: '6px 12px', color: 'var(--color-purple)', fontSize: 'var(--fs-base)', fontWeight: 600,
-            cursor: exporting || entries.length === 0 ? 'default' : 'pointer',
-            fontFamily: 'inherit', opacity: exporting || entries.length === 0 ? 0.5 : 1,
-          }}
-        >
-          {exporting ? 'Exporting...' : 'Export Excel'}
-        </button>
+      {/* Page header — tertiary tier-label + counts + utility cluster +
+          cyan accent rule. Mirrors /discrepancies, /ppr, /parking. */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 12, flexWrap: 'wrap',
+        marginBottom: 10, paddingBottom: 6,
+        borderBottom: '1px solid rgba(56,189,248,0.20)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>Events Log</span>
+          <span style={{
+            fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+            display: 'inline-flex', gap: 6, alignItems: 'center',
+          }}>
+            <span>
+              {filtered.length === entries.length
+                ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
+                : `${filtered.length} of ${entries.length} entries`}
+            </span>
+            {todayShiftReview && (
+              <>
+                <span style={{ color: 'var(--color-text-4)' }}>·</span>
+                <span style={{ color: 'var(--color-amber)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL pending
+                </span>
+              </>
+            )}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleExport}
+            disabled={exporting || entries.length === 0}
+            style={{ ...utilityBtn, opacity: exporting || entries.length === 0 ? 0.5 : 1 }}
+            title="Export to Excel"
+          >
+            <Sheet size={12} color="var(--color-accent)" strokeWidth={2.25} />
+            {exporting ? '...' : 'Excel'}
+          </button>
+        </div>
       </div>
 
-      <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 12 }}>Events Log</div>
-
-      {/* ===== Today's Shift Review ===== */}
+      {/* Compact shift-review bar — only when AMSL pending today. One-line
+          pill replacing the prior full card. */}
       {todayShiftReview && (
-        <div
+        <button
           onClick={() => setShiftReviewOpen(true)}
           style={{
-            padding: 12, marginBottom: 12, borderRadius: 'var(--radius-md)',
-            background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.3)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, width: '100%',
+            padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-md)',
+            background: 'rgba(56,189,248,0.08)',
+            border: '1px solid rgba(56,189,248,0.3)',
+            cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          <div>
-            <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-cyan)' }}>
-              Review Shift
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-              {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL signatures captured for today
-            </div>
-          </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-cyan)', fontWeight: 600 }}>Sign →</div>
-        </div>
+          <span style={{ display: 'inline-flex', gap: 8, alignItems: 'baseline', fontSize: 'var(--fs-sm)' }}>
+            <span style={{ fontWeight: 700, color: 'var(--color-cyan)' }}>Sign your shift review</span>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)' }}>
+              {todayShiftReview.signedCount}/{todayShiftReview.total} AMSL signatures captured
+            </span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--color-cyan)', fontWeight: 700, fontSize: 'var(--fs-xs)' }}>
+            Sign <ArrowRight size={12} />
+          </span>
+        </button>
       )}
 
-      {/* Manual Entry Section */}
-      <div className="card" style={{ marginBottom: 16, padding: '14px', border: '1px solid rgba(34,211,238,0.2)', background: 'rgba(34,211,238,0.04)' }}>
-        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
-          New Log Entry
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>
-            Record notes, observations, or events not captured automatically by the system.
+      {/* New Log Entry — neutral chrome (de-emphasized vs the prior
+          cyan-tinted card) so the list dominates the page. Inline
+          template trigger + Enter-to-submit preserved. */}
+      <div style={{
+        marginBottom: 12, padding: 12,
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--color-bg-surface)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 }}>
+          <div style={{
+            fontSize: 'var(--fs-2xs)', fontWeight: 800, color: 'var(--color-text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+          }}>
+            New Log Entry
           </div>
           <button
             onClick={() => setShowTemplatePicker(true)}
             style={{
-              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 'var(--radius-md)',
-              padding: '4px 12px', color: 'var(--color-cyan)', fontSize: 'var(--fs-sm)',
-              fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+              background: 'none', border: 'none',
+              color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700,
+              letterSpacing: '0.04em', textTransform: 'uppercase',
+              cursor: 'pointer', fontFamily: 'inherit', padding: 0,
             }}
           >
             Use Template
@@ -683,22 +750,81 @@ export default function ActivityPage() {
         />
       )}
 
-      {/* Period Presets */}
-      <div style={{ display: 'flex', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-text-4)', marginBottom: 12 }}>
-        {PRESETS.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => setPeriod(p.value)}
+      {/* Search + chip-cluster date range. Search filters across actor +
+          OI + action label + details in one shot, replacing the prior
+          column-header inline inputs. */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 0 }}>
+          <Search size={14} color="var(--color-text-3)" style={{
+            position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none',
+          }} />
+          <input
+            type="text"
+            placeholder="Search actor, OI, action, or details..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             style={{
-              flex: 1, padding: '8px 0', border: 'none', fontSize: 'var(--fs-base)', fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-              background: period === p.value ? 'var(--color-cyan-btn-bg)' : 'transparent',
-              color: period === p.value ? 'var(--color-cyan-btn-text)' : 'var(--color-text-2)',
+              width: '100%', boxSizing: 'border-box',
+              padding: '8px 32px 8px 32px',
+              background: 'var(--color-search-bg)',
+              border: '1px solid var(--color-search-border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
+              fontFamily: 'inherit', outline: 'none',
             }}
-          >
-            {p.label}
-          </button>
-        ))}
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              style={{
+                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--color-text-3)', padding: 4, display: 'flex',
+              }}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Date range chip cluster — single bordered container, dim
+            off-state per the cluster pattern. */}
+        <div style={{
+          display: 'flex',
+          padding: 3,
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border)',
+          background: 'var(--color-bg-surface)',
+          flexShrink: 0,
+        }}>
+          {PRESETS.map((p) => {
+            const active = period === p.value
+            return (
+              <button
+                key={p.value}
+                onClick={() => setPeriod(p.value)}
+                style={{
+                  padding: '5px 12px',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: 'var(--fs-xs)',
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  background: active ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)' : 'transparent',
+                  color: active ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Custom Date Range */}
@@ -726,13 +852,8 @@ export default function ActivityPage() {
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 8 }}>
-            {filtered.length === entries.length
-              ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
-              : `${filtered.length} of ${entries.length} entries`}
-          </div>
-
-          {/* Columnar Table */}
+          {/* Columnar Table — entry count + AMSL badge live in the
+              header now, so no standalone count line here. */}
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: narrow ? 0 : 600 }}>
               <thead>
@@ -743,62 +864,42 @@ export default function ActivityPage() {
                   <th style={{ ...thStyle, width: 50 }}>OI</th>
                   <th style={{ ...thStyle, width: 60, textAlign: 'right' }}></th>
                 </tr>
-                <tr>
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
-                  {!narrow && (
-                    <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
-                      <input
-                        type="text"
-                        className="input-dark"
-                        placeholder="Search actions..."
-                        value={filterAction}
-                        onChange={(e) => setFilterAction(e.target.value)}
-                        style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
-                      />
-                    </th>
-                  )}
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
-                    <input
-                      type="text"
-                      className="input-dark"
-                      placeholder="Search details..."
-                      value={filterDetails}
-                      onChange={(e) => setFilterDetails(e.target.value)}
-                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
-                    />
-                  </th>
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
-                    <input
-                      type="text"
-                      className="input-dark"
-                      placeholder="Search..."
-                      value={filterUser}
-                      onChange={(e) => setFilterUser(e.target.value)}
-                      style={{ width: '100%', fontSize: 'var(--fs-2xs)', padding: '3px 6px' }}
-                    />
-                  </th>
-                  <th style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}></th>
-                </tr>
               </thead>
               <tbody>
                 {grouped.map((group) => (
                   <>
-                    {/* Date header row */}
+                    {/* Date group header — relative anchor (Today /
+                        Yesterday / weekday) + secondary date + entry
+                        count. Matches /recent-activity, /daily-reviews,
+                        /wildlife. */}
                     <tr key={`date-${group.date}`}>
                       <td
                         colSpan={narrow ? 4 : 5}
                         style={{
-                          padding: '10px 8px 4px',
-                          fontSize: 'var(--fs-sm)',
-                          fontWeight: 700,
-                          color: 'var(--color-text-3)',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
+                          padding: '12px 4px 6px',
                           borderBottom: '1px solid var(--color-border)',
-                          background: 'var(--color-bg-inset)',
                         }}
                       >
-                        {group.label}
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                            {group.primary}
+                          </span>
+                          {group.secondary && (
+                            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+                              {group.secondary}
+                            </span>
+                          )}
+                          <span style={{
+                            marginLeft: 'auto',
+                            fontSize: 'var(--fs-2xs)',
+                            color: 'var(--color-text-4)',
+                            fontWeight: 700,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                          }}>
+                            {group.items.length} {group.items.length === 1 ? 'entry' : 'entries'}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                     {/* Entry rows */}

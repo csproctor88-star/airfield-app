@@ -11,8 +11,9 @@ import { RELEASE_NOTES } from '@/lib/release-notes'
  * holds `base_setup:write`:
  *
  *   • Base admin → directs them to the Base Setup wizard.
- *   • Everyone else → tells them to wait for the base to be configured,
- *     then take the in-app tour from the View App Tutorial button.
+ *   • Everyone else → points them at /training as the learning surface
+ *     and warns that some modules will look empty until the base admin
+ *     finishes setup.
  *
  * Gated on `profiles.tours_completed.welcome`. Stamps
  * `last_seen_release_version` to the latest on dismiss so the
@@ -70,7 +71,7 @@ export function WelcomeGate() {
     return () => { cancelled = true }
   }, [])
 
-  async function dismiss(opts: { goToSetup?: boolean } = {}) {
+  async function dismiss(opts: { goToSetup?: boolean; goToTraining?: boolean } = {}) {
     if (busy) return
     setBusy(true)
 
@@ -105,6 +106,8 @@ export function WelcomeGate() {
     setShow(false)
     if (opts.goToSetup) {
       router.push('/base-config/setup')
+    } else if (opts.goToTraining) {
+      router.push('/training')
     }
   }
 
@@ -179,11 +182,12 @@ export function WelcomeGate() {
               </>
             ) : (
               <>
-                Once your base administrator finishes setup, you can take a
-                guided tour of every page by clicking{' '}
-                <strong style={{ color: 'var(--color-text-1)' }}>View App Tutorial</strong>{' '}
-                in the sidebar footer. Until the base is configured, some
-                modules will look empty — that&apos;s expected.
+                Visit{' '}
+                <strong style={{ color: 'var(--color-text-1)' }}>Glidepath Training</strong>{' '}
+                in the sidebar to learn how each module works — overviews,
+                screenshots, and step-by-step workflows for every feature.
+                Until your base administrator finishes setup, some modules
+                will look empty — that&apos;s expected.
               </>
             )}
           </div>
@@ -218,14 +222,25 @@ export function WelcomeGate() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={() => void dismiss()}
-              disabled={busy}
-              style={primaryBtnStyle}
-            >
-              Got it
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => void dismiss()}
+                disabled={busy}
+                style={secondaryBtnStyle}
+              >
+                I&apos;ll explore later
+              </button>
+              <button
+                type="button"
+                onClick={() => void dismiss({ goToTraining: true })}
+                disabled={busy}
+                style={primaryBtnStyle}
+              >
+                Open Training
+                <ArrowRight size={14} />
+              </button>
+            </>
           )}
         </div>
       </div>

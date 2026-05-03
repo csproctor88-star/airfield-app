@@ -7,29 +7,17 @@ import { OnboardingTour } from '@/components/tour/OnboardingTour'
 import { getTour, registerTour } from '@/lib/tours/registry'
 import { markTourCompleted } from '@/lib/tours/state'
 import { SETUP_WIZARD_TOUR_STEPS } from '@/lib/tours/setup-wizard-tour'
-import { SIDEBAR_TOUR_STEPS } from '@/lib/tours/sidebar-tour'
-import { MOBILE_TOUR_STEPS } from '@/lib/tours/mobile-tour'
 
-// Pre-register the three known tours. Page-scope tours (Stage 2) will
-// register themselves from the page that owns them.
+// The full app-walkthrough tours (app-sidebar / app-mobile-nav) were
+// retired — see /training for the canonical learning surface. Only the
+// focused base-setup wizard tour remains; it auto-fires for sys_admins
+// on first visit to /base-config/setup.
 registerTour({
   tourId: 'setup-wizard',
   label: 'Replay base setup tour',
   scope: 'wizard',
   steps: SETUP_WIZARD_TOUR_STEPS,
   visibleWhen: (path) => path.startsWith('/base-config/setup'),
-})
-registerTour({
-  tourId: 'app-sidebar',
-  label: 'Take the app tour',
-  scope: 'app',
-  steps: SIDEBAR_TOUR_STEPS,
-})
-registerTour({
-  tourId: 'app-mobile-nav',
-  label: 'Take the app tour',
-  scope: 'app',
-  steps: MOBILE_TOUR_STEPS,
 })
 
 type ActiveTour = { tourId: string }

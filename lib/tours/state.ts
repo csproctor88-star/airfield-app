@@ -45,3 +45,23 @@ export async function markTourCompleted(tourId: string): Promise<void> {
     console.error('[tours] markTourCompleted failed:', error.message)
   }
 }
+
+export async function unmarkTourCompleted(tourId: string): Promise<void> {
+  const supabase = createClient()
+  if (!supabase) return
+  const row = await loadCurrentRow()
+  if (!row) return
+
+  // Drop the key entirely rather than setting false — keeps the JSONB
+  // small and treats absence + false identically downstream.
+  const next = { ...row.map }
+  delete next[tourId]
+  const { error } = await supabase
+    .from('profiles')
+    .update({ tours_completed: next } as never)
+    .eq('id', row.userId)
+
+  if (error) {
+    console.error('[tours] unmarkTourCompleted failed:', error.message)
+  }
+}

@@ -4,16 +4,59 @@ All notable changes to Glidepath.
 
 ## [Unreleased]
 
-### Added
-- **Permission matrix auth** — replaces ad-hoc role-string checks with a canonical `permissions` catalogue (77 keys), `role_permissions` preset map, `user_permission_overrides` per-user grants/revokes, and a `user_has_permission(uid, key)` SECURITY DEFINER helper. Client code uses `usePermissions().has(PERM.X)` (React) or `getPermissionsFor()` (server routes). Scales to outside-agency roles without new code per feature.
+### Planned
+- Per-page Help / launcher for opt-in module tours (Stage 3 — registry already supports `scope: 'page'`)
+- Screenshot capture for the rebuilt Glidepath Training modules (placeholders in place)
+- IAW Compliance citation audit in `lib/base-setup-guide.ts` (working file `docs/base-setup-guide-review.md`)
+
+---
+
+## [2.33.0] — 2026-05-02
+
+### Added — Glidepath Training rebuilt
+- **`/training` is now a role-filterable hub** — wipes the prior expand/collapse module list. `lib/training/modules.ts` holds 27 module entries (4 new since the old Training: `recent-activity`, `ces`, `acsi`, `users`) with overview, key features, how-to-access, workflow, screenshots, FAQ, related modules, and a `roles[]` for the chip filter.
+- **Per-module deep-dive subpages** at `/training/[module-id]` — 9-section layout (hero with role chips + Open Module + Mark Reviewed; Overview; Key Features card grid; How to Access; Screenshots gallery; Workflow stepper with vertical connecting line; FAQ; Related modules; back-link).
+- **Mark Reviewed toggle** — per-user reviewed state stored under the `training:<id>` namespace inside `profiles.tours_completed` JSONB. New `lib/training/use-reviewed.ts` hook with optimistic updates + rollback. Hub page shows reviewed-vs-unreviewed filter chips + progress counter ("3 of 27 reviewed"). Cards flip to a green-tinted treatment with a check badge when reviewed.
+- **Role chip filter** at the top of /training narrows to a role's actionable working set (CES → 4 modules; Safety → 3; PPR → 4; MAJCOM → 5; Read-Only → 5).
+
+### Changed — Click-through tour torn down
+- The full app-walkthrough sidebar / mobile tours are gone. The "View App Tutorial" button + welcome-dialog tour entry point retired in favor of /training as the canonical learning surface. Setup-wizard tour at `/base-config/setup` retained.
+- Welcome dialog non-admin variant now points at /training instead of the old tutorial button.
+
+### Added — Auth + email
+- **`/api/forgot-password`** — anonymous endpoint that mints the recovery link via `admin.auth.admin.generateLink({type:'recovery'})` and sends a branded Resend email. Replaces the prior client-side `supabase.auth.resetPasswordForEmail` call (which was using Supabase's default unbranded SMTP). Enumeration-safe — every failure path returns 200.
+- Login page surfaces `?error=...` query params verbatim instead of silently dropping unknown codes.
+
+### Fixed — Email links
+- Invite, signup, password-reset emails were embedding `properties.action_link` (Supabase's hosted /auth/v1/verify URL). Server-generated links under PKCE flow can't satisfy the code_verifier exchange, so users were bouncing to /login. All four email routes now build the URL directly as `{site}/auth/confirm?token_hash=&type=&next=` per the Supabase SSR docs.
+
+### Changed — Events Log structure-first refresh
+- Tertiary header tier-label + counts ("EVENTS LOG · 107 entries · 0/2 AMSL pending") + utility cluster + cyan accent rule. Matches /discrepancies, /ppr, /parking.
+- Compact 1-line shift-review bar (was a full card).
+- Single search bar across actor / OI / action / details (was per-column inline inputs).
+- Chip-cluster date range tabs (was full-width segmented buttons).
+- Date group headers use Today / Yesterday / weekday relative anchor + entry count (was raw "MAY 2, 2026").
+- New Log Entry card de-emphasized to neutral chrome.
+
+### Added — Permission matrix
+- Replaces ad-hoc role-string checks with a canonical `permissions` catalogue (77 keys), `role_permissions` preset map, `user_permission_overrides` per-user grants/revokes, and a `user_has_permission(uid, key)` SECURITY DEFINER helper. Client code uses `usePermissions().has(PERM.X)` (React) or `getPermissionsFor()` (server routes).
 - **Three new roles** — `airfield_status` (kiosk — per-base view-only login, sidebar/bottom-nav/switcher hidden, `KioskGuard` redirects off any non-root route), `ppr` (PPR entries + airfield status view, edits via `ppr:write`), `majcom_rfm` (multi-base read-only — uses `base_members` rows + header installation switcher). Safety expanded with `wildlife:write` + narrow `safety_update_rsc_bwc` RPC. ATC matches airfield_status until an ATC-specific module lands.
 - **Bulk base assignment** — UserDetailModal has a new "Bulk" button that opens a checkbox list of every installation, pre-checks current memberships, and saves all adds/removes in one pass. Primary base stays locked. Designed for MAJCOM/RFM setup.
 - **CES write path** — `ces_update_discrepancy(...)` SECURITY DEFINER RPC lets CES change discrepancy status (In Work / Project / Work Completed), edit resolution notes, and add audit notes atomically. CES was silently blocked by RLS before; `StatusUpdateModal` now routes every CES save through the RPC.
 - **Risk Control Measure** — optional field on airfield discrepancies (alongside Project # and Estimated Cost) and a required field on every ACSI N-item discrepancy. ACSI filing blocks with a toast listing any N items missing an RCM. Linking an airfield discrepancy to an N item imports all three fields.
 
+### Added — Modules
+- **PPR module** — public QR-coded request form at `/<icao>/ppr-request`, AMOPS triage queue, multi-agency coordination log with per-agency reply tracking, branded approve / deny emails, single-page PPR PDF, soft-cancel preserves audit trail.
+- **Daily Reviews** — per-shift sign-off (Day / Mid / Swing AMSL + NAMO + AFM) with SHA-256 events_hash freezing the rollup. Events Log shows AMENDED pill on entries arriving after `fully_certified_at`.
+- **ACSI per-member signatures** — toggleable in Base Setup; collected at filing.
+- **ARFF status log** — mirrors runway log, split columns for CAT changes vs aircraft readiness.
+- **Offline write queue** — wraps 12 CRUD modules + inspector + pending photos. Workbox runtime caching for QRC / PPR / Contractors / Discrepancies / Library / Aircraft / Waivers offline reads. iOS PWA polish + airfield diagram upload rewrite + OFFLINE pill in same batch.
+
 ### Changed
-- **Sidebar / More / page gates** — 15 pages swapped from hardcoded `userRole === 'x'` lists to `usePermissions().has()`. `HREF_TO_VIEW_PERM` map in the sidebar self-gates every nav item from the user's permission bundle; the legacy `CES_ALLOWED_ITEMS` / `canManageUsers` gates remain as fallbacks only for hrefs not in the map.
+- **Sidebar / More / page gates** — 15 pages swapped from hardcoded `userRole === 'x'` lists to `usePermissions().has()`. `HREF_TO_VIEW_PERM` map in the sidebar self-gates every nav item from the user's permission bundle.
 - **CES / AMOPS / Safety / kiosk role scoping** refined — see `project_permission_matrix.md` in memory for the full role × permission table.
+- **Distinctive-refresh sweep** across `/`, `/dashboard`, `/discrepancies`, `/ppr`, `/checks`, `/inspections`, plus structure-first restructures of `/daily-reviews`, `/recent-activity`, `/wildlife`, `/aircraft`, `/contractors`, `/notams`, `/scn`, `/shift-checklist`, `/checks/history`, `/waivers`, `/obstructions`, `/users`, `/more`, `/library`, `/infrastructure`, `/base-config` (plus the Phase 2 wizard chrome refresh + first-run tour + Quick Setup pre-fill).
+- **Sidebar pending-action dots** — green for "work done, awaiting acknowledgement" (Discrepancies / Airfield Management section header), red for action-required (PPR / QRC / NOTAM).
 
 ### Schema
 - `2026042200` — permission matrix scaffold (`permissions`, `role_permissions`, `user_permission_overrides` + `user_has_permission()` helper). Seeds match today's effective behavior for all 9 existing roles.
@@ -30,19 +73,16 @@ All notable changes to Glidepath.
 - `2026042102` — adds `project_number TEXT`, `estimated_cost TEXT`, `risk_control_measure TEXT` to `discrepancies` (all optional).
 - `2026042103` — adds `waiting_for_project` to the `discrepancies.current_status` CHECK constraint (the app already used the value but the DB rejected it).
 
-### Other
+### Other schema
 - `2026042101` — `get_public_feedback_config(p_base_id)` + `base_exists(p_base_id)` SECURITY DEFINER RPCs so the QR-scan flow works for anonymous visitors (the public feedback form was silently rejected by `bases_select` RLS before).
+- `2026050100` — locks `library:view` + `library:manage` to sys_admin only.
+- `2026050200` — `profiles.has_completed_setup_tour` boolean (legacy fallback; superseded by JSONB).
+- `2026050201` — `bases.quick_setup_pending` JSONB for the wizard staging.
+- `2026050202` — `profiles.tours_completed` JSONB; backfills `{"setup-wizard": true}` from the prior boolean. Now also stores `training:<id>` namespaced reviewed-module flags.
 
-### Planned
-- METAR weather API integration (aviationweather.gov)
-- Expand test coverage onto new modules (`modules-config`, SCN summaries, release-notes)
-- Regenerate Supabase types to eliminate remaining `as any` casts
-- Extract shared PDF utilities (`lib/pdf-utils.ts`) to reduce boilerplate across 16 PDF generators
-- Training Management Module (DAF training records)
-- Outage analytics (frequency/duration tracking for lighting systems)
-- Part 139 civilian airport template support
-- CAC/PIV authentication (pending Platform One onboarding)
-- BowMonk Conversion Tool (feature parity with legacy Grotefend app)
+### Fixed
+- **Discrepancies pending-verification badge** on sidebar + `/more` — fires when discrepancies sit in `current_status = 'work_completed_awaiting_verification'`.
+- **Tour engine bugs** during the now-retired sidebar tour: stepIdx loop on remount, off-screen bubble placement, sidebar overflow clipping, overlay too dark — all fixed before teardown; fixes saved as `feedback_tour_bubble_placement.md`.
 
 ---
 

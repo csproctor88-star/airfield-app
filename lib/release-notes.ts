@@ -17,6 +17,21 @@ export type ReleaseNote = {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '2.33.0',
+    date: '2026-05-02',
+    headline: 'Glidepath Training rebuilt, permission matrix overhaul, PPR module, offline reads + writes',
+    highlights: [
+      'Glidepath Training rebuilt at /training — role-filterable module hub plus per-module deep-dive pages with overview, key features, workflow, screenshots, and a Mark Reviewed toggle so you can track what you have learned across sessions.',
+      'Permission matrix replaces ad-hoc role checks — 77 permission keys, per-user overrides, and three new roles (kiosk-only Airfield Status, PPR-only, MAJCOM/RFM read-only).',
+      'PPR module — public QR-coded request form at /<icao>/ppr-request, AMOPS triage queue, multi-agency coordination log, branded approve / deny emails, single-page PPR PDF.',
+      'Offline reads + writes — Workbox runtime caching for QRC, Discrepancies, Library, Aircraft, Waivers, plus an offline write queue for inspections, checks, and discrepancies with auto-sync on reconnect.',
+      'Daily Reviews — per-shift sign-off with events_hash freezing the daily rollup; the Events Log shows an AMENDED pill on entries that arrived after certification.',
+      'Forgot-password and invite emails now send the branded Glidepath template (was Supabase default) and land users on the correct screen.',
+      'Events Log refresh — tertiary header with inline counts, compact shift-review bar, single search bar across actor / OI / action / details, chip-cluster date range, Today / Yesterday relative-date headers.',
+      'ACSI per-member signature support, ARFF status log mirrors the runway log, iOS PWA polish, airfield diagram upload rewrite.',
+    ],
+  },
+  {
     version: '2.32.0',
     date: '2026-04-21',
     headline: 'Modular onboarding, Secondary Crash Net, and a cleaner dashboard',
