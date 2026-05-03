@@ -110,10 +110,22 @@ export async function fetchAllReviewsForBase(
 }
 
 /**
- * Operational personnel at this base who are expected to complete monthly QRC
- * reviews (airfield_manager, namo, amops). Two-step query for the same
- * reason as fetchAllReviewsForBase above.
+ * Personnel at this base who are expected to complete (or audit) monthly QRC
+ * reviews. Includes the operational roles (airfield_manager, namo, amops)
+ * plus admin roles (base_admin, sys_admin) — at small ANG units the same
+ * person often wears multiple hats and the sys_admin actively does reviews.
+ *
+ * Note: anyone outside this role set who actually has a review row gets
+ * folded in by the consolidated PDF preparation step (defensive — catches
+ * edge cases like a `safety` user who happened to review).
+ *
+ * Two-step query for the same PostgREST embed-cache reason as
+ * fetchAllReviewsForBase above.
  */
+export const REVIEWER_ROLES = [
+  'airfield_manager', 'namo', 'amops', 'base_admin', 'sys_admin',
+] as const
+
 export async function fetchEligibleReviewers(baseId: string): Promise<EligibleReviewer[]> {
   const supabase = createClient()
   if (!supabase) return []
@@ -124,7 +136,7 @@ export async function fetchEligibleReviewers(baseId: string): Promise<EligibleRe
     .from('base_members')
     .select('user_id, role')
     .eq('base_id', baseId)
-    .in('role', ['airfield_manager', 'namo', 'amops'])
+    .in('role', REVIEWER_ROLES)
 
   if (error || !members) return []
   const memberRows = members as { user_id: string; role: string }[]

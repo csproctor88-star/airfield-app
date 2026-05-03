@@ -7,7 +7,7 @@ import type { QrcTemplate } from '@/lib/supabase/types'
 import type { useMonthlyReviews } from '@/lib/qrc/use-monthly-reviews'
 import { type MonthlyReviewState } from '@/lib/qrc/monthly-review-status'
 import { MonthlyReviewModal } from '@/components/qrc/monthly-review-modal'
-import { fetchAllReviewsForBase, fetchEligibleReviewers } from '@/lib/supabase/qrc-reviews'
+import { fetchAllReviewsForBase, fetchEligibleReviewers, type EligibleReviewer } from '@/lib/supabase/qrc-reviews'
 import { generateQrcMonthlyReviewPdf } from '@/lib/qrc-monthly-review-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
@@ -86,13 +86,35 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
       fetchAllReviewsForBase(baseId, monthStart),
       fetchEligibleReviewers(baseId),
     ])
+
+    // Fold in any reviewer not already in the eligible list. Catches
+    // legitimate reviews from users whose role isn't in REVIEWER_ROLES
+    // (e.g., a contractor or safety user who happened to review). The
+    // cached profile fields on the review row let us synthesize an
+    // EligibleReviewer without an extra round-trip.
+    const eligibleIds = new Set(eligibleUsers.map(u => u.user_id))
+    const seen = new Set<string>()
+    const extras: EligibleReviewer[] = []
+    for (const r of allReviews) {
+      if (eligibleIds.has(r.user_id) || seen.has(r.user_id)) continue
+      seen.add(r.user_id)
+      extras.push({
+        user_id: r.user_id,
+        name: r.reviewer_name ?? '(unknown)',
+        rank: r.reviewer_rank,
+        operating_initials: r.reviewer_initials,
+        role: 'other',
+      })
+    }
+    const roster = [...eligibleUsers, ...extras].sort((a, b) => a.name.localeCompare(b.name))
+
     return generateQrcMonthlyReviewPdf({
       baseName,
       baseIcao,
       month: pickerMonth.month,
       year: pickerMonth.year,
       templates,
-      eligibleUsers,
+      eligibleUsers: roster,
       reviews: allReviews,
       generatedBy: generatedByLabel,
     })

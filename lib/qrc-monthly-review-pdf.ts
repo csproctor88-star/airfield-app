@@ -259,6 +259,9 @@ function formatRole(role: string): string {
     case 'airfield_manager': return 'Airfield Manager'
     case 'namo': return 'NAMO'
     case 'amops': return 'AMOPS'
+    case 'base_admin': return 'Base Admin'
+    case 'sys_admin': return 'Sys Admin'
+    case 'other': return 'Other'
     default: return role
   }
 }
