@@ -184,7 +184,7 @@ paper / clipboards / whiteboards in marketing copy. The analog era ended
 
 | Migration | Status | What it does |
 |---|---|---|
-| `2026050300_qrc_monthly_reviews.sql` | ⚠ **Pending** — apply before Reviews tab works | New table for per-user monthly QRC review events. Immutable (no UPDATE/DELETE policies). RLS: SELECT for any base member, INSERT for own row + `qrc:execute` permission. |
+| `2026050300_qrc_monthly_reviews.sql` | ✅ Applied | New table for per-user monthly QRC review events. Immutable (no UPDATE/DELETE policies). RLS: SELECT for any base member, INSERT for own row + `qrc:execute` permission. |
 | All prior migrations through `2026050202` | ✅ Applied | (carryover) |
 
 ---
@@ -235,7 +235,6 @@ paper / clipboards / whiteboards in marketing copy. The analog era ended
 
 | Item | Severity | Notes |
 |---|---|---|
-| Migration `2026050300_qrc_monthly_reviews.sql` not applied | High | Reviews tab returns empty; Mark as Reviewed will throw RLS error until the table exists. |
 | 3 module training pages still missing planned screenshots | Low | dashboard / notams / feedback each have 1 of 2 captures wired. The second planned shot for each was dropped because the underlying feature doesn't exist (not a capture gap). |
 | `lib/tours/pages/*.ts` still present | Low | (Carryover) 28 files retained as content seed for the training rebuild. No imports anywhere; safe to delete in a sweep when convenient. |
 | `data-tour` anchors throughout page.tsx files | Low | (Carryover) 70+ anchors no longer used by any active tour (only setup-wizard tour uses them). Harmless dead attributes; sweep is optional cleanup. |
@@ -256,22 +255,17 @@ paper / clipboards / whiteboards in marketing copy. The analog era ended
 
 ## Next session tasks
 
-1. **Apply `2026050300_qrc_monthly_reviews.sql`** to staging and prod
-   databases. The Reviews tab on `/qrc` cannot function without the table —
-   any Mark as Reviewed will fail RLS, and the consolidated PDF returns no
-   rows. This is the gating step before the QRC monthly review feature can
-   ship to operators.
-2. **Bump version to 2.34.0** if the QRC monthly review feature is treated
+1. **Bump version to 2.34.0** if the QRC monthly review feature is treated
    as a release. Five places: `package.json`,
    `app/(app)/settings/page.tsx`, `app/login/page.tsx`, `CHANGELOG.md`,
    `README.md`. New entry in `lib/release-notes.ts`. Suggested headline:
    per-user monthly QRC review with cross-operator compliance matrix PDF +
    mobile fix for the inspection-discrepancy panel + complete /training
    screenshot capture pass.
-3. **IAW Compliance citation audit in `lib/base-setup-guide.ts`** —
+2. **IAW Compliance citation audit in `lib/base-setup-guide.ts`** —
    (carryover) user flagged a couple as wrong. Working file
    `docs/base-setup-guide-review.md`.
-4. **The 3 missing module screenshots** are essentially untouchable —
+3. **The 3 missing module screenshots** are essentially untouchable —
    dashboard_2, notams_2, feedback_2 all referenced features that don't
    exist. If you want to top those module galleries off, capture an
    alternative shot per module (e.g., dashboard's AFM toggle section,
@@ -299,7 +293,7 @@ paper / clipboards / whiteboards in marketing copy. The analog era ended
 TypeScript clean (npx tsc --noEmit exit 0)
 Tests: 253 pass / 25 files (unchanged from prior)
 Build: npm run build clean — no warnings, no errors.
-1 new migration this session (2026050300_qrc_monthly_reviews.sql) — pending application.
+1 new migration this session (2026050300_qrc_monthly_reviews.sql) — applied.
 
 Notable First Load JS (changed routes this session):
   /qrc                     18.4 kB / 342 kB    (jumped from prior baseline due to Reviews tab + jspdf-autotable import for the consolidated PDF)
