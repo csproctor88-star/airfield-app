@@ -235,7 +235,6 @@ paper / clipboards / whiteboards in marketing copy. The analog era ended
 
 | Item | Severity | Notes |
 |---|---|---|
-| 3 module training pages still missing planned screenshots | Low | dashboard / notams / feedback each have 1 of 2 captures wired. The second planned shot for each was dropped because the underlying feature doesn't exist (not a capture gap). |
 | `lib/tours/pages/*.ts` still present | Low | (Carryover) 28 files retained as content seed for the training rebuild. No imports anywhere; safe to delete in a sweep when convenient. |
 | `data-tour` anchors throughout page.tsx files | Low | (Carryover) 70+ anchors no longer used by any active tour (only setup-wizard tour uses them). Harmless dead attributes; sweep is optional cleanup. |
 | `/training` Quick Start + Base Setup tabs use stub content | Medium | (Carryover) Quick Start has 7 lean steps; Base Setup tab is a placeholder pointing at `/base-config/setup` wizard. Could be expanded over time. |
@@ -265,12 +264,6 @@ paper / clipboards / whiteboards in marketing copy. The analog era ended
 2. **IAW Compliance citation audit in `lib/base-setup-guide.ts`** —
    (carryover) user flagged a couple as wrong. Working file
    `docs/base-setup-guide-review.md`.
-3. **The 3 missing module screenshots** are essentially untouchable —
-   dashboard_2, notams_2, feedback_2 all referenced features that don't
-   exist. If you want to top those module galleries off, capture an
-   alternative shot per module (e.g., dashboard's AFM toggle section,
-   notams' expanded FAA-feed entry, feedback's monthly PDF preview) and
-   wire it. Otherwise they stay at 1 of 2 indefinitely.
 
 ### Long-running carryover (bandwidth-permitting)
 
