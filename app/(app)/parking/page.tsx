@@ -1125,7 +1125,18 @@ export default function ParkingPage() {
       for (const spot of spotsWithAircraft) {
         const c = spotCenter(spot)
         const marker = spotMarkersMapRef.current.get(spot.id)
-        if (marker) marker.setPosition({ lat: c.lat, lng: c.lon })
+        if (marker) {
+          marker.setPosition({ lat: c.lat, lng: c.lon })
+          // Apply label visibility — toggling LBL doesn't change positions,
+          // but we still need to flip the label on/off for each marker.
+          marker.setLabel(visibleLayers.labels ? {
+            text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
+            color: '#FFFFFF',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            className: 'parking-ac-label',
+          } : null)
+        }
         w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
       }
       const spotsWithNoseGear = spotsWithAircraft.filter(s => s.pivot_point_ft > 0)
