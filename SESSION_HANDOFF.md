@@ -1,91 +1,182 @@
 # Session Handoff
 
-**Date:** 2026-05-02
+**Date:** 2026-05-03
 **Branch:** `main`
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `1b1367c` (origin/main) — pending: tour teardown + /training rebuild + Events Log refresh + 2.33.0 release bump (~25 modified files, 7 new directories, 3 deleted files)
+**HEAD:** `baed8bd` (origin/main)
 
 ---
 
 ## What shipped this session
 
-This session pivoted hard. We started by deepening the page-feature tour content (waves 1–2 in commits `cfed596` and `1b1367c`), then realized the click-through tour had ballooned to 111 steps — too long to be the primary learning channel. The user called it: scrap the master tour, rebuild `/training` from scratch as a real reference surface. After the pivot we tore down the tour, rebuilt `/training` with role-filterable cards + per-module deep-dive subpages + a Mark Reviewed toggle, ran a structure-first refresh on Events Log, and bumped to v2.33.0. The session also fixed two real auth bugs along the way (forgot-password sending Supabase default email, and invite/signup links bouncing to /login under PKCE).
+The session opened by pushing the v2.33.0 release commit that the prior handoff
+left pending (`2ffc318`). After that, three substantive streams: a mobile bug
+fix on the shared discrepancy capture panel, the complete `/training`
+screenshot capture pass (64 shots wired with re-verified captions), and a new
+QRC monthly per-user review feature with a consolidated cross-operator
+compliance matrix PDF. We also ran a marketing carousel experiment that was
+deleted at the end — code is gone, design exploration captured under Lessons.
 
-### Tour wave 1 — page-feature deepening (`cfed596`)
+### Mobile discrepancy panel — stack vertically on narrow viewports (`36a6e96`)
 
-Discrepancies / QRC / PPR / Wildlife sub-tours expanded from 1–4 steps to 5–7 each, with new `data-tour` anchors per page. Authoring driven by the recipe at `feedback_page_tour_recipe.md`. This work survived the pivot — the tour copy is now the seed for the matching `/training/[id]` modules in Phase 2.
+`components/ui/simple-discrepancy-panel.tsx` was a fixed 3:2 flex row (map
+left, comment + buttons right). At ≤640px the map column was crushed to ~60%
+of viewport width — barely usable in the field for inspectors marking items
+Fail. Fix: detect narrow viewport via `matchMedia('(max-width: 640px)')` (the
+same pattern `app/(app)/activity/page.tsx:348` already uses), flip the parent
+flex to `column`, give both children full width. The map's existing
+`aspectRatio: '3 / 4'` cap then naturally extends it vertically. Affects both
+`/checks` and `/inspections` since they share this component.
 
-### Tour engine extension (`e833639`)
+### QRC monthly per-user review (`255c77a`)
 
-`TourStep.dispatchOnEnter?: { event, detail }` fires a `CustomEvent` on `window` during the step transition. Pages register listeners under the `glidepath:tour-<page>-<action>` convention. Plus arrow-key navigation on the bubble (→ next, ← back, Esc skip; disabled while focus is in an input/textarea/select). Engine retained for the setup-wizard tour after the master-tour teardown.
+New Reviews tab on `/qrc` for AMOPS personnel to complete the monthly QRC
+review cadence — every operator certifies they've read each QRC monthly
+between the annual NAMO/AFM review cycles. Activation flow on the Available
+tab is unchanged: clicking a tile still starts an execution one-tap with no
+modal interception. The annual review (template-level, NAMO/AFM) stays
+untouched too — it's a separate cadence on a separate column of the same
+table.
 
-### Auth — direct verify-OTP URL for all email flows (`fc1ff35`)
+Per-user review state lives in a new immutable `qrc_monthly_reviews` table
+(one row per Mark-as-Reviewed event) so the consolidated PDF can roll up
+cross-operator compliance and so each row proves which template version the
+operator reviewed (`template_updated_at_at_review` snapshot column captures
+`qrc_templates.updated_at` at insert time). RLS: SELECT for any base member
+(operational compliance is shift-visible like the events log), INSERT for own
+row only requiring `qrc:execute`, no UPDATE/DELETE policies — reviews are
+immutable like activity_log rows.
 
-The reported bug: invite links bounced users to `/login` instead of `/setup-account`. Root cause: invite, signup, admin password reset, and the new self-service forgot-password were all emailing `inviteData.properties.action_link` (Supabase's hosted `/auth/v1/verify` URL). With PKCE flow enabled (the default for new projects), Supabase redirects after verification with `?code=...` and the exchange requires a code_verifier in the user's browser localStorage — but server-generated links never put one there. Exchange fails, our `/auth/confirm` falls through to `/login`, and the error message gets dropped because the login page only renders `kiosk_*` codes.
+Reviews tab groups templates into Due / Updated since review / Current
+buckets. Rolling 30-day threshold. "Updated since review" wins over "Overdue"
+when the template changed — that's the more actionable signal. Click a row →
+read-only review modal renders the QRC content + amber "Updated since your
+last review" banner if applicable + optional notes textarea + Mark as Reviewed
+button. The hook (`lib/qrc/use-monthly-reviews.ts`) is lifted to the page
+level so the tab badge count and the tab body share one fetch — marking a
+review updates the badge immediately without a second round-trip.
 
-Fix per Supabase SSR docs: build the URL ourselves as `${siteUrl}/auth/confirm?token_hash=<hashed>&type=<verification_type>&next=<destination>`. The route handler's `verifyOtp({type, token_hash})` path doesn't need PKCE. Applied to all four routes (invite, signup-email, admin/reset-password, forgot-password). Also: new `/api/forgot-password` anonymous endpoint replaced the prior `supabase.auth.resetPasswordForEmail` call which was sending Supabase's default unbranded SMTP. Login page now displays any unrecognized `?error=` value verbatim so the next failure isn't invisible.
+Generate Compliance Report button (gated on `qrc:execute`) builds the PDF for
+a chosen calendar month; email export goes through the existing
+`sendPdfViaEmail` pipeline.
 
-### Tour wave 2 — deep page tours + parking panel-opening (`1b1367c`)
+### QRC compliance PDF — matrix layout + fix empty-export bug (`9689cfd`)
 
-Five more page sub-tours deepened: Parking 1 → 10 steps (deep dive with `dispatchOnEnter` events that open the floating panel and switch each tab Aircraft → Environment → Clearance → Settings, plus showing the aircraft picker), Infrastructure 1 → 6, Inspections-all 2 → 6, Daily Reviews 1 → 5, Obstructions 1 → 5. Parking page registers `glidepath:tour-parking-*` listeners that mutate sidebar state from tour steps. setTab handler closes the picker first so a stale modal overlay doesn't cover the next anchor.
+Two fixes after the user pulled the first generated PDF and reported all 25
+QRCs showed "Never reviewed" despite being marked Current in the Reviews tab.
 
-### Pivot — click-through tour torn down, /training rebuilt (uncommitted)
+**Bug 1**: `fetchAllReviewsForBase` and `fetchEligibleReviewers` were using
+PostgREST embed-join syntax (`profiles:user_id ( name, rank, ... )`). When
+the schema cache hasn't refreshed after a migration, those embeds silently
+fail and the whole query returns empty. The single-user `fetchUserReviews`
+worked because it had no embed, which is why the Reviews tab UI showed
+correct state but the PDF saw nothing. Replaced both functions with separate
+`from('profiles').in('id', ids)` lookups + JS-side join, matching the proven
+pattern in `lib/supabase/daily-reviews.ts:219-227`. More verbose, can't fail
+silently.
 
-After wave 2 hit 111 steps total, the user called it. Decision: kill the master tour entirely; make `/training` the canonical learning surface.
+**Bug 2**: per-operator detail pages were too verbose for compliance records.
+User wanted "QRCs on the left, operator initials at the top, Y/N cells" — a
+matrix view. Replaced the per-operator detail pages with a single Compliance
+Matrix on page 2: rows = QRC # + Title (left), columns = one per operator
+with header "Rank Initials" (e.g., "TSgt JK"), cells = Y (filled green) if
+the operator reviewed that QRC during the report month, N (filled red) if
+not. Switched orientation to landscape Letter so 1-15 operators fit per page;
+autoTable handles row overflow. Operator column width auto-adjusts (capped
+22mm so a 1-operator report doesn't blow up the cell, floored at 11mm so up
+to ~15 operators stay legible).
 
-**Phase 0 — teardown:**
-- Deleted `components/tour/HelpMenu.tsx`, `lib/tours/sidebar-tour.ts`, `lib/tours/mobile-tour.ts`.
-- `components/tour/tour-launcher.tsx` trimmed to register only the setup-wizard tour.
-- `components/welcome-gate.tsx` non-admin variant rewritten to point at `/training` instead of the old "View App Tutorial" sidebar button.
-- `components/layout/sidebar-nav.tsx` and `app/(app)/more/page.tsx` no longer render the HelpMenu / HelpRow.
-- `lib/tours/state.ts` gained `unmarkTourCompleted()` for the new reviewed-modules toggle.
-- Engine, setup-wizard tour, and `/base-config/setup` first-run tour all retained — they're focused on-page tutorials, not the app-wide marathon.
-- The `lib/tours/pages/*.ts` files stayed (they were the seed for the new `/training` module copy — kept for reference, can be deleted later if desired).
+### QRC compliance roster — include admin roles + actual reviewers (`2adc2f9`)
 
-**Phase 1 — training architecture + content:**
-- New `lib/training/modules.ts` — `ModuleRef` shape with `id`, `name`, `icon`, `color`, `path`, `tagline`, `roles[]`, `overview`, `keyFeatures`, `howToAccess`, `workflow?`, `screenshots?`, `faq?`, `relatedModules?`, `readMinutes?`. Holds 27 modules (4 new since old Training: `recent-activity`, `ces`, `acsi`, `users`).
-- New `app/(app)/training/[module-id]/page.tsx` — 9-section subpage layout: Hero (icon, role chips, Open Module + Mark Reviewed buttons) · Overview · Key Features (2-column card grid with check icons) · How to Access (tinted callout) · Screenshots (gallery with framed empty-state placeholder) · Workflow (numbered stepper with vertical connecting line) · FAQ (collapsible accordion) · Related modules · Footer back-link.
-- New `components/training/role-chip-filter.tsx` — multi-select role chips above the modules grid.
-- New `components/training/module-card.tsx` — tile card with icon-tile color, neutral border, "X min read" footer (or "Reviewed" in green when marked).
-- Rewrote `app/(app)/training/page.tsx` from scratch — three tabs (Modules / Quick Start / Base Setup), search across module name + tagline + overview + keyFeatures, role chip filter, Reviewed/Unreviewed/All toggle + progress counter ("3 of 27 reviewed"). PDF export still works through structural typing on `ModuleData` subset.
-- New `lib/training/use-reviewed.ts` — hook that loads per-user reviewed map from `profiles.tours_completed` under `training:<id>` namespace. Optimistic toggle with rollback. Exposes `isReviewed(id)` + `toggle(id)` + `loaded` flag. Uses migration `2026050202` JSONB column — no new migration needed.
+User pulled the report at Selfridge and noticed they (SMSgt Christopher
+Proctor, sys_admin) weren't in the roster despite having marked all 25 QRCs
+reviewed. Root cause: `fetchEligibleReviewers` filtered strictly to
+operational roles (airfield_manager / namo / amops). At small ANG units the
+same person often wears multiple hats, and a sys_admin who actively reviews
+QRCs has to appear on the records report.
 
-**Roles tightened to actionable working sets** per user direction ("CES should only see CES and safety should only see the modules they can take action/edit"):
-- CES → 4 modules (ces, discrepancies, infrastructure, settings)
-- Safety → 3 modules (airfield-status, wildlife, settings)
-- PPR → 4 modules (airfield-status, ppr, regulations, settings)
-- MAJCOM → 5 modules (activity, daily-reviews, reports, regulations, settings)
-- Read-Only → 5 modules (airfield-status, aircraft, notams, regulations, settings)
-- AMOPS picks up acsi, waivers, obstructions
-- AFM / NAMO see most ops + airfield-mgmt modules
-- Sys Admin / Base Admin see everything
+Two-layer fix:
+1. `REVIEWER_ROLES` constant now includes `base_admin` and `sys_admin` in
+   addition to the operational trio. Anyone with one of those five roles at
+   the base shows up in the matrix even if they haven't reviewed yet (so
+   gaps remain visible).
+2. `preparePdf` folds in any reviewer whose role isn't in `REVIEWER_ROLES`
+   but who has at least one review in the window. Synthesizes the
+   EligibleReviewer entry from the cached profile fields on the review row —
+   no extra round-trip. Catches edge cases like a `safety` user who happened
+   to review.
 
-**Visual polish iterations** (multiple sub-fixes during user QA):
-- Dropped colored left rail from module cards — neutral border, icon tile carries module color (was reading as a rainbow grid)
-- Removed role chips from cards (added "FILTER BY ROLE" label to the filter chips instead so users know what they do)
-- Quick Start step cards redesigned — 52px outlined-pill numbered circles connected by a vertical cyan line (was tiny filled-cyan square tiles)
-- "Open module" button switched from filled to outlined recipe per `feedback_amber_text_contrast.md` (filled amber reads muddy on the QRC subpage)
-- Workflow stepper circles also outlined recipe (preventive — same amber issue)
-- Replaced all 42 `→` characters in module howToAccess strings with `›` (right-angle quote, more font-conservative)
-- Removed `sys_admins` / `base_admins` snake_case from prose; use "system administrators" / "base administrators". Saved as `feedback_no_snake_case_prose.md`.
+`formatRole` gained labels for `base_admin` / `sys_admin` / `other` so the
+Operator Roll-Up table renders them cleanly.
 
-### Events Log structure-first refresh (uncommitted)
+### Training screenshot pass — the slog (`fac87d6` + `7012092` + `baed8bd`)
 
-Confirmed `/activity` was missed in the prior structure-first sweep — git shows lots of feature/bug-fix commits but no UX pass. Restructure (single file, ~250 lines changed):
+Three commits doing what should have been one. First (`fac87d6`) cleared 51
+stale PNGs from the prior /training rebuild that no longer matched the new
+naming convention. Second (`7012092`) — user dropped 64 captures into
+`public/training/` with names like `acsi_ (1).png` (space + parens). I
+batch-renamed to canonical `<id>_<n>.png` and wired all 27 modules'
+`screenshots: []` arrays. Caught one stray "Customer Feedback" page screenshot
+named generically and folded it in as `feedback_1.png`. Third (`baed8bd`) —
+user reviewed and called out that "the captions you wired up are not with the
+correct captions at all". Root cause: I'd written captions from
+`docs/training-screenshots.md` (the planning doc) without looking at the
+actual PNGs. Captures don't always match the planned shot. Re-captioned every
+wired screenshot by reading each PNG and describing what's actually in it.
 
-- Plain h1 → tertiary "EVENTS LOG" tier-label + inline counts ("107 entries · 0/2 AMSL pending") + utility cluster (Excel) + cyan accent rule. Matches `/discrepancies`, `/ppr`, `/parking`.
-- Full Review Shift card → compact 1-line button (still cyan-tinted, much less vertical space).
-- Cyan-tinted New Log Entry card → neutral border (de-emphasized so list dominates page).
-- Per-column inline search inputs (3) → single top search bar matching actor / OI / action / details in one shot.
-- Full-width segmented period buttons → bordered chip-cluster (Today / 7 Days / 30 Days / Custom).
-- Raw "MAY 2, 2026" date headers → relative-anchor recipe (Today / Yesterday / weekday) + secondary date + right-aligned entry count badge per group.
-- Filter logic collapsed: `filterUser` / `filterAction` / `filterDetails` → single `search` state.
-- Removed standalone Back button (rare need on a sidebar destination) and the standalone "107 entries" line (now inline in header).
-- Header had a dup "Template" button next to Excel — caught in QA, removed (Use Template inline in New Log Entry section is the only entry point now).
+The re-caption pass surfaced four real accuracy bugs in module copy that was
+also written from imagined features rather than the actual UI:
+- Dashboard had no "Quick-launch buttons" label — they're just module
+  shortcut tiles. Renamed in copy.
+- NOTAMs had no "Add Local NOTAM" function — that was removed long ago.
+  Dropped every Local NOTAM reference.
+- Customer Feedback has no detail view — rows show comment + custom-field
+  responses inline. Workflow step rewritten.
+- Checks + Inspections + ACSI + Shift Checklist + QRC copy used "walk" verbs
+  ("walk the airfield", "walk the items") — checks aren't physical walks.
+  Replaced with "work through" / "step through" / "take through".
 
-### v2.33.0 release bump (uncommitted)
+ACSI shot 3 was actually a Daily Review modal (mis-categorized capture);
+dropped from the gallery, file kept in `public/training/` in case it gets
+repurposed for `daily-reviews_3.png`. Final state: 64 of 67 planned captures
+landed; dashboard, notams, and feedback each ended on 1 of 2 because the
+planned second shot didn't represent a real feature.
 
-`package.json`, `README.md`, `app/(app)/settings/page.tsx`, `app/login/page.tsx` — version strings to 2.33.0. New `RELEASE_NOTES` entry in `lib/release-notes.ts` (8 highlight bullets). `CHANGELOG.md` — moved [Unreleased] content into a new [2.33.0] section, added training-rebuild + tour-teardown + auth-fix + events-log-refresh subsections, plus PPR module + Daily Reviews + offline write queue + ACSI per-member sigs to the Modules-added section.
+Five feedback memories saved to prevent the same mistakes from re-happening:
+`feedback_no_walk_in_checks`, `feedback_no_local_notams`,
+`feedback_dashboard_no_quick_launch`, `feedback_no_feedback_detail_view`,
+and most importantly `feedback_caption_screenshots_first` (always Read the
+actual PNG before captioning — this was the meta-lesson behind the whole
+re-caption pass). Plus an earlier session memory
+`feedback_navaid_discrepancy_scope` correcting the assertion that the
+Airfield Status NAVAID grid auto-creates discrepancies (it doesn't —
+`/infrastructure` does).
+
+### Marketing carousel experiment — built then scrapped (uncommitted, deleted)
+
+Spent significant time building a `/marketing` route system to generate
+Facebook-ready carousel cards showcasing Glidepath features. Iterated through
+three distinct designs:
+
+1. **Per-module documentation cards** — mirrored the training pages in a
+   text-dense single card per module. Too documentation-y, didn't stand out
+   in a social feed.
+2. **Marquee-feature carousel** — 6 features × 3 cards (hero / detail /
+   outcome) with screenshot-led layouts. Wide app screenshots got
+   letterboxed inside `flex: 1` frames, leaving giant voids on cards.
+3. **Fixed grid layout with vertical stacking and width-first sizing** —
+   better, but the user concluded the cards "aren't going to turn out how I
+   envision them" and called it.
+
+All marketing files deleted (`lib/marketing/`, `components/marketing/`,
+`app/marketing/`), `middleware.ts` reverted (the `/marketing` public-path
+entry is gone). Tasks closed. The Glidepath logo file rename
+`public/dark logo.jpg` → `public/glidepath-logo-dark.jpg` survives in the
+working tree as untracked carryover (cleaner name, harmless).
+
+Saved `feedback_no_paper_comparison.md` from the experiment — don't reference
+paper / clipboards / whiteboards in marketing copy. The analog era ended
+10+ years ago; the competition is other software.
 
 ---
 
@@ -93,35 +184,50 @@ Confirmed `/activity` was missed in the prior structure-first sweep — git show
 
 | Migration | Status | What it does |
 |---|---|---|
-| `2026050202_profiles_tours_completed_jsonb.sql` | ✅ Applied | (carryover) JSONB column. Now stores `setup-wizard`, `welcome`, and `training:<id>` namespaced flags. |
-| All prior migrations through `2026050201` | ✅ Applied | (carryover) |
-
-No new migrations this session.
+| `2026050300_qrc_monthly_reviews.sql` | ⚠ **Pending** — apply before Reviews tab works | New table for per-user monthly QRC review events. Immutable (no UPDATE/DELETE policies). RLS: SELECT for any base member, INSERT for own row + `qrc:execute` permission. |
+| All prior migrations through `2026050202` | ✅ Applied | (carryover) |
 
 ---
 
 ## Bugs fixed during the session
 
-| Symptom | Root cause | Commit / state |
+| Symptom | Root cause | Commit |
 |---|---|---|
-| Forgot-password sent Supabase's default unbranded email | `supabase.auth.resetPasswordForEmail` from the browser hits Supabase SMTP | `fc1ff35` — new `/api/forgot-password` route mints link via admin API + sends branded Resend email |
-| Invite emails bounced users to /login instead of /setup-account | `properties.action_link` → Supabase `/auth/v1/verify` → `?code=...` → exchange fails because PKCE code_verifier was never set in browser (server-generated link) | `fc1ff35` — all four email routes now build `/auth/confirm?token_hash=&type=&next=` directly |
-| Login page silently dropped `?error=...` from `/auth/confirm` | Error-code map only handled `kiosk_*` codes | `fc1ff35` — falls back to displaying raw error string |
-| Tour step 75 (parking-environment-tab) couldn't show tabs | aircraft picker modal overlay covered the tab bar | uncommitted (parking page setTab listener now closes picker first) |
-| `/training` module grid read like a rainbow hodge-podge | colored left rail per module + colored role chips per card | uncommitted (dropped left rail, neutral chips, icon tile carries color) |
-| `/training` "Open module" button was muddy on amber QRC card | filled amber + white text per `feedback_amber_text_contrast.md` | uncommitted (switched to outlined-pill recipe) |
-| `/training/[id]` "How to Access" text rendered with weird letter-spacing + `→` showing as `!'` | font fallback on `→` character widening surrounding metrics | uncommitted (replaced all 42 `→` with `›` in `modules.ts`) |
-| `/training` prose contained `sys_admins` / `base_admins` snake_case | leaked database identifiers in user-facing copy | uncommitted (rewrote as "system administrators" / "base administrators"; saved feedback memory) |
+| Airfield-inspection map was unusably small on mobile when an item was marked Fail | Shared discrepancy panel locked into a 3:2 flex row even at narrow viewports — map crushed to ~60% screen width | `36a6e96` |
+| Consolidated QRC review PDF showed all 25 templates as "Never reviewed" despite Reviews tab showing them as Current | PostgREST embed-join syntax (`profiles:user_id (...)`) silently failed when schema cache hadn't refreshed after the migration; whole query returned empty | `9689cfd` |
+| Sys admin missing from the consolidated PDF roster despite having marked QRCs reviewed | `fetchEligibleReviewers` filtered strictly to operational roles, excluded `sys_admin` and `base_admin` even though they actively review at small units | `2adc2f9` |
+| Module training pages had captions describing features that don't exist (Quick Launch, Local NOTAM, feedback detail view, "walk the airfield") | Module copy was originally written from imagined features, not from the actual UI; my screenshot captions were written from the planning doc, not the captured PNGs | `baed8bd` |
 
 ---
 
 ## Lessons from this session
 
-- **Click-through tutorials don't scale.** 111 steps was the breaking point. The right model for module-level training is reference content (with optional Mark Reviewed tracking) at a dedicated page like `/training`, not a marathon walkthrough that nobody finishes. Saved as the strategic context in `lib/release-notes.ts` 2.33.0 entry.
-- **Per-user state inside `tours_completed` JSONB scales beyond tours.** The column was added by `2026050202` for tour completion tracking. Reusing it under namespaced keys (`training:<id>`, `welcome`, `setup-wizard`) avoids a migration per new flag and stays cleanly RLS-scoped to the auth user.
-- **Server-generated email links can't use PKCE flow.** Supabase's `properties.action_link` works for client-initiated flows but breaks for `generateLink()` because the code_verifier was never stored on the user's browser. Always build `{site}/auth/confirm?token_hash=&type=&next=` directly for any server-generated email.
-- **Snake_case role names in user-facing prose look like leaked identifiers.** Saved as `feedback_no_snake_case_prose.md`. Type defs and ROLE_LABELS keys can stay snake_case; user-visible text uses spelled-out forms.
-- **Outlined-pill recipe is the safe default for module-color buttons.** Filled amber/yellow reads muddy with any text color (`feedback_amber_text_contrast.md`). The filled treatment also fails for cyan with low-contrast small numbers. Apply outlined recipe (tinted bg + colored border + colored text) to anything that takes module color.
+- **Always Read the actual screenshot before captioning.** Wiring captions
+  from a planning doc compounds error: if the user captured something
+  different from what was planned (which they often do), every caption is
+  wrong, and you don't notice until they tell you. Saved as
+  `feedback_caption_screenshots_first.md`. The same lesson applies to
+  writing module copy, tour text, alt text, and any prose tied to a captured
+  image.
+- **PostgREST embed joins are fragile after migrations.** The
+  `select('a, b, profiles:user_id (...)')` shorthand depends on the schema
+  cache having refreshed to know about the FK. After a fresh migration like
+  `2026050300`, the embed silently returns empty. Use the pattern in
+  `lib/supabase/daily-reviews.ts:219-227` instead — separate
+  `from('profiles').in('id', ids)` lookup + JS-side join. More verbose,
+  can't fail silently.
+- **Marketing material is its own discipline.** The training documentation
+  pages work as documentation; they don't work as social-feed content.
+  Audience reads docs deliberately and skims feeds aggressively — the same
+  content needs different visual treatment. The marketing experiment failed
+  because we tried to translate documentation into marketing rather than
+  rewriting from a marketing-first brief. If revisited, start from "what
+  does an airfield manager scrolling Facebook need to see in 2 seconds to
+  stop scrolling" rather than "let's reformat the docs".
+- **Don't compare Glidepath to paper.** Saved as
+  `feedback_no_paper_comparison.md`. Airfield managers haven't been on
+  physical paper / clipboards / whiteboards in 10+ years; competing against
+  the analog era dates the product and insults the audience.
 
 ---
 
@@ -129,33 +235,56 @@ No new migrations this session.
 
 | Item | Severity | Notes |
 |---|---|---|
-| `/training` modules have no real screenshots | Medium | All 27 modules have `screenshots: []` placeholders. Subpages render a framed "Screenshots coming" empty state. Capture is a manual user task — drop PNGs into `/public/training/<module-id>_<n>.png` and update the array. Phase 3 of the plan. |
-| `lib/tours/pages/*.ts` files still present | Low | 28 files retained as content seed for the training rebuild. Can be deleted in a followup commit; they're no longer imported anywhere. |
-| `data-tour` anchors throughout page.tsx files | Low | 70+ anchors no longer used by any active tour (only setup-wizard tour anchors remain in active use). Harmless dead attributes; sweep is optional cleanup. |
-| `/training` Quick Start + Base Setup tabs use stub content | Medium | Quick Start has 7 lean steps; Base Setup tab is a placeholder pointing at `/base-config/setup` wizard. Could be expanded over time. |
+| Migration `2026050300_qrc_monthly_reviews.sql` not applied | High | Reviews tab returns empty; Mark as Reviewed will throw RLS error until the table exists. |
+| 3 module training pages still missing planned screenshots | Low | dashboard / notams / feedback each have 1 of 2 captures wired. The second planned shot for each was dropped because the underlying feature doesn't exist (not a capture gap). |
+| `lib/tours/pages/*.ts` still present | Low | (Carryover) 28 files retained as content seed for the training rebuild. No imports anywhere; safe to delete in a sweep when convenient. |
+| `data-tour` anchors throughout page.tsx files | Low | (Carryover) 70+ anchors no longer used by any active tour (only setup-wizard tour uses them). Harmless dead attributes; sweep is optional cleanup. |
+| `/training` Quick Start + Base Setup tabs use stub content | Medium | (Carryover) Quick Start has 7 lean steps; Base Setup tab is a placeholder pointing at `/base-config/setup` wizard. Could be expanded over time. |
 | FAQ entries on every module are empty | Low | `faq: []` on all 27 modules. Populate as user questions come in. |
-| IAW Compliance citations in `lib/base-setup-guide.ts` need verification | Medium | (Carryover) User flagged a couple as wrong. Working file at `docs/base-setup-guide-review.md`. |
+| IAW Compliance citations in `lib/base-setup-guide.ts` need verification | Medium | (Carryover) User flagged a couple as wrong. Working file `docs/base-setup-guide-review.md`. |
 | `lib/permissions-server.ts` imports `resolveEffectivePermissions` from `'use client'` module | Medium | (Carryover) Move to a shared module. |
 | `audit-panel.tsx` per-row internal styling | Low | (Carryover) 1.6K LOC of its own. |
 | `/infrastructure` perf | Low–Medium | (Carryover) Smooth on dev laptops, may stutter elsewhere. AdvancedMarkerElement migration target. |
 | Largest source files | Held | `base-config/setup/page.tsx` ~5.8K LOC, `parking/page.tsx` ~4.7K LOC, `infrastructure/page.tsx` ~4.3K LOC. |
-| Untracked carryover files | Low | `.claude/`, `docs/DEMO_LOGINS.md`, `docs/base-setup-guide-review.md`, `public/dark logo.jpg`. |
-| ~124 `as any` casts | Low | (Carryover) |
+| Untracked carryover files | Low | `.claude/`, `docs/DEMO_LOGINS.md`, `docs/base-setup-guide-review.md`, `public/glidepath-logo-dark.jpg` (renamed from `public/dark logo.jpg`). |
+| ~124 `as any` casts | Low | (Carryover) Plus four new ones in `lib/supabase/qrc-reviews.ts` for the not-yet-regenerated `qrc_monthly_reviews` table type — fine until the next supabase types regeneration sweeps them up. |
 | Check draft real-time sync deferred | Low | (Carryover) Two users could create duplicate drafts. |
 | "Advisories" → "WWA Notifications" UI sweep | Deferred | Glossary memory says "WWA Notifications"; running app still says "Advisories". |
+| Trademark | Held | (Carryover) CDW holds live "GLIDEPATH" Class 42 (SaaS) registration — risk for commercial use. |
 
 ---
 
 ## Next session tasks
 
-1. **Capture screenshots for `/training` modules** — 27 modules × 2-3 shots each = ~50-75 PNGs. Drop into `/public/training/<id>_<n>.png` and update the `screenshots` arrays per module. Incremental work — can land a batch at a time. The subpages already render a "Screenshots coming" placeholder, so partial capture is fine.
-2. **Optionally delete `lib/tours/pages/*.ts`** — 28 files no longer imported. Can also sweep the `data-tour` attributes from page files if doing a real cleanup pass. Pure mechanical change.
-3. **IAW Compliance citation audit in `lib/base-setup-guide.ts`** — (carryover) user flagged a couple as wrong. Working file `docs/base-setup-guide-review.md`.
+1. **Apply `2026050300_qrc_monthly_reviews.sql`** to staging and prod
+   databases. The Reviews tab on `/qrc` cannot function without the table —
+   any Mark as Reviewed will fail RLS, and the consolidated PDF returns no
+   rows. This is the gating step before the QRC monthly review feature can
+   ship to operators.
+2. **Bump version to 2.34.0** if the QRC monthly review feature is treated
+   as a release. Five places: `package.json`,
+   `app/(app)/settings/page.tsx`, `app/login/page.tsx`, `CHANGELOG.md`,
+   `README.md`. New entry in `lib/release-notes.ts`. Suggested headline:
+   per-user monthly QRC review with cross-operator compliance matrix PDF +
+   mobile fix for the inspection-discrepancy panel + complete /training
+   screenshot capture pass.
+3. **IAW Compliance citation audit in `lib/base-setup-guide.ts`** —
+   (carryover) user flagged a couple as wrong. Working file
+   `docs/base-setup-guide-review.md`.
+4. **The 3 missing module screenshots** are essentially untouchable —
+   dashboard_2, notams_2, feedback_2 all referenced features that don't
+   exist. If you want to top those module galleries off, capture an
+   alternative shot per module (e.g., dashboard's AFM toggle section,
+   notams' expanded FAA-feed entry, feedback's monthly PDF preview) and
+   wire it. Otherwise they stay at 1 of 2 indefinitely.
 
 ### Long-running carryover (bandwidth-permitting)
 
-- Move `resolveEffectivePermissions` out of `lib/permissions.ts`.
-- Component extraction of inline tab functions in `base-config/setup/page.tsx`.
+- Sweep the unreferenced `lib/tours/pages/*.ts` files + dead `data-tour`
+  attributes.
+- Move `resolveEffectivePermissions` out of `lib/permissions.ts` into a
+  shared module (server + client both import).
+- Component extraction in `base-config/setup/page.tsx` (~5.8K LOC).
 - `audit-panel.tsx` per-row internal styling refresh (1.6K LOC).
 - `/parking/page.tsx` component extraction (~4.7K LOC).
 - "Advisories" → "WWA Notifications" UI sweep.
@@ -168,16 +297,14 @@ No new migrations this session.
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 253 pass / 25 files (unchanged)
+Tests: 253 pass / 25 files (unchanged from prior)
 Build: npm run build clean — no warnings, no errors.
-No new migrations this session.
+1 new migration this session (2026050300_qrc_monthly_reviews.sql) — pending application.
 
 Notable First Load JS (changed routes this session):
-  /training                             5.03 kB / 193 kB    (was 21.6 kB / 134 kB; -16 kB local — content moved to lib/training/modules.ts and components/training/)
-  /training/[module-id]                 3.8 kB / 182 kB     (NEW dynamic route for per-module deep-dive)
-  /activity                             — (Events Log; restructured but route size unchanged)
-  /more                                 7.35 kB / 201 kB    (was 7.52 kB; HelpRow removed)
-  /login                                10.2 kB / 166 kB    (was 10.2 kB; error display + version bump)
+  /qrc                     18.4 kB / 342 kB    (jumped from prior baseline due to Reviews tab + jspdf-autotable import for the consolidated PDF)
+  /training/[module-id]    3.8 kB / 188 kB     (was 3.8 kB / 182 kB; +6 kB from screenshot wiring across 27 modules)
+  /checks, /inspections    unchanged at the route level (mobile fix lives in the shared simple-discrepancy-panel chunk)
 
 Largest static page (unchanged): /wildlife 458 kB / 793 kB.
 Middleware: 74.5 kB.
@@ -190,7 +317,8 @@ Shared by all: 91.2 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **2.33.0** | 2026-05-02 (this session bump) | Glidepath Training rebuilt at /training as role-filterable hub + per-module deep-dive subpages with Mark Reviewed toggle; click-through tour torn down; PPR module; Daily Reviews; offline write queue + Workbox runtime caching; permission matrix overhaul + 3 new roles; Events Log structure-first refresh; auth fix for invite/signup/reset emails landing on correct screen; forgot-password sends branded email. |
+| **Unreleased** | — | QRC per-user monthly review + cross-operator compliance matrix PDF; mobile fix for inspection-discrepancy panel; complete /training screenshot capture pass (64 shots wired with verified captions). |
+| 2.33.0 | 2026-05-02 | Glidepath Training rebuilt at /training as role-filterable hub + per-module deep-dive subpages with Mark Reviewed toggle; click-through tour torn down; PPR module; Daily Reviews; offline write queue + Workbox runtime caching; permission matrix overhaul + 3 new roles; Events Log structure-first refresh; auth fix for invite/signup/reset emails landing on correct screen; forgot-password sends branded email. |
 | v2.32.0 | 2026-04-21 | Modular Onboarding, SCN, Close-for-Day, What's New modal |
 | v2.31.0 | 2026-04-07 | Full Google Maps migration, Custom Status Boards, PPR Log |
 | v2.30.0 | 2026-04-14 | Daily Reviews + shift sign-off, ARFF status log, Vitest scaffold |
@@ -203,35 +331,27 @@ See `CHANGELOG.md` for full history.
 
 ### New files
 
-- `lib/training/modules.ts` — `ModuleRef` type + 27 module entries (the canonical data source for /training).
-- `lib/training/use-reviewed.ts` — hook for Mark Reviewed toggle persistence.
-- `app/(app)/training/[module-id]/page.tsx` — per-module deep-dive subpage (9-section layout).
-- `components/training/role-chip-filter.tsx` — multi-select role filter chips.
-- `components/training/module-card.tsx` — tile-grid card.
-- `app/api/forgot-password/route.ts` — anonymous Resend-backed password reset endpoint (committed in `fc1ff35`).
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_page_tour_recipe.md` — page-feature tour authoring conventions (kept; still applies if a future page tour is built).
-- `C:/Users/cspro/.claude/projects/C--Users-cspro/memory/feedback_no_snake_case_prose.md` — never use snake_case role identifiers in user-facing copy.
+- `supabase/migrations/2026050300_qrc_monthly_reviews.sql` — table + RLS for per-user monthly QRC review events.
+- `lib/supabase/qrc-reviews.ts` — `fetchUserReviews` / `fetchAllReviewsForBase` / `fetchEligibleReviewers` / `markReviewed`.
+- `lib/qrc/monthly-review-status.ts` — pure helper computing per-template per-user review state.
+- `lib/qrc/use-monthly-reviews.ts` — hook with optimistic insert + rollback.
+- `components/qrc/monthly-review-modal.tsx` — read-only review modal with amber "updated since" banner.
+- `components/qrc/reviews-tab.tsx` — Reviews tab body with grouped buckets + month picker + Generate Compliance Report.
+- `lib/qrc-monthly-review-pdf.ts` — landscape-Letter consolidated PDF: cover summary + Y/N matrix.
+- `docs/training-screenshots.md` — per-shot capture checklist; this session's commits filled it in and pruned 3 obsolete entries.
+- 64 PNG files at `public/training/<module-id>_<n>.png` — module screenshots.
+- 7 feedback memories at `~/.claude/projects/C--Users-cspro/memory/`: `feedback_navaid_discrepancy_scope`, `feedback_no_walk_in_checks`, `feedback_no_local_notams`, `feedback_dashboard_no_quick_launch`, `feedback_no_feedback_detail_view`, `feedback_caption_screenshots_first`, `feedback_no_paper_comparison`.
 
 ### Modified files
 
-- `app/(app)/training/page.tsx` — rewritten from scratch as role-filterable hub.
-- `app/(app)/activity/page.tsx` — Events Log structure-first refresh.
-- `app/(app)/parking/page.tsx` — `glidepath:tour-parking-*` event listeners + 4 new anchors (committed in `1b1367c`).
-- `app/(app)/more/page.tsx` — removed HelpRow.
-- `components/layout/sidebar-nav.tsx` — removed HelpMenu slot.
-- `components/welcome-gate.tsx` — non-admin variant points at /training.
-- `components/tour/tour-launcher.tsx` — only registers setup-wizard tour now.
-- `components/tour/OnboardingTour.tsx` — `dispatchOnEnter` + arrow-key nav (committed in `e833639`).
-- `lib/tours/state.ts` — added `unmarkTourCompleted`.
-- `lib/release-notes.ts` — new 2.33.0 entry.
-- `package.json`, `README.md`, `app/(app)/settings/page.tsx`, `app/login/page.tsx` — version strings to 2.33.0.
-- `CHANGELOG.md` — [Unreleased] folded into [2.33.0]; new sections for training rebuild + tour teardown + auth fix + Events Log refresh.
+- `app/(app)/qrc/page.tsx` — new `'reviews'` tab between Available and Active; `useMonthlyReviews` hook lifted to page level so badge count + tab body share state.
+- `lib/training/modules.ts` — every module's `screenshots: []` populated; copy corrections (no Quick Launch, no Local NOTAM, no detail view, no "walk").
+- `lib/supabase/types.ts` — new `QrcMonthlyReview` type (table not yet in auto-generated `Database`).
+- `components/ui/simple-discrepancy-panel.tsx` — `narrow` matchMedia state; flex flips to column on mobile.
 
 ### Deleted files
 
-- `components/tour/HelpMenu.tsx`
-- `lib/tours/sidebar-tour.ts`
-- `lib/tours/mobile-tour.ts`
+- 51 PNGs in `public/training/` — pre-rebuild assets cleared before the new capture pass (`fac87d6`).
 
 ### Environment changes
 
@@ -239,4 +359,4 @@ None this session.
 
 ---
 
-*Three commits this session pushed to `origin/main` (`cfed596` → `e833639` → `fc1ff35` → `1b1367c`). After that the pivot work + Events Log refresh + 2.33.0 bump remain uncommitted on disk pending one final commit + push to ship 2.33.0.*
+*Eight commits this session pushed to `origin/main` in this order: `2ffc318` → `36a6e96` → `fac87d6` → `255c77a` → `9689cfd` → `2adc2f9` → `7012092` → `baed8bd`. Marketing carousel experiment built and scrapped within the session — no commits, code deleted from working tree.*
