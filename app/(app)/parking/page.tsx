@@ -382,7 +382,7 @@ export default function ParkingPage() {
   const [showClearances, setShowClearances] = useState(true)
   const [apronContext, setApronContext] = useState<ApronContext>('parking')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ aircraft: true, obstacles: false, taxilanes: false, clearance: true, settings: false, reference: false })
-  const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({ aircraft: true, obstacles: true, taxilanes: true, boundaries: true, clearance: true })
+  const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({ aircraft: true, obstacles: true, taxilanes: true, boundaries: true, clearance: true, labels: true })
   const toggleLayerVisibility = (key: string) => setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }))
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
@@ -1206,13 +1206,13 @@ export default function ParkingPage() {
             anchor: new google.maps.Point(displayDim / 2, displayDim / 2),
           } as google.maps.Icon,
           zIndex: 10,
-          label: {
+          label: visibleLayers.labels ? {
             text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
             color: '#FFFFFF',
             fontSize: '11px',
             fontWeight: 'bold',
             className: 'parking-ac-label',
-          },
+          } : undefined,
         })
         spotMarkersMapRef.current.set(spot.id, marker)
         spotMetaRef.current.set(spot.id, { fixedDim: cached.fixedDim, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
@@ -1233,7 +1233,7 @@ export default function ParkingPage() {
       }
     }
     renderAircraft()
-  }, [mapLoaded, spotsWithAircraft, visibleLayers.aircraft, mapHeadingDeg])
+  }, [mapLoaded, spotsWithAircraft, visibleLayers.aircraft, visibleLayers.labels, mapHeadingDeg])
 
   // ── Layer 3: Zoom rescaling — fires on 'idle' (after zoom animation settles),
   // not on 'zoom_changed' (which fires during animation and causes flicker).
@@ -3230,7 +3230,7 @@ export default function ParkingPage() {
                               >
                                 <div style={{ display: 'flex', gap: 6 }}>
                                   <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
-                                    Spot Name
+                                    Aircraft Label
                                     <input value={s.spot_name || ''} onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                                   </label>
                                   <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
@@ -3315,18 +3315,18 @@ export default function ParkingPage() {
                 >
                   {obstaclesLocked ? 'Obstacles Locked' : 'Obstacles Unlocked — Drag Enabled'}
                 </button>
-                {(['aircraft', 'obstacles', 'taxilanes', 'boundaries'] as const).map(lk => (
+                {(['aircraft', 'labels', 'obstacles', 'taxilanes', 'boundaries'] as const).map(lk => (
                   <button
                     key={lk}
                     onClick={() => toggleLayerVisibility(lk)}
-                    title={`${visibleLayers[lk] ? 'Hide' : 'Show'} ${lk}`}
+                    title={`${visibleLayers[lk] ? 'Hide' : 'Show'} ${lk === 'labels' ? 'aircraft labels' : lk}`}
                     style={{
                       padding: '2px 4px', border: 'none', cursor: 'pointer', background: 'transparent',
                       fontSize: 11, color: visibleLayers[lk] ? 'var(--color-cyan)' : 'var(--color-text-secondary)',
                       opacity: visibleLayers[lk] ? 1 : 0.3,
                     }}
                   >
-                    {lk === 'aircraft' ? 'AC' : lk === 'obstacles' ? 'OB' : lk === 'taxilanes' ? 'TL' : 'AB'}
+                    {lk === 'aircraft' ? 'AC' : lk === 'labels' ? 'LBL' : lk === 'obstacles' ? 'OB' : lk === 'taxilanes' ? 'TL' : 'AB'}
                   </button>
                 ))}
               </div>
@@ -4306,10 +4306,10 @@ export default function ParkingPage() {
               </div>
 
               <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {/* Spot Name / Tail # / Callsign */}
+                {/* Aircraft Label / Tail # / Callsign */}
                 <div style={{ display: 'flex', gap: 4 }}>
                   <label style={{ flex: 1 }}>
-                    <span style={ctxLabelStyle}>Spot Name</span>
+                    <span style={ctxLabelStyle}>Aircraft Label</span>
                     <input value={s.spot_name || ''} onChange={e => handleUpdateSpot(s.id, { spot_name: e.target.value })} style={ctxInputStyle} />
                   </label>
                   <label style={{ flex: 1 }}>
