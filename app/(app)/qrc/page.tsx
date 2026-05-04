@@ -112,7 +112,9 @@ export default function QrcPage() {
 
   // Drives the Reviews tab badge count (Due + Updated). Same hook the
   // ReviewsTab uses internally — React de-dupes the underlying fetch.
-  const monthlyReviews = useMonthlyReviews(installationId)
+  const reviewInterval: 'monthly' | 'quarterly' =
+    (currentInstallation as { qrc_review_interval?: 'monthly' | 'quarterly' } | null)?.qrc_review_interval ?? 'monthly'
+  const monthlyReviews = useMonthlyReviews(installationId, reviewInterval)
   const reviewsDueCount = templates.filter(t => {
     if (!t.is_active) return false
     const s = monthlyReviews.getStatus(t)

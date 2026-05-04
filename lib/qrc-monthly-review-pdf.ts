@@ -6,18 +6,23 @@ import {
 import { formatZuluDateTime } from '@/lib/utils'
 import type { QrcTemplate } from '@/lib/supabase/types'
 import type { QrcMonthlyReviewWithUser, EligibleReviewer } from '@/lib/supabase/qrc-reviews'
+import type { ReviewInterval } from '@/lib/qrc/monthly-review-status'
 
 export interface QrcMonthlyReviewPdfInput {
   baseName?: string | null
   baseIcao?: string | null
-  /** Calendar month + year the report covers. Filename + cover header. */
-  month: number  // 1–12
+  /** Per-base review interval. Drives title, subtitle, window, filename. */
+  interval?: ReviewInterval
+  /** Calendar month (1–12) — required when interval='monthly'. */
+  month?: number
+  /** Calendar quarter (1–4) — required when interval='quarterly'. */
+  quarter?: 1 | 2 | 3 | 4
   year: number
   templates: QrcTemplate[]
   eligibleUsers: EligibleReviewer[]
   /**
-   * Every review row at the base ≥ start of the report month. The generator
-   * filters to the [monthStart, monthEnd) window itself so callers can hand
+   * Every review row at the base ≥ start of the report period. The generator
+   * filters to the [periodStart, periodEnd) window itself so callers can hand
    * in a wider window without rework.
    */
   reviews: QrcMonthlyReviewWithUser[]
@@ -50,7 +55,10 @@ function operatorShortLabel(u: EligibleReviewer): string {
 export async function generateQrcMonthlyReviewPdf(
   input: QrcMonthlyReviewPdfInput,
 ): Promise<{ doc: jsPDF; filename: string }> {
-  const { baseName, baseIcao, month, year, templates, eligibleUsers, reviews, generatedBy } = input
+  const { baseName, baseIcao, year, templates, eligibleUsers, reviews, generatedBy } = input
+  const interval: ReviewInterval = input.interval ?? 'monthly'
+  const month = interval === 'monthly' ? (input.month ?? 1) : 1
+  const quarter = interval === 'quarterly' ? (input.quarter ?? 1) : 1
 
   // Landscape Letter so the matrix fits more operator columns. The cover
   // summary lives at the top of page 1; autoTable breaks the matrix
@@ -58,12 +66,14 @@ export async function generateQrcMonthlyReviewPdf(
   const ctx = createPdf({ orientation: 'landscape', format: 'letter' })
   const { doc, margin } = ctx
 
-  // ── Window the reviews to the requested calendar month ──
-  const monthStart = new Date(Date.UTC(year, month - 1, 1)).getTime()
-  const monthEnd = new Date(Date.UTC(year, month, 1)).getTime()
+  // ── Window the reviews to the requested calendar period ──
+  const periodStartMonth = interval === 'quarterly' ? (quarter - 1) * 3 : month - 1
+  const periodEndMonth = interval === 'quarterly' ? quarter * 3 : month
+  const periodStart = new Date(Date.UTC(year, periodStartMonth, 1)).getTime()
+  const periodEnd = new Date(Date.UTC(year, periodEndMonth, 1)).getTime()
   const reviewsInWindow = reviews.filter(r => {
     const t = new Date(r.reviewed_at).getTime()
-    return t >= monthStart && t < monthEnd
+    return t >= periodStart && t < periodEnd
   })
 
   // Latest review IN WINDOW per (user, template). Rows are already DESC by
@@ -101,9 +111,13 @@ export async function generateQrcMonthlyReviewPdf(
   // ─────────────────────────────────────────────────────────
   let y = margin
   y = drawBaseHeader(ctx, y, { baseName, baseIcao })
+  const periodTitle = interval === 'quarterly' ? 'Quarterly' : 'Monthly'
+  const periodSubtitle = interval === 'quarterly'
+    ? `Compliance Report — Q${quarter} ${year}`
+    : `Compliance Report — ${MONTH_NAMES[month - 1]} ${year}`
   y = drawReportTitle(ctx, y, {
-    title: 'AMOPS Monthly QRC Review',
-    subtitle: `Compliance Report — ${MONTH_NAMES[month - 1]} ${year}`,
+    title: `AMOPS ${periodTitle} QRC Review`,
+    subtitle: periodSubtitle,
   })
 
   y = drawStatBox(ctx, y, [
@@ -173,8 +187,12 @@ export async function generateQrcMonthlyReviewPdf(
   y += 4
   doc.setFontSize(8)
   doc.setTextColor(100)
+  const periodLegend = interval === 'quarterly'
+    ? `Q${quarter} ${year}`
+    : `${MONTH_NAMES[month - 1]} ${year}`
+  const periodNoun = interval === 'quarterly' ? 'quarter' : 'month'
   doc.text(
-    `Y = reviewed during ${MONTH_NAMES[month - 1]} ${year}    ·    N = not reviewed during this month`,
+    `Y = reviewed during ${periodLegend}    ·    N = not reviewed during this ${periodNoun}`,
     margin, y,
   )
   y += 6
@@ -247,9 +265,11 @@ export async function generateQrcMonthlyReviewPdf(
     drawFooter(ctx)
   }
 
-  const monthSlug = `${year}-${String(month).padStart(2, '0')}`
+  const periodSlug = interval === 'quarterly'
+    ? `${year}-q${quarter}`
+    : `${year}-${String(month).padStart(2, '0')}`
   const baseSlug = (baseIcao || baseName || 'base').toString().toLowerCase().replace(/\s+/g, '-')
-  const filename = `qrc-monthly-review-${baseSlug}-${monthSlug}.pdf`
+  const filename = `qrc-${interval}-review-${baseSlug}-${periodSlug}.pdf`
 
   return { doc, filename }
 }

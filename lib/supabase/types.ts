@@ -964,6 +964,7 @@ export type Database = {
           location: string | null
           majcom: string | null
           name: string
+          qrc_review_interval: 'monthly' | 'quarterly'
           setup_progress: Json
           shift_count: number
           status_labels: Json
@@ -992,6 +993,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name: string
+          qrc_review_interval?: 'monthly' | 'quarterly'
           setup_progress?: Json
           shift_count?: number
           status_labels?: Json
@@ -1020,6 +1022,7 @@ export type Database = {
           location?: string | null
           majcom?: string | null
           name?: string
+          qrc_review_interval?: 'monthly' | 'quarterly'
           setup_progress?: Json
           shift_count?: number
           status_labels?: Json

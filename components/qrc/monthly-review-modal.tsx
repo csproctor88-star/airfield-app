@@ -5,11 +5,12 @@ import { toast } from 'sonner'
 import { CheckCircle2, X, AlertCircle, Calendar, ClipboardCheck } from 'lucide-react'
 import { formatZuluDate } from '@/lib/utils'
 import type { QrcStep, QrcTemplate } from '@/lib/supabase/types'
-import type { MonthlyReviewStatus } from '@/lib/qrc/monthly-review-status'
+import type { MonthlyReviewStatus, ReviewInterval } from '@/lib/qrc/monthly-review-status'
 
 interface Props {
   template: QrcTemplate
   status: MonthlyReviewStatus
+  interval?: ReviewInterval
   onClose: () => void
   /** Resolves with { error: string | null }. Caller persists. */
   onMarkReviewed: (templateId: string, note: string) => Promise<{ error: string | null }>
@@ -20,9 +21,10 @@ interface Props {
  * template was edited since the user's last review, captures an optional
  * note, then calls onMarkReviewed which persists via the parent's hook.
  */
-export function MonthlyReviewModal({ template, status, onClose, onMarkReviewed }: Props) {
+export function MonthlyReviewModal({ template, status, interval = 'monthly', onClose, onMarkReviewed }: Props) {
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const intervalLabel = interval === 'quarterly' ? 'Quarterly Review' : 'Monthly Review'
 
   const steps = (template.steps as unknown as QrcStep[] | null) || []
 
@@ -74,7 +76,7 @@ export function MonthlyReviewModal({ template, status, onClose, onMarkReviewed }
             <div style={{
               fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-amber)',
               textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4,
-            }}>QRC-{template.qrc_number} · Monthly Review</div>
+            }}>QRC-{template.qrc_number} · {intervalLabel}</div>
             <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', lineHeight: 1.2 }}>
               {template.title}
             </div>

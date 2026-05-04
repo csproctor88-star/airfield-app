@@ -395,7 +395,7 @@ export default function BaseSetupPage() {
             {step.key === 'facilities' && <FacilitiesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'templates' && <TemplatesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
-            {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
             {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} markSaved={markSaved} />}
@@ -3103,7 +3103,8 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
 
 type QrcTemplateRow = { id: string; qrc_number: number; title: string; notes: string | null; is_active: boolean; steps: unknown[]; references: string | null; has_scn_form: boolean }
 
-function QrcTemplatesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
+function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { installationId: string | null; currentInstallation: any; markSaved?: (stepKey: WizardStepKey) => void }) {
+  const { refreshCurrentInstallation } = useInstallation()
   const [templates, setTemplates] = useState<QrcTemplateRow[]>([])
   const [loaded, setLoaded] = useState(false)
   const [showSeedPicker, setShowSeedPicker] = useState(false)
@@ -3111,6 +3112,27 @@ function QrcTemplatesTab({ installationId, markSaved }: { installationId: string
   const [seeding, setSeeding] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<QrcTemplateRow | null>(null)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
+  const reviewInterval: 'monthly' | 'quarterly' =
+    (currentInstallation as { qrc_review_interval?: 'monthly' | 'quarterly' } | null)?.qrc_review_interval ?? 'monthly'
+  const [savingInterval, setSavingInterval] = useState(false)
+
+  async function handleSaveInterval(next: 'monthly' | 'quarterly') {
+    if (!installationId || next === reviewInterval) return
+    setSavingInterval(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { error } = await (supabase as any)
+        .from('bases')
+        .update({ qrc_review_interval: next, updated_at: new Date().toISOString() })
+        .eq('id', installationId)
+      if (error) toast.error(error.message)
+      else {
+        toast.success(`Review interval set to ${next === 'monthly' ? 'Monthly' : 'Quarterly'}`)
+        await refreshCurrentInstallation()
+      }
+    }
+    setSavingInterval(false)
+  }
 
   const load = useCallback(async () => {
     if (!installationId) return
@@ -3198,6 +3220,47 @@ function QrcTemplatesTab({ installationId, markSaved }: { installationId: string
           background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
           padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
         }}>+ Add from Defaults</button>
+      </div>
+
+      {/* Review Interval — drives /qrc Reviews tab threshold + period picker + compliance PDF window */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', marginBottom: 14,
+        border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
+        background: 'var(--color-bg-elevated)', flexWrap: 'wrap',
+      }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Review Interval</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+            How often operators must re-review each QRC. Drives the Reviews tab and compliance report.
+          </div>
+        </div>
+        <div style={{ display: 'inline-flex', gap: 0, marginLeft: 'auto' }}>
+          {(['monthly', 'quarterly'] as const).map((opt, i) => {
+            const selected = reviewInterval === opt
+            return (
+              <button
+                key={opt}
+                onClick={() => handleSaveInterval(opt)}
+                disabled={savingInterval}
+                style={{
+                  padding: '6px 14px', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  border: '1px solid var(--color-border)',
+                  borderTopLeftRadius: i === 0 ? 'var(--radius-sm)' : 0,
+                  borderBottomLeftRadius: i === 0 ? 'var(--radius-sm)' : 0,
+                  borderTopRightRadius: i === 1 ? 'var(--radius-sm)' : 0,
+                  borderBottomRightRadius: i === 1 ? 'var(--radius-sm)' : 0,
+                  borderLeftWidth: i === 0 ? 1 : 0,
+                  background: selected
+                    ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
+                    : 'var(--color-bg-inset)',
+                  color: selected ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                  cursor: savingInterval ? 'default' : 'pointer',
+                  opacity: savingInterval ? 0.6 : 1,
+                }}
+              >{opt === 'monthly' ? 'Monthly' : 'Quarterly'}</button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Seed Picker Dialog */}

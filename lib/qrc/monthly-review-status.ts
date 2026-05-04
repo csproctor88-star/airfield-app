@@ -1,6 +1,10 @@
 import type { QrcTemplate, QrcMonthlyReview } from '@/lib/supabase/types'
 
-export const MONTHLY_REVIEW_DAYS = 30
+export const INTERVAL_DAYS = { monthly: 30, quarterly: 90 } as const
+export type ReviewInterval = keyof typeof INTERVAL_DAYS
+
+/** @deprecated kept for any external import; prefer INTERVAL_DAYS[interval]. */
+export const MONTHLY_REVIEW_DAYS = INTERVAL_DAYS.monthly
 
 export type MonthlyReviewState = 'never' | 'overdue' | 'updated' | 'current'
 
@@ -13,10 +17,10 @@ export interface MonthlyReviewStatus {
 }
 
 /**
- * Compute per-user monthly review status for a QRC template.
+ * Compute per-user review status for a QRC template.
  *
  *   never     — user has never marked this QRC reviewed
- *   overdue   — last review > MONTHLY_REVIEW_DAYS ago
+ *   overdue   — last review > INTERVAL_DAYS[interval] ago
  *   updated   — template.updated_at > user's last review (template changed since)
  *   current   — reviewed within window AND no template changes since
  *
@@ -26,6 +30,7 @@ export interface MonthlyReviewStatus {
 export function getMonthlyReviewStatus(
   template: Pick<QrcTemplate, 'updated_at'>,
   latestReview: QrcMonthlyReview | null | undefined,
+  interval: ReviewInterval = 'monthly',
 ): MonthlyReviewStatus {
   if (!latestReview) {
     return { state: 'never', reviewedAt: null, templateUpdatedSince: false, daysSinceReview: null }
@@ -42,7 +47,7 @@ export function getMonthlyReviewStatus(
   if (templateUpdatedSince) {
     return { state: 'updated', reviewedAt, templateUpdatedSince: true, daysSinceReview }
   }
-  if (daysSinceReview > MONTHLY_REVIEW_DAYS) {
+  if (daysSinceReview > INTERVAL_DAYS[interval]) {
     return { state: 'overdue', reviewedAt, templateUpdatedSince: false, daysSinceReview }
   }
   return { state: 'current', reviewedAt, templateUpdatedSince: false, daysSinceReview }

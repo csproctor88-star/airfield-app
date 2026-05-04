@@ -2,19 +2,23 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { fetchUserReviews, markReviewed as persistReview } from '@/lib/supabase/qrc-reviews'
-import { getMonthlyReviewStatus, type MonthlyReviewStatus } from './monthly-review-status'
+import { getMonthlyReviewStatus, type MonthlyReviewStatus, type ReviewInterval } from './monthly-review-status'
 import type { QrcMonthlyReview, QrcTemplate } from '@/lib/supabase/types'
 
 /**
- * Per-user monthly QRC review state for the Reviews tab.
+ * Per-user QRC review state for the Reviews tab.
  *
  *   reviews      — Map<templateId, QrcMonthlyReview> of latest review per template
  *   loaded       — true after the initial fetch completes (gate UI flicker)
- *   getStatus    — compute MonthlyReviewStatus for a template
+ *   interval     — echoed back from the caller for downstream UI
+ *   getStatus    — compute MonthlyReviewStatus for a template (uses interval)
  *   markReviewed — optimistic insert; rolls back on persistence error
  *   refresh      — re-fetch (call after the user changes installation)
  */
-export function useMonthlyReviews(baseId: string | null | undefined) {
+export function useMonthlyReviews(
+  baseId: string | null | undefined,
+  interval: ReviewInterval = 'monthly',
+) {
   const [reviews, setReviews] = useState<Map<string, QrcMonthlyReview>>(new Map())
   const [loaded, setLoaded] = useState(false)
 
@@ -38,9 +42,9 @@ export function useMonthlyReviews(baseId: string | null | undefined) {
 
   const getStatus = useCallback(
     (template: Pick<QrcTemplate, 'id' | 'updated_at'>): MonthlyReviewStatus => {
-      return getMonthlyReviewStatus(template, reviews.get(template.id) || null)
+      return getMonthlyReviewStatus(template, reviews.get(template.id) || null, interval)
     },
-    [reviews],
+    [reviews, interval],
   )
 
   const markReviewed = useCallback(
@@ -79,5 +83,5 @@ export function useMonthlyReviews(baseId: string | null | undefined) {
     [baseId, reviews],
   )
 
-  return { reviews, loaded, getStatus, markReviewed, refresh }
+  return { reviews, loaded, interval, getStatus, markReviewed, refresh }
 }

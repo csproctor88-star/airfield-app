@@ -46,11 +46,18 @@ function defaultMonth(): { month: number; year: number } {
   return { month: d.getUTCMonth() + 1, year: d.getUTCFullYear() }
 }
 
+function defaultQuarter(): { quarter: 1 | 2 | 3 | 4; year: number } {
+  const d = new Date()
+  const q = (Math.floor(d.getUTCMonth() / 3) + 1) as 1 | 2 | 3 | 4
+  return { quarter: q, year: d.getUTCFullYear() }
+}
+
 export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByLabel, monthlyReviews }: Props) {
-  const { reviews, loaded, getStatus, markReviewed } = monthlyReviews
+  const { reviews, loaded, getStatus, markReviewed, interval } = monthlyReviews
   const { has } = usePermissions()
   const [openTemplateId, setOpenTemplateId] = useState<string | null>(null)
   const [pickerMonth, setPickerMonth] = useState(defaultMonth)
+  const [pickerQuarter, setPickerQuarter] = useState(defaultQuarter)
   const [generating, setGenerating] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,9 +88,11 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
 
   async function preparePdf() {
     if (!baseId) throw new Error('No base selected')
-    const monthStart = new Date(Date.UTC(pickerMonth.year, pickerMonth.month - 1, 1))
+    const windowStart = interval === 'quarterly'
+      ? new Date(Date.UTC(pickerQuarter.year, (pickerQuarter.quarter - 1) * 3, 1))
+      : new Date(Date.UTC(pickerMonth.year, pickerMonth.month - 1, 1))
     const [allReviews, eligibleUsers] = await Promise.all([
-      fetchAllReviewsForBase(baseId, monthStart),
+      fetchAllReviewsForBase(baseId, windowStart),
       fetchEligibleReviewers(baseId),
     ])
 
@@ -111,8 +120,10 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
     return generateQrcMonthlyReviewPdf({
       baseName,
       baseIcao,
-      month: pickerMonth.month,
-      year: pickerMonth.year,
+      interval,
+      month: interval === 'monthly' ? pickerMonth.month : undefined,
+      quarter: interval === 'quarterly' ? pickerQuarter.quarter : undefined,
+      year: interval === 'monthly' ? pickerMonth.year : pickerQuarter.year,
       templates,
       eligibleUsers: roster,
       reviews: allReviews,
@@ -148,11 +159,15 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
   async function handleSendEmail(email: string) {
     if (!emailPdfData) return
     setSendingEmail(true)
+    const subjectPeriod = interval === 'quarterly'
+      ? `${pickerQuarter.year} Q${pickerQuarter.quarter}`
+      : `${pickerMonth.year}-${String(pickerMonth.month).padStart(2, '0')}`
+    const subjectLabel = interval === 'quarterly' ? 'Quarterly' : 'Monthly'
     const result = await sendPdfViaEmail(
       emailPdfData.doc,
       emailPdfData.filename,
       email,
-      `AMOPS Monthly QRC Review — ${pickerMonth.year}-${String(pickerMonth.month).padStart(2, '0')}`,
+      `AMOPS ${subjectLabel} QRC Review — ${subjectPeriod}`,
     )
     if (result.success) {
       toast.success('Email sent successfully')
@@ -180,8 +195,10 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
           <span style={{
             fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
             textTransform: 'uppercase', letterSpacing: '0.06em',
-          }}>Report Month:</span>
-          <MonthPicker value={pickerMonth} onChange={setPickerMonth} />
+          }}>{interval === 'quarterly' ? 'Report Quarter:' : 'Report Month:'}</span>
+          {interval === 'quarterly'
+            ? <QuarterPicker value={pickerQuarter} onChange={setPickerQuarter} />
+            : <MonthPicker value={pickerMonth} onChange={setPickerMonth} />}
         </div>
         {canGenerateReport && (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -277,6 +294,7 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
         <MonthlyReviewModal
           template={openTemplate}
           status={getStatus(openTemplate)}
+          interval={interval}
           onClose={() => setOpenTemplateId(null)}
           onMarkReviewed={markReviewed}
         />
@@ -381,6 +399,39 @@ function MonthPicker({
         style={{ padding: '5px 8px', fontSize: 'var(--fs-sm)' }}
       >
         {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select
+        value={value.year}
+        onChange={e => onChange({ ...value, year: Number(e.target.value) })}
+        className="input-dark"
+        style={{ padding: '5px 8px', fontSize: 'var(--fs-sm)' }}
+      >
+        {years.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function QuarterPicker({
+  value, onChange,
+}: {
+  value: { quarter: 1 | 2 | 3 | 4; year: number }
+  onChange: (next: { quarter: 1 | 2 | 3 | 4; year: number }) => void
+}) {
+  const thisYear = new Date().getUTCFullYear()
+  const years = [thisYear, thisYear - 1, thisYear - 2, thisYear - 3, thisYear - 4]
+  return (
+    <div style={{ display: 'inline-flex', gap: 4 }}>
+      <select
+        value={value.quarter}
+        onChange={e => onChange({ ...value, quarter: Number(e.target.value) as 1 | 2 | 3 | 4 })}
+        className="input-dark"
+        style={{ padding: '5px 8px', fontSize: 'var(--fs-sm)' }}
+      >
+        <option value={1}>Q1 (Jan–Mar)</option>
+        <option value={2}>Q2 (Apr–Jun)</option>
+        <option value={3}>Q3 (Jul–Sep)</option>
+        <option value={4}>Q4 (Oct–Dec)</option>
       </select>
       <select
         value={value.year}
