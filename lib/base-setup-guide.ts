@@ -1,8 +1,3 @@
-// NOTE: DAFMAN / UFC / AFMAN / AF Form citations below were authored from
-// general knowledge and need verification against the source documents
-// before relying on them as compliance attestations. Some paragraph numbers
-// or document references may be inaccurate. Update the `cite` triples per
-// step once verified.
 import type { WizardStepKey } from '@/lib/modules-config'
 
 export type GuideRequired = 'yes' | 'optional' | 'conditional'
@@ -19,7 +14,10 @@ export type StepGuide = {
   why: string
   required: GuideRequired
   examples: string[]
-  cite: GuideCite
+  /** null when the step has no DAFMAN/UFC compliance hook (administrative
+   *  or operationally-specific configuration). The Guide panel renders a
+   *  short notice in that case instead of the generated IAW sentence. */
+  cite: GuideCite | null
   fields: Record<string, string>
 }
 
@@ -43,13 +41,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       'configuration in the system — get it right once and every downstream module benefits.',
     required: 'yes',
     examples: ['06L/24R', '13/31', '04L/22R', '08/26', '17/35'],
-    cite: {
-      reg: 'DAFMAN 13-204v2',
-      para: '2.5.2',
-      outcome:
-        'maintain accurate, current physical airfield data that all downstream airfield management activities (status reporting, ' +
-        'inspections, NAVAID outage tracking, obstruction evaluation) reference',
-    },
+    cite: null,
     fields: {
       established_elevation:
         'The highest runway-end elevation in feet MSL. Used as the reference elevation for obstruction surface analysis under ' +
@@ -96,10 +88,10 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['Entire Airfield', 'RWY 06L/24R', 'TWY A', 'TWY B', 'East Ramp', 'West Ramp', 'Hot Cargo Pad'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10.1',
+      para: '5.1. to 5.4.',
       outcome:
-        'support discrepancy and inspection geolocation accuracy required for the daily airfield check, lighting check, and ' +
-        'monthly airfield inspection records',
+        'support discrepancy and inspection geolocation accuracy required for the daily airfield check, lighting check, ' +
+        'construction checks and and monthly joint airfield inspection records',
     },
     fields: {
       area_name:
@@ -123,10 +115,10 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Foxtrot'],
     cite: {
       reg: 'UFC 3-260-01',
-      para: 'Ch. 3',
+      para: '5-5 and Table 5-1',
       outcome:
-        'support taxilane and taxiway clearance envelope analysis used during parking plan development and wingtip clearance ' +
-        'verification per the airfield criteria',
+        'Ensures UFC 3-260-01, Table 5-1 Fixed-Wing Taxiway clearance requirements are met with the drop of a pen rather than ' +
+        'using a measuring wheel or completing manual calculations.',
     },
     fields: {
       taxiway_id: 'Phonetic or numeric designator as published on the airfield diagram (e.g. "Alpha", "A1", "B2").',
@@ -151,10 +143,10 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['ILS RWY 06L', 'PAPI RWY 24R', 'TACAN', 'VOR', 'MALSR RWY 13', 'ALSF-1 RWY 31', 'REIL RWY 22'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10',
+      para: '2.5.2.9.3.',
       outcome:
-        'maintain current Visual NAVAID status records for AFM shift sign-offs and the Daily Operations rollup, satisfying the ' +
-        'requirement to document NAVAID outages',
+        'Quickly brief status of navigation aids to on-coming shift using real-time data that is updated instantly. Flying units ' +
+        'and base leadership can quickly identify outages to NAVAIDs.',
     },
     fields: {
       navaid_name:
@@ -181,10 +173,10 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['Pavements', 'Electrical', 'HVAC', 'Structures', 'Heavy Equipment', 'Sign Shop'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '4.2',
+      para: '2.3.2.7',
       outcome:
-        'support timely discrepancy routing to the responsible Civil Engineering Squadron shop, satisfying the requirement to ' +
-        'coordinate airfield discrepancies with CES for resolution',
+        'Streamline coordination with CE or work service providers to oversee the correction of airfield discrepancies ' +
+        'instantaneously. No delay in when work centers are notified of pending work orders.',
     },
     fields: {
       shop_name: 'CES shop name as used in coordination (e.g. "Pavements", "Electrical Shop", "Sign Shop").',
@@ -211,10 +203,10 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['P-23', 'P-26', 'Crash 1', 'Crash 2', 'Brush 1'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10',
+      para: '2.5.2.9. and 2.5.2.24.',
       outcome:
-        'maintain current ARFF vehicle readiness records for AFM shift sign-offs and the Daily Operations rollup, satisfying ' +
-        'the requirement to document ARFF status alongside other airfield-status indicators',
+        'Provides immediate updates to current ARFF status to flying units and base leadership at a quick glance rather than ' +
+        'multiple phone calls and product updates.',
     },
     fields: {
       show_cat_dropdown:
@@ -242,11 +234,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     required: 'yes',
     examples: ['Tower (Bldg 100)', 'Fire Station (Bldg 200)', 'Base Ops (Bldg 250)', 'Hangar 1 (Bldg 300)'],
     cite: {
-      reg: 'AF Form 483',
-      para: 'Block 7',
+      reg: 'DAFMAN 13-204v2',
+      para: '2.2.2.6.',
       outcome:
-        'support facility-level location entry on Personnel on Airfield logs (AF Form 483) and discrepancy filings, ' +
-        'satisfying the requirement to identify the facility associated with airfield activity',
+        'Connects work orders to specific facility numbers for streamlined work order review and tracking. Helps identify ' +
+        'discrepancies associated with airfield facility numbers at the Facility Board or Facility Working Group.',
     },
     fields: {
       facility_number: 'Official facility / building number as published in the base directory.',
@@ -277,10 +269,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     ],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10.1',
+      para: '5.1. through 5.1.3.',
       outcome:
-        'document the items required to be evaluated on the daily airfield check and lighting check, satisfying the requirement ' +
-        'to perform and record airfield inspections per AFM frequencies and DAFMAN content requirements',
+        'All required inspection items are listed to meet DAFMAN requirements. If an item needs inspected on your airfield, ' +
+        'add it to this checklist and it will be required to be completed each inspection. If naming changes, the checklist ' +
+        'can be easily edited within this module to ensure documentaiton stays current.',
     },
     fields: {
       template_section: 'Logical grouping (Pavement, Markings, Lighting, Wildlife, FOD, Signage, etc.).',
@@ -310,10 +303,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     ],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10.3',
+      para: 'All',
       outcome:
-        'document the recurring shift tasks performed by AFM personnel and the per-shift completion state, supporting the daily ' +
-        'review and shift sign-off requirement',
+        'NAMO/AMOM/AFM dictates what tasks are required to be accomplished by each shift. This shift checklist provides a ' +
+        'trackable way to determine who did what tasks and when they did them. Checklist must be 100% complete before it ' +
+        'can be marked completed and filed for records disposition.',
     },
     fields: {
       task_name: 'Canonical task name as it appears on the checklist (e.g. "FOD Check", "NAVAID Status Verify").',
@@ -338,11 +332,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     required: 'conditional',
     examples: ['Aircraft Mishap', 'Hung Ordnance', 'Fuel Spill', 'Severe Weather', 'Bird Strike Response'],
     cite: {
-      reg: 'AFMAN 91-203',
-      para: 'Ch. 24',
+      reg: 'DAFMAN 13-204v2',
+      para: '2.5.2.8.',
       outcome:
-        'support emergency and contingency response by providing structured Quick Reaction Checklists that meet the requirement ' +
-        'to document and execute response actions per Air Force safety guidance',
+        'Enables AMOPS personnel to quickly open QRCs, excute them, and save them for records. Maintain annual reviews by the ' +
+        'NAMO as well as monthly or quarterly reviews by AMOPS personnel.',
     },
     fields: {
       qrc_name: 'QRC name (e.g. "Aircraft Mishap", "Hung Ordnance"). Used as the activation button label.',
@@ -366,10 +360,9 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['Tower', 'Fire Department', 'Ambulance', 'Security Forces', 'Hospital', 'Command Post'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10.5',
+      para: '4.2.2.3.7.',
       outcome:
-        'document the daily Secondary Crash Net communication check by agency, satisfying the requirement to maintain the daily ' +
-        'SCN check log',
+        'A centeralized location to maintain daily SCN checks, and each agency\'s status for receiving emergency notifications.',
     },
     fields: {
       agency_name: 'Agency as it should appear on the SCN check log (e.g. "Tower", "Fire Department", "Ambulance").',
@@ -391,11 +384,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     required: 'conditional',
     examples: ['Mallard', 'Canada Goose', 'Red-tailed Hawk', 'White-tailed Deer', 'Coyote', 'Eastern Cottontail'],
     cite: {
-      reg: 'DAFMAN 91-212',
-      para: 'Ch. 4',
+      reg: 'DAFI 91-212',
+      para: '2.3. and 1.3.9.16.',
       outcome:
-        'support the Bird/Wildlife Aircraft Strike Hazard (BASH) program by enabling rapid, structured wildlife sighting and ' +
-        'strike entry, satisfying the requirement to document wildlife activity for trend analysis and mitigation planning',
+        'Provides a robust outlook of wildlife and strike hazardous throughout the airfield. Creates a more realistic migration ' +
+        'pattern for more thorough trend analysis that drives prevention of mishaps involving wildlife.',
     },
     fields: {
       species_category: 'Filter the species library by category (bird, mammal, reptile, bat) before picking.',
@@ -430,8 +423,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       reg: 'DAFMAN 13-204v2',
       para: 'Table A3.1',
       outcome:
-        'classify lighting outages into the 4-tier alert structure and detect bar-out conditions, satisfying the requirement to ' +
-        'maintain runway and approach lighting status in accordance with the DAFMAN 13-204v2 Table A3.1 outage thresholds',
+        'Standardizes how airfield lighting outages are reported to CES, providing a visual representation of which lights are ' +
+        'out and where. No more describing lights by using directions such as, "Third light from the West side of TWY A on the ' +
+        'North side". Maintenance personnel can go directly to the light that is out of service and make the repair. Automated ' +
+        'outage thresholds are calcuated and instructions for required steps are provided when systems approach or exceed the ' +
+        'A3.1 requirements.',
     },
     fields: {
       system_name: 'Lighting system name (e.g. "RWY 06L Edge Lights"). Used in the outage report and discrepancy auto-creation.',
@@ -456,13 +452,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       'on the dashboard, so the shift sign-off captures the full picture.',
     required: 'optional',
     examples: ['Arresting Systems', 'Comm Status', 'Snow Equipment', 'Fuel Trucks', 'Ground Equipment'],
-    cite: {
-      reg: 'DAFMAN 13-204v2',
-      para: '2.5.2.10',
-      outcome:
-        'support local airfield status indicators required for AFM shift sign-offs that go beyond the standard NAVAID and ARFF ' +
-        'panels, satisfying the requirement to document the full operational status of the airfield',
-    },
+    cite: null,
     fields: {
       board_label: 'Status board name as it appears as the section header on the dashboard (e.g. "Arresting Systems").',
       item_label: 'Item name within the board (e.g. "BAK-12 East", "Tower Radio").',
@@ -486,10 +476,12 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['Aircraft Type', 'Tail #', 'Unit', 'POC', 'Purpose', 'ETA Zulu', 'ETD Zulu', 'Slot Time'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '7.7',
+      para: '6.1.5.',
       outcome:
-        'maintain a PPR record set with the fields required by local installation policy, supporting the requirement to manage ' +
-        'PPR for transient aircraft',
+        'Streamlined coordination for PPRs, reducing phone calls and e-mails between agencies on base. Each coordination group ' +
+        'can take action on a PPR they are required to, at any time they want without waiting on other agencies. Once all ' +
+        'coordination is completed it is sent back to AMOPS for approval/denial. Once action is taking by AMOPS, requestors are ' +
+        'automatically notified with their PPR number.',
     },
     fields: {
       column_label: 'Column header as it appears on the PPR table.',
@@ -513,10 +505,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     examples: ['"How can we improve transient parking?"', '"Tell us about your visit to base ops."', '"Report a safety concern."'],
     cite: {
       reg: 'DAFMAN 13-204v2',
-      para: '1.3',
+      para: '2.5.2.13.',
       outcome:
-        'capture customer-facing feedback to support continuous improvement of airfield management services, supporting the ' +
-        'requirement to provide responsive airfield management',
+        'Eliminates the barrier for customers to provide feedback to AMOPS services. Users can submit feedback immediately and ' +
+        'it is sent to the NAMO and AFM for review. Responses are maintained and are used in reports and analytics to create a ' +
+        'better overall experience for users of the airfield.',
     },
     fields: {
       form_headline: 'Top-of-form headline visible to submitters.',
@@ -533,6 +526,7 @@ export function getFieldHint(step: WizardStepKey, fieldId: string): string | nul
   return BASE_SETUP_GUIDE[step]?.fields?.[fieldId] ?? null
 }
 
-export function formatComplianceStatement(cite: GuideCite): string {
+export function formatComplianceStatement(cite: GuideCite | null): string {
+  if (!cite) return 'Administrative or operationally-specific setup; no DAFMAN compliance citation applies.'
   return `IAW ${cite.reg} §${cite.para}, configuring this step satisfies the requirement to ${cite.outcome}.`
 }
