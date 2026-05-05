@@ -34,11 +34,11 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       'Use Import from ICAO to pull surveyed coordinates, length, width, surface, and approach lighting directly from the FAA ' +
       'database for the airport identifier on file. Imported runways can be edited inline. The "Adjust on Map" button drops draggable ' +
       'pins on satellite imagery for sub-meter precision when the published coords need a final tune. Any number of runways are ' +
-      'supported; closed runways may be added with a closed-status flag if obstruction analysis still needs them.',
+      'supported.',
     why:
       'Without correctly entered runways, NAVAID and Lighting alignment is wrong, parking clearance lines anchor on the wrong ' +
-      'edges, obstruction surfaces are mislocated, and DAFMAN bar-out detection cannot run. Runway data is the single most leveraged ' +
-      'configuration in the system — get it right once and every downstream module benefits.',
+      'edges, and obstruction surfaces are mislocated. Runway data is the single most leveraged configuration in the system — ' +
+      'get it right once and every downstream module benefits.',
     required: 'yes',
     examples: ['06L/24R', '13/31', '04L/22R', '08/26', '17/35'],
     cite: null,
@@ -91,7 +91,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       para: '5.1. to 5.4.',
       outcome:
         'support discrepancy and inspection geolocation accuracy required for the daily airfield check, lighting check, ' +
-        'construction checks and and monthly joint airfield inspection records',
+        'construction checks, and monthly joint airfield inspection records',
     },
     fields: {
       area_name:
@@ -101,16 +101,15 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
 
   taxiways: {
     what:
-      'Defines every taxiway designator at the installation. Taxiways are referenced by clearance envelope analysis (parking plans), ' +
-      'discrepancy location selection, and the Visual NAVAIDs taxiway-lighting layout. Each taxiway is a named centerline that the ' +
-      'parking module ray-tests for wingtip clearance and that infrastructure bar-detection groups light fixtures along.',
+      'Defines every taxiway designator at the installation. Taxiways are referenced by the obstruction evaluation tool to ' +
+      'determine when obstructions do not meet fixed or mobile obstacle clearance requirements.',
     how:
-      'Add one row per named taxiway (Alpha, Bravo, Charlie, etc.). Order on the parking page follows the order entered here. ' +
-      'For complex airfields with parallel taxiways, use the published designator (TWY A1, TWY A2, etc.) so the inspector picker ' +
-      'matches what is on the airfield diagram.',
+      'Creating a taxiway centerline allows you to identify the centerline of existing taxiways to establish UFC clearance ' +
+      'distances. Distances are measured off the centerline you create by dropping points and hitting save. You can also import ' +
+      'KML/GeoJSON documents if you have taxiway centerlines depicted on maps from CES.',
     why:
-      'Missing taxiways mean parking-plan clearance analysis cannot validate wingtip envelopes against that taxiway, and ' +
-      'inspectors logging a taxiway discrepancy cannot pin it to the correct centerline for trend analysis.',
+      'Easily identify when an obstruction does not provide adequate wingtip clearance and streamline processing of airfield ' +
+      'waivers or NOTAMs using the Obstruction Evaluation Tool.',
     required: 'yes',
     examples: ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Foxtrot'],
     cite: {
@@ -128,17 +127,16 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
   navaids: {
     what:
       'Defines the Visual NAVAIDs and approach aids displayed on the Airfield Status page as green / yellow / red toggles. Each ' +
-      'NAVAID becomes a row on the status board. AFM personnel flip the status as conditions change; the system writes a status-' +
-      'change log entry, optionally auto-creates a discrepancy when the NAVAID goes red, and surfaces inoperative NAVAIDs in the ' +
-      'shift sign-off and the Daily Operations rollup.',
+      'NAVAID becomes a row on the status board. AMOPS personnel flip the status as conditions change; the system writes a ' +
+      'status-change log entry to the events log automatically, and surfaces inoperative NAVAIDs in the Daily Operations rollup.',
     how:
       'Add one entry per addressable NAVAID — typically one per runway end for ILS and approach lighting, plus the field-level aids ' +
       '(TACAN, VOR, NDB) once each. Initial color is green. The Outage Engine flags configurations as automatic-discrepancy-on-red ' +
       'in the Lighting Systems step (separate from this step).',
     why:
-      'NAVAID status is the single most-watched datum on the dashboard. AFM relies on this configuration to certify that the ' +
+      'NAVAID status is the single most-watched datum on the dashboard. AMOPS relies on this configuration to certify that the ' +
       'list of NAVAIDs displayed on the status board matches the actual NAVAIDs on the field. A missing NAVAID here means a ' +
-      'silent gap in the shift sign-off — the system cannot warn about something it does not know exists.',
+      'silent gap in the airfield status board — the system cannot warn about something it does not know exists.',
     required: 'yes',
     examples: ['ILS RWY 06L', 'PAPI RWY 24R', 'TACAN', 'VOR', 'MALSR RWY 13', 'ALSF-1 RWY 31', 'REIL RWY 22'],
     cite: {
@@ -188,17 +186,15 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
   arff: {
     what:
       'Defines the crash, fire, and rescue (ARFF) vehicles supported at the installation and the aircraft types they cover. Each ' +
-      'vehicle becomes a row on the Airfield Status page ARFF readiness panel where AFM flips Ready / Not Ready / Reduced as ' +
-      'crews and equipment cycle. The aircraft list drives the ARFF CAT (Aircraft Categorization) dropdown if "Show CAT dropdown" is ' +
-      'enabled, letting AFM publish the CAT supported by current readiness.',
+      'aircraft type becomes a row on the Airfield Status page ARFF readiness panel where AMOPS identifies current ARFF ' +
+      'capabilities per aircraft type. ARFF CAT is toggled if airfields use ARFF CAT to determine service capabilities.',
     how:
-      'List the vehicle inventory by name or callsign (e.g. "P-23", "P-26", "Crash 1"). Add the aircraft types the installation ' +
-      'supports (F-16, KC-135, C-17, etc.) — these populate the CAT-by-aircraft picker and the ARFF support matrix. Toggle ' +
-      '"Show CAT dropdown" if the AFM tower wants per-CAT readiness display in addition to per-vehicle status.',
+      'Add the aircraft types the installation supports (F-16, KC-135, C-17, etc.) — these populate the CAT-by-aircraft picker. ' +
+      'Toggle "Show CAT dropdown" if AMOPS wants per-CAT readiness display in addition to per-aircraft status.',
     why:
-      'AFM verifies ARFF readiness on every shift sign-off (DAFMAN 13-204v2 §2.5.2.10). Without the vehicle inventory configured ' +
-      'here, the readiness panel cannot render and the shift sign-off cannot record an ARFF status. The aircraft list drives the ' +
-      'CAT drop and the per-aircraft readiness change log.',
+      'AMOPS verifies ARFF readiness on every shift. Without the aircraft inventory configured here, the readiness panel cannot ' +
+      'render and the Events Log cannot record ARFF status changes. The aircraft list drives the CAT drop and the per-aircraft ' +
+      'readiness change log.',
     required: 'yes',
     examples: ['P-23', 'P-26', 'Crash 1', 'Crash 2', 'Brush 1'],
     cite: {
@@ -221,16 +217,15 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
 
   facilities: {
     what:
-      'Defines the building numbers and named facilities referenced by discrepancies, inspections, and contractor escort logs ' +
-      '(AF Form 483). Each facility becomes a pickable location whenever a record needs to attach to a building rather than to a ' +
-      'runway, taxiway, or area. Examples: Tower, Fire Station, Base Ops, Hangar 1, Bldg 200.',
+      'Defines the building numbers and named facilities referenced by discrepancies and inspections. Each facility becomes a ' +
+      'pickable location whenever a record needs to attach to a building rather than to a runway, taxiway, or area. Examples: ' +
+      'Tower, Fire Station, Base Ops, Hangar 1, Bldg 200.',
     how:
       'Add one row per facility. Use the official facility number as the primary identifier; description is for human recognition. ' +
-      'Order is preserved on pickers — put the most-used facilities at the top.',
+      'Order is preserved on pickers, put the most-used facilities at the top.',
     why:
-      'Without facilities defined, inspectors logging building-related discrepancies (interior lighting failures, HVAC issues, ' +
-      'broken ramps) fall back to free-text and the records cannot be filtered or trended by facility. Contractor escort logs ' +
-      'use this list to attach personnel to the facility they are visiting.',
+      'Without facilities defined, inspectors logging building-related discrepancies (interior lighting failures, pavement ' +
+      'failures) fall back to free-text and the records cannot be filtered or trended by facility.',
     required: 'yes',
     examples: ['Tower (Bldg 100)', 'Fire Station (Bldg 200)', 'Base Ops (Bldg 250)', 'Hangar 1 (Bldg 300)'],
     cite: {
@@ -273,7 +268,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       outcome:
         'All required inspection items are listed to meet DAFMAN requirements. If an item needs inspected on your airfield, ' +
         'add it to this checklist and it will be required to be completed each inspection. If naming changes, the checklist ' +
-        'can be easily edited within this module to ensure documentaiton stays current.',
+        'can be easily edited within this module to ensure documentation stays current.',
     },
     fields: {
       template_section: 'Logical grouping (Pavement, Markings, Lighting, Wildlife, FOD, Signage, etc.).',
@@ -335,7 +330,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       reg: 'DAFMAN 13-204v2',
       para: '2.5.2.8.',
       outcome:
-        'Enables AMOPS personnel to quickly open QRCs, excute them, and save them for records. Maintain annual reviews by the ' +
+        'Enables AMOPS personnel to quickly open QRCs, execute them, and save them for records. Maintain annual reviews by the ' +
         'NAMO as well as monthly or quarterly reviews by AMOPS personnel.',
     },
     fields: {
@@ -362,7 +357,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       reg: 'DAFMAN 13-204v2',
       para: '4.2.2.3.7.',
       outcome:
-        'A centeralized location to maintain daily SCN checks, and each agency\'s status for receiving emergency notifications.',
+        'A centralized location to maintain daily SCN checks, and each agency\'s status for receiving emergency notifications.',
     },
     fields: {
       agency_name: 'Agency as it should appear on the SCN check log (e.g. "Tower", "Fire Department", "Ambulance").',
@@ -387,7 +382,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       reg: 'DAFI 91-212',
       para: '2.3. and 1.3.9.16.',
       outcome:
-        'Provides a robust outlook of wildlife and strike hazardous throughout the airfield. Creates a more realistic migration ' +
+        'Provides a robust outlook of wildlife and strike hazards throughout the airfield. Creates a more realistic migration ' +
         'pattern for more thorough trend analysis that drives prevention of mishaps involving wildlife.',
     },
     fields: {
@@ -426,7 +421,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
         'Standardizes how airfield lighting outages are reported to CES, providing a visual representation of which lights are ' +
         'out and where. No more describing lights by using directions such as, "Third light from the West side of TWY A on the ' +
         'North side". Maintenance personnel can go directly to the light that is out of service and make the repair. Automated ' +
-        'outage thresholds are calcuated and instructions for required steps are provided when systems approach or exceed the ' +
+        'outage thresholds are calculated and instructions for required steps are provided when systems approach or exceed the ' +
         'A3.1 requirements.',
     },
     fields: {
@@ -480,7 +475,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       outcome:
         'Streamlined coordination for PPRs, reducing phone calls and e-mails between agencies on base. Each coordination group ' +
         'can take action on a PPR they are required to, at any time they want without waiting on other agencies. Once all ' +
-        'coordination is completed it is sent back to AMOPS for approval/denial. Once action is taking by AMOPS, requestors are ' +
+        'coordination is completed it is sent back to AMOPS for approval/denial. Once action is taken by AMOPS, requestors are ' +
         'automatically notified with their PPR number.',
     },
     fields: {
