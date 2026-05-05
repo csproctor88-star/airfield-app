@@ -83,21 +83,23 @@ export const MODULES: ModuleRef[] = [
     icon: Home,
     color: 'var(--color-cyan)',
     path: '/',
-    tagline: 'Real-time situational awareness for the runway and field',
+    tagline: 'Real-time situational awareness for the runway and the airfield',
     roles: [...OPS_CORE, 'safety', 'ppr', 'read_only'],
     overview:
       'Glidepath\'s landing page and the single screen most users keep open all shift. Combines live weather, runway open/closed status, NAVAID outage indicators, ARFF readiness, advisory alerts, and an at-a-glance count of contractors currently on the field.\n\n' +
       'Edits are inline — set runway labels, change a NAVAID color, toggle AFM Out-of-Office — and every change auto-logs to the Events Log so the AF Form 3616 audit trail builds itself. The page subscribes to Supabase realtime so what one shift changes shows up on every other open browser within a second.',
     keyFeatures: [
+      'Current installation, Zulu time, Julian Date and local date in header so it is viewable across the application',
       'Live weather + runway selector with editable status labels',
       'NAVAID grid color-coded green / yellow / red with click-to-update status dialog (notes field for shift handoff context)',
       'ARFF readiness panel with CAT dropdown (when configured)',
       'Advisory + WWA Notification strip (WATCH / WARNING / ADVISORY) for active alerts',
-      'AFM Out-of-Office and Closed-for-Day toggles (DAFMAN 13-204 §2.5.2)',
+      'AMOPS Out-of-Office and Closed-for-Day toggles that shows Kiosk Mode users the status of AMOPS and the airfield',
       'Custom status boards configurable per base in Base Setup',
       'Personnel-on-Airfield mini-table (full management on /contractors)',
-      'PPR grid surfaces transient aircraft inbound today',
+      'PPR grid surfaces transient aircraft inbound today, columns displayed customizeable in Base Setup',
       'Realtime updates — no manual refresh needed',
+      'Kiosk mode, enabling other agencies to view airfield status without logging in using a token URL that can be reset if compromised',
     ],
     howToAccess: 'Sidebar › Home (/) or mobile bottom-nav Home tab. Glidepath\'s default landing route after sign-in.',
     workflow: {
@@ -108,7 +110,7 @@ export const MODULES: ModuleRef[] = [
         'Set or change runway status labels if conditions changed (auto-logs to Events Log).',
         'Click any NAVAID and use the status dialog to set green / yellow / red plus shift-handoff notes.',
         'Verify ARFF readiness reflects current CAT.',
-        'Toggle AFM Out-of-Office if leaving the office; toggle off when back.',
+        'Toggle AMOPS Out-of-Office from the Dashboard if leaving the office; toggle off when back.',
       ],
     },
     screenshots: [
@@ -126,16 +128,16 @@ export const MODULES: ModuleRef[] = [
     icon: LayoutDashboard,
     color: 'var(--color-cyan)',
     path: '/dashboard',
-    tagline: 'KPI hub + AFM administrative controls',
+    tagline: 'AMOPS administrative controls',
     roles: OPS_CORE,
     overview:
-      'A shift-focused operational view with KPI tiles, the AFM Out-of-Office / Closed-for-Day controls, and module shortcut tiles. Open at the start of every shift to see what is open, what is overdue, and where the day stands.\n\n' +
-      'The KPI strip shows today\'s airfield + lighting inspection state, the daily-review pending count, the last completed check, and any open discrepancies awaiting verification. The module shortcut tiles jump straight into the most-used flows so you don\'t have to navigate the sidebar.',
+      'A shift-focused operational view with inspection quick start tiles, the AFM Out-of-Office / Closed-for-Day controls, and module shortcut tiles.\n\n' +
+      'The KPI strip shows today\'s airfield + lighting inspection state, the daily-review pending count, the last completed check. The module shortcut tiles jump straight into the most-used flows so you don\'t have to navigate the sidebar.',
     keyFeatures: [
       'Inspection cadence summary — today\'s airfield + lighting status with in-progress / completed states',
       'Last completed check type + Zulu timestamp for quick handoff context',
       'Open-discrepancies count + awaiting-verification badge',
-      'AFM Out-of-Office and Closed-for-Day toggles with message customization',
+      'AMOPS Out-of-Office and Closed-for-Day toggles with message customization',
       'Module shortcut tiles — Personnel on Airfield, Shift Checklist, QRCs, SCN, and more',
       'Module setup progress bar (sys admin) showing overall base configuration completeness',
       '0600L daily reset honoring the installation timezone',
@@ -167,10 +169,10 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Immutable audit trail — the AF Form 3616 substitute',
     roles: OPS_AND_OVERSIGHT,
     overview:
-      'Rolling log of every airfield action — status changes, NOTAMs, inspections, sign-offs, manual entries. This is the AF Form 3616 substitute (T-3 waiver on file with HQ AFCEC). Entries are immutable; the audit trail captures who did what and when.\n\n' +
-      'Most rows are auto-logged by the system as you work. Manual entries are templated for common operational events (Tower Reporting, AMOPS Reporting, Inspections / Checks notes, etc.) so the right category surfaces on the report PDF. Filter by date, type, or actor; search across actor / action / entity / notes.',
+      'Rolling log of every airfield action — status changes, NOTAMs, inspections, sign-offs, manual entries. This is the AF Form 3616 substitute. Entries are immutable; the audit trail captures who did what and when.\n\n' +
+      'Most rows are auto-logged by the system as you work. Manual entries are templated for common operational events (Tower Reporting, AMOPS Reporting, Inspections / Checks notes, etc.) so the right category surfaces on the report PDF. Filter by date, type, or actor; search across users / action / entity / notes.',
     keyFeatures: [
-      'Immutable audit trail — no edit / delete (DAFMAN 13-204v2 §2.5)',
+      'Immutable audit trail — no edit / delete (except for users own entries)',
       'Date-range filter (Today / 7d / 30d / Custom) + active-filter chip strip',
       'Filter by action type, entity type, or specific user',
       'Full-text search across actor / action / entity / metadata',
@@ -208,10 +210,9 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Per-user audit feed — what each teammate has been doing',
     roles: OPS_CORE,
     overview:
-      'Same underlying data as the Events Log, but reorganised by actor instead of chronology. Useful for shift handoff oversight and answering "who worked what in the last shift." Each user gets their own card with all of their actions in the visible window.\n\n' +
+      'Extends beyond what the Events Log captures, organized chronology. Useful for shift handoff oversight and answering "who worked what in the last shift."\n\n' +
       'Defaults to the last 7 days. Filter by user, entity type, or action type; search free text in the action details. No edit or delete (it\'s a view onto the same immutable audit trail).',
     keyFeatures: [
-      'User-grouped cards (rank + name header, then all of their actions below)',
       'Period selector — Today / 7d / 30d / 90d / Custom',
       'Filter by entity type (Discrepancy / Check / Inspection / etc.)',
       'Filter by action type (Created / Updated / Deleted / Closed)',
@@ -225,7 +226,7 @@ export const MODULES: ModuleRef[] = [
       steps: [
         'Open Recent Activity.',
         'Set the period to the prior shift\'s window (e.g., last 8 hours).',
-        'Scan each user\'s card to see what was completed and what was opened.',
+        'Scan to see what was completed and what was opened.',
         'Click any entity link to jump into the source record for follow-up.',
       ],
     },
@@ -243,14 +244,14 @@ export const MODULES: ModuleRef[] = [
     icon: Zap,
     color: 'var(--color-amber)',
     path: '/qrc',
-    tagline: 'Step-by-step emergency response with full audit trail',
+    tagline: 'Step-by-step checklists with full audit trail',
     roles: OPS_CORE,
     overview:
-      '25 emergency and contingency checklists from AFMAN 91-203 — aircraft mishap, hung ordnance, fuel spill, severe weather, and more. The engine steps the responder through each item in order; every acknowledgement is stamped with who did it and when so the after-action review writes itself.\n\n' +
+      '25 emergency and contingency checklist templates that are editable per base — aircraft mishap, hung ordnance, fuel spill, severe weather, and more. The engine steps the responder through each item in order; every acknowledgement is stamped with who did it and when so the after-action review writes itself.\n\n' +
       'Active QRCs persist across shift changes — start a checklist on day shift and mid shift can pick up exactly where you left off. The sidebar fires a red dot whenever a QRC is open so handoffs never miss an in-progress emergency response.',
     keyFeatures: [
-      '25 starter templates from AFMAN 91-203, plus any custom checklists configured for your base',
-      'Three tabs: Available (the library), Active (currently running, persists across shifts), History (audit trail)',
+      '25 starter templates, plus any custom checklists configured for your base',
+      'Three tabs: Available (the library), Active (currently running, persists across shifts), History (audit trail), Reviews (for documenting checklist reviews IAW DAFMAN 13-204v2, configurable for monthly or quarterly)',
       'Eight step types: confirmations, notifications, free-text capture, sub-checklists, navigations to other modules, status updates, and more',
       'Per-step audit: who acknowledged + Zulu timestamp, captured automatically',
       'After-Action Report PDF on close — every step + acknowledgement, ready for post-event debrief',
@@ -366,13 +367,13 @@ export const MODULES: ModuleRef[] = [
     tagline: '7 check types, draft persistence, inline discrepancy capture',
     roles: OPS_CORE,
     overview:
-      'Daily, lighting, FOD, weather, construction, heavy aircraft, and other checks. Pick a type, work through the inspection items, and log discrepancies inline as you find them. Drafts auto-save to Supabase + localStorage so you can resume from another device or recover after a crash.\n\n' +
-      'Discrepancies you log during a check auto-route to the right CES shop based on the type-to-shop mapping in Base Setup. Photos attach per-discrepancy via path-scoped storage RLS. Check-specific fields (RSC for Daily, BWC for FOD, BASH for Wildlife checks) appear conditionally based on the check type chosen.',
+      'Daily, lighting, FOD, weather, construction, heavy aircraft, and other checks. Pick a type, work through the items, and log discrepancies inline as you find them. Drafts auto-save to the database so you can resume from another device or.\n\n' +
+      'Discrepancies you log during a check auto-route to the right CES shop based on the type-to-shop mapping in Base Setup. Photos attach per-discrepancy to the discrepancy database. Check-specific fields (RSC for Daily, BWC for FOD, BASH for Wildlife checks) appear conditionally based on the check type chosen.',
     keyFeatures: [
       'Seven check types — Daily, Lighting, FOD, Weather, Construction, Other, Heavy Aircraft',
       'Per-area selector covers entire airfield or specific zones configured in Base Setup',
       'Inline discrepancy capture — log issues as you find them, photo + GPS optional',
-      'Draft auto-save to Supabase + localStorage for cross-device resume',
+      'Draft auto-save to database for cross-device resume',
       'Resume prompt on page load if a draft exists from another device',
       'Conditional fields by check type (RSC, BWC, RCR, BASH)',
       'Offline write queue — drafts sync when connection returns',
@@ -408,22 +409,22 @@ export const MODULES: ModuleRef[] = [
     roles: OPS_CORE,
     overview:
       'Launchpad for every inspection cadence at your base — Daily Airfield (DAFMAN 13-204v2), ACSI (Para 5.4.3 annual compliance), Pre/Post Construction, and Monthly Joint. Each tile starts a new inspection of that type or opens its history.\n\n' +
-      'Daily Airfield is hard-locked to one airfield + one lighting inspection per day, per base, with a 0600L reset. Drafts auto-save to localStorage with cross-device load from Supabase. Issues you log roll into the Discrepancies module with the same workflow + CES routing.',
+      'Daily Airfield is hard-locked to one airfield + one lighting inspection per day, per base, with a 0600L reset. Drafts auto-save to device cache with cross-device load from database upon draft save. Issues you log roll into the Discrepancies module with the same workflow + CES routing.',
     keyFeatures: [
       'Four inspection types — Daily Airfield, ACSI, Pre/Post Construction, Monthly Joint',
       'Daily one-per-day lock prevents double-booking at the same base',
       '0600L reset honoring installation timezone',
-      'Auto-save drafts to localStorage; cross-device load from Supabase',
-      'started_at stamped on insert for accurate audit trail',
+      'Auto-save drafts to device; cross-device load from database with save draft option before filing',
+      'Time started stamped on insert for accurate audit trail, with auto "AFLD3/ ON AFLD FOR..."',
       'Issues log to Discrepancies with auto-routing to CES shops',
-      'Photos attach per-issue via path-scoped storage RLS',
+      'Photos attach per-issue to the discrepancy database',
       'History link on every tile — filter by date, inspector, status',
     ],
     howToAccess: 'Sidebar › Operations › All Inspections. On mobile, More menu › Operations › All Inspections.',
     workflow: {
       title: 'Starting a daily inspection',
       steps: [
-        'Open All Inspections.',
+        'Open All Inspections or navigate to the Dashboard.',
         'Click the Daily Airfield tile to start a new airfield inspection.',
         'Work through the inspection items; log discrepancies and capture photos as you find issues.',
         'The draft auto-saves; sign in from another device to continue if needed.',
@@ -448,14 +449,14 @@ export const MODULES: ModuleRef[] = [
     roles: OPS_CORE,
     overview:
       'Annual compliance inspection per DAFMAN 13-204v2 Para 5.4.3. The full ACSI checklist runs to hundreds of items across multiple sections; the engine renders one section at a time, captures pass/fail/N/A per item with optional remarks and photos, and supports per-member signatures so the inspection team\'s sign-off is on the record.\n\n' +
-      'Drafts auto-save and resume — ACSI runs are long, often spanning days. The launcher tile on /inspections/all surfaces an in-progress draft as "Continue ACSI Draft" so you can pick up where you left off without searching.',
+      'Drafts auto-save and resume — ACSI often span days. The launcher tile on /inspections/all surfaces an in-progress draft as "Continue ACSI Draft" so you can pick up where you left off without searching.',
     keyFeatures: [
       'Hundreds of items across multiple sections, rendered one section at a time',
       'Pass / Fail / N/A per item with optional remarks + photo evidence',
       'Per-member signature toggle (configurable in Base Setup) for team sign-off',
       'Auto-save with cross-device resume — surfaces as "Continue ACSI Draft" on the launcher',
-      'Issues log to Discrepancies with full workflow integration',
-      'PDF export bundles the entire inspection with signatures + photos',
+      'Exisiting discrepancies can be linked to Fail items, importing remarks, project cost, Work Order number, Risk Control Measures etc. with full workflow integration',
+      'PDF export bundles the entire inspection with signatures + photos all in line, without manual consolidation',
       'History tab shows every past ACSI run with completion status',
     ],
     howToAccess: 'Sidebar › Operations › All Inspections › ACSI tile (Start ACSI or Continue ACSI Draft).',
@@ -464,9 +465,9 @@ export const MODULES: ModuleRef[] = [
       steps: [
         'From All Inspections, click ACSI to start a new inspection.',
         'Step the team through each section — Pass / Fail / N/A per item with remarks and photos.',
-        'For Failed items, capture a discrepancy directly so the audit trail includes routing.',
+        'For Failed items, link a discrepancy directly from your discrepancy log.',
         'Save and resume across days as needed — the draft persists.',
-        'When complete, collect per-member signatures and export the PDF for the official record.',
+        'When complete, export the PDF and collect per-member signatures for the official record.',
       ],
     },
     screenshots: [
@@ -483,19 +484,19 @@ export const MODULES: ModuleRef[] = [
     icon: ClipboardSignature,
     color: 'var(--color-purple)',
     path: '/daily-reviews',
-    tagline: 'Per-shift sign-off + AFM daily certification',
+    tagline: 'Per-shift sign-off + NAMO/AFM daily certification',
     roles: OPS_AND_OVERSIGHT,
     overview:
-      'DAFMAN 13-204v1 §2.5.2.10.3 / .10.4 shift turnover and daily review queue. Each shift signs off on the events from their shift; AFM closes the day. Pending and reviewed counters in the header give an at-a-glance read before scrolling.\n\n' +
+      'DAFMAN 13-204v1 §2.5.2.10.3 / .10.4 shift turnover and daily review queue. Each shift signs off on the events from their shift; AFM finalzies the review. Pending and reviewed counters in the header give an at-a-glance read before scrolling.\n\n' +
       'The colored left rail on each row communicates state: green when fully certified, amber when today is pending (your turn), quiet when a past day is still unsigned. Click any row to open the sign modal. Required slots adapt to your base — bases.shift_count (2 or 3) determines whether you have Day/Mid/Swing or just Day/Swing.',
     keyFeatures: [
       'Per-day rows with colored left rail showing state at a glance',
       'Required slots: Day AMSL / Swing AMSL / Mid AMSL + NAMO + AFM (slot count from bases.shift_count)',
-      'Events hash (SHA-256 of the day\'s entity IDs) freezes the rollup on certification',
-      'Events Log shows AMENDED pill when a row\'s created_at > the day\'s fully_certified_at',
+      'Events save and freeze the daily review on certification by the AFM',
+      'Events Log shows AMENDED pill when an entry on Events Log is ammended after the Daily Ops Summary is fully certified.',
       'Sign modal carries name + rank + Zulu timestamp + optional notes per slot',
-      'fully_certified_at stamps when every required slot is signed; row turns green',
-      'PDF export per day for the AFMAN evidence binder',
+      'AFM certification stamps when every required slot is signed; row turns green',
+      'PDF export per day for Air Force Records Disposition requirements',
       'Pending vs reviewed counter in the header for queue oversight',
     ],
     howToAccess: 'Sidebar › Operations › Daily Reviews. On mobile, More menu › Operations › Daily Reviews.',
@@ -526,7 +527,7 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Issue tracking with CES routing and verification workflow',
     roles: [...OPS_CORE, 'ces'],
     overview:
-      'Submit problems, route them to the right CES shop, and verify the work when CES marks it complete. The green dot on the sidebar fires when something is waiting for your verification — the second-to-last state in the lifecycle (Work Completed Awaiting Verification).\n\n' +
+      'Submit problems, route them to the right CES shop, and verify the work when CES marks it complete. The green dot on the sidebar fires when something is waiting for AMOPS verification — the second-to-last state in the lifecycle (Work Completed Awaiting Verification).\n\n' +
       'New discrepancies auto-route to the assigned CES shop based on the type-to-shop mapping in Base Setup. KPI tiles up top quick-filter to Open, > 30 Days, or per-current-status (AFM / CES / AMOPS). Map view plots every filtered discrepancy on the airfield diagram for spotting clusters.',
     keyFeatures: [
       'Lifecycle: Submitted › Awaiting Action by CES › Waiting for Project / In Work › Work Completed (Awaiting Verification) › Closed',
@@ -534,10 +535,10 @@ export const MODULES: ModuleRef[] = [
       'KPI tiles for quick-filter (Open, > 30 Days, AFM / CES / AMOPS owners)',
       'Map view plots every filtered discrepancy on the airfield diagram',
       'Status pills with colored left rails on every row showing current owner',
-      'Photos per discrepancy via path-scoped storage RLS',
+      'Photos per discrepancy',
       'Notes history on every discrepancy detail for back-and-forth context',
       'Excel / PDF / Email export of the current filtered view',
-      'Sidebar green dot fires when discrepancies await your verification',
+      'Sidebar green dot fires when discrepancies await AMOPS verification',
     ],
     howToAccess: 'Sidebar › Airfield Management › Discrepancies. On mobile, More menu › Airfield Management › Discrepancies.',
     workflow: {
@@ -607,15 +608,15 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Prior Permission Required for transient aircraft',
     roles: ['ppr', ...OPS_CORE],
     overview:
-      'Prior Permission Required entries for transient aircraft. The sidebar dot fires when entries are awaiting your triage, approval, or coordination. Aircrews request via a QR-coded public form at /<your-icao>/ppr-request — no login required — and submissions land here with status Awaiting Review.\n\n' +
+      'Prior Permission Required entries for transient aircraft. The sidebar dot fires when entries are awaiting your review, approval, or coordination. Aircrews request via a QR-coded public form at /<your-icao>/ppr-request — no login required — and submissions land here with status Awaiting Review.\n\n' +
       'The column set is configured per base in Base Setup › PPR Columns. Status pills track the lifecycle: Review › Coordination › Approval › Approved / Denied / Canceled. Soft-canceled rows strike through but stay visible for the audit trail. Email approve/deny + branded PPR PDF export are built in.',
     keyFeatures: [
       'Public QR-coded request form at /<icao>/ppr-request — no login needed',
       'Configurable column set per base (Base Setup › PPR Columns)',
-      'Triage queue with KPI pills (Awaiting Review / Awaiting Approval / per-agency pending)',
+      'Request queue with KPI pills (Awaiting Review / Awaiting Approval / per-agency pending)',
       'Multi-agency coordination log with per-agency reply tracking',
       'Status pills: Review › Coordination › Approval › Approved / Denied / Canceled',
-      'Email approve / deny with branded denial reason via Resend',
+      'Email approve / deny with branded denial reason.',
       'Single-page PPR PDF for the requestor',
       'Soft-cancel preserves rows in the audit trail (strikethrough display)',
     ],
@@ -625,7 +626,7 @@ export const MODULES: ModuleRef[] = [
       steps: [
         'Open PPR; the Awaiting Review pill shows new public submissions.',
         'Click any row to open the detail editor.',
-        'Coordinate with required agencies (Tower, Base Ops, etc.) using the coordination log.',
+        'Coordinate with required agencies (Tower, Transient Alert, Fuels, etc.) using the coordination log.',
         'Once coordinated, move to Approval and decide — the requestor gets an email.',
         'Export the PPR PDF for the approved arrival.',
       ],
@@ -652,7 +653,7 @@ export const MODULES: ModuleRef[] = [
       'Two entry types: + Sighting (green) for observed wildlife with optional dispersal action; + Strike (red) for confirmed aircraft contact with damage level and aircraft details. They feed two different reporting requirements. Heatmap aggregates strike density on the airfield map; analytics breaks out trends by species and time-of-day.',
     keyFeatures: [
       'DAFMAN 91-212 BASH program logging — sightings + strikes',
-      'Species picker curated per base in Base Setup › Wildlife Species (270+ species available)',
+      'Species picker with photos curated per base in Base Setup › Wildlife Species (270+ species available)',
       'Dispersal action + effectiveness tracking on sightings',
       'Damage level + aircraft details on strikes',
       'Day-grouped timeline (Today / Yesterday / weekday-date)',
@@ -685,13 +686,13 @@ export const MODULES: ModuleRef[] = [
     icon: Users,
     color: 'var(--color-cyan)',
     path: '/contractors',
-    tagline: 'AF Form 483 escort tracking with credential expirations',
+    tagline: 'Contractors and Personnel on the Airfield tracking',
     roles: OPS_CORE,
     overview:
-      'AF Form 483 contractor escort logs. Track who is on the airfield, what facility they are visiting, who is escorting them, and credential expirations. Active personnel show on the Airfield Status page so the duty AMOPS controller has a constant read on who\'s out there.\n\n' +
-      'Templates speed up recurring contractors — define a template once, apply it for repeat visits. Filter tabs (Active / All / Completed) and a search bar narrow the list. Credential expiration dates color-code red when imminent.',
+      'Track who is on the airfield, what facility they are visiting, who is escorting them, and AF Form 483 validation. Active personnel show on the Airfield Status page so the duty AMOPS cpersonnel have constant read on who\'s out there. Automatic entries are made to the Events Log as personnel are logged on and off the airfield.\n\n' +
+      'Templates speed up recurring contractors — define a template once, apply it for repeat visits. Filter tabs (Active / All / Completed) and a search bar narrow the list. AF Form 483 refresher dates color-code red when imminent.',
     keyFeatures: [
-      'AF Form 483 lifecycle — entry / exit logging with escort assignment',
+      'Entry / exit logging with escort assignment',
       'Templates for recurring contractors (stored in bases.contractor_templates JSONB)',
       'Active / All / Completed filter tabs',
       'Credential expiry color-coding (red when within 30 days)',
@@ -704,7 +705,7 @@ export const MODULES: ModuleRef[] = [
       title: 'Logging a contractor on the airfield',
       steps: [
         'Open Personnel on Airfield; click + Add Personnel.',
-        'Fill in company, contact, location, escort, credential expiry.',
+        'Fill in company, contact, location, escort, AF Form 483 and POV pass information as applicable.',
         'Submit — the entry logs and the contractor appears on Airfield Status.',
         'When they leave, click their row and mark exit time — they move to Completed.',
       ],
@@ -726,13 +727,12 @@ export const MODULES: ModuleRef[] = [
     tagline: 'UFC 3-260-01 parking plans with live clearance analysis',
     roles: OPS_CORE,
     overview:
-      'Plan transient and resident parking with wingtip and taxilane clearance envelopes per UFC 3-260-01. Drag aircraft, set heading, and the engine ray-tests against runways, taxiways, and adjacent spots in real time. Plans persist per base — multiple drafts plus one Active that drives ARFF and ATC views.\n\n' +
+      'Plan transient and home station parking with wingtip and taxilane clearance envelopes per UFC 3-260-01. Drag aircraft, set heading, and the engine ray-tests against runways, taxiways, and adjacent spots in real time. Plans persist per base — multiple plans can be saved to the database.\n\n' +
       'The floating panel has four tabs: Aircraft (placed silhouettes grouped by type), Environment (obstacles + taxilanes + apron boundaries), Clearance (live UFC evaluation with violations + warnings), and Settings (per-plan apron context that flips which UFC table the engine reads).',
     keyFeatures: [
       'UFC 3-260-01 wingtip + taxilane clearance evaluation, live as you drag',
       'To-scale aircraft silhouettes from a 200+ airframe library',
       'Multiple plans per base — Draft / Active / Template states',
-      'Active plan drives ARFF readiness and transient parking views',
       'Box-select for batch heading rotation + bulk clearance overrides',
       'Multi-aircraft, obstacle, taxilane, and apron-boundary drawing tools',
       'Clearance tab shows every violation + warning with feet-clearance numbers and UFC cite',
@@ -747,7 +747,7 @@ export const MODULES: ModuleRef[] = [
         'Click + Add Aircraft on the Aircraft tab; pick an airframe and place it on the map.',
         'Drag and rotate as needed — the Clearance tab updates live.',
         'Switch to Clearance tab; resolve violations by repositioning or overriding clearances.',
-        'Set the plan Active when ready — it drives ARFF + transient board across the app.',
+        'Set the plan Active when ready.',
       ],
     },
     screenshots: [
@@ -775,7 +775,7 @@ export const MODULES: ModuleRef[] = [
       'FAA survey-grade coordinates for primary, approach, transitional, inner-horizontal',
       'Single-point evaluation: click map or Use My Location',
       'Multi-point mode: lines + areas evaluated at every vertex with worst-penetration flagging',
-      'Required Actions section numbers FAA + leadership notification steps',
+      'Required Actions section numbers FAA, CES and leadership notification steps',
       'History page shows every past evaluation with re-open links',
       'Distance + altitude calculations use published coordinates (not visual rendering)',
     ],
@@ -808,14 +808,14 @@ export const MODULES: ModuleRef[] = [
     tagline: 'NAVAID inventory + DAFMAN A3.1 outage engine',
     roles: [...OPS_CORE, 'ces'],
     overview:
-      'Map view of every NAVAID component on the field — edge lights, PAPI, MALSR, ALSF, threshold bars, taxiway lighting. Each fixture has a status; the Outage Engine classifies outages into four tiers per DAFMAN 13-204v2 Table A3.1 and detects bar-out conditions across grouped fixtures.\n\n' +
+      'Map view of every NAVAID component on the field — edge lights, PAPI, MALSR, ALSF, threshold bars, taxiway lighting. Each fixture has a status; the Outage Engine classifies outages into four tiers per DAFMAN 13-204v2 Table A3.1 and detects conditions across grouped fixtures.\n\n' +
       'Click any fixture marker to inspect or report inop — the engine immediately re-evaluates the system tier and shows the outage ring (green / yellow / red / black). Reporting an outage auto-creates a discrepancy and routes it to the Electrical Light shop based on your base setup.',
     keyFeatures: [
       'DAFMAN 13-204v2 Table A3.1 outage engine — green / yellow / red / black tiers',
-      'Bar-level analysis flags bar inop when 3+ fixtures in the group are down',
+      'Bar-level analysis flags bar inop when 3+ fixtures in the group are down for approach light centerline bars',
       'Click any fixture to inspect or report inop — auto-creates discrepancy',
       'Lighting Status panel rolls up per-system status (PAPI, MALSR, ALSF, edge, threshold)',
-      'Edit Mode (admin): drag fixtures to correct positions, bulk-shift, box-select, place new bars',
+      'Edit Mode: drag fixtures to correct positions, bulk-shift, box-select, place new bars',
       'Audit Mode: component-grouped review with click-to-zoom for periodic NAVAID audits',
       'Import Base Data seeds from your installation\'s standard NAVAID inventory',
       'Import Features accepts KML uploads for one-off updates',
@@ -890,13 +890,12 @@ export const MODULES: ModuleRef[] = [
     tagline: '200+ airframes — silhouettes, dimensions, ARFF CAT, ACN/PCN',
     roles: [...OPS_CORE, 'read_only'],
     overview:
-      'Reference data on 200+ airframes. Silhouettes, dimensions (wingspan / length / height), ARFF CAT category, and parking clearance requirements. Used by the parking module (silhouettes + clearance envelopes), the ARFF readiness panel (CAT mapping), and as a quick reference when fielding transient requests.\n\n' +
+      'Reference data on 200+ airframes. Silhouettes, dimensions (wingspan / length / height), and parking clearance requirements. Used by the parking module (silhouettes + clearance envelopes), and as a quick reference when fielding transient requests.\n\n' +
       'Search by aircraft type or manufacturer; sort by MTOW, wingspan, length, or height. The ACN/PCN calculator lets you compare aircraft pavement requirements against your airfield\'s PCN. Favorites persist per browser via localStorage.',
     keyFeatures: [
       '200+ airframes — military and commercial',
       'Silhouettes rendered to-scale (used by /parking)',
       'Wingspan / length / height / MTOW per airframe',
-      'ARFF CAT category mapping (used by ARFF readiness)',
       'ACN/PCN calculator for pavement bearing comparison',
       'Search by type / manufacturer; sort by dimensions',
       'Favorites system — star frequently-used airframes (localStorage)',
@@ -930,7 +929,7 @@ export const MODULES: ModuleRef[] = [
     tagline: '70+ DAFMAN, UFC, AFMAN, and AF Form references',
     roles: [...OPS_CORE, 'ces', 'majcom_rfm', 'ppr', 'read_only'],
     overview:
-      'Searchable PDF library of 70+ DAFMAN, UFC, AFMAN, and AF Form documents that govern airfield management. The IAW Compliance callouts elsewhere in the app point you back to specific paragraphs here. Full-text search works across PDF content + titles.\n\n' +
+      'Searchable PDF library of 70+ DAFMAN, UFC, AFMAN, and AF Form documents that govern airfield management. The IAW Compliance callouts elsewhere in the app point you back to specific paragraphs here. Full-text search works across PDF content + titles (search all regulations at once).\n\n' +
       'Two tabs: References (curated regulatory library) and My Documents (user uploads — local procedures, wing guidance). Filter by category (DAFMAN / UFC / AFMAN / AF Form) or favorites only. PDF viewer opens inline for quick lookups.',
     keyFeatures: [
       '70+ regulations: DAFMAN 13-204, UFC 3-260-01, AFMAN 91-203, etc.',
@@ -978,7 +977,6 @@ export const MODULES: ModuleRef[] = [
       'Expiration warning glow within 24h window',
       'Sidebar red dot fires while any NOTAM is within expiration window',
       'Compact Zulu effective-date format (e.g., "Today 1430Z")',
-      'PERM (permanent) NOTAMs never expire',
       'PDF + Email export of current filtered view',
     ],
     howToAccess: 'Sidebar › Reference › NOTAMs. On mobile, More menu › Reference › NOTAMs.',
@@ -1027,7 +1025,7 @@ export const MODULES: ModuleRef[] = [
         'Click the Daily Operations Summary card.',
         'Set the date range.',
         'Click Generate PDF.',
-        'Email it from the modal or download for the daily binder.',
+        'Email it from the modal or download for records management.',
       ],
     },
     screenshots: [
@@ -1088,14 +1086,14 @@ export const MODULES: ModuleRef[] = [
       'Invite, edit, and remove users; assign roles from the permission matrix; grant per-user permission overrides for the rare case a member needs more or less than their role preset gives them. Invitations send a branded email via Resend with a setup-account link.\n\n' +
       'Status states are pending (awaiting email verification or admin approval) › active › deactivated (soft delete, can be reactivated). System administrators see all users; base administrators see only their installation. Sign-up requests come in as pending and need an admin to approve.',
     keyFeatures: [
-      'Invite users via branded email (Resend) — sets pending status',
+      'Invite users via email — sets pending status',
       'Role assignment from the permission matrix (12 roles, ~86 permission keys)',
       'Per-user permission overrides for fine-grained adjustments',
       'Status: pending › active › deactivated (soft delete, reactivatable)',
       'System admins see all users; base admins see their installation only',
       'Self-signup requests show as pending for admin approval',
-      'Operating initials + rank capture for audit-trail signatures',
-      'Per-user password reset (admin-triggered, branded email)',
+      'Name, Operating initials, rank, and EDIPI capture for audit-trail signatures',
+      'Per-user password reset (admin-triggered)',
     ],
     howToAccess: 'Sidebar › Admin › Users (admin role required). On mobile, More menu › Admin › Users.',
     workflow: {
@@ -1104,7 +1102,7 @@ export const MODULES: ModuleRef[] = [
         'Open Users.',
         'Click + Invite User.',
         'Fill in name, email, rank, role.',
-        'Submit — invitation email sends via Resend; status is pending.',
+        'Submit — invitation email sends; status is pending.',
         'User clicks the email link, sets a password, and lands as active.',
       ],
     },
