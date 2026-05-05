@@ -307,13 +307,20 @@ export default function NewDiscrepancyPage() {
             onClick={() => setTypeDropdownOpen((v) => !v)}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left', width: '100%' }}
           >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               {selectedTypes.length === 0
                 ? 'Select type(s)...'
-                : selectedTypes.map((v) => {
+                : selectedTypes.map((v, i) => {
                     const t = DISCREPANCY_TYPES.find((d) => d.value === v)
-                    return t ? `${t.emoji} ${t.label}` : v
-                  }).join(', ')}
+                    if (!t) return <span key={v}>{v}{i < selectedTypes.length - 1 ? ', ' : ''}</span>
+                    const Icon = t.icon
+                    return (
+                      <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon size={14} strokeWidth={2.25} />
+                        {t.label}{i < selectedTypes.length - 1 ? ',' : ''}
+                      </span>
+                    )
+                  })}
             </span>
             <span style={{ marginLeft: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{typeDropdownOpen ? '▲' : '▼'}</span>
           </button>
@@ -321,6 +328,7 @@ export default function NewDiscrepancyPage() {
             <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 'var(--z-nav)', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-text-4)', borderRadius: 'var(--radius-md)', marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
               {DISCREPANCY_TYPES.map((t) => {
                 const selected = selectedTypes.includes(t.value)
+                const Icon = t.icon
                 return (
                   <button
                     key={t.value}
@@ -335,7 +343,10 @@ export default function NewDiscrepancyPage() {
                     <span style={{ width: 20, height: 20, borderRadius: 'var(--radius-xs)', border: `2px solid ${selected ? 'var(--color-cyan)' : 'var(--color-text-3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-md)', flexShrink: 0, background: selected ? 'color-mix(in srgb, var(--color-cyan-bright) 13%, transparent)' : 'transparent', color: 'var(--color-cyan)' }}>
                       {selected ? '✓' : ''}
                     </span>
-                    <span>{t.emoji} {t.label}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <Icon size={16} strokeWidth={2.25} style={{ color: 'var(--color-text-2)' }} />
+                      {t.label}
+                    </span>
                   </button>
                 )
               })}

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { renderLucideToSvgString } from '@/lib/render-lucide-svg'
+import { ClipboardList, type LucideIcon } from 'lucide-react'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 
 type Props = {
@@ -16,14 +18,14 @@ type Props = {
   onTypeFilterChange?: (typeValue: string | null) => void
 }
 
-// Map discrepancy type value -> emoji from constants
-const TYPE_EMOJI: Record<string, string> = Object.fromEntries(
-  DISCREPANCY_TYPES.map((t) => [t.value, t.emoji]),
+// Map discrepancy type value -> lucide icon component from constants
+const TYPE_ICON: Record<string, LucideIcon> = Object.fromEntries(
+  DISCREPANCY_TYPES.map((t) => [t.value, t.icon]),
 )
 
-function getTypeEmoji(typeStr: string): string {
+function getTypeIcon(typeStr: string): LucideIcon {
   const first = typeStr.split(',')[0]?.trim()
-  return TYPE_EMOJI[first] || '\u{1F4CB}'
+  return TYPE_ICON[first || ''] || ClipboardList
 }
 
 function getTypeLabel(typeStr: string): string {
@@ -153,9 +155,9 @@ export default function DiscrepancyMapViewGoogle({
     visibleDiscrepancies.forEach((d) => {
       const lat = d.latitude!
       const lng = d.longitude!
-      const emoji = getTypeEmoji(d.type)
+      const Icon = getTypeIcon(d.type)
 
-      // Build marker element -- 30px circle with emoji
+      // Build marker element -- 30px circle with lucide icon
       const el = document.createElement('div')
       el.style.width = '30px'
       el.style.height = '30px'
@@ -166,11 +168,9 @@ export default function DiscrepancyMapViewGoogle({
       el.style.display = 'flex'
       el.style.alignItems = 'center'
       el.style.justifyContent = 'center'
-      el.style.fontSize = '15px'
-      el.style.lineHeight = '1'
       el.style.cursor = 'pointer'
       el.style.transition = 'transform 0.15s ease'
-      el.textContent = emoji
+      el.innerHTML = renderLucideToSvgString(Icon, { size: 16 })
 
       el.addEventListener('mouseenter', () => {
         el.style.transform = 'scale(1.3)'
@@ -348,6 +348,7 @@ export default function DiscrepancyMapViewGoogle({
               {legendItems.map((t) => {
                 const isActive = activeTypeFilter === t.value
                 const isDimmed = activeTypeFilter !== null && !isActive
+                const Icon = t.icon
                 return (
                   <div
                     key={t.value}
@@ -368,13 +369,16 @@ export default function DiscrepancyMapViewGoogle({
                   >
                     <span
                       style={{
-                        fontSize: '12px',
                         flexShrink: 0,
                         width: 16,
-                        textAlign: 'center',
+                        height: 12,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isActive ? '#22D3EE' : '#CBD5E1',
                       }}
                     >
-                      {t.emoji}
+                      <Icon size={12} strokeWidth={2.25} />
                     </span>
                     <span
                       style={{

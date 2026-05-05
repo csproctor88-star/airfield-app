@@ -224,7 +224,7 @@ export function EditDiscrepancyModal({
         <FieldLabel>Type</FieldLabel>
         <select className="input-dark" value={form.type}
           onChange={(e) => setForm(p => ({ ...p, type: e.target.value }))}>
-          {DISCREPANCY_TYPES.map(t => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
+          {DISCREPANCY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
       </div>
 

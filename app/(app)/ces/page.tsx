@@ -96,11 +96,24 @@ export default function CESDashboardPage() {
     }
   }
 
-  const getTypeLabel = (typeVal: string) =>
-    typeVal.split(',').map(v => {
-      const t = DISCREPANCY_TYPES.find(dt => dt.value === v.trim())
-      return t ? `${t.emoji} ${t.label}` : v.trim()
-    }).join(', ')
+  const renderTypeLabel = (typeVal: string) => {
+    const parts = typeVal.split(',').map(v => v.trim())
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {parts.map((v, i) => {
+          const t = DISCREPANCY_TYPES.find(dt => dt.value === v)
+          if (!t) return <span key={`${v}-${i}`}>{v}{i < parts.length - 1 ? ',' : ''}</span>
+          const Icon = t.icon
+          return (
+            <span key={`${v}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+              <Icon size={12} strokeWidth={2.25} />
+              {t.label}{i < parts.length - 1 ? ',' : ''}
+            </span>
+          )
+        })}
+      </span>
+    )
+  }
 
   const handleStatusSaved = (updated: DiscrepancyRow) => {
     setDiscrepancies(prev => prev.map(d => d.id === updated.id ? updated : d))
@@ -281,7 +294,7 @@ export default function CESDashboardPage() {
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                          <span>{getTypeLabel(d.type)}</span>
+                          <span>{renderTypeLabel(d.type)}</span>
                           <span>{d.location_text}</span>
                           {activeShop === '__all' && d.assigned_shop && (
                             <span style={{ fontWeight: 600 }}>{d.assigned_shop}</span>

@@ -359,7 +359,24 @@ export default function DiscrepancyDetailPage() {
             || (d as typeof d & { created_by_name?: string | null }).created_by_name || null
           const detailItems: { label: string; value: React.ReactNode }[] = [
             { label: 'Location', value: (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })() },
-            { label: 'Type', value: (() => { return d.type.split(', ').map(v => { const t = DISCREPANCY_TYPES.find(dt => dt.value === v); return t ? `${t.emoji} ${t.label}` : v }).join(', ') })() },
+            { label: 'Type', value: (() => {
+              const parts = d.type.split(', ')
+              return (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {parts.map((v, i) => {
+                    const t = DISCREPANCY_TYPES.find(dt => dt.value === v)
+                    if (!t) return <span key={`${v}-${i}`}>{v}{i < parts.length - 1 ? ',' : ''}</span>
+                    const Icon = t.icon
+                    return (
+                      <span key={`${v}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Icon size={14} strokeWidth={2.25} />
+                        {t.label}{i < parts.length - 1 ? ',' : ''}
+                      </span>
+                    )
+                  })}
+                </span>
+              )
+            })() },
             { label: 'Current Status', value: csLabel },
             { label: 'Facility #', value: (d as typeof d & { facility_number?: string | null }).facility_number || '—' },
             { label: 'Work Order Assigned to', value: d.assigned_shop || 'Unassigned' },

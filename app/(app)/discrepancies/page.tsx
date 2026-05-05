@@ -872,6 +872,7 @@ export default function DiscrepanciesPage() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                       {typesWithMatches.map((t) => {
                         const active = typeFilter === t.value
+                        const Icon = t.icon
                         return (
                           <button
                             key={t.value}
@@ -886,6 +887,7 @@ export default function DiscrepanciesPage() {
                               display: 'inline-flex', alignItems: 'center', gap: 4,
                             }}
                           >
+                            <Icon size={12} strokeWidth={2.25} />
                             {t.label}
                             <span style={{
                               fontSize: 'var(--fs-2xs)', fontWeight: 600,

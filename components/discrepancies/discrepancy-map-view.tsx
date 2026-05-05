@@ -6,7 +6,9 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { SATELLITE_STYLE, MAP_PERF_OPTIONS } from '@/lib/map-config'
 import { useInstallation } from '@/lib/installation-context'
 import { isMapboxConfigured } from '@/lib/utils'
+import { renderLucideToSvgString } from '@/lib/render-lucide-svg'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { ClipboardList, type LucideIcon } from 'lucide-react'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 
 type Props = {
@@ -19,14 +21,14 @@ type Props = {
   onTypeFilterChange?: (typeValue: string | null) => void
 }
 
-// Map discrepancy type value → emoji from constants
-const TYPE_EMOJI: Record<string, string> = Object.fromEntries(
-  DISCREPANCY_TYPES.map((t) => [t.value, t.emoji]),
+// Map discrepancy type value → lucide icon component from constants
+const TYPE_ICON: Record<string, LucideIcon> = Object.fromEntries(
+  DISCREPANCY_TYPES.map((t) => [t.value, t.icon]),
 )
 
-function getTypeEmoji(typeStr: string): string {
+function getTypeIcon(typeStr: string): LucideIcon {
   const first = typeStr.split(',')[0]?.trim()
-  return TYPE_EMOJI[first] || '\u{1F4CB}'
+  return TYPE_ICON[first || ''] || ClipboardList
 }
 
 function getTypeLabel(typeStr: string): string {
@@ -136,7 +138,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
     visibleDiscrepancies.forEach((d) => {
       const lat = d.latitude!
       const lng = d.longitude!
-      const emoji = getTypeEmoji(d.type)
+      const Icon = getTypeIcon(d.type)
       const typeLabel = getTypeLabel(d.type)
       const days = daysOpenFn(d.created_at)
       const photoUrl = photoMap?.[d.id]
@@ -155,9 +157,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       inner.style.display = 'flex'
       inner.style.alignItems = 'center'
       inner.style.justifyContent = 'center'
-      inner.style.fontSize = '15px'
-      inner.style.lineHeight = '1'
-      inner.textContent = emoji
+      inner.innerHTML = renderLucideToSvgString(Icon, { size: 16 })
       el.appendChild(inner)
 
       el.addEventListener('mouseenter', () => {
@@ -300,6 +300,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
               {legendItems.map((t) => {
                 const isActive = activeTypeFilter === t.value
                 const isDimmed = activeTypeFilter !== null && !isActive
+                const Icon = t.icon
                 return (
                   <div
                     key={t.value}
@@ -316,7 +317,9 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span style={{ fontSize: '12px', flexShrink: 0, width: 16, textAlign: 'center' }}>{t.emoji}</span>
+                    <span style={{ flexShrink: 0, width: 16, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: isActive ? '#22D3EE' : '#CBD5E1' }}>
+                      <Icon size={12} strokeWidth={2.25} />
+                    </span>
                     <span style={{ fontSize: '10px', color: isActive ? '#22D3EE' : '#CBD5E1', fontWeight: 600 }}>{t.label}</span>
                   </div>
                 )

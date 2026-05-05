@@ -2,21 +2,41 @@
 // Base-specific configuration (name, ICAO, runways, areas, etc.) is
 // stored in the database and loaded via InstallationContext.
 
+import {
+  AlertTriangle,
+  Construction,
+  Lightbulb,
+  Paintbrush,
+  Signpost,
+  Droplets,
+  Trees,
+  Bird,
+  Ban,
+  RadioTower,
+  ClipboardList,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+
 // === Discrepancy Types (SRS Section 6.1) ===
 
-export const DISCREPANCY_TYPES = [
-  { value: 'fod_hazard', label: 'FOD Hazard', emoji: '🚨', defaultShop: 'Airfield Management' },
-  { value: 'pavement', label: 'Pavement Deficiency', emoji: '🛣️', defaultShop: 'CE Pavements' },
-  { value: 'lighting', label: 'Lighting Outage/Deficiency', emoji: '💡', defaultShop: 'CE Electrical' },
-  { value: 'marking', label: 'Marking Deficiency', emoji: '🎨', defaultShop: 'CE Pavements' },
-  { value: 'signage', label: 'Signage Deficiency', emoji: '🪧', defaultShop: 'CE Electrical' },
-  { value: 'drainage', label: 'Drainage Issue', emoji: '🌊', defaultShop: 'CE Structures' },
-  { value: 'vegetation', label: 'Vegetation Encroachment', emoji: '🌿', defaultShop: 'CE Grounds' },
-  { value: 'wildlife', label: 'Wildlife Hazard', emoji: '🦅', defaultShop: 'Airfield Management' },
-  { value: 'obstruction', label: 'Airfield Obstruction', emoji: '⛔', defaultShop: 'CE / Airfield Management' },
-  { value: 'navaid', label: 'NAVAID Deficiency', emoji: '📡', defaultShop: 'CE Electrical / FAA' },
-  { value: 'other', label: 'Other', emoji: '📋', defaultShop: null },
-] as const
+export const DISCREPANCY_TYPES: ReadonlyArray<{
+  readonly value: string
+  readonly label: string
+  readonly icon: LucideIcon
+  readonly defaultShop: string | null
+}> = [
+  { value: 'fod_hazard', label: 'FOD Hazard', icon: AlertTriangle, defaultShop: 'Airfield Management' },
+  { value: 'pavement', label: 'Pavement Deficiency', icon: Construction, defaultShop: 'CE Pavements' },
+  { value: 'lighting', label: 'Lighting Outage/Deficiency', icon: Lightbulb, defaultShop: 'CE Electrical' },
+  { value: 'marking', label: 'Marking Deficiency', icon: Paintbrush, defaultShop: 'CE Pavements' },
+  { value: 'signage', label: 'Signage Deficiency', icon: Signpost, defaultShop: 'CE Electrical' },
+  { value: 'drainage', label: 'Drainage Issue', icon: Droplets, defaultShop: 'CE Structures' },
+  { value: 'vegetation', label: 'Vegetation Encroachment', icon: Trees, defaultShop: 'CE Grounds' },
+  { value: 'wildlife', label: 'Wildlife Hazard', icon: Bird, defaultShop: 'Airfield Management' },
+  { value: 'obstruction', label: 'Airfield Obstruction', icon: Ban, defaultShop: 'CE / Airfield Management' },
+  { value: 'navaid', label: 'NAVAID Deficiency', icon: RadioTower, defaultShop: 'CE Electrical / FAA' },
+  { value: 'other', label: 'Other', icon: ClipboardList, defaultShop: null },
+]
 
 export const STATUS_CONFIG = {
   open:      { color: '#3B82F6', bg: '#DBEAFE', label: 'Open' },
