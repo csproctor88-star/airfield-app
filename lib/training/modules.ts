@@ -97,7 +97,7 @@ export const MODULES: ModuleRef[] = [
       'AMOPS Out-of-Office and Closed-for-Day toggles that shows Kiosk Mode users the status of AMOPS and the airfield',
       'Custom status boards configurable per base in Base Setup',
       'Personnel-on-Airfield mini-table (full management on /contractors)',
-      'PPR grid surfaces transient aircraft inbound today, columns displayed customizeable in Base Setup',
+      'PPR grid surfaces transient aircraft inbound today, columns displayed customizable in Base Setup',
       'Realtime updates — no manual refresh needed',
       'Kiosk mode, enabling other agencies to view airfield status without logging in using a token URL that can be reset if compromised',
     ],
@@ -251,7 +251,7 @@ export const MODULES: ModuleRef[] = [
       'Active QRCs persist across shift changes — start a checklist on day shift and mid shift can pick up exactly where you left off. The sidebar fires a red dot whenever a QRC is open so handoffs never miss an in-progress emergency response.',
     keyFeatures: [
       '25 starter templates, plus any custom checklists configured for your base',
-      'Three tabs: Available (the library), Active (currently running, persists across shifts), History (audit trail), Reviews (for documenting checklist reviews IAW DAFMAN 13-204v2, configurable for monthly or quarterly)',
+      'Four tabs: Available (the library), Active (currently running, persists across shifts), History (audit trail), Reviews (for documenting checklist reviews IAW DAFMAN 13-204v2, configurable for monthly or quarterly)',
       'Eight step types: confirmations, notifications, free-text capture, sub-checklists, navigations to other modules, status updates, and more',
       'Per-step audit: who acknowledged + Zulu timestamp, captured automatically',
       'After-Action Report PDF on close — every step + acknowledgement, ready for post-event debrief',
@@ -367,7 +367,7 @@ export const MODULES: ModuleRef[] = [
     tagline: '7 check types, draft persistence, inline discrepancy capture',
     roles: OPS_CORE,
     overview:
-      'Daily, lighting, FOD, weather, construction, heavy aircraft, and other checks. Pick a type, work through the items, and log discrepancies inline as you find them. Drafts auto-save to the database so you can resume from another device or.\n\n' +
+      'Daily, lighting, FOD, weather, construction, heavy aircraft, and other checks. Pick a type, work through the items, and log discrepancies inline as you find them. Drafts auto-save to the database so you can resume from another device.\n\n' +
       'Discrepancies you log during a check auto-route to the right CES shop based on the type-to-shop mapping in Base Setup. Photos attach per-discrepancy to the discrepancy database. Check-specific fields (RSC for Daily, BWC for FOD, BASH for Wildlife checks) appear conditionally based on the check type chosen.',
     keyFeatures: [
       'Seven check types — Daily, Lighting, FOD, Weather, Construction, Other, Heavy Aircraft',
@@ -455,7 +455,7 @@ export const MODULES: ModuleRef[] = [
       'Pass / Fail / N/A per item with optional remarks + photo evidence',
       'Per-member signature toggle (configurable in Base Setup) for team sign-off',
       'Auto-save with cross-device resume — surfaces as "Continue ACSI Draft" on the launcher',
-      'Exisiting discrepancies can be linked to Fail items, importing remarks, project cost, Work Order number, Risk Control Measures etc. with full workflow integration',
+      'Existing discrepancies can be linked to Fail items, importing remarks, project cost, Work Order number, Risk Control Measures etc. with full workflow integration',
       'PDF export bundles the entire inspection with signatures + photos all in line, without manual consolidation',
       'History tab shows every past ACSI run with completion status',
     ],
@@ -487,13 +487,13 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Per-shift sign-off + NAMO/AFM daily certification',
     roles: OPS_AND_OVERSIGHT,
     overview:
-      'DAFMAN 13-204v1 §2.5.2.10.3 / .10.4 shift turnover and daily review queue. Each shift signs off on the events from their shift; AFM finalzies the review. Pending and reviewed counters in the header give an at-a-glance read before scrolling.\n\n' +
+      'DAFMAN 13-204v1 §2.5.2.10.3 / .10.4 shift turnover and daily review queue. Each shift signs off on the events from their shift; AFM finalizes the review. Pending and reviewed counters in the header give an at-a-glance read before scrolling.\n\n' +
       'The colored left rail on each row communicates state: green when fully certified, amber when today is pending (your turn), quiet when a past day is still unsigned. Click any row to open the sign modal. Required slots adapt to your base — bases.shift_count (2 or 3) determines whether you have Day/Mid/Swing or just Day/Swing.',
     keyFeatures: [
       'Per-day rows with colored left rail showing state at a glance',
       'Required slots: Day AMSL / Swing AMSL / Mid AMSL + NAMO + AFM (slot count from bases.shift_count)',
       'Events save and freeze the daily review on certification by the AFM',
-      'Events Log shows AMENDED pill when an entry on Events Log is ammended after the Daily Ops Summary is fully certified.',
+      'Events Log shows AMENDED pill when an entry on Events Log is amended after the Daily Ops Summary is fully certified.',
       'Sign modal carries name + rank + Zulu timestamp + optional notes per slot',
       'AFM certification stamps when every required slot is signed; row turns green',
       'PDF export per day for Air Force Records Disposition requirements',
@@ -689,7 +689,7 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Contractors and Personnel on the Airfield tracking',
     roles: OPS_CORE,
     overview:
-      'Track who is on the airfield, what facility they are visiting, who is escorting them, and AF Form 483 validation. Active personnel show on the Airfield Status page so the duty AMOPS cpersonnel have constant read on who\'s out there. Automatic entries are made to the Events Log as personnel are logged on and off the airfield.\n\n' +
+      'Track who is on the airfield, what facility they are visiting, who is escorting them, and AF Form 483 validation. Active personnel show on the Airfield Status page so the duty AMOPS personnel have constant read on who\'s out there. Automatic entries are made to the Events Log as personnel are logged on and off the airfield.\n\n' +
       'Templates speed up recurring contractors — define a template once, apply it for repeat visits. Filter tabs (Active / All / Completed) and a search bar narrow the list. AF Form 483 refresher dates color-code red when imminent.',
     keyFeatures: [
       'Entry / exit logging with escort assignment',
