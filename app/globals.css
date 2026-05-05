@@ -1235,3 +1235,45 @@ html, body {
 @media (max-width: 1023px) {
   aside[data-tour="guide-panel"] { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Google Maps InfoWindow — close-button overlay
+   The default chrome puts the X in its own row above the content
+   (.gm-style-iw-chr), leaving an empty band that makes our popups
+   look unfinished. Float it as a top-right overlay so the title
+   sits flush against the top of the card. Per-component scoped
+   styles still own background / border / X color theming.
+   ═══════════════════════════════════════════════════════════════ */
+
+.gm-style-iw-c {
+  position: relative;
+}
+
+.gm-style-iw-chr {
+  position: absolute !important;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+.gm-style-iw-chr button.gm-ui-hover-effect {
+  width: 28px !important;
+  height: 28px !important;
+  margin: 0 !important;
+  opacity: 0.65;
+  transition: opacity 0.15s ease;
+}
+
+.gm-style-iw-chr button.gm-ui-hover-effect:hover {
+  opacity: 1;
+}
+
+/* Default content padding-right so the floating X has clearance.
+   Per-component rules can override .gm-style-iw or .gm-style-iw-d
+   padding but should preserve at least 28px of right padding. */
+.gm-style-iw-d {
+  padding-right: 30px;
+}

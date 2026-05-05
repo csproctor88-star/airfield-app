@@ -4148,13 +4148,14 @@ export default function InfrastructureMapPage() {
         )}
       </div>
 
-      {/* Google Maps InfoWindow styles */}
+      {/* Google Maps InfoWindow styles — close-button overlay rules
+          live in app/globals.css; here we only set the chrome theme. */}
       <style>{`
         .gm-style-iw {
           background: var(--color-bg-elevated) !important;
           border: 1px solid var(--color-border) !important;
           border-radius: 10px !important;
-          padding: 8px 10px !important;
+          padding: 8px 30px 8px 10px !important;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
         }
         .gm-style-iw-d {

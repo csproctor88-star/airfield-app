@@ -484,7 +484,8 @@ export default function DiscrepancyMapViewGoogle({
         </div>
       )}
 
-      {/* Dark-theme InfoWindow styling */}
+      {/* Dark-theme InfoWindow styling — close-button overlay rules
+          live in app/globals.css; here we only set the dark chrome. */}
       <style jsx global>{`
         .gm-style-iw-c {
           background: rgba(15, 23, 42, 0.95) !important;
@@ -495,16 +496,13 @@ export default function DiscrepancyMapViewGoogle({
         }
         .gm-style-iw-d {
           overflow: auto !important;
-          padding: 10px 12px !important;
+          padding: 10px 30px 10px 12px !important;
         }
         .gm-style-iw-tc::after {
           background: rgba(15, 23, 42, 0.95) !important;
         }
         .gm-ui-hover-effect {
           filter: invert(0.6) !important;
-        }
-        .gm-style-iw-chr {
-          padding-top: 0 !important;
         }
       `}</style>
     </div>
