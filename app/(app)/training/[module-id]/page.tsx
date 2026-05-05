@@ -32,7 +32,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
     .filter((x): x is ModuleRef => Boolean(x))
 
   return (
-    <div className="page-container" style={{ maxWidth: 920 }}>
+    <div className="page-container" style={{ maxWidth: 1180 }}>
       <BackLink />
 
       {/* HERO — gradient accent strip + large icon tile + role chips */}
@@ -89,7 +89,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
             <div style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-text-1)', lineHeight: 1.15 }}>
               {m.name}
             </div>
-            <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', marginTop: 6, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 'var(--fs-lg)', color: 'var(--color-text-2)', marginTop: 6, lineHeight: 1.5 }}>
               {m.tagline}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 12, alignItems: 'center' }}>
@@ -197,10 +197,10 @@ function ModuleView({ m }: { m: ModuleRef }) {
             <p
               key={i}
               style={{
-                fontSize: 'var(--fs-sm)',
+                fontSize: 'var(--fs-md)',
                 color: 'var(--color-text-2)',
-                lineHeight: 1.65,
-                margin: i === arr.length - 1 ? 0 : '0 0 10px',
+                lineHeight: 1.7,
+                margin: i === arr.length - 1 ? 0 : '0 0 12px',
               }}
             >
               {para}
@@ -244,7 +244,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
               }}>
                 <Check size={12} strokeWidth={3} />
               </div>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.55 }}>
                 {f}
               </div>
             </div>
@@ -278,7 +278,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
           }}>
             <Compass size={14} strokeWidth={2.25} />
           </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.55, flex: 1 }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.6, flex: 1 }}>
             {m.howToAccess}
           </div>
         </div>
@@ -289,11 +289,11 @@ function ModuleView({ m }: { m: ModuleRef }) {
         {m.screenshots && m.screenshots.length > 0 ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(520px, 1fr))',
+            gap: 16,
           }}>
             {m.screenshots.map((s, i) => (
-              <figure key={i} style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <figure key={i} style={{ margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={s.src}
@@ -307,7 +307,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
                     display: 'block',
                   }}
                 />
-                <figcaption style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                <figcaption style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontStyle: 'italic', lineHeight: 1.5 }}>
                   {s.caption}
                 </figcaption>
               </figure>
@@ -398,9 +398,9 @@ function ModuleView({ m }: { m: ModuleRef }) {
                 <div style={{
                   flex: 1,
                   padding: '4px 12px 8px',
-                  fontSize: 'var(--fs-sm)',
+                  fontSize: 'var(--fs-md)',
                   color: 'var(--color-text-2)',
-                  lineHeight: 1.55,
+                  lineHeight: 1.6,
                 }}>
                   {s}
                 </div>
@@ -550,7 +550,7 @@ function FaqRow({ q, a, color }: { q: string; a: string; color: string }) {
           border: 'none',
           cursor: 'pointer',
           color: 'var(--color-text-1)',
-          fontSize: 'var(--fs-sm)',
+          fontSize: 'var(--fs-md)',
           fontWeight: 700,
           fontFamily: 'inherit',
           textAlign: 'left',
@@ -562,9 +562,9 @@ function FaqRow({ q, a, color }: { q: string; a: string; color: string }) {
       {open && (
         <div style={{
           padding: '0 14px 14px 38px',
-          fontSize: 'var(--fs-sm)',
+          fontSize: 'var(--fs-md)',
           color: 'var(--color-text-2)',
-          lineHeight: 1.6,
+          lineHeight: 1.65,
         }}>
           {a}
         </div>
