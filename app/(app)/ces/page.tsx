@@ -106,7 +106,7 @@ export default function CESDashboardPage() {
           const Icon = t.icon
           return (
             <span key={`${v}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <Icon size={12} strokeWidth={2.25} />
+              <Icon size={12} strokeWidth={2.25} color={t.color} />
               {t.label}{i < parts.length - 1 ? ',' : ''}
             </span>
           )

@@ -369,7 +369,7 @@ export default function DiscrepancyDetailPage() {
                     const Icon = t.icon
                     return (
                       <span key={`${v}-${i}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Icon size={14} strokeWidth={2.25} />
+                        <Icon size={14} strokeWidth={2.25} color={t.color} />
                         {t.label}{i < parts.length - 1 ? ',' : ''}
                       </span>
                     )

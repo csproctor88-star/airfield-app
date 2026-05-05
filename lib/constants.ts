@@ -23,19 +23,20 @@ export const DISCREPANCY_TYPES: ReadonlyArray<{
   readonly value: string
   readonly label: string
   readonly icon: LucideIcon
+  readonly color: string
   readonly defaultShop: string | null
 }> = [
-  { value: 'fod_hazard', label: 'FOD Hazard', icon: AlertTriangle, defaultShop: 'Airfield Management' },
-  { value: 'pavement', label: 'Pavement Deficiency', icon: Construction, defaultShop: 'CE Pavements' },
-  { value: 'lighting', label: 'Lighting Outage/Deficiency', icon: Lightbulb, defaultShop: 'CE Electrical' },
-  { value: 'marking', label: 'Marking Deficiency', icon: Paintbrush, defaultShop: 'CE Pavements' },
-  { value: 'signage', label: 'Signage Deficiency', icon: Signpost, defaultShop: 'CE Electrical' },
-  { value: 'drainage', label: 'Drainage Issue', icon: Droplets, defaultShop: 'CE Structures' },
-  { value: 'vegetation', label: 'Vegetation Encroachment', icon: Trees, defaultShop: 'CE Grounds' },
-  { value: 'wildlife', label: 'Wildlife Hazard', icon: Bird, defaultShop: 'Airfield Management' },
-  { value: 'obstruction', label: 'Airfield Obstruction', icon: Ban, defaultShop: 'CE / Airfield Management' },
-  { value: 'navaid', label: 'NAVAID Deficiency', icon: RadioTower, defaultShop: 'CE Electrical / FAA' },
-  { value: 'other', label: 'Other', icon: ClipboardList, defaultShop: null },
+  { value: 'fod_hazard', label: 'FOD Hazard', icon: AlertTriangle, color: '#EF4444', defaultShop: 'Airfield Management' },
+  { value: 'pavement', label: 'Pavement Deficiency', icon: Construction, color: '#F97316', defaultShop: 'CE Pavements' },
+  { value: 'lighting', label: 'Lighting Outage/Deficiency', icon: Lightbulb, color: '#FACC15', defaultShop: 'CE Electrical' },
+  { value: 'marking', label: 'Marking Deficiency', icon: Paintbrush, color: '#EC4899', defaultShop: 'CE Pavements' },
+  { value: 'signage', label: 'Signage Deficiency', icon: Signpost, color: '#60A5FA', defaultShop: 'CE Electrical' },
+  { value: 'drainage', label: 'Drainage Issue', icon: Droplets, color: '#2DD4BF', defaultShop: 'CE Structures' },
+  { value: 'vegetation', label: 'Vegetation Encroachment', icon: Trees, color: '#22C55E', defaultShop: 'CE Grounds' },
+  { value: 'wildlife', label: 'Wildlife Hazard', icon: Bird, color: '#A3E635', defaultShop: 'Airfield Management' },
+  { value: 'obstruction', label: 'Airfield Obstruction', icon: Ban, color: '#B91C1C', defaultShop: 'CE / Airfield Management' },
+  { value: 'navaid', label: 'NAVAID Deficiency', icon: RadioTower, color: '#A855F7', defaultShop: 'CE Electrical / FAA' },
+  { value: 'other', label: 'Other', icon: ClipboardList, color: '#94A3B8', defaultShop: null },
 ]
 
 export const STATUS_CONFIG = {

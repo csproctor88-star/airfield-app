@@ -316,7 +316,7 @@ export default function NewDiscrepancyPage() {
                     const Icon = t.icon
                     return (
                       <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <Icon size={14} strokeWidth={2.25} />
+                        <Icon size={14} strokeWidth={2.25} color={t.color} />
                         {t.label}{i < selectedTypes.length - 1 ? ',' : ''}
                       </span>
                     )
@@ -344,7 +344,7 @@ export default function NewDiscrepancyPage() {
                       {selected ? '✓' : ''}
                     </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <Icon size={16} strokeWidth={2.25} style={{ color: 'var(--color-text-2)' }} />
+                      <Icon size={16} strokeWidth={2.25} color={t.color} />
                       {t.label}
                     </span>
                   </button>

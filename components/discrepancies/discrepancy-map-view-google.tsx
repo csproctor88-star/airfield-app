@@ -22,10 +22,18 @@ type Props = {
 const TYPE_ICON: Record<string, LucideIcon> = Object.fromEntries(
   DISCREPANCY_TYPES.map((t) => [t.value, t.icon]),
 )
+const TYPE_COLOR: Record<string, string> = Object.fromEntries(
+  DISCREPANCY_TYPES.map((t) => [t.value, t.color]),
+)
 
 function getTypeIcon(typeStr: string): LucideIcon {
   const first = typeStr.split(',')[0]?.trim()
   return TYPE_ICON[first || ''] || ClipboardList
+}
+
+function getTypeColor(typeStr: string): string {
+  const first = typeStr.split(',')[0]?.trim()
+  return TYPE_COLOR[first || ''] || '#FFFFFF'
 }
 
 function getTypeLabel(typeStr: string): string {
@@ -156,6 +164,7 @@ export default function DiscrepancyMapViewGoogle({
       const lat = d.latitude!
       const lng = d.longitude!
       const Icon = getTypeIcon(d.type)
+      const color = getTypeColor(d.type)
 
       // Build marker element -- 30px circle with lucide icon
       const el = document.createElement('div')
@@ -170,7 +179,7 @@ export default function DiscrepancyMapViewGoogle({
       el.style.justifyContent = 'center'
       el.style.cursor = 'pointer'
       el.style.transition = 'transform 0.15s ease'
-      el.innerHTML = renderLucideToSvgString(Icon, { size: 16 })
+      el.innerHTML = renderLucideToSvgString(Icon, { size: 16, color })
 
       el.addEventListener('mouseenter', () => {
         el.style.transform = 'scale(1.3)'
@@ -375,7 +384,8 @@ export default function DiscrepancyMapViewGoogle({
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: isActive ? '#22D3EE' : '#CBD5E1',
+                        color: t.color,
+                        opacity: isDimmed ? 0.5 : 1,
                       }}
                     >
                       <Icon size={12} strokeWidth={2.25} />

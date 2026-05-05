@@ -25,10 +25,18 @@ type Props = {
 const TYPE_ICON: Record<string, LucideIcon> = Object.fromEntries(
   DISCREPANCY_TYPES.map((t) => [t.value, t.icon]),
 )
+const TYPE_COLOR: Record<string, string> = Object.fromEntries(
+  DISCREPANCY_TYPES.map((t) => [t.value, t.color]),
+)
 
 function getTypeIcon(typeStr: string): LucideIcon {
   const first = typeStr.split(',')[0]?.trim()
   return TYPE_ICON[first || ''] || ClipboardList
+}
+
+function getTypeColor(typeStr: string): string {
+  const first = typeStr.split(',')[0]?.trim()
+  return TYPE_COLOR[first || ''] || '#FFFFFF'
 }
 
 function getTypeLabel(typeStr: string): string {
@@ -139,6 +147,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       const lat = d.latitude!
       const lng = d.longitude!
       const Icon = getTypeIcon(d.type)
+      const color = getTypeColor(d.type)
       const typeLabel = getTypeLabel(d.type)
       const days = daysOpenFn(d.created_at)
       const photoUrl = photoMap?.[d.id]
@@ -157,7 +166,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
       inner.style.display = 'flex'
       inner.style.alignItems = 'center'
       inner.style.justifyContent = 'center'
-      inner.innerHTML = renderLucideToSvgString(Icon, { size: 16 })
+      inner.innerHTML = renderLucideToSvgString(Icon, { size: 16, color })
       el.appendChild(inner)
 
       el.addEventListener('mouseenter', () => {
@@ -317,7 +326,7 @@ export default function DiscrepancyMapView({ discrepancies, daysOpenFn, photoMap
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span style={{ flexShrink: 0, width: 16, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: isActive ? '#22D3EE' : '#CBD5E1' }}>
+                    <span style={{ flexShrink: 0, width: 16, height: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: t.color, opacity: isDimmed ? 0.5 : 1 }}>
                       <Icon size={12} strokeWidth={2.25} />
                     </span>
                     <span style={{ fontSize: '10px', color: isActive ? '#22D3EE' : '#CBD5E1', fontWeight: 600 }}>{t.label}</span>

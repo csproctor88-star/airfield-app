@@ -887,7 +887,7 @@ export default function DiscrepanciesPage() {
                               display: 'inline-flex', alignItems: 'center', gap: 4,
                             }}
                           >
-                            <Icon size={12} strokeWidth={2.25} />
+                            <Icon size={12} strokeWidth={2.25} color={t.color} />
                             {t.label}
                             <span style={{
                               fontSize: 'var(--fs-2xs)', fontWeight: 600,
