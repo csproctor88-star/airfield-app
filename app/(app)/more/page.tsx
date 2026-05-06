@@ -55,6 +55,7 @@ const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: Plane, color: 'var(--color-accent)', href: '/aircraft' },
   { name: 'Reference Library', icon: Library, color: 'var(--color-cyan)', href: '/regulations' },
   { name: 'NOTAMs', icon: RadioTower, color: 'var(--color-cyan)', href: '/notams' },
+  { name: 'Glidepath Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/training' },
 ]
 
 // Admin
@@ -63,7 +64,6 @@ const adminItems: ModuleItem[] = [
   { name: 'Daily Reviews', icon: CalendarCheck, color: 'var(--color-purple)', href: '/daily-reviews' },
   { name: 'Waivers', icon: FileText, color: 'var(--color-purple)', href: '/waivers' },
   { name: 'Reports & Analytics', icon: TrendingUp, color: 'var(--color-cyan)', href: '/reports' },
-  { name: 'Glidepath Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/training' },
   { name: 'PDF Library', icon: BookOpen, color: 'var(--color-purple)', href: '/library', adminOnly: true },
   { name: 'User Management', icon: Users, color: 'var(--color-text-3)', href: '/users', adminOnly: true },
 ]
