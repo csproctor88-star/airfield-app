@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Sheet, Search, X, ArrowRight } from 'lucide-react'
+import { Sheet, FileText, Search, X, ArrowRight } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchActivityLog, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
+import { fetchActivityLogPage, fetchActivityLogForExport, fetchEntityDetails, type ActivityEntry, type EntityDetails } from '@/lib/supabase/activity-queries'
 import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/supabase/activity'
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
@@ -330,6 +330,8 @@ export default function ActivityPage() {
   const [detailsMap, setDetailsMap] = useState<Map<string, EntityDetails>>(new Map())
   const [certifiedAtByDate, setCertifiedAtByDate] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [manualText, setManualText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -353,11 +355,23 @@ export default function ActivityPage() {
     return () => mq.removeEventListener('change', update)
   }, [])
 
-  // Unified search across actor name, OI, action label, and details text.
-  // Replaces the prior per-column inline inputs (filterUser / filterAction
-  // / filterDetails) with one top-level search bar matching the rest of
-  // the app.
+  // Unified search across actor name, OI, action label, and details
+  // text. Server-side via `fetchActivityLogPage` so a query hits the
+  // entire activity_log table, not just whatever's currently in memory.
+  // Debounced by 300ms so each keystroke doesn't fire a request.
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Sentinel for IntersectionObserver-driven Load More.
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  // Token bumped on every reset so an in-flight loadMore() can detect
+  // that its result is stale (date range / search changed mid-fetch)
+  // and discard the response instead of appending to the wrong list.
+  const loadTokenRef = useRef(0)
 
   const getDateRange = useCallback((): { start: string; end: string } => {
     const now = new Date()
@@ -382,24 +396,38 @@ export default function ActivityPage() {
     }
   }, [period, today, customStart, customEnd])
 
-  const loadEntries = useCallback(async () => {
+  const PAGE_SIZE = 500
+
+  // Load (or reload) the first page — resets the list, fetches the most
+  // recent PAGE_SIZE entries in the current range/search, refreshes the
+  // certifiedAt map. Used on mount, on filter changes, and after edits.
+  // Events Log is the AF Form 3616 operational log; PPR workflow churn
+  // and high-volume wildlife sightings would flood it, so those still
+  // live on /recent-activity instead.
+  const loadFirstPage = useCallback(async () => {
+    const token = ++loadTokenRef.current
     setLoading(true)
+    setEntries([])
+    setDetailsMap(new Map())
+    setHasMore(false)
     const { start, end } = getDateRange()
-    // Events Log is the AF Form 3616 operational log. PPR workflow
-    // churn and high-volume wildlife sightings would flood it; those
-    // still appear on the Activity Log page (/recent-activity).
-    const { data } = await fetchActivityLog({
+    const { data } = await fetchActivityLogPage({
       baseId: installationId,
       startDate: start,
       endDate: end,
-      limit: 500,
+      limit: PAGE_SIZE,
       excludeEntityTypes: ['ppr_entry', 'wildlife_sighting'],
+      searchQuery: debouncedSearch,
     })
+    if (loadTokenRef.current !== token) return
     setEntries(data)
     const details = await fetchEntityDetails(data)
+    if (loadTokenRef.current !== token) return
     setDetailsMap(details)
+    setHasMore(data.length >= PAGE_SIZE)
     if (installationId) {
       const reviews = await fetchRecentReviews(installationId, 90)
+      if (loadTokenRef.current !== token) return
       const map = new Map<string, string>()
       for (const r of reviews) {
         if (r.fully_certified_at) map.set(r.review_date, r.fully_certified_at)
@@ -407,29 +435,71 @@ export default function ActivityPage() {
       setCertifiedAtByDate(map)
     }
     setLoading(false)
-  }, [installationId, getDateRange])
+  }, [installationId, getDateRange, debouncedSearch])
 
+  // Append the next page using cursor pagination — `created_at` of the
+  // last loaded row is the cursor. Survives concurrent inserts / deletes
+  // and stays fast at any depth (offset pagination would slow down).
+  const loadMore = useCallback(async () => {
+    if (loadingMore || loading || !hasMore || entries.length === 0) return
+    const token = loadTokenRef.current
+    setLoadingMore(true)
+    const { start, end } = getDateRange()
+    const oldest = entries[entries.length - 1].created_at
+    const { data } = await fetchActivityLogPage({
+      baseId: installationId,
+      startDate: start,
+      endDate: end,
+      beforeCreatedAt: oldest,
+      limit: PAGE_SIZE,
+      excludeEntityTypes: ['ppr_entry', 'wildlife_sighting'],
+      searchQuery: debouncedSearch,
+    })
+    if (loadTokenRef.current !== token) return
+    if (data.length > 0) {
+      setEntries((prev) => [...prev, ...data])
+      const newDetails = await fetchEntityDetails(data)
+      if (loadTokenRef.current !== token) return
+      setDetailsMap((prev) => {
+        const merged = new Map(prev)
+        newDetails.forEach((v, k) => merged.set(k, v))
+        return merged
+      })
+    }
+    setHasMore(data.length >= PAGE_SIZE)
+    setLoadingMore(false)
+  }, [loadingMore, loading, hasMore, entries, installationId, getDateRange, debouncedSearch])
+
+  // Reset + first-page load fires on every filter change.
   useEffect(() => {
-    loadEntries()
-  }, [loadEntries])
+    loadFirstPage()
+  }, [loadFirstPage])
 
-  // Filter entries by the unified search query — matches against actor
-  // name + OI + action label + details text in one shot.
-  const q = search.trim().toLowerCase()
-  const filtered = !q ? entries : entries.filter((a) => {
-    const userName = (a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name).toLowerCase()
-    const oi = (a.user_operating_initials || '').toLowerCase()
-    const actionStr = formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata).toLowerCase()
-    const detailsStr = buildDetailsString(a, detailsMap).toLowerCase()
-    return userName.includes(q) || oi.includes(q) || actionStr.includes(q) || detailsStr.includes(q)
-  })
+  // IntersectionObserver-driven infinite scroll. Fires loadMore when the
+  // sentinel scrolls into view (with a 200px rootMargin so the next page
+  // is already in flight before the user reaches the bottom).
+  useEffect(() => {
+    const node = sentinelRef.current
+    if (!node || !hasMore || loading) return
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) loadMore()
+    }, { rootMargin: '200px' })
+    io.observe(node)
+    return () => io.disconnect()
+  }, [hasMore, loading, loadMore])
 
-  // Group filtered entries by Zulu date. Header text uses the relative
-  // anchor recipe (Today / Yesterday / weekday) shared with
-  // /recent-activity, /daily-reviews, and /wildlife.
+  // Server filters via `fetchActivityLogPage` when the search box is
+  // active, so `entries` is already the correct subset — no client-side
+  // pass needed. Search hits the entire table, not just whatever's
+  // currently in memory.
+  const searchActive = debouncedSearch.trim().length >= 2
+
+  // Group entries by Zulu date. Header text uses the relative anchor
+  // recipe (Today / Yesterday / weekday) shared with /recent-activity,
+  // /daily-reviews, and /wildlife.
   const todayZuluIso = new Date().toISOString().slice(0, 10)
   const grouped: { date: string; primary: string; secondary: string | null; items: ActivityEntry[] }[] = []
-  for (const entry of filtered) {
+  for (const entry of entries) {
     const d = new Date(entry.created_at)
     const dateKey = d.toISOString().split('T')[0]
     const existing = grouped.find((g) => g.date === dateKey)
@@ -457,7 +527,7 @@ export default function ActivityPage() {
     } else {
       toast.success('Entry logged')
       setManualText('')
-      await loadEntries()
+      await loadFirstPage()
     }
     setSubmitting(false)
   }
@@ -488,7 +558,7 @@ export default function ActivityPage() {
     } else {
       toast.success('Entry updated')
       setEditingId(null)
-      await loadEntries()
+      await loadFirstPage()
     }
     setSaving(false)
   }
@@ -505,14 +575,49 @@ export default function ActivityPage() {
       toast.error(error)
     } else {
       toast.success('Entry deleted')
-      await loadEntries()
+      await loadFirstPage()
     }
   }
 
+  /**
+   * Pull the full range for an export — paginated, no 500-row cap.
+   * Returns prepared row objects with the same shape both Excel and
+   * PDF want, so the two paths share a single fetch + transform.
+   */
+  const fetchExportRows = async () => {
+    const { start, end } = getDateRange()
+    const { data } = await fetchActivityLogForExport({
+      baseId: installationId,
+      startDate: start,
+      endDate: end,
+      excludeEntityTypes: ['ppr_entry', 'wildlife_sighting'],
+    })
+    const exportDetails = await fetchEntityDetails(data)
+    const rows = data.map((a) => {
+      const d = new Date(a.created_at)
+      const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
+      return {
+        createdAt: a.created_at,
+        date: formatZuluDate(d),
+        time: d.toISOString().slice(11, 16),
+        action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata),
+        details: buildDetailsString(a, exportDetails),
+        oi: a.user_operating_initials || '',
+        user: userName,
+      }
+    })
+    return { rows, start, end }
+  }
+
   const handleExport = async () => {
-    if (entries.length === 0) return
     setExporting(true)
     try {
+      const { rows, start, end } = await fetchExportRows()
+      if (rows.length === 0) {
+        toast.message('No entries in range to export')
+        setExporting(false)
+        return
+      }
       const { createStyledWorkbook, addStyledSheet, saveWorkbook } = await import('@/lib/excel-export')
 
       const columns = [
@@ -523,26 +628,47 @@ export default function ActivityPage() {
         { header: 'OI', key: 'oi', width: 8 },
         { header: 'User', key: 'user', width: 24 },
       ]
-      const rows = entries.map((a) => {
-        const d = new Date(a.created_at)
-        const userName = a.user_rank ? `${a.user_rank} ${a.user_name}` : a.user_name
-        return {
-          date: formatZuluDate(d),
-          time: d.toISOString().slice(11, 16),
-          action: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata),
-          details: buildDetailsString(a, detailsMap),
-          oi: a.user_operating_initials || '',
-          user: userName,
-        }
-      })
       const wb = await createStyledWorkbook()
       addStyledSheet(wb, 'Events Log', columns, rows)
-      const { start, end } = getDateRange()
       const startLabel = start.split('T')[0]
       const endLabel = end.split('T')[0]
       await saveWorkbook(wb, `Events_Log_${startLabel}_to_${endLabel}.xlsx`)
+      toast.success(`Exported ${rows.length} ${rows.length === 1 ? 'entry' : 'entries'} to Excel`)
     } catch (e) {
       console.error('Export failed:', e)
+      toast.error('Export failed')
+    }
+    setExporting(false)
+  }
+
+  const handleExportPdf = async () => {
+    setExporting(true)
+    try {
+      const { rows, start, end } = await fetchExportRows()
+      if (rows.length === 0) {
+        toast.message('No entries in range to export')
+        setExporting(false)
+        return
+      }
+      const { generateEventsLogPdf } = await import('@/lib/events-log-pdf')
+      const { doc, filename } = await generateEventsLogPdf({
+        rows: rows.map(r => ({
+          createdAt: r.createdAt,
+          action: r.action,
+          details: r.details,
+          oi: r.oi,
+          user: r.user,
+        })),
+        startDate: start,
+        endDate: end,
+        baseName: currentInstallation?.name,
+        baseIcao: (currentInstallation as { icao?: string | null } | null)?.icao,
+      })
+      doc.save(filename)
+      toast.success(`Exported ${rows.length} ${rows.length === 1 ? 'entry' : 'entries'} to PDF`)
+    } catch (e) {
+      console.error('PDF export failed:', e)
+      toast.error('PDF export failed')
     }
     setExporting(false)
   }
@@ -611,9 +737,9 @@ export default function ActivityPage() {
             display: 'inline-flex', gap: 6, alignItems: 'center',
           }}>
             <span>
-              {filtered.length === entries.length
-                ? `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`
-                : `${filtered.length} of ${entries.length} entries`}
+              {searchActive
+                ? `${entries.length} ${entries.length === 1 ? 'match' : 'matches'}${hasMore ? '+' : ''}`
+                : `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${hasMore ? '+ loaded' : ''}`}
             </span>
             {todayShiftReview && (
               <>
@@ -628,12 +754,21 @@ export default function ActivityPage() {
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={handleExport}
-            disabled={exporting || entries.length === 0}
-            style={{ ...utilityBtn, opacity: exporting || entries.length === 0 ? 0.5 : 1 }}
+            disabled={exporting}
+            style={{ ...utilityBtn, opacity: exporting ? 0.5 : 1 }}
             title="Export to Excel"
           >
             <Sheet size={12} color="var(--color-accent)" strokeWidth={2.25} />
             {exporting ? '...' : 'Excel'}
+          </button>
+          <button
+            onClick={handleExportPdf}
+            disabled={exporting}
+            style={{ ...utilityBtn, opacity: exporting ? 0.5 : 1 }}
+            title="Export to PDF"
+          >
+            <FileText size={12} color="var(--color-accent)" strokeWidth={2.25} />
+            {exporting ? '...' : 'PDF'}
           </button>
         </div>
       </div>
@@ -738,7 +873,7 @@ export default function ActivityPage() {
             } else {
               toast.success('Entry logged')
               setShowTemplatePicker(false)
-              await loadEntries()
+              await loadFirstPage()
             }
           }}
           onClose={() => setShowTemplatePicker(false)}
@@ -1004,6 +1139,47 @@ export default function ActivityPage() {
               </tbody>
             </table>
           </div>
+          {/* Infinite-scroll sentinel + status line. The IntersectionObserver
+              effect watches `sentinelRef` and fires loadMore() when it
+              scrolls within 200px of the viewport. The text below is
+              cosmetic — the observer does the work. */}
+          <div
+            ref={sentinelRef}
+            style={{
+              padding: '16px 8px',
+              textAlign: 'center',
+              fontSize: 'var(--fs-xs)',
+              color: 'var(--color-text-4)',
+              fontWeight: 600,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {loadingMore
+              ? 'Loading more…'
+              : hasMore
+                ? (
+                  <button
+                    onClick={loadMore}
+                    style={{
+                      background: 'none',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '6px 14px',
+                      color: 'var(--color-text-3)',
+                      fontSize: 'var(--fs-xs)',
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Load More
+                  </button>
+                )
+                : `— End of ${searchActive ? 'matches' : 'log'} —`}
+          </div>
         </>
       )}
 
@@ -1197,7 +1373,7 @@ export default function ActivityPage() {
           userId={currentUserId}
           userName={currentUserName}
           defaultPdfEmail={defaultPdfEmail}
-          onSigned={() => { refreshReviews(); loadEntries() }}
+          onSigned={() => { refreshReviews(); loadFirstPage() }}
         />
       )}
     </div>

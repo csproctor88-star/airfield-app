@@ -184,6 +184,158 @@ export async function fetchActivityLog(options: {
 }
 
 /**
+ * One page of Events Log entries — cursor-paginated for infinite-scroll.
+ *
+ * When `beforeCreatedAt` is set, returns rows older than that timestamp
+ * (the cursor is the `created_at` of the last loaded row, so a stable
+ * walk through the table that survives concurrent inserts).
+ *
+ * When `searchQuery` is set (≥2 chars), filters server-side across
+ * `entity_display_id`, `entity_type`, `metadata.details`, and any user
+ * whose `name` or `operating_initials` matches. Lets the search bar hit
+ * the entire table, not just whatever's currently in memory.
+ *
+ * Returns `hasMore: true` when the result is at least `limit` rows long
+ * — the caller uses that to decide whether to keep showing the
+ * load-more sentinel.
+ */
+export async function fetchActivityLogPage(options: {
+  baseId?: string | null
+  startDate?: string
+  endDate?: string
+  beforeCreatedAt?: string
+  limit?: number
+  excludeEntityTypes?: string[]
+  searchQuery?: string
+}): Promise<{ data: ActivityEntry[]; hasMore: boolean; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: [], hasMore: false, error: 'Supabase not configured' }
+
+  const { baseId, startDate, endDate, beforeCreatedAt, limit = 500, excludeEntityTypes, searchQuery } = options
+
+  // ── Search expansion: profiles → user_ids ──
+  // PostgREST's `.or()` operates on a single table, so to match against
+  // joined `profiles` columns we do a small lookup first and fold the
+  // matched user IDs into the activity_log filter as `user_id.in.(...)`.
+  let matchedUserIds: string[] = []
+  const trimmedQ = (searchQuery || '').trim()
+  // Sanitize for PostgREST URL syntax — strip characters that confuse
+  // the .or() filter parser (commas, parens, %).
+  const safeQ = trimmedQ.replace(/[,()%]/g, ' ').trim()
+  const useSearch = safeQ.length >= 2
+
+  if (useSearch) {
+    const { data: profileMatches } = await supabase
+      .from('profiles')
+      .select('id')
+      .or(`name.ilike.%${safeQ}%,operating_initials.ilike.%${safeQ}%`)
+      .limit(200)
+    matchedUserIds = ((profileMatches || []) as { id: string }[]).map((p) => p.id)
+  }
+
+  let query = supabase
+    .from('activity_log')
+    .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank, role, edipi, operating_initials)')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (baseId) query = query.eq('base_id', baseId)
+  if (startDate) query = query.gte('created_at', startDate)
+  if (endDate) query = query.lte('created_at', endDate)
+  if (beforeCreatedAt) query = query.lt('created_at', beforeCreatedAt)
+  if (excludeEntityTypes && excludeEntityTypes.length > 0) {
+    query = query.not('entity_type', 'in', `(${excludeEntityTypes.join(',')})`)
+  }
+
+  if (useSearch) {
+    const orParts = [
+      `entity_display_id.ilike.%${safeQ}%`,
+      `entity_type.ilike.%${safeQ}%`,
+      `metadata->>details.ilike.%${safeQ}%`,
+      `metadata->>template_label.ilike.%${safeQ}%`,
+      `metadata->>template_category.ilike.%${safeQ}%`,
+      `action.ilike.%${safeQ}%`,
+    ]
+    if (matchedUserIds.length > 0) {
+      orParts.push(`user_id.in.(${matchedUserIds.join(',')})`)
+    }
+    query = query.or(orParts.join(','))
+  }
+
+  const { data, error } = await query
+  if (error) return { data: [], hasMore: false, error: error.message }
+
+  const rows = ((data || []) as Record<string, unknown>[]).map((r) => ({
+    ...r,
+    user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+    user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
+    user_role: (r.profiles as { role?: string } | null)?.role || null,
+    user_edipi: (r.profiles as { edipi?: string } | null)?.edipi || null,
+    user_operating_initials: (r.profiles as { operating_initials?: string } | null)?.operating_initials || null,
+    metadata: (r.metadata as Record<string, unknown>) || null,
+  })) as ActivityEntry[]
+
+  return { data: rows, hasMore: rows.length >= limit, error: null }
+}
+
+/**
+ * Paginated variant of `fetchActivityLog` for the Events Log export path.
+ * Bypasses Supabase's 1000-row default by fetching pages until the source
+ * is exhausted, so a multi-month export pulls every row in range — not
+ * just the most recent N. Same join shape and filters as `fetchActivityLog`.
+ */
+export async function fetchActivityLogForExport(options: {
+  baseId?: string | null
+  startDate?: string
+  endDate?: string
+  excludeEntityTypes?: string[]
+}): Promise<{ data: ActivityEntry[]; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { data: [], error: 'Supabase not configured' }
+
+  const { baseId, startDate, endDate, excludeEntityTypes } = options
+  const pageSize = 1000
+  const all: ActivityEntry[] = []
+  let offset = 0
+
+  while (true) {
+    let query = supabase
+      .from('activity_log')
+      .select('id, action, entity_type, entity_id, entity_display_id, metadata, created_at, user_id, profiles:user_id(name, rank, role, edipi, operating_initials)')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+
+    if (baseId) query = query.eq('base_id', baseId)
+    if (startDate) query = query.gte('created_at', startDate)
+    if (endDate) query = query.lte('created_at', endDate)
+    if (excludeEntityTypes && excludeEntityTypes.length > 0) {
+      query = query.not('entity_type', 'in', `(${excludeEntityTypes.join(',')})`)
+    }
+
+    const { data, error } = await query
+    if (error) return { data: all, error: error.message }
+    if (!data || data.length === 0) break
+
+    for (const r of data as Record<string, unknown>[]) {
+      all.push({
+        ...r,
+        user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+        user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
+        user_role: (r.profiles as { role?: string } | null)?.role || null,
+        user_edipi: (r.profiles as { edipi?: string } | null)?.edipi || null,
+        user_operating_initials: (r.profiles as { operating_initials?: string } | null)?.operating_initials || null,
+        metadata: (r.metadata as Record<string, unknown>) || null,
+      } as ActivityEntry)
+    }
+
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  return { data: all, error: null }
+}
+
+/**
  * Fetch a unified activity feed for the Dashboard's "Recent Activity" section.
  * Merges activity_log entries with recent discrepancy, check, and inspection events
  * so the Dashboard shows everything that happens — not just manual log entries.
