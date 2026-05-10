@@ -2044,7 +2044,7 @@ function ScnAgenciesTab({ installationId, markSaved }: { installationId: string 
     <div>
       <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 14, lineHeight: 1.6 }}>
         Add every agency contacted on the Secondary Crash Net. Each appears as a toggleable
-        badge on the daily SCN check page where the controller marks it Loud &amp; Clear, No Response,
+        badge on the daily SCN check page where AMOPS personnel mark it Loud &amp; Clear, No Response,
         or Out of Service. Drag rows to reorder; click Edit to rename.
       </p>
       <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>SCN Agencies <FieldHint stepKey="scnagencies" fieldId="agency_name" /></h3>

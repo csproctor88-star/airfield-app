@@ -278,7 +278,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
 
   shiftchecklist: {
     what:
-      'Defines the per-shift task list (Day, Swing, Mid) for the controllers or AFM personnel on duty. Each task has a frequency ' +
+      'Defines the per-shift task list (Day, Swing, Mid) for the AMOPS personnel on duty. Each task has a frequency ' +
       '(daily, weekly, or monthly) and one or more shifts it appears on. Items appear on the Shift Checklist page and on the ' +
       'Dashboard sidebar, with a 3-state toggle (not done, in progress, complete) and a 0600L reset (per installation timezone).',
     how:
@@ -287,8 +287,8 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       'per-base shift count (2 or 3) is set in Modules / Base; this step renders the matching number of shift columns.',
     why:
       'AFM tracks shift accountability through this checklist. Daily Reviews uses the completion state to auto-fill the daily ' +
-      'rollup, and the dashboard sidebar surfaces incomplete tasks at a glance. Without the checklist, AFM personnel work from ' +
-      'paper or memory and accountability is uneven across shifts.',
+      'rollup, and the dashboard sidebar surfaces incomplete tasks at a glance. Without the checklist, AMOPS personnel rely on ' +
+      'memory or ad-hoc tracking and accountability is uneven across shifts.',
     required: 'yes',
     examples: [
       'FOD Check (daily, all shifts)',
