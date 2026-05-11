@@ -7,7 +7,7 @@ export const PPR_PAGE_TOUR: TourStep[] = [
     title: 'PPR Log',
     body:
       'Prior Permission Required entries for transient aircraft. The ' +
-      'sidebar dot fires when entries are awaiting your triage, ' +
+      'sidebar dot fires when entries are awaiting your review, ' +
       'approval, or coordination. PDF + Email export the current ' +
       'filtered range.',
   },
@@ -26,7 +26,7 @@ export const PPR_PAGE_TOUR: TourStep[] = [
     anchor: 'ppr-kpi-band',
     title: 'Pending queues',
     body:
-      'Awaiting Review (your triage queue), Awaiting Approval (after ' +
+      'Awaiting Review (your review queue), Awaiting Approval (after ' +
       'coordination is back), and per-agency pills (when an agency ' +
       'still owes you a reply). Click any pill to filter to that ' +
       'queue; the row collapses entirely when nothing is pending.',

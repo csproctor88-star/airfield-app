@@ -207,7 +207,7 @@ export const MODULES: ModuleDef[] = [
     key: 'feedback',
     label: 'Customer Feedback',
     category: 'optional',
-    description: 'Public feedback form with QR code for base ops or transient parking; submissions land in the Feedback module for AFM triage.',
+    description: 'Public feedback form with QR code for base ops or transient parking; submissions land in the Feedback module for AFM review.',
     useCase: 'Bases that want a no-login feedback channel for transient aircrew and contractors.',
     hrefs: ['/feedback'],
     setupSteps: ['feedback'],

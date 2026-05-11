@@ -13,7 +13,7 @@ import {
 import { formatPprColumnValue, type PprColumn, type PprCoordination, type PprEntry, type PprRemark } from '@/lib/supabase/ppr'
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_amops_triage: 'Pending Triage',
+  pending_amops_triage: 'Pending Review',
   pending_coordination: 'Pending Coord',
   pending_amops_approval: 'Pending Approval',
   approved: 'Approved',
@@ -73,7 +73,7 @@ const STRIP_HEIGHT = 13
 const SECTION_GAP = 4
 const SECTION_HEADER_HEIGHT = 5
 const ROW_LINE_HEIGHT = 5
-const LABEL_WIDTH_RATIO = 0.5
+const LABEL_WIDTH_RATIO = 0.62
 const FOOTER_RESERVE = 12
 const ROW_SHADE: [number, number, number] = [245, 247, 250]
 
@@ -438,13 +438,16 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
         STATUS_LABELS[e.status] || e.status,
       ]
     }),
+    // Column widths sum to contentWidth so the summary table spans
+    // the full page width and lines up with the cards below.
+    tableWidth: contentWidth,
     columnStyles: {
       0: { cellWidth: 28 },
-      1: { cellWidth: 32 },
-      2: { cellWidth: 25 },
+      1: { cellWidth: 36 },
+      2: { cellWidth: 26 },
       3: { cellWidth: 22 },
-      4: { cellWidth: 32 },
-      5: { cellWidth: 28 },
+      4: { cellWidth: 36 },
+      5: { cellWidth: 38 },
     },
   })
 

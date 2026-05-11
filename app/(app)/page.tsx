@@ -2693,7 +2693,7 @@ export default function HomePage() {
           approved:               { label: 'Approved',  bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
           pending_amops_approval: { label: 'Pending',   bg: 'rgba(245,158,11,0.10)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
           pending_coordination:   { label: 'Coord',     bg: 'rgba(56,189,248,0.10)', fg: '#38bdf8', border: 'rgba(56,189,248,0.4)' },
-          pending_amops_triage:   { label: 'Triage',    bg: 'rgba(167,139,250,0.10)',fg: '#a78bfa', border: 'rgba(167,139,250,0.4)' },
+          pending_amops_triage:   { label: 'Review',    bg: 'rgba(167,139,250,0.10)',fg: '#a78bfa', border: 'rgba(167,139,250,0.4)' },
           denied:                 { label: 'Denied',    bg: 'rgba(239,68,68,0.10)',  fg: '#ef4444', border: 'rgba(239,68,68,0.4)' },
           canceled:               { label: 'Canceled',  bg: 'rgba(148,163,184,0.10)',fg: '#94a3b8', border: 'rgba(148,163,184,0.4)' },
         }

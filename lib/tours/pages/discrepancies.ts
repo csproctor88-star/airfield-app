@@ -70,6 +70,6 @@ export const DISCREPANCIES_PAGE_TOUR: TourStep[] = [
     body:
       'Click + New to file a discrepancy. Pick the type and the system ' +
       'auto-routes to the responsible CES shop based on the type-to-' +
-      'shop mapping in your base setup — no manual triage required.',
+      'shop mapping in your base setup — no manual review required.',
   },
 ]

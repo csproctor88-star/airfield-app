@@ -634,7 +634,7 @@ export const MODULES: ModuleRef[] = [
     screenshots: [
       { src: '/training/ppr_1.png', caption: 'Public PPR request form (Selfridge ANG Base shown) — Name / Email / Commercial Phone / Arrival Date plus base-specific service callouts (Tower hours, transient services), then aircraft details (Callsign, Aircraft Type, Quantity, ETA Z). No login required.' },
       { src: '/training/ppr_2.png', caption: 'PPR detail — full Request Details block (arrival date, callsign, aircraft type/qty, ICAOs, ETA/ETD, POC name/email/phone, weight-bearing waiver), Remarks field, Audit timestamps, and Decide / Edit / Cancel / Del action row.' },
-      { src: '/training/ppr_3.png', caption: 'PPR Log — KPI tile row (Awaiting Review, Awaiting Approval, per-agency pending counts) above a triage table with PPR # / Status pill / Arrival Date / Callsign / Aircraft Type columns.' },
+      { src: '/training/ppr_3.png', caption: 'PPR Log — KPI tile row (Awaiting Review, Awaiting Approval, per-agency pending counts) above a review table with PPR # / Status pill / Arrival Date / Callsign / Aircraft Type columns.' },
     ],
     faq: [],
     relatedModules: ['contractors', 'activity', 'airfield-status'],
@@ -1120,10 +1120,10 @@ export const MODULES: ModuleRef[] = [
     icon: MessageSquare,
     color: 'var(--color-cyan)',
     path: '/feedback',
-    tagline: 'Triage inbox for the public QR feedback form',
+    tagline: 'Review inbox for the public QR feedback form',
     roles: OPS_CORE,
     overview:
-      'Inbox for the public QR-code feedback form (configured in Base Setup › Customer Feedback Form). Triage submissions, reply, and route to the right module owner. The QR code is designed for posting at base ops or transient parking so anyone can scan and submit feedback without a login.\n\n' +
+      'Inbox for the public QR-code feedback form (configured in Base Setup › Customer Feedback Form). Review submissions, reply, and route to the right module owner. The QR code is designed for posting at base ops or transient parking so anyone can scan and submit feedback without a login.\n\n' +
       'Form fields are customizable per base — free-form comment + 1-5 star rating + any custom fields you configure. Stats cards aggregate submissions and average rating; rating colors green for 4-5★, amber for 3★, red for 1-2★.',
     keyFeatures: [
       'Public QR-code form at /feedback/[baseId] — no login required',
