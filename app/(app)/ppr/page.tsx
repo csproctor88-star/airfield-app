@@ -177,8 +177,9 @@ export default function PprPage() {
       doc.save(filename)
       toast.success('PDF exported')
     } catch (err) {
-      console.error(err)
-      toast.error('Failed to generate PDF')
+      console.error('PPR PDF export failed:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`PDF failed: ${msg}`)
     } finally {
       setGeneratingPdf(false)
     }
@@ -191,8 +192,9 @@ export default function PprPage() {
       setEmailPdfData(result)
       setEmailModalOpen(true)
     } catch (err) {
-      console.error(err)
-      toast.error('Failed to generate PDF')
+      console.error('PPR PDF email prep failed:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(`PDF failed: ${msg}`)
     } finally {
       setGeneratingPdf(false)
     }
