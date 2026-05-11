@@ -147,19 +147,24 @@ export default function PprPage() {
 
   async function preparePdf() {
     const { generatePprPdf } = await import('@/lib/ppr-pdf')
-    // Fetch the remark threads for every PPR in the export window so
-    // the PDF carries the same audit trail the staff page shows in
-    // the detail card. Run in parallel — these are independent reads.
+    // Export honors the active filters (status / agency / search) by
+    // using `filteredEntries` rather than the raw fetch result, so a
+    // user with "Awaiting Review" selected gets just those PPRs in
+    // the PDF instead of every entry the page loaded.
+    const exportEntries = filteredEntries
+    // Fetch the remark threads for every exported PPR so the PDF
+    // carries the same audit trail the staff page shows in the
+    // detail card. Run in parallel — these are independent reads.
     const remarksByEntry: Record<string, PprRemark[]> = {}
-    if (entries.length > 0) {
-      const threads = await Promise.all(entries.map((e) => fetchPprRemarks(e.id)))
-      entries.forEach((e, i) => {
+    if (exportEntries.length > 0) {
+      const threads = await Promise.all(exportEntries.map((e) => fetchPprRemarks(e.id)))
+      exportEntries.forEach((e, i) => {
         if (threads[i].length > 0) remarksByEntry[e.id] = threads[i]
       })
     }
     return generatePprPdf({
       columns,
-      entries,
+      entries: exportEntries,
       dateFrom,
       dateTo,
       baseName: currentInstallation?.name,
