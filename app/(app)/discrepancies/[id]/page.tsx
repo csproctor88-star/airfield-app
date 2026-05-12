@@ -355,8 +355,10 @@ export default function DiscrepancyDetailPage() {
         {(() => {
           const csValue = (d as typeof d & { current_status?: string }).current_status
           const csLabel = csValue ? (CURRENT_STATUS_OPTIONS.find(o => o.value === csValue)?.label || csValue) : '—'
-          const createdBy = (d as typeof d & { created_by_name?: string | null; submitter_name?: string | null }).submitter_name
-            || (d as typeof d & { created_by_name?: string | null }).created_by_name || null
+          const reporter = 'reporter' in d ? d.reporter : null
+          const createdBy = reporter && reporter.name
+            ? (reporter.rank ? `${reporter.rank} ${reporter.name}` : reporter.name)
+            : null
           const detailItems: { label: string; value: React.ReactNode }[] = [
             { label: 'Location', value: (() => { const loc = LOCATION_OPTIONS.find(l => l.value === d.location_text); return loc ? `${loc.emoji} ${loc.label}` : d.location_text })() },
             { label: 'Type', value: (() => {
@@ -391,7 +393,7 @@ export default function DiscrepancyDetailPage() {
             { label: 'Project #', value: (d as typeof d & { project_number?: string | null }).project_number || '—' },
             { label: 'Estimated Cost', value: (d as typeof d & { estimated_cost?: string | null }).estimated_cost || '—' },
             { label: 'Submitted', value: formatZuluDateTime(new Date(d.created_at)) },
-            ...(createdBy ? [{ label: 'Submitted By', value: createdBy }] : []),
+            ...(createdBy ? [{ label: 'Created By', value: createdBy }] : []),
             { label: 'Photos', value: `${d.photo_count}` },
           ]
           const showSystemMap = Boolean(systemMapUrl)

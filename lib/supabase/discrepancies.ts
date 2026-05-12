@@ -26,6 +26,12 @@ export type DiscrepancyRow = {
   assigned_shop: string | null
   assigned_to: string | null
   reported_by: string
+  /** Denormalized profile snapshot for the user that created the
+   *  discrepancy. Populated by the `reporter:reported_by(...)` join in
+   *  fetchDiscrepancy / fetchDiscrepancies so the UI can render
+   *  "Created By" without a second round-trip. Null when the user has
+   *  been deleted (reported_by becomes orphaned via SET NULL). */
+  reporter?: { name: string | null; rank: string | null; operating_initials: string | null } | null
   work_order_number: string | null
   notam_reference: string | null
   linked_notam_id: string | null
@@ -44,13 +50,21 @@ export type DiscrepancyRow = {
   updated_at: string
 }
 
+/** Format a reporter as "Rank Name" or just "Name", falling back to
+ *  an em-dash when the join is null or empty. Operating initials are
+ *  not used here — they're a separate audit handle. */
+export function formatReporter(r: DiscrepancyRow['reporter']): string {
+  if (!r || !r.name) return '—'
+  return r.rank ? `${r.rank} ${r.name}` : r.name
+}
+
 export async function fetchDiscrepancies(baseId?: string | null): Promise<DiscrepancyRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
   let query = supabase
     .from('discrepancies')
-    .select('*')
+    .select('*, reporter:reported_by(name, rank, operating_initials)')
     .order('created_at', { ascending: false })
 
   if (baseId) {
@@ -64,7 +78,7 @@ export async function fetchDiscrepancies(baseId?: string | null): Promise<Discre
     return []
   }
 
-  return data as DiscrepancyRow[]
+  return data as unknown as DiscrepancyRow[]
 }
 
 export async function fetchDiscrepancy(id: string): Promise<DiscrepancyRow | null> {
@@ -73,7 +87,7 @@ export async function fetchDiscrepancy(id: string): Promise<DiscrepancyRow | nul
 
   const { data, error } = await supabase
     .from('discrepancies')
-    .select('*')
+    .select('*, reporter:reported_by(name, rank, operating_initials)')
     .eq('id', id)
     .single()
 
@@ -82,7 +96,7 @@ export async function fetchDiscrepancy(id: string): Promise<DiscrepancyRow | nul
     return null
   }
 
-  return data as DiscrepancyRow
+  return data as unknown as DiscrepancyRow
 }
 
 export async function createDiscrepancy(input: {

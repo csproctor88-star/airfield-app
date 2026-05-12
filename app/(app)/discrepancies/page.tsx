@@ -280,6 +280,7 @@ export default function DiscrepanciesPage() {
       { header: 'Work Order #', key: 'work_order', width: 16 },
       { header: 'Days Open', key: 'days_open', width: 10 },
       { header: 'Created At', key: 'created_at', width: 14 },
+      { header: 'Created By', key: 'created_by', width: 22 },
       ...(hasPhotos ? [
         { header: 'Photo Count', key: 'photo_count', width: 12 },
         { header: 'Photo Files', key: 'photo_files', width: 30 },
@@ -304,6 +305,7 @@ export default function DiscrepanciesPage() {
         work_order: d.work_order_number || '',
         days_open: usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
         created_at: formatZuluDate(new Date(d.created_at)),
+        created_by: 'reporter' in d && d.reporter ? (d.reporter.rank ? `${d.reporter.rank} ${d.reporter.name}` : d.reporter.name || '') : '',
         ...(hasPhotos ? {
           photo_count: info?.count || 0,
           photo_files: info?.files.join(', ') || '',
@@ -435,7 +437,7 @@ export default function DiscrepanciesPage() {
       type_label: getTypeLabel(d.type),
       shop: d.assigned_shop || '',
       days_open: usingDemo ? (d as typeof DEMO_DISCREPANCIES[number]).days_open : daysOpen(d.created_at),
-      reported_by: '',
+      reported_by: 'reporter' in d && d.reporter ? (d.reporter.rank ? `${d.reporter.rank} ${d.reporter.name}` : d.reporter.name || '') : '',
       last_update: '',
       comments: '',
       photos: photoMap[d.id] || [],

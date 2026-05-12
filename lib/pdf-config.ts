@@ -73,7 +73,7 @@ export const COLUMN_DEFS: PdfColumnDef[] = [
   { key: 'type', header: 'Type', baseWidth: 22 },
   { key: 'shop', header: 'Shop', baseWidth: 20 },
   { key: 'days_open', header: 'Days', baseWidth: 10, halign: 'center' },
-  { key: 'reported_by', header: 'Reported By', baseWidth: 20 },
+  { key: 'reported_by', header: 'Created By', baseWidth: 20 },
   { key: 'last_update', header: 'Last Update', baseWidth: 14 },
   { key: 'comments', header: 'Comments', baseWidth: 32, fontSize: 6 },
   { key: 'photos', header: 'Photos', baseWidth: PDF_PHOTO.COL_W },

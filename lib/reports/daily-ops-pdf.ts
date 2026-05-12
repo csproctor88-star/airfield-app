@@ -353,7 +353,7 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
       autoTable(doc, {
         startY: y,
         margin: { left: margin, right: margin },
-        head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Status', 'Reported By', 'Photos']],
+        head: [['ID', 'Title', 'Type', 'Location', 'Shop', 'Status', 'Created By', 'Photos']],
         body: tableBody,
         styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
         headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
