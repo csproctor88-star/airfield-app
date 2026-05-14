@@ -9,6 +9,7 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
+import QrcEditorDialog from '@/components/admin/qrc-editor-dialog'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import {
   fetchChecklistItems,
@@ -91,7 +92,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'facilities', number: 7, label: 'Facilities', description: 'Add facility numbers and descriptions referenced by discrepancies and inspections (e.g., Tower, Fire Station, Bldg 200).', required: true },
   { key: 'templates', number: 8, label: 'Inspection Templates', description: 'Configure the checklist sections and items for daily airfield and lighting inspections. These define what inspectors evaluate during each inspection.', required: true },
   { key: 'shiftchecklist', number: 9, label: 'Shift Checklist', description: 'Define the tasks tracked per shift (Day/Swing/Mid) with daily, weekly, or monthly frequency. These appear on the Shift Checklist page and Dashboard.', required: true },
-  { key: 'qrc', number: 10, label: 'QRC Templates', description: 'Configure Quick Reaction Checklists for emergency response. Seed from the default library or customize for your installation.', required: true },
+  { key: 'qrc', number: 10, label: 'QRCs', description: 'Configure Quick Reaction Checklists for emergency response. Import the 25 default templates or build your own from scratch.', required: true },
   { key: 'scnagencies', number: 11, label: 'SCN Agencies', description: 'List the agencies checked on the Secondary Crash Net. Each appears as a toggleable badge on the daily SCN check page (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital).', required: true },
   { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
   { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
@@ -3101,7 +3102,17 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
 // QRC Templates Tab
 // ═══════════════════════════════════════════════════════════════
 
-type QrcTemplateRow = { id: string; qrc_number: number; title: string; notes: string | null; is_active: boolean; steps: unknown[]; references: string | null; has_scn_form: boolean }
+type QrcTemplateRow = {
+  id: string
+  qrc_number: number
+  title: string
+  notes: string | null
+  is_active: boolean
+  steps: unknown[]
+  references: string | null
+  has_scn_form: boolean
+  scn_fields: unknown | null
+}
 
 function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { installationId: string | null; currentInstallation: any; markSaved?: (stepKey: WizardStepKey) => void }) {
   const { refreshCurrentInstallation } = useInstallation()
@@ -3111,7 +3122,12 @@ function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { i
   const [seedSelected, setSeedSelected] = useState<Set<number>>(new Set())
   const [seeding, setSeeding] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<QrcTemplateRow | null>(null)
+  const [creating, setCreating] = useState(false)
   const [menuOpen, setMenuOpen] = useState<string | null>(null)
+
+  function openCreateDialog() {
+    setCreating(true)
+  }
   const reviewInterval: 'monthly' | 'quarterly' =
     (currentInstallation as { qrc_review_interval?: 'monthly' | 'quarterly' } | null)?.qrc_review_interval ?? 'monthly'
   const [savingInterval, setSavingInterval] = useState(false)
@@ -3211,15 +3227,23 @@ function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { i
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>QRC Templates</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>QRCs</div>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure Quick Reaction Checklists for this base. <FieldHint stepKey="qrc" fieldId="qrc_step_type" /></div>
         </div>
-        <button onClick={openSeedPicker} style={{
-          background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
-          padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
-        }}>+ Add from Defaults</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={openCreateDialog} style={{
+            background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+            color: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
+            borderRadius: 'var(--radius-base)',
+            padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>+ Create QRC</button>
+          <button onClick={openSeedPicker} style={{
+            background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
+            padding: '8px 16px', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit',
+          }}>Import 25 QRC Templates</button>
+        </div>
       </div>
 
       {/* Review Interval — drives /qrc Reviews tab threshold + period picker + compliance PDF window */}
@@ -3276,12 +3300,24 @@ function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { i
       )}
 
       {/* Edit Template Dialog */}
-      {editingTemplate && (
-        <EditQrcDialog
+      {editingTemplate && installationId && (
+        <QrcEditorDialog
+          mode="edit"
+          installationId={installationId}
           template={editingTemplate}
-          inputStyle={inputStyle}
           onClose={() => setEditingTemplate(null)}
           onSaved={async () => { setEditingTemplate(null); await load() }}
+        />
+      )}
+
+      {/* Create QRC Dialog */}
+      {creating && installationId && (
+        <QrcEditorDialog
+          mode="create"
+          installationId={installationId}
+          existingNumbers={new Set(templates.map(t => t.qrc_number))}
+          onClose={() => setCreating(false)}
+          onSaved={async () => { setCreating(false); markSaved?.('qrc'); await load() }}
         />
       )}
 
@@ -3289,7 +3325,7 @@ function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { i
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
       ) : templates.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-          No QRC templates. Click &quot;+ Add from Defaults&quot; to select which QRCs to add.
+          No QRCs configured. Click &quot;+ Create QRC&quot; to build one from scratch, or &quot;Import 25 QRC Templates&quot; to start from the defaults.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -3399,8 +3435,8 @@ function SeedPickerDialog({
     <div className="modal-overlay" style={{ padding: 16 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
-          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Add QRC Templates</div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Select which QRCs to add to this base.</div>
+          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>Import QRC Templates</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Select which of the 25 default QRCs to add to this base.</div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px' }}>
           {allQrcs.length === 0 ? (
@@ -3450,208 +3486,7 @@ function SeedPickerDialog({
   )
 }
 
-// --- Edit QRC Template Dialog ---
-
-const STEP_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'checkbox', label: 'Checkbox' },
-  { value: 'checkbox_with_note', label: 'Checkbox + Note' },
-  { value: 'fill_field', label: 'Fill-in Field' },
-  { value: 'time_field', label: 'Time Field' },
-  { value: 'notify_agencies', label: 'Agency Notification' },
-  { value: 'conditional', label: 'Conditional Ref' },
-  { value: 'text', label: 'Text (read-only)' },
-  { value: 'textarea', label: 'Text Area' },
-]
-
-const STEP_TYPE_LABELS: Record<string, string> = Object.fromEntries(STEP_TYPE_OPTIONS.map(o => [o.value, o.label]))
-
-function EditQrcDialog({
-  template, inputStyle, onClose, onSaved,
-}: {
-  template: QrcTemplateRow
-  inputStyle: React.CSSProperties
-  onClose: () => void
-  onSaved: () => Promise<void>
-}) {
-  const [title, setTitle] = useState(template.title)
-  const [notes, setNotes] = useState(template.notes || '')
-  const [refs, setRefs] = useState(template.references || '')
-  const [steps, setSteps] = useState<{ id: string; label: string; type: string }[]>(
-    (template.steps as { id: string; label: string; type: string }[]).map(s => ({ id: s.id, label: s.label, type: s.type }))
-  )
-  const [saving, setSaving] = useState(false)
-  const [addingStep, setAddingStep] = useState(false)
-  const [newStepLabel, setNewStepLabel] = useState('')
-  const [newStepType, setNewStepType] = useState('checkbox')
-
-  async function handleSave() {
-    if (!title.trim()) { toast.error('Title is required'); return }
-    setSaving(true)
-    const { updateQrcTemplate } = await import('@/lib/supabase/qrc')
-
-    // Rebuild full steps — preserve original step data, update labels, add new steps
-    const origSteps = template.steps as Record<string, unknown>[]
-    const origMap = new Map(origSteps.map(s => [(s as { id: string }).id, s]))
-    const fullSteps = steps.map(s => {
-      const orig = origMap.get(s.id)
-      if (orig) return { ...orig, label: s.label, type: s.type }
-      return { id: s.id, type: s.type, label: s.label }
-    })
-
-    const { error } = await updateQrcTemplate(template.id, {
-      title: title.trim(),
-      notes: notes.trim() || null,
-      references: refs.trim() || null,
-      steps: fullSteps as any,
-    })
-    if (error) toast.error(error)
-    else { toast.success('Template updated'); await onSaved() }
-    setSaving(false)
-  }
-
-  function handleAddStep() {
-    if (!newStepLabel.trim()) return
-    const nextNum = steps.length + 1
-    setSteps([...steps, { id: String(nextNum), label: newStepLabel.trim(), type: newStepType }])
-    setNewStepLabel('')
-    setNewStepType('checkbox')
-    setAddingStep(false)
-  }
-
-  function handleRemoveStep(idx: number) {
-    setSteps(steps.filter((_, i) => i !== idx))
-  }
-
-  function handleMoveStep(idx: number, dir: -1 | 1) {
-    const arr = [...steps]
-    const target = idx + dir
-    if (target < 0 || target >= arr.length) return
-    ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
-    setSteps(arr)
-  }
-
-  return (
-    <div className="modal-overlay" style={{ padding: 16 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="card" style={{ width: '100%', maxWidth: 560, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0 }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
-          <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-            Edit QRC-{template.qrc_number}
-          </div>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
-          {/* Title */}
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Title <FieldHint stepKey="qrc" fieldId="qrc_name" /></label>
-            <input value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
-          </div>
-          {/* Notes / Warning */}
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>Warning / Notes</label>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
-          </div>
-          {/* References */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', display: 'block', marginBottom: 2 }}>References</label>
-            <input value={refs} onChange={e => setRefs(e.target.value)} placeholder="e.g. AFI 13-204V3" style={inputStyle} />
-          </div>
-          {/* Steps */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Steps ({steps.length})</label>
-            <button onClick={() => setAddingStep(true)} style={{
-              background: 'none', border: '1px solid var(--color-cyan)', borderRadius: 'var(--radius-sm)',
-              padding: '2px 10px', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)',
-              fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-            }}>+ Add Step</button>
-          </div>
-          {steps.map((s, i) => (
-            <div key={`${s.id}-${i}`} style={{
-              padding: '6px 0',
-              borderBottom: '1px solid var(--color-border)',
-            }}>
-              {/* Row 1: number + label text + action buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', minWidth: 20 }}>{i + 1}.</span>
-                <input
-                  value={s.label}
-                  onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], label: e.target.value }; setSteps(arr) }}
-                  style={{ ...inputStyle, padding: '4px 8px', flex: 1 }}
-                />
-                <button onClick={() => handleMoveStep(i, -1)} disabled={i === 0} style={{
-                  background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer',
-                  color: i === 0 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
-                }}>&uarr;</button>
-                <button onClick={() => handleMoveStep(i, 1)} disabled={i === steps.length - 1} style={{
-                  background: 'none', border: 'none', cursor: i === steps.length - 1 ? 'default' : 'pointer',
-                  color: i === steps.length - 1 ? 'var(--color-text-4)' : 'var(--color-text-2)', fontSize: 12, padding: '0 2px', fontFamily: 'inherit',
-                }}>&darr;</button>
-                <button onClick={() => handleRemoveStep(i)} style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--color-danger)', fontSize: 'var(--fs-sm)', padding: '0 2px', fontFamily: 'inherit',
-                }}>&times;</button>
-              </div>
-              {/* Row 2: type selector */}
-              <div style={{ marginLeft: 26, marginTop: 4 }}>
-                <select
-                  value={s.type}
-                  onChange={e => { const arr = [...steps]; arr[i] = { ...arr[i], type: e.target.value }; setSteps(arr) }}
-                  style={{ ...inputStyle, padding: '3px 6px', fontSize: 'var(--fs-xs)', width: 'auto' }}
-                >
-                  {STEP_TYPE_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ))}
-          {addingStep && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-              <input
-                value={newStepLabel}
-                onChange={e => setNewStepLabel(e.target.value)}
-                placeholder="New step text"
-                onKeyDown={e => { if (e.key === 'Enter') handleAddStep() }}
-                style={{ ...inputStyle, flex: 1, padding: '4px 8px', minWidth: 150 }}
-                autoFocus
-              />
-              <select
-                value={newStepType}
-                onChange={e => setNewStepType(e.target.value)}
-                style={{ ...inputStyle, padding: '3px 4px', fontSize: 'var(--fs-xs)', minWidth: 90 }}
-              >
-                {STEP_TYPE_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <button onClick={handleAddStep} disabled={!newStepLabel.trim()} style={{
-                background: newStepLabel.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
-                color: newStepLabel.trim() ? '#000' : 'var(--color-text-3)',
-                border: 'none', borderRadius: 'var(--radius-sm)', padding: '4px 12px',
-                fontWeight: 700, fontSize: 'var(--fs-xs)', cursor: newStepLabel.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit',
-              }}>Add</button>
-              <button onClick={() => { setAddingStep(false); setNewStepLabel(''); setNewStepType('checkbox') }} style={{
-                background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
-                padding: '4px 10px', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)',
-                fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              }}>Cancel</button>
-            </div>
-          )}
-        </div>
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
-          <button onClick={handleSave} disabled={saving} style={{
-            flex: 1, padding: '10px 0', borderRadius: 'var(--radius-base)', border: 'none',
-            background: 'var(--color-cyan)', color: '#fff', fontWeight: 700,
-            fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-          }}>{saving ? 'Saving...' : 'Save Changes'}</button>
-          <button onClick={onClose} style={{
-            padding: '10px 16px', borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)',
-            background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
-            fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-          }}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  )
-}
+// QRC editor dialog (create + edit) lives in components/admin/qrc-editor-dialog.tsx.
 
 // ═══════════════════════════════════════════════════════════════
 // Lighting Systems Tab — define systems + clone from DAFMAN templates
