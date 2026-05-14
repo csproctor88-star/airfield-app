@@ -137,9 +137,8 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
     y = (doc as any).lastAutoTable.finalY + 4
   }
 
-  // ── Map screenshot (preserve source aspect ratio exactly) ──
+  // ── Map screenshot — always on its own page, filling the page ──
   if (mapDataUrl) {
-    checkPageBreak(80)
     try {
       const img = new Image()
       await new Promise<void>((resolve, reject) => {
@@ -147,8 +146,10 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         img.onerror = () => reject()
         img.src = mapDataUrl
       })
+      doc.addPage()
+      y = margin
       const aspect = img.width / img.height
-      const maxH = pageHeight - y - 15
+      const maxH = pageHeight - margin - 15
       let imgW = contentWidth
       let imgH = imgW / aspect
       if (imgH > maxH) {
@@ -156,8 +157,9 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         imgW = imgH * aspect
       }
       const imgX = margin + (contentWidth - imgW) / 2
-      doc.addImage(mapDataUrl, 'JPEG', imgX, y, imgW, imgH)
-      y += imgH + 4
+      const imgY = y + (maxH - imgH) / 2
+      doc.addImage(mapDataUrl, 'JPEG', imgX, imgY, imgW, imgH)
+      y = imgY + imgH + 4
     } catch {
       // Map capture failed — skip silently
     }
