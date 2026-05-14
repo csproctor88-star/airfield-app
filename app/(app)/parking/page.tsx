@@ -9,6 +9,7 @@ import { formatCoordsDMS } from '@/lib/utils'
 import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
 import silhouetteManifest from '@/public/aircraft_silhouette_manifest.json'
+import { NumberField } from '@/components/ui/number-field'
 import {
   fetchParkingPlans,
   createParkingPlan,
@@ -1494,11 +1495,9 @@ export default function ParkingPage() {
       if (now - lastLabelUpdate < LABEL_THROTTLE_MS) return
       lastLabelUpdate = now
 
-      // Clear old drag labels and lines
-      dragLabelMarkersRef.current.forEach(m => m.setMap(null))
-      dragLabelMarkersRef.current = []
-      dragLineRef.current.forEach(l => l.setMap(null))
-      dragLineRef.current = []
+      // Track how many pool slots are used this frame. Hide any extra at end.
+      let usedLabels = 0
+      let usedLines = 0
 
       // Show clearance distance labels + connecting lines during aircraft drag
       if (dragSpotId.current && map.current) {
@@ -1540,29 +1539,45 @@ export default function ParkingPage() {
             }
           }
 
+          // Reuse polyline + label marker instances across frames. Creating
+          // new google.maps.Marker / Polyline per move tick allocates DOM
+          // nodes and stalls the main thread — the choppiness during drag.
           const addLabel = (fromLat: number, fromLng: number, toLat: number, toLng: number, text: string, color: string) => {
-            // Connecting line
-            const line = new google.maps.Polyline({
-              path: [{ lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng }],
-              strokeColor: color, strokeWeight: 1.5, strokeOpacity: 0.6,
-              map: gmap, clickable: false, zIndex: 9998,
-            })
-            dragLineRef.current.push(line)
+            const path = [{ lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng }]
+            let line = dragLineRef.current[usedLines]
+            if (line) {
+              line.setOptions({ path, strokeColor: color })
+              if (line.getMap() !== gmap) line.setMap(gmap)
+            } else {
+              line = new google.maps.Polyline({
+                path, strokeColor: color, strokeWeight: 1.5, strokeOpacity: 0.6,
+                map: gmap, clickable: false, zIndex: 9998,
+              })
+              dragLineRef.current.push(line)
+            }
+            usedLines++
 
-            // Distance label at midpoint with dark background for readability
-            const lbl = new google.maps.Marker({
-              position: { lat: (fromLat + toLat) / 2, lng: (fromLng + toLng) / 2 },
-              map: gmap,
-              label: { text, color: '#FFFFFF', fontWeight: 'bold', fontSize: '12px', className: 'parking-drag-label' },
-              icon: {
-                path: 'M -30,-10 L 30,-10 L 30,10 L -30,10 Z',
-                fillColor: color === '#22C55E' ? 'rgba(0,80,0,0.85)' : color === '#F59E0B' ? 'rgba(120,80,0,0.85)' : 'rgba(120,0,0,0.85)',
-                fillOpacity: 1, strokeColor: color, strokeWeight: 1.5, scale: 0.6,
-                anchor: new google.maps.Point(0, 0),
-              },
-              clickable: false, zIndex: 9999,
-            })
-            dragLabelMarkersRef.current.push(lbl)
+            const fillColor = color === '#22C55E' ? 'rgba(0,80,0,0.85)' : color === '#F59E0B' ? 'rgba(120,80,0,0.85)' : 'rgba(120,0,0,0.85)'
+            const position = { lat: (fromLat + toLat) / 2, lng: (fromLng + toLng) / 2 }
+            const label = { text, color: '#FFFFFF', fontWeight: 'bold', fontSize: '12px', className: 'parking-drag-label' }
+            const icon = {
+              path: 'M -30,-10 L 30,-10 L 30,10 L -30,10 Z',
+              fillColor, fillOpacity: 1, strokeColor: color, strokeWeight: 1.5, scale: 0.6,
+              anchor: new google.maps.Point(0, 0),
+            }
+            let lbl = dragLabelMarkersRef.current[usedLabels]
+            if (lbl) {
+              lbl.setPosition(position)
+              lbl.setLabel(label)
+              lbl.setIcon(icon)
+              if (lbl.getMap() !== gmap) lbl.setMap(gmap)
+            } else {
+              lbl = new google.maps.Marker({
+                position, map: gmap, label, icon, clickable: false, zIndex: 9999,
+              })
+              dragLabelMarkersRef.current.push(lbl)
+            }
+            usedLabels++
           }
 
           // Check distances to other aircraft
@@ -1613,15 +1628,22 @@ export default function ParkingPage() {
         }
       }
 
+      // Hide any unused pool slots from this frame (keep the instances alive
+      // so subsequent frames / drags can reuse them).
+      for (let i = usedLabels; i < dragLabelMarkersRef.current.length; i++) {
+        if (dragLabelMarkersRef.current[i].getMap()) dragLabelMarkersRef.current[i].setMap(null)
+      }
+      for (let i = usedLines; i < dragLineRef.current.length; i++) {
+        if (dragLineRef.current[i].getMap()) dragLineRef.current[i].setMap(null)
+      }
+
       mapDiv.style.cursor = 'grabbing'
     }
 
     const onMouseUp = async (upLat: number, upLng: number) => {
-      // Clean up drag labels and lines
-      dragLabelMarkersRef.current.forEach(m => m.setMap(null))
-      dragLabelMarkersRef.current = []
-      dragLineRef.current.forEach(l => l.setMap(null))
-      dragLineRef.current = []
+      // Hide pooled drag labels and lines (keep instances for next drag)
+      dragLabelMarkersRef.current.forEach(m => { if (m.getMap()) m.setMap(null) })
+      dragLineRef.current.forEach(l => { if (l.getMap()) l.setMap(null) })
 
       if (!isDraggingRef.current) return
 
@@ -3010,16 +3032,15 @@ export default function ParkingPage() {
                         }}
                         style={{ flex: 1 }}
                       />
-                      <input
-                        type="number" min={0} max={360} step={1}
-                        value={allSameHeading ? firstHeading : ''}
+                      <NumberField
+                        min={0} max={360} step={1}
+                        allowEmpty={false}
+                        value={allSameHeading ? firstHeading : null}
                         placeholder={allSameHeading ? '' : 'mixed'}
-                        onChange={e => {
-                          const raw = e.target.value; if (raw === '') return
-                          const deg = Math.min(360, Math.max(0, Number(raw)))
-                          if (!isNaN(deg)) for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                        onCommit={v => {
+                          if (v == null) return
+                          for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: v })
                         }}
-                        onFocus={e => e.target.select()}
                         style={{ width: 50, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-purple)', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
                       />
                       <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>°</span>
@@ -3156,15 +3177,14 @@ export default function ParkingPage() {
                             }}
                             style={{ flex: 1 }}
                           />
-                          <input
-                            type="number" min={0} max={360} step={1}
+                          <NumberField
+                            min={0} max={360} step={1}
+                            allowEmpty={false}
                             value={groupSpots[0]?.heading_deg ?? 0}
-                            onChange={e => {
-                              const raw = e.target.value; if (raw === '') return
-                              const deg = Math.min(360, Math.max(0, Number(raw)))
-                              if (!isNaN(deg)) for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg })
+                            onCommit={v => {
+                              if (v == null) return
+                              for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: v })
                             }}
-                            onFocus={e => e.target.select()}
                             style={{ width: 44, padding: '2px 3px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', textAlign: 'center', fontWeight: 700 }}
                           />
                           <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)' }}>°</span>
@@ -3264,9 +3284,8 @@ export default function ParkingPage() {
                                     Heading
                                     <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ width: '100%' }} />
                                   </label>
-                                  <input type="number" min={0} max={360} step={1} value={s.heading_deg}
-                                    onChange={e => { const raw = e.target.value; if (raw === '') return; const v = Math.min(360, Math.max(0, Number(raw))); if (!isNaN(v)) handleUpdateSpot(s.id, { heading_deg: v }) }}
-                                    onFocus={e => e.target.select()}
+                                  <NumberField min={0} max={360} step={1} allowEmpty={false} value={s.heading_deg}
+                                    onCommit={v => { if (v != null) handleUpdateSpot(s.id, { heading_deg: v }) }}
                                     style={{ width: 48, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
                                   />
                                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
@@ -3431,18 +3450,18 @@ export default function ParkingPage() {
                           <div style={{ display: 'flex', gap: 6 }}>
                             <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Width (ft)
-                              <input type="number" value={obs.width_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { width_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                              <NumberField min={0} allowEmpty={false} value={obs.width_ft ?? 0} onCommit={v => { if (v != null) handleUpdateObstacle(obs.id, { width_ft: v }) }} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                             </label>
                             <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                               Length (ft)
-                              <input type="number" value={obs.length_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { length_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                              <NumberField min={0} allowEmpty={false} value={obs.length_ft ?? 0} onCommit={v => { if (v != null) handleUpdateObstacle(obs.id, { length_ft: v }) }} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                             </label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
                               <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                                 Rotation
                                 <input type="range" min={0} max={360} step={1} value={obs.rotation_deg || 0} onChange={e => handleUpdateObstacle(obs.id, { rotation_deg: Number(e.target.value) })} style={{ width: '100%' }} />
                               </label>
-                              <input type="number" min={0} max={360} step={1} value={obs.rotation_deg || 0} onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateObstacle(obs.id, { rotation_deg: v }) }} style={{ width: 52, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }} />
+                              <NumberField min={0} max={360} step={1} allowEmpty={false} value={obs.rotation_deg ?? 0} onCommit={v => { if (v != null) handleUpdateObstacle(obs.id, { rotation_deg: v }) }} style={{ width: 52, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }} />
                               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
                             </div>
                           </div>
@@ -3450,13 +3469,13 @@ export default function ParkingPage() {
                         {obs.obstacle_type === 'circle' && (
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             Radius (ft)
-                            <input type="number" value={obs.radius_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { radius_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                            <NumberField min={0} allowEmpty={false} value={obs.radius_ft ?? 0} onCommit={v => { if (v != null) handleUpdateObstacle(obs.id, { radius_ft: v }) }} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                         )}
                         {obs.obstacle_type === 'point' && (
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             Height (ft)
-                            <input type="number" value={obs.height_ft || 0} onChange={e => handleUpdateObstacle(obs.id, { height_ft: Number(e.target.value) })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                            <NumberField min={0} allowEmpty={false} value={obs.height_ft ?? 0} onCommit={v => { if (v != null) handleUpdateObstacle(obs.id, { height_ft: v }) }} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                         )}
                         <div style={{ display: 'flex', gap: 4 }}>
@@ -3597,7 +3616,7 @@ export default function ParkingPage() {
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                             Design Wingspan (ft)
-                            <input type="number" value={tl.design_wingspan_ft || ''} placeholder="100" onChange={e => handleUpdateTaxilane(tl.id, { design_wingspan_ft: Number(e.target.value) || null as any })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
+                            <NumberField min={0} value={tl.design_wingspan_ft ?? null} placeholder="100" onCommit={v => handleUpdateTaxilane(tl.id, { design_wingspan_ft: (v ?? null) as any })} style={{ width: '100%', padding: '3px 6px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)' }} />
                           </label>
                           <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
                             <input type="checkbox" checked={tl.is_transient} onChange={e => handleUpdateTaxilane(tl.id, { is_transient: e.target.checked })} />
@@ -4337,8 +4356,8 @@ export default function ParkingPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ ...ctxLabelStyle, marginBottom: 0, flexShrink: 0 }}>Heading</span>
                   <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ flex: 1 }} />
-                  <input type="number" min={0} max={360} step={1} value={s.heading_deg}
-                    onChange={e => { const v = Math.min(360, Math.max(0, Number(e.target.value) || 0)); handleUpdateSpot(s.id, { heading_deg: v }) }}
+                  <NumberField min={0} max={360} step={1} allowEmpty={false} value={s.heading_deg}
+                    onCommit={v => { if (v != null) handleUpdateSpot(s.id, { heading_deg: v }) }}
                     style={{ width: 40, padding: '2px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
                   />
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
@@ -4416,13 +4435,9 @@ export default function ParkingPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>Hdg:</span>
-                    <input
-                      type="number" min={0} max={359} value={placementHeading}
-                      onChange={e => {
-                        const n = parseInt(e.target.value, 10)
-                        if (!isNaN(n)) setPlacementHeading(((n % 360) + 360) % 360)
-                      }}
-                      onFocus={e => e.target.select()}
+                    <NumberField
+                      min={0} max={359} allowEmpty={false} value={placementHeading}
+                      onCommit={v => { if (v != null) setPlacementHeading(((v % 360) + 360) % 360) }}
                       style={{
                         width: 48, padding: '3px 4px', borderRadius: 4, textAlign: 'center',
                         border: '1px solid var(--color-border)', background: 'var(--color-bg)',
