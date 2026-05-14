@@ -10,6 +10,7 @@ import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
 import silhouetteManifest from '@/public/aircraft_silhouette_manifest.json'
 import { NumberField } from '@/components/ui/number-field'
+import { HeadingSlider } from '@/components/ui/heading-slider'
 import {
   fetchParkingPlans,
   createParkingPlan,
@@ -302,6 +303,43 @@ function renderFallbackIcon(): { imageData: ImageData; width: number; height: nu
   return { imageData: ctx.getImageData(0, 0, size, size), width: size, height: size }
 }
 
+// Build an un-rotated, padded base canvas for an aircraft type. The image
+// is centered inside a fixedDim × fixedDim canvas so that rotating around
+// the canvas center rotates around the aircraft center.
+async function buildBaseSilhouetteCanvas(
+  aircraftName: string,
+  wingspanFt: number,
+  lengthFt: number,
+): Promise<HTMLCanvasElement> {
+  const result = await renderSilhouetteImage(aircraftName, wingspanFt, lengthFt)
+  const imgData = result || renderFallbackIcon()
+  const fixedDim = Math.max(imgData.width, imgData.height) + 16
+  const canvas = document.createElement('canvas')
+  canvas.width = fixedDim
+  canvas.height = fixedDim
+  const ctx = canvas.getContext('2d')!
+  const ox = Math.round((fixedDim - imgData.width) / 2)
+  const oy = Math.round((fixedDim - imgData.height) / 2)
+  ctx.putImageData(imgData.imageData, ox, oy)
+  return canvas
+}
+
+// Synchronously rotate a cached base canvas and return a data URL ready to
+// hand to google.maps.Marker.setIcon. Canvas-to-canvas drawImage is sync
+// (unlike Image.onload), so this runs in a few ms per call — fast enough
+// to do 60×/sec during slider drag.
+function rotateBaseCanvas(baseCanvas: HTMLCanvasElement, headingDeg: number): { url: string; fixedDim: number } {
+  const fixedDim = baseCanvas.width
+  const rotCanvas = document.createElement('canvas')
+  rotCanvas.width = fixedDim
+  rotCanvas.height = fixedDim
+  const rotCtx = rotCanvas.getContext('2d')!
+  rotCtx.translate(fixedDim / 2, fixedDim / 2)
+  rotCtx.rotate((headingDeg * Math.PI) / 180)
+  rotCtx.drawImage(baseCanvas, -fixedDim / 2, -fixedDim / 2)
+  return { url: rotCanvas.toDataURL('image/png'), fixedDim }
+}
+
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
  *  the aircraft's real-world wingspan at the current map zoom.
  *  Uses Google Maps projection to convert real-world distance to pixels. */
@@ -548,6 +586,11 @@ export default function ParkingPage() {
   const selectionRingRef = useRef<google.maps.Circle | null>(null)
   // Cache rotated silhouette data URLs to avoid re-rendering on every zoom change
   const silhouetteCacheRef = useRef<Map<string, { url: string; fixedDim: number; heading: number }>>(new Map())
+  // Cache the un-rotated, padded base canvas per aircraft type. Used by
+  // imperativeRotateSpot to spin the icon synchronously during slider drag
+  // (bypassing the React → map effect → async SVG re-render chain).
+  // Key: `${aircraftName}-${wingspanFt}-${lengthFt}`.
+  const baseSilhouetteCanvasRef = useRef<Map<string, HTMLCanvasElement>>(new Map())
   // Nose gear markers — managed with aircraft layer
   const noseGearMarkersRef = useRef<google.maps.Marker[]>([])
   // ── Derived data ──
@@ -578,6 +621,36 @@ export default function ParkingPage() {
   taxilanesRef.current = taxilanes
   const apronContextRef = useRef(apronContext)
   apronContextRef.current = apronContext
+  const mapHeadingDegRef = useRef(0)
+  mapHeadingDegRef.current = mapHeadingDeg
+
+  // Synchronously spin one spot's icon by setting a freshly-rotated icon URL
+  // straight on the google.maps.Marker. Skips React + the async map effect
+  // entirely — used by the slider drag preview so the aircraft rotates
+  // smoothly under the cursor without waiting for a Supabase round-trip
+  // or an SVG re-render. Returns true if the icon was updated, false if
+  // the base canvas isn't cached yet (caller should fall back to setSpots).
+  const imperativeRotateSpot = useCallback((spotId: string, headingDeg: number): boolean => {
+    const w = map.current
+    if (!w) return false
+    const spot = spotsWithAircraftRef.current.find(s => s.id === spotId)
+    if (!spot) return false
+    const marker = spotMarkersMapRef.current.get(spotId)
+    if (!marker) return false
+    const baseKey = `${spot.aircraft_name || '__fallback'}-${spot.wingspan_ft}-${spot.length_ft}`
+    const baseCanvas = baseSilhouetteCanvasRef.current.get(baseKey)
+    if (!baseCanvas) return false
+    const effective = ((headingDeg - mapHeadingDegRef.current + 360) % 360)
+    const { url, fixedDim } = rotateBaseCanvas(baseCanvas, effective)
+    const iconScale = computeIconScale(spot.wingspan_ft, spot.length_ft, w.gmap)
+    const displayDim = Math.min(800, Math.max(8, Math.round(fixedDim * iconScale)))
+    marker.setIcon({
+      url,
+      scaledSize: new google.maps.Size(displayDim, displayDim),
+      anchor: new google.maps.Point(displayDim / 2, displayDim / 2),
+    } as google.maps.Icon)
+    return true
+  }, [])
 
   const taxilanesForCheck: TaxilaneForCheck[] = useMemo(
     () => taxilanes.map(t => ({
@@ -1111,32 +1184,55 @@ export default function ParkingPage() {
       return
     }
 
-    // Detect position-only update. We compare EFFECTIVE heading (compass minus
-    // map heading, rounded) so that map rotation invalidates the fast path and
-    // forces an icon re-render with the new counter-rotation.
+    // Fast path: same set of spots (same IDs + aircraft names) and every
+    // base canvas already cached, meaning any heading change can be applied
+    // synchronously without a full marker rebuild. Position-only changes
+    // also flow through here (the heading branch is just skipped per spot).
     const prevRendered = renderedSpotsRef.current
-    const isPositionOnlyUpdate = spotsWithAircraft.length === prevRendered.size &&
+    const sameSet = spotsWithAircraft.length === prevRendered.size &&
       spotsWithAircraft.every(s => {
         const prev = prevRendered.get(s.id)
-        const effective = Math.round(((s.heading_deg || 0) - mapHeadingDeg + 360) % 360)
-        return prev && prev.heading === effective && prev.name === (s.aircraft_name || '')
+        return prev != null && prev.name === (s.aircraft_name || '')
       })
+    const allBasesCached = sameSet && spotsWithAircraft.every(s => {
+      const baseKey = `${s.aircraft_name || '__fallback'}-${s.wingspan_ft}-${s.length_ft}`
+      return baseSilhouetteCanvasRef.current.has(baseKey)
+    })
 
-    if (isPositionOnlyUpdate && spotMarkersMapRef.current.size > 0) {
+    if (allBasesCached && spotMarkersMapRef.current.size > 0) {
       for (const spot of spotsWithAircraft) {
-        const c = spotCenter(spot)
         const marker = spotMarkersMapRef.current.get(spot.id)
-        if (marker) {
-          marker.setPosition({ lat: c.lat, lng: c.lon })
-          // Apply label visibility — toggling LBL doesn't change positions,
-          // but we still need to flip the label on/off for each marker.
-          marker.setLabel(visibleLayers.labels ? {
-            text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
-            color: '#FFFFFF',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            className: 'parking-ac-label',
-          } : null)
+        if (!marker) continue
+        const c = spotCenter(spot)
+        marker.setPosition({ lat: c.lat, lng: c.lon })
+        marker.setLabel(visibleLayers.labels ? {
+          text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
+          color: '#FFFFFF',
+          fontSize: '11px',
+          fontWeight: 'bold',
+          className: 'parking-ac-label',
+        } : null)
+
+        const effective = Math.round(((spot.heading_deg || 0) - mapHeadingDeg + 360) % 360)
+        const prev = prevRendered.get(spot.id)
+        if (prev && prev.heading !== effective) {
+          // Heading changed — re-rotate the cached base canvas and swap the
+          // marker's icon in place. No async work, no marker re-creation.
+          const baseKey = `${spot.aircraft_name || '__fallback'}-${spot.wingspan_ft}-${spot.length_ft}`
+          const baseCanvas = baseSilhouetteCanvasRef.current.get(baseKey)!
+          const { url, fixedDim } = rotateBaseCanvas(baseCanvas, effective)
+          const iconScale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
+          const displayDim = Math.min(800, Math.max(8, Math.round(fixedDim * iconScale)))
+          marker.setIcon({
+            url,
+            scaledSize: new google.maps.Size(displayDim, displayDim),
+            anchor: new google.maps.Point(displayDim / 2, displayDim / 2),
+          } as google.maps.Icon)
+          const cacheKey = `${spot.id}-${effective}`
+          spotMetaRef.current.set(spot.id, { fixedDim, wingspanFt: spot.wingspan_ft, lengthFt: spot.length_ft, cacheKey })
+          if (!silhouetteCacheRef.current.has(cacheKey)) {
+            silhouetteCacheRef.current.set(cacheKey, { url, fixedDim, heading: effective })
+          }
         }
         w.featureIndex.set(`spot-${spot.id}`, { lat: c.lat, lng: c.lon, type: 'aircraft', props: { spotId: spot.id, heading: spot.heading_deg } })
       }
@@ -1176,32 +1272,22 @@ export default function ParkingPage() {
         // Use computeIconScale — same formula that worked in Mapbox
         const iconScale = computeIconScale(spot.wingspan_ft, spot.length_ft, gmap)
 
-        // Get or create cached rotated image
+        // Get or build the un-rotated base canvas for this aircraft type.
+        // Shared across all spots of the same aircraft so the heavy SVG
+        // render only runs once per type, not once per spot.
+        const baseKey = `${spot.aircraft_name || '__fallback'}-${spot.wingspan_ft}-${spot.length_ft}`
+        let baseCanvas = baseSilhouetteCanvasRef.current.get(baseKey)
+        if (!baseCanvas) {
+          baseCanvas = await buildBaseSilhouetteCanvas(spot.aircraft_name || '', spot.wingspan_ft, spot.length_ft)
+          baseSilhouetteCanvasRef.current.set(baseKey, baseCanvas)
+        }
+        if (renderCancelRef.current !== renderToken) return
+
+        // Synchronous rotation now that the base is cached.
         let cached = silhouetteCacheRef.current.get(cacheKey)
         if (!cached) {
-          const result = await renderSilhouetteImage(spot.aircraft_name || '', spot.wingspan_ft, spot.length_ft)
-          const imgData = result || renderFallbackIcon()
-
-          const canvas = document.createElement('canvas')
-          canvas.width = imgData.width
-          canvas.height = imgData.height
-          const ctx = canvas.getContext('2d')!
-          ctx.putImageData(imgData.imageData, 0, 0)
-          const dataUrl = canvas.toDataURL('image/png')
-
-          const fixedDim = Math.max(imgData.width, imgData.height) + 16
-          const rotCanvas = document.createElement('canvas')
-          rotCanvas.width = fixedDim
-          rotCanvas.height = fixedDim
-          const rotCtx = rotCanvas.getContext('2d')!
-          rotCtx.translate(fixedDim / 2, fixedDim / 2)
-          rotCtx.rotate(effectiveHeading * Math.PI / 180)
-          const img = new Image()
-          img.src = dataUrl
-          await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
-          rotCtx.drawImage(img, -imgData.width / 2, -imgData.height / 2, imgData.width, imgData.height)
-
-          cached = { url: rotCanvas.toDataURL('image/png'), fixedDim, heading: effectiveHeading }
+          const { url, fixedDim } = rotateBaseCanvas(baseCanvas, effectiveHeading)
+          cached = { url, fixedDim, heading: effectiveHeading }
           silhouetteCacheRef.current.set(cacheKey, cached)
         }
 
@@ -3023,13 +3109,10 @@ export default function ParkingPage() {
                       <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
                         Heading:
                       </span>
-                      <input
-                        type="range" min={0} max={360} step={1}
+                      <HeadingSlider
                         value={allSameHeading ? firstHeading : 0}
-                        onChange={e => {
-                          const deg = Number(e.target.value)
-                          for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: deg })
-                        }}
+                        onPreview={deg => { for (const s of selSpots) imperativeRotateSpot(s.id, deg) }}
+                        onCommit={deg => { for (const s of selSpots) handleUpdateSpot(s.id, { heading_deg: deg }) }}
                         style={{ flex: 1 }}
                       />
                       <NumberField
@@ -3168,13 +3251,10 @@ export default function ParkingPage() {
                           }}
                         >
                           <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.04em' }}>All {groupSpots.length} hdg</span>
-                          <input
-                            type="range" min={0} max={360} step={1}
+                          <HeadingSlider
                             value={groupSpots[0]?.heading_deg ?? 0}
-                            onChange={e => {
-                              const deg = Number(e.target.value)
-                              for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg })
-                            }}
+                            onPreview={deg => { for (const s of groupSpots) imperativeRotateSpot(s.id, deg) }}
+                            onCommit={deg => { for (const s of groupSpots) handleUpdateSpot(s.id, { heading_deg: deg }) }}
                             style={{ flex: 1 }}
                           />
                           <NumberField
@@ -3282,7 +3362,12 @@ export default function ParkingPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                                     Heading
-                                    <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ width: '100%' }} />
+                                    <HeadingSlider
+                                      value={s.heading_deg}
+                                      onPreview={deg => imperativeRotateSpot(s.id, deg)}
+                                      onCommit={deg => handleUpdateSpot(s.id, { heading_deg: deg })}
+                                      style={{ width: '100%' }}
+                                    />
                                   </label>
                                   <NumberField min={0} max={360} step={1} allowEmpty={false} value={s.heading_deg}
                                     onCommit={v => { if (v != null) handleUpdateSpot(s.id, { heading_deg: v }) }}
@@ -3459,7 +3544,11 @@ export default function ParkingPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
                               <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', flex: 1 }}>
                                 Rotation
-                                <input type="range" min={0} max={360} step={1} value={obs.rotation_deg || 0} onChange={e => handleUpdateObstacle(obs.id, { rotation_deg: Number(e.target.value) })} style={{ width: '100%' }} />
+                                <HeadingSlider
+                                  value={obs.rotation_deg ?? 0}
+                                  onCommit={deg => handleUpdateObstacle(obs.id, { rotation_deg: deg })}
+                                  style={{ width: '100%' }}
+                                />
                               </label>
                               <NumberField min={0} max={360} step={1} allowEmpty={false} value={obs.rotation_deg ?? 0} onCommit={v => { if (v != null) handleUpdateObstacle(obs.id, { rotation_deg: v }) }} style={{ width: 52, padding: '3px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }} />
                               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>°</span>
@@ -4355,7 +4444,12 @@ export default function ParkingPage() {
                 {/* Heading */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ ...ctxLabelStyle, marginBottom: 0, flexShrink: 0 }}>Heading</span>
-                  <input type="range" min={0} max={360} step={1} value={s.heading_deg} onChange={e => handleUpdateSpot(s.id, { heading_deg: Number(e.target.value) })} style={{ flex: 1 }} />
+                  <HeadingSlider
+                    value={s.heading_deg}
+                    onPreview={deg => imperativeRotateSpot(s.id, deg)}
+                    onCommit={deg => handleUpdateSpot(s.id, { heading_deg: deg })}
+                    style={{ flex: 1 }}
+                  />
                   <NumberField min={0} max={360} step={1} allowEmpty={false} value={s.heading_deg}
                     onCommit={v => { if (v != null) handleUpdateSpot(s.id, { heading_deg: v }) }}
                     style={{ width: 40, padding: '2px 4px', borderRadius: 3, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)', textAlign: 'center' }}
