@@ -71,7 +71,7 @@ import {
   PanelLeft, PanelLeftClose, Maximize2, Minimize2, Ruler as RulerIcon,
   Plane, MapPin, Building2, Minus, Circle as CircleIcon,
   ArrowRight, ArrowLeftRight, Square,
-  Lock, Unlock, Download, Mail, Crop,
+  Lock, Unlock, Download, Mail, Crop, X,
 } from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
@@ -2390,16 +2390,15 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (w) {
-      // Resize the map div to match the on-screen 16:9 capture frame exactly,
-      // so the captured pixels are the same lat/lng bounds the user sees
-      // inside the frame overlay. Map center + zoom are preserved by Google
-      // Maps across resize, so shrinking the viewport just trims the area
-      // outside the frame.
+      // Capture the on-screen 16:9 capture frame as-is — no resize, no tile
+      // re-layout. Earlier we resized the map div to the frame dimensions,
+      // which caused Google Maps to blank the tile layer briefly while it
+      // re-laid out (visible in non-fullscreen exports as missing imagery
+      // under the SVG overlays). Clipping via html2canvas's window options
+      // captures the live rendering at its current size and just trims to
+      // the framed rectangle.
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
-      const parent = mapDiv.parentElement
-      const origWidth = parent?.style.width || ''
-      const origHeight = parent?.style.height || ''
       const liveW = mapDiv.clientWidth
       const liveH = mapDiv.clientHeight
       const frame = captureFrameDims(liveW, liveH)
@@ -2407,17 +2406,11 @@ export default function ParkingPage() {
       const scale = Math.max(2, 1800 / Math.max(1, frame.w))
 
       try {
-        if (parent) {
-          parent.style.width = `${frame.w}px`
-          parent.style.height = `${frame.h}px`
-        }
-        google.maps.event.trigger(gmap, 'resize')
-        // Wait for tiles to load at new size
+        // Make sure any pending tile / overlay work has settled before we snap.
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 3000) // fallback timeout
+          setTimeout(resolve, 1500) // fallback if already idle
         })
-        // Extra frame for rendering
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
         const html2canvas = (await import('html2canvas')).default
@@ -2427,21 +2420,18 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale,
           logging: false,
-          width: mapDiv.clientWidth,
-          height: mapDiv.clientHeight,
+          x: frame.x,
+          y: frame.y,
+          width: frame.w,
+          height: frame.h,
+          windowWidth: liveW,
+          windowHeight: liveH,
         })
         mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
       } catch (err) {
         console.warn('Map capture error:', err)
         toast.error('Map capture failed')
         mapDataUrl = null
-      } finally {
-        // Restore original size
-        if (parent) {
-          parent.style.width = origWidth
-          parent.style.height = origHeight
-        }
-        google.maps.event.trigger(gmap, 'resize')
       }
     }
 
@@ -2954,6 +2944,21 @@ export default function ParkingPage() {
               }}>
                 {selectedPlan.is_template ? 'Template' : selectedPlan.is_active ? 'Active' : 'Draft'}
               </span>
+            )}
+            {!mobile && (
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                title="Hide panel — exports work whether the panel is shown or hidden"
+                aria-label="Hide panel"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, marginLeft: 2, padding: 0, borderRadius: 4,
+                  background: 'transparent', border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <X size={13} />
+              </button>
             )}
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
