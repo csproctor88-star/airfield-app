@@ -71,7 +71,7 @@ import {
   PanelLeft, PanelLeftClose, Maximize2, Minimize2, Ruler as RulerIcon,
   Plane, MapPin, Building2, Minus, Circle as CircleIcon,
   ArrowRight, ArrowLeftRight, Square,
-  Lock, Unlock, Download, Mail,
+  Lock, Unlock, Download, Mail, Crop,
 } from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
@@ -324,6 +324,21 @@ async function buildBaseSilhouetteCanvas(
   return canvas
 }
 
+// 16:9 capture frame inset inside a map container of the given pixel size.
+// The PDF map page is landscape, so we lock the capture aspect to 16:9 and
+// center the frame; the user can pan/zoom so the content they care about
+// sits inside it.
+function captureFrameDims(containerW: number, containerH: number): { w: number; h: number; x: number; y: number } {
+  const TARGET = 16 / 9
+  if (containerW <= 0 || containerH <= 0) return { w: containerW, h: containerH, x: 0, y: 0 }
+  if (containerW / containerH >= TARGET) {
+    const w = Math.round(containerH * TARGET)
+    return { w, h: containerH, x: Math.round((containerW - w) / 2), y: 0 }
+  }
+  const h = Math.round(containerW / TARGET)
+  return { w: containerW, h, x: 0, y: Math.round((containerH - h) / 2) }
+}
+
 // Synchronously rotate a cached base canvas and return a data URL ready to
 // hand to google.maps.Marker.setIcon. Canvas-to-canvas drawImage is sync
 // (unlike Image.onload), so this runs in a few ms per call — fast enough
@@ -426,6 +441,20 @@ export default function ParkingPage() {
   const [apronContext, setApronContext] = useState<ApronContext>('parking')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ aircraft: true, obstacles: false, taxilanes: false, clearance: true, settings: false, reference: false })
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({ aircraft: true, obstacles: true, taxilanes: true, boundaries: true, clearance: true, labels: true })
+  // PDF capture frame: when on, an unobtrusive 16:9 rectangle is drawn over
+  // the map showing exactly what the PDF export will capture. Persisted so
+  // it stays on once enabled.
+  const [showCaptureFrame, setShowCaptureFrame] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('glidepath_parking_capture_frame') !== '0'
+  })
+  const toggleCaptureFrame = () => {
+    setShowCaptureFrame(v => {
+      const next = !v
+      try { localStorage.setItem('glidepath_parking_capture_frame', next ? '1' : '0') } catch { /* noop */ }
+      return next
+    })
+  }
   const toggleLayerVisibility = (key: string) => setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }))
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
@@ -565,6 +594,9 @@ export default function ParkingPage() {
   // Google Maps ready state
   const hasGoogleMaps = isGoogleMapsConfigured()
   const [googleReady, setGoogleReady] = useState(false)
+  // Live map-container pixel size — drives the capture-frame overlay so the
+  // user sees exactly the 16:9 area the PDF will receive.
+  const [mapSize, setMapSize] = useState<{ w: number; h: number } | null>(null)
 
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -790,7 +822,20 @@ export default function ParkingPage() {
       setMapLoaded(true)
     })
 
+    // Track map container pixel size for the capture-frame overlay
+    const el = mapContainer.current
+    let resizeObs: ResizeObserver | null = null
+    if (el) {
+      const update = () => setMapSize({ w: el.clientWidth, h: el.clientHeight })
+      update()
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObs = new ResizeObserver(update)
+        resizeObs.observe(el)
+      }
+    }
+
     return () => {
+      if (resizeObs) resizeObs.disconnect()
       if (map.current) {
         clearAllObjects(map.current)
         map.current = null
@@ -2345,18 +2390,26 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (w) {
-      // Temporarily resize map to landscape for a wider capture
+      // Resize the map div to match the on-screen 16:9 capture frame exactly,
+      // so the captured pixels are the same lat/lng bounds the user sees
+      // inside the frame overlay. Map center + zoom are preserved by Google
+      // Maps across resize, so shrinking the viewport just trims the area
+      // outside the frame.
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
       const parent = mapDiv.parentElement
       const origWidth = parent?.style.width || ''
       const origHeight = parent?.style.height || ''
+      const liveW = mapDiv.clientWidth
+      const liveH = mapDiv.clientHeight
+      const frame = captureFrameDims(liveW, liveH)
+      // Scale html2canvas output high enough for a sharp print at letter size.
+      const scale = Math.max(2, 1800 / Math.max(1, frame.w))
 
       try {
-        // Expand to 1600×900 for high-quality landscape capture
         if (parent) {
-          parent.style.width = '1600px'
-          parent.style.height = '900px'
+          parent.style.width = `${frame.w}px`
+          parent.style.height = `${frame.h}px`
         }
         google.maps.event.trigger(gmap, 'resize')
         // Wait for tiles to load at new size
@@ -2372,7 +2425,7 @@ export default function ParkingPage() {
           useCORS: true,
           allowTaint: true,
           backgroundColor: null,
-          scale: 2,
+          scale,
           logging: false,
           width: mapDiv.clientWidth,
           height: mapDiv.clientHeight,
@@ -4095,6 +4148,40 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          {/* PDF capture-frame overlay — shows the 16:9 area the export will capture.
+              Outside is dimmed; inside is untouched. Always non-interactive. */}
+          {showCaptureFrame && mapSize && mapSize.w > 0 && mapSize.h > 0 && selectedPlanId && (() => {
+            const f = captureFrameDims(mapSize.w, mapSize.h)
+            if (f.x === 0 && f.y === 0) return null  // viewport already at 16:9
+            const dim = 'rgba(0,0,0,0.22)'
+            return (
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
+                {f.x > 0 && (
+                  <>
+                    <div style={{ position: 'absolute', left: 0, top: 0, width: f.x, height: '100%', background: dim }} />
+                    <div style={{ position: 'absolute', right: 0, top: 0, width: f.x, height: '100%', background: dim }} />
+                  </>
+                )}
+                {f.y > 0 && (
+                  <>
+                    <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: f.y, background: dim }} />
+                    <div style={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: f.y, background: dim }} />
+                  </>
+                )}
+                <div style={{
+                  position: 'absolute', left: f.x, top: f.y, width: f.w, height: f.h,
+                  border: '2px dashed var(--color-cyan)', boxSizing: 'border-box',
+                }} />
+                <div style={{
+                  position: 'absolute', left: f.x + 8, top: f.y + 8,
+                  padding: '3px 8px', borderRadius: 3,
+                  background: 'rgba(0,0,0,0.6)', color: 'var(--color-cyan)',
+                  fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                }}>PDF Capture Area</div>
+              </div>
+            )
+          })()}
           {/* ── Floating panel — anchored top-left under the controls toolbar, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (() => {
             const startResize = (dir: 'w' | 'h' | 'wh') => (e: React.MouseEvent) => {
@@ -4176,15 +4263,19 @@ export default function ParkingPage() {
             )
 
             // Reusable button factories so desktop and mobile render the same controls.
-            const PanelBtn = !isMobile && (
+            // Mobile uses a bottom sheet for the panel (state: sheetExpanded);
+            // desktop uses a floating side panel (state: !sidebarCollapsed). The
+            // button drives whichever is active.
+            const panelOpen = isMobile ? sheetExpanded : !sidebarCollapsed
+            const PanelBtn = (
               <button
                 key="panel"
-                onClick={() => setSidebarCollapsed(c => !c)}
-                title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
-                style={{ ...railBtnBase, ...(sidebarCollapsed ? {} : activeStyle('var(--color-cyan)')) }}
+                onClick={() => isMobile ? setSheetExpanded(s => !s) : setSidebarCollapsed(c => !c)}
+                title={panelOpen ? 'Hide panel' : 'Show panel'}
+                style={{ ...railBtnBase, ...(panelOpen ? activeStyle('var(--color-cyan)') : {}) }}
               >
-                {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-                <span>{sidebarCollapsed ? 'Panel' : 'Hide'}</span>
+                {panelOpen ? <PanelLeftClose size={18} /> : <PanelLeft size={18} />}
+                <span>{panelOpen ? 'Hide' : 'Panel'}</span>
               </button>
             )
             const FullBtn = (
@@ -4207,6 +4298,17 @@ export default function ParkingPage() {
               >
                 <RulerIcon size={18} />
                 <span>{rulerActive && ruler.totalFt > 0 ? ruler.formatDist(ruler.totalFt) : 'Ruler'}</span>
+              </button>
+            )
+            const FrameBtn = (
+              <button
+                key="frame"
+                onClick={toggleCaptureFrame}
+                title={showCaptureFrame ? 'Hide PDF capture frame' : 'Show PDF capture frame'}
+                style={{ ...railBtnBase, ...(showCaptureFrame ? activeStyle('var(--color-cyan)') : {}) }}
+              >
+                <Crop size={18} />
+                <span>Frame</span>
               </button>
             )
             const PdfBtn = (
@@ -4334,11 +4436,13 @@ export default function ParkingPage() {
                     background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                   }}>
+                    {PanelBtn}
                     {FullBtn}
                     {RulerBtn}
                     {selectedPlanId && (
                       <>
                         <VDivider />
+                        {FrameBtn}
                         {PdfBtn}
                         {EmailBtn}
                       </>
@@ -4368,6 +4472,7 @@ export default function ParkingPage() {
                     <HDivider />
                     {editTools}
                     <HDivider />
+                    {FrameBtn}
                     {PdfBtn}
                     {EmailBtn}
                   </>
