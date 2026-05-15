@@ -407,6 +407,10 @@ export default function ParkingPage() {
   const [duplicateName, setDuplicateName] = useState('')
   const [duplicateDesc, setDuplicateDesc] = useState('')
   const [duplicateAsTemplate, setDuplicateAsTemplate] = useState(false)
+  const [showEditPlan, setShowEditPlan] = useState(false)
+  const [editPlanName, setEditPlanName] = useState('')
+  const [editPlanDesc, setEditPlanDesc] = useState('')
+  const [savingPlanEdit, setSavingPlanEdit] = useState(false)
   const [showAircraftPicker, setShowAircraftPicker] = useState(false)
   const [aircraftSearch, setAircraftSearch] = useState('')
   const [bulkAddCount, setBulkAddCount] = useState<number | ''>(1)
@@ -2289,6 +2293,31 @@ export default function ParkingPage() {
     }
   }
 
+  const openEditPlan = () => {
+    if (!selectedPlan) return
+    setEditPlanName(selectedPlan.plan_name)
+    setEditPlanDesc(selectedPlan.description || '')
+    setShowEditPlan(true)
+  }
+
+  const handleSavePlanEdit = async () => {
+    if (!selectedPlan || !installationId) return
+    const trimmedName = editPlanName.trim()
+    if (!trimmedName) { toast.error('Plan name is required'); return }
+    setSavingPlanEdit(true)
+    const updated = await updateParkingPlan(
+      selectedPlan.id,
+      { plan_name: trimmedName, description: editPlanDesc.trim() || null },
+      installationId,
+    )
+    setSavingPlanEdit(false)
+    if (updated) {
+      setPlans(prev => prev.map(p => p.id === updated.id ? updated : p))
+      setShowEditPlan(false)
+      toast.success('Plan updated')
+    }
+  }
+
   const handleDeletePlan = async () => {
     if (!selectedPlan) return
     if (!confirm(`Delete plan "${selectedPlan.plan_name}"? All aircraft in this plan will be removed.`)) return
@@ -2978,9 +3007,18 @@ export default function ParkingPage() {
                     border: '1px solid var(--color-border)', borderRadius: 6,
                     boxShadow: '0 4px 16px rgba(0,0,0,0.4)', overflow: 'hidden',
                   }}>
-                    <button onClick={() => { handleToggleTemplate(); setShowActionMenu(false) }} style={{
+                    <button onClick={() => { openEditPlan(); setShowActionMenu(false) }} style={{
                       width: '100%', padding: '8px 12px', textAlign: 'left',
                       background: 'transparent', border: 'none', cursor: 'pointer',
+                      color: 'var(--color-cyan)', fontSize: 11, fontWeight: 600,
+                      fontFamily: 'inherit',
+                    }}>
+                      Edit Details
+                    </button>
+                    <button onClick={() => { handleToggleTemplate(); setShowActionMenu(false) }} style={{
+                      width: '100%', padding: '8px 12px', textAlign: 'left',
+                      background: 'transparent', border: 'none',
+                      borderTop: '1px solid var(--color-border)', cursor: 'pointer',
                       color: 'var(--color-purple)', fontSize: 11, fontWeight: 600,
                       fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8,
                     }}>
@@ -4739,6 +4777,75 @@ export default function ParkingPage() {
                 }}
               >
                 {newPlanIsTemplate ? 'Create Template' : 'Create Plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Plan Details Modal */}
+      {showEditPlan && selectedPlan && (
+        <div
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowEditPlan(false) }}
+          className="modal-overlay"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: 400, background: 'var(--color-bg-surface)',
+              borderRadius: 8, border: '1px solid var(--color-border)', padding: 20,
+            }}
+          >
+            <h3 style={{ margin: '0 0 12px', fontSize: 'var(--fs-base)', color: 'var(--color-text-primary)' }}>
+              Edit Plan Details
+            </h3>
+            <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+              Plan Name *
+              <input
+                autoFocus
+                value={editPlanName}
+                onChange={e => setEditPlanName(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: 4, marginTop: 4,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                  color: 'var(--color-text-primary)', fontSize: 'var(--fs-sm)',
+                }}
+              />
+            </label>
+            <label style={{ display: 'block', fontSize: 'var(--fs-sm)', color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+              Description
+              <textarea
+                value={editPlanDesc}
+                onChange={e => setEditPlanDesc(e.target.value)}
+                rows={3}
+                placeholder="Renders below the title block on the PDF export."
+                style={{
+                  width: '100%', padding: '6px 10px', borderRadius: 4, marginTop: 4,
+                  border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                  color: 'var(--color-text-primary)', fontSize: 'var(--fs-sm)', resize: 'vertical',
+                }}
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowEditPlan(false)}
+                disabled={savingPlanEdit}
+                style={{ padding: '6px 16px', borderRadius: 4, background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: savingPlanEdit ? 'default' : 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePlanEdit}
+                disabled={savingPlanEdit || !editPlanName.trim()}
+                style={{
+                  padding: '6px 16px', borderRadius: 4, border: 'none',
+                  cursor: (savingPlanEdit || !editPlanName.trim()) ? 'default' : 'pointer',
+                  background: editPlanName.trim() ? 'var(--color-cyan)' : 'var(--color-border)',
+                  color: editPlanName.trim() ? '#fff' : 'var(--color-text-secondary)',
+                  fontWeight: 500, opacity: savingPlanEdit ? 0.6 : 1,
+                }}
+              >
+                {savingPlanEdit ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
