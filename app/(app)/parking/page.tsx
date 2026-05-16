@@ -507,6 +507,13 @@ export default function ParkingPage() {
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
+  // Tracks whether the silent warm-up cycle has primed Google Maps's internal
+  // tile cache for the export's resize-to-1600x900 target. Without this prime,
+  // the first export after page load returns gray tiles because the WebGL
+  // drawing buffer behind the vector renderer is cleared between frames.
+  // Real user interaction (pan/zoom/placement) primes it naturally; the
+  // effect below does the same thing programmatically once on map mount.
+  const [mapWarmedUp, setMapWarmedUp] = useState(false)
 
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
@@ -771,15 +778,14 @@ export default function ParkingPage() {
       center: { lat: centerLat, lng: centerLng },
       zoom: 15,
       scaleControl: true,
-      // Raster tile rendering (no mapId) — chosen so html2canvas can read
-      // the tile imagery for PDF exports. The vector renderer draws to a
-      // WebGL canvas without preserveDrawingBuffer set, which means the
-      // browser clears the drawing buffer after each frame and the export
-      // captures come back gray. Raster tiles are standard <img> elements
-      // that html2canvas reads reliably from any starting state. Heading
-      // rotation is preserved (CSS transform on the tile container);
-      // arbitrary-angle tilt is the only feature given up — raster clamps
-      // tilt to 0° / 45°.
+      // Vector Map ID enables smooth arbitrary heading rotation (Ctrl+drag).
+      // Tile capture in PDF exports works after a warm-up cycle that mimics
+      // the natural user interactions (pan/zoom/resize) that prime Google's
+      // internal tile cache — see the warm-up effect below. Without the
+      // warm-up, the first export after page load returns gray tiles
+      // because Google's vector renderer draws to a WebGL canvas without
+      // preserveDrawingBuffer set.
+      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
       tilt: 0, // start flat; user can request 45° via the tilt button
       rotateControl: true,
       heading: 0,
@@ -2239,6 +2245,50 @@ export default function ParkingPage() {
     }, 200)
   }, [isFullscreen])
 
+  // Silent warm-up after the map's initial tile load. Mimics the resize-to-
+  // 1600×900 cycle the export does, so Google's internal tile cache is
+  // already populated for that size when the user clicks PDF / Email — the
+  // first export then captures real tiles instead of the gray placeholder
+  // it would otherwise get from the cold WebGL drawing buffer.
+  // Setting mapWarmedUp to true unblocks the export buttons.
+  useEffect(() => {
+    if (!mapLoaded || mapWarmedUp) return
+    let cancelled = false
+    const run = async () => {
+      const w = map.current
+      if (!w) return
+      const gmap = w.gmap
+      const mapDiv = gmap.getDiv()
+      const parent = mapDiv.parentElement
+      if (!parent) { setMapWarmedUp(true); return }
+      const origWidth = parent.style.width
+      const origHeight = parent.style.height
+      try {
+        parent.style.width = '1600px'
+        parent.style.height = '900px'
+        google.maps.event.trigger(gmap, 'resize')
+        await new Promise<void>(resolve => {
+          google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
+          setTimeout(resolve, 3000)
+        })
+        if (cancelled) return
+      } finally {
+        parent.style.width = origWidth
+        parent.style.height = origHeight
+        google.maps.event.trigger(gmap, 'resize')
+      }
+      // Brief settle so the restore-to-original-size also finishes painting
+      // before we declare ready.
+      await new Promise<void>(resolve => {
+        google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
+        setTimeout(resolve, 1500)
+      })
+      if (!cancelled) setMapWarmedUp(true)
+    }
+    run()
+    return () => { cancelled = true }
+  }, [mapLoaded, mapWarmedUp])
+
   // ── Sync mapHeadingDeg with the gmap's heading ──
   // Listens to heading_changed; updates state so renderAircraft can
   // counter-rotate icons. We sync on every change (cheap state update);
@@ -2951,26 +3001,28 @@ export default function ParkingPage() {
               <>
                 <button
                   onClick={handleExportPdf}
-                  disabled={exportingPdf}
-                  title="Export PDF"
+                  disabled={exportingPdf || !mapWarmedUp}
+                  title={mapWarmedUp ? 'Export PDF' : 'Preparing export — a few seconds…'}
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
-                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                    border: '1px solid var(--color-border)',
+                    cursor: exportingPdf ? 'wait' : (mapWarmedUp ? 'pointer' : 'wait'),
+                    fontWeight: 600, opacity: (exportingPdf || !mapWarmedUp) ? 0.5 : 1,
                   }}
                 >
                   {exportingPdf ? '...' : 'PDF'}
                 </button>
                 <button
                   onClick={handleEmailPdf}
-                  disabled={exportingPdf}
-                  title="Email PDF"
+                  disabled={exportingPdf || !mapWarmedUp}
+                  title={mapWarmedUp ? 'Email PDF' : 'Preparing export — a few seconds…'}
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
-                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                    border: '1px solid var(--color-border)',
+                    cursor: exportingPdf ? 'wait' : (mapWarmedUp ? 'pointer' : 'wait'),
+                    fontWeight: 600, opacity: (exportingPdf || !mapWarmedUp) ? 0.5 : 1,
                   }}
                 >
                   ✉
@@ -4227,9 +4279,13 @@ export default function ParkingPage() {
               <button
                 key="pdf"
                 onClick={handleExportPdf}
-                disabled={exportingPdf}
-                title="Export PDF"
-                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
+                disabled={exportingPdf || !mapWarmedUp}
+                title={mapWarmedUp ? 'Export PDF' : 'Preparing export — a few seconds…'}
+                style={{
+                  ...railBtnBase,
+                  opacity: (exportingPdf || !mapWarmedUp) ? 0.5 : 1,
+                  cursor: exportingPdf ? 'wait' : (mapWarmedUp ? 'pointer' : 'wait'),
+                }}
               >
                 <Download size={18} />
                 <span>{exportingPdf ? '...' : 'PDF'}</span>
@@ -4239,9 +4295,13 @@ export default function ParkingPage() {
               <button
                 key="email"
                 onClick={handleEmailPdf}
-                disabled={exportingPdf}
-                title="Email PDF"
-                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
+                disabled={exportingPdf || !mapWarmedUp}
+                title={mapWarmedUp ? 'Email PDF' : 'Preparing export — a few seconds…'}
+                style={{
+                  ...railBtnBase,
+                  opacity: (exportingPdf || !mapWarmedUp) ? 0.5 : 1,
+                  cursor: exportingPdf ? 'wait' : (mapWarmedUp ? 'pointer' : 'wait'),
+                }}
               >
                 <Mail size={18} />
                 <span>Email</span>
