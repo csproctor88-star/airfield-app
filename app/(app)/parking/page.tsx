@@ -71,7 +71,7 @@ import {
   PanelLeft, PanelLeftClose, Maximize2, Minimize2, Ruler as RulerIcon,
   Plane, MapPin, Building2, Minus, Circle as CircleIcon,
   ArrowRight, ArrowLeftRight, Square,
-  Lock, Unlock, Download, Mail, X,
+  Lock, Unlock, Download, Mail,
 } from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
@@ -324,41 +324,6 @@ async function buildBaseSilhouetteCanvas(
   return canvas
 }
 
-// Ray-cast point-in-polygon. `vertices` is a closed quadrilateral (or any
-// polygon) given in lat/lng. Used to filter parking spots / obstacles by
-// whether they sit inside the on-screen capture frame after the four
-// pixel corners have been projected to lat/lng — works correctly under
-// map rotation because the projection has already applied it.
-function pointInLatLngPolygon(
-  point: { lat: number; lng: number },
-  vertices: { lat: number; lng: number }[],
-): boolean {
-  let inside = false
-  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-    const xi = vertices[i].lng, yi = vertices[i].lat
-    const xj = vertices[j].lng, yj = vertices[j].lat
-    const intersects = (yi > point.lat) !== (yj > point.lat)
-      && point.lng < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi
-    if (intersects) inside = !inside
-  }
-  return inside
-}
-
-// 16:9 capture frame inset inside a map container of the given pixel size.
-// The PDF map page is landscape, so we lock the capture aspect to 16:9 and
-// center the frame; the user can pan/zoom so the content they care about
-// sits inside it.
-function captureFrameDims(containerW: number, containerH: number): { w: number; h: number; x: number; y: number } {
-  const TARGET = 16 / 9
-  if (containerW <= 0 || containerH <= 0) return { w: containerW, h: containerH, x: 0, y: 0 }
-  if (containerW / containerH >= TARGET) {
-    const w = Math.round(containerH * TARGET)
-    return { w, h: containerH, x: Math.round((containerW - w) / 2), y: 0 }
-  }
-  const h = Math.round(containerW / TARGET)
-  return { w: containerW, h, x: 0, y: Math.round((containerH - h) / 2) }
-}
-
 // Synchronously rotate a cached base canvas and return a data URL ready to
 // hand to google.maps.Marker.setIcon. Canvas-to-canvas drawImage is sync
 // (unlike Image.onload), so this runs in a few ms per call — fast enough
@@ -461,25 +426,6 @@ export default function ParkingPage() {
   const [apronContext, setApronContext] = useState<ApronContext>('parking')
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({ aircraft: true, obstacles: false, taxilanes: false, clearance: true, settings: false, reference: false })
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>({ aircraft: true, obstacles: true, taxilanes: true, boundaries: true, clearance: true, labels: true })
-  // PDF capture framing mode. While non-null, a 16:9 frame is shown over
-  // the map with dimming + an instruction banner. The user pans/zooms to
-  // position their content, then confirms — which runs the captured export
-  // for PDF or Email respectively.
-  const [framingMode, setFramingMode] = useState<'pdf' | 'email' | null>(null)
-  // Queue of captured aprons accumulated via Add Apron. Single-apron
-  // exports leave this empty; multi-apron exports build it up while the
-  // user repositions between Add Apron clicks and finalize on Confirm.
-  type PendingApron = {
-    label: string
-    mapDataUrl: string | null
-    spots: ParkingSpot[]
-    spotsWithAircraft: SpotWithAircraft[]
-    allResults: ClearanceResult[]
-    violations: ClearanceResult[]
-    warnings: ClearanceResult[]
-  }
-  const [pendingAprons, setPendingAprons] = useState<PendingApron[]>([])
-  const [apronNamePrompt, setApronNamePrompt] = useState<{ open: boolean; draft: string; intent: 'add' | 'confirm' }>({ open: false, draft: '', intent: 'add' })
   const toggleLayerVisibility = (key: string) => setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }))
   const toggleSection = (key: string) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
   const [aircraftCategoryFilter, setAircraftCategoryFilter] = useState<'all' | 'military' | 'commercial'>('all')
@@ -619,9 +565,6 @@ export default function ParkingPage() {
   // Google Maps ready state
   const hasGoogleMaps = isGoogleMapsConfigured()
   const [googleReady, setGoogleReady] = useState(false)
-  // Live map-container pixel size — drives the capture-frame overlay so the
-  // user sees exactly the 16:9 area the PDF will receive.
-  const [mapSize, setMapSize] = useState<{ w: number; h: number } | null>(null)
 
   // Map refs
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -828,16 +771,11 @@ export default function ParkingPage() {
       center: { lat: centerLat, lng: centerLng },
       zoom: 15,
       scaleControl: true,
-      // Raster rendering on both desktop and mobile — mapId intentionally
-      // omitted. The vector renderer draws tiles to a WebGL canvas without
-      // preserveDrawingBuffer set, so html2canvas can't read the GPU buffer
-      // by the time the export runs (the browser has already cleared it for
-      // the next frame). With raster tiles, html2canvas reads the standard
-      // <img> elements cleanly and the PDF export captures real satellite
-      // imagery on every platform. Heading rotation still works via a CSS
-      // transform on the tile container; the only feature lost is
-      // arbitrary-angle tilt via the Ctrl-drag handler below — raster
-      // clamps tilt to 0° / 45°. Acceptable tradeoff for reliable exports.
+      // Override the global flat-only defaults: parking laydown benefits from
+      // being able to align heading with the runway and tilt for perspective.
+      // Vector Map ID enables interactive heading rotation (Ctrl+drag) and
+      // arbitrary tilt at any zoom — required for non-45°-imagery locations.
+      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
       tilt: 0, // start flat; user can request 45° via the tilt button
       rotateControl: true,
       heading: 0,
@@ -852,20 +790,7 @@ export default function ParkingPage() {
       setMapLoaded(true)
     })
 
-    // Track map container pixel size for the capture-frame overlay
-    const el = mapContainer.current
-    let resizeObs: ResizeObserver | null = null
-    if (el) {
-      const update = () => setMapSize({ w: el.clientWidth, h: el.clientHeight })
-      update()
-      if (typeof ResizeObserver !== 'undefined') {
-        resizeObs = new ResizeObserver(update)
-        resizeObs.observe(el)
-      }
-    }
-
     return () => {
-      if (resizeObs) resizeObs.disconnect()
       if (map.current) {
         clearAllObjects(map.current)
         map.current = null
@@ -2414,268 +2339,98 @@ export default function ParkingPage() {
 
   // ── PDF export ──
 
-  // Snap the current map view through html2canvas, project the frame's
-  // pixel corners to lat/lng, and filter the plan's spots / obstacles /
-  // clearance results to only those inside that polygon. Returns a
-  // PendingApron ready to be appended to the export queue or exported on
-  // its own. `label` is the apron header — pass null for single-apron
-  // exports (no per-section header rendered in the PDF).
-  const captureCurrentFrame = async (label: string | null): Promise<PendingApron | null> => {
+  const buildParkingPdf = async () => {
     if (!selectedPlan) return null
     const w = map.current
     let mapDataUrl: string | null = null
-    // Polygon of lat/lng corners corresponding to the on-screen capture frame.
-    // Used after the snap to filter the PDF's aircraft / clearance tables so
-    // they only list what's actually inside the captured map area. Stays null
-    // if we can't project (no map, or the projection isn't ready yet) — in
-    // which case the PDF falls back to listing the full plan.
-    let framePolygon: { lat: number; lng: number }[] | null = null
 
     if (w) {
-      // Capture the on-screen 16:9 capture frame as-is — no resize, no tile
-      // re-layout. Earlier we resized the map div to the frame dimensions,
-      // which caused Google Maps to blank the tile layer briefly while it
-      // re-laid out (visible in non-fullscreen exports as missing imagery
-      // under the SVG overlays). Clipping via html2canvas's window options
-      // captures the live rendering at its current size and just trims to
-      // the framed rectangle.
+      // Temporarily resize map to landscape for a wider capture
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
-      const liveW = mapDiv.clientWidth
-      const liveH = mapDiv.clientHeight
-      const frame = captureFrameDims(liveW, liveH)
-      // Mobile capped at 2× because phones have per-side canvas limits
-      // (iOS Safari ~4096 px) — combined with device DPR (typically 2–3),
-      // a higher scale would blow past the limit. Desktop uses the original
-      // sharpness target so the printed map page stays crisp at letter size.
-      const scale = isMobile
-        ? Math.min(2, Math.max(1, 1800 / Math.max(1, frame.w)))
-        : Math.max(2, 1800 / Math.max(1, frame.w))
+      const parent = mapDiv.parentElement
+      const origWidth = parent?.style.width || ''
+      const origHeight = parent?.style.height || ''
 
       try {
-        // Make sure any pending tile / overlay work has settled before we snap.
+        // Expand to 1600×900 for high-quality landscape capture
+        if (parent) {
+          parent.style.width = '1600px'
+          parent.style.height = '900px'
+        }
+        google.maps.event.trigger(gmap, 'resize')
+        // Wait for tiles to load at new size
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 1500) // fallback if already idle
+          setTimeout(resolve, 3000) // fallback timeout
         })
+        // Extra frame for rendering
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-        // Capture the FULL map div and crop to the frame with a plain
-        // canvas drawImage. windowWidth/windowHeight = liveW/liveH was the
-        // configuration that previously captured desktop tiles correctly
-        // (commit 7ad0ceb). They pin html2canvas's simulated viewport to
-        // the map div's actual dimensions; without them, html2canvas falls
-        // back to window.innerWidth/innerHeight which can drift from the
-        // map's layout and leave the WebGL tile layer blank. We do NOT
-        // pass width/height as well — that combination was overconstrained
-        // and brought back the right-edge black band on non-fullscreen.
         const html2canvas = (await import('html2canvas')).default
-        const fullCanvas = await html2canvas(mapDiv, {
+        const canvas = await html2canvas(mapDiv, {
           useCORS: true,
           allowTaint: true,
           backgroundColor: null,
-          scale,
+          scale: 2,
           logging: false,
-          windowWidth: liveW,
-          windowHeight: liveH,
+          width: mapDiv.clientWidth,
+          height: mapDiv.clientHeight,
         })
-
-        // Compute the ACTUAL pixel-to-CSS-pixel ratio from the rendered
-        // canvas, not the requested scale — guards against html2canvas
-        // emitting a canvas that drifts from (liveW × scale, liveH × scale).
-        const sx = fullCanvas.width / Math.max(1, liveW)
-        const sy = fullCanvas.height / Math.max(1, liveH)
-        const cropped = document.createElement('canvas')
-        cropped.width = Math.round(frame.w * sx)
-        cropped.height = Math.round(frame.h * sy)
-        const cctx = cropped.getContext('2d')
-        if (cctx) {
-          cctx.drawImage(
-            fullCanvas,
-            Math.round(frame.x * sx), Math.round(frame.y * sy),
-            cropped.width, cropped.height,
-            0, 0,
-            cropped.width, cropped.height,
-          )
-          mapDataUrl = cropped.toDataURL('image/jpeg', 0.9)
-        } else {
-          mapDataUrl = fullCanvas.toDataURL('image/jpeg', 0.9)
-        }
+        mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
       } catch (err) {
         console.warn('Map capture error:', err)
         toast.error('Map capture failed')
         mapDataUrl = null
-      }
-
-      // Project the four frame corners to lat/lng. Clockwise from the top-left
-      // so the resulting polygon winding stays consistent under map rotation.
-      const tl = pixelToLatLng(w, frame.x, frame.y)
-      const tr = pixelToLatLng(w, frame.x + frame.w, frame.y)
-      const br = pixelToLatLng(w, frame.x + frame.w, frame.y + frame.h)
-      const bl = pixelToLatLng(w, frame.x, frame.y + frame.h)
-      if (tl && tr && br && bl) framePolygon = [tl, tr, br, bl]
-    }
-
-    // Strict filter: only aircraft, obstacles, and clearance results whose
-    // every referenced entity is inside the captured frame end up in the PDF.
-    // If projection failed, framePolygon is null and we fall back to the full
-    // plan (degraded but still produces a usable export).
-    let spotsForPdf = spots
-    let spotsWithAircraftForPdf = spotsWithAircraft
-    let allResultsForPdf = allResults
-    let violationsForPdf = violations
-    let warningsForPdf = warnings
-    if (framePolygon) {
-      const poly = framePolygon
-      // Use the visible aircraft center (offset from the nose by half length
-      // along the heading), not the raw stored nose coords, so a spot counts
-      // as "in frame" exactly when its body sits inside the dashed rectangle.
-      const spotInFrame = (s: SpotWithAircraft) => {
-        const c = spotCenter(s)
-        return pointInLatLngPolygon({ lat: c.lat, lng: c.lon }, poly)
-      }
-      const inSpotIds = new Set<string>()
-      spotsWithAircraftForPdf = spotsWithAircraft.filter(s => {
-        if (spotInFrame(s)) { inSpotIds.add(s.id); return true }
-        return false
-      })
-      spotsForPdf = spots.filter(s => inSpotIds.has(s.id))
-      const inObstacleIds = new Set<string>()
-      for (const o of obstacles) {
-        if (pointInLatLngPolygon({ lat: o.latitude, lng: o.longitude }, poly)) {
-          inObstacleIds.add(o.id)
+      } finally {
+        // Restore original size
+        if (parent) {
+          parent.style.width = origWidth
+          parent.style.height = origHeight
         }
+        google.maps.event.trigger(gmap, 'resize')
       }
-      allResultsForPdf = allResults.filter(r => {
-        if (r.spot_a_id && !inSpotIds.has(r.spot_a_id)) return false
-        if (r.spot_b_id && !inSpotIds.has(r.spot_b_id)) return false
-        if (r.obstacle_id && !inObstacleIds.has(r.obstacle_id)) return false
-        return true
-      })
-      violationsForPdf = allResultsForPdf.filter(r => r.status === 'violation')
-      warningsForPdf = allResultsForPdf.filter(r => r.status === 'warning')
     }
 
-    return {
-      label: label || '',
-      mapDataUrl,
-      spots: spotsForPdf,
-      spotsWithAircraft: spotsWithAircraftForPdf,
-      allResults: allResultsForPdf,
-      violations: violationsForPdf,
-      warnings: warningsForPdf,
-    }
-  }
-
-  const exportSections = async (sections: PendingApron[], mode: 'pdf' | 'email') => {
-    if (!selectedPlan || sections.length === 0) return
-    const result = await generateParkingPdf({
-      plan: selectedPlan,
-      apronContext,
-      baseName: currentInstallation?.name,
-      baseIcao: currentInstallation?.icao,
-      sections: sections.map(s => ({
-        label: s.label || null,
-        spots: s.spots,
-        spotsWithAircraft: s.spotsWithAircraft,
-        allResults: s.allResults,
-        violations: s.violations,
-        warnings: s.warnings,
-        mapDataUrl: s.mapDataUrl,
-      })),
+    return generateParkingPdf({
+      plan: selectedPlan, spots, spotsWithAircraft,
+      allResults, violations, warnings, apronContext, mapDataUrl,
+      baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
     })
-    if (mode === 'pdf') {
-      result.doc.save(result.filename)
-      toast.success(sections.length > 1 ? `PDF exported (${sections.length} aprons)` : 'PDF exported')
-    } else {
-      setEmailPdfData(result)
-      setEmailModalOpen(true)
-    }
   }
 
-  // The two visible entry points just open the framing overlay. The actual
-  // capture + save / email runs in handleConfirmCapture once the user has
-  // positioned the map inside the frame.
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     if (!selectedPlan) return
-    setFramingMode('pdf')
-  }
-
-  const handleEmailPdf = () => {
-    if (!selectedPlan) return
-    setFramingMode('email')
-  }
-
-  const handleCancelCapture = () => {
-    setFramingMode(null)
-    setPendingAprons([])
-    setApronNamePrompt({ open: false, draft: '', intent: 'add' })
-  }
-
-  // Add Apron always prompts for a name (per user preference). Confirm
-  // prompts only when there are already queued aprons (the current frame
-  // becomes the final, named apron). With an empty queue, Confirm runs
-  // the original single-apron, no-label export path.
-  const handleAddApron = () => {
-    if (!framingMode) return
-    setApronNamePrompt({ open: true, draft: `Apron ${pendingAprons.length + 1}`, intent: 'add' })
-  }
-
-  const handleConfirmCapture = async () => {
-    const mode = framingMode
-    if (!mode || !selectedPlan) { handleCancelCapture(); return }
-    if (pendingAprons.length > 0) {
-      setApronNamePrompt({ open: true, draft: `Apron ${pendingAprons.length + 1}`, intent: 'confirm' })
-      return
-    }
-    // Single-apron path — capture the current frame as one anonymous
-    // section and export immediately.
-    setFramingMode(null)
     setExportingPdf(true)
     try {
-      const capture = await captureCurrentFrame(null)
-      if (!capture) return
-      await exportSections([capture], mode)
-    } catch (err) {
-      toast.error(mode === 'pdf' ? 'Failed to export PDF' : 'Failed to generate PDF')
-      console.error(err)
-    } finally {
-      setExportingPdf(false)
-    }
-  }
-
-  // Save handler shared between the Add Apron prompt and the Confirm-
-  // with-queue prompt. Adds the current frame to the queue under the typed
-  // name; if intent is 'confirm', also runs the multi-apron export.
-  const handleApronNamePromptSave = async () => {
-    const fallback = `Apron ${pendingAprons.length + 1}`
-    const name = (apronNamePrompt.draft.trim() || fallback)
-    const intent = apronNamePrompt.intent
-    const mode = framingMode
-    setApronNamePrompt({ open: false, draft: '', intent: 'add' })
-    setExportingPdf(true)
-    try {
-      const capture = await captureCurrentFrame(name)
-      if (!capture) return
-      if (intent === 'add') {
-        setPendingAprons(prev => [...prev, capture])
-        toast.success(`Added "${name}" — position the next apron`)
-      } else if (mode) {
-        const sections = [...pendingAprons, capture]
-        setFramingMode(null)
-        setPendingAprons([])
-        await exportSections(sections, mode)
+      const result = await buildParkingPdf()
+      if (result) {
+        result.doc.save(result.filename)
+        toast.success('PDF exported')
       }
     } catch (err) {
-      toast.error('Failed to capture apron')
+      toast.error('Failed to export PDF')
       console.error(err)
     } finally {
       setExportingPdf(false)
     }
   }
 
-  const handleApronNamePromptCancel = () => {
-    setApronNamePrompt({ open: false, draft: '', intent: 'add' })
+  const handleEmailPdf = async () => {
+    if (!selectedPlan) return
+    setExportingPdf(true)
+    try {
+      const result = await buildParkingPdf()
+      if (result) {
+        setEmailPdfData(result)
+        setEmailModalOpen(true)
+      }
+    } catch (err) {
+      toast.error('Failed to generate PDF')
+      console.error(err)
+    } finally {
+      setExportingPdf(false)
+    }
   }
 
   // ── Spot actions ──
@@ -3146,21 +2901,6 @@ export default function ParkingPage() {
               }}>
                 {selectedPlan.is_template ? 'Template' : selectedPlan.is_active ? 'Active' : 'Draft'}
               </span>
-            )}
-            {!mobile && (
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                title="Hide panel — exports work whether the panel is shown or hidden"
-                aria-label="Hide panel"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 22, height: 22, marginLeft: 2, padding: 0, borderRadius: 4,
-                  background: 'transparent', border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                <X size={13} />
-              </button>
             )}
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -4355,151 +4095,6 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          {/* PDF capture framing overlay — shown only while the user is positioning
-              the map for an export. Confirm runs the capture; Cancel exits. */}
-          {framingMode && mapSize && mapSize.w > 0 && mapSize.h > 0 && selectedPlanId && (() => {
-            const f = captureFrameDims(mapSize.w, mapSize.h)
-            const dim = 'rgba(0,0,0,0.45)'
-            const verb = framingMode === 'pdf' ? 'Export PDF' : 'Email PDF'
-            return (
-              <>
-                {/* Dim outside the frame (purely visual — pointer-events off so
-                    the user can still pan/zoom the map underneath). */}
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
-                  {f.x > 0 && (
-                    <>
-                      <div style={{ position: 'absolute', left: 0, top: 0, width: f.x, height: '100%', background: dim }} />
-                      <div style={{ position: 'absolute', right: 0, top: 0, width: f.x, height: '100%', background: dim }} />
-                    </>
-                  )}
-                  {f.y > 0 && (
-                    <>
-                      <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: f.y, background: dim }} />
-                      <div style={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: f.y, background: dim }} />
-                    </>
-                  )}
-                  <div style={{
-                    position: 'absolute', left: f.x, top: f.y, width: f.w, height: f.h,
-                    border: '2px dashed var(--color-cyan)', boxSizing: 'border-box',
-                  }} />
-                </div>
-
-                {/* Instruction banner — Cancel / Add Apron / Confirm. Inline-
-                    switches to a name prompt while the user is naming an apron. */}
-                <div style={{
-                  position: 'absolute', zIndex: 6,
-                  top: 14, left: '50%', transform: 'translateX(-50%)',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 12px',
-                  background: 'var(--color-bg-surface)',
-                  border: '1px solid var(--color-cyan)',
-                  borderRadius: 8,
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                  maxWidth: 'calc(100% - 28px)',
-                  flexWrap: 'wrap',
-                }}>
-                  {apronNamePrompt.open ? (
-                    <>
-                      <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 600,
-                        color: 'var(--color-text-primary)', whiteSpace: 'nowrap',
-                      }}>Apron name:</span>
-                      <input
-                        autoFocus
-                        value={apronNamePrompt.draft}
-                        onChange={e => setApronNamePrompt(p => ({ ...p, draft: e.target.value }))}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') { e.preventDefault(); handleApronNamePromptSave() }
-                          else if (e.key === 'Escape') { e.preventDefault(); handleApronNamePromptCancel() }
-                        }}
-                        style={{
-                          width: 200, padding: '5px 8px', borderRadius: 4, fontFamily: 'inherit',
-                          background: 'var(--color-bg)', border: '1px solid var(--color-border)',
-                          color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)',
-                        }}
-                      />
-                      <button
-                        onClick={handleApronNamePromptCancel}
-                        disabled={exportingPdf}
-                        style={{
-                          padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
-                          background: 'transparent', border: '1px solid var(--color-border)',
-                          color: 'var(--color-text-secondary)', cursor: exportingPdf ? 'wait' : 'pointer',
-                          fontSize: 'var(--fs-xs)', fontWeight: 600,
-                        }}
-                      >Cancel</button>
-                      <button
-                        onClick={handleApronNamePromptSave}
-                        disabled={exportingPdf}
-                        style={{
-                          padding: '5px 14px', borderRadius: 4, fontFamily: 'inherit',
-                          background: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
-                          color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
-                          fontSize: 'var(--fs-xs)', fontWeight: 700, opacity: exportingPdf ? 0.6 : 1,
-                        }}
-                      >{exportingPdf
-                        ? 'Capturing…'
-                        : apronNamePrompt.intent === 'confirm' ? `Save & ${verb}` : 'Save Apron'
-                      }</button>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{
-                        fontSize: 'var(--fs-xs)', fontWeight: 600,
-                        color: 'var(--color-text-primary)',
-                        whiteSpace: isMobile ? 'normal' : 'nowrap',
-                      }}>
-                        {pendingAprons.length === 0
-                          ? `Position the map inside the frame, then confirm to ${verb.toLowerCase()}.`
-                          : `${pendingAprons.length} apron${pendingAprons.length === 1 ? '' : 's'} queued — position the next one.`}
-                      </span>
-                      {pendingAprons.length > 0 && (
-                        <span style={{
-                          fontSize: 'var(--fs-2xs)', fontWeight: 600,
-                          color: 'var(--color-cyan)',
-                          maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }} title={pendingAprons.map(a => a.label).join(', ')}>
-                          {pendingAprons.map(a => a.label).join(', ')}
-                        </span>
-                      )}
-                      <button
-                        onClick={handleCancelCapture}
-                        disabled={exportingPdf}
-                        style={{
-                          padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
-                          background: 'transparent', border: '1px solid var(--color-border)',
-                          color: 'var(--color-text-secondary)', cursor: exportingPdf ? 'wait' : 'pointer',
-                          fontSize: 'var(--fs-xs)', fontWeight: 600,
-                        }}
-                      >Cancel</button>
-                      <button
-                        onClick={handleAddApron}
-                        disabled={exportingPdf}
-                        title="Capture this apron and keep framing more"
-                        style={{
-                          padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
-                          background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
-                          border: '1px solid var(--color-cyan)',
-                          color: 'var(--color-cyan)', cursor: exportingPdf ? 'wait' : 'pointer',
-                          fontSize: 'var(--fs-xs)', fontWeight: 700,
-                        }}
-                      >+ Add Apron</button>
-                      <button
-                        onClick={handleConfirmCapture}
-                        disabled={exportingPdf}
-                        style={{
-                          padding: '5px 14px', borderRadius: 4, fontFamily: 'inherit',
-                          background: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
-                          color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
-                          fontSize: 'var(--fs-xs)', fontWeight: 700,
-                        }}
-                      >Confirm &amp; {verb}</button>
-                    </>
-                  )}
-                </div>
-              </>
-            )
-          })()}
           {/* ── Floating panel — anchored top-left under the controls toolbar, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (() => {
             const startResize = (dir: 'w' | 'h' | 'wh') => (e: React.MouseEvent) => {
@@ -4581,19 +4176,15 @@ export default function ParkingPage() {
             )
 
             // Reusable button factories so desktop and mobile render the same controls.
-            // Mobile uses a bottom sheet for the panel (state: sheetExpanded);
-            // desktop uses a floating side panel (state: !sidebarCollapsed). The
-            // button drives whichever is active.
-            const panelOpen = isMobile ? sheetExpanded : !sidebarCollapsed
-            const PanelBtn = (
+            const PanelBtn = !isMobile && (
               <button
                 key="panel"
-                onClick={() => isMobile ? setSheetExpanded(s => !s) : setSidebarCollapsed(c => !c)}
-                title={panelOpen ? 'Hide panel' : 'Show panel'}
-                style={{ ...railBtnBase, ...(panelOpen ? activeStyle('var(--color-cyan)') : {}) }}
+                onClick={() => setSidebarCollapsed(c => !c)}
+                title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
+                style={{ ...railBtnBase, ...(sidebarCollapsed ? {} : activeStyle('var(--color-cyan)')) }}
               >
-                {panelOpen ? <PanelLeftClose size={18} /> : <PanelLeft size={18} />}
-                <span>{panelOpen ? 'Hide' : 'Panel'}</span>
+                {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+                <span>{sidebarCollapsed ? 'Panel' : 'Hide'}</span>
               </button>
             )
             const FullBtn = (
@@ -4743,7 +4334,6 @@ export default function ParkingPage() {
                     background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                   }}>
-                    {PanelBtn}
                     {FullBtn}
                     {RulerBtn}
                     {selectedPlanId && (
