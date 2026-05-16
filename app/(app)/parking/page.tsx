@@ -2448,12 +2448,13 @@ export default function ParkingPage() {
       const liveW = mapDiv.clientWidth
       const liveH = mapDiv.clientHeight
       const frame = captureFrameDims(liveW, liveH)
-      // Sharp enough for a letter-size print without ballooning the canvas
-      // past the per-side limits some mobile browsers enforce (~4096 px).
-      // Mobile portrait frames are ~360 px wide so cap at 2× — combined with
-      // the device's own DPR, the rendered backing canvas is still 4×–6×
-      // CSS pixels under the hood.
-      const scale = Math.min(2, Math.max(1, 1800 / Math.max(1, frame.w)))
+      // Mobile capped at 2× because phones have per-side canvas limits
+      // (iOS Safari ~4096 px) — combined with device DPR (typically 2–3),
+      // a higher scale would blow past the limit. Desktop uses the original
+      // sharpness target so the printed map page stays crisp at letter size.
+      const scale = isMobile
+        ? Math.min(2, Math.max(1, 1800 / Math.max(1, frame.w)))
+        : Math.max(2, 1800 / Math.max(1, frame.w))
 
       try {
         // Make sure any pending tile / overlay work has settled before we snap.
@@ -2463,17 +2464,15 @@ export default function ParkingPage() {
         })
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-        // Capture the FULL map div first, then crop to the frame with a plain
-        // canvas drawImage. html2canvas's own x/y/width/height clipping was
-        // producing a black band on the right side of the captured image in
-        // non-fullscreen layouts. The two-step capture is more expensive but
-        // deterministic. windowWidth/windowHeight + explicit width/height
-        // pin both the simulated viewport and the rendered output to the
-        // live map div dimensions, keeping the crop offsets aligned even
-        // on high-DPR mobile devices. Tile capture works on both renderers
-        // because the parking map opts out of the vector mapId on mobile
-        // (see Google Maps init) — raster tiles are img elements that
-        // html2canvas reads cleanly, including any CSS rotation transform.
+        // Capture the FULL map div and crop to the frame with a plain
+        // canvas drawImage. Minimal options on html2canvas — explicit
+        // width/height + windowWidth/Height were causing the right edge
+        // of the capture to come back black on desktop non-fullscreen
+        // and the WebGL tile layer to render blank on desktop fullscreen
+        // (the simulated viewport diverged from the actual layout). Let
+        // html2canvas use the element's natural clientWidth/Height; the
+        // crop derives its pixel scale from the rendered canvas size so
+        // it stays accurate regardless of what html2canvas chooses.
         const html2canvas = (await import('html2canvas')).default
         const fullCanvas = await html2canvas(mapDiv, {
           useCORS: true,
@@ -2481,10 +2480,6 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale,
           logging: false,
-          width: liveW,
-          height: liveH,
-          windowWidth: liveW,
-          windowHeight: liveH,
         })
 
         // Compute the ACTUAL pixel-to-CSS-pixel ratio from the rendered
