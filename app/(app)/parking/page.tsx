@@ -2167,10 +2167,18 @@ export default function ParkingPage() {
     let pending: { heading: number; tilt: number } | null = null
     let rafId: number | null = null
 
+    // Raster maps don't support gmap.moveCamera() — it's a vector-only
+    // API and silently no-ops here. Use setHeading / setTilt instead,
+    // which work on both renderers.
+    const apply = (p: { heading: number; tilt: number }) => {
+      gmap.setHeading(p.heading)
+      gmap.setTilt(p.tilt)
+    }
+
     const flush = () => {
       rafId = null
       if (pending) {
-        gmap.moveCamera(pending)
+        apply(pending)
         pending = null
       }
     }
@@ -2194,6 +2202,8 @@ export default function ParkingPage() {
       const dy = e.clientY - startY
       pending = {
         heading: (startHeading + dx / 2 + 360) % 360,
+        // Raster clamps tilt to {0, 45} internally; we still range the
+        // value here so Y-drag distance feels consistent.
         tilt: Math.max(0, Math.min(67, startTilt + dy / 4)),
       }
       if (rafId == null) rafId = requestAnimationFrame(flush)
@@ -2202,7 +2212,7 @@ export default function ParkingPage() {
       if (!active) return
       active = false
       if (rafId != null) { cancelAnimationFrame(rafId); rafId = null }
-      if (pending) { gmap.moveCamera(pending); pending = null }
+      if (pending) { apply(pending); pending = null }
       gmap.setOptions({ draggable: true })
       mapDiv.style.cursor = ''
     }
