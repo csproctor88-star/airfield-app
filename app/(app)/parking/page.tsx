@@ -832,7 +832,16 @@ export default function ParkingPage() {
       // being able to align heading with the runway and tilt for perspective.
       // Vector Map ID enables interactive heading rotation (Ctrl+drag) and
       // arbitrary tilt at any zoom — required for non-45°-imagery locations.
-      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
+      //
+      // Skipped on mobile because the vector renderer draws tiles to a WebGL
+      // canvas without preserveDrawingBuffer, which html2canvas can't read
+      // reliably on iOS Safari — the captured tiles come back as the gray
+      // loading placeholder. Raster rendering (img-element tiles) captures
+      // cleanly via html2canvas and still supports heading rotation via
+      // CSS transform on the tile container, which is what mobile parking
+      // exports need. Tilt at non-45° angles is the only feature we give
+      // up on mobile.
+      mapId: isMobile ? undefined : process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
       tilt: 0, // start flat; user can request 45° via the tilt button
       rotateControl: true,
       heading: 0,
@@ -2439,8 +2448,12 @@ export default function ParkingPage() {
       const liveW = mapDiv.clientWidth
       const liveH = mapDiv.clientHeight
       const frame = captureFrameDims(liveW, liveH)
-      // Scale html2canvas output high enough for a sharp print at letter size.
-      const scale = Math.max(2, 1800 / Math.max(1, frame.w))
+      // Sharp enough for a letter-size print without ballooning the canvas
+      // past the per-side limits some mobile browsers enforce (~4096 px).
+      // Mobile portrait frames are ~360 px wide so cap at 2× — combined with
+      // the device's own DPR, the rendered backing canvas is still 4×–6×
+      // CSS pixels under the hood.
+      const scale = Math.min(2, Math.max(1, 1800 / Math.max(1, frame.w)))
 
       try {
         // Make sure any pending tile / overlay work has settled before we snap.
@@ -2453,16 +2466,14 @@ export default function ParkingPage() {
         // Capture the FULL map div first, then crop to the frame with a plain
         // canvas drawImage. html2canvas's own x/y/width/height clipping was
         // producing a black band on the right side of the captured image in
-        // non-fullscreen layouts (likely when the map div extends past the
-        // browser viewport — the clip ends up reading from a region the
-        // simulated window never painted). The two-step capture is more
-        // expensive but deterministic.
-        //
-        // windowWidth/windowHeight are required so html2canvas simulates a
-        // viewport matching the map div instead of falling back to
-        // window.innerWidth/innerHeight — the latter drifts from the map's
-        // actual size in fullscreen, causing tiles to render outside the
-        // canvas bounds (visible as blank/black map areas).
+        // non-fullscreen layouts. The two-step capture is more expensive but
+        // deterministic. windowWidth/windowHeight + explicit width/height
+        // pin both the simulated viewport and the rendered output to the
+        // live map div dimensions, keeping the crop offsets aligned even
+        // on high-DPR mobile devices. Tile capture works on both renderers
+        // because the parking map opts out of the vector mapId on mobile
+        // (see Google Maps init) — raster tiles are img elements that
+        // html2canvas reads cleanly, including any CSS rotation transform.
         const html2canvas = (await import('html2canvas')).default
         const fullCanvas = await html2canvas(mapDiv, {
           useCORS: true,
@@ -2470,17 +2481,25 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale,
           logging: false,
+          width: liveW,
+          height: liveH,
           windowWidth: liveW,
           windowHeight: liveH,
         })
+
+        // Compute the ACTUAL pixel-to-CSS-pixel ratio from the rendered
+        // canvas, not the requested scale — guards against html2canvas
+        // emitting a canvas that drifts from (liveW × scale, liveH × scale).
+        const sx = fullCanvas.width / Math.max(1, liveW)
+        const sy = fullCanvas.height / Math.max(1, liveH)
         const cropped = document.createElement('canvas')
-        cropped.width = Math.round(frame.w * scale)
-        cropped.height = Math.round(frame.h * scale)
+        cropped.width = Math.round(frame.w * sx)
+        cropped.height = Math.round(frame.h * sy)
         const cctx = cropped.getContext('2d')
         if (cctx) {
           cctx.drawImage(
             fullCanvas,
-            Math.round(frame.x * scale), Math.round(frame.y * scale),
+            Math.round(frame.x * sx), Math.round(frame.y * sy),
             cropped.width, cropped.height,
             0, 0,
             cropped.width, cropped.height,
