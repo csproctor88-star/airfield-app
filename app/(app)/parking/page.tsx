@@ -2245,12 +2245,14 @@ export default function ParkingPage() {
     }, 200)
   }, [isFullscreen])
 
-  // Silent warm-up after the map's initial tile load. Mimics the resize-to-
-  // 1600×900 cycle the export does, so Google's internal tile cache is
-  // already populated for that size when the user clicks PDF / Email — the
-  // first export then captures real tiles instead of the gray placeholder
-  // it would otherwise get from the cold WebGL drawing buffer.
-  // Setting mapWarmedUp to true unblocks the export buttons.
+  // Silent warm-up after the map's initial tile load. Runs the EXACT same
+  // capture pipeline as a real export — resize to 1600×900, wait for idle,
+  // call html2canvas, restore — and discards the output. The discarded
+  // first capture warms whatever it is that makes the second capture in
+  // a session always succeed (the bare resize cycle alone wasn't enough;
+  // empirically, an actual html2canvas read is required to prime the WebGL
+  // / browser GPU state). Setting mapWarmedUp to true unblocks the export
+  // buttons.
   useEffect(() => {
     if (!mapLoaded || mapWarmedUp) return
     let cancelled = false
@@ -2272,6 +2274,24 @@ export default function ParkingPage() {
           setTimeout(resolve, 3000)
         })
         if (cancelled) return
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+        // Actual html2canvas call — output discarded. This is the bit that
+        // makes the next real capture succeed.
+        const html2canvas = (await import('html2canvas')).default
+        await html2canvas(mapDiv, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          scale: 1,  // lower scale since output is discarded — faster warm-up
+          logging: false,
+          width: mapDiv.clientWidth,
+          height: mapDiv.clientHeight,
+        })
+        if (cancelled) return
+      } catch (err) {
+        // Warm-up failure shouldn't block the user; the real export still
+        // works (after a retry, as before this change).
+        console.warn('Map capture warm-up failed:', err)
       } finally {
         parent.style.width = origWidth
         parent.style.height = origHeight
