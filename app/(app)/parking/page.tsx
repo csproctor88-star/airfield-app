@@ -2344,113 +2344,72 @@ export default function ParkingPage() {
     const w = map.current
     let mapDataUrl: string | null = null
 
-    // Auto-enter fullscreen for the capture if the user isn't already in it.
-    // The resize-to-1600×900 trick relies on a starting map div that's at
-    // least roughly that size to produce a complete, non-clipped capture —
-    // in the standard non-fullscreen layout the parent's max width and the
-    // sidebar column leave the right edge of the captured canvas unpainted
-    // (the old "right-side black band" issue). Brief layout flash while
-    // the export runs (~1–2 s), then we restore.
-    const wasFullscreen = isFullscreen
-    const enteredFullscreen = !wasFullscreen
-    if (enteredFullscreen) {
-      setIsFullscreen(true)
-      // Wait for React to commit the layout change.
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-      if (w) {
-        const gmap = w.gmap
-        // Notify Google Maps of the container resize.
-        google.maps.event.trigger(gmap, 'resize')
-        // Wait for tilesloaded (tiles for the new viewport actually fetched).
-        // This is the critical wait — the manual toggle path works because
-        // the user spends a few seconds looking at the map, during which
-        // tiles load fully into the WebGL buffer. Without this wait, the
-        // capture fires before tiles arrive and reads a blank buffer.
-        await new Promise<void>(resolve => {
-          google.maps.event.addListenerOnce(gmap, 'tilesloaded', () => resolve())
-          setTimeout(resolve, 4000)
-        })
-        // Force a WebGL re-render via a tiny pan + restore — this leaves
-        // freshly-painted pixels in the drawing buffer just before the
-        // capture, matching the warm state a manual toggle leaves behind.
-        const center = gmap.getCenter()
-        if (center) {
-          gmap.panBy(1, 0)
-          gmap.panTo(center)
+    if (w) {
+      // Temporarily resize map to landscape for a wider capture
+      const gmap = w.gmap
+      const mapDiv = gmap.getDiv()
+      const parent = mapDiv.parentElement
+      const origWidth = parent?.style.width || ''
+      const origHeight = parent?.style.height || ''
+
+      try {
+        // Expand to 1600×900 for high-quality landscape capture
+        if (parent) {
+          parent.style.width = '1600px'
+          parent.style.height = '900px'
         }
+        google.maps.event.trigger(gmap, 'resize')
+        // Wait for tiles to load at new size
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 2000)
+          setTimeout(resolve, 3000) // fallback timeout
         })
-        // Extra paint settle so the WebGL buffer is fully populated.
-        await new Promise(r => setTimeout(r, 500))
-      }
-    }
+        // Extra frame for rendering
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-    try {
-      if (w) {
-        // Temporarily resize map to landscape for a wider capture
-        const gmap = w.gmap
-        const mapDiv = gmap.getDiv()
-        const parent = mapDiv.parentElement
-        const origWidth = parent?.style.width || ''
-        const origHeight = parent?.style.height || ''
-
-        try {
-          // Expand to 1600×900 for high-quality landscape capture
-          if (parent) {
-            parent.style.width = '1600px'
-            parent.style.height = '900px'
-          }
-          google.maps.event.trigger(gmap, 'resize')
-          // Wait for tiles to load at new size
-          await new Promise<void>(resolve => {
-            google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-            setTimeout(resolve, 3000) // fallback timeout
-          })
-          // Extra frame for rendering
-          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-
-          const html2canvas = (await import('html2canvas')).default
-          const canvas = await html2canvas(mapDiv, {
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: null,
-            scale: 2,
-            logging: false,
-            width: mapDiv.clientWidth,
-            height: mapDiv.clientHeight,
-          })
-          mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
-        } catch (err) {
-          console.warn('Map capture error:', err)
-          toast.error('Map capture failed')
-          mapDataUrl = null
-        } finally {
-          // Restore original size
-          if (parent) {
-            parent.style.width = origWidth
-            parent.style.height = origHeight
-          }
-          google.maps.event.trigger(gmap, 'resize')
+        const html2canvas = (await import('html2canvas')).default
+        const canvas = await html2canvas(mapDiv, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          scale: 2,
+          logging: false,
+          width: mapDiv.clientWidth,
+          height: mapDiv.clientHeight,
+        })
+        mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+      } catch (err) {
+        console.warn('Map capture error:', err)
+        toast.error('Map capture failed')
+        mapDataUrl = null
+      } finally {
+        // Restore original size
+        if (parent) {
+          parent.style.width = origWidth
+          parent.style.height = origHeight
         }
-      }
-
-      return generateParkingPdf({
-        plan: selectedPlan, spots, spotsWithAircraft,
-        allResults, violations, warnings, apronContext, mapDataUrl,
-        baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
-      })
-    } finally {
-      // Restore non-fullscreen if we entered it for the capture.
-      if (enteredFullscreen) {
-        setIsFullscreen(false)
+        google.maps.event.trigger(gmap, 'resize')
       }
     }
+
+    return generateParkingPdf({
+      plan: selectedPlan, spots, spotsWithAircraft,
+      allResults, violations, warnings, apronContext, mapDataUrl,
+      baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
+    })
   }
 
   const handleExportPdf = async () => {
     if (!selectedPlan) return
+    // Capture only works correctly with the map at fullscreen size — at
+    // non-fullscreen sizes the WebGL drawing buffer behind Google's vector
+    // renderer comes back blank in the captured image (gray tiles in the
+    // PDF). Enforced at the click site rather than auto-fullscreening
+    // because programmatic toggles don't reliably prime the WebGL state.
+    if (!isFullscreen) {
+      toast.error('Enter fullscreen first — the Full button in the toolbar — then export.')
+      return
+    }
     setExportingPdf(true)
     try {
       const result = await buildParkingPdf()
@@ -2468,6 +2427,10 @@ export default function ParkingPage() {
 
   const handleEmailPdf = async () => {
     if (!selectedPlan) return
+    if (!isFullscreen) {
+      toast.error('Enter fullscreen first — the Full button in the toolbar — then email.')
+      return
+    }
     setExportingPdf(true)
     try {
       const result = await buildParkingPdf()
@@ -2987,26 +2950,28 @@ export default function ParkingPage() {
               <>
                 <button
                   onClick={handleExportPdf}
-                  disabled={exportingPdf}
-                  title="Export PDF"
+                  disabled={exportingPdf || !isFullscreen}
+                  title={isFullscreen ? 'Export PDF' : 'Enter fullscreen (Full button) to enable PDF export'}
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
-                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                    border: '1px solid var(--color-border)',
+                    cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
+                    fontWeight: 600, opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
                   }}
                 >
                   {exportingPdf ? '...' : 'PDF'}
                 </button>
                 <button
                   onClick={handleEmailPdf}
-                  disabled={exportingPdf}
-                  title="Email PDF"
+                  disabled={exportingPdf || !isFullscreen}
+                  title={isFullscreen ? 'Email PDF' : 'Enter fullscreen (Full button) to enable Email PDF'}
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
-                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
+                    border: '1px solid var(--color-border)',
+                    cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
+                    fontWeight: 600, opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
                   }}
                 >
                   ✉
@@ -4263,9 +4228,13 @@ export default function ParkingPage() {
               <button
                 key="pdf"
                 onClick={handleExportPdf}
-                disabled={exportingPdf}
-                title="Export PDF"
-                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
+                disabled={exportingPdf || !isFullscreen}
+                title={isFullscreen ? 'Export PDF' : 'Enter fullscreen to enable PDF export'}
+                style={{
+                  ...railBtnBase,
+                  opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
+                  cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
+                }}
               >
                 <Download size={18} />
                 <span>{exportingPdf ? '...' : 'PDF'}</span>
@@ -4275,9 +4244,13 @@ export default function ParkingPage() {
               <button
                 key="email"
                 onClick={handleEmailPdf}
-                disabled={exportingPdf}
-                title="Email PDF"
-                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
+                disabled={exportingPdf || !isFullscreen}
+                title={isFullscreen ? 'Email PDF' : 'Enter fullscreen to enable Email PDF'}
+                style={{
+                  ...railBtnBase,
+                  opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
+                  cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
+                }}
               >
                 <Mail size={18} />
                 <span>Email</span>
