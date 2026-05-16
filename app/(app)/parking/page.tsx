@@ -2344,59 +2344,88 @@ export default function ParkingPage() {
     const w = map.current
     let mapDataUrl: string | null = null
 
-    if (w) {
-      // Temporarily resize map to landscape for a wider capture
-      const gmap = w.gmap
-      const mapDiv = gmap.getDiv()
-      const parent = mapDiv.parentElement
-      const origWidth = parent?.style.width || ''
-      const origHeight = parent?.style.height || ''
-
-      try {
-        // Expand to 1600×900 for high-quality landscape capture
-        if (parent) {
-          parent.style.width = '1600px'
-          parent.style.height = '900px'
-        }
-        google.maps.event.trigger(gmap, 'resize')
-        // Wait for tiles to load at new size
+    // Auto-enter fullscreen for the capture if the user isn't already in it.
+    // The resize-to-1600×900 trick relies on a starting map div that's at
+    // least roughly that size to produce a complete, non-clipped capture —
+    // in the standard non-fullscreen layout the parent's max width and the
+    // sidebar column leave the right edge of the captured canvas unpainted
+    // (the old "right-side black band" issue). Brief layout flash while
+    // the export runs (~1–2 s), then we restore.
+    const wasFullscreen = isFullscreen
+    const enteredFullscreen = !wasFullscreen
+    if (enteredFullscreen) {
+      setIsFullscreen(true)
+      // Wait for React to commit the layout change + Google Maps to settle.
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+      if (w) {
+        google.maps.event.trigger(w.gmap, 'resize')
         await new Promise<void>(resolve => {
-          google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 3000) // fallback timeout
+          google.maps.event.addListenerOnce(w.gmap, 'idle', () => resolve())
+          setTimeout(resolve, 1500)
         })
-        // Extra frame for rendering
-        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-
-        const html2canvas = (await import('html2canvas')).default
-        const canvas = await html2canvas(mapDiv, {
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          scale: 2,
-          logging: false,
-          width: mapDiv.clientWidth,
-          height: mapDiv.clientHeight,
-        })
-        mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
-      } catch (err) {
-        console.warn('Map capture error:', err)
-        toast.error('Map capture failed')
-        mapDataUrl = null
-      } finally {
-        // Restore original size
-        if (parent) {
-          parent.style.width = origWidth
-          parent.style.height = origHeight
-        }
-        google.maps.event.trigger(gmap, 'resize')
       }
     }
 
-    return generateParkingPdf({
-      plan: selectedPlan, spots, spotsWithAircraft,
-      allResults, violations, warnings, apronContext, mapDataUrl,
-      baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
-    })
+    try {
+      if (w) {
+        // Temporarily resize map to landscape for a wider capture
+        const gmap = w.gmap
+        const mapDiv = gmap.getDiv()
+        const parent = mapDiv.parentElement
+        const origWidth = parent?.style.width || ''
+        const origHeight = parent?.style.height || ''
+
+        try {
+          // Expand to 1600×900 for high-quality landscape capture
+          if (parent) {
+            parent.style.width = '1600px'
+            parent.style.height = '900px'
+          }
+          google.maps.event.trigger(gmap, 'resize')
+          // Wait for tiles to load at new size
+          await new Promise<void>(resolve => {
+            google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
+            setTimeout(resolve, 3000) // fallback timeout
+          })
+          // Extra frame for rendering
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+          const html2canvas = (await import('html2canvas')).default
+          const canvas = await html2canvas(mapDiv, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            scale: 2,
+            logging: false,
+            width: mapDiv.clientWidth,
+            height: mapDiv.clientHeight,
+          })
+          mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+        } catch (err) {
+          console.warn('Map capture error:', err)
+          toast.error('Map capture failed')
+          mapDataUrl = null
+        } finally {
+          // Restore original size
+          if (parent) {
+            parent.style.width = origWidth
+            parent.style.height = origHeight
+          }
+          google.maps.event.trigger(gmap, 'resize')
+        }
+      }
+
+      return generateParkingPdf({
+        plan: selectedPlan, spots, spotsWithAircraft,
+        allResults, violations, warnings, apronContext, mapDataUrl,
+        baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
+      })
+    } finally {
+      // Restore non-fullscreen if we entered it for the capture.
+      if (enteredFullscreen) {
+        setIsFullscreen(false)
+      }
+    }
   }
 
   const handleExportPdf = async () => {
