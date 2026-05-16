@@ -771,11 +771,15 @@ export default function ParkingPage() {
       center: { lat: centerLat, lng: centerLng },
       zoom: 15,
       scaleControl: true,
-      // Override the global flat-only defaults: parking laydown benefits from
-      // being able to align heading with the runway and tilt for perspective.
-      // Vector Map ID enables interactive heading rotation (Ctrl+drag) and
-      // arbitrary tilt at any zoom — required for non-45°-imagery locations.
-      mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
+      // Raster tile rendering (no mapId) — chosen so html2canvas can read
+      // the tile imagery for PDF exports. The vector renderer draws to a
+      // WebGL canvas without preserveDrawingBuffer set, which means the
+      // browser clears the drawing buffer after each frame and the export
+      // captures come back gray. Raster tiles are standard <img> elements
+      // that html2canvas reads reliably from any starting state. Heading
+      // rotation is preserved (CSS transform on the tile container);
+      // arbitrary-angle tilt is the only feature given up — raster clamps
+      // tilt to 0° / 45°.
       tilt: 0, // start flat; user can request 45° via the tilt button
       rotateControl: true,
       heading: 0,
@@ -2401,15 +2405,6 @@ export default function ParkingPage() {
 
   const handleExportPdf = async () => {
     if (!selectedPlan) return
-    // Capture only works correctly with the map at fullscreen size — at
-    // non-fullscreen sizes the WebGL drawing buffer behind Google's vector
-    // renderer comes back blank in the captured image (gray tiles in the
-    // PDF). Enforced at the click site rather than auto-fullscreening
-    // because programmatic toggles don't reliably prime the WebGL state.
-    if (!isFullscreen) {
-      toast.error('Enter fullscreen first — the Full button in the toolbar — then export.')
-      return
-    }
     setExportingPdf(true)
     try {
       const result = await buildParkingPdf()
@@ -2427,10 +2422,6 @@ export default function ParkingPage() {
 
   const handleEmailPdf = async () => {
     if (!selectedPlan) return
-    if (!isFullscreen) {
-      toast.error('Enter fullscreen first — the Full button in the toolbar — then email.')
-      return
-    }
     setExportingPdf(true)
     try {
       const result = await buildParkingPdf()
@@ -2950,28 +2941,26 @@ export default function ParkingPage() {
               <>
                 <button
                   onClick={handleExportPdf}
-                  disabled={exportingPdf || !isFullscreen}
-                  title={isFullscreen ? 'Export PDF' : 'Enter fullscreen (Full button) to enable PDF export'}
+                  disabled={exportingPdf}
+                  title="Export PDF"
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)',
-                    cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
-                    fontWeight: 600, opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
+                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
+                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
                   }}
                 >
                   {exportingPdf ? '...' : 'PDF'}
                 </button>
                 <button
                   onClick={handleEmailPdf}
-                  disabled={exportingPdf || !isFullscreen}
-                  title={isFullscreen ? 'Email PDF' : 'Enter fullscreen (Full button) to enable Email PDF'}
+                  disabled={exportingPdf}
+                  title="Email PDF"
                   style={{
                     padding: '4px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)',
                     background: 'var(--color-bg)', color: 'var(--color-text-secondary)',
-                    border: '1px solid var(--color-border)',
-                    cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
-                    fontWeight: 600, opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
+                    border: '1px solid var(--color-border)', cursor: exportingPdf ? 'wait' : 'pointer',
+                    fontWeight: 600, opacity: exportingPdf ? 0.5 : 1,
                   }}
                 >
                   ✉
@@ -4228,13 +4217,9 @@ export default function ParkingPage() {
               <button
                 key="pdf"
                 onClick={handleExportPdf}
-                disabled={exportingPdf || !isFullscreen}
-                title={isFullscreen ? 'Export PDF' : 'Enter fullscreen to enable PDF export'}
-                style={{
-                  ...railBtnBase,
-                  opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
-                  cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
-                }}
+                disabled={exportingPdf}
+                title="Export PDF"
+                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
               >
                 <Download size={18} />
                 <span>{exportingPdf ? '...' : 'PDF'}</span>
@@ -4244,13 +4229,9 @@ export default function ParkingPage() {
               <button
                 key="email"
                 onClick={handleEmailPdf}
-                disabled={exportingPdf || !isFullscreen}
-                title={isFullscreen ? 'Email PDF' : 'Enter fullscreen to enable Email PDF'}
-                style={{
-                  ...railBtnBase,
-                  opacity: (exportingPdf || !isFullscreen) ? 0.5 : 1,
-                  cursor: exportingPdf ? 'wait' : (isFullscreen ? 'pointer' : 'not-allowed'),
-                }}
+                disabled={exportingPdf}
+                title="Email PDF"
+                style={{ ...railBtnBase, opacity: exportingPdf ? 0.5 : 1, cursor: exportingPdf ? 'wait' : 'pointer' }}
               >
                 <Mail size={18} />
                 <span>Email</span>
