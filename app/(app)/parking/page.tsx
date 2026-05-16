@@ -2355,14 +2355,35 @@ export default function ParkingPage() {
     const enteredFullscreen = !wasFullscreen
     if (enteredFullscreen) {
       setIsFullscreen(true)
-      // Wait for React to commit the layout change + Google Maps to settle.
+      // Wait for React to commit the layout change.
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
       if (w) {
-        google.maps.event.trigger(w.gmap, 'resize')
+        const gmap = w.gmap
+        // Notify Google Maps of the container resize.
+        google.maps.event.trigger(gmap, 'resize')
+        // Wait for tilesloaded (tiles for the new viewport actually fetched).
+        // This is the critical wait — the manual toggle path works because
+        // the user spends a few seconds looking at the map, during which
+        // tiles load fully into the WebGL buffer. Without this wait, the
+        // capture fires before tiles arrive and reads a blank buffer.
         await new Promise<void>(resolve => {
-          google.maps.event.addListenerOnce(w.gmap, 'idle', () => resolve())
-          setTimeout(resolve, 1500)
+          google.maps.event.addListenerOnce(gmap, 'tilesloaded', () => resolve())
+          setTimeout(resolve, 4000)
         })
+        // Force a WebGL re-render via a tiny pan + restore — this leaves
+        // freshly-painted pixels in the drawing buffer just before the
+        // capture, matching the warm state a manual toggle leaves behind.
+        const center = gmap.getCenter()
+        if (center) {
+          gmap.panBy(1, 0)
+          gmap.panTo(center)
+        }
+        await new Promise<void>(resolve => {
+          google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
+          setTimeout(resolve, 2000)
+        })
+        // Extra paint settle so the WebGL buffer is fully populated.
+        await new Promise(r => setTimeout(r, 500))
       }
     }
 
