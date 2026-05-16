@@ -828,20 +828,16 @@ export default function ParkingPage() {
       center: { lat: centerLat, lng: centerLng },
       zoom: 15,
       scaleControl: true,
-      // Override the global flat-only defaults: parking laydown benefits from
-      // being able to align heading with the runway and tilt for perspective.
-      // Vector Map ID enables interactive heading rotation (Ctrl+drag) and
-      // arbitrary tilt at any zoom — required for non-45°-imagery locations.
-      //
-      // Skipped on mobile because the vector renderer draws tiles to a WebGL
-      // canvas without preserveDrawingBuffer, which html2canvas can't read
-      // reliably on iOS Safari — the captured tiles come back as the gray
-      // loading placeholder. Raster rendering (img-element tiles) captures
-      // cleanly via html2canvas and still supports heading rotation via
-      // CSS transform on the tile container, which is what mobile parking
-      // exports need. Tilt at non-45° angles is the only feature we give
-      // up on mobile.
-      mapId: isMobile ? undefined : process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
+      // Raster rendering on both desktop and mobile — mapId intentionally
+      // omitted. The vector renderer draws tiles to a WebGL canvas without
+      // preserveDrawingBuffer set, so html2canvas can't read the GPU buffer
+      // by the time the export runs (the browser has already cleared it for
+      // the next frame). With raster tiles, html2canvas reads the standard
+      // <img> elements cleanly and the PDF export captures real satellite
+      // imagery on every platform. Heading rotation still works via a CSS
+      // transform on the tile container; the only feature lost is
+      // arbitrary-angle tilt via the Ctrl-drag handler below — raster
+      // clamps tilt to 0° / 45°. Acceptable tradeoff for reliable exports.
       tilt: 0, // start flat; user can request 45° via the tilt button
       rotateControl: true,
       heading: 0,
@@ -2465,14 +2461,14 @@ export default function ParkingPage() {
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
         // Capture the FULL map div and crop to the frame with a plain
-        // canvas drawImage. Minimal options on html2canvas — explicit
-        // width/height + windowWidth/Height were causing the right edge
-        // of the capture to come back black on desktop non-fullscreen
-        // and the WebGL tile layer to render blank on desktop fullscreen
-        // (the simulated viewport diverged from the actual layout). Let
-        // html2canvas use the element's natural clientWidth/Height; the
-        // crop derives its pixel scale from the rendered canvas size so
-        // it stays accurate regardless of what html2canvas chooses.
+        // canvas drawImage. windowWidth/windowHeight = liveW/liveH was the
+        // configuration that previously captured desktop tiles correctly
+        // (commit 7ad0ceb). They pin html2canvas's simulated viewport to
+        // the map div's actual dimensions; without them, html2canvas falls
+        // back to window.innerWidth/innerHeight which can drift from the
+        // map's layout and leave the WebGL tile layer blank. We do NOT
+        // pass width/height as well — that combination was overconstrained
+        // and brought back the right-edge black band on non-fullscreen.
         const html2canvas = (await import('html2canvas')).default
         const fullCanvas = await html2canvas(mapDiv, {
           useCORS: true,
@@ -2480,6 +2476,8 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale,
           logging: false,
+          windowWidth: liveW,
+          windowHeight: liveH,
         })
 
         // Compute the ACTUAL pixel-to-CSS-pixel ratio from the rendered
