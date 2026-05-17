@@ -384,40 +384,30 @@ function captureOutlineRect(viewportW: number, viewportH: number): { w: number; 
 
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
  *  the aircraft's real-world wingspan at the current map zoom.
- *  Uses Google Maps projection to convert real-world distance to pixels. */
+ *  Derived purely from zoom + latitude via the Mercator meters-per-pixel
+ *  formula — independent of map rotation. The previous implementation
+ *  used gmap.getBounds() to derive pixels-per-degree, which returned the
+ *  AABB of the rotated visible area (expanded by ~√2 at 45°), so icons
+ *  rendered wrong-sized when the user rotated the map. */
 function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.maps.Map): number {
-  // Directly measure how many pixels the wingspan should occupy by projecting
-  // two real-world points and measuring their screen distance.
-  // This matches the Mapbox approach exactly.
-  const bounds = gmap.getBounds()
-  const div = gmap.getDiv()
-  if (!bounds || !div) return 0.1
-
   const center = gmap.getCenter()
-  if (!center) return 0.1
+  const zoom = gmap.getZoom()
+  if (!center || zoom == null) return 0.1
 
-  const ne = bounds.getNorthEast()
-  const sw = bounds.getSouthWest()
-  const mapWidthPx = div.clientWidth
-  if (mapWidthPx <= 0) return 0.1
+  // Web Mercator meters-per-pixel: 156543.03392 at the equator at zoom 0,
+  // scaled by cos(lat) for the projection and 1/2^Z for the zoom level.
+  const lat = center.lat()
+  const mpp = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom)
+  if (!isFinite(mpp) || mpp <= 0) return 0.1
 
-  // Degrees of longitude visible in the map
-  const lngSpan = ne.lng() - sw.lng()
-  if (lngSpan <= 0) return 0.1
-
-  // Pixels per degree of longitude
-  const pxPerDegLng = mapWidthPx / lngSpan
-
-  // Wingspan in degrees of longitude at this latitude
+  // Wingspan in screen pixels at the current zoom.
   const wingspanM = wingspanFt * FT_TO_M
-  const wingspanDegLng = wingspanM / (111319.9 * Math.cos(center.lat() * Math.PI / 180))
+  const targetPx = wingspanM / mpp
 
-  // Target screen pixels for the wingspan
-  const targetPx = wingspanDegLng * pxPerDegLng
-
-  // Divide by SVG drawing width (w), not canvas width (w+8). Apply 1.03 overcompensation
-  // so silhouettes render slightly larger than actual — SVG wing tip artwork doesn't extend
-  // to the exact bounding box edge. Oversized is safer than undersized for clearance planning.
+  // Divide by SVG drawing width (w), not canvas width (w+8). Apply 1.03
+  // overcompensation so silhouettes render slightly larger than actual —
+  // SVG wing-tip artwork doesn't extend to the exact bounding box edge.
+  // Oversized is safer than undersized for clearance planning.
   const aspect = lengthFt / wingspanFt
   const svgDrawW = aspect >= 1 ? Math.round(REF_ICON_SIZE / aspect) : REF_ICON_SIZE
 
