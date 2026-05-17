@@ -19,24 +19,30 @@ import {
 } from '@/lib/calculations/parking-clearance'
 import type { ParkingPlan, ParkingSpot } from '@/lib/supabase/parking'
 
-interface ParkingPdfInput {
-  plan: ParkingPlan
+// One framed capture from the parking map — a single "page bundle" in the
+// PDF. Single-apron exports pass a one-element array with no label;
+// multi-apron exports pass one entry per Add Apron capture.
+export interface ParkingPdfSection {
+  label?: string | null
   spots: ParkingSpot[]
   spotsWithAircraft: SpotWithAircraft[]
   allResults: ClearanceResult[]
   violations: ClearanceResult[]
   warnings: ClearanceResult[]
-  apronContext: ApronContext
   mapDataUrl: string | null
+}
+
+interface ParkingPdfInput {
+  plan: ParkingPlan
+  apronContext: ApronContext
+  sections: ParkingPdfSection[]
   baseName?: string | null
   baseIcao?: string | null
 }
 
 export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const {
-    plan, spots, spotsWithAircraft, allResults, violations, warnings,
-    apronContext, mapDataUrl, baseName, baseIcao,
-  } = input
+  const { plan, apronContext, sections, baseName, baseIcao } = input
+  const isMulti = sections.length > 1
 
   const ctx = createPdf({ orientation: 'landscape' })
   const { doc, pageHeight, margin, contentWidth } = ctx
@@ -51,10 +57,14 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
 
   y = drawBaseHeader(ctx, y, { baseName, baseIcao })
   y = drawReportTitle(ctx, y, { title: 'AIRCRAFT PARKING PLAN', subtitle: plan.plan_name })
+
+  // Aggregate stats across every section so the front-matter box reflects
+  // the entire export, not just the first apron.
+  const totalAircraft = sections.reduce((acc, s) => acc + s.spots.length, 0)
   y = drawStatBox(ctx, y, [
     { label: 'Plan Status', value: plan.is_active ? 'ACTIVE' : 'DRAFT' },
     { label: 'Clearance Context', value: APRON_CONTEXT_LABELS[apronContext] || apronContext },
-    { label: 'Total Aircraft', value: String(spots.length) },
+    { label: isMulti ? `Total Aircraft (${sections.length} Aprons)` : 'Total Aircraft', value: String(totalAircraft) },
     { label: 'Generated', value: formatZuluDateTime(new Date().toISOString()) },
   ])
 
@@ -67,149 +77,178 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
     y += descLines.length * 3.5 + 4
   }
 
-  // ── Aircraft Summary (compact, part of header) ──
-  if (spotsWithAircraft.length > 0) {
-    // Group by aircraft_name
-    const groups = new Map<string, SpotWithAircraft[]>()
-    for (const s of spotsWithAircraft) {
-      const name = s.aircraft_name || 'Unknown'
-      if (!groups.has(name)) groups.set(name, [])
-      groups.get(name)!.push(s)
-    }
-
-    const summaryRows = Array.from(groups.entries()).map(([name, group]) => {
-      const s = group[0]
-      const adg = getADGFromWingspan(s.wingspan_ft)
-      const detail = s.clearance_ft != null
-        ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual' }
-        : getWingtipClearanceDetail(s.wingspan_ft, apronContext, name)
-
-      return [
-        name,
-        String(group.length),
-        adg,
-        `${Math.round(s.wingspan_ft)} × ${Math.round(s.length_ft)}`,
-        `${detail.clearance_ft} ft`,
-      ]
-    })
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Aircraft Type', 'Qty', 'ADG', 'WS × Len (ft)', 'Min Clearance']],
-      body: summaryRows,
-      margin: { left: margin, right: margin },
-      tableWidth: 'wrap',
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
-      columnStyles: {
-        1: { cellWidth: 10, halign: 'center' },
-        2: { cellWidth: 12, halign: 'center' },
-        3: { cellWidth: 30 },
-        4: { cellWidth: 22, halign: 'right' },
-      },
-    })
-    y = (doc as any).lastAutoTable.finalY + 4
-  }
-
-  // ── Spot Detail Table (per-aircraft with nose coordinates) ──
-  if (spotsWithAircraft.length > 0) {
-    checkPageBreak(20)
-    const spotRows = spotsWithAircraft.map(s => [
-      s.spot_name || s.aircraft_name || '—',
-      s.aircraft_name || '—',
-      s.tail_number || '—',
-      `${s.heading_deg}°`,
-      formatCoordsDMS(s.latitude, s.longitude),
-    ])
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Spot', 'Aircraft', 'Tail #', 'Hdg', 'Nose Coordinates']],
-      body: spotRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
-      columnStyles: {
-        3: { cellWidth: 14, halign: 'center' },
-        4: { cellWidth: 48, font: 'courier' },
-      },
-    })
-    y = (doc as any).lastAutoTable.finalY + 4
-  }
-
-  // ── Map screenshot — always on its own page, filling the page ──
-  if (mapDataUrl) {
-    try {
-      const img = new Image()
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject()
-        img.src = mapDataUrl
-      })
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i]
+    if (i > 0) {
+      // Each apron after the first starts on a fresh page so multi-apron
+      // exports are easy to flip through.
       doc.addPage()
       y = margin
-      const aspect = img.width / img.height
-      const maxH = pageHeight - margin - 15
-      let imgW = contentWidth
-      let imgH = imgW / aspect
-      if (imgH > maxH) {
-        imgH = maxH
-        imgW = imgH * aspect
-      }
-      const imgX = margin + (contentWidth - imgW) / 2
-      const imgY = y + (maxH - imgH) / 2
-      doc.addImage(mapDataUrl, 'JPEG', imgX, imgY, imgW, imgH)
-      y = imgY + imgH + 4
-    } catch {
-      // Map capture failed — skip silently
+      y = drawBaseHeader(ctx, y, { baseName, baseIcao })
     }
-  }
 
-  // ── Clearance Violations & Warnings (only if any) ──
-  const issueResults = allResults.filter(r => r.status !== 'ok')
-  if (issueResults.length > 0) {
-    checkPageBreak(30)
-    doc.setFontSize(10)
-    doc.setTextColor(0)
-    doc.text('CLEARANCE VIOLATIONS & WARNINGS', margin, y)
-    y += 5
+    // Section header — only renders when an apron label is present (i.e.
+    // when this came from an Add Apron capture). Single-apron exports get
+    // no header, matching the original layout.
+    if (section.label) {
+      checkPageBreak(14)
+      doc.setFontSize(12)
+      doc.setTextColor(0)
+      doc.setFont('helvetica', 'bold')
+      doc.text(section.label, margin, y)
+      doc.setFont('helvetica', 'normal')
+      y += 7
+      doc.setFontSize(8)
+      doc.setTextColor(80)
+      doc.text(`${section.spots.length} aircraft`, margin, y)
+      y += 5
+    }
 
-    const crRows = issueResults
-      .sort((a, b) => (a.status === 'violation' ? 0 : 1) - (b.status === 'violation' ? 0 : 1))
-      .map(r => [
-        r.aircraft_a,
-        r.aircraft_b || '—',
-        r.distance_ft.toFixed(1),
-        String(r.required_ft),
-        r.ufc_item,
-        r.status.toUpperCase(),
+    // ── Aircraft Summary ──
+    if (section.spotsWithAircraft.length > 0) {
+      const groups = new Map<string, SpotWithAircraft[]>()
+      for (const s of section.spotsWithAircraft) {
+        const name = s.aircraft_name || 'Unknown'
+        if (!groups.has(name)) groups.set(name, [])
+        groups.get(name)!.push(s)
+      }
+
+      const summaryRows = Array.from(groups.entries()).map(([name, group]) => {
+        const s = group[0]
+        const adg = getADGFromWingspan(s.wingspan_ft)
+        const detail = s.clearance_ft != null
+          ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual' }
+          : getWingtipClearanceDetail(s.wingspan_ft, apronContext, name)
+
+        return [
+          name,
+          String(group.length),
+          adg,
+          `${Math.round(s.wingspan_ft)} × ${Math.round(s.length_ft)}`,
+          `${detail.clearance_ft} ft`,
+        ]
+      })
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Aircraft Type', 'Qty', 'ADG', 'WS × Len (ft)', 'Min Clearance']],
+        body: summaryRows,
+        margin: { left: margin, right: margin },
+        tableWidth: 'wrap',
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: {
+          1: { cellWidth: 10, halign: 'center' },
+          2: { cellWidth: 12, halign: 'center' },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 22, halign: 'right' },
+        },
+      })
+      y = (doc as any).lastAutoTable.finalY + 4
+    }
+
+    // ── Spot Detail Table ──
+    if (section.spotsWithAircraft.length > 0) {
+      checkPageBreak(20)
+      const spotRows = section.spotsWithAircraft.map(s => [
+        s.spot_name || s.aircraft_name || '—',
+        s.aircraft_name || '—',
+        s.tail_number || '—',
+        `${s.heading_deg}°`,
+        formatCoordsDMS(s.latitude, s.longitude),
       ])
 
-    autoTable(doc, {
-      startY: y,
-      head: [['Aircraft A', 'Aircraft B / Obstacle', 'Actual (ft)', 'Required (ft)', 'UFC Item', 'Status']],
-      body: crRows,
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
-      columnStyles: {
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-      },
-      didParseCell: (data) => {
-        if (data.section === 'body' && data.column.index === 5) {
-          const status = String(data.cell.raw)
-          if (status === 'VIOLATION') {
-            data.cell.styles.textColor = [239, 68, 68]
-            data.cell.styles.fontStyle = 'bold'
-          } else if (status === 'WARNING') {
-            data.cell.styles.textColor = [249, 158, 11]
-            data.cell.styles.fontStyle = 'bold'
-          }
+      autoTable(doc, {
+        startY: y,
+        head: [['Spot', 'Aircraft', 'Tail #', 'Hdg', 'Nose Coordinates']],
+        body: spotRows,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: {
+          3: { cellWidth: 14, halign: 'center' },
+          4: { cellWidth: 48, font: 'courier' },
+        },
+      })
+      y = (doc as any).lastAutoTable.finalY + 4
+    }
+
+    // ── Map screenshot — own page, filling the page ──
+    if (section.mapDataUrl) {
+      try {
+        const img = new Image()
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () => reject()
+          img.src = section.mapDataUrl!
+        })
+        doc.addPage()
+        y = margin
+        const aspect = img.width / img.height
+        const maxH = pageHeight - margin - 15
+        let imgW = contentWidth
+        let imgH = imgW / aspect
+        if (imgH > maxH) {
+          imgH = maxH
+          imgW = imgH * aspect
         }
-      },
-    })
-    y = (doc as any).lastAutoTable.finalY + 6
+        const imgX = margin + (contentWidth - imgW) / 2
+        const imgY = y + (maxH - imgH) / 2
+        doc.addImage(section.mapDataUrl, 'JPEG', imgX, imgY, imgW, imgH)
+        y = imgY + imgH + 4
+      } catch {
+        // Map capture failed — skip silently
+      }
+    }
+
+    // ── Clearance Violations & Warnings ──
+    const issueResults = section.allResults.filter(r => r.status !== 'ok')
+    if (issueResults.length > 0) {
+      checkPageBreak(30)
+      doc.setFontSize(10)
+      doc.setTextColor(0)
+      doc.text(section.label
+        ? `CLEARANCE VIOLATIONS & WARNINGS — ${section.label}`
+        : 'CLEARANCE VIOLATIONS & WARNINGS', margin, y)
+      y += 5
+
+      const crRows = issueResults
+        .sort((a, b) => (a.status === 'violation' ? 0 : 1) - (b.status === 'violation' ? 0 : 1))
+        .map(r => [
+          r.aircraft_a,
+          r.aircraft_b || '—',
+          r.distance_ft.toFixed(1),
+          String(r.required_ft),
+          r.ufc_item,
+          r.status.toUpperCase(),
+        ])
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Aircraft A', 'Aircraft B / Obstacle', 'Actual (ft)', 'Required (ft)', 'UFC Item', 'Status']],
+        body: crRows,
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: {
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+        },
+        didParseCell: (data) => {
+          if (data.section === 'body' && data.column.index === 5) {
+            const status = String(data.cell.raw)
+            if (status === 'VIOLATION') {
+              data.cell.styles.textColor = [239, 68, 68]
+              data.cell.styles.fontStyle = 'bold'
+            } else if (status === 'WARNING') {
+              data.cell.styles.textColor = [249, 158, 11]
+              data.cell.styles.fontStyle = 'bold'
+            }
+          }
+        },
+      })
+      y = (doc as any).lastAutoTable.finalY + 6
+    }
   }
 
   // ── Footer (render on every page after tables + map are placed) ──

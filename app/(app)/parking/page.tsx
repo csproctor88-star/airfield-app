@@ -558,6 +558,20 @@ export default function ParkingPage() {
   // Live map-container pixel size — drives the frame overlay so it
   // matches the actual mapDiv dimensions.
   const [mapSize, setMapSize] = useState<{ w: number; h: number } | null>(null)
+  // Queue of captured aprons accumulated via Add Apron. Single-apron
+  // exports leave this empty; multi-apron exports build it up while the
+  // user repositions between Add Apron clicks and finalize on Confirm.
+  type PendingApron = {
+    label: string
+    mapDataUrl: string | null
+    spots: ParkingSpot[]
+    spotsWithAircraft: SpotWithAircraft[]
+    allResults: ClearanceResult[]
+    violations: ClearanceResult[]
+    warnings: ClearanceResult[]
+  }
+  const [pendingAprons, setPendingAprons] = useState<PendingApron[]>([])
+  const [apronNamePrompt, setApronNamePrompt] = useState<{ open: boolean; draft: string; intent: 'add' | 'confirm' }>({ open: false, draft: '', intent: 'add' })
 
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
@@ -2466,14 +2480,16 @@ export default function ParkingPage() {
 
   // ── PDF export ──
 
-  const buildParkingPdf = async () => {
+  // Snap the current map view through html2canvas, project the frame's
+  // pixel corners to lat/lng, and filter the plan's spots / obstacles /
+  // clearance results to only those inside that polygon. Returns a
+  // PendingApron ready to be appended to the export queue or exported on
+  // its own. `label` is the apron header — pass null for single-apron
+  // exports (no per-section header rendered in the PDF).
+  const captureCurrentFrame = async (label: string | null): Promise<PendingApron | null> => {
     if (!selectedPlan) return null
     const w = map.current
     let mapDataUrl: string | null = null
-    // Polygon of lat/lng corners corresponding to the on-screen capture frame.
-    // Used after the snap to filter the PDF's aircraft / clearance tables to
-    // only what's actually inside the captured map area. Stays null if we
-    // can't project — in which case the PDF falls back to the full plan.
     let framePolygon: { lat: number; lng: number }[] | null = null
 
     if (w) {
@@ -2563,16 +2579,44 @@ export default function ParkingPage() {
       warningsForPdf = allResultsForPdf.filter(r => r.status === 'warning')
     }
 
-    return generateParkingPdf({
-      plan: selectedPlan,
+    return {
+      label: label || '',
+      mapDataUrl,
       spots: spotsForPdf,
       spotsWithAircraft: spotsWithAircraftForPdf,
       allResults: allResultsForPdf,
       violations: violationsForPdf,
       warnings: warningsForPdf,
-      apronContext, mapDataUrl,
-      baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
+    }
+  }
+
+  // Run the multi-section generator for one or more captures and either
+  // save the PDF directly (mode === 'pdf') or open the email modal
+  // (mode === 'email').
+  const exportSections = async (sections: PendingApron[], mode: 'pdf' | 'email') => {
+    if (!selectedPlan || sections.length === 0) return
+    const result = await generateParkingPdf({
+      plan: selectedPlan,
+      apronContext,
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
+      sections: sections.map(s => ({
+        label: s.label || null,
+        spots: s.spots,
+        spotsWithAircraft: s.spotsWithAircraft,
+        allResults: s.allResults,
+        violations: s.violations,
+        warnings: s.warnings,
+        mapDataUrl: s.mapDataUrl,
+      })),
     })
+    if (mode === 'pdf') {
+      result.doc.save(result.filename)
+      toast.success(sections.length > 1 ? `PDF exported (${sections.length} aprons)` : 'PDF exported')
+    } else {
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    }
   }
 
   // The toolbar buttons enter framing mode; the actual capture runs in
@@ -2587,29 +2631,76 @@ export default function ParkingPage() {
     setFramingMode('email')
   }
 
-  const handleCancelCapture = () => setFramingMode(null)
+  const handleCancelCapture = () => {
+    setFramingMode(null)
+    setPendingAprons([])
+    setApronNamePrompt({ open: false, draft: '', intent: 'add' })
+  }
+
+  // Add Apron always prompts for a name. Confirm prompts only when there
+  // are already queued aprons (the current frame becomes the final, named
+  // apron). With an empty queue, Confirm runs the single-apron, no-label
+  // export path.
+  const handleAddApron = () => {
+    if (!framingMode) return
+    setApronNamePrompt({ open: true, draft: `Apron ${pendingAprons.length + 1}`, intent: 'add' })
+  }
 
   const handleConfirmCapture = async () => {
     const mode = framingMode
-    if (!mode || !selectedPlan) { setFramingMode(null); return }
+    if (!mode || !selectedPlan) { handleCancelCapture(); return }
+    if (pendingAprons.length > 0) {
+      setApronNamePrompt({ open: true, draft: `Apron ${pendingAprons.length + 1}`, intent: 'confirm' })
+      return
+    }
+    // Single-apron path — capture the current frame as one anonymous
+    // section and export immediately.
     setFramingMode(null)
     setExportingPdf(true)
     try {
-      const result = await buildParkingPdf()
-      if (!result) return
-      if (mode === 'pdf') {
-        result.doc.save(result.filename)
-        toast.success('PDF exported')
-      } else {
-        setEmailPdfData(result)
-        setEmailModalOpen(true)
-      }
+      const capture = await captureCurrentFrame(null)
+      if (!capture) return
+      await exportSections([capture], mode)
     } catch (err) {
       toast.error(mode === 'pdf' ? 'Failed to export PDF' : 'Failed to generate PDF')
       console.error(err)
     } finally {
       setExportingPdf(false)
     }
+  }
+
+  // Shared handler between Add Apron and Confirm-with-queue. Captures the
+  // current frame under the typed name; if intent is 'confirm', also runs
+  // the multi-apron export.
+  const handleApronNamePromptSave = async () => {
+    const fallback = `Apron ${pendingAprons.length + 1}`
+    const name = (apronNamePrompt.draft.trim() || fallback)
+    const intent = apronNamePrompt.intent
+    const mode = framingMode
+    setApronNamePrompt({ open: false, draft: '', intent: 'add' })
+    setExportingPdf(true)
+    try {
+      const capture = await captureCurrentFrame(name)
+      if (!capture) return
+      if (intent === 'add') {
+        setPendingAprons(prev => [...prev, capture])
+        toast.success(`Added "${name}" — position the next apron`)
+      } else if (mode) {
+        const sections = [...pendingAprons, capture]
+        setFramingMode(null)
+        setPendingAprons([])
+        await exportSections(sections, mode)
+      }
+    } catch (err) {
+      toast.error('Failed to capture apron')
+      console.error(err)
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  const handleApronNamePromptCancel = () => {
+    setApronNamePrompt({ open: false, draft: '', intent: 'add' })
   }
 
   // ── Spot actions ──
@@ -4304,7 +4395,8 @@ export default function ParkingPage() {
                     border: '2px dashed var(--color-cyan)', boxSizing: 'border-box',
                   }} />
                 </div>
-                {/* Instruction banner — top-center, above the dim layer. */}
+                {/* Instruction banner — Cancel / Add Apron / Confirm. Inline-
+                    switches to a name prompt while the user is naming an apron. */}
                 <div style={{
                   position: 'absolute', zIndex: 6,
                   top: 14, left: '50%', transform: 'translateX(-50%)',
@@ -4316,33 +4408,104 @@ export default function ParkingPage() {
                   boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                   maxWidth: 'calc(100% - 28px)', flexWrap: 'wrap',
                 }}>
-                  <span style={{
-                    fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    color: 'var(--color-text-primary)',
-                    whiteSpace: isMobile ? 'normal' : 'nowrap',
-                  }}>
-                    Position the map inside the frame, then confirm to {verb.toLowerCase()}.
-                  </span>
-                  <button
-                    onClick={handleCancelCapture}
-                    disabled={exportingPdf}
-                    style={{
-                      padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
-                      background: 'transparent', border: '1px solid var(--color-border)',
-                      color: 'var(--color-text-secondary)', cursor: exportingPdf ? 'wait' : 'pointer',
-                      fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    }}
-                  >Cancel</button>
-                  <button
-                    onClick={handleConfirmCapture}
-                    disabled={exportingPdf}
-                    style={{
-                      padding: '5px 14px', borderRadius: 4, fontFamily: 'inherit',
-                      background: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
-                      color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
-                      fontSize: 'var(--fs-xs)', fontWeight: 700, opacity: exportingPdf ? 0.6 : 1,
-                    }}
-                  >{exportingPdf ? 'Capturing…' : `Confirm & ${verb}`}</button>
+                  {apronNamePrompt.open ? (
+                    <>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        color: 'var(--color-text-primary)', whiteSpace: 'nowrap',
+                      }}>Apron name:</span>
+                      <input
+                        autoFocus
+                        value={apronNamePrompt.draft}
+                        onChange={e => setApronNamePrompt(p => ({ ...p, draft: e.target.value }))}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') { e.preventDefault(); handleApronNamePromptSave() }
+                          else if (e.key === 'Escape') { e.preventDefault(); handleApronNamePromptCancel() }
+                        }}
+                        style={{
+                          width: 200, padding: '5px 8px', borderRadius: 4, fontFamily: 'inherit',
+                          background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-primary)', fontSize: 'var(--fs-xs)',
+                        }}
+                      />
+                      <button
+                        onClick={handleApronNamePromptCancel}
+                        disabled={exportingPdf}
+                        style={{
+                          padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
+                          background: 'transparent', border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-secondary)', cursor: exportingPdf ? 'wait' : 'pointer',
+                          fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        }}
+                      >Cancel</button>
+                      <button
+                        onClick={handleApronNamePromptSave}
+                        disabled={exportingPdf}
+                        style={{
+                          padding: '5px 14px', borderRadius: 4, fontFamily: 'inherit',
+                          background: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
+                          color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
+                          fontSize: 'var(--fs-xs)', fontWeight: 700, opacity: exportingPdf ? 0.6 : 1,
+                        }}
+                      >{exportingPdf
+                        ? 'Capturing…'
+                        : apronNamePrompt.intent === 'confirm' ? `Save & ${verb}` : 'Save Apron'
+                      }</button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{
+                        fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        color: 'var(--color-text-primary)',
+                        whiteSpace: isMobile ? 'normal' : 'nowrap',
+                      }}>
+                        {pendingAprons.length === 0
+                          ? `Position the map inside the frame, then confirm to ${verb.toLowerCase()}.`
+                          : `${pendingAprons.length} apron${pendingAprons.length === 1 ? '' : 's'} queued — position the next one.`}
+                      </span>
+                      {pendingAprons.length > 0 && (
+                        <span style={{
+                          fontSize: 'var(--fs-2xs)', fontWeight: 600,
+                          color: 'var(--color-cyan)',
+                          maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }} title={pendingAprons.map(a => a.label).join(', ')}>
+                          {pendingAprons.map(a => a.label).join(', ')}
+                        </span>
+                      )}
+                      <button
+                        onClick={handleCancelCapture}
+                        disabled={exportingPdf}
+                        style={{
+                          padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
+                          background: 'transparent', border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-secondary)', cursor: exportingPdf ? 'wait' : 'pointer',
+                          fontSize: 'var(--fs-xs)', fontWeight: 600,
+                        }}
+                      >Cancel</button>
+                      <button
+                        onClick={handleAddApron}
+                        disabled={exportingPdf}
+                        title="Capture this apron and keep framing more"
+                        style={{
+                          padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
+                          background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+                          border: '1px solid var(--color-cyan)',
+                          color: 'var(--color-cyan)', cursor: exportingPdf ? 'wait' : 'pointer',
+                          fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        }}
+                      >+ Add Apron</button>
+                      <button
+                        onClick={handleConfirmCapture}
+                        disabled={exportingPdf}
+                        style={{
+                          padding: '5px 14px', borderRadius: 4, fontFamily: 'inherit',
+                          background: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
+                          color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
+                          fontSize: 'var(--fs-xs)', fontWeight: 700,
+                        }}
+                      >Confirm & {verb}</button>
+                    </>
+                  )}
                 </div>
               </>
             )
