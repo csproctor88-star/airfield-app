@@ -530,6 +530,14 @@ export default function ParkingPage() {
   // Real user interaction (pan/zoom/placement) primes it naturally; the
   // effect below does the same thing programmatically once on map mount.
   const [mapWarmedUp, setMapWarmedUp] = useState(false)
+  // PDF capture framing mode. When non-null, an overlay shows the 16:9
+  // capture frame + a Cancel / Confirm banner. The user pans/zooms to
+  // position content inside the frame, then confirms — which runs the
+  // capture pipeline. Set by handleExportPdf / handleEmailPdf.
+  const [framingMode, setFramingMode] = useState<'pdf' | 'email' | null>(null)
+  // Live map-container pixel size — drives the frame overlay so it
+  // matches the actual mapDiv dimensions.
+  const [mapSize, setMapSize] = useState<{ w: number; h: number } | null>(null)
 
   // Lock mode — prevents dragging when locked
   const [planLocked, setPlanLocked] = useState(false)
@@ -816,7 +824,20 @@ export default function ParkingPage() {
       setMapLoaded(true)
     })
 
+    // Track map container pixel size for the capture-frame overlay
+    const el = mapContainer.current
+    let resizeObs: ResizeObserver | null = null
+    if (el) {
+      const update = () => setMapSize({ w: el.clientWidth, h: el.clientHeight })
+      update()
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObs = new ResizeObserver(update)
+        resizeObs.observe(el)
+      }
+    }
+
     return () => {
+      if (resizeObs) resizeObs.disconnect()
       if (map.current) {
         clearAllObjects(map.current)
         map.current = null
@@ -2480,34 +2501,37 @@ export default function ParkingPage() {
     })
   }
 
-  const handleExportPdf = async () => {
+  // The toolbar buttons enter framing mode; the actual capture runs in
+  // handleConfirmCapture once the user positions the map inside the frame.
+  const handleExportPdf = () => {
     if (!selectedPlan) return
-    setExportingPdf(true)
-    try {
-      const result = await buildParkingPdf()
-      if (result) {
-        result.doc.save(result.filename)
-        toast.success('PDF exported')
-      }
-    } catch (err) {
-      toast.error('Failed to export PDF')
-      console.error(err)
-    } finally {
-      setExportingPdf(false)
-    }
+    setFramingMode('pdf')
   }
 
-  const handleEmailPdf = async () => {
+  const handleEmailPdf = () => {
     if (!selectedPlan) return
+    setFramingMode('email')
+  }
+
+  const handleCancelCapture = () => setFramingMode(null)
+
+  const handleConfirmCapture = async () => {
+    const mode = framingMode
+    if (!mode || !selectedPlan) { setFramingMode(null); return }
+    setFramingMode(null)
     setExportingPdf(true)
     try {
       const result = await buildParkingPdf()
-      if (result) {
+      if (!result) return
+      if (mode === 'pdf') {
+        result.doc.save(result.filename)
+        toast.success('PDF exported')
+      } else {
         setEmailPdfData(result)
         setEmailModalOpen(true)
       }
     } catch (err) {
-      toast.error('Failed to generate PDF')
+      toast.error(mode === 'pdf' ? 'Failed to export PDF' : 'Failed to generate PDF')
       console.error(err)
     } finally {
       setExportingPdf(false)
@@ -4178,6 +4202,77 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+          {/* PDF capture framing overlay — shown only while the user is positioning
+              the map for an export. Confirm runs the capture; Cancel exits. */}
+          {framingMode && mapSize && mapSize.w > 0 && mapSize.h > 0 && selectedPlanId && (() => {
+            const f = captureFrameDims(mapSize.w, mapSize.h)
+            const dim = 'rgba(0,0,0,0.45)'
+            const verb = framingMode === 'pdf' ? 'Export PDF' : 'Email PDF'
+            return (
+              <>
+                {/* Dim outside the frame — pointer-events off so the map underneath
+                    stays interactive (pan/zoom). */}
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
+                  {f.x > 0 && (
+                    <>
+                      <div style={{ position: 'absolute', left: 0, top: 0, width: f.x, height: '100%', background: dim }} />
+                      <div style={{ position: 'absolute', right: 0, top: 0, width: f.x, height: '100%', background: dim }} />
+                    </>
+                  )}
+                  {f.y > 0 && (
+                    <>
+                      <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: f.y, background: dim }} />
+                      <div style={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: f.y, background: dim }} />
+                    </>
+                  )}
+                  <div style={{
+                    position: 'absolute', left: f.x, top: f.y, width: f.w, height: f.h,
+                    border: '2px dashed var(--color-cyan)', boxSizing: 'border-box',
+                  }} />
+                </div>
+                {/* Instruction banner — top-center, above the dim layer. */}
+                <div style={{
+                  position: 'absolute', zIndex: 6,
+                  top: 14, left: '50%', transform: 'translateX(-50%)',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 12px',
+                  background: 'var(--color-bg-surface)',
+                  border: '1px solid var(--color-cyan)',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                  maxWidth: 'calc(100% - 28px)', flexWrap: 'wrap',
+                }}>
+                  <span style={{
+                    fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    whiteSpace: isMobile ? 'normal' : 'nowrap',
+                  }}>
+                    Position the map inside the frame, then confirm to {verb.toLowerCase()}.
+                  </span>
+                  <button
+                    onClick={handleCancelCapture}
+                    disabled={exportingPdf}
+                    style={{
+                      padding: '5px 12px', borderRadius: 4, fontFamily: 'inherit',
+                      background: 'transparent', border: '1px solid var(--color-border)',
+                      color: 'var(--color-text-secondary)', cursor: exportingPdf ? 'wait' : 'pointer',
+                      fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    }}
+                  >Cancel</button>
+                  <button
+                    onClick={handleConfirmCapture}
+                    disabled={exportingPdf}
+                    style={{
+                      padding: '5px 14px', borderRadius: 4, fontFamily: 'inherit',
+                      background: 'var(--color-cyan)', border: '1px solid var(--color-cyan)',
+                      color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
+                      fontSize: 'var(--fs-xs)', fontWeight: 700, opacity: exportingPdf ? 0.6 : 1,
+                    }}
+                  >{exportingPdf ? 'Capturing…' : `Confirm & ${verb}`}</button>
+                </div>
+              </>
+            )
+          })()}
           {/* ── Floating panel — anchored top-left under the controls toolbar, desktop only ── */}
           {!isMobile && !sidebarCollapsed && (() => {
             const startResize = (dir: 'w' | 'h' | 'wh') => (e: React.MouseEvent) => {
