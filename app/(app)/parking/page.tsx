@@ -2332,13 +2332,17 @@ export default function ParkingPage() {
       if (!w) return
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
-      const liveW = mapDiv.clientWidth
-      const liveH = mapDiv.clientHeight
-      const frame = captureFrameDims(liveW, liveH)
+      const parent = mapDiv.parentElement
+      if (!parent) { setMapWarmedUp(true); return }
+      const origWidth = parent.style.width
+      const origHeight = parent.style.height
       try {
+        parent.style.width = '1600px'
+        parent.style.height = '900px'
+        google.maps.event.trigger(gmap, 'resize')
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 1500)
+          setTimeout(resolve, 3000)
         })
         if (cancelled) return
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
@@ -2349,17 +2353,21 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale: 1, // lower scale since output is discarded — faster warm-up
           logging: false,
-          x: frame.x,
-          y: frame.y,
-          width: frame.w,
-          height: frame.h,
-          windowWidth: liveW,
-          windowHeight: liveH,
+          width: mapDiv.clientWidth,
+          height: mapDiv.clientHeight,
         })
         if (cancelled) return
       } catch (err) {
         console.warn('Map capture warm-up failed:', err)
+      } finally {
+        parent.style.width = origWidth
+        parent.style.height = origHeight
+        google.maps.event.trigger(gmap, 'resize')
       }
+      await new Promise<void>(resolve => {
+        google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
+        setTimeout(resolve, 1500)
+      })
       if (!cancelled) setMapWarmedUp(true)
     }
     run()
@@ -2490,19 +2498,31 @@ export default function ParkingPage() {
     if (!selectedPlan) return null
     const w = map.current
     let mapDataUrl: string | null = null
+    // Polygon of lat/lng corners corresponding to the captured map area
+    // (the 1600×900 viewport after resize). Used to filter PDF tables.
     let framePolygon: { lat: number; lng: number }[] | null = null
 
     if (w) {
+      // Resize-trick capture (proven to reliably get tiles into the WebGL
+      // drawing buffer just before html2canvas reads). The frame-area
+      // clipping approach failed back-to-back captures (multi-apron
+      // exports had the second capture come back gray). We trade the
+      // slight viewport-vs-capture shift for capture reliability.
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
-      const liveW = mapDiv.clientWidth
-      const liveH = mapDiv.clientHeight
-      const frame = captureFrameDims(liveW, liveH)
+      const parent = mapDiv.parentElement
+      const origWidth = parent?.style.width || ''
+      const origHeight = parent?.style.height || ''
 
       try {
+        if (parent) {
+          parent.style.width = '1600px'
+          parent.style.height = '900px'
+        }
+        google.maps.event.trigger(gmap, 'resize')
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 1500)
+          setTimeout(resolve, 3000)
         })
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
@@ -2513,30 +2533,32 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale: 2,
           logging: false,
-          x: frame.x,
-          y: frame.y,
-          width: frame.w,
-          height: frame.h,
-          windowWidth: liveW,
-          windowHeight: liveH,
+          width: mapDiv.clientWidth,
+          height: mapDiv.clientHeight,
         })
         mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
+
+        // Project the four corners of the resized (captured) viewport to
+        // lat/lng. This is the geographic area actually in the PDF map
+        // page, so the filter accurately matches what's visible.
+        const liveW = mapDiv.clientWidth
+        const liveH = mapDiv.clientHeight
+        const tl = pixelToLatLng(w, 0, 0)
+        const tr = pixelToLatLng(w, liveW, 0)
+        const br = pixelToLatLng(w, liveW, liveH)
+        const bl = pixelToLatLng(w, 0, liveH)
+        if (tl && tr && br && bl) framePolygon = [tl, tr, br, bl]
       } catch (err) {
         console.warn('Map capture error:', err)
         toast.error('Map capture failed')
         mapDataUrl = null
+      } finally {
+        if (parent) {
+          parent.style.width = origWidth
+          parent.style.height = origHeight
+        }
+        google.maps.event.trigger(gmap, 'resize')
       }
-
-      // Project the four frame corners to lat/lng so we can filter the PDF
-      // tables to only the aircraft that are inside the captured area.
-      // Clockwise from top-left for consistent polygon winding under
-      // map rotation; pixelToLatLng routes through Google's projection
-      // which already applies the live map heading.
-      const tl = pixelToLatLng(w, frame.x, frame.y)
-      const tr = pixelToLatLng(w, frame.x + frame.w, frame.y)
-      const br = pixelToLatLng(w, frame.x + frame.w, frame.y + frame.h)
-      const bl = pixelToLatLng(w, frame.x, frame.y + frame.h)
-      if (tl && tr && br && bl) framePolygon = [tl, tr, br, bl]
     }
 
     // Strict filter: only aircraft, obstacles, and clearance results whose
@@ -2649,16 +2671,20 @@ export default function ParkingPage() {
   const handleConfirmCapture = async () => {
     const mode = framingMode
     if (!mode || !selectedPlan) { handleCancelCapture(); return }
-    if (pendingAprons.length > 0) {
-      setApronNamePrompt({ open: true, draft: `Apron ${pendingAprons.length + 1}`, intent: 'confirm' })
-      return
-    }
-    // Single-apron path — capture the current frame as one anonymous
-    // section and export immediately.
-    setFramingMode(null)
     setExportingPdf(true)
     try {
+      // Non-empty queue: ship the queued aprons as-is. Don't capture
+      // the current view again — Add Apron is the explicit add gesture.
+      if (pendingAprons.length > 0) {
+        const sections = [...pendingAprons]
+        setFramingMode(null)
+        setPendingAprons([])
+        await exportSections(sections, mode)
+        return
+      }
+      // Empty queue: single-apron path — capture current view + export.
       const capture = await captureCurrentFrame(null)
+      setFramingMode(null)
       if (!capture) return
       await exportSections([capture], mode)
     } catch (err) {
@@ -2669,28 +2695,20 @@ export default function ParkingPage() {
     }
   }
 
-  // Shared handler between Add Apron and Confirm-with-queue. Captures the
-  // current frame under the typed name; if intent is 'confirm', also runs
-  // the multi-apron export.
+  // Add Apron flow: captures the current frame under the typed name
+  // and appends to the queue. Framing mode stays open so the user can
+  // position the next apron and Add Apron again, or Confirm & Export
+  // to ship the queue.
   const handleApronNamePromptSave = async () => {
     const fallback = `Apron ${pendingAprons.length + 1}`
     const name = (apronNamePrompt.draft.trim() || fallback)
-    const intent = apronNamePrompt.intent
-    const mode = framingMode
     setApronNamePrompt({ open: false, draft: '', intent: 'add' })
     setExportingPdf(true)
     try {
       const capture = await captureCurrentFrame(name)
       if (!capture) return
-      if (intent === 'add') {
-        setPendingAprons(prev => [...prev, capture])
-        toast.success(`Added "${name}" — position the next apron`)
-      } else if (mode) {
-        const sections = [...pendingAprons, capture]
-        setFramingMode(null)
-        setPendingAprons([])
-        await exportSections(sections, mode)
-      }
+      setPendingAprons(prev => [...prev, capture])
+      toast.success(`Added "${name}" — position the next apron`)
     } catch (err) {
       toast.error('Failed to capture apron')
       console.error(err)
@@ -4462,10 +4480,7 @@ export default function ParkingPage() {
                           color: '#000', cursor: exportingPdf ? 'wait' : 'pointer',
                           fontSize: 'var(--fs-xs)', fontWeight: 700, opacity: exportingPdf ? 0.6 : 1,
                         }}
-                      >{exportingPdf
-                        ? 'Capturing…'
-                        : apronNamePrompt.intent === 'confirm' ? `Save & ${verb}` : 'Save Apron'
-                      }</button>
+                      >{exportingPdf ? 'Capturing…' : 'Save Apron'}</button>
                     </>
                   ) : (
                     <>
