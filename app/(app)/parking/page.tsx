@@ -2340,13 +2340,25 @@ export default function ParkingPage() {
       const mapDiv = gmap.getDiv()
       const parent = mapDiv.parentElement
       if (!parent) { setMapWarmedUp(true); return }
-      const origWidth = parent.style.width
-      const origHeight = parent.style.height
+      const origStyle = {
+        position: parent.style.position,
+        top: parent.style.top,
+        left: parent.style.left,
+        width: parent.style.width,
+        height: parent.style.height,
+        zIndex: parent.style.zIndex,
+        flex: parent.style.flex,
+      }
       const preCenter = gmap.getCenter()
       const preZoom = gmap.getZoom()
       try {
+        parent.style.position = 'fixed'
+        parent.style.top = '0'
+        parent.style.left = '0'
         parent.style.width = '1600px'
         parent.style.height = '900px'
+        parent.style.zIndex = '10000'
+        parent.style.flex = 'none'
         google.maps.event.trigger(gmap, 'resize')
         if (preCenter) gmap.setCenter(preCenter)
         if (preZoom != null) gmap.setZoom(preZoom)
@@ -2370,8 +2382,13 @@ export default function ParkingPage() {
       } catch (err) {
         console.warn('Map capture warm-up failed:', err)
       } finally {
-        parent.style.width = origWidth
-        parent.style.height = origHeight
+        parent.style.position = origStyle.position
+        parent.style.top = origStyle.top
+        parent.style.left = origStyle.left
+        parent.style.width = origStyle.width
+        parent.style.height = origStyle.height
+        parent.style.zIndex = origStyle.zIndex
+        parent.style.flex = origStyle.flex
         google.maps.event.trigger(gmap, 'resize')
         if (preCenter) gmap.setCenter(preCenter)
         if (preZoom != null) gmap.setZoom(preZoom)
@@ -2515,26 +2532,38 @@ export default function ParkingPage() {
     let framePolygon: { lat: number; lng: number }[] | null = null
 
     if (w) {
-      // Resize-trick capture (proven to reliably get tiles into the WebGL
-      // drawing buffer just before html2canvas reads). We trade the
-      // slight viewport-vs-capture shift for capture reliability vs the
-      // frame-area approach. Zoom + center are re-applied AFTER the resize
-      // because Google Maps's fractional-zoom logic can subtly adjust both
-      // when the container shrinks/grows — without re-applying, the
-      // captured geographic area drifts from what the on-screen outline
-      // promises (PDF ends up showing extra area top/bottom or sides).
+      // Force the parent out of flex layout with position: fixed so the
+      // 1600x900 dimensions are actually honored — without this, the flex
+      // container keeps the parent at its current height (usually ~viewport
+      // height, not 900), so the "1600x900 capture" actually captures the
+      // viewport's pixel dimensions. The on-screen outline IS 1600x900, so
+      // the PDF then shows extra geographic area below/above the outline.
+      // Matches the original Mapbox capture pipeline (pre-Apr 2026).
+      // Brief visible flash during capture is acceptable (~1s).
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
       const parent = mapDiv.parentElement
-      const origWidth = parent?.style.width || ''
-      const origHeight = parent?.style.height || ''
+      const origStyle = {
+        position: parent?.style.position || '',
+        top: parent?.style.top || '',
+        left: parent?.style.left || '',
+        width: parent?.style.width || '',
+        height: parent?.style.height || '',
+        zIndex: parent?.style.zIndex || '',
+        flex: parent?.style.flex || '',
+      }
       const preCenter = gmap.getCenter()
       const preZoom = gmap.getZoom()
 
       try {
         if (parent) {
+          parent.style.position = 'fixed'
+          parent.style.top = '0'
+          parent.style.left = '0'
           parent.style.width = '1600px'
           parent.style.height = '900px'
+          parent.style.zIndex = '10000'
+          parent.style.flex = 'none'
         }
         google.maps.event.trigger(gmap, 'resize')
         // Force the resized map back to the exact pre-resize center + zoom
@@ -2559,8 +2588,8 @@ export default function ParkingPage() {
         })
         mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
 
-        // Project the four corners of the resized (captured) viewport to
-        // lat/lng. This is the geographic area actually in the PDF map
+        // Project the four corners of the (now actually 1600x900) viewport
+        // to lat/lng. This is the geographic area actually in the PDF map
         // page, so the filter accurately matches what's visible.
         const liveW = mapDiv.clientWidth
         const liveH = mapDiv.clientHeight
@@ -2575,8 +2604,13 @@ export default function ParkingPage() {
         mapDataUrl = null
       } finally {
         if (parent) {
-          parent.style.width = origWidth
-          parent.style.height = origHeight
+          parent.style.position = origStyle.position
+          parent.style.top = origStyle.top
+          parent.style.left = origStyle.left
+          parent.style.width = origStyle.width
+          parent.style.height = origStyle.height
+          parent.style.zIndex = origStyle.zIndex
+          parent.style.flex = origStyle.flex
         }
         google.maps.event.trigger(gmap, 'resize')
         // Restore the live viewport's center + zoom too, so the user lands
