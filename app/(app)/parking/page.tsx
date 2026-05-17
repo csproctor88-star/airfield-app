@@ -340,6 +340,22 @@ function rotateBaseCanvas(baseCanvas: HTMLCanvasElement, headingDeg: number): { 
   return { url: rotCanvas.toDataURL('image/png'), fixedDim }
 }
 
+// 16:9 capture frame inset inside a map container of the given pixel size.
+// The PDF map page is landscape, so we lock the capture aspect to 16:9 and
+// center the frame; the user can pan/zoom so the content they care about
+// sits inside it. Returns the rectangle (in container CSS pixels) that
+// html2canvas will clip to.
+function captureFrameDims(containerW: number, containerH: number): { w: number; h: number; x: number; y: number } {
+  const TARGET = 16 / 9
+  if (containerW <= 0 || containerH <= 0) return { w: containerW, h: containerH, x: 0, y: 0 }
+  if (containerW / containerH >= TARGET) {
+    const w = Math.round(containerH * TARGET)
+    return { w, h: containerH, x: Math.round((containerW - w) / 2), y: 0 }
+  }
+  const h = Math.round(containerW / TARGET)
+  return { w: containerW, h, x: 0, y: Math.round((containerH - h) / 2) }
+}
+
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
  *  the aircraft's real-world wingspan at the current map zoom.
  *  Uses Google Maps projection to convert real-world distance to pixels. */
@@ -2245,14 +2261,14 @@ export default function ParkingPage() {
     }, 200)
   }, [isFullscreen])
 
-  // Silent warm-up after the map's initial tile load. Runs the EXACT same
-  // capture pipeline as a real export — resize to 1600×900, wait for idle,
-  // call html2canvas, restore — and discards the output. The discarded
-  // first capture warms whatever it is that makes the second capture in
-  // a session always succeed (the bare resize cycle alone wasn't enough;
-  // empirically, an actual html2canvas read is required to prime the WebGL
-  // / browser GPU state). Setting mapWarmedUp to true unblocks the export
-  // buttons.
+  // Silent warm-up after the map's initial tile load. Runs the same
+  // frame-area html2canvas read the real export will run, and discards
+  // the output. The discarded first capture warms whatever it is that
+  // makes the second capture in a session always succeed (empirically,
+  // an actual html2canvas read is what primes the WebGL / browser GPU
+  // state — the resize cycle wasn't required, it just happened to be
+  // bundled with the read in the previous implementation). Setting
+  // mapWarmedUp to true unblocks the export buttons.
   useEffect(() => {
     if (!mapLoaded || mapWarmedUp) return
     let cancelled = false
@@ -2261,48 +2277,34 @@ export default function ParkingPage() {
       if (!w) return
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
-      const parent = mapDiv.parentElement
-      if (!parent) { setMapWarmedUp(true); return }
-      const origWidth = parent.style.width
-      const origHeight = parent.style.height
+      const liveW = mapDiv.clientWidth
+      const liveH = mapDiv.clientHeight
+      const frame = captureFrameDims(liveW, liveH)
       try {
-        parent.style.width = '1600px'
-        parent.style.height = '900px'
-        google.maps.event.trigger(gmap, 'resize')
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 3000)
+          setTimeout(resolve, 1500)
         })
         if (cancelled) return
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-        // Actual html2canvas call — output discarded. This is the bit that
-        // makes the next real capture succeed.
         const html2canvas = (await import('html2canvas')).default
         await html2canvas(mapDiv, {
           useCORS: true,
           allowTaint: true,
           backgroundColor: null,
-          scale: 1,  // lower scale since output is discarded — faster warm-up
+          scale: 1, // lower scale since output is discarded — faster warm-up
           logging: false,
-          width: mapDiv.clientWidth,
-          height: mapDiv.clientHeight,
+          x: frame.x,
+          y: frame.y,
+          width: frame.w,
+          height: frame.h,
+          windowWidth: liveW,
+          windowHeight: liveH,
         })
         if (cancelled) return
       } catch (err) {
-        // Warm-up failure shouldn't block the user; the real export still
-        // works (after a retry, as before this change).
         console.warn('Map capture warm-up failed:', err)
-      } finally {
-        parent.style.width = origWidth
-        parent.style.height = origHeight
-        google.maps.event.trigger(gmap, 'resize')
       }
-      // Brief settle so the restore-to-original-size also finishes painting
-      // before we declare ready.
-      await new Promise<void>(resolve => {
-        google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-        setTimeout(resolve, 1500)
-      })
       if (!cancelled) setMapWarmedUp(true)
     }
     run()
@@ -2429,26 +2431,24 @@ export default function ParkingPage() {
     let mapDataUrl: string | null = null
 
     if (w) {
-      // Temporarily resize map to landscape for a wider capture
+      // Capture the on-screen 16:9 capture frame as-is — no resize, no tile
+      // re-layout. The map div stays at its current visible size, and
+      // html2canvas's own x/y/width/height options clip the captured canvas
+      // to the frame's pixel rectangle. The result is that the PDF map page
+      // shows EXACTLY the geographic area that was inside the dashed frame
+      // on screen (no "captured area shifted wider" effect).
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
-      const parent = mapDiv.parentElement
-      const origWidth = parent?.style.width || ''
-      const origHeight = parent?.style.height || ''
+      const liveW = mapDiv.clientWidth
+      const liveH = mapDiv.clientHeight
+      const frame = captureFrameDims(liveW, liveH)
 
       try {
-        // Expand to 1600×900 for high-quality landscape capture
-        if (parent) {
-          parent.style.width = '1600px'
-          parent.style.height = '900px'
-        }
-        google.maps.event.trigger(gmap, 'resize')
-        // Wait for tiles to load at new size
+        // Make sure any pending tile / overlay work has settled before we snap.
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
-          setTimeout(resolve, 3000) // fallback timeout
+          setTimeout(resolve, 1500)
         })
-        // Extra frame for rendering
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
         const html2canvas = (await import('html2canvas')).default
@@ -2458,21 +2458,18 @@ export default function ParkingPage() {
           backgroundColor: null,
           scale: 2,
           logging: false,
-          width: mapDiv.clientWidth,
-          height: mapDiv.clientHeight,
+          x: frame.x,
+          y: frame.y,
+          width: frame.w,
+          height: frame.h,
+          windowWidth: liveW,
+          windowHeight: liveH,
         })
         mapDataUrl = canvas.toDataURL('image/jpeg', 0.9)
       } catch (err) {
         console.warn('Map capture error:', err)
         toast.error('Map capture failed')
         mapDataUrl = null
-      } finally {
-        // Restore original size
-        if (parent) {
-          parent.style.width = origWidth
-          parent.style.height = origHeight
-        }
-        google.maps.event.trigger(gmap, 'resize')
       }
     }
 
