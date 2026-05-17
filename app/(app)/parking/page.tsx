@@ -2342,10 +2342,14 @@ export default function ParkingPage() {
       if (!parent) { setMapWarmedUp(true); return }
       const origWidth = parent.style.width
       const origHeight = parent.style.height
+      const preCenter = gmap.getCenter()
+      const preZoom = gmap.getZoom()
       try {
         parent.style.width = '1600px'
         parent.style.height = '900px'
         google.maps.event.trigger(gmap, 'resize')
+        if (preCenter) gmap.setCenter(preCenter)
+        if (preZoom != null) gmap.setZoom(preZoom)
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
           setTimeout(resolve, 3000)
@@ -2369,6 +2373,8 @@ export default function ParkingPage() {
         parent.style.width = origWidth
         parent.style.height = origHeight
         google.maps.event.trigger(gmap, 'resize')
+        if (preCenter) gmap.setCenter(preCenter)
+        if (preZoom != null) gmap.setZoom(preZoom)
       }
       await new Promise<void>(resolve => {
         google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
@@ -2510,15 +2516,20 @@ export default function ParkingPage() {
 
     if (w) {
       // Resize-trick capture (proven to reliably get tiles into the WebGL
-      // drawing buffer just before html2canvas reads). The frame-area
-      // clipping approach failed back-to-back captures (multi-apron
-      // exports had the second capture come back gray). We trade the
-      // slight viewport-vs-capture shift for capture reliability.
+      // drawing buffer just before html2canvas reads). We trade the
+      // slight viewport-vs-capture shift for capture reliability vs the
+      // frame-area approach. Zoom + center are re-applied AFTER the resize
+      // because Google Maps's fractional-zoom logic can subtly adjust both
+      // when the container shrinks/grows — without re-applying, the
+      // captured geographic area drifts from what the on-screen outline
+      // promises (PDF ends up showing extra area top/bottom or sides).
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
       const parent = mapDiv.parentElement
       const origWidth = parent?.style.width || ''
       const origHeight = parent?.style.height || ''
+      const preCenter = gmap.getCenter()
+      const preZoom = gmap.getZoom()
 
       try {
         if (parent) {
@@ -2526,6 +2537,10 @@ export default function ParkingPage() {
           parent.style.height = '900px'
         }
         google.maps.event.trigger(gmap, 'resize')
+        // Force the resized map back to the exact pre-resize center + zoom
+        // so the capture matches what the on-screen outline is promising.
+        if (preCenter) gmap.setCenter(preCenter)
+        if (preZoom != null) gmap.setZoom(preZoom)
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
           setTimeout(resolve, 3000)
@@ -2564,6 +2579,10 @@ export default function ParkingPage() {
           parent.style.height = origHeight
         }
         google.maps.event.trigger(gmap, 'resize')
+        // Restore the live viewport's center + zoom too, so the user lands
+        // back exactly where they were before the export.
+        if (preCenter) gmap.setCenter(preCenter)
+        if (preZoom != null) gmap.setZoom(preZoom)
       }
     }
 
