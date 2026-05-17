@@ -71,7 +71,7 @@ import {
   PanelLeft, PanelLeftClose, Maximize2, Minimize2, Ruler as RulerIcon,
   Plane, MapPin, Building2, Minus, Circle as CircleIcon,
   ArrowRight, ArrowLeftRight, Square,
-  Lock, Unlock, Download, Mail,
+  Lock, Unlock, Download, Mail, X,
 } from 'lucide-react'
 
 // ── Silhouette manifest lookup ──
@@ -3172,6 +3172,21 @@ export default function ParkingPage() {
                 {selectedPlan.is_template ? 'Template' : selectedPlan.is_active ? 'Active' : 'Draft'}
               </span>
             )}
+            {!mobile && (
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                title="Hide panel"
+                aria-label="Hide panel"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 22, height: 22, marginLeft: 2, padding: 0, borderRadius: 4,
+                  background: 'transparent', border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)', cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <select
@@ -4590,16 +4605,21 @@ export default function ParkingPage() {
               <div style={{ background: 'var(--color-border)', flexShrink: 0, height: 1, margin: '4px 4px' }} />
             )
 
-            // Reusable button factories so desktop and mobile render the same controls.
-            const PanelBtn = !isMobile && (
+            // Reusable button factories. Mobile uses a bottom sheet for the
+            // panel (sheetExpanded); desktop uses a floating side panel
+            // (sidebarCollapsed). PanelBtn drives whichever is active so
+            // mobile users get a one-tap open / close from the toolbar
+            // rather than only the bottom-sheet drag handle.
+            const panelOpen = isMobile ? sheetExpanded : !sidebarCollapsed
+            const PanelBtn = (
               <button
                 key="panel"
-                onClick={() => setSidebarCollapsed(c => !c)}
-                title={sidebarCollapsed ? 'Show panel' : 'Hide panel'}
-                style={{ ...railBtnBase, ...(sidebarCollapsed ? {} : activeStyle('var(--color-cyan)')) }}
+                onClick={() => isMobile ? setSheetExpanded(s => !s) : setSidebarCollapsed(c => !c)}
+                title={panelOpen ? 'Hide panel' : 'Show panel'}
+                style={{ ...railBtnBase, ...(panelOpen ? activeStyle('var(--color-cyan)') : {}) }}
               >
-                {sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-                <span>{sidebarCollapsed ? 'Panel' : 'Hide'}</span>
+                {panelOpen ? <PanelLeftClose size={18} /> : <PanelLeft size={18} />}
+                <span>{panelOpen ? 'Hide' : 'Panel'}</span>
               </button>
             )
             const FullBtn = (
@@ -4757,6 +4777,7 @@ export default function ParkingPage() {
                     background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                   }}>
+                    {PanelBtn}
                     {FullBtn}
                     {RulerBtn}
                     {selectedPlanId && (

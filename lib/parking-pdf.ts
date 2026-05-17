@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { formatZuluDate, formatZuluDateTime, formatCoordsDMS } from '@/lib/utils'
+import { formatZuluDate, formatZuluDateTime, formatZuluTime, formatCoordsDMS } from '@/lib/utils'
 import {
   createPdf,
   drawBaseHeader,
@@ -259,7 +259,11 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
   }
 
   const safeName = plan.plan_name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')
-  const filename = `Parking_Plan_${safeName}_${formatZuluDate(new Date().toISOString())}.pdf`
+  // Include Zulu HHMM so successive captures of the same plan on the same
+  // date (typical multi-apron workflow) don't overwrite each other on
+  // download. Invisible inside the PDF; only the saved filename changes.
+  const now = new Date().toISOString()
+  const filename = `Parking_Plan_${safeName}_${formatZuluDate(now)}_${formatZuluTime(now)}Z.pdf`
 
   return { doc, filename }
 }
