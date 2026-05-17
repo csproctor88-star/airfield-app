@@ -850,7 +850,7 @@ export default function ParkingPage() {
       // because Google's vector renderer draws to a WebGL canvas without
       // preserveDrawingBuffer set.
       mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_VECTOR_MAP_ID,
-      tilt: 0, // start flat; user can request 45° via the tilt button
+      tilt: 0, // locked at 0 — tilt breaks aircraft icon scaling
       rotateControl: true,
       heading: 0,
     })
@@ -2234,10 +2234,14 @@ export default function ParkingPage() {
     }
   }, [boxSelectActive, mapLoaded])
 
-  // ── Ctrl+drag heading rotation (Vector Map) ──
+  // ── Ctrl+drag heading rotation ──
   // gestureHandling: 'greedy' suppresses the built-in rotation gesture, so
   // we implement it explicitly: hold Ctrl (or Shift) and drag horizontally
-  // to rotate; vertical drag tilts (0-67° clamp matches Vector Maps behavior).
+  // to rotate. Tilt is intentionally NOT supported — at non-flat tilts the
+  // aircraft SVG icons stop scaling correctly (Google Maps projects them
+  // through the tilted camera and our icon-scale calc only handles the
+  // overhead case). Parking laydowns don't need perspective, so we keep
+  // the camera locked at tilt: 0 and only let the user adjust heading.
   useEffect(() => {
     if (!mapLoaded) return
     const w = map.current
@@ -2246,22 +2250,14 @@ export default function ParkingPage() {
     const mapDiv = gmap.getDiv()
 
     let active = false
-    let startX = 0, startY = 0, startHeading = 0, startTilt = 0
-    let pending: { heading: number; tilt: number } | null = null
+    let startX = 0, startHeading = 0
+    let pending: number | null = null
     let rafId: number | null = null
-
-    // Raster maps don't support gmap.moveCamera() — it's a vector-only
-    // API and silently no-ops here. Use setHeading / setTilt instead,
-    // which work on both renderers.
-    const apply = (p: { heading: number; tilt: number }) => {
-      gmap.setHeading(p.heading)
-      gmap.setTilt(p.tilt)
-    }
 
     const flush = () => {
       rafId = null
-      if (pending) {
-        apply(pending)
+      if (pending != null) {
+        gmap.setHeading(pending)
         pending = null
       }
     }
@@ -2271,9 +2267,9 @@ export default function ParkingPage() {
       if (!e.ctrlKey && !e.shiftKey) return
       active = true
       startX = e.clientX
-      startY = e.clientY
       startHeading = gmap.getHeading() ?? 0
-      startTilt = gmap.getTilt() ?? 0
+      // Defensive: snap any accidental non-zero tilt back to flat.
+      if ((gmap.getTilt() ?? 0) !== 0) gmap.setTilt(0)
       gmap.setOptions({ draggable: false })
       mapDiv.style.cursor = 'grabbing'
       e.preventDefault()
@@ -2282,20 +2278,14 @@ export default function ParkingPage() {
     const onMove = (e: MouseEvent) => {
       if (!active) return
       const dx = e.clientX - startX
-      const dy = e.clientY - startY
-      pending = {
-        heading: (startHeading + dx / 2 + 360) % 360,
-        // Raster clamps tilt to {0, 45} internally; we still range the
-        // value here so Y-drag distance feels consistent.
-        tilt: Math.max(0, Math.min(67, startTilt + dy / 4)),
-      }
+      pending = (startHeading + dx / 2 + 360) % 360
       if (rafId == null) rafId = requestAnimationFrame(flush)
     }
     const onUp = () => {
       if (!active) return
       active = false
       if (rafId != null) { cancelAnimationFrame(rafId); rafId = null }
-      if (pending) { apply(pending); pending = null }
+      if (pending != null) { gmap.setHeading(pending); pending = null }
       gmap.setOptions({ draggable: true })
       mapDiv.style.cursor = ''
     }
