@@ -340,6 +340,26 @@ function rotateBaseCanvas(baseCanvas: HTMLCanvasElement, headingDeg: number): { 
   return { url: rotCanvas.toDataURL('image/png'), fixedDim }
 }
 
+// Ray-cast point-in-polygon. `vertices` is a closed quadrilateral (or any
+// polygon) given in lat/lng. Used to filter parking spots / obstacles by
+// whether they sit inside the on-screen capture frame after the four
+// pixel corners have been projected to lat/lng — works correctly under
+// map rotation because the projection has already applied it.
+function pointInLatLngPolygon(
+  point: { lat: number; lng: number },
+  vertices: { lat: number; lng: number }[],
+): boolean {
+  let inside = false
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const xi = vertices[i].lng, yi = vertices[i].lat
+    const xj = vertices[j].lng, yj = vertices[j].lat
+    const intersects = (yi > point.lat) !== (yj > point.lat)
+      && point.lng < ((xj - xi) * (point.lat - yi)) / (yj - yi) + xi
+    if (intersects) inside = !inside
+  }
+  return inside
+}
+
 // 16:9 capture frame inset inside a map container of the given pixel size.
 // The PDF map page is landscape, so we lock the capture aspect to 16:9 and
 // center the frame; the user can pan/zoom so the content they care about
@@ -2450,14 +2470,13 @@ export default function ParkingPage() {
     if (!selectedPlan) return null
     const w = map.current
     let mapDataUrl: string | null = null
+    // Polygon of lat/lng corners corresponding to the on-screen capture frame.
+    // Used after the snap to filter the PDF's aircraft / clearance tables to
+    // only what's actually inside the captured map area. Stays null if we
+    // can't project — in which case the PDF falls back to the full plan.
+    let framePolygon: { lat: number; lng: number }[] | null = null
 
     if (w) {
-      // Capture the on-screen 16:9 capture frame as-is — no resize, no tile
-      // re-layout. The map div stays at its current visible size, and
-      // html2canvas's own x/y/width/height options clip the captured canvas
-      // to the frame's pixel rectangle. The result is that the PDF map page
-      // shows EXACTLY the geographic area that was inside the dashed frame
-      // on screen (no "captured area shifted wider" effect).
       const gmap = w.gmap
       const mapDiv = gmap.getDiv()
       const liveW = mapDiv.clientWidth
@@ -2465,7 +2484,6 @@ export default function ParkingPage() {
       const frame = captureFrameDims(liveW, liveH)
 
       try {
-        // Make sure any pending tile / overlay work has settled before we snap.
         await new Promise<void>(resolve => {
           google.maps.event.addListenerOnce(gmap, 'idle', () => resolve())
           setTimeout(resolve, 1500)
@@ -2492,11 +2510,67 @@ export default function ParkingPage() {
         toast.error('Map capture failed')
         mapDataUrl = null
       }
+
+      // Project the four frame corners to lat/lng so we can filter the PDF
+      // tables to only the aircraft that are inside the captured area.
+      // Clockwise from top-left for consistent polygon winding under
+      // map rotation; pixelToLatLng routes through Google's projection
+      // which already applies the live map heading.
+      const tl = pixelToLatLng(w, frame.x, frame.y)
+      const tr = pixelToLatLng(w, frame.x + frame.w, frame.y)
+      const br = pixelToLatLng(w, frame.x + frame.w, frame.y + frame.h)
+      const bl = pixelToLatLng(w, frame.x, frame.y + frame.h)
+      if (tl && tr && br && bl) framePolygon = [tl, tr, br, bl]
+    }
+
+    // Strict filter: only aircraft, obstacles, and clearance results whose
+    // every referenced entity is inside the captured frame end up in the PDF.
+    // If projection failed, framePolygon is null and we fall back to the
+    // full plan arrays (degraded but still produces a usable export).
+    let spotsForPdf = spots
+    let spotsWithAircraftForPdf = spotsWithAircraft
+    let allResultsForPdf = allResults
+    let violationsForPdf = violations
+    let warningsForPdf = warnings
+    if (framePolygon) {
+      const poly = framePolygon
+      // Use the visible body center (offset from the stored nose coords by
+      // half the aircraft length along the heading), so a spot counts as
+      // "in frame" exactly when its body sits inside the dashed rectangle.
+      const spotInFrame = (s: SpotWithAircraft) => {
+        const c = spotCenter(s)
+        return pointInLatLngPolygon({ lat: c.lat, lng: c.lon }, poly)
+      }
+      const inSpotIds = new Set<string>()
+      spotsWithAircraftForPdf = spotsWithAircraft.filter(s => {
+        if (spotInFrame(s)) { inSpotIds.add(s.id); return true }
+        return false
+      })
+      spotsForPdf = spots.filter(s => inSpotIds.has(s.id))
+      const inObstacleIds = new Set<string>()
+      for (const o of obstacles) {
+        if (pointInLatLngPolygon({ lat: o.latitude, lng: o.longitude }, poly)) {
+          inObstacleIds.add(o.id)
+        }
+      }
+      allResultsForPdf = allResults.filter(r => {
+        if (r.spot_a_id && !inSpotIds.has(r.spot_a_id)) return false
+        if (r.spot_b_id && !inSpotIds.has(r.spot_b_id)) return false
+        if (r.obstacle_id && !inObstacleIds.has(r.obstacle_id)) return false
+        return true
+      })
+      violationsForPdf = allResultsForPdf.filter(r => r.status === 'violation')
+      warningsForPdf = allResultsForPdf.filter(r => r.status === 'warning')
     }
 
     return generateParkingPdf({
-      plan: selectedPlan, spots, spotsWithAircraft,
-      allResults, violations, warnings, apronContext, mapDataUrl,
+      plan: selectedPlan,
+      spots: spotsForPdf,
+      spotsWithAircraft: spotsWithAircraftForPdf,
+      allResults: allResultsForPdf,
+      violations: violationsForPdf,
+      warnings: warningsForPdf,
+      apronContext, mapDataUrl,
       baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao,
     })
   }
