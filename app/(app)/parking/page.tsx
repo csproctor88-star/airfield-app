@@ -360,20 +360,26 @@ function pointInLatLngPolygon(
   return inside
 }
 
-// 16:9 capture frame inset inside a map container of the given pixel size.
-// The PDF map page is landscape, so we lock the capture aspect to 16:9 and
-// center the frame; the user can pan/zoom so the content they care about
-// sits inside it. Returns the rectangle (in container CSS pixels) that
-// html2canvas will clip to.
-function captureFrameDims(containerW: number, containerH: number): { w: number; h: number; x: number; y: number } {
-  const TARGET = 16 / 9
-  if (containerW <= 0 || containerH <= 0) return { w: containerW, h: containerH, x: 0, y: 0 }
-  if (containerW / containerH >= TARGET) {
-    const w = Math.round(containerH * TARGET)
-    return { w, h: containerH, x: Math.round((containerW - w) / 2), y: 0 }
+// The capture pipeline temporarily resizes the map to CAPTURE_W × CAPTURE_H
+// and snaps that. Because Google Maps keeps the same center lat/lng across
+// a resize, the captured geographic area is a CAPTURE_W × CAPTURE_H pixel
+// rectangle centered on the current map center — which corresponds to a
+// rectangle of the same pixel dimensions centered in the live viewport.
+const CAPTURE_W = 1600
+const CAPTURE_H = 900
+
+// Position of the actual captured area within the user's current viewport.
+// Returns the outline rectangle in CSS pixels (may have negative x/y or
+// extend past the viewport if the viewport is smaller than the capture —
+// that's intentional, it tells the user the capture will include more
+// than what's on screen).
+function captureOutlineRect(viewportW: number, viewportH: number): { w: number; h: number; x: number; y: number } {
+  return {
+    w: CAPTURE_W,
+    h: CAPTURE_H,
+    x: Math.round((viewportW - CAPTURE_W) / 2),
+    y: Math.round((viewportH - CAPTURE_H) / 2),
   }
-  const h = Math.round(containerW / TARGET)
-  return { w: containerW, h, x: 0, y: Math.round((containerH - h) / 2) }
 }
 
 /** Compute the icon-size scale factor to make a REF_ICON_SIZE image match
@@ -4400,32 +4406,22 @@ export default function ParkingPage() {
 
         <div style={{ flex: 1, minHeight: 0, position: 'relative', paddingBottom: isMobile && !isFullscreen ? 48 : 0 }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-          {/* PDF capture framing overlay — shown only while the user is positioning
-              the map for an export. Confirm runs the capture; Cancel exits. */}
+          {/* PDF capture framing overlay — shows the exact 1600×900 area the
+              capture will produce, centered in the viewport. If the viewport
+              is smaller than the capture, the outline extends past the
+              visible edges (intentional — tells the user the capture will
+              include more than what's on screen). Box-shadow dims everything
+              outside the outline. Confirm runs the capture; Cancel exits. */}
           {framingMode && mapSize && mapSize.w > 0 && mapSize.h > 0 && selectedPlanId && (() => {
-            const f = captureFrameDims(mapSize.w, mapSize.h)
-            const dim = 'rgba(0,0,0,0.45)'
+            const o = captureOutlineRect(mapSize.w, mapSize.h)
             const verb = framingMode === 'pdf' ? 'Export PDF' : 'Email PDF'
             return (
               <>
-                {/* Dim outside the frame — pointer-events off so the map underneath
-                    stays interactive (pan/zoom). */}
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5 }}>
-                  {f.x > 0 && (
-                    <>
-                      <div style={{ position: 'absolute', left: 0, top: 0, width: f.x, height: '100%', background: dim }} />
-                      <div style={{ position: 'absolute', right: 0, top: 0, width: f.x, height: '100%', background: dim }} />
-                    </>
-                  )}
-                  {f.y > 0 && (
-                    <>
-                      <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: f.y, background: dim }} />
-                      <div style={{ position: 'absolute', left: 0, bottom: 0, width: '100%', height: f.y, background: dim }} />
-                    </>
-                  )}
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5, overflow: 'hidden' }}>
                   <div style={{
-                    position: 'absolute', left: f.x, top: f.y, width: f.w, height: f.h,
+                    position: 'absolute', left: o.x, top: o.y, width: o.w, height: o.h,
                     border: '2px dashed var(--color-cyan)', boxSizing: 'border-box',
+                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)',
                   }} />
                 </div>
                 {/* Instruction banner — Cancel / Add Apron / Confirm. Inline-
