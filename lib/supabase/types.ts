@@ -963,6 +963,7 @@ export type Database = {
           is_active: boolean
           location: string | null
           majcom: string | null
+          map_provider: 'google' | 'bing' | 'esri'
           name: string
           qrc_review_interval: 'monthly' | 'quarterly'
           setup_progress: Json
@@ -992,6 +993,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           majcom?: string | null
+          map_provider?: 'google' | 'bing' | 'esri'
           name: string
           qrc_review_interval?: 'monthly' | 'quarterly'
           setup_progress?: Json
@@ -1021,6 +1023,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           majcom?: string | null
+          map_provider?: 'google' | 'bing' | 'esri'
           name?: string
           qrc_review_interval?: 'monthly' | 'quarterly'
           setup_progress?: Json

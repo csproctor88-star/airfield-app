@@ -20,6 +20,7 @@ import {
   pixelToLatLng,
   imageDataToDataUrl,
 } from '@/lib/google-map-adapter'
+import { applyMapProvider } from '@/lib/map-providers'
 import {
   fetchInfrastructureFeatures,
   createInfrastructureFeature,
@@ -403,7 +404,7 @@ export default function InfrastructureMapPage() {
     () => Object.fromEntries(LAYERS.map(l => [l.key, false]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
-  const { runways, installationId, facilities } = useInstallation()
+  const { runways, installationId, facilities, mapProvider } = useInstallation()
   const { has } = usePermissions()
 
   // Fullscreen
@@ -2300,6 +2301,8 @@ export default function InfrastructureMapPage() {
       zoom: 16,
     })
 
+    applyMapProvider(gmap, mapProvider)
+
     const wrapper = createGMapWrapper(gmap)
 
     // Register all icon images
@@ -2442,7 +2445,7 @@ export default function InfrastructureMapPage() {
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleReady, installationId])
+  }, [googleReady, installationId, mapProvider])
 
   // Re-render features when data or visibility changes
   useEffect(() => {

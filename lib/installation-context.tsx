@@ -7,6 +7,7 @@ import { fetchFacilities, type FacilityRow } from '@/lib/supabase/facilities'
 import { createClient } from '@/lib/supabase/client'
 import type { ModuleKey, SetupProgress, SetupStepStatus, WizardStepKey } from '@/lib/modules-config'
 import { ALL_TOGGLEABLE_MODULES } from '@/lib/modules-config'
+import { getInstallationMapProvider, type MapProvider } from '@/lib/map-providers'
 
 export interface InstallationContextValue {
   /** Current active installation (null while loading) */
@@ -49,6 +50,8 @@ export interface InstallationContextValue {
   updateDefaultClosedMessage: (message: string) => Promise<void>
   /** Module keys enabled for the current installation */
   enabledModules: ModuleKey[]
+  /** Satellite tile provider for the current installation (default 'google') */
+  mapProvider: MapProvider
   /** Per-step setup completion state for the current installation */
   setupProgress: SetupProgress
   /** Persist a new enabled-modules list for the current installation */
@@ -198,6 +201,8 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
   const setupProgress: SetupProgress =
     ((currentInstallation as unknown as { setup_progress?: SetupProgress } | null)?.setup_progress) ?? {}
 
+  const mapProvider: MapProvider = getInstallationMapProvider(currentInstallation)
+
   const updateEnabledModules = useCallback(async (keys: ModuleKey[]) => {
     if (!installationId) return
     const supabase = createClient()
@@ -315,7 +320,7 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
 
   return (
     <InstallationContext.Provider
-      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress, updateEnabledModules, markSetupStep, loaded }}
+      value={{ currentInstallation, installationId, allInstallations, runways, areas, ceShops, typeShopMap, arffAircraft, facilities, switchInstallation, refreshCurrentInstallation, removeInstallation, userRole, defaultPdfEmail, updateDefaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, mapProvider, setupProgress, updateEnabledModules, markSetupStep, loaded }}
     >
       {children}
     </InstallationContext.Provider>

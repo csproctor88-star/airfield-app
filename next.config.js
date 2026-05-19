@@ -115,6 +115,22 @@ const withPWA = require('@ducanh2912/next-pwa').default({
         },
       },
       {
+        // Cache Bing aerial tiles — alternate provider for OCONUS bases.
+        // Bing serves from ecn.t{0..3}.tiles.virtualearth.net.
+        urlPattern: /ecn\.t\d\.tiles\.virtualearth\.net\/tiles\//,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'bing-satellite-tiles',
+          expiration: {
+            maxEntries: 4000,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+      {
         // Cache Mapbox satellite tiles (*.tiles.mapbox.com)
         urlPattern: /tiles\.mapbox\.com/,
         handler: 'CacheFirst',

@@ -70,6 +70,7 @@ import { isTourCompleted, markTourCompleted } from '@/lib/tours/state'
 import { QuickSetupModal, QuickSetupBanner } from '@/components/base-setup/QuickSetupModal'
 import { FieldHint } from '@/components/base-setup/FieldHint'
 import { loadQuickSetupDraft, type QuickSetupDraft, type QuickSetupStepKey, QUICK_SETUP_STEPS } from '@/lib/base-setup-quick-setup'
+import { MAP_PROVIDER_LABELS, MAP_PROVIDER_DESCRIPTIONS, type MapProvider } from '@/lib/map-providers'
 import { Zap } from 'lucide-react'
 
 type SetupTab = WizardStepKey
@@ -605,10 +606,31 @@ function RunwayTab({
   markSaveError?: () => void
 }) {
   void markSaveError // reserved for future explicit error wiring
+  const { mapProvider, refreshCurrentInstallation } = useInstallation()
   const [runways, setRunways] = useState(initialRunways)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingRunwayId, setEditingRunwayId] = useState<string | null>(null)
+
+  // Map imagery provider
+  const [mapProviderSaving, setMapProviderSaving] = useState(false)
+  const handleSaveMapProvider = async (next: MapProvider) => {
+    if (!installationId) return
+    setMapProviderSaving(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { error } = await supabase
+        .from('bases')
+        .update({ map_provider: next, updated_at: new Date().toISOString() } as Record<string, unknown>)
+        .eq('id', installationId)
+      if (error) toast.error(error.message)
+      else {
+        toast.success(`Map imagery set to ${MAP_PROVIDER_LABELS[next]}`)
+        await refreshCurrentInstallation()
+      }
+    }
+    setMapProviderSaving(false)
+  }
 
   // Base elevation
   const [baseElevation, setBaseElevation] = useState<number | null>(null)
@@ -1063,6 +1085,55 @@ function RunwayTab({
         <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
           Used by Obstruction Evaluation Tool
         </span>
+      </div>
+
+      {/* Map Imagery — per-base satellite tile provider */}
+      <div style={{
+        padding: '10px 14px', marginBottom: 12,
+        background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)' }}>
+            Map Imagery
+          </label>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+            Switch providers if Google blurs your airfield (common at OCONUS bases — Ramstein, Spangdahlem, Kleine Brogel)
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+          {(['google', 'bing', 'esri'] as const).map(p => (
+            <label
+              key={p}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8,
+                padding: '8px 10px',
+                background: mapProvider === p ? 'color-mix(in srgb, var(--color-cyan) 8%, transparent)' : 'transparent',
+                border: mapProvider === p ? '1px solid color-mix(in srgb, var(--color-cyan) 40%, transparent)' : '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                cursor: mapProviderSaving ? 'wait' : 'pointer',
+                opacity: mapProviderSaving ? 0.6 : 1,
+              }}
+            >
+              <input
+                type="radio"
+                name="map_provider"
+                value={p}
+                checked={mapProvider === p}
+                disabled={mapProviderSaving}
+                onChange={() => handleSaveMapProvider(p)}
+                style={{ marginTop: 2 }}
+              />
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                  {MAP_PROVIDER_LABELS[p]}
+                </span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.4 }}>
+                  {MAP_PROVIDER_DESCRIPTIONS[p]}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {runways.length === 0 && !adding && (
