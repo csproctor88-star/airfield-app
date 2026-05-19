@@ -153,6 +153,7 @@ export async function POST(request: Request) {
       from: fromLabel,
       to: entry.requester_email,
       replyTo,
+      cc: replyTo ? [replyTo] : undefined,
       subject: `${base.name} PPR APPROVED — ${entry.ppr_number}`,
       html: `
         <p>Hello ${safeName},</p>

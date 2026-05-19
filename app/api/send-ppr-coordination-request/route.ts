@@ -173,6 +173,7 @@ export async function POST(request: Request) {
         from: fromLabel,
         to: recipients,
         replyTo,
+        cc: replyTo ? [replyTo] : undefined,
         subject: `${base.name} PPR coordination requested — ${agencyName}`,
         html: `
           <p>A Prior Permission Required (PPR) request at ${safeBase} has been routed to <strong>${safeAgency}</strong> for coordination.</p>
