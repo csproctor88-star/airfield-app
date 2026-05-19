@@ -12,7 +12,8 @@ import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-featu
 import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
-import { ArrowLeft, ListChecks, MapPin } from 'lucide-react'
+import { ArrowLeft, ListChecks } from 'lucide-react'
+import UseMyLocationButton from '@/components/ui/use-my-location-button'
 
 // Section header treatment used to delimit visual groups in the
 // create form. Matches the accent-underline pattern on / and
@@ -42,7 +43,6 @@ export default function NewDiscrepancyPage() {
 
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
-  const [gpsLoading, setGpsLoading] = useState(false)
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const typeDropdownRef = useRef<HTMLDivElement>(null)
@@ -137,42 +137,6 @@ export default function NewDiscrepancyPage() {
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setFormData((prev) => ({ ...prev, latitude: lat, longitude: lng }))
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
-  }, [])
-
-  const captureLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser')
-      return
-    }
-    setGpsLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData((prev) => ({
-          ...prev,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }))
-        setGpsLoading(false)
-        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
-      },
-      (error) => {
-        setGpsLoading(false)
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            toast.error('Location access denied. Enable in browser settings.')
-            break
-          case error.POSITION_UNAVAILABLE:
-            toast.error('Location information unavailable.')
-            break
-          case error.TIMEOUT:
-            toast.error('Location request timed out.')
-            break
-          default:
-            toast.error('Unable to get your location.')
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    )
   }, [])
 
   const handleSubmit = async () => {
@@ -475,22 +439,13 @@ export default function NewDiscrepancyPage() {
         )}
 
         {/* GPS Use My Location */}
-        <button
-          type="button"
-          onClick={captureLocation}
-          disabled={gpsLoading}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            width: '100%', padding: '10px 16px', marginBottom: 8, borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-            color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
-            cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-            opacity: gpsLoading ? 0.6 : 1,
-          }}
-        >
-          <MapPin size={14} strokeWidth={2.25} />
-          {gpsLoading ? 'Getting Location...' : 'Use My Location'}
-        </button>
+        <UseMyLocationButton
+          variant="inline"
+          onLocation={(c) =>
+            setFormData((prev) => ({ ...prev, latitude: c.lat, longitude: c.lng }))
+          }
+          style={{ marginBottom: 8 }}
+        />
 
         <div style={{ ...formGroupHeaderStyle, marginTop: 16 }}>Media</div>
 

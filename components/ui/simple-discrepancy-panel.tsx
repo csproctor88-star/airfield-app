@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { ExpandableTextarea } from '@/components/ui/expandable-textarea'
-import { X, AlertTriangle } from 'lucide-react'
+import { X, AlertTriangle, Crosshair } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
 import { ZoomableImage } from '@/components/ui/zoomable-image'
@@ -229,25 +229,27 @@ export function SimpleDiscrepancyPanel({
             </div>
           )}
 
-          {/* Use My Location */}
+          {/* Use My Location — parent owns per-index loading state, so this
+              matches the shared UseMyLocationButton inline style by hand rather
+              than restructuring the parent to push the component down. */}
           <button
             type="button"
             onClick={() => onCaptureGps(index)}
             disabled={gpsLoading}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              width: '100%', padding: 10, borderRadius: 8, minHeight: 44,
-              border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-              color: 'var(--color-accent)', fontSize: 'var(--fs-base)', fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '10px 16px', minHeight: 44,
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+              background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+              color: 'var(--color-cyan)',
+              fontSize: 'var(--fs-md)', fontWeight: 700,
               cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
               opacity: gpsLoading ? 0.6 : 1,
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-            </svg>
-            {gpsLoading ? 'Getting...' : 'Use My Location'}
+            <Crosshair size={16} />
+            {gpsLoading ? 'Getting Location…' : 'Use My Location'}
           </button>
 
           {/* Upload Photos */}

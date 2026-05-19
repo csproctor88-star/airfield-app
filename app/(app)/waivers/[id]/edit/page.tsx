@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DEMO_WAIVERS, DEMO_WAIVER_CRITERIA } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
+import UseMyLocationButton from '@/components/ui/use-my-location-button'
 import type { WaiverClassification, WaiverCriteriaSource, WaiverAttachmentType } from '@/lib/supabase/types'
 import {
   ArrowLeft, FileWarning, Plus,
@@ -42,7 +43,6 @@ export default function EditWaiverPage() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [usingDemo, setUsingDemo] = useState(false)
-  const [gpsLoading, setGpsLoading] = useState(false)
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     basic: true, criteria: true, risk: false, project: false, location: false, attachments: false,
@@ -223,39 +223,6 @@ export default function EditWaiverPage() {
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setFormData((prev) => ({ ...prev, location_lat: lat, location_lng: lng }))
     toast.success(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
-  }, [])
-
-  const captureLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser')
-      return
-    }
-    setGpsLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData((prev) => ({
-          ...prev,
-          location_lat: position.coords.latitude,
-          location_lng: position.coords.longitude,
-        }))
-        setGpsLoading(false)
-        toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
-      },
-      (error) => {
-        setGpsLoading(false)
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            toast.error('Location access denied. Enable in browser settings.')
-            break
-          case error.POSITION_UNAVAILABLE:
-            toast.error('Location information unavailable.')
-            break
-          default:
-            toast.error('Unable to get location.')
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    )
   }, [])
 
   const handleSubmit = async () => {
@@ -601,25 +568,13 @@ export default function EditWaiverPage() {
             </div>
 
             {/* GPS Use My Location */}
-            <button
-              type="button"
-              onClick={captureLocation}
-              disabled={gpsLoading}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-                color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
-                cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-                opacity: gpsLoading ? 0.6 : 1,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-              </svg>
-              {gpsLoading ? 'Getting Location...' : 'Use My Location'}
-            </button>
+            <UseMyLocationButton
+              variant="inline"
+              onLocation={(c) =>
+                setFormData((prev) => ({ ...prev, location_lat: c.lat, location_lng: c.lng }))
+              }
+              style={{ marginBottom: 12 }}
+            />
 
             <div style={{ marginBottom: 12 }}>
               <span className="section-label">Period Valid</span>

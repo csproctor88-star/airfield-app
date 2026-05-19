@@ -4,7 +4,8 @@ import { Suspense, useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { ArrowLeft, AlertTriangle, History, Crosshair, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, History, AlertCircle, CheckCircle2 } from 'lucide-react'
+import UseMyLocationButton from '@/components/ui/use-my-location-button'
 import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
 import { getRunwayGeometry, pointToRunwayRelation, distanceFt, bearing } from '@/lib/calculations/geometry'
@@ -114,7 +115,6 @@ function ObstructionsContent() {
   const [photos, setPhotos] = useState<{ file?: File; url: string }[]>([])
 
   // GPS location state
-  const [gpsLoading, setGpsLoading] = useState(false)
   const [flyToPoint, setFlyToPoint] = useState<LatLon | null>(null)
 
   // Evaluation result — supports multi-runway
@@ -261,41 +261,6 @@ function ObstructionsContent() {
       toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Elevation API unavailable' })
     }
   }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
-
-  // Use device GPS to select location
-  const useMyLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser')
-      return
-    }
-    setGpsLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const point: LatLon = { lat: position.coords.latitude, lon: position.coords.longitude }
-        setFlyToPoint(point)
-        handlePointSelected(point)
-        setGpsLoading(false)
-        toast.success('Location acquired')
-      },
-      (error) => {
-        setGpsLoading(false)
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            toast.error('Location access denied. Enable location permissions and try again.')
-            break
-          case error.POSITION_UNAVAILABLE:
-            toast.error('Location unavailable. Make sure GPS is enabled.')
-            break
-          case error.TIMEOUT:
-            toast.error('Location request timed out. Try again.')
-            break
-          default:
-            toast.error('Unable to get your location')
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    )
-  }, [handlePointSelected])
 
   // Run the evaluation against all runways
   const runEvaluation = () => {
@@ -567,25 +532,15 @@ function ObstructionsContent() {
       </div>
 
       {/* Use My Location */}
-      <button
-        type="button"
-        onClick={useMyLocation}
-        disabled={gpsLoading}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          width: '100%', marginTop: 8,
-          padding: '10px 16px', borderRadius: 'var(--radius-md)',
-          border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
-          background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
-          color: 'var(--color-cyan)',
-          fontSize: 'var(--fs-md)', fontWeight: 700,
-          cursor: gpsLoading ? 'wait' : 'pointer',
-          fontFamily: 'inherit', opacity: gpsLoading ? 0.6 : 1,
+      <UseMyLocationButton
+        variant="inline"
+        onLocation={(c) => {
+          const point: LatLon = { lat: c.lat, lon: c.lng }
+          setFlyToPoint(point)
+          handlePointSelected(point)
         }}
-      >
-        <Crosshair size={16} />
-        {gpsLoading ? 'Getting Location...' : 'Use My Location'}
-      </button>
+        style={{ marginTop: 8 }}
+      />
 
       {/* Point Info Card */}
       {pointInfo && (

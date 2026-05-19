@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
+import UseMyLocationButton from '@/components/ui/use-my-location-button'
 
 const LocationPickerMap = dynamic(
   () => import('@/components/ui/location-picker-map-google'),
@@ -71,7 +72,6 @@ export function EditDiscrepancyModal({
 }) {
   const { areas: installationAreas, facilities, installationId, ceShops } = useInstallation()
   const [saving, setSaving] = useState(false)
-  const [gpsLoading, setGpsLoading] = useState(false)
   const [form, setForm] = useState({
     title: discrepancy.title,
     description: discrepancy.description,
@@ -108,46 +108,6 @@ export function EditDiscrepancyModal({
 
   const handlePointSelected = useCallback((lat: number, lng: number) => {
     setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))
-  }, [])
-
-  const captureLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      import('sonner').then(({ toast }) => toast.error('Geolocation is not supported by your browser'))
-      return
-    }
-    setGpsLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setForm((prev) => ({
-          ...prev,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        }))
-        setGpsLoading(false)
-        import('sonner').then(({ toast }) =>
-          toast.success(`Location: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`)
-        )
-      },
-      (error) => {
-        setGpsLoading(false)
-        import('sonner').then(({ toast }) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              toast.error('Location access denied. Enable in browser settings.')
-              break
-            case error.POSITION_UNAVAILABLE:
-              toast.error('Location information unavailable.')
-              break
-            case error.TIMEOUT:
-              toast.error('Location request timed out.')
-              break
-            default:
-              toast.error('Unable to get your location.')
-          }
-        })
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    )
   }, [])
 
   const handleSave = async () => {
@@ -383,25 +343,13 @@ export function EditDiscrepancyModal({
       </div>
 
       {/* Use My Location */}
-      <button
-        type="button"
-        onClick={captureLocation}
-        disabled={gpsLoading}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          width: '100%', padding: '10px 16px', marginBottom: 12, borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border-active)', background: 'var(--color-border)',
-          color: 'var(--color-accent)', fontSize: 'var(--fs-md)', fontWeight: 600,
-          cursor: gpsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-          opacity: gpsLoading ? 0.6 : 1,
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-        </svg>
-        {gpsLoading ? 'Getting Location...' : 'Use My Location'}
-      </button>
+      <UseMyLocationButton
+        variant="inline"
+        onLocation={(c) =>
+          setForm((prev) => ({ ...prev, latitude: c.lat, longitude: c.lng }))
+        }
+        style={{ marginBottom: 12 }}
+      />
 
       <SaveButton saving={saving} onClick={handleSave} />
     </ModalOverlay>
