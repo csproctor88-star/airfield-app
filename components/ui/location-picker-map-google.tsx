@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 
 type Props = {
@@ -30,7 +31,7 @@ export default function LocationPickerMapGoogle({
   const markerRef = useRef<google.maps.Marker | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [apiReady, setApiReady] = useState(false)
-  const { runways, installationId } = useInstallation()
+  const { runways, installationId, mapProvider } = useInstallation()
   const hasApiKey = isGoogleMapsConfigured()
 
   const onPointSelectedRef = useRef(onPointSelected)
@@ -56,6 +57,8 @@ export default function LocationPickerMapGoogle({
       zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
     })
 
+    applyMapProvider(gmap, mapProvider)
+
     gmap.addListener('click', (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
       onPointSelectedRef.current(e.latLng.lat(), e.latLng.lng())
@@ -69,7 +72,7 @@ export default function LocationPickerMapGoogle({
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId])
+  }, [apiReady, installationId, mapProvider])
 
   // Update marker
   useEffect(() => {

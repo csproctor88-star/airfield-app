@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { Trash2 } from 'lucide-react'
 
@@ -18,7 +19,7 @@ export default function AcsiLocationMapGoogle({ pins, onPinsChange }: Props) {
   const markersRef = useRef<google.maps.Marker[]>([])
   const [mapLoaded, setMapLoaded] = useState(false)
   const [apiReady, setApiReady] = useState(false)
-  const { runways, installationId } = useInstallation()
+  const { runways, installationId, mapProvider } = useInstallation()
   const hasApiKey = isGoogleMapsConfigured()
 
   const pinsRef = useRef(pins)
@@ -45,6 +46,8 @@ export default function AcsiLocationMapGoogle({ pins, onPinsChange }: Props) {
       zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
     })
 
+    applyMapProvider(gmap, mapProvider)
+
     gmap.addListener('click', (e: google.maps.MapMouseEvent) => {
       if (!e.latLng) return
       onPinsChangeRef.current([...pinsRef.current, { lat: e.latLng.lat(), lng: e.latLng.lng() }])
@@ -60,7 +63,7 @@ export default function AcsiLocationMapGoogle({ pins, onPinsChange }: Props) {
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId])
+  }, [apiReady, installationId, mapProvider])
 
   // Sync markers
   useEffect(() => {

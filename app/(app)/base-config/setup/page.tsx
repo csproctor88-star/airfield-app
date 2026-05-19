@@ -70,7 +70,7 @@ import { isTourCompleted, markTourCompleted } from '@/lib/tours/state'
 import { QuickSetupModal, QuickSetupBanner } from '@/components/base-setup/QuickSetupModal'
 import { FieldHint } from '@/components/base-setup/FieldHint'
 import { loadQuickSetupDraft, type QuickSetupDraft, type QuickSetupStepKey, QUICK_SETUP_STEPS } from '@/lib/base-setup-quick-setup'
-import { MAP_PROVIDER_LABELS, MAP_PROVIDER_DESCRIPTIONS, type MapProvider } from '@/lib/map-providers'
+import { MAP_PROVIDER_LABELS, MAP_PROVIDER_DESCRIPTIONS, applyMapProvider, type MapProvider } from '@/lib/map-providers'
 import { Zap } from 'lucide-react'
 
 type SetupTab = WizardStepKey
@@ -878,6 +878,8 @@ function RunwayTab({
         zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
       })
 
+      applyMapProvider(gmap, mapProvider)
+
       // Runway centerline
       line = new google.maps.Polyline({
         path: [
@@ -926,7 +928,7 @@ function RunwayTab({
       adjustMap.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adjustingRunway])
+  }, [adjustingRunway, mapProvider])
 
   // Update centerline when coords change from dragging
   useEffect(() => {

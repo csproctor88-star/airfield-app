@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS, type GMapWrapper, createGMapWrapper, pixelToLatLng, queryFeatureAtPoint, clearAllObjects } from '@/lib/google-map-adapter'
+import { applyMapProvider } from '@/lib/map-providers'
 import { toast } from 'sonner'
 import { useGoogleMapRuler } from '@/hooks/use-google-map-ruler'
 import { useInstallation } from '@/lib/installation-context'
@@ -417,7 +418,7 @@ function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.map
 // ── Main Page ──
 
 export default function ParkingPage() {
-  const { installationId, currentInstallation, runways, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation, runways, defaultPdfEmail, mapProvider } = useInstallation()
 
   // ── State ──
   const [plans, setPlans] = useState<ParkingPlan[]>([])
@@ -845,6 +846,8 @@ export default function ParkingPage() {
       heading: 0,
     })
 
+    applyMapProvider(gmap, mapProvider)
+
     const wrapper = createGMapWrapper(gmap)
     map.current = wrapper
     gmapRawRef.current = gmap
@@ -874,7 +877,7 @@ export default function ParkingPage() {
         setMapLoaded(false)
       }
     }
-  }, [googleReady, installationId, runways])
+  }, [googleReady, installationId, runways, mapProvider])
 
   // ── Map click handler for placing aircraft/obstacles ──
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import { fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
@@ -31,7 +32,7 @@ export function InfrastructureFeaturePickerGoogle({
   const [apiReady, setApiReady] = useState(false)
   const [filteredFeatures, setFilteredFeatures] = useState<InfrastructureFeature[]>([])
   const [loading, setLoading] = useState(true)
-  const { runways, installationId } = useInstallation()
+  const { runways, installationId, mapProvider } = useInstallation()
   const hasApiKey = isGoogleMapsConfigured()
   const selectedRef = useRef<string[]>(selectedFeatureIds)
   selectedRef.current = selectedFeatureIds
@@ -83,6 +84,8 @@ export function InfrastructureFeaturePickerGoogle({
       zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
     })
 
+    applyMapProvider(gmap, mapProvider)
+
     mapRef.current = gmap
     setMapLoaded(true)
 
@@ -93,7 +96,7 @@ export function InfrastructureFeaturePickerGoogle({
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId])
+  }, [apiReady, installationId, mapProvider])
 
   // Render features as markers
   useEffect(() => {

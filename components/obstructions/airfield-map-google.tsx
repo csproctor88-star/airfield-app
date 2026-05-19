@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useGoogleMapRuler } from '@/hooks/use-google-map-ruler'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import {
   type LatLon,
@@ -215,7 +216,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
   const onPointSelectedRef = useRef(onPointSelected)
   onPointSelectedRef.current = onPointSelected
 
-  const { runways: installationRunways, installationId } = useInstallation()
+  const { runways: installationRunways, installationId, mapProvider } = useInstallation()
 
   const hasApiKey = isGoogleMapsConfigured()
 
@@ -278,6 +279,8 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
       mapId: 'glidepath-obstruction',
     })
+
+    applyMapProvider(gmap, mapProvider)
 
     mapRef.current = gmap
 
@@ -357,7 +360,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId])
+  }, [apiReady, installationId, mapProvider])
 
   // Sync surface visibility
   useEffect(() => {

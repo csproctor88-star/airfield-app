@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { WAIVER_CLASSIFICATIONS, WAIVER_STATUS_CONFIG } from '@/lib/constants'
 import type { WaiverRow } from '@/lib/supabase/waivers'
@@ -31,7 +32,7 @@ export default function WaiverMapViewGoogle({ waivers }: Props) {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
   const [activeClassFilter, setActiveClassFilter] = useState<string | null>(null)
-  const { runways, installationId } = useInstallation()
+  const { runways, installationId, mapProvider } = useInstallation()
 
   const configured = isGoogleMapsConfigured()
 
@@ -84,6 +85,8 @@ export default function WaiverMapViewGoogle({ waivers }: Props) {
         mapId: 'waiver-map',
       })
 
+      applyMapProvider(m, mapProvider)
+
       mapRef.current = m
       infoWindowRef.current = new google.maps.InfoWindow()
       setMapLoaded(true)
@@ -98,7 +101,7 @@ export default function WaiverMapViewGoogle({ waivers }: Props) {
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configured, installationId])
+  }, [configured, installationId, mapProvider])
 
   // Add/update markers when waivers, classification filter, or map changes
   useEffect(() => {

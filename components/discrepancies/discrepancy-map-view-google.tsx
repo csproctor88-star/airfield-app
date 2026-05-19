@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
 import { renderLucideToSvgString } from '@/lib/render-lucide-svg'
@@ -64,7 +65,7 @@ export default function DiscrepancyMapViewGoogle({
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
   const [internalTypeFilter, setInternalTypeFilter] = useState<string | null>(null)
-  const { runways, installationId } = useInstallation()
+  const { runways, installationId, mapProvider } = useInstallation()
 
   // Use controlled filter if provided, otherwise internal
   const activeTypeFilter =
@@ -124,6 +125,8 @@ export default function DiscrepancyMapViewGoogle({
           mapId: 'discrepancy-map',
         })
 
+        applyMapProvider(m, mapProvider)
+
         mapRef.current = m
         infoWindowRef.current = new google.maps.InfoWindow({ maxWidth: 360 })
 
@@ -145,7 +148,7 @@ export default function DiscrepancyMapViewGoogle({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configured, installationId])
+  }, [configured, installationId, mapProvider])
 
   // Add/update markers when discrepancies, type filter, or map changes
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
+import { applyMapProvider } from '@/lib/map-providers'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchTaxiways, createTaxiway, updateTaxiway, deleteTaxiway } from '@/lib/supabase/taxiways'
@@ -28,7 +29,7 @@ const SERVICE_LABELS: Record<ServiceBranch, string> = {
 }
 
 export default function TaxiwayEditorGoogle() {
-  const { installationId, runways } = useInstallation()
+  const { installationId, runways, mapProvider } = useInstallation()
   const mapContainer = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const [apiReady, setApiReady] = useState(false)
@@ -119,6 +120,8 @@ export default function TaxiwayEditorGoogle() {
       zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
     })
 
+    applyMapProvider(gmap, mapProvider)
+
     // Click handler for drawing
     gmap.addListener('click', (e: google.maps.MapMouseEvent) => {
       if (!drawingRef.current || !e.latLng) return
@@ -133,7 +136,7 @@ export default function TaxiwayEditorGoogle() {
       mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId])
+  }, [apiReady, installationId, mapProvider])
 
   // ── Clear all Google Maps objects ──
   const clearAllMapObjects = () => {
