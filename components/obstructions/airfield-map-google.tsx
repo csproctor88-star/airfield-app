@@ -5,6 +5,7 @@ import { useGoogleMapRuler } from '@/hooks/use-google-map-ruler'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
+import UseMyLocationButton from '@/components/ui/use-my-location-button'
 import {
   type LatLon,
   type RunwayGeometry,
@@ -206,7 +207,10 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
   const polygonsRef = useRef<google.maps.Polygon[]>([])
   const taxiwayPolygonsRef = useRef<google.maps.Polygon[]>([])
   const labelsRef = useRef<google.maps.Marker[]>([])
+  const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  const userAccuracyRef = useRef<google.maps.Circle | null>(null)
 
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
   const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
@@ -492,6 +496,53 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     mapRef.current.setZoom(15)
   }, [flyToPoint, mapLoaded])
 
+  // Render / update the user-location overlay (purely informational —
+  // separate from selectedPoint, which is the evaluation point set by
+  // the inline "Use My Location" button in the sidebar).
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return
+    if (!userLocation) {
+      if (userMarkerRef.current) { userMarkerRef.current.map = null; userMarkerRef.current = null }
+      if (userAccuracyRef.current) { userAccuracyRef.current.setMap(null); userAccuracyRef.current = null }
+      return
+    }
+
+    const map = mapRef.current
+
+    const el = document.createElement('div')
+    el.style.width = '18px'
+    el.style.height = '18px'
+    el.style.borderRadius = '50%'
+    el.style.background = '#22D3EE'
+    el.style.border = '3px solid #FFFFFF'
+    el.style.boxShadow = '0 0 0 1px rgba(15, 23, 42, 0.6), 0 0 12px rgba(34, 211, 238, 0.7)'
+    el.title = `Your location (±${Math.round(userLocation.accuracy)} m)`
+
+    if (userMarkerRef.current) userMarkerRef.current.map = null
+    userMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
+      map,
+      position: { lat: userLocation.lat, lng: userLocation.lng },
+      content: el,
+      zIndex: 9999,
+    })
+
+    if (userAccuracyRef.current) userAccuracyRef.current.setMap(null)
+    userAccuracyRef.current = new google.maps.Circle({
+      map,
+      center: { lat: userLocation.lat, lng: userLocation.lng },
+      radius: userLocation.accuracy,
+      strokeColor: '#22D3EE',
+      strokeOpacity: 0.6,
+      strokeWeight: 1,
+      fillColor: '#22D3EE',
+      fillOpacity: 0.12,
+      clickable: false,
+    })
+
+    map.panTo({ lat: userLocation.lat, lng: userLocation.lng })
+    if ((map.getZoom() ?? 0) < 15) map.setZoom(16)
+  }, [userLocation, mapLoaded])
+
   const toggleLayer = (key: ToggleKey) => {
     setVisibility(prev => ({ ...prev, [key]: !prev[key] }))
   }
@@ -535,7 +586,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
           border: '1px solid var(--color-border-mid)',
         }}
       />
-      {/* Ruler button — top right */}
+      {/* Ruler + Use My Location — top right */}
       <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
         <button
           onClick={() => setRulerActive(r => !r)}
@@ -559,6 +610,14 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
               color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit',
             }}
           >Clear</button>
+        )}
+        {mapLoaded && (
+          <UseMyLocationButton
+            variant="overlay"
+            acquired={!!userLocation}
+            onLocation={(c) => setUserLocation(c)}
+            onClear={() => setUserLocation(null)}
+          />
         )}
       </div>
       {/* Legend */}

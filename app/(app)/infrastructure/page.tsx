@@ -21,6 +21,7 @@ import {
   imageDataToDataUrl,
 } from '@/lib/google-map-adapter'
 import { applyMapProvider } from '@/lib/map-providers'
+import { Crosshair } from 'lucide-react'
 import {
   fetchInfrastructureFeatures,
   createInfrastructureFeature,
@@ -3660,20 +3661,28 @@ export default function InfrastructureMapPage() {
           </button>
           <button
             onClick={toggleLocationTracking}
+            title={trackingLocation ? 'Stop tracking your location' : 'Show my location on the map'}
             style={{
-              background: trackingLocation ? 'rgba(59, 130, 246, 0.15)' : 'var(--color-bg-surface)',
-              border: trackingLocation ? '1px solid rgba(59, 130, 246, 0.5)' : '1px solid var(--color-border)',
-              borderRadius: 8,
-              padding: '6px 10px',
-              color: trackingLocation ? '#3B82F6' : 'var(--color-text-primary)',
-              fontSize: 14,
-              cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              background: trackingLocation
+                ? 'color-mix(in srgb, var(--color-cyan) 22%, rgba(4, 7, 12, 0.88))'
+                : 'rgba(4, 7, 12, 0.88)',
+              border: `1px solid ${trackingLocation
+                ? 'color-mix(in srgb, var(--color-cyan) 55%, transparent)'
+                : 'rgba(148, 163, 184, 0.25)'}`,
+              borderRadius: 6,
+              color: trackingLocation ? 'var(--color-cyan)' : '#CBD5E1',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
             }}
-            title={trackingLocation ? 'Stop tracking' : 'Find my location'}
           >
-            ◎
+            <Crosshair size={12} />
+            {trackingLocation ? 'Tracking…' : 'Use My Location'}
           </button>
         </div>
 
