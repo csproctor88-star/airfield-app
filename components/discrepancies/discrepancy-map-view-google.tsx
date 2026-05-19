@@ -6,7 +6,8 @@ import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
 import { renderLucideToSvgString } from '@/lib/render-lucide-svg'
-import { ClipboardList, type LucideIcon } from 'lucide-react'
+import { ClipboardList, Crosshair, type LucideIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 
 type Props = {
@@ -62,9 +63,13 @@ export default function DiscrepancyMapViewGoogle({
   const mapRef = useRef<google.maps.Map | null>(null)
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([])
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
+  const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null)
+  const userAccuracyRef = useRef<google.maps.Circle | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
   const [internalTypeFilter, setInternalTypeFilter] = useState<string | null>(null)
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
   const { runways, installationId, mapProvider } = useInstallation()
 
   // Use controlled filter if provided, otherwise internal
@@ -144,6 +149,8 @@ export default function DiscrepancyMapViewGoogle({
         markersRef.current.forEach((m) => (m.map = null))
         markersRef.current = []
         if (infoWindowRef.current) infoWindowRef.current.close()
+        if (userMarkerRef.current) { userMarkerRef.current.map = null; userMarkerRef.current = null }
+        if (userAccuracyRef.current) { userAccuracyRef.current.setMap(null); userAccuracyRef.current = null }
         mapRef.current = null
       }
     }
@@ -265,6 +272,95 @@ export default function DiscrepancyMapViewGoogle({
     },
     [activeTypeFilter, onTypeFilterChange],
   )
+
+  // ── Use My Location — drop a marker at the user's GPS position so they
+  // can see themselves on the COP relative to logged discrepancies.
+  const handleUseMyLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported on this device')
+      return
+    }
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        })
+        setGpsLoading(false)
+        toast.success('Location acquired')
+      },
+      (error) => {
+        setGpsLoading(false)
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            toast.error('Location access denied. Enable location permissions and try again.')
+            break
+          case error.POSITION_UNAVAILABLE:
+            toast.error('Location unavailable. Make sure GPS is enabled.')
+            break
+          case error.TIMEOUT:
+            toast.error('Location request timed out. Try again.')
+            break
+          default:
+            toast.error('Unable to get your location')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  }, [])
+
+  // Render / update the user-location marker + accuracy circle when the
+  // location state changes. Pan the map to the position at a useful zoom.
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return
+    if (!userLocation) {
+      if (userMarkerRef.current) { userMarkerRef.current.map = null; userMarkerRef.current = null }
+      if (userAccuracyRef.current) { userAccuracyRef.current.setMap(null); userAccuracyRef.current = null }
+      return
+    }
+
+    const map = mapRef.current
+
+    // Build the blue "you are here" dot
+    const el = document.createElement('div')
+    el.style.width = '18px'
+    el.style.height = '18px'
+    el.style.borderRadius = '50%'
+    el.style.background = '#22D3EE'
+    el.style.border = '3px solid #FFFFFF'
+    el.style.boxShadow = '0 0 0 1px rgba(15, 23, 42, 0.6), 0 0 12px rgba(34, 211, 238, 0.7)'
+    el.title = `Your location (±${Math.round(userLocation.accuracy)} m)`
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.map = null
+    }
+    userMarkerRef.current = new google.maps.marker.AdvancedMarkerElement({
+      map,
+      position: { lat: userLocation.lat, lng: userLocation.lng },
+      content: el,
+      zIndex: 9999,
+    })
+
+    if (userAccuracyRef.current) {
+      userAccuracyRef.current.setMap(null)
+    }
+    userAccuracyRef.current = new google.maps.Circle({
+      map,
+      center: { lat: userLocation.lat, lng: userLocation.lng },
+      radius: userLocation.accuracy,
+      strokeColor: '#22D3EE',
+      strokeOpacity: 0.6,
+      strokeWeight: 1,
+      fillColor: '#22D3EE',
+      fillOpacity: 0.12,
+      clickable: false,
+    })
+
+    map.panTo({ lat: userLocation.lat, lng: userLocation.lng })
+    if ((map.getZoom() ?? 0) < 15) map.setZoom(16)
+  }, [userLocation, mapLoaded])
 
   if (!configured) {
     return (
@@ -471,6 +567,41 @@ export default function DiscrepancyMapViewGoogle({
               : 'No discrepancies match the selected type filter.'}
           </div>
         </div>
+      )}
+      {/* Use My Location — drops a blue dot + accuracy circle at the user's GPS position */}
+      {mapLoaded && (
+        <button
+          type="button"
+          onClick={userLocation ? () => setUserLocation(null) : handleUseMyLocation}
+          disabled={gpsLoading}
+          title={userLocation ? 'Clear your location' : 'Show my location on the map'}
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 10px',
+            background: userLocation
+              ? 'color-mix(in srgb, var(--color-cyan) 22%, rgba(4, 7, 12, 0.88))'
+              : 'rgba(4, 7, 12, 0.88)',
+            border: `1px solid ${userLocation
+              ? 'color-mix(in srgb, var(--color-cyan) 55%, transparent)'
+              : 'rgba(148, 163, 184, 0.25)'}`,
+            borderRadius: 6,
+            color: userLocation ? 'var(--color-cyan)' : '#CBD5E1',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: gpsLoading ? 'wait' : 'pointer',
+            fontFamily: 'inherit',
+            opacity: gpsLoading ? 0.6 : 1,
+            zIndex: 2,
+          }}
+        >
+          <Crosshair size={12} />
+          {gpsLoading ? 'Locating…' : userLocation ? 'Clear Location' : 'Use My Location'}
+        </button>
       )}
       {/* Stats badge */}
       {mapLoaded && (
