@@ -139,19 +139,24 @@ export default function PprPage() {
   const [remarkInput, setRemarkInput] = useState('')
   const [remarkBusy, setRemarkBusy] = useState(false)
 
+  // Row selection for exporting a specific PPR or a subset. Holds entry
+  // ids; the export paths intersect this with the currently visible
+  // (filtered) rows so a stale id from a since-hidden row can't leak in.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
   // PDF export
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
   const [emailPdfData, setEmailPdfData] = useState<{ doc: jsPDF; filename: string } | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
 
-  async function preparePdf() {
+  async function preparePdf(entriesOverride?: PprEntry[]) {
     const { generatePprPdf } = await import('@/lib/ppr-pdf')
-    // Export honors the active filters (status / agency / search) by
-    // using `filteredEntries` rather than the raw fetch result, so a
-    // user with "Awaiting Review" selected gets just those PPRs in
-    // the PDF instead of every entry the page loaded.
-    const exportEntries = filteredEntries
+    // Default export honors the active filters (status / agency /
+    // search) via `filteredEntries`. When an override is supplied
+    // (single-PPR or selection export) those exact rows are used and
+    // the subtitle/filename are scoped accordingly.
+    const exportEntries = entriesOverride ?? filteredEntries
     // Fetch the remark threads for every exported PPR so the PDF
     // carries the same audit trail the staff page shows in the
     // detail card. Run in parallel — these are independent reads.
@@ -162,6 +167,20 @@ export default function PprPage() {
         if (threads[i].length > 0) remarksByEntry[e.id] = threads[i]
       })
     }
+
+    let subtitle: string | undefined
+    let filename: string | undefined
+    if (entriesOverride) {
+      if (entriesOverride.length === 1) {
+        const e = entriesOverride[0]
+        subtitle = `PPR ${e.ppr_number}`
+        filename = `ppr-${e.ppr_number.replace(/[^a-zA-Z0-9_-]/g, '') || 'entry'}.pdf`
+      } else {
+        subtitle = `Selected PPRs (${entriesOverride.length})`
+        filename = `ppr-selection-${entriesOverride.length}.pdf`
+      }
+    }
+
     return generatePprPdf({
       columns,
       entries: exportEntries,
@@ -172,13 +191,15 @@ export default function PprPage() {
       timezone: baseTimezone,
       remarksByEntry,
       coordsByEntry,
+      subtitle,
+      filename,
     })
   }
 
-  async function handleExportPdf() {
+  async function handleExportPdf(entriesOverride?: PprEntry[]) {
     setGeneratingPdf(true)
     try {
-      const { doc, filename } = await preparePdf()
+      const { doc, filename } = await preparePdf(entriesOverride)
       doc.save(filename)
       toast.success('PDF exported')
     } catch (err) {
@@ -190,10 +211,10 @@ export default function PprPage() {
     }
   }
 
-  async function handleEmailPdf() {
+  async function handleEmailPdf(entriesOverride?: PprEntry[]) {
     setGeneratingPdf(true)
     try {
-      const result = await preparePdf()
+      const result = await preparePdf(entriesOverride)
       setEmailPdfData(result)
       setEmailModalOpen(true)
     } catch (err) {
@@ -419,6 +440,36 @@ export default function PprPage() {
     setDateMode('today')
     setSearchQuery('')
   }
+
+  // Selected rows, intersected with what's currently visible so a
+  // selection made before a filter change can't carry hidden rows into
+  // an export.
+  const selectedEntries = useMemo(
+    () => filteredEntries.filter((e) => selectedIds.has(e.id)),
+    [filteredEntries, selectedIds],
+  )
+  const allVisibleSelected = filteredEntries.length > 0 && filteredEntries.every((e) => selectedIds.has(e.id))
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (filteredEntries.every((e) => prev.has(e.id))) {
+        const next = new Set(prev)
+        filteredEntries.forEach((e) => next.delete(e.id))
+        return next
+      }
+      const next = new Set(prev)
+      filteredEntries.forEach((e) => next.add(e.id))
+      return next
+    })
+  }
+  const clearSelection = () => setSelectedIds(new Set())
 
   // Columns that hold a per-PPR value AND the admin chose to surface
   // on the PPR Log (table + detail card + PDF). info_only is excluded
@@ -743,16 +794,16 @@ export default function PprPage() {
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
-            onClick={handleExportPdf}
+            onClick={() => handleExportPdf()}
             disabled={generatingPdf || filteredEntries.length === 0}
-            title={filteredEntries.length === 0 ? 'No entries in the selected range' : 'Export PDF'}
+            title={filteredEntries.length === 0 ? 'No entries in the selected range' : 'Export all visible PPRs to PDF'}
             style={utilityBtnStyle(generatingPdf || filteredEntries.length === 0)}
           >
             <FileText size={14} color="var(--color-accent)" />
             {generatingPdf ? 'Generating…' : 'PDF'}
           </button>
           <button
-            onClick={handleEmailPdf}
+            onClick={() => handleEmailPdf()}
             disabled={generatingPdf || filteredEntries.length === 0}
             style={utilityBtnStyle(generatingPdf || filteredEntries.length === 0)}
           >
@@ -1122,10 +1173,56 @@ export default function PprPage() {
           </div>
         </div>
       ) : (
-        <div data-tour="ppr-list" style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+        <>
+          {/* Selection action bar — appears once any row is checked.
+              Exports/emails just the selected PPRs (single or many). */}
+          {selectedEntries.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+              padding: '8px 12px', marginBottom: 8,
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid rgba(56,189,248,0.40)',
+              background: 'rgba(56,189,248,0.08)',
+            }}>
+              <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-accent)' }}>
+                {selectedEntries.length} selected
+              </span>
+              <div style={{ flex: 1 }} />
+              <button
+                onClick={() => handleExportPdf(selectedEntries)}
+                disabled={generatingPdf}
+                style={utilityBtnStyle(generatingPdf)}
+              >
+                <FileText size={14} color="var(--color-accent)" />
+                {generatingPdf ? 'Generating…' : 'Export PDF'}
+              </button>
+              <button
+                onClick={() => handleEmailPdf(selectedEntries)}
+                disabled={generatingPdf}
+                style={utilityBtnStyle(generatingPdf)}
+              >
+                <Mail size={14} color="var(--color-accent)" />
+                Email
+              </button>
+              <button onClick={clearSelection} style={utilityBtnStyle(false)}>
+                <X size={14} />
+                Clear
+              </button>
+            </div>
+          )}
+          <div data-tour="ppr-list" style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
               <tr style={{ background: 'var(--color-bg-elevated)', borderBottom: '2px solid var(--color-border)' }}>
+                <th style={{ ...thStyle, width: 36, textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all visible PPRs"
+                    style={{ cursor: 'pointer' }}
+                  />
+                </th>
                 <th style={thStyle}>PPR #</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Arrival Date</th>
@@ -1151,6 +1248,15 @@ export default function PprPage() {
                       opacity: entry.status === 'canceled' ? 0.55 : 1,
                     }}
                   >
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(entry.id)}
+                        onChange={() => toggleSelect(entry.id)}
+                        aria-label={`Select PPR ${entry.ppr_number}`}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
                     <td style={tdStyle}>
                       {/* Only the PPR # is clickable so users can scroll
                           and read the rest of the row without
@@ -1197,7 +1303,8 @@ export default function PprPage() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Create / Edit modal */}
@@ -1680,13 +1787,24 @@ export default function PprPage() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => setDetailEntry(null)}
-                  aria-label="Close"
-                  style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontSize: 24, lineHeight: 1, padding: 0 }}
-                >
-                  ×
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    onClick={() => handleExportPdf([detailEntry])}
+                    disabled={generatingPdf}
+                    title="Export this PPR to PDF"
+                    style={utilityBtnStyle(generatingPdf)}
+                  >
+                    <FileText size={14} color="var(--color-accent)" />
+                    {generatingPdf ? 'Generating…' : 'PDF'}
+                  </button>
+                  <button
+                    onClick={() => setDetailEntry(null)}
+                    aria-label="Close"
+                    style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontSize: 24, lineHeight: 1, padding: 0 }}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
 
               {/* Requester */}

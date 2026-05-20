@@ -54,6 +54,41 @@ export function formatLocalTime(zuluHHMM: string, tz: string): string {
   }
 }
 
+/**
+ * Convert a Zulu wall-clock date + HHMM time into the equivalent
+ * base-local date and time in the supplied IANA timezone. Unlike
+ * formatLocalTime (which is time-of-day only), this anchors to the
+ * real calendar date, so it correctly handles midnight rollover — a
+ * 0030Z arrival can land on the previous local day. Stored PPR time
+ * values are always Zulu wall-clock, so the digits passed here are
+ * treated as UTC. Returns null when inputs are malformed.
+ *
+ *   dateISO  — 'YYYY-MM-DD' (the Zulu calendar date)
+ *   zuluHHMM — 'HHMM' or 'HH:MM' (Zulu wall clock)
+ *   tz       — IANA zone, e.g. 'America/New_York'
+ */
+export function zuluToLocalDateTime(
+  dateISO: string,
+  zuluHHMM: string,
+  tz: string,
+): { date: string; time: string } | null {
+  const digits = (zuluHHMM || '').replace(/\D/g, '').slice(0, 4)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '') || digits.length !== 4) return null
+  const d = new Date(`${dateISO}T${digits.slice(0, 2)}:${digits.slice(2, 4)}:00Z`)
+  if (Number.isNaN(d.getTime())) return null
+  try {
+    const date = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, month: 'numeric', day: 'numeric', year: 'numeric',
+    }).format(d)
+    const time = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(d).replace(':', '')
+    return { date, time }
+  } catch {
+    return null
+  }
+}
+
 // Format relative time, e.g. "2h ago", "3d ago"
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()

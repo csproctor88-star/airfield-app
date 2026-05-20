@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { formatZuluDateTime, formatZuluDate } from '@/lib/utils'
+import { formatZuluDateTime, formatZuluDate, zuluToLocalDateTime } from '@/lib/utils'
 import { sanitizePdfText } from '@/lib/pdf-config'
 import {
   createPdf,
@@ -52,6 +52,11 @@ interface PprPdfInput {
   /** Optional coordination rows per entry id. Rendered as a
    *  Coordination section inside each card. */
   coordsByEntry?: Record<string, PprCoordination[]>
+  /** Override the report subtitle. Defaults to "Arrival date: <range>".
+   *  Used by the single-PPR / selection export paths. */
+  subtitle?: string
+  /** Override the output filename. Defaults to the date-range name. */
+  filename?: string
 }
 
 const formatCell = formatPprColumnValue
@@ -62,6 +67,77 @@ function findColumn(columns: PprColumn[], match: string): PprColumn | undefined 
   return columns.find(c => c.column_name.toLowerCase().includes(m))
 }
 
+/**
+ * Find a `time`-type column whose name matches one of the keywords (in
+ * priority order). Restricted to time columns so a broad keyword like
+ * "depart" can't accidentally grab the "Departure Date" column.
+ */
+function findTimeColumn(columns: PprColumn[], keywords: string[], excludeId?: string): PprColumn | undefined {
+  for (const kw of keywords) {
+    const col = columns.find(c =>
+      c.column_type === 'time' &&
+      c.id !== excludeId &&
+      c.column_name.toLowerCase().includes(kw),
+    )
+    if (col) return col
+  }
+  return undefined
+}
+
+/** Extract HHMM digits from a stored time value (always Zulu wall-clock). */
+function zuluTimeDigits(raw: string | null | undefined): string {
+  return (raw || '').replace(/\D/g, '').slice(0, 4)
+}
+
+/** en-US numeric date label (UTC) — matches zuluToLocalDateTime's date
+ *  format so the two can be compared to detect a local-day rollover. */
+function zuluDateLabel(dateISO: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'UTC', month: 'numeric', day: 'numeric', year: 'numeric',
+    }).format(new Date(dateISO + 'T00:00:00Z'))
+  } catch {
+    return dateISO
+  }
+}
+
+/** Base-local subline for a Zulu date+time, or '' when there's nothing
+ *  worth showing (UTC base, or local == Zulu). Includes the local date
+ *  only when it differs from the Zulu date (midnight rollover). */
+function localSubline(dateISO: string, digits: string, tz: string, zuluLabel: string): string {
+  if (!digits || !dateISO || tz === 'UTC') return ''
+  const loc = zuluToLocalDateTime(dateISO, digits, tz)
+  if (!loc) return ''
+  if (loc.time === digits && loc.date === zuluLabel) return ''
+  return loc.date === zuluLabel ? `${loc.time}L` : `${loc.date} ${loc.time}L`
+}
+
+/** Arrival display: Zulu date (+ ETA time) as the main line, base-local
+ *  equivalent as an optional subline. */
+function buildArrivalDisplay(entry: PprEntry, etaCol: PprColumn | undefined, tz: string): { main: string; sub: string } {
+  const label = zuluDateLabel(entry.arrival_date)
+  const digits = etaCol ? zuluTimeDigits(entry.column_values?.[etaCol.id]) : ''
+  return {
+    main: digits ? `${label} ${digits}Z` : label,
+    sub: localSubline(entry.arrival_date, digits, tz, label),
+  }
+}
+
+/** Departure display: Zulu date (+ ETD time) main line + base-local sub. */
+function buildDepartureDisplay(
+  entry: PprEntry,
+  depDateCol: PprColumn | undefined,
+  etdCol: PprColumn | undefined,
+  tz: string,
+): { main: string; sub: string } {
+  const depISO = depDateCol ? (entry.column_values?.[depDateCol.id] || '') : ''
+  const label = depISO ? zuluDateLabel(depISO) : ''
+  const digits = etdCol ? zuluTimeDigits(entry.column_values?.[etdCol.id]) : ''
+  let main = label
+  if (digits) main = main ? `${label} ${digits}Z` : `${digits}Z`
+  return { main, sub: localSubline(depISO, digits, tz, label) }
+}
+
 // ── Card layout constants (mm) ─────────────────────────────────
 // 1-up cards on portrait letter (~186mm content width). Labels get
 // roomy single-line rendering for most field names; only the longest
@@ -69,7 +145,8 @@ function findColumn(columns: PprColumn[], match: string): PprColumn | undefined 
 const CARD_ROW_GAP = 5
 const CARD_PADDING = 5
 const TITLE_HEIGHT = 8
-const STRIP_HEIGHT = 13
+// Tall enough for label + Zulu value + an optional base-local subline.
+const STRIP_HEIGHT = 16
 const SECTION_GAP = 4
 const SECTION_HEADER_HEIGHT = 5
 const ROW_LINE_HEIGHT = 5
@@ -92,7 +169,7 @@ function formatCoordLine(c: PprCoordination): string {
 interface CardData {
   entry: PprEntry
   detailColumns: PprColumn[]
-  headerStripCells: { label: string; value: string }[]
+  headerStripCells: { label: string; value: string; sub?: string }[]
   remarks: PprRemark[]
   coords: PprCoordination[]
   tz: string
@@ -106,11 +183,11 @@ function buildHeaderStripCells(
   etdCol: PprColumn | undefined,
   depDateCol: PprColumn | undefined,
   tz: string,
-): { label: string; value: string }[] {
-  const cells: { label: string; value: string }[] = []
+): { label: string; value: string; sub?: string }[] {
+  const cells: { label: string; value: string; sub?: string }[] = []
 
-  const eta = etaCol ? formatCell(etaCol, entry.column_values?.[etaCol.id] || '', { tz }) : ''
-  cells.push({ label: 'Arrival', value: `${entry.arrival_date}${eta ? ' ' + eta : ''}` })
+  const arr = buildArrivalDisplay(entry, etaCol, tz)
+  cells.push({ label: 'Arrival', value: arr.main, sub: arr.sub || undefined })
 
   if (aircraftCol) {
     const v = formatCell(aircraftCol, entry.column_values?.[aircraftCol.id] || '', { tz })
@@ -121,13 +198,8 @@ function buildHeaderStripCells(
     if (v) cells.push({ label: 'Callsign', value: v })
   }
 
-  let dep = ''
-  if (depDateCol) dep = formatCell(depDateCol, entry.column_values?.[depDateCol.id] || '', { tz })
-  if (etdCol) {
-    const etd = formatCell(etdCol, entry.column_values?.[etdCol.id] || '', { tz })
-    if (etd) dep = dep ? `${dep} ${etd}` : etd
-  }
-  if (dep) cells.push({ label: 'Departure', value: dep })
+  const dep = buildDepartureDisplay(entry, depDateCol, etdCol, tz)
+  if (dep.main) cells.push({ label: 'Departure', value: dep.main, sub: dep.sub || undefined })
 
   return cells
 }
@@ -239,6 +311,14 @@ function renderCard(doc: jsPDF, card: CardData, x: number, y: number, cardWidth:
       doc.setFont('helvetica', 'bold')
       const lines = doc.splitTextToSize(sanitizePdfText(cell.value), cellWidth - 2)
       if (lines.length > 0) doc.text(lines[0], cellX, cy + 9)
+      if (cell.sub) {
+        doc.setFontSize(7)
+        doc.setTextColor(120)
+        doc.setFont('helvetica', 'normal')
+        const subLines = doc.splitTextToSize(sanitizePdfText(cell.sub), cellWidth - 2)
+        if (subLines.length > 0) doc.text(subLines[0], cellX, cy + 13.5)
+        doc.setTextColor(0)
+      }
     }
     cy += STRIP_HEIGHT - 1
   }
@@ -381,9 +461,19 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
 
   const callsignCol = findColumn(dataColumns, 'callsign')
   const aircraftCol = findColumn(dataColumns, 'aircraft type') || findColumn(dataColumns, 'aircraft')
-  const etaCol = findColumn(dataColumns, 'eta') || findColumn(dataColumns, 'arrival time')
-  const etdCol = findColumn(dataColumns, 'etd') || findColumn(dataColumns, 'departure time')
   const depDateCol = findColumn(dataColumns, 'departure date')
+
+  // Time columns are matched type-aware (only `time` columns) so a broad
+  // keyword can't grab a date column, and in priority order. The
+  // departure time is resolved first so the arrival matcher can exclude
+  // it; the arrival matcher then falls back to a lone remaining time
+  // column when naming doesn't match any keyword.
+  const etdCol = findTimeColumn(dataColumns, ['etd', 'departure time', 'depart', 'wheels up', 'off block', 'takeoff'])
+  let etaCol = findTimeColumn(dataColumns, ['eta', 'arrival time', 'arrival', 'arrive', 'inbound', 'land', 'on block', 'wheels down'], etdCol?.id)
+  if (!etaCol) {
+    const remainingTimeCols = dataColumns.filter(c => c.column_type === 'time' && c.id !== etdCol?.id)
+    if (remainingTimeCols.length === 1) etaCol = remainingTimeCols[0]
+  }
 
   const stripIds = new Set([callsignCol?.id, aircraftCol?.id, etaCol?.id, etdCol?.id, depDateCol?.id]
     .filter((x): x is string => !!x))
@@ -395,7 +485,9 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
   const rangeLabel = dateFrom === dateTo
     ? formatZuluDate(new Date(dateFrom + 'T00:00:00'))
     : `${formatZuluDate(new Date(dateFrom + 'T00:00:00'))} – ${formatZuluDate(new Date(dateTo + 'T00:00:00'))}`
-  y = drawReportTitle(ctx, y, { title: 'PPR LOG', subtitle: `Arrival date: ${rangeLabel}` })
+  const subtitle = input.subtitle ?? `Arrival date: ${rangeLabel}`
+  const outFilename = input.filename ?? buildFilename(dateFrom, dateTo)
+  y = drawReportTitle(ctx, y, { title: 'PPR LOG', subtitle })
   y = drawStatBox(ctx, y, [
     { label: 'Entries', value: String(entries.length) },
     { label: 'Generated', value: formatZuluDateTime(new Date()) },
@@ -406,7 +498,7 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     doc.setTextColor(120)
     doc.text('No PPR entries for the selected range.', margin, y)
     drawFooter(ctx)
-    return { doc, filename: buildFilename(dateFrom, dateTo) }
+    return { doc, filename: outFilename }
   }
 
   // ── Summary table — quick spreadsheet-style index of every PPR in
@@ -424,17 +516,16 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     startY: y,
     head: [['PPR #', 'Arrival', 'Aircraft', 'Callsign', 'Departure', 'Status']],
     body: entries.map((e) => {
-      const ar = etaCol ? formatCell(etaCol, e.column_values?.[etaCol.id] || '', { tz }) : ''
       const ac = aircraftCol ? formatCell(aircraftCol, e.column_values?.[aircraftCol.id] || '', { tz }) : ''
       const cs = callsignCol ? formatCell(callsignCol, e.column_values?.[callsignCol.id] || '', { tz }) : ''
-      const dd = depDateCol ? formatCell(depDateCol, e.column_values?.[depDateCol.id] || '', { tz }) : ''
-      const et = etdCol ? formatCell(etdCol, e.column_values?.[etdCol.id] || '', { tz }) : ''
+      const arr = buildArrivalDisplay(e, etaCol, tz)
+      const dep = buildDepartureDisplay(e, depDateCol, etdCol, tz)
       return [
         sanitizePdfText(e.ppr_number),
-        `${e.arrival_date}${ar ? ' ' + ar : ''}`,
+        arr.sub ? `${arr.main}\n${arr.sub}` : arr.main,
         sanitizePdfText(ac),
         sanitizePdfText(cs),
-        dd ? `${dd}${et ? ' ' + et : ''}` : sanitizePdfText(et),
+        dep.sub ? `${dep.main}\n${dep.sub}` : dep.main,
         STATUS_LABELS[e.status] || e.status,
       ]
     }),
@@ -496,5 +587,5 @@ export async function generatePprPdf(input: PprPdfInput): Promise<{ doc: jsPDF; 
     drawFooter(ctx)
   }
 
-  return { doc, filename: buildFilename(dateFrom, dateTo) }
+  return { doc, filename: outFilename }
 }
