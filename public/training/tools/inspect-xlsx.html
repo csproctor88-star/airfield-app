@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Inspect XLSX (focused)</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<pre id="out" style="font: 11px ui-monospace, monospace; white-space: pre-wrap;"></pre>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  const log = (...a) => { out.textContent += a.map(x => typeof x === 'string' ? x : JSON.stringify(x, null, 2)).join(' ') + '\n'; };
+  const wbs = {};
+  for (const f of ['tr.xlsx', 'formal.xlsx']) {
+    const r = await fetch(f);
+    const buf = await r.arrayBuffer();
+    wbs[f] = XLSX.read(buf, { type: 'array', cellDates: true });
+  }
+  window.__WBS = wbs;
+  const dump = (label, sheet, maxRows = 200) => {
+    log('\n=== ' + label + ' (sheet: ' + (sheet ? '!ref ' + sheet['!ref'] : 'NONE') + ') ===');
+    if (!sheet) { log('(missing)'); return; }
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', blankrows: false, raw: false });
+    log('rows:', rows.length);
+    for (let i = 0; i < Math.min(rows.length, maxRows); i++) {
+      const trimmed = rows[i].map(c => (typeof c === 'string' && c.length > 120) ? c.slice(0,120)+'…' : c);
+      // strip trailing empties
+      let last = trimmed.length;
+      while (last > 0 && (trimmed[last-1] === '' || trimmed[last-1] == null)) last--;
+      if (last === 0) continue;
+      log('R' + String(i+1).padStart(3,'0') + ':', JSON.stringify(trimmed.slice(0,last)));
+    }
+    if (rows.length > maxRows) log('... (' + (rows.length - maxRows) + ' more rows)');
+  };
+
+  const tr = wbs['tr.xlsx'];
+  dump('Qualifications', tr.Sheets['Qualifications'], 80);
+  dump('623A', tr.Sheets['623A'], 60);
+  dump('DAF Form 797', tr.Sheets['DAF Form 797'], 60);
+  dump('DAF Form 1098 2026', tr.Sheets['DAF Form 1098 2026'], 60);
+  dump('DAF Form 1098 2025', tr.Sheets['DAF Form 1098 2025'], 60);
+  dump('JQS-CFETP', tr.Sheets['JQS-CFETP'], 60);
+
+  const fm = wbs['formal.xlsx'];
+  log('\nFORMAL sheets:', fm.SheetNames);
+  for (const n of fm.SheetNames) dump('formal.' + n, fm.Sheets[n], 80);
+
+  window.__INSPECTED = true;
+})();
+</script>
+</body>
+</html>
