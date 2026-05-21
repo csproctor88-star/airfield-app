@@ -13,12 +13,13 @@ import { buildUnitKpis, type UnitKpis } from '@/lib/amtr/rollup'
 import { AMTR_MEMBER_STATUSES } from '@/lib/amtr/reference-data'
 import { NotificationCenter } from '@/components/amtr/notification-center'
 import { TrainingReferences } from '@/components/amtr/training-references'
+import { HowToGuide } from '@/components/amtr/how-to-guide'
 import { Field, Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Award, Plus, BarChart3, UsersRound, ChevronRight, BookOpen, ClipboardCheck } from 'lucide-react'
+import { Award, Plus, BarChart3, UsersRound, ChevronRight, BookOpen, ClipboardCheck, HelpCircle } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -43,6 +44,7 @@ export default function AmtrRosterPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [showRefs, setShowRefs] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
   const [grade, setGrade] = useState('')
@@ -124,6 +126,7 @@ export default function AmtrRosterPage() {
         <Award size={24} style={{ color: 'var(--color-accent)' }} />
         <h1 style={{ margin: 0, fontSize: 22 }}>Training Records</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Btn variant={showGuide ? 'primary' : 'secondary'} onClick={() => setShowGuide((s) => !s)}><HelpCircle size={15} /> How it works</Btn>
           <Btn variant={showRefs ? 'primary' : 'secondary'} onClick={() => setShowRefs((s) => !s)}><BookOpen size={15} /> Training References</Btn>
           <Link href="/amtr/reports" style={linkBtnStyle}><BarChart3 size={15} /> Reports</Link>
           {canManage && <Link href="/amtr/roles" style={linkBtnStyle}><UsersRound size={15} /> Training Admin</Link>}
@@ -142,6 +145,12 @@ export default function AmtrRosterPage() {
           </div>
         ))}
       </div>
+
+      {showGuide && (
+        <div className="card" style={{ padding: 18, marginBottom: 18 }}>
+          <HowToGuide />
+        </div>
+      )}
 
       {showRefs && (
         <div className="card" style={{ padding: 18, marginBottom: 18 }}>
