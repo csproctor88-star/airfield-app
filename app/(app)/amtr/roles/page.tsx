@@ -12,11 +12,11 @@ import {
 } from '@/lib/supabase/amtr'
 import { seedBaseCatalogs, SEED_COUNTS } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
-import { Field, Btn, thStyle, tdStyle } from '@/components/amtr/ui'
+import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Download } from 'lucide-react'
+import { ArrowLeft, Download, ChevronRight, ChevronDown } from 'lucide-react'
 
 type Row = Record<string, unknown>
 type Profile = { id: string; label: string; sortKey: string }
@@ -32,8 +32,8 @@ export default function AmtrRolesPage() {
   const [seeding, setSeeding] = useState(false)
   const [assignments, setAssignments] = useState<AmtrRoleAssignment[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
-  const [selUser, setSelUser] = useState('')
-  const [selRoles, setSelRoles] = useState<Set<AmtrRole>>(new Set())
+  const [search, setSearch] = useState('')
+  const [savingKey, setSavingKey] = useState<string | null>(null)
   const [cat1098, setCat1098] = useState<Row[]>([])
   const [catRat, setCatRat] = useState<Row[]>([])
   const [catJqs, setCatJqs] = useState<Row[]>([])
@@ -94,24 +94,15 @@ export default function AmtrRolesPage() {
     load()
   }
 
-  const toggleRole = (r: AmtrRole) => {
-    setSelRoles((prev) => {
-      const next = new Set(prev)
-      if (next.has(r)) next.delete(r); else next.add(r)
-      return next
-    })
-  }
-  const grant = async () => {
-    if (!installationId || !selUser || selRoles.size === 0) return
-    for (const r of Array.from(selRoles)) {
-      const { error } = await addAmtrRole(installationId, selUser, r)
-      if (error) { toast.error(error); return }
-    }
-    toast.success(`Granted ${selRoles.size} role${selRoles.size > 1 ? 's' : ''}`)
-    setSelRoles(new Set()); setSelUser(''); load()
-  }
-  const revoke = async (id: string) => {
-    const { error } = await removeAmtrRole(id)
+  // Matrix toggle: assignment present → revoke; absent → grant. Saves instantly.
+  const toggleAssign = async (uid: string, role: AmtrRole, existingId: string | undefined) => {
+    if (!installationId) return
+    const key = `${uid}:${role}`
+    setSavingKey(key)
+    const { error } = existingId
+      ? await removeAmtrRole(existingId)
+      : await addAmtrRole(installationId, uid, role)
+    setSavingKey(null)
     if (error) { toast.error(error); return }
     load()
   }
@@ -125,12 +116,12 @@ export default function AmtrRolesPage() {
 
   if (!canManage) return <div style={{ padding: 24 }}><EmptyState message="Requires the Manage Training Records permission." /></div>
 
-  const labelFor = (uid: string) => profiles.find((p) => p.id === uid)?.label ?? uid
-  const byUser = new Map<string, AmtrRoleAssignment[]>()
-  for (const a of assignments) {
-    if (!byUser.has(a.user_id)) byUser.set(a.user_id, [])
-    byUser.get(a.user_id)!.push(a)
-  }
+  // (user_id:role) → assignment id, for the matrix checkboxes.
+  const assignByKey = new Map<string, string>()
+  for (const a of assignments) assignByKey.set(`${a.user_id}:${a.role}`, a.id)
+  const filteredProfiles = search.trim()
+    ? profiles.filter((p) => p.label.toLowerCase().includes(search.trim().toLowerCase()))
+    : profiles
   const catalogsLoaded = catJqs.length > 0
 
   return (
@@ -143,108 +134,91 @@ export default function AmtrRolesPage() {
       {loading ? <LoadingState /> : (
         <>
           {/* Standard catalog adopt */}
-          <div className="card" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 260 }}>
-              <div style={{ fontWeight: 600 }}>Standard 1C7X1 Catalogs</div>
-              <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-                Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), and milestone ({SEED_COUNTS.milestones}) catalogs for this base. Already-populated catalogs are skipped.
-              </div>
-            </div>
-            <Btn variant="primary" onClick={loadStandard} disabled={seeding}>
+          <CollapsibleCard title="Standard 1C7X1 Catalogs"
+            actions={<Btn variant="primary" onClick={loadStandard} disabled={seeding}>
               <Download size={15} /> {seeding ? 'Loading…' : catalogsLoaded ? 'Re-check / load missing' : 'Load standard catalogs'}
-            </Btn>
-          </div>
-
-          {/* Role assignments */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <h3 style={{ marginTop: 0 }}>Role Assignments</h3>
-            <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-              A user may hold multiple roles; the highest applies when viewing others&apos; records. On their own record they always act as Trainee. One signature per record (signing as one role blocks the others).
-            </p>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', marginBottom: 12, flexWrap: 'wrap' }}>
-              <Field label="User" style={{ minWidth: 260 }}>
-                <select className="input-dark" value={selUser} onChange={(e) => setSelUser(e.target.value)}>
-                  <option value="">Select a user…</option>
-                  {profiles.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-                </select>
-              </Field>
-              <Field label="Roles (select one or more)">
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 2 }}>
-                  {ROLES.map((r) => {
-                    const on = selRoles.has(r)
-                    return (
-                      <button key={r} type="button" onClick={() => toggleRole(r)}
-                        style={{
-                          padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
-                          fontSize: 'var(--fs-sm)', fontWeight: on ? 700 : 600,
-                          border: `1.5px solid ${on ? 'var(--color-accent)' : 'var(--color-border-mid)'}`,
-                          background: on ? 'color-mix(in srgb, var(--color-accent) 14%, transparent)' : 'transparent',
-                          color: on ? 'var(--color-accent)' : 'var(--color-text-2)',
-                        }}>
-                        {AMTR_ROLE_LABELS[r]}
-                      </button>
-                    )
-                  })}
-                </div>
-              </Field>
-              <Btn variant="primary" onClick={grant} disabled={!selUser || selRoles.size === 0}>Grant</Btn>
+            </Btn>}>
+            <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
+              Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), and milestone ({SEED_COUNTS.milestones}) catalogs for this base. Already-populated catalogs are skipped.
             </div>
-            {byUser.size === 0 ? <EmptyState message="No AMTR roles assigned yet." /> : (
-              <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'hidden' }}>
-                {Array.from(byUser.entries()).map(([uid, list], i) => (
-                  <div key={uid} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '10px 14px', borderTop: i > 0 ? '1px solid var(--color-border)' : 'none' }}>
-                    <span style={{ fontWeight: 600, minWidth: 220, flexShrink: 0 }}>{labelFor(uid)}</span>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {list.map((a) => <RolePill key={a.id} label={AMTR_ROLE_LABELS[a.role]} onRemove={() => revoke(a.id)} />)}
-                    </div>
-                  </div>
-                ))}
+          </CollapsibleCard>
+
+          {/* Role assignments — matrix */}
+          <CollapsibleCard title="Role Assignments"
+            actions={<input className="input-dark" placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} />}>
+            <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
+              Check a box to assign a role; uncheck to remove it. Signing authority is hierarchical — a Certifier may sign the Trainee, Trainer, and Certifier blocks; NAMT signs all but AFM; AFM signs every block. On their own record a member may only sign the Trainee block. Each signature locks its own block.
+            </p>
+            {profiles.length === 0 ? <EmptyState message="No personnel found for this base." /> : (
+              <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <th style={{ ...thStyle, textAlign: 'left' }}>Member</th>
+                      {ROLES.map((r) => <th key={r} style={{ ...thStyle, textAlign: 'center', width: 90 }}>{AMTR_ROLE_LABELS[r]}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProfiles.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <td style={{ ...tdStyle, fontWeight: 600 }}>{p.label}</td>
+                        {ROLES.map((r) => {
+                          const key = `${p.id}:${r}`
+                          const existingId = assignByKey.get(key)
+                          return (
+                            <td key={r} style={{ ...tdStyle, textAlign: 'center' }}>
+                              <input type="checkbox" checked={!!existingId} disabled={savingKey === key}
+                                onChange={() => toggleAssign(p.id, r, existingId)}
+                                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--color-accent)' }} />
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-          </div>
+            {search.trim() && filteredProfiles.length === 0 && (
+              <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 8 }}>No members match “{search}”.</div>
+            )}
+          </CollapsibleCard>
 
           {/* 1098 catalog */}
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h3 style={{ margin: 0 }}>DAF 1098 — Recurring Training ({cat1098.length})</h3>
-              <div style={{ marginLeft: 'auto' }}>
-                <Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>
-              </div>
-            </div>
+          <CollapsibleCard title="DAF 1098 — Recurring Training" count={cat1098.length}
+            actions={<Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>}>
             <CatalogList rows={cat1098} field="task" onDelete={async (id) => { await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
-          </div>
+          </CollapsibleCard>
 
           {/* RAT catalog */}
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h3 style={{ margin: 0 }}>Ready Airman Training ({catRat.length})</h3>
-              <div style={{ marginLeft: 'auto' }}>
-                <Btn variant="secondary" onClick={() => addTask('amtr_rat_catalog', 'course')}>+ Add course</Btn>
-              </div>
-            </div>
+          <CollapsibleCard title="Ready Airman Training" count={catRat.length}
+            actions={<Btn variant="secondary" onClick={() => addTask('amtr_rat_catalog', 'course')}>+ Add course</Btn>}>
             <CatalogList rows={catRat} field="course" onDelete={async (id) => { await deleteAmtrRow('amtr_rat_catalog', id); load() }} />
-          </div>
+          </CollapsibleCard>
         </>
       )}
     </div>
   )
 }
 
-function RolePill({ label, onRemove }: { label: string; onRemove: () => void }) {
+// Collapsible section card — collapsed by default; actions show only when open.
+function CollapsibleCard({ title, count, actions, children }: {
+  title: string; count?: number; actions?: React.ReactNode; children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 4px 3px 10px',
-      borderRadius: 999, fontSize: 'var(--fs-sm)', fontWeight: 600,
-      background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)', color: 'var(--color-accent)',
-      border: '1px solid color-mix(in srgb, var(--color-accent) 35%, transparent)',
-    }}>
-      {label}
-      <button onClick={onRemove} title="Revoke" style={{
-        display: 'inline-flex', width: 16, height: 16, alignItems: 'center', justifyContent: 'center',
-        borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 12, lineHeight: 1, fontFamily: 'inherit',
-        background: 'color-mix(in srgb, var(--color-accent) 24%, transparent)', color: 'var(--color-accent)',
-      }}>×</button>
-    </span>
+    <div className="card" style={{ marginBottom: 16, padding: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', flexWrap: 'wrap' }}>
+        <button onClick={() => setOpen((o) => !o)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--color-text-1)', padding: 0 }}>
+          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <strong style={{ fontSize: 16 }}>{title}</strong>
+          {count != null && <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', fontWeight: 400 }}>({count})</span>}
+        </button>
+        {actions && open && <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>{actions}</div>}
+      </div>
+      {open && <div style={{ padding: '0 16px 16px' }}>{children}</div>}
+    </div>
   )
 }
 

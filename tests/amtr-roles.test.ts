@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  effectiveRoleForRecord, canViewRecord, canSignSlot, rolesForSlot,
+  effectiveRoleForRecord, canViewRecord, canSignSlot, slotsUserCanSign, rolesForSlot,
   canEnterData, canReopen, isRecordLocked, AMTR_ROLE_LABELS,
 } from '@/lib/amtr/roles'
 import type { AmtrRole } from '@/lib/supabase/amtr'
@@ -38,23 +38,51 @@ describe('AMTR role layer', () => {
     })
   })
 
-  describe('canSignSlot — one signature per record', () => {
-    it('allows signing a slot the caller has the role for', () => {
-      expect(canSignSlot(['certifier'] as AmtrRole[], 'certifier', [])).toBe(true)
+  describe('slotsUserCanSign — hierarchical authority', () => {
+    it('trainee may sign only the trainee block', () => {
+      expect(slotsUserCanSign(['trainee'] as AmtrRole[], false)).toEqual(new Set(['trainee']))
     })
-    it('blocks a slot the caller lacks the role for', () => {
-      expect(canSignSlot(['trainer'] as AmtrRole[], 'certifier', [])).toBe(false)
+    it('trainer may sign only the trainer block (not trainee)', () => {
+      expect(slotsUserCanSign(['trainer'] as AmtrRole[], false)).toEqual(new Set(['trainer', 'evaluator']))
     })
-    it('blocks a second slot under a different role on the same record', () => {
-      // caller is both trainer and certifier, already signed as trainer
-      expect(canSignSlot(['trainer', 'certifier'] as AmtrRole[], 'certifier', ['trainer'])).toBe(false)
+    it('certifier may sign trainee, trainer, certifier', () => {
+      expect(slotsUserCanSign(['certifier'] as AmtrRole[], false))
+        .toEqual(new Set(['trainee', 'trainer', 'certifier', 'evaluator']))
     })
-    it('allows re-signing the same slot already owned', () => {
-      expect(canSignSlot(['certifier'] as AmtrRole[], 'certifier', ['certifier'])).toBe(true)
+    it('namt may sign everything except afm', () => {
+      expect(slotsUserCanSign(['namt'] as AmtrRole[], false))
+        .toEqual(new Set(['trainee', 'trainer', 'certifier', 'namt', 'evaluator']))
+    })
+    it('afm may sign every block', () => {
+      expect(slotsUserCanSign(['afm'] as AmtrRole[], false))
+        .toEqual(new Set(['trainee', 'trainer', 'certifier', 'namt', 'afm', 'evaluator']))
+    })
+    it('own record is always trainee-only, regardless of held roles', () => {
+      expect(slotsUserCanSign(['afm', 'namt'] as AmtrRole[], true)).toEqual(new Set(['trainee']))
+    })
+  })
+
+  describe('canSignSlot', () => {
+    it('certifier can sign trainee, trainer, and certifier on another record', () => {
+      expect(canSignSlot(['certifier'] as AmtrRole[], 'trainee', false)).toBe(true)
+      expect(canSignSlot(['certifier'] as AmtrRole[], 'trainer', false)).toBe(true)
+      expect(canSignSlot(['certifier'] as AmtrRole[], 'certifier', false)).toBe(true)
+    })
+    it('trainer cannot sign the trainee block', () => {
+      expect(canSignSlot(['trainer'] as AmtrRole[], 'trainee', false)).toBe(false)
+      expect(canSignSlot(['trainer'] as AmtrRole[], 'trainer', false)).toBe(true)
+    })
+    it('namt cannot sign the afm block; afm can', () => {
+      expect(canSignSlot(['namt'] as AmtrRole[], 'afm', false)).toBe(false)
+      expect(canSignSlot(['afm'] as AmtrRole[], 'afm', false)).toBe(true)
+    })
+    it('own record: even an AFM may sign only the trainee block', () => {
+      expect(canSignSlot(['afm'] as AmtrRole[], 'trainee', true)).toBe(true)
+      expect(canSignSlot(['afm'] as AmtrRole[], 'certifier', true)).toBe(false)
     })
     it('evaluator slot accepts any non-trainee role', () => {
-      expect(canSignSlot(['namt'] as AmtrRole[], 'evaluator', [])).toBe(true)
-      expect(canSignSlot(['trainee'] as AmtrRole[], 'evaluator', [])).toBe(false)
+      expect(canSignSlot(['namt'] as AmtrRole[], 'evaluator', false)).toBe(true)
+      expect(canSignSlot(['trainee'] as AmtrRole[], 'evaluator', false)).toBe(false)
     })
   })
 

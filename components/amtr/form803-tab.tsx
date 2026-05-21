@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { upsertAmtrRow, deleteAmtrRow, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { DAF803_SECTIONS } from '@/lib/amtr/reference-data'
-import { SignCell, LockTag, ReopenButton } from '@/components/amtr/signable'
+import { SignCell } from '@/components/amtr/signable'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_803', rowId: string, slot: SignSlot, already: SignSlot[], onSigned?: () => Promise<void>) => Promise<void>
-type ReopenFn = (table: 'amtr_803', rowId: string) => Promise<void>
+type SignFn = (table: 'amtr_803', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type ReopenFn = (table: 'amtr_803', rowId: string, slot: SignSlot) => Promise<void>
 
 const SECTION_NOTES: Record<string, string> = {
   apprenticeGrad: 'Apprentice Graduation — initial qualification entries.',
@@ -22,9 +22,9 @@ const SECTION_NOTES: Record<string, string> = {
 
 export function Form803Tab(props: {
   rows: Row[]; canWrite: boolean; canEnterData: boolean; installationId: string; memberId: string
-  member: AmtrMember; myRoles: AmtrRole[]; sign: SignFn; reopen: ReopenFn; onChange: () => void
+  member: AmtrMember; myRoles: AmtrRole[]; isOwn: boolean; sign: SignFn; reopen: ReopenFn; onChange: () => void
 }) {
-  const { rows, canWrite, canEnterData, installationId, memberId, myRoles, sign, reopen, onChange } = props
+  const { rows, canWrite, canEnterData, installationId, memberId, myRoles, isOwn, sign, reopen, onChange } = props
   const [section, setSection] = useState<string>('apprenticeGrad')
   const reopenAllowed = canReopen(myRoles)
   const sectionRows = rows.filter((r) => r.section === section)
@@ -63,7 +63,6 @@ export function Form803Tab(props: {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: 30 }} />
                 <th style={thStyle}>JQS Item(s) Evaluated</th><th style={thStyle}>Date</th>
                 <th style={thStyle}>In UGT</th><th style={thStyle}>Results</th><th style={thStyle}>Evaluator</th><th style={thStyle}>Remarks</th>
               </tr>
@@ -71,34 +70,32 @@ export function Form803Tab(props: {
             <tbody>
               {sectionRows.map((r) => {
                 const id = String(r.id)
-                const locked = !!r.locked_at
-                const already = (r.evaluator_initials ? ['evaluator'] : []) as SignSlot[]
                 return (
                   <tr key={id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>{locked ? <LockTag /> : null}</td>
                     <td style={tdStyle}>
-                      <input className="input-dark" style={{ ...di, width: '100%', minWidth: 220 }} disabled={!canEnterData || locked} placeholder="e.g. 7.5.1" defaultValue={(r.sts_item as string) ?? ''} onBlur={(e) => canEnterData && !locked && setField(r, 'sts_item', e.target.value || null)} />
-                      {locked && reopenAllowed && <span style={{ marginLeft: 8 }}><ReopenButton onReopen={() => reopen('amtr_803', id)} /></span>}
+                      <input className="input-dark" style={{ ...di, width: '100%', minWidth: 220 }} disabled={!canEnterData} placeholder="e.g. 7.5.1" defaultValue={(r.sts_item as string) ?? ''} onBlur={(e) => canEnterData && setField(r, 'sts_item', e.target.value || null)} />
                     </td>
-                    <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData || locked} defaultValue={r.eval_date ? String(r.eval_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && !locked && setField(r, 'eval_date', e.target.value || null)} /></td>
+                    <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={r.eval_date ? String(r.eval_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(r, 'eval_date', e.target.value || null)} /></td>
                     <td style={tdStyle}>
-                      <select className="input-dark" style={sel} disabled={!canEnterData || locked} defaultValue={(r.in_ugt as string) ?? ''} onChange={(e) => setField(r, 'in_ugt', e.target.value || null)}>
+                      <select className="input-dark" style={sel} disabled={!canEnterData} defaultValue={(r.in_ugt as string) ?? ''} onChange={(e) => setField(r, 'in_ugt', e.target.value || null)}>
                         <option value="">—</option><option>Yes</option><option>No</option>
                       </select>
                     </td>
                     <td style={tdStyle}>
-                      <select className="input-dark" style={sel} disabled={!canEnterData || locked} defaultValue={(r.results as string) ?? ''} onChange={(e) => setField(r, 'results', e.target.value || null)}>
+                      <select className="input-dark" style={sel} disabled={!canEnterData} defaultValue={(r.results as string) ?? ''} onChange={(e) => setField(r, 'results', e.target.value || null)}>
                         <option value="">—</option><option>SAT</option><option>UNSAT</option>
                       </select>
                     </td>
                     <td style={tdStyle}>
-                      <SignCell value={(r.evaluator_initials as string) ?? null} locked={locked}
-                        canSign={canWrite && !locked && canSignSlot(myRoles, 'evaluator', [])}
-                        onSign={() => sign('amtr_803', id, 'evaluator', already)} />
+                      <SignCell value={(r.evaluator_initials as string) ?? null}
+                        canSign={canWrite && canSignSlot(myRoles, 'evaluator', isOwn)}
+                        canReopenSlot={reopenAllowed && !!r.evaluator_signed_by}
+                        onReopen={() => reopen('amtr_803', id, 'evaluator')}
+                        onSign={() => sign('amtr_803', id, 'evaluator')} />
                     </td>
                     <td style={tdStyle}>
-                      <input className="input-dark" style={{ ...di, width: 180 }} disabled={!canEnterData || locked} defaultValue={(r.remarks as string) ?? ''} placeholder={r.results === 'UNSAT' ? 'Deficiency + retrain plan' : 'Remarks'} onBlur={(e) => canEnterData && !locked && setField(r, 'remarks', e.target.value || null)} />
-                      {canEnterData && !locked && <button onClick={async () => { await deleteAmtrRow('amtr_803', id); onChange() }} style={{ marginLeft: 6, background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}>×</button>}
+                      <input className="input-dark" style={{ ...di, width: 180 }} disabled={!canEnterData} defaultValue={(r.remarks as string) ?? ''} placeholder={r.results === 'UNSAT' ? 'Deficiency + retrain plan' : 'Remarks'} onBlur={(e) => canEnterData && setField(r, 'remarks', e.target.value || null)} />
+                      {canEnterData && <button onClick={async () => { await deleteAmtrRow('amtr_803', id); onChange() }} style={{ marginLeft: 6, background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}>×</button>}
                     </td>
                   </tr>
                 )

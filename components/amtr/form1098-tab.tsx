@@ -7,23 +7,22 @@ import { buildSignoff, buildTrainingDue, fireToTrainingTeam, type NotificationDr
 import { dueStatus, computeNextDue } from '@/lib/amtr/status'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { StatusPill } from '@/components/amtr/status-pill'
-import { SignCell, LockTag, ReopenButton } from '@/components/amtr/signable'
+import { SignCell } from '@/components/amtr/signable'
 import { SimpleCatalogEditor } from '@/components/amtr/simple-catalog-editor'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 
 const FREQ_OPTIONS = ['', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Biennial', 'Triennial', 'As Required']
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot, already: SignSlot[], onSigned?: () => Promise<void>) => Promise<void>
-type ReopenFn = (table: 'amtr_1098_progress', rowId: string) => Promise<void>
-const SLOTS: SignSlot[] = ['trainee', 'certifier']
+type SignFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type ReopenFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot) => Promise<void>
 
 export function Form1098Tab(props: {
   catalog: Row[]; progress: Row[]; canWrite: boolean; canEnterData: boolean; canManage: boolean
-  installationId: string; memberId: string; member: AmtrMember; myRoles: AmtrRole[]
+  installationId: string; memberId: string; member: AmtrMember; myRoles: AmtrRole[]; isOwn: boolean
   highlightItem: string | null; sign: SignFn; reopen: ReopenFn; onChange: () => void
 }) {
-  const { catalog, progress, canWrite, canEnterData, canManage, installationId, memberId, member, myRoles, highlightItem, sign, reopen, onChange } = props
+  const { catalog, progress, canWrite, canEnterData, canManage, installationId, memberId, member, myRoles, isOwn, highlightItem, sign, reopen, onChange } = props
   const [editMode, setEditMode] = useState(false)
   const currentYear = String(new Date().getUTCFullYear())
   const years = Array.from(new Set([currentYear, ...progress.map((p) => String(p.year_label)).filter(Boolean)])).sort((a, b) => b.localeCompare(a))
@@ -53,7 +52,7 @@ export function Form1098Tab(props: {
   if (editMode) {
     return (
       <SimpleCatalogEditor table="amtr_1098_catalog" rows={catalog} installationId={installationId}
-        columns={[{ key: 'task', label: 'Task', flex: true }, { key: 'type', label: 'Type', width: 110 }, { key: 'frequency', label: 'Frequency', type: 'select', options: FREQ_OPTIONS, width: 130 }]}
+        columns={[{ key: 'task', label: 'Task', flex: true }, { key: 'type', label: 'Type', width: 110 }, { key: 'frequency', label: 'Frequency', type: 'select', options: FREQ_OPTIONS, width: 130 }, { key: 'score_or_hours', label: 'Score/Hrs', width: 90 }]}
         defaults={{ task: 'New Task', frequency: 'Annual' }} onDone={() => setEditMode(false)} onChange={onChange} />
     )
   }
@@ -115,7 +114,6 @@ export function Form1098Tab(props: {
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
         <thead>
           <tr>
-            <th style={{ ...thStyle, width: 30 }} />
             <th style={thStyle}>Task</th><th style={thStyle}>Start</th>
             <th style={{ ...thStyle, whiteSpace: 'normal', width: 90 }}>Last<br />Completed</th>
             <th style={{ ...thStyle, whiteSpace: 'normal', width: 64 }}>Cert<br />Official</th><th style={thStyle}>Trainee</th>
@@ -127,20 +125,20 @@ export function Form1098Tab(props: {
           {catalog.map((c) => {
             const catId = String(c.id)
             const p = progByCat.get(catId)
-            const locked = !!p?.locked_at
             const freq = String(c.frequency ?? 'Annual')
             const last = (p?.last_completed as string) ?? ''
             const next = (p?.next_due as string) ?? null
             const status = dueStatus({ dueDate: next, completedDate: last })
-            const already = SLOTS.filter((s) => p && p[`${s}_initials`]) as SignSlot[]
             const hi = highlightItem === catId
             const signCell = (slot: SignSlot) => (
               <td style={tdStyle}>
-                <SignCell value={(p?.[`${slot}_initials`] as string) ?? null} locked={locked}
-                  canSign={canWrite && !locked && canSignSlot(myRoles, slot, already.filter((x) => x !== slot))}
+                <SignCell value={(p?.[`${slot}_initials`] as string) ?? null}
+                  canSign={canWrite && canSignSlot(myRoles, slot, isOwn)}
+                  canReopenSlot={reopenAllowed && !!p?.[`${slot}_signed_by`]}
+                  onReopen={() => p?.id && reopen('amtr_1098_progress', String(p.id), slot)}
                   onSign={async () => {
                     const rid = await ensure(catId); if (!rid) return
-                    await sign('amtr_1098_progress', rid, slot, already, async () => {
+                    await sign('amtr_1098_progress', rid, slot, async () => {
                       if (slot !== 'trainee' && member.user_id) {
                         const draft: NotificationDraft = buildSignoff(member.full_name, slot as AmtrRole, 'DAF 1098', String(c.task), catId, '1098')
                         await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...draft })
@@ -150,16 +148,12 @@ export function Form1098Tab(props: {
               </td>
             )
             return (
-              <tr key={catId} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
-                <td style={{ ...tdStyle, textAlign: 'center' }}>{locked ? <LockTag /> : null}</td>
-                <td style={tdStyle}>
-                  {String(c.task)}
-                  {locked && reopenAllowed && <span style={{ marginLeft: 8 }}><ReopenButton onReopen={() => reopen('amtr_1098_progress', String(p?.id))} /></span>}
-                </td>
-                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData || locked} defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && !locked && setField(catId, freq, 'start_date', e.target.value)} /></td>
-                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData || locked} defaultValue={last ? last.slice(0, 10) : ''} onBlur={(e) => canEnterData && !locked && setField(catId, freq, 'last_completed', e.target.value)} /></td>
+              <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
+                <td style={tdStyle}>{String(c.task)}</td>
+                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, freq, 'start_date', e.target.value)} /></td>
+                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={last ? last.slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, freq, 'last_completed', e.target.value)} /></td>
                 {signCell('certifier')}{signCell('trainee')}
-                <td style={tdStyle}><input className="input-dark" style={{ ...di, width: 80 }} disabled={!canEnterData || locked} defaultValue={(p?.score_or_hours as string) ?? ''} placeholder="2 Hrs" onBlur={(e) => canEnterData && !locked && setField(catId, freq, 'score_or_hours', e.target.value)} /></td>
+                <td style={tdStyle}>{c.score_or_hours ? String(c.score_or_hours) : '—'}</td>
                 <td style={tdStyle}>{c.type ? String(c.type) : '—'}</td>
                 <td style={tdStyle}>{freq}</td>
                 <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{next ? next.slice(0, 10) : '—'}</td>

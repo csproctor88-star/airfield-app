@@ -27,13 +27,15 @@ export type NotificationDraft = {
   dedupe_key: string
 }
 
-export function buildTrainingDue(trainingName: string, dueISO: string, itemId: string): NotificationDraft {
+export function buildTrainingDue(
+  trainingName: string, dueISO: string, itemId: string, tab: string = '1098',
+): NotificationDraft {
   return {
     kind: 'training_due',
     body: `${trainingName} due by ${formatDueLabel(dueISO)}.`,
-    target_tab: '1098',
+    target_tab: tab,
     target_item_id: itemId,
-    dedupe_key: `training_due:${itemId}`,
+    dedupe_key: `training_due:${tab}:${itemId}`,
   }
 }
 

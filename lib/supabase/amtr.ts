@@ -325,13 +325,13 @@ export async function amtrSign(
   return { error: null }
 }
 
-/** Reopen a locked signable row (NAMT/AFM only — enforced server-side). */
+/** Clear a single signature block (NAMT/AFM only — enforced server-side). */
 export async function amtrReopen(
-  table: AmtrSignableTable, rowId: string,
+  table: AmtrSignableTable, rowId: string, slot: string,
 ): Promise<{ error: string | null }> {
   const supabase = db()
   if (!supabase) return { error: 'Supabase not configured' }
-  const { error } = await supabase.rpc('amtr_reopen', { p_table: table, p_row_id: rowId } as never)
+  const { error } = await supabase.rpc('amtr_reopen', { p_table: table, p_row_id: rowId, p_slot: slot } as never)
   if (error) {
     console.error('amtr_reopen failed:', error.message)
     return { error: friendlyError(error.message) }

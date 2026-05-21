@@ -1,17 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Lock, Unlock, Pencil, GripVertical, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Unlock, Pencil, GripVertical, Trash2 } from 'lucide-react'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import type { AmtrMember, AmtrRole } from '@/lib/supabase/amtr'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { Btn } from '@/components/amtr/ui'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot, already: SignSlot[], onSigned?: () => Promise<void>) => Promise<void>
-type ReopenFn = (table: 'amtr_jqs_progress', rowId: string) => Promise<void>
-
-const SLOTS: SignSlot[] = ['trainee', 'trainer', 'certifier']
+type SignFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type ReopenFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot) => Promise<void>
 
 // Hierarchical renumber: sections → 1, 2, 3…; items → <section>.<n> by depth.
 function computeJqsNumbers(rows: Row[]): string[] {
@@ -25,21 +23,31 @@ function computeJqsNumbers(rows: Row[]): string[] {
   })
 }
 
-// Inline initials cell: shows initials, a Sign button, or — / lock.
-function Initials({ value, canSign, locked, onSign }: { value: string | null; canSign: boolean; locked: boolean; onSign: () => void }) {
-  if (value) return <span style={{ fontWeight: 600 }}>{value}</span>
-  if (locked) return <span style={{ color: 'var(--color-text-3)' }}>—</span>
+// Inline initials cell: shows initials (with an optional per-slot reopen for
+// NAMT/AFM), a Sign button, or —. Each block locks on its own once signed.
+function Initials({ value, canSign, canReopenSlot, onSign, onReopen }: {
+  value: string | null; canSign: boolean; canReopenSlot?: boolean; onSign: () => void; onReopen?: () => void
+}) {
+  if (value) return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+      <span style={{ fontWeight: 600 }}>{value}</span>
+      {canReopenSlot && onReopen && (
+        <button onClick={onReopen} title="Reopen this signature (NAMT/AFM)"
+          style={{ display: 'inline-flex', alignItems: 'center', padding: 1, border: 'none', background: 'transparent', color: 'var(--color-text-3)', cursor: 'pointer' }}><Unlock size={11} /></button>
+      )}
+    </span>
+  )
   if (!canSign) return <span style={{ color: 'var(--color-text-3)' }}>—</span>
   return <button onClick={onSign} style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px', borderRadius: 5, border: '1px solid var(--color-border-mid)', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontFamily: 'inherit' }}>Sign</button>
 }
 
 export function JqsTab(props: {
   catalog: Row[]; progress: Row[]; installationId: string; memberId: string
-  member: AmtrMember; myRoles: AmtrRole[]; canWrite: boolean; canEnterData: boolean; canManage: boolean
+  member: AmtrMember; myRoles: AmtrRole[]; canWrite: boolean; canEnterData: boolean; canManage: boolean; isOwn: boolean
   highlightItem: string | null; sign: SignFn; reopen: ReopenFn; onChange: () => void
   notifySignoff: (slot: SignSlot, itemRef: string, itemId: string) => Promise<void>
 }) {
-  const { catalog, progress, installationId, memberId, myRoles, canWrite, canEnterData, canManage, highlightItem, sign, reopen, onChange, notifySignoff } = props
+  const { catalog, progress, installationId, memberId, myRoles, canWrite, canEnterData, canManage, isOwn, highlightItem, sign, reopen, onChange, notifySignoff } = props
   const progByCat = new Map(progress.map((p) => [String(p.catalog_id), p]))
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [editMode, setEditMode] = useState(false)
@@ -155,7 +163,7 @@ export function JqsTab(props: {
                 section={g.section} items={items} open={open} showTR={showTR}
                 onToggle={() => setCollapsed((prev) => { const n = new Set(prev); n.has(secId) ? n.delete(secId) : n.add(secId); return n })}
                 progByCat={progByCat} highlightItem={highlightItem}
-                canWrite={canWrite} canEnterData={canEnterData} myRoles={myRoles} reopenAllowed={reopenAllowed}
+                canWrite={canWrite} canEnterData={canEnterData} myRoles={myRoles} isOwn={isOwn} reopenAllowed={reopenAllowed}
                 setDate={setDate} ensureProgress={ensureProgress} sign={sign} reopen={reopen} notifySignoff={notifySignoff}
               />
             )
@@ -170,12 +178,12 @@ export function JqsTab(props: {
 function SectionGroup(props: {
   section: Row | null; items: Row[]; open: boolean; showTR: boolean; onToggle: () => void
   progByCat: Map<string, Row>; highlightItem: string | null
-  canWrite: boolean; canEnterData: boolean; myRoles: AmtrRole[]; reopenAllowed: boolean
+  canWrite: boolean; canEnterData: boolean; myRoles: AmtrRole[]; isOwn: boolean; reopenAllowed: boolean
   setDate: (catId: string, field: 'start_date' | 'complete_date', v: string) => void
   ensureProgress: (catId: string) => Promise<string>
   sign: SignFn; reopen: ReopenFn; notifySignoff: (slot: SignSlot, itemRef: string, itemId: string) => Promise<void>
 }) {
-  const { section, items, open, showTR, onToggle, progByCat, highlightItem, canWrite, canEnterData, myRoles, reopenAllowed, setDate, ensureProgress, sign, reopen, notifySignoff } = props
+  const { section, items, open, showTR, onToggle, progByCat, highlightItem, canWrite, canEnterData, myRoles, isOwn, reopenAllowed, setDate, ensureProgress, sign, reopen, notifySignoff } = props
   return (
     <>
       {section && (
@@ -196,8 +204,6 @@ function SectionGroup(props: {
       {open && items.map((c, idx) => {
         const catId = String(c.id)
         const p = progByCat.get(catId)
-        const locked = !!p?.locked_at
-        const already = SLOTS.filter((s) => p && p[`${s}_initials`]) as SignSlot[]
         const hi = highlightItem === catId
         const required = !!c.required
         const bg = hi ? 'var(--color-accent-glow)'
@@ -207,12 +213,13 @@ function SectionGroup(props: {
           <td style={{ ...cell, textAlign: 'center' }}>
             <Initials
               value={(p?.[`${slot}_initials`] as string) ?? null}
-              canSign={canWrite && !locked && canSignSlot(myRoles, slot, already.filter((x) => x !== slot))}
-              locked={locked}
+              canSign={canWrite && canSignSlot(myRoles, slot, isOwn)}
+              canReopenSlot={reopenAllowed && !!p?.[`${slot}_signed_by`]}
+              onReopen={() => p?.id && reopen('amtr_jqs_progress', String(p.id), slot)}
               onSign={async () => {
                 const rowId = await ensureProgress(catId)
                 if (!rowId) return
-                await sign('amtr_jqs_progress', rowId, slot, already, async () => {
+                await sign('amtr_jqs_progress', rowId, slot, async () => {
                   if (slot !== 'trainee') await notifySignoff(slot, String(c.number ?? c.title), catId)
                 })
               }}
@@ -220,31 +227,22 @@ function SectionGroup(props: {
           </td>
         )
         return (
-          <tr key={catId} style={{ borderBottom: '1px solid var(--color-border)', background: bg }}>
-            <td style={{ ...cell, textAlign: 'center', boxShadow: required ? 'inset 3px 0 0 var(--color-warning)' : undefined }}>
-              {locked ? <Lock size={13} style={{ color: 'var(--color-text-3)' }} /> : null}
-            </td>
+          <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: bg }}>
+            <td style={{ ...cell, textAlign: 'center', boxShadow: required ? 'inset 3px 0 0 var(--color-warning)' : undefined }} />
             <td style={{ ...cell, paddingLeft: 8 + Number(c.depth ?? 0) * 12 }}>
               <span style={{ color: 'var(--color-text-3)' }}>{c.number ? `${String(c.number)} ` : ''}</span>{String(c.title)}
-              {locked && reopenAllowed && (
-                <button onClick={async () => { const rid = String(p?.id); if (rid) await reopen('amtr_jqs_progress', rid) }}
-                  title="Reopen (NAMT/AFM)"
-                  style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--color-border-mid)', background: 'transparent', color: 'var(--color-text-3)', cursor: 'pointer' }}>
-                  <Unlock size={11} /> Reopen
-                </button>
-              )}
             </td>
             <td style={{ ...cell, textAlign: 'center' }}>{c.core_cert ? String(c.core_cert) : ''}</td>
             <td style={{ ...cell, maxWidth: 80, whiteSpace: 'normal', textAlign: 'center' }}>{c.deploy_sei ? String(c.deploy_sei) : ''}</td>
             <td style={cell}>
-              <input type="date" className="input-dark" style={dateInput} disabled={!canEnterData || locked}
+              <input type="date" className="input-dark" style={dateInput} disabled={!canEnterData}
                 defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''}
-                onBlur={(e) => canEnterData && !locked && setDate(catId, 'start_date', e.target.value)} />
+                onBlur={(e) => canEnterData && setDate(catId, 'start_date', e.target.value)} />
             </td>
             <td style={cell}>
-              <input type="date" className="input-dark" style={dateInput} disabled={!canEnterData || locked}
+              <input type="date" className="input-dark" style={dateInput} disabled={!canEnterData}
                 defaultValue={p?.complete_date ? String(p.complete_date).slice(0, 10) : ''}
-                onBlur={(e) => canEnterData && !locked && setDate(catId, 'complete_date', e.target.value)} />
+                onBlur={(e) => canEnterData && setDate(catId, 'complete_date', e.target.value)} />
             </td>
             {signCell('trainee')}{signCell('trainer')}{signCell('certifier')}
             <td style={{ ...cell, textAlign: 'center' }}>{c.prof3 ? String(c.prof3) : ''}</td>

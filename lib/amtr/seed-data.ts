@@ -18,7 +18,7 @@ export type JqsSeedRow = {
   deploy_sei: string | null; prof3: string | null; prof5: string | null
   prof7: string | null; prof9: string | null; sort_order: number
 }
-export type Recurring1098Row = { task: string; type: string | null; frequency: string; sort_order: number }
+export type Recurring1098Row = { task: string; type: string | null; frequency: string; score_or_hours: string | null; sort_order: number }
 export type FormalRow = { section: string; course: string; sort_order: number }
 export type RatRow = { course: string; category: string | null; method: string | null; frequency: string; sort_order: number }
 export type MilestoneRow = { path: string; phase_label: string; sts_items: string | null; topic: string; sort_order: number }

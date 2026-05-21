@@ -420,15 +420,19 @@ function QualsMatrix({ members, data }: { members: AmtrMember[]; data: Record<st
     return v?.value === 'Yes'
   }
   if (cols.length === 0) return <EmptyState message="No qualifications recorded yet." />
+  // Compact column styling so the full qualification matrix fits without
+  // horizontal scrolling — small wrapped headers + narrow dot columns.
+  const qTh: React.CSSProperties = { fontSize: 10, lineHeight: 1.15, padding: '6px 4px', textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--color-text-3)', fontWeight: 700, textAlign: 'center', verticalAlign: 'bottom', whiteSpace: 'normal', width: 56 }
+  const qTd: React.CSSProperties = { padding: '6px 4px', textAlign: 'center', width: 56 }
   return (
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr><th style={thStyle}>Member</th>{cols.map((c) => <th key={c} style={{ ...thStyle, textAlign: 'center' }}>{c}</th>)}</tr></thead>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead><tr><th style={{ ...qTh, textAlign: 'left', width: 'auto' }}>Member</th>{cols.map((c) => <th key={c} style={qTh}>{c}</th>)}</tr></thead>
         <tbody>
           {members.map((m) => (
             <tr key={m.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <td style={{ ...tdStyle, fontWeight: 600 }}>{m.full_name}</td>
-              {cols.map((c) => <td key={c} style={{ ...tdStyle, textAlign: 'center', color: filled(m.id, c) ? 'var(--color-success)' : 'var(--color-text-3)' }}>{filled(m.id, c) ? '●' : '○'}</td>)}
+              <td style={{ ...qTd, textAlign: 'left', width: 'auto', fontSize: 'var(--fs-sm)', fontWeight: 600, whiteSpace: 'nowrap' }}>{m.full_name}</td>
+              {cols.map((c) => <td key={c} style={{ ...qTd, color: filled(m.id, c) ? 'var(--color-success)' : 'var(--color-text-3)' }}>{filled(m.id, c) ? '●' : '○'}</td>)}
             </tr>
           ))}
         </tbody>

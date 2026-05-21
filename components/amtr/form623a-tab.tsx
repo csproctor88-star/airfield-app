@@ -5,13 +5,13 @@ import { ChevronRight, ChevronDown, X } from 'lucide-react'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { buildSignoff } from '@/lib/amtr/notifications'
 import { canSignSlot, canReopen, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
-import { SignCell, LockTag, ReopenButton } from '@/components/amtr/signable'
+import { SignCell } from '@/components/amtr/signable'
 import { Btn } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_623a', rowId: string, slot: SignSlot, already: SignSlot[], onSigned?: () => Promise<void>) => Promise<void>
-type ReopenFn = (table: 'amtr_623a', rowId: string) => Promise<void>
+type SignFn = (table: 'amtr_623a', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type ReopenFn = (table: 'amtr_623a', rowId: string, slot: SignSlot) => Promise<void>
 
 const ENTRY_TYPES = [
   'Quarterly Training Records Inspection', 'Initial Training', 'Recurring Training',
@@ -25,14 +25,12 @@ const COLS: { slot: SignSlot; label: string; sig: string; ph: string }[] = [
   { slot: 'namt', label: 'NAMT Comment', sig: 'NAMT signature', ph: 'NAMT review / direction' },
   { slot: 'afm', label: 'AFM Comment', sig: 'AFM signature', ph: 'AFM review / endorsement' },
 ]
-const REQUIRED_SLOTS: SignSlot[] = ['trainee', 'trainer', 'namt', 'afm']
-
 export function Form623aTab(props: {
   entries: Row[]; canWrite: boolean; canEnterData: boolean; installationId: string; memberId: string
-  member: AmtrMember; myRoles: AmtrRole[]; effRole: AmtrRole | null
+  member: AmtrMember; myRoles: AmtrRole[]; effRole: AmtrRole | null; isOwn: boolean
   highlightItem: string | null; sign: SignFn; reopen: ReopenFn; onChange: () => void
 }) {
-  const { entries, canWrite, canEnterData, installationId, memberId, member, myRoles, effRole, highlightItem, sign, reopen, onChange } = props
+  const { entries, canWrite, canEnterData, installationId, memberId, member, myRoles, effRole, isOwn, highlightItem, sign, reopen, onChange } = props
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(highlightItem ? [highlightItem] : []))
@@ -87,27 +85,23 @@ export function Form623aTab(props: {
         <div style={{ display: 'grid', gap: 10 }}>
           {filtered.map((e) => {
             const id = String(e.id)
-            const locked = !!e.locked_at
             const open = expanded.has(id)
-            const already = REQUIRED_SLOTS.filter((s) => e[`${s}_initials`]) as SignSlot[]
             const hi = highlightItem === id
             return (
-              <div key={id} className="card" style={{ padding: 14, background: hi ? 'var(--color-accent-glow)' : undefined }}>
+              <div key={id} data-amtr-item={id} className="card" style={{ padding: 14, background: hi ? 'var(--color-accent-glow)' : undefined }}>
                 <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                   <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     Date
-                    <input type="date" className="input-dark" style={{ display: 'block', marginTop: 4, width: 160 }} disabled={!canEnterData || locked}
-                      defaultValue={e.form_date ? String(e.form_date).slice(0, 10) : ''} onBlur={(ev) => canEnterData && !locked && setField(id, 'form_date', ev.target.value)} />
+                    <input type="date" className="input-dark" style={{ display: 'block', marginTop: 4, width: 160 }} disabled={!canEnterData}
+                      defaultValue={e.form_date ? String(e.form_date).slice(0, 10) : ''} onBlur={(ev) => canEnterData && setField(id, 'form_date', ev.target.value)} />
                   </label>
                   <label style={{ flex: 1, minWidth: 240, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     Entry Type
-                    <input className="input-dark" list="amtr-623a-types" style={{ display: 'block', marginTop: 4 }} placeholder="Type or pick…" disabled={!canEnterData || locked}
-                      defaultValue={(e.entry_type as string) ?? ''} onBlur={(ev) => canEnterData && !locked && setField(id, 'entry_type', ev.target.value)} />
+                    <input className="input-dark" list="amtr-623a-types" style={{ display: 'block', marginTop: 4 }} placeholder="Type or pick…" disabled={!canEnterData}
+                      defaultValue={(e.entry_type as string) ?? ''} onBlur={(ev) => canEnterData && setField(id, 'entry_type', ev.target.value)} />
                   </label>
                   <Btn variant="ghost" onClick={() => toggle(id)}>{open ? <><ChevronDown size={14} /> Hide details</> : <><ChevronRight size={14} /> Show details</>}</Btn>
-                  {locked ? <LockTag /> : null}
-                  {locked && reopenAllowed && <ReopenButton onReopen={() => reopen('amtr_623a', id)} />}
-                  {canWrite && !locked && <button onClick={() => remove(id)} title="Delete entry" style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}><X size={16} /></button>}
+                  {canWrite && <button onClick={() => remove(id)} title="Delete entry" style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}><X size={16} /></button>}
                 </div>
 
                 {open && (
@@ -117,12 +111,14 @@ export function Form623aTab(props: {
                       return (
                         <div key={col.slot}>
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{col.label}</div>
-                          <textarea className="input-dark" rows={4} style={{ resize: 'vertical' }} placeholder={col.ph} disabled={locked || !mineToEdit}
-                            defaultValue={(e[`${col.slot}_comment`] as string) ?? ''} onBlur={(ev) => mineToEdit && !locked && setField(id, `${col.slot}_comment`, ev.target.value)} />
+                          <textarea className="input-dark" rows={4} style={{ resize: 'vertical' }} placeholder={col.ph} disabled={!mineToEdit}
+                            defaultValue={(e[`${col.slot}_comment`] as string) ?? ''} onBlur={(ev) => mineToEdit && setField(id, `${col.slot}_comment`, ev.target.value)} />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                            <SignCell value={(e[`${col.slot}_initials`] as string) ?? null} locked={locked}
-                              canSign={canWrite && !locked && canSignSlot(myRoles, col.slot, already.filter((x) => x !== col.slot))}
-                              onSign={() => sign('amtr_623a', id, col.slot, already, async () => {
+                            <SignCell value={(e[`${col.slot}_initials`] as string) ?? null}
+                              canSign={canWrite && canSignSlot(myRoles, col.slot, isOwn)}
+                              canReopenSlot={reopenAllowed && !!e[`${col.slot}_signed_by`]}
+                              onReopen={() => reopen('amtr_623a', id, col.slot)}
+                              onSign={() => sign('amtr_623a', id, col.slot, async () => {
                                 if (col.slot !== 'trainee' && member.user_id) {
                                   await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...buildSignoff(member.full_name, col.slot as AmtrRole, '623A', String(e.entry_type ?? 'entry'), id, '623a') })
                                 }

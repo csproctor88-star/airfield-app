@@ -13,16 +13,15 @@ import {
 } from '@/lib/supabase/amtr'
 import { AMTR_MEMBER_STATUSES } from '@/lib/amtr/reference-data'
 import { amtrReopen } from '@/lib/supabase/amtr'
-import { dueStatus } from '@/lib/amtr/status'
 import { canSignSlot, effectiveRoleForRecord, canEnterData, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
 import { buildSignoff } from '@/lib/amtr/notifications'
-import { StatusPill } from '@/components/amtr/status-pill'
 import { Field, Btn } from '@/components/amtr/ui'
 import { RecordSidebar } from '@/components/amtr/record-sidebar'
 import { JqsTab } from '@/components/amtr/jqs-tab'
 import { Form623aTab } from '@/components/amtr/form623a-tab'
 import { Form797Tab } from '@/components/amtr/form797-tab'
 import { Form1098Tab } from '@/components/amtr/form1098-tab'
+import { RatTab } from '@/components/amtr/rat-tab'
 import { Form803Tab } from '@/components/amtr/form803-tab'
 import { MilestonesTab } from '@/components/amtr/milestones-tab'
 import { QualificationsTab } from '@/components/amtr/qualifications-tab'
@@ -145,17 +144,34 @@ export default function AmtrMemberPage() {
   useEffect(() => { loadMember() }, [loadMember])
   useEffect(() => { loadTab() }, [loadTab])
 
+  // Keep the active tab in sync with the URL so a notification click lands on
+  // the right tab even when we're already on this member's page (the
+  // NotificationCenter also renders on the Cover tab).
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (t) setTab(t)
+  }, [searchParams])
+
+  // Scroll the highlighted item into view once its tab has rendered.
+  useEffect(() => {
+    if (!highlightItem) return
+    const el = document.querySelector(`[data-amtr-item="${highlightItem}"]`)
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [highlightItem, tab, jqsProg, r1098Prog, ratProg, entries623a, items797, mileProg])
+
   // ── signature helper ───────────────────────────────────────
+  // Per-block: signing fills one block and locks only that block; the rest
+  // of the record stays editable. Authority is hierarchical (see roles.ts).
   const sign = async (
-    table: AmtrSignableTable, rowId: string, slot: SignSlot, alreadySigned: SignSlot[],
+    table: AmtrSignableTable, rowId: string, slot: SignSlot,
     onSigned?: () => Promise<void>,
   ) => {
-    if (!canSignSlot(myRoles, slot, alreadySigned)) {
-      toast.error(`You can't sign as ${slot} on this record.`); return
+    if (!canSignSlot(myRoles, slot, isOwn)) {
+      toast.error(`You can't sign the ${slot} block on this record.`); return
     }
-    const initials = window.prompt(`Enter your initials to sign as ${slot}:`)?.trim()
+    const initials = window.prompt(`Enter your initials to sign the ${slot} block:`)?.trim()
     if (!initials) return
-    const initialsConfirm = window.confirm(`I certify this signature as ${slot}. Initials "${initials}" will be recorded with my identity and timestamp, and the item locks when all required signatures are complete.`)
+    const initialsConfirm = window.confirm(`I certify this signature for the ${slot} block. Initials "${initials}" will be recorded with my identity and timestamp. This block becomes final (only NAMT/AFM can reopen it).`)
     if (!initialsConfirm) return
     const { error } = await amtrSign(table, rowId, slot, initials)
     if (error) { toast.error(error); return }
@@ -164,11 +180,11 @@ export default function AmtrMemberPage() {
     loadTab()
   }
 
-  const reopen = async (table: AmtrSignableTable, rowId: string) => {
-    if (!window.confirm('Reopen this locked record? This is logged in the History.')) return
-    const { error } = await amtrReopen(table, rowId)
+  const reopen = async (table: AmtrSignableTable, rowId: string, slot: SignSlot) => {
+    if (!window.confirm(`Reopen the ${slot} signature? This clears the initials and is logged in the History.`)) return
+    const { error } = await amtrReopen(table, rowId, slot)
     if (error) { toast.error(error); return }
-    toast.success('Record reopened'); loadTab()
+    toast.success('Signature reopened'); loadTab()
   }
 
   const notifyJqsSignoff = async (slot: SignSlot, itemRef: string, itemId: string) => {
@@ -233,6 +249,7 @@ export default function AmtrMemberPage() {
           canWrite={canWrite}
           canEnterData={dataEntryAllowed}
           canManage={canManage}
+          isOwn={isOwn}
           highlightItem={highlightItem}
           sign={sign}
           reopen={reopen}
@@ -243,24 +260,24 @@ export default function AmtrMemberPage() {
 
       {tab === '1098' && (
         <Form1098Tab catalog={r1098Cat} progress={r1098Prog} canWrite={canWrite} canEnterData={dataEntryAllowed} canManage={canManage}
-          installationId={installationId!} memberId={memberId} member={member} myRoles={myRoles}
+          installationId={installationId!} memberId={memberId} member={member} myRoles={myRoles} isOwn={isOwn}
           highlightItem={highlightItem} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
       {tab === 'rat' && (
-        <RatTab catalog={ratCat} progress={ratProg} canWrite={canWrite} memberId={memberId}
+        <RatTab catalog={ratCat} progress={ratProg} canWrite={canWrite} canManage={canManage} memberId={memberId}
           installationId={installationId!} member={member} onChange={loadTab} highlightItem={highlightItem} />
       )}
 
       {tab === '623a' && (
         <Form623aTab entries={entries623a} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
-          memberId={memberId} member={member} myRoles={myRoles} effRole={effRole}
+          memberId={memberId} member={member} myRoles={myRoles} effRole={effRole} isOwn={isOwn}
           highlightItem={highlightItem} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
       {tab === '797' && (
         <Form797Tab items={items797} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
-          memberId={memberId} member={member} myRoles={myRoles} myUserId={myUserId}
+          memberId={memberId} member={member} myRoles={myRoles} myUserId={myUserId} isOwn={isOwn}
           highlightItem={highlightItem} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
@@ -275,7 +292,7 @@ export default function AmtrMemberPage() {
 
       {tab === '803' && (
         <Form803Tab rows={items803} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
-          memberId={memberId} member={member} myRoles={myRoles} sign={sign} reopen={reopen} onChange={loadTab} />
+          memberId={memberId} member={member} myRoles={myRoles} isOwn={isOwn} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
       {tab === 'milestones' && (
@@ -333,53 +350,6 @@ function CoverTab({ member, canWrite, onSaved }: { member: AmtrMember; canWrite:
           <Btn variant="primary" onClick={save} disabled={saving}>Save Cover</Btn>
         </div>
       )}
-    </div>
-  )
-}
-
-// ── References (read-only) ─────────────────────────────────
-// ── RAT with status ────────────────────────────────────────
-function RatTab(props: {
-  catalog: Row[]; progress: Row[]; canWrite: boolean; memberId: string; installationId: string
-  member: AmtrMember; onChange: () => void; highlightItem: string | null
-}) {
-  const { catalog, progress, canWrite, memberId, installationId, onChange, highlightItem } = props
-  const progByCat = new Map(progress.map((p) => [String(p.catalog_id), p]))
-  if (catalog.length === 0) return <EmptyState message="RAT catalog is empty — add requirements under Roles & Catalogs." />
-  const setRow = async (catId: string, field: 'completed' | 'due', value: string) => {
-    const p = progByCat.get(catId)
-    await upsertAmtrRow('amtr_rat_progress', {
-      ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null,
-    })
-    onChange()
-  }
-  return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
-        <thead>
-          <tr style={{ textAlign: 'left', color: 'var(--color-text-3)', borderBottom: '1px solid var(--color-border)' }}>
-            <th style={{ padding: '8px 12px' }}>Course</th><th>Method</th><th>Completed</th><th>Due</th><th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {catalog.map((c) => {
-            const p = progByCat.get(String(c.id))
-            const completed = (p?.completed as string) ?? ''
-            const due = (p?.due as string) ?? ''
-            const status = dueStatus({ dueDate: due, completedDate: completed })
-            const hi = highlightItem && String(c.id) === highlightItem
-            return (
-              <tr key={String(c.id)} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
-                <td style={{ padding: '8px 12px' }}>{String(c.course)}</td>
-                <td>{String(c.method ?? '')}</td>
-                <td><input type="date" className="input-dark" disabled={!canWrite} defaultValue={completed ? completed.slice(0, 10) : ''} onBlur={(e) => setRow(String(c.id), 'completed', e.target.value)} /></td>
-                <td><input type="date" className="input-dark" disabled={!canWrite} defaultValue={due ? due.slice(0, 10) : ''} onBlur={(e) => setRow(String(c.id), 'due', e.target.value)} /></td>
-                <td><StatusPill status={status} /></td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
     </div>
   )
 }
