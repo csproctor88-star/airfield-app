@@ -64,6 +64,7 @@ import {
   ArrowUp,
   ArrowDown,
   LogOut,
+  Award,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -72,7 +73,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Home, LayoutDashboard, Activity, Zap, ListChecks, ClipboardCheck, ClipboardList, ClipboardPen,
   Bird, HardHat, AlertTriangle, MapPin, Database, Shield, Lightbulb,
   PlaneLanding, Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
-  Wrench, SlidersHorizontal, FolderOpen, GraduationCap, Radio, MessageSquare, History,
+  Wrench, SlidersHorizontal, FolderOpen, GraduationCap, Radio, MessageSquare, History, Award,
 }
 
 // Group icons
@@ -103,6 +104,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/ppr':               'ppr:view',
   '/feedback':          'feedback:view',
   '/contractors':       'contractors:view',
+  '/amtr':              'amtr:view',
   '/ces':               'ces:view',
   '/discrepancies':     'discrepancies:view',
   '/obstructions':      'obstructions:view',

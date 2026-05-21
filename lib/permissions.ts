@@ -85,6 +85,13 @@ export const PERM = {
   DAILY_REVIEWS_SIGN_NAMO:              'daily_reviews:sign:namo',
   DAILY_REVIEWS_SIGN_AFM:               'daily_reviews:sign:afm',
 
+  // AMTR — Airfield Management Training Record
+  AMTR_VIEW:                            'amtr:view',
+  AMTR_WRITE:                           'amtr:write',
+  AMTR_DELETE:                          'amtr:delete',
+  AMTR_MANAGE:                          'amtr:manage',
+  AMTR_EXPORT:                          'amtr:export',
+
   // Reporting / activity
   DASHBOARD_VIEW:                       'dashboard:view',
   REPORTS_VIEW:                         'reports:view',
