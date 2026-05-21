@@ -12,6 +12,7 @@ import {
 } from '@/lib/supabase/amtr'
 import { seedBaseCatalogs, SEED_COUNTS } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
+import { InspectionChecklistEditor } from '@/components/amtr/inspection-checklist-editor'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -37,18 +38,20 @@ export default function AmtrRolesPage() {
   const [cat1098, setCat1098] = useState<Row[]>([])
   const [catRat, setCatRat] = useState<Row[]>([])
   const [catJqs, setCatJqs] = useState<Row[]>([])
+  const [catInsp, setCatInsp] = useState<Row[]>([])
 
   const load = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
     const supabase = createClient()
-    const [a, c1098, crat, cjqs] = await Promise.all([
+    const [a, c1098, crat, cjqs, cinsp] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_rat_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
+      fetchAmtrByBase<Row>('amtr_inspection_checklist', installationId),
     ])
-    setAssignments(a); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs)
+    setAssignments(a); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp)
     if (supabase) {
       try {
         // Only personnel assigned to THIS base (base_members), not all Glidepath users.
@@ -129,7 +132,7 @@ export default function AmtrRolesPage() {
       <div style={{ marginBottom: 12 }}>
         <Btn variant="ghost" onClick={() => router.push('/amtr')}><ArrowLeft size={15} /> Roster</Btn>
       </div>
-      <h1 style={{ marginTop: 0, fontSize: 22 }}>AMTR Roles &amp; Catalogs</h1>
+      <h1 style={{ marginTop: 0, fontSize: 22 }}>Training Admin</h1>
 
       {loading ? <LoadingState /> : (
         <>
@@ -139,7 +142,7 @@ export default function AmtrRolesPage() {
               <Download size={15} /> {seeding ? 'Loading…' : catalogsLoaded ? 'Re-check / load missing' : 'Load standard catalogs'}
             </Btn>}>
             <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-              Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), and milestone ({SEED_COUNTS.milestones}) catalogs for this base. Already-populated catalogs are skipped.
+              Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), milestone ({SEED_COUNTS.milestones}), and inspection checklist ({SEED_COUNTS.inspection}) catalogs for this base. Already-populated catalogs are skipped.
             </div>
           </CollapsibleCard>
 
@@ -194,6 +197,14 @@ export default function AmtrRolesPage() {
           <CollapsibleCard title="Ready Airman Training" count={catRat.length}
             actions={<Btn variant="secondary" onClick={() => addTask('amtr_rat_catalog', 'course')}>+ Add course</Btn>}>
             <CatalogList rows={catRat} field="course" onDelete={async (id) => { await deleteAmtrRow('amtr_rat_catalog', id); load() }} />
+          </CollapsibleCard>
+
+          {/* Inspection checklist builder */}
+          <CollapsibleCard title="Inspection Checklist" count={catInsp.filter((r) => r.kind === 'item').length}>
+            <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
+              The checklist used for monthly training-record inspections. Add, edit, reorder, or remove sections and items. Items tagged <strong>auto</strong> are auto-detected from each member&apos;s record during an inspection.
+            </p>
+            <InspectionChecklistEditor rows={catInsp} installationId={installationId!} onChange={load} />
           </CollapsibleCard>
         </>
       )}

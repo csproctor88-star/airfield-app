@@ -32,7 +32,7 @@ import { MemberOverview } from '@/components/amtr/member-overview'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Award } from 'lucide-react'
+import { ArrowLeft, Award, ClipboardCheck } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -218,6 +218,13 @@ export default function AmtrMemberPage() {
         <span style={{ color: 'var(--color-text-3)' }}>
           {[member.grade, member.dafsc, member.status].filter(Boolean).join(' · ')}
         </span>
+        {canWrite && (
+          <div style={{ marginLeft: 'auto' }}>
+            <Btn variant="secondary" onClick={() => window.open(`/amtr/${memberId}/inspect`, '_blank')}>
+              <ClipboardCheck size={15} /> Inspect record ↗
+            </Btn>
+          </div>
+        )}
       </div>
       <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 16 }}>
         {isOwn ? 'Viewing your own record — Trainee context (you self-initial your own column).'

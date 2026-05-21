@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { fetchAmtrMembers, fetchAmtrByBase, type AmtrMember } from '@/lib/supabase/amtr'
+import { fetchLatestInspectionPerMember, type AmtrInspection } from '@/lib/supabase/amtr-inspections'
 import { dueStatus, ratApplies, parseDate, daysBetween, type DueStatus } from '@/lib/amtr/status'
 import { buildMemberRollup, buildUnitKpis, complianceCounts, type MemberRollup, type UnitKpis } from '@/lib/amtr/rollup'
 import { generateAmtrRosterPdf, generateAmtrMemberPrintPdf } from '@/lib/amtr-pdf'
@@ -21,7 +22,7 @@ type Row = Record<string, unknown>
 const SUBTABS = [
   ['overview', 'Overview'], ['rollup', 'Unit Roll-up'], ['overdue', 'Overdue / Due Soon'],
   ['recurring', '1098 & RAT'], ['formal', 'Formal Training'], ['activity', '797 Activity'],
-  ['quals', 'Quals & SEI'], ['print', 'Member Print'],
+  ['quals', 'Quals & SEI'], ['inspections', 'Inspections'], ['print', 'Member Print'],
 ] as const
 
 type DueItem = { memberId: string; memberName: string; due: string; delta: number; task: string; source: string; status: DueStatus }
@@ -40,6 +41,7 @@ export default function AmtrReportsPage() {
   const [data, setData] = useState<Record<string, Row[]>>({})
   const [rollups, setRollups] = useState<MemberRollup[]>([])
   const [kpis, setKpis] = useState<UnitKpis>({ members: 0, requiredTasks: 0, complete: 0, dueSoon: 0, overdue: 0 })
+  const [latestInsp, setLatestInsp] = useState<Map<string, AmtrInspection>>(new Map())
 
   const baseInfo = { baseName: currentInstallation?.name, baseIcao: (currentInstallation as { icao?: string } | null)?.icao }
 
@@ -62,6 +64,7 @@ export default function AmtrReportsPage() {
     ])
     setMembers(mem)
     setData({ jqsCat, jqsProg, formalCat, formalProg, r1098Cat, r1098Prog, ratCat, ratProg, items797, quals, qtps })
+    setLatestInsp(await fetchLatestInspectionPerMember(installationId))
 
     const jqsRequired = jqsCat.filter((c) => c.kind === 'item').length
     const formalRequired = formalCat.length
@@ -181,6 +184,7 @@ export default function AmtrReportsPage() {
           {sub === 'formal' && <FormalTable members={members} data={data} />}
           {sub === 'activity' && <ActivityTable activity={activity} onMember={(id) => router.push(`/amtr/${id}`)} />}
           {sub === 'quals' && <QualsMatrix members={members} data={data} />}
+          {sub === 'inspections' && <InspectionsTable members={members} latest={latestInsp} onMember={(id) => router.push(`/amtr/${id}/inspect`)} />}
           {sub === 'print' && <MemberPrint members={members} rollups={rollups} dueItems={dueItems} baseInfo={baseInfo} canExport={canExport} />}
         </>
       )}
@@ -402,6 +406,30 @@ function ActivityTable({ activity, onMember }: { activity: Activity; onMember: (
               <td style={{ ...tdStyle, fontWeight: 600 }}>{a.memberName}</td><td style={tdStyle}>{a.task}</td><td style={tdStyle}>{a.trainer || '—'}</td>
             </tr>
           ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function InspectionsTable({ members, latest, onMember }: { members: AmtrMember[]; latest: Map<string, AmtrInspection>; onMember: (id: string) => void }) {
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead><tr><th style={thStyle}>Member</th><th style={thStyle}>Last Inspected</th><th style={thStyle}>Status</th><th style={thStyle}>Gaps</th><th style={thStyle} /></tr></thead>
+        <tbody>
+          {members.map((m) => {
+            const insp = latest.get(m.id)
+            return (
+              <tr key={m.id} onClick={() => onMember(m.id)} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer', background: !insp ? 'color-mix(in srgb, var(--color-warning) 8%, transparent)' : undefined }}>
+                <td style={{ ...tdStyle, fontWeight: 600 }}>{m.full_name}</td>
+                <td style={tdStyle}>{insp ? insp.inspection_date : '—'}</td>
+                <td style={tdStyle}>{insp ? (insp.status === 'completed' ? <StatusPill status="complete" /> : <StatusPill status="due_soon" />) : <span style={{ color: 'var(--color-warning)' }}>Never inspected</span>}</td>
+                <td style={{ ...tdStyle, color: insp && insp.gap_count > 0 ? 'var(--color-danger)' : undefined, fontWeight: insp && insp.gap_count > 0 ? 700 : 400 }}>{insp ? insp.gap_count : '—'}</td>
+                <td style={{ ...tdStyle, textAlign: 'right', color: 'var(--color-accent)', fontSize: 'var(--fs-sm)' }}>Inspect →</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

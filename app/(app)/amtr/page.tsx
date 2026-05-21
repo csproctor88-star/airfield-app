@@ -18,7 +18,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Award, Plus, BarChart3, UsersRound, ChevronRight, BookOpen } from 'lucide-react'
+import { Award, Plus, BarChart3, UsersRound, ChevronRight, BookOpen, ClipboardCheck } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -126,7 +126,7 @@ export default function AmtrRosterPage() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn variant={showRefs ? 'primary' : 'secondary'} onClick={() => setShowRefs((s) => !s)}><BookOpen size={15} /> Training References</Btn>
           <Link href="/amtr/reports" style={linkBtnStyle}><BarChart3 size={15} /> Reports</Link>
-          {canManage && <Link href="/amtr/roles" style={linkBtnStyle}><UsersRound size={15} /> Roles &amp; Catalogs</Link>}
+          {canManage && <Link href="/amtr/roles" style={linkBtnStyle}><UsersRound size={15} /> Training Admin</Link>}
           {canWrite && (
             <Btn variant="primary" onClick={() => setShowForm((s) => !s)}><Plus size={15} /> New Member</Btn>
           )}
@@ -224,7 +224,16 @@ export default function AmtrRosterPage() {
                       <td style={tdStyle}>
                         {m.user_id ? <Badge label="Account" color="var(--color-success)" /> : <Badge label="Roster" color="#94A3B8" />}
                       </td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}><ChevronRight size={16} style={{ color: 'var(--color-text-3)' }} /></td>
+                      <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {canWrite && (
+                          <button onClick={(e) => { e.stopPropagation(); window.open(`/amtr/${m.id}/inspect`, '_blank') }}
+                            title="Inspect record (new tab)"
+                            style={{ background: 'none', border: '1px solid var(--color-border-mid)', borderRadius: 6, padding: '3px 8px', marginRight: 8, cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
+                            <ClipboardCheck size={13} style={{ verticalAlign: '-2px' }} /> Inspect
+                          </button>
+                        )}
+                        <ChevronRight size={16} style={{ color: 'var(--color-text-3)', verticalAlign: 'middle' }} />
+                      </td>
                     </tr>
                   )
                 })}

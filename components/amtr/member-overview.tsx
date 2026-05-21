@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { fetchAmtrByBase, fetchAmtrByMember, type AmtrMember } from '@/lib/supabase/amtr'
+import { fetchAmtrInspectionsByMember, type AmtrInspection } from '@/lib/supabase/amtr-inspections'
 import { dueStatus, ratApplies } from '@/lib/amtr/status'
 import { pct } from '@/lib/amtr/rollup'
 import { NotificationCenter } from '@/components/amtr/notification-center'
+import { ClipboardCheck } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -15,9 +17,11 @@ export function MemberOverview({ installationId, member }: { installationId: str
     formalPct: number; formalDone: number; formalReq: number
     complete: number; dueSoon: number; overdue: number
   } | null>(null)
+  const [inspections, setInspections] = useState<AmtrInspection[]>([])
 
   const load = useCallback(async () => {
     const currentYear = String(new Date().getUTCFullYear())
+    setInspections(await fetchAmtrInspectionsByMember(memberId))
     const [jqsCat, jqsProg, formalCat, formalProg, r1098Prog, ratProg] = await Promise.all([
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
       fetchAmtrByMember<Row>('amtr_jqs_progress', memberId),
@@ -69,6 +73,26 @@ export function MemberOverview({ installationId, member }: { installationId: str
         </div>
       </div>
       <NotificationCenter />
+
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
+          <ClipboardCheck size={16} /> Record Inspections
+          <button onClick={() => window.open(`/amtr/${memberId}/inspect`, '_blank')}
+            style={{ marginLeft: 'auto', background: 'none', border: '1px solid var(--color-border-mid)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit' }}>
+            New / open inspection ↗
+          </button>
+        </div>
+        {inspections.length === 0 ? (
+          <div style={{ padding: '10px 16px', color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>No inspections recorded yet.</div>
+        ) : inspections.slice(0, 6).map((i) => (
+          <div key={i.id} onClick={() => window.open(`/amtr/${memberId}/inspect`, '_blank')}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid var(--color-border)', cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>
+            <span style={{ width: 90 }}>{i.inspection_date}</span>
+            <span style={{ color: i.status === 'completed' ? 'var(--color-success)' : 'var(--color-warning)' }}>{i.status === 'completed' ? 'Completed' : 'Draft'}</span>
+            <span style={{ marginLeft: 'auto', color: i.gap_count > 0 ? 'var(--color-danger)' : 'var(--color-text-3)' }}>{i.gap_count} gap{i.gap_count === 1 ? '' : 's'}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
