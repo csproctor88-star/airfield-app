@@ -18,6 +18,7 @@ import { DEFAULT_INSPECTION_CHECKLIST } from '@/lib/amtr/inspection-checklist'
 import { generateAmtrInspectionPdf } from '@/lib/amtr-inspection-pdf'
 import type { AmtrInspection } from '@/lib/supabase/amtr-inspections'
 import { Btn } from '@/components/amtr/ui'
+import { AMTR_BAR_HEIGHT } from '@/components/amtr/module-bar'
 import { JqsTab } from '@/components/amtr/jqs-tab'
 import { Form623aTab } from '@/components/amtr/form623a-tab'
 import { Form797Tab } from '@/components/amtr/form797-tab'
@@ -54,6 +55,8 @@ export default function AmtrInspectPage() {
   const { has } = usePermissions()
   const canWrite = has(PERM.AMTR_WRITE)
   const canExport = has(PERM.AMTR_EXPORT)
+  const canManage = has(PERM.AMTR_MANAGE)
+  const [myRoles, setMyRoles] = useState<AmtrRole[]>([])
 
   const [loading, setLoading] = useState(true)
   const [member, setMember] = useState<AmtrMember | null>(null)
@@ -96,6 +99,7 @@ export default function AmtrInspectPage() {
       fetchAmtrInspectionsByMember(memberId),
     ])
     setMember(m)
+    setMyRoles(roles.filter((r) => r.user_id === uid).map((r) => r.role))
     setData({ jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg })
 
     // display name for the completed-by stamp
@@ -221,12 +225,18 @@ export default function AmtrInspectPage() {
 
   if (loading) return <div style={{ padding: 24 }}><LoadingState message="Loading record + checklist…" /></div>
   if (!member) return <div style={{ padding: 24 }}><EmptyState message="Member not found." /></div>
+  if (!canManage && !myRoles.some((r) => r !== 'trainee')) return (
+    <div style={{ padding: 24 }}>
+      <Btn variant="ghost" onClick={() => router.push(`/amtr/${memberId}`)}><ArrowLeft size={15} /> Record</Btn>
+      <div style={{ marginTop: 16 }}><EmptyState message="Record inspections require a Trainer, Certifier, NAMT, or AFM role." /></div>
+    </div>
+  )
 
   const gapCount = items.filter((it) => it.status === 'no').length
   const answered = items.filter((it) => it.status != null).length
 
   return (
-    <div style={{ padding: 16, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: 16, height: `calc(100vh - ${AMTR_BAR_HEIGHT}px)`, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <Btn variant="ghost" onClick={() => router.push(`/amtr/${memberId}`)}><ArrowLeft size={15} /> Record</Btn>
         <ClipboardCheck size={20} style={{ color: 'var(--color-accent)' }} />

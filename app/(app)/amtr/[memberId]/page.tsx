@@ -13,7 +13,7 @@ import {
 } from '@/lib/supabase/amtr'
 import { AMTR_MEMBER_STATUSES } from '@/lib/amtr/reference-data'
 import { amtrReopen } from '@/lib/supabase/amtr'
-import { canSignSlot, effectiveRoleForRecord, canEnterData, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
+import { canSignSlot, effectiveRoleForRecord, canEnterData, canViewRecord, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
 import { buildSignoff } from '@/lib/amtr/notifications'
 import { Field, Btn } from '@/components/amtr/ui'
 import { RecordSidebar } from '@/components/amtr/record-sidebar'
@@ -86,7 +86,16 @@ export default function AmtrMemberPage() {
   const [mileProg, setMileProg] = useState<Row[]>([])
 
   const isOwn = !!(member?.user_id && member.user_id === myUserId)
-  const effRole = effectiveRoleForRecord(myRoles, isOwn)
+  // Program managers (amtr:manage — AFM / NAMT / Base Admin) bypass the AMTR-role
+  // layer: they act with AFM authority on every record so they can always see,
+  // edit, and sign (still subject to the self-certification guard on their own
+  // record). Everyone else operates strictly under their assigned AMTR roles.
+  const signingRoles: AmtrRole[] = canManage ? Array.from(new Set<AmtrRole>([...myRoles, 'afm'])) : myRoles
+  const effRole = effectiveRoleForRecord(signingRoles, isOwn)
+  // Visibility: own record always; others' records only with a non-trainee role
+  // (or manager bypass). A no-role user sees only their own record.
+  const canSee = canManage || canViewRecord(myRoles, isOwn)
+  const hasOversight = canManage || myRoles.some((r) => r !== 'trainee')
 
   const loadMember = useCallback(async () => {
     if (!memberId || !installationId) return
@@ -172,7 +181,7 @@ export default function AmtrMemberPage() {
     table: AmtrSignableTable, rowId: string, slot: SignSlot,
     onSigned?: () => Promise<void>,
   ) => {
-    if (!canSignSlot(myRoles, slot, isOwn)) {
+    if (!canSignSlot(signingRoles, slot, isOwn)) {
       toast.error(`You can't sign the ${slot} block on this record.`); return
     }
     const initials = window.prompt(`Enter your initials to sign the ${slot} block:`)?.trim()
@@ -231,8 +240,18 @@ export default function AmtrMemberPage() {
 
   if (loading) return <div style={{ padding: 24 }}><LoadingState message="Loading record…" /></div>
   if (!member) return <div style={{ padding: 24 }}><EmptyState message="Member not found." /></div>
+  if (!canSee) return (
+    <div style={{ padding: 24 }}>
+      <Btn variant="ghost" onClick={() => router.push('/amtr')}><ArrowLeft size={15} /> Roster</Btn>
+      <div style={{ marginTop: 16 }}>
+        <EmptyState message="You don't have access to this training record. You can only view records you're assigned an AMTR role for." />
+      </div>
+    </div>
+  )
 
   const dataEntryAllowed = canEnterData(effRole)
+  // Only managers / users with a non-trainee role may jump to other members.
+  const memberOptions = hasOversight ? allMembers : allMembers.filter((m) => m.user_id === myUserId)
   const hiddenTabs = RAT_EXEMPT.has(member.status) ? new Set(['rat']) : undefined
 
   return (
@@ -243,7 +262,7 @@ export default function AmtrMemberPage() {
           Member
           <select className="input-dark" style={{ width: 'auto', minWidth: 240 }} value={memberId}
             onChange={(e) => router.push(`/amtr/${e.target.value}${tab !== 'cover' ? `?tab=${tab}` : ''}`)}>
-            {allMembers.map((m) => <option key={m.id} value={m.id}>{m.full_name}{m.grade ? ` — ${m.grade}` : ''}</option>)}
+            {memberOptions.map((m) => <option key={m.id} value={m.id}>{m.full_name}{m.grade ? ` — ${m.grade}` : ''}</option>)}
           </select>
         </label>
       </div>
@@ -260,13 +279,13 @@ export default function AmtrMemberPage() {
               <FileSpreadsheet size={15} /> {exporting ? 'Exporting…' : 'Export Record (Excel)'}
             </Btn>
           )}
-          {canWrite && (
+          {canWrite && dataEntryAllowed && (
             <>
               <Btn variant="secondary" onClick={() => fileRef.current?.click()}><Upload size={15} /> Import from Excel</Btn>
               <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={onImportFile} />
             </>
           )}
-          {canWrite && (
+          {canWrite && hasOversight && (
             <Btn variant="secondary" onClick={() => window.open(`/amtr/${memberId}/inspect`, '_blank')}>
               <ClipboardCheck size={15} /> Inspect record ↗
             </Btn>
@@ -316,7 +335,7 @@ export default function AmtrMemberPage() {
       {tab === 'cover' && (
         <>
           <MemberOverview installationId={installationId!} member={member} />
-          <CoverTab member={member} canWrite={canWrite} onSaved={loadMember} />
+          <CoverTab member={member} canWrite={canWrite && dataEntryAllowed} onSaved={loadMember} />
         </>
       )}
       {tab === 'references' && <TrainingReferences installationId={installationId} canManage={canManage} />}
@@ -329,7 +348,7 @@ export default function AmtrMemberPage() {
           installationId={installationId!}
           memberId={memberId}
           member={member}
-          myRoles={myRoles}
+          myRoles={signingRoles}
           canWrite={canWrite}
           canEnterData={dataEntryAllowed}
           canManage={canManage}
@@ -344,24 +363,24 @@ export default function AmtrMemberPage() {
 
       {tab === '1098' && (
         <Form1098Tab catalog={r1098Cat} progress={r1098Prog} canWrite={canWrite} canEnterData={dataEntryAllowed} canManage={canManage}
-          installationId={installationId!} memberId={memberId} member={member} myRoles={myRoles} isOwn={isOwn}
+          installationId={installationId!} memberId={memberId} member={member} myRoles={signingRoles} isOwn={isOwn}
           highlightItem={highlightItem} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
       {tab === 'rat' && (
-        <RatTab catalog={ratCat} progress={ratProg} canWrite={canWrite} canManage={canManage} memberId={memberId}
+        <RatTab catalog={ratCat} progress={ratProg} canWrite={canWrite && dataEntryAllowed} canManage={canManage} memberId={memberId}
           installationId={installationId!} member={member} onChange={loadTab} highlightItem={highlightItem} />
       )}
 
       {tab === '623a' && (
         <Form623aTab entries={entries623a} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
-          memberId={memberId} member={member} myRoles={myRoles} effRole={effRole} isOwn={isOwn}
+          memberId={memberId} member={member} myRoles={signingRoles} effRole={effRole} isOwn={isOwn}
           highlightItem={highlightItem} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
       {tab === '797' && (
         <Form797Tab items={items797} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
-          memberId={memberId} member={member} myRoles={myRoles} myUserId={myUserId} isOwn={isOwn}
+          memberId={memberId} member={member} myRoles={signingRoles} myUserId={myUserId} isOwn={isOwn}
           highlightItem={highlightItem} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
@@ -376,7 +395,7 @@ export default function AmtrMemberPage() {
 
       {tab === '803' && (
         <Form803Tab rows={items803} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
-          memberId={memberId} member={member} myRoles={myRoles} isOwn={isOwn} sign={sign} reopen={reopen} onChange={loadTab} />
+          memberId={memberId} member={member} myRoles={signingRoles} isOwn={isOwn} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 
       {tab === 'milestones' && (
@@ -385,7 +404,7 @@ export default function AmtrMemberPage() {
       )}
 
       {tab === 'files' && (
-        <SimpleListTab tab="files" memberId={memberId} installationId={installationId!} canWrite={canWrite} />
+        <SimpleListTab tab="files" memberId={memberId} installationId={installationId!} canWrite={canWrite && dataEntryAllowed} />
       )}
       </div>
     </div>

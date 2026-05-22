@@ -1,32 +1,24 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
+import { createClient } from '@/lib/supabase/client'
 import {
-  fetchAmtrMembers, fetchAmtrByBase, syncAmtrRosterFromBase, type AmtrMember,
+  fetchAmtrMembers, fetchAmtrByBase, fetchAmtrRoleAssignments, syncAmtrRosterFromBase,
+  type AmtrMember, type AmtrRole,
 } from '@/lib/supabase/amtr'
 import { dueStatus, ratApplies } from '@/lib/amtr/status'
 import { buildUnitKpis, type UnitKpis } from '@/lib/amtr/rollup'
 import { NotificationCenter } from '@/components/amtr/notification-center'
-import { TrainingReferences } from '@/components/amtr/training-references'
-import { HowToGuide } from '@/components/amtr/how-to-guide'
-import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
+import { thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { Badge } from '@/components/ui/badge'
-import { Award, UsersRound, ChevronRight, BookOpen, HelpCircle } from 'lucide-react'
+import { Award, ChevronRight } from 'lucide-react'
 
 type Row = Record<string, unknown>
-
-const linkBtnStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-  borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-  border: '1.5px solid var(--color-border-mid)', color: 'var(--color-text-1)',
-  textDecoration: 'none',
-}
 
 export default function AmtrRosterPage() {
   const { installationId } = useInstallation()
@@ -40,9 +32,11 @@ export default function AmtrRosterPage() {
   const [kpis, setKpis] = useState<UnitKpis>({ members: 0, requiredTasks: 0, complete: 0, dueSoon: 0, overdue: 0 })
   const [memberDue, setMemberDue] = useState<Record<string, { overdue: number; dueSoon: number }>>({})
   const [loading, setLoading] = useState(true)
-  const [showRefs, setShowRefs] = useState(false)
-  const [showGuide, setShowGuide] = useState(false)
   const [search, setSearch] = useState('')
+  const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [myRoles, setMyRoles] = useState<AmtrRole[]>([])
+  // Roster KPI filter: null = no filter. Clicking a KPI card narrows the roster.
+  const [rosterFilter, setRosterFilter] = useState<'current' | 'due_soon' | 'overdue' | null>(null)
 
   const load = useCallback(async () => {
     if (!installationId) return
@@ -50,11 +44,19 @@ export default function AmtrRosterPage() {
     // Auto-populate the roster from the base's assigned users (skips anyone
     // already on the roster or explicitly removed). Requires write access.
     if (canWrite) await syncAmtrRosterFromBase(installationId)
-    const [mem, r1098Prog, ratProg] = await Promise.all([
+    let uid: string | null = null
+    const supabase = createClient()
+    if (supabase) {
+      try { const { data: { user } } = await supabase.auth.getUser(); uid = user?.id ?? null } catch { /* */ }
+    }
+    setMyUserId(uid)
+    const [mem, r1098Prog, ratProg, roleRows] = await Promise.all([
       fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_progress', installationId, 'member_id'),
       fetchAmtrByBase<Row>('amtr_rat_progress', installationId, 'member_id'),
+      fetchAmtrRoleAssignments(installationId),
     ])
+    setMyRoles(roleRows.filter((r) => r.user_id === uid).map((r) => r.role))
     setMembers(mem)
 
     const statusOf = new Map(mem.map((m) => [m.id, m.status]))
@@ -89,57 +91,68 @@ export default function AmtrRosterPage() {
 
   const compliancePct = kpis.requiredTasks > 0 ? Math.round((kpis.complete / kpis.requiredTasks) * 100) : 100
   const complianceColor = compliancePct >= 90 ? 'var(--color-success)' : compliancePct >= 75 ? 'var(--color-warning)' : 'var(--color-danger)'
-  const kpiCards = [
-    { label: 'Members', value: kpis.members, color: 'var(--color-accent)', onClick: () => document.getElementById('amtr-roster')?.scrollIntoView({ behavior: 'smooth' }) },
+  // Users with a non-trainee role (or managers) see the whole roster; everyone
+  // else sees only their own record.
+  const hasOversight = canManage || myRoles.some((r) => r !== 'trainee')
+  type RosterFilter = 'current' | 'due_soon' | 'overdue' | null
+  const toggleFilter = (f: RosterFilter) => setRosterFilter((cur) => (cur === f ? null : f))
+  const kpiCards: { label: string; value: string | number; color?: string; filter?: RosterFilter; active?: boolean; onClick?: () => void }[] = [
+    { label: 'Members', value: kpis.members, color: 'var(--color-accent)', active: rosterFilter === null, onClick: () => { setRosterFilter(null); document.getElementById('amtr-roster')?.scrollIntoView({ behavior: 'smooth' }) } },
     { label: 'Compliance', value: `${compliancePct}%`, color: complianceColor },
     { label: 'Recurring Items', value: kpis.requiredTasks },
-    { label: 'Complete', value: kpis.complete, color: 'var(--color-success)' },
-    { label: 'Due Soon', value: kpis.dueSoon, color: 'var(--color-warning)' },
-    { label: 'Overdue', value: kpis.overdue, color: 'var(--color-danger)' },
+    { label: 'Complete', value: kpis.complete, color: 'var(--color-success)', active: rosterFilter === 'current', onClick: () => toggleFilter('current') },
+    { label: 'Due Soon', value: kpis.dueSoon, color: 'var(--color-warning)', active: rosterFilter === 'due_soon', onClick: () => toggleFilter('due_soon') },
+    { label: 'Overdue', value: kpis.overdue, color: 'var(--color-danger)', active: rosterFilter === 'overdue', onClick: () => toggleFilter('overdue') },
   ]
 
-  const filtered = members.filter((m) =>
-    !search || m.full_name.toLowerCase().includes(search.toLowerCase()))
+  const matchesRosterFilter = (m: AmtrMember) => {
+    if (!rosterFilter) return true
+    const due = memberDue[m.id]
+    const overdue = due?.overdue ?? 0, dueSoon = due?.dueSoon ?? 0
+    if (rosterFilter === 'overdue') return overdue > 0
+    if (rosterFilter === 'due_soon') return dueSoon > 0
+    return overdue === 0 && dueSoon === 0 // 'current'
+  }
+  const visibleMembers = hasOversight ? members : members.filter((m) => m.user_id === myUserId)
+  const filtered = visibleMembers.filter((m) =>
+    (!search || m.full_name.toLowerCase().includes(search.toLowerCase())) && matchesRosterFilter(m))
+  const filterLabel = rosterFilter === 'overdue' ? 'with overdue items' : rosterFilter === 'due_soon' ? 'with items due soon' : rosterFilter === 'current' ? 'who are current' : null
 
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <Award size={24} style={{ color: 'var(--color-accent)' }} />
         <h1 style={{ margin: 0, fontSize: 22 }}>Training Records</h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Btn variant={showGuide ? 'primary' : 'secondary'} onClick={() => setShowGuide((s) => !s)}><HelpCircle size={15} /> Help</Btn>
-          <Btn variant={showRefs ? 'primary' : 'secondary'} onClick={() => setShowRefs((s) => !s)}><BookOpen size={15} /> Training References</Btn>
-          {canManage && <Link href="/amtr/roles" style={linkBtnStyle}><UsersRound size={15} /> Admin</Link>}
-        </div>
       </div>
 
       {/* Analytics KPI strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 18 }}>
         {kpiCards.map((k) => (
-          <div key={k.label} className="card" style={{ padding: '14px 16px', cursor: k.onClick ? 'pointer' : 'default' }} onClick={k.onClick}>
+          <div key={k.label} className="card"
+            style={{
+              padding: '14px 16px', cursor: k.onClick ? 'pointer' : 'default',
+              border: k.active ? `1.5px solid ${k.color ?? 'var(--color-accent)'}` : undefined,
+              boxShadow: k.active ? `0 0 0 1px ${k.color ?? 'var(--color-accent)'}` : undefined,
+            }}
+            onClick={k.onClick}
+            title={k.onClick && k.label !== 'Members' ? `Show only members ${k.label === 'Complete' ? 'who are current' : k.label === 'Due Soon' ? 'with items due soon' : 'with overdue items'}` : k.onClick ? 'Show all members' : undefined}>
             <div className="section-label" style={{ marginBottom: 6 }}>{k.label}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: k.color ?? 'var(--color-text-1)' }}>{loading ? '—' : k.value}</div>
           </div>
         ))}
       </div>
 
-      {showGuide && (
-        <div className="card" style={{ padding: 18, marginBottom: 18 }}>
-          <HowToGuide />
-        </div>
-      )}
-
-      {showRefs && (
-        <div className="card" style={{ padding: 18, marginBottom: 18 }}>
-          <TrainingReferences installationId={installationId} canManage={canManage} />
-        </div>
-      )}
-
       <div style={{ marginBottom: 18 }}><NotificationCenter /></div>
 
-      <div id="amtr-roster" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-        <h2 style={{ margin: 0, fontSize: 16 }}>Assigned Members</h2>
-        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{members.length}</span>
+      <div id="amtr-roster" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 16 }}>{hasOversight ? 'Assigned Members' : 'My Record'}</h2>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{filtered.length}{filterLabel ? ` of ${visibleMembers.length}` : ''}</span>
+        {filterLabel && (
+          <button onClick={() => setRosterFilter(null)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 999, border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit' }}>
+            Showing members {filterLabel} · clear ✕
+          </button>
+        )}
         <input
           className="input-dark"
           style={{ marginLeft: 'auto', maxWidth: 280 }}
@@ -150,7 +163,7 @@ export default function AmtrRosterPage() {
       </div>
 
       {loading ? <LoadingState message="Loading roster…" />
-        : filtered.length === 0 ? <EmptyState message="No members yet — the roster populates automatically from the base's assigned users." icon="🎓" />
+        : filtered.length === 0 ? <EmptyState message={rosterFilter || search ? 'No members match the current filter.' : 'No members yet — the roster populates automatically from the base\'s assigned users.'} icon="🎓" />
         : (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

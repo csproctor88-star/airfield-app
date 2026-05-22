@@ -66,7 +66,7 @@ export function Form623aTab(props: {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>DAF Form 623A — Individual Training Record</h2>
-        {canWrite && <div style={{ marginLeft: 'auto' }}><Btn variant="primary" onClick={addEntry}>+ New entry</Btn></div>}
+        {canEnterData && <div style={{ marginLeft: 'auto' }}><Btn variant="primary" onClick={addEntry}>+ New entry</Btn></div>}
       </div>
 
       {effRole && (
@@ -105,7 +105,7 @@ export function Form623aTab(props: {
                       defaultValue={(e.entry_type as string) ?? ''} onBlur={(ev) => canEnterData && setField(id, 'entry_type', ev.target.value)} />
                   </label>
                   <Btn variant="ghost" onClick={() => toggle(id)}>{open ? <><ChevronDown size={14} /> Hide details</> : <><ChevronRight size={14} /> Show details</>}</Btn>
-                  {canWrite && <button onClick={() => remove(id)} title="Delete entry" style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}><X size={16} /></button>}
+                  {canEnterData && <button onClick={() => remove(id)} title="Delete entry" style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}><X size={16} /></button>}
                 </div>
 
                 {open && (

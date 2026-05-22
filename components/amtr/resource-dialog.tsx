@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BookOpen, ExternalLink, Plus, Trash2, X } from 'lucide-react'
+import { BookOpen, ExternalLink, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, deleteAmtrRow } from '@/lib/supabase/amtr'
 import { Btn } from '@/components/amtr/ui'
 
@@ -17,11 +17,17 @@ export function ResourceDialog({ catalogId, taskLabel, installationId, canManage
   const [resources, setResources] = useState<Row[]>([])
   const [label, setLabel] = useState('')
   const [url, setUrl] = useState('')
+  // View by default — resources render as clickable links. Managers flip into
+  // edit mode to add/rename/remove. A task with no resources yet opens straight
+  // into edit mode so the manager can add the first one.
+  const [editing, setEditing] = useState(false)
 
   const load = useCallback(async () => {
     const all = await fetchAmtrByBase<Row>('amtr_1098_resources', installationId)
-    setResources(all.filter((r) => String(r.catalog_id) === catalogId))
-  }, [installationId, catalogId])
+    const mine = all.filter((r) => String(r.catalog_id) === catalogId)
+    setResources(mine)
+    if (canManage && mine.length === 0) setEditing(true)
+  }, [installationId, catalogId, canManage])
   useEffect(() => { load() }, [load])
 
   const refresh = () => { load(); onChanged?.() }
@@ -39,17 +45,22 @@ export function ResourceDialog({ catalogId, taskLabel, installationId, canManage
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
           <BookOpen size={16} style={{ color: 'var(--color-accent)' }} />
           <strong style={{ fontSize: 15 }}>{taskLabel}</strong>
-          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
+          {canManage && (
+            <Btn variant={editing ? 'primary' : 'ghost'} onClick={() => setEditing((e) => !e)} style={{ marginLeft: 'auto' }}>
+              {editing ? 'Done' : <><Pencil size={13} /> Edit</>}
+            </Btn>
+          )}
+          <button onClick={onClose} style={{ marginLeft: canManage ? 0 : 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
         </div>
         <div style={{ padding: 16 }}>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>Training resources for this task (shown on every member&apos;s record).</div>
-          {resources.length === 0 && <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 10 }}>No resources added yet.</div>}
+          {resources.length === 0 && !editing && <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 10 }}>No resources added yet.</div>}
           <div style={{ display: 'grid', gap: 8 }}>
             {resources.map((r) => {
               const id = String(r.id); const link = (r.url as string) ?? ''
               return (
                 <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {canManage ? (
+                  {editing && canManage ? (
                     <>
                       <input className="input-dark" style={{ width: 180, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} defaultValue={(r.label as string) ?? ''} placeholder="Label" onBlur={(e) => edit(id, 'label', e.target.value)} />
                       <input className="input-dark" style={{ flex: 1, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} defaultValue={link} placeholder="https://…" onBlur={(e) => edit(id, 'url', e.target.value)} />
@@ -64,7 +75,7 @@ export function ResourceDialog({ catalogId, taskLabel, installationId, canManage
               )
             })}
           </div>
-          {canManage && (
+          {editing && canManage && (
             <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <input className="input-dark" style={{ width: 180, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Airfield Driving SOP)" />
               <input className="input-dark" style={{ flex: 1, minWidth: 160, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />

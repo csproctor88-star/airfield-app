@@ -25,6 +25,8 @@ export function Form1098Tab(props: {
 }) {
   const { catalog, progress, canWrite, canEnterData, canManage, installationId, memberId, member, myRoles, isOwn, highlightItem, sign, reopen, onChange } = props
   const [editMode, setEditMode] = useState(false)
+  // KPI status filter for the task table. null = show all (Required).
+  const [statusFilter, setStatusFilter] = useState<'complete' | 'due_soon' | 'overdue' | null>(null)
   const currentYear = String(new Date().getUTCFullYear())
   const [year, setYear] = useState(currentYear)
   const [extraYears, setExtraYears] = useState<string[]>([])
@@ -126,12 +128,20 @@ export function Form1098Tab(props: {
     const s = dueStatus({ dueDate: (p?.next_due as string) ?? null, completedDate: (p?.last_completed as string) ?? '' })
     if (s === 'complete') kpi.complete++; else if (s === 'due_soon') kpi.dueSoon++; else if (s === 'overdue') kpi.overdue++
   }
-  const kpiCards = [
-    { label: 'Required', value: kpi.required },
-    { label: 'Complete', value: kpi.complete, color: 'var(--color-success)' },
-    { label: 'Due Soon', value: kpi.dueSoon, color: 'var(--color-warning)' },
-    { label: 'Overdue', value: kpi.overdue, color: 'var(--color-danger)' },
+  type StatusFilter = 'complete' | 'due_soon' | 'overdue' | null
+  const toggleFilter = (f: StatusFilter) => setStatusFilter((cur) => (cur === f ? null : f))
+  const kpiCards: { label: string; value: number; color?: string; filter: StatusFilter; active: boolean }[] = [
+    { label: 'Required', value: kpi.required, filter: null, active: statusFilter === null },
+    { label: 'Complete', value: kpi.complete, color: 'var(--color-success)', filter: 'complete', active: statusFilter === 'complete' },
+    { label: 'Due Soon', value: kpi.dueSoon, color: 'var(--color-warning)', filter: 'due_soon', active: statusFilter === 'due_soon' },
+    { label: 'Overdue', value: kpi.overdue, color: 'var(--color-danger)', filter: 'overdue', active: statusFilter === 'overdue' },
   ]
+  const visibleCatalog = statusFilter
+    ? activeCatalog.filter((c) => {
+        const p = progByCat.get(String(c.id))
+        return dueStatus({ dueDate: (p?.next_due as string) ?? null, completedDate: (p?.last_completed as string) ?? '' }) === statusFilter
+      })
+    : activeCatalog
 
   return (
     <div>
@@ -141,7 +151,13 @@ export function Form1098Tab(props: {
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
       {kpiCards.map((k) => (
-        <div key={k.label} className="card" style={{ padding: '12px 16px' }}>
+        <div key={k.label} className="card" onClick={() => toggleFilter(k.filter)}
+          title={k.filter ? `Show only ${k.label.toLowerCase()} tasks` : 'Show all tasks'}
+          style={{
+            padding: '12px 16px', cursor: 'pointer',
+            border: k.active ? `1.5px solid ${k.color ?? 'var(--color-accent)'}` : undefined,
+            boxShadow: k.active ? `0 0 0 1px ${k.color ?? 'var(--color-accent)'}` : undefined,
+          }}>
           <div className="section-label" style={{ marginBottom: 4 }}>{k.label}</div>
           <div style={{ fontSize: 24, fontWeight: 700, color: k.color ?? 'var(--color-text-1)' }}>{k.value}</div>
         </div>
@@ -170,7 +186,10 @@ export function Form1098Tab(props: {
           </tr>
         </thead>
         <tbody>
-          {activeCatalog.map((c) => {
+          {visibleCatalog.length === 0 && (
+            <tr><td colSpan={10} style={{ ...tdStyle, color: 'var(--color-text-3)', textAlign: 'center' }}>No {statusFilter === 'due_soon' ? 'due soon' : statusFilter} tasks.</td></tr>
+          )}
+          {visibleCatalog.map((c) => {
             const catId = String(c.id)
             const p = progByCat.get(catId)
             const freq = String(c.frequency ?? 'Annual')
@@ -199,8 +218,8 @@ export function Form1098Tab(props: {
               <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
                 <td style={tdStyle}>
                   <button onClick={() => setResourceFor(c)} title="Training resources"
-                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-text-1)', fontFamily: 'inherit', fontSize: 'inherit', textAlign: 'left', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    {String(c.task)}
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-text-1)', fontFamily: 'inherit', fontSize: 'inherit', textAlign: 'left', display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <span>{String(c.task)}</span>
                     <BookOpen size={13} style={{ color: (resources.get(catId)?.length ?? 0) > 0 ? 'var(--color-accent)' : 'var(--color-text-3)', flexShrink: 0 }} />
                   </button>
                 </td>
