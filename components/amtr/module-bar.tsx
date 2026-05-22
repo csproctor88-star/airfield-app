@@ -5,7 +5,7 @@
 // member record, inspection, reports, admin). Help and References open as
 // overlays so they work regardless of the current route.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
@@ -28,6 +28,18 @@ export function AmtrModuleBar() {
   const canManage = has(PERM.AMTR_MANAGE)
   const canView = has(PERM.AMTR_VIEW)
   const [overlay, setOverlay] = useState<'help' | 'refs' | null>(null)
+  // The global app header is sticky at top:0 with a dynamic height. Measure it
+  // so this bar locks directly beneath it instead of riding up over it on scroll.
+  const [headerOffset, setHeaderOffset] = useState(0)
+  useEffect(() => {
+    const header = document.querySelector('.app-main')?.firstElementChild as HTMLElement | null
+    if (!header) return
+    const update = () => setHeaderOffset(header.offsetHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(header)
+    return () => ro.disconnect()
+  }, [])
 
   if (!canView) return null
 
@@ -36,7 +48,7 @@ export function AmtrModuleBar() {
       <div style={{
         height: AMTR_BAR_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8,
         padding: '0 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)',
-        position: 'sticky', top: 0, zIndex: 50,
+        position: 'sticky', top: headerOffset, zIndex: 40,
       }}>
         <Link href="/amtr" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--color-text-1)', textDecoration: 'none', fontWeight: 600, fontSize: 'var(--fs-sm)' }}>
           <Award size={16} style={{ color: 'var(--color-accent)' }} /> Training Records
