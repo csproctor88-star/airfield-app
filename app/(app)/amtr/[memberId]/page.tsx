@@ -32,7 +32,7 @@ import { MemberOverview } from '@/components/amtr/member-overview'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Award, ClipboardCheck } from 'lucide-react'
+import { ArrowLeft, Award, ClipboardCheck, FileSpreadsheet } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -54,6 +54,8 @@ export default function AmtrMemberPage() {
   const { has } = usePermissions()
   const canWrite = has(PERM.AMTR_WRITE)
   const canManage = has(PERM.AMTR_MANAGE)
+  const canExport = has(PERM.AMTR_EXPORT)
+  const [exporting, setExporting] = useState(false)
 
   const [member, setMember] = useState<AmtrMember | null>(null)
   const [allMembers, setAllMembers] = useState<AmtrMember[]>([])
@@ -187,6 +189,14 @@ export default function AmtrMemberPage() {
     toast.success('Signature reopened'); loadTab()
   }
 
+  const exportRecord = async () => {
+    if (!member || !installationId) return
+    setExporting(true)
+    try { const { exportAmtrRecord } = await import('@/lib/amtr-record-excel'); await exportAmtrRecord(installationId, member); toast.success('Record exported to Excel') }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Export failed') }
+    finally { setExporting(false) }
+  }
+
   const notifyJqsSignoff = async (slot: SignSlot, itemRef: string, itemId: string) => {
     if (slot === 'trainee' || !member?.user_id || !installationId) return
     const draft = buildSignoff(member.full_name, slot as AmtrRole, 'JQS-CFETP', itemRef, itemId, 'jqs')
@@ -218,13 +228,18 @@ export default function AmtrMemberPage() {
         <span style={{ color: 'var(--color-text-3)' }}>
           {[member.grade, member.dafsc, member.status].filter(Boolean).join(' · ')}
         </span>
-        {canWrite && (
-          <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {canExport && (
+            <Btn variant="secondary" onClick={exportRecord} disabled={exporting}>
+              <FileSpreadsheet size={15} /> {exporting ? 'Exporting…' : 'Export Record (Excel)'}
+            </Btn>
+          )}
+          {canWrite && (
             <Btn variant="secondary" onClick={() => window.open(`/amtr/${memberId}/inspect`, '_blank')}>
               <ClipboardCheck size={15} /> Inspect record ↗
             </Btn>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 16 }}>
         {isOwn ? 'Viewing your own record — Trainee context (you self-initial your own column).'
