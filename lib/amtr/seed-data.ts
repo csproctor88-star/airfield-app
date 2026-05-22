@@ -12,7 +12,10 @@ import ratCourses from './data/rat-courses.json'
 import milestones from './data/milestones.json'
 import { DEFAULT_INSPECTION_CHECKLIST } from './inspection-checklist'
 import { DEFAULT_623A_ENTRY_TYPES } from './reference-data'
+import std803 from './data/std-803.json'
 import { insertAmtrRows, countAmtrRows } from '@/lib/supabase/amtr'
+
+const STD_803 = std803 as Record<string, unknown>[]
 
 const INSPECTION_CHECKLIST = DEFAULT_INSPECTION_CHECKLIST.map((r, i) => ({
   kind: r.kind, label: r.label, item_number: r.item_number, auto_key: r.auto_key ?? null, sort_order: i,
@@ -44,6 +47,7 @@ export const SEED_COUNTS = {
   rat: RAT_COURSES.length,
   milestones: MILESTONES.length,
   inspection: DEFAULT_INSPECTION_CHECKLIST.length,
+  std803: STD_803.length,
 }
 
 const withBase = (baseId: string, rows: Record<string, unknown>[]) =>
@@ -65,6 +69,7 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
     { table: 'amtr_milestone_catalog', rows: MILESTONES as unknown as Record<string, unknown>[] },
     { table: 'amtr_inspection_checklist', rows: INSPECTION_CHECKLIST },
     { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A },
+    { table: 'amtr_803_catalog', rows: STD_803 },
   ]
   const results: SeedResult[] = []
   for (const job of jobs) {

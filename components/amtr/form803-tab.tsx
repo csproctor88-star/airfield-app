@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { upsertAmtrRow, deleteAmtrRow, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
+import { useState, useEffect } from 'react'
+import { upsertAmtrRow, deleteAmtrRow, fetchAmtrByBase, insertAmtrRows, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { DAF803_SECTIONS } from '@/lib/amtr/reference-data'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
+import { toast } from 'sonner'
 
 type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_803', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
@@ -26,13 +27,33 @@ export function Form803Tab(props: {
 }) {
   const { rows, canWrite, canEnterData, installationId, memberId, myRoles, isOwn, sign, reopen, onChange } = props
   const [section, setSection] = useState<string>('apprenticeGrad')
+  const [catalog, setCatalog] = useState<Row[]>([])
   const reopenAllowed = canReopen(myRoles)
   const sectionRows = rows.filter((r) => r.section === section)
+
+  useEffect(() => {
+    let active = true
+    fetchAmtrByBase<Row>('amtr_803_catalog', installationId).then((c) => { if (active) setCatalog(c) })
+    return () => { active = false }
+  }, [installationId])
 
   const addRow = async () => {
     await upsertAmtrRow('amtr_803', { base_id: installationId, member_id: memberId, section, sort_order: sectionRows.length })
     onChange()
   }
+  const populateStandard = async () => {
+    const std = catalog.filter((c) => c.section === section)
+    const existing = new Set(sectionRows.map((r) => String(r.sts_item ?? '').trim()).filter(Boolean))
+    const toAdd = std.filter((c) => !existing.has(String(c.sts_item ?? '').trim()))
+    if (toAdd.length === 0) { toast.info('All standard items already added for this section.'); return }
+    const { error } = await insertAmtrRows('amtr_803', toAdd.map((c, i) => ({
+      base_id: installationId, member_id: memberId, section, sts_item: c.sts_item, sort_order: sectionRows.length + i,
+    })))
+    if (error) { toast.error(error); return }
+    toast.success(`Added ${toAdd.length} standard item${toAdd.length === 1 ? '' : 's'}`)
+    onChange()
+  }
+  const stdCount = catalog.filter((c) => c.section === section).length
   const setField = async (r: Row, field: string, value: unknown) => {
     await upsertAmtrRow('amtr_803', { ...r, [field]: value })
     onChange()
@@ -57,7 +78,12 @@ export function Form803Tab(props: {
       <div style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', borderLeft: '3px solid var(--color-accent)', background: 'var(--color-bg-inset)' }}>
         {SECTION_NOTES[section]}
       </div>
-      {canEnterData && <div style={{ marginBottom: 12 }}><Btn variant="primary" onClick={addRow}>+ Add task evaluation</Btn></div>}
+      {canEnterData && (
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Btn variant="primary" onClick={addRow}>+ Add task evaluation</Btn>
+          {stdCount > 0 && <Btn variant="secondary" onClick={populateStandard}>Populate standard items ({stdCount})</Btn>}
+        </div>
+      )}
       {sectionRows.length === 0 ? <EmptyState message="No evaluations in this section." /> : (
         <div className="card" style={{ padding: 0, overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
