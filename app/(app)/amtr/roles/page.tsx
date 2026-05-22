@@ -19,7 +19,7 @@ import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Download, ChevronRight, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Download, ChevronRight, ChevronDown, BarChart3 } from 'lucide-react'
 
 type Row = Record<string, unknown>
 type Profile = { id: string; label: string; sortKey: string }
@@ -135,10 +135,11 @@ export default function AmtrRolesPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Btn variant="ghost" onClick={() => router.push('/amtr')}><ArrowLeft size={15} /> Roster</Btn>
+        <Btn variant="secondary" onClick={() => router.push('/amtr/reports')}><BarChart3 size={15} /> Reports</Btn>
       </div>
-      <h1 style={{ marginTop: 0, fontSize: 22 }}>Training Admin</h1>
+      <h1 style={{ marginTop: 0, fontSize: 22 }}>Admin</h1>
 
       {loading ? <LoadingState /> : (
         <>

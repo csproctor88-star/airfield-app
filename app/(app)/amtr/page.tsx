@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  fetchAmtrMembers, fetchAmtrByBase, createAmtrMember, type AmtrMember,
+  fetchAmtrMembers, fetchAmtrByBase, createAmtrMember, deleteAmtrMember,
+  syncAmtrRosterFromBase, excludeAmtrMember, type AmtrMember,
 } from '@/lib/supabase/amtr'
 import { dueStatus, ratApplies } from '@/lib/amtr/status'
 import { buildUnitKpis, type UnitKpis } from '@/lib/amtr/rollup'
@@ -19,7 +20,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Award, Plus, BarChart3, UsersRound, ChevronRight, BookOpen, ClipboardCheck, HelpCircle } from 'lucide-react'
+import { Award, Plus, UsersRound, ChevronRight, BookOpen, ClipboardCheck, HelpCircle, Trash2 } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -55,6 +56,9 @@ export default function AmtrRosterPage() {
   const load = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
+    // Auto-populate the roster from the base's assigned users (skips anyone
+    // already on the roster or explicitly removed). Requires write access.
+    if (canWrite) await syncAmtrRosterFromBase(installationId)
     const [mem, r1098Prog, ratProg] = await Promise.all([
       fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_progress', installationId, 'member_id'),
@@ -84,7 +88,7 @@ export default function AmtrRosterPage() {
     setKpis(buildUnitKpis(mem, recurring))
     setMemberDue(perMember)
     setLoading(false)
-  }, [installationId])
+  }, [installationId, canWrite])
 
   useEffect(() => { load() }, [load])
 
@@ -99,6 +103,15 @@ export default function AmtrRosterPage() {
     if (error) { toast.error(error); return }
     toast.success('Member added')
     setName(''); setGrade(''); setDafsc(''); setStatus('Active'); setShowForm(false)
+    load()
+  }
+
+  const removeMember = async (m: AmtrMember, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm(`Remove ${m.full_name} from the training roster? Their training record will be deleted and they won't be auto-added again.`)) return
+    if (m.user_id && installationId) await excludeAmtrMember(installationId, m.user_id)
+    await deleteAmtrMember(m.id)
+    toast.success('Removed from roster')
     load()
   }
 
@@ -126,13 +139,9 @@ export default function AmtrRosterPage() {
         <Award size={24} style={{ color: 'var(--color-accent)' }} />
         <h1 style={{ margin: 0, fontSize: 22 }}>Training Records</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Btn variant={showGuide ? 'primary' : 'secondary'} onClick={() => setShowGuide((s) => !s)}><HelpCircle size={15} /> How it works</Btn>
+          <Btn variant={showGuide ? 'primary' : 'secondary'} onClick={() => setShowGuide((s) => !s)}><HelpCircle size={15} /> Help</Btn>
           <Btn variant={showRefs ? 'primary' : 'secondary'} onClick={() => setShowRefs((s) => !s)}><BookOpen size={15} /> Training References</Btn>
-          <Link href="/amtr/reports" style={linkBtnStyle}><BarChart3 size={15} /> Reports</Link>
-          {canManage && <Link href="/amtr/roles" style={linkBtnStyle}><UsersRound size={15} /> Training Admin</Link>}
-          {canWrite && (
-            <Btn variant="primary" onClick={() => setShowForm((s) => !s)}><Plus size={15} /> New Member</Btn>
-          )}
+          {canManage && <Link href="/amtr/roles" style={linkBtnStyle}><UsersRound size={15} /> Admin</Link>}
         </div>
       </div>
 
@@ -159,6 +168,12 @@ export default function AmtrRosterPage() {
       )}
 
       <div style={{ marginBottom: 18 }}><NotificationCenter /></div>
+
+      {canWrite && (
+        <div style={{ marginBottom: 12 }}>
+          <Btn variant="primary" onClick={() => setShowForm((s) => !s)}><Plus size={15} /> New Member</Btn>
+        </div>
+      )}
 
       {showForm && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -239,6 +254,12 @@ export default function AmtrRosterPage() {
                             title="Inspect record (new tab)"
                             style={{ background: 'none', border: '1px solid var(--color-border-mid)', borderRadius: 6, padding: '3px 8px', marginRight: 8, cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
                             <ClipboardCheck size={13} style={{ verticalAlign: '-2px' }} /> Inspect
+                          </button>
+                        )}
+                        {canWrite && (
+                          <button onClick={(e) => removeMember(m, e)} title="Remove from roster"
+                            style={{ background: 'none', border: 'none', padding: 4, marginRight: 6, cursor: 'pointer', color: 'var(--color-text-3)', verticalAlign: 'middle' }}>
+                            <Trash2 size={14} />
                           </button>
                         )}
                         <ChevronRight size={16} style={{ color: 'var(--color-text-3)', verticalAlign: 'middle' }} />

@@ -163,6 +163,56 @@ export async function deleteAmtrMember(id: string): Promise<{ error: string | nu
   return { error: null }
 }
 
+// ── Roster auto-population from the base's assigned users ───
+type ProfileRow = { id: string; rank?: string | null; first_name?: string | null; last_name?: string | null; name?: string | null; email?: string | null }
+
+/** User IDs excluded from the training roster (don't require a record). */
+export async function fetchAmtrMemberExclusions(baseId: string): Promise<string[]> {
+  const supabase = db()
+  if (!supabase) return []
+  const { data } = await supabase.from('amtr_member_exclusions').select('user_id').eq('base_id', baseId)
+  return ((data ?? []) as { user_id: string }[]).map((r) => r.user_id)
+}
+
+/** Mark a base user as not requiring a training record (so sync won't re-add them). */
+export async function excludeAmtrMember(baseId: string, userId: string): Promise<{ error: string | null }> {
+  const supabase = db()
+  if (!supabase) return { error: 'Supabase not configured' }
+  const { error } = await supabase.from('amtr_member_exclusions').upsert({ base_id: baseId, user_id: userId } as never, { onConflict: 'base_id,user_id' })
+  return { error: error ? friendlyError(error.message) : null }
+}
+
+/** Create training-record members for every base user not already on the roster
+ * and not excluded. Returns how many were created. Requires amtr:write. */
+export async function syncAmtrRosterFromBase(baseId: string): Promise<{ created: number; error: string | null }> {
+  const supabase = db()
+  if (!supabase) return { created: 0, error: null }
+  const { data: bm } = await supabase.from('base_members').select('user_id').eq('base_id', baseId)
+  const baseUserIds = ((bm ?? []) as { user_id: string }[]).map((r) => r.user_id).filter(Boolean)
+  if (baseUserIds.length === 0) return { created: 0, error: null }
+
+  const [{ data: mem }, exclusions] = await Promise.all([
+    supabase.from('amtr_members').select('user_id').eq('base_id', baseId),
+    fetchAmtrMemberExclusions(baseId),
+  ])
+  const have = new Set(((mem ?? []) as { user_id: string | null }[]).map((r) => r.user_id).filter(Boolean) as string[])
+  const excluded = new Set(exclusions)
+  const missing = baseUserIds.filter((id) => !have.has(id) && !excluded.has(id))
+  if (missing.length === 0) return { created: 0, error: null }
+
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', missing)
+  const profById = new Map(((profs ?? []) as ProfileRow[]).map((p) => [p.id, p]))
+  const rows = missing.map((id) => {
+    const p = profById.get(id)
+    const last = (p?.last_name || '').trim(); const first = (p?.first_name || '').trim(); const rank = (p?.rank || '').trim()
+    const full_name = (last || first) ? `${last}${last && first ? ', ' : ''}${first}` : (p?.name || p?.email || 'Member')
+    return { base_id: baseId, user_id: id, full_name, grade: rank || null, status: 'Active' }
+  })
+  const { error } = await supabase.from('amtr_members').insert(rows as never)
+  if (error) { console.error('syncAmtrRosterFromBase:', error.message); return { created: 0, error: friendlyError(error.message) } }
+  return { created: rows.length, error: null }
+}
+
 // ── Role assignments (the AMTR role layer) ─────────────────
 
 export async function fetchAmtrRoleAssignments(baseId: string): Promise<AmtrRoleAssignment[]> {

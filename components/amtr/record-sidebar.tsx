@@ -37,13 +37,13 @@ export function RecordSidebar({
             onMouseLeave={() => setHover((h) => (h === k ? null : h))}
             style={{
               padding: '7px 14px', borderRadius: 7, cursor: 'pointer',
-              border: `1px solid ${on ? 'var(--color-accent)' : 'transparent'}`,
+              border: `1px solid ${on ? 'var(--color-accent)' : 'var(--color-border-mid)'}`,
               fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: on ? 700 : 600,
               whiteSpace: 'nowrap',
-              background: on ? 'var(--color-accent)' : hovered ? 'var(--color-bg-surface)' : 'transparent',
-              color: on ? '#fff' : hovered ? 'var(--color-text-1)' : 'var(--color-text-2)',
+              background: on ? 'var(--color-accent)' : hovered ? 'var(--color-bg-elevated)' : 'var(--color-bg-surface)',
+              color: on ? '#fff' : 'var(--color-text-2)',
               boxShadow: on ? '0 1px 4px rgba(0,0,0,0.35)' : 'none',
-              transition: 'background 120ms, color 120ms',
+              transition: 'background 120ms, color 120ms, border-color 120ms',
             }}
           >
             {labels[k]}
