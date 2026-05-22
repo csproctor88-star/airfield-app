@@ -34,6 +34,7 @@ export default function AmtrRolesPage() {
   const canManage = has(PERM.AMTR_MANAGE)
 
   const [loading, setLoading] = useState(true)
+  const initialLoaded = useRef(false)
   const [seeding, setSeeding] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [catalogVersion, setCatalogVersion] = useState<string | null>(null)
@@ -56,7 +57,11 @@ export default function AmtrRolesPage() {
 
   const load = useCallback(async () => {
     if (!installationId) return
-    setLoading(true)
+    // Only show the full-page loader on the very first load. Edits trigger a
+    // background refresh — flipping `loading` here would unmount every
+    // CollapsibleCard (their open state is local) and bounce the user to the
+    // collapsed top of the page on every checkbox / catalog change.
+    if (!initialLoaded.current) setLoading(true)
     // Roster mirrors the base's assigned users — pull in any new ones.
     await syncAmtrRosterFromBase(installationId)
     const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile, c803, cqual, ver] = await Promise.all([
@@ -73,6 +78,7 @@ export default function AmtrRolesPage() {
       fetchAmtrCatalogVersion(installationId),
     ])
     setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual); setCatalogVersion(ver)
+    initialLoaded.current = true
     setLoading(false)
   }, [installationId])
 
