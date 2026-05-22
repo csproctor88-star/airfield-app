@@ -51,6 +51,18 @@ export function Form1098Tab(props: {
     setExtraYears((prev) => Array.from(new Set([...prev, y])))
     setYear(y)
   }
+  const deleteYear = async () => {
+    if (year === currentYear) return
+    if (!window.confirm(`Delete the ${year} 1098 for ${member.full_name}? This removes their ${year} entries (use to purge years past the retention requirement).`)) return
+    // Remove this member's progress rows for the year.
+    for (const p of progress.filter((x) => String(x.year_label) === year)) await deleteAmtrRow('amtr_1098_progress', String(p.id))
+    // Remove the base year-tab row(s) for that label so the empty tab goes away.
+    const yearRows = await fetchAmtrByBase<Row>('amtr_1098_years', installationId)
+    for (const yr of yearRows.filter((r) => String(r.year_label) === year)) await deleteAmtrRow('amtr_1098_years', String(yr.id))
+    setExtraYears((prev) => prev.filter((y) => y !== year))
+    setYear(currentYear)
+    onChange()
+  }
 
   // Reconcile current-year due/overdue 1098 items → notify the whole training
   // team (trainee + trainers + NAMT + AFM). Idempotent (dedupe upsert); run
@@ -92,6 +104,16 @@ export function Form1098Tab(props: {
     const patch: Row = { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, [field]: value || null }
     if (field === 'last_completed') patch.next_due = computeNextDue(value, freq)
     await upsertAmtrRow('amtr_1098_progress', patch)
+    // Auto-rollover: completing a task whose next due lands in a later year
+    // seeds that task on the next year's 1098 (carrying the due date), so the
+    // next year's record generates itself and shows the task as coming due.
+    if (field === 'last_completed' && value && patch.next_due) {
+      const nextYear = String(new Date(`${String(patch.next_due).slice(0, 10)}T00:00:00Z`).getUTCFullYear())
+      const exists = progress.some((x) => String(x.catalog_id) === catId && String(x.year_label) === nextYear)
+      if (Number(nextYear) > Number(year) && !exists) {
+        await upsertAmtrRow('amtr_1098_progress', { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: nextYear, next_due: patch.next_due })
+      }
+    }
     onChange()
   }
 
@@ -130,7 +152,8 @@ export function Form1098Tab(props: {
         </button>
       ))}
       {canEnterData && <button onClick={addYear} title="Add a prior year for transcription" style={{ padding: '5px 10px', borderRadius: 6, border: '1px dashed var(--color-border-mid)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-text-3)' }}>+ Add year</button>}
-      <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>1098 records are retained per year (two-year requirement).</span>
+      {canEnterData && year !== currentYear && <button onClick={deleteYear} title="Delete this year's records" style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-danger)' }}>Delete {year}</button>}
+      <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Completing a task auto-creates next year&apos;s 1098. Records are retained per year (two-year requirement).</span>
     </div>
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
