@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
@@ -32,7 +32,8 @@ import { MemberOverview } from '@/components/amtr/member-overview'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Award, ClipboardCheck, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, Award, ClipboardCheck, FileSpreadsheet, Upload, X } from 'lucide-react'
+import type { ParsedRecord, ImportSummary } from '@/lib/amtr-record-import'
 
 type Row = Record<string, unknown>
 
@@ -56,6 +57,9 @@ export default function AmtrMemberPage() {
   const canManage = has(PERM.AMTR_MANAGE)
   const canExport = has(PERM.AMTR_EXPORT)
   const [exporting, setExporting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [importPreview, setImportPreview] = useState<{ parsed: ParsedRecord; summary: ImportSummary } | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const [member, setMember] = useState<AmtrMember | null>(null)
   const [allMembers, setAllMembers] = useState<AmtrMember[]>([])
@@ -197,6 +201,28 @@ export default function AmtrMemberPage() {
     finally { setExporting(false) }
   }
 
+  const onImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    try {
+      const buf = await file.arrayBuffer()
+      const { parseAmtrRecordWorkbook, summarizeParsed } = await import('@/lib/amtr-record-import')
+      const parsed = await parseAmtrRecordWorkbook(buf)
+      setImportPreview({ parsed, summary: summarizeParsed(parsed) })
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not read the workbook') }
+  }
+  const doImport = async () => {
+    if (!member || !installationId || !importPreview) return
+    setImporting(true)
+    try {
+      const { applyAmtrImport } = await import('@/lib/amtr-record-import')
+      const { written, unmatched } = await applyAmtrImport(installationId, member, importPreview.parsed)
+      toast.success(`Imported ${written} item${written === 1 ? '' : 's'}${unmatched.length ? ` · ${unmatched.length} unmatched (skipped)` : ''}`)
+      setImportPreview(null); loadMember(); loadTab()
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Import failed') }
+    finally { setImporting(false) }
+  }
+
   const notifyJqsSignoff = async (slot: SignSlot, itemRef: string, itemId: string) => {
     if (slot === 'trainee' || !member?.user_id || !installationId) return
     const draft = buildSignoff(member.full_name, slot as AmtrRole, 'JQS-CFETP', itemRef, itemId, 'jqs')
@@ -235,12 +261,48 @@ export default function AmtrMemberPage() {
             </Btn>
           )}
           {canWrite && (
+            <>
+              <Btn variant="secondary" onClick={() => fileRef.current?.click()}><Upload size={15} /> Import from Excel</Btn>
+              <input ref={fileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={onImportFile} />
+            </>
+          )}
+          {canWrite && (
             <Btn variant="secondary" onClick={() => window.open(`/amtr/${memberId}/inspect`, '_blank')}>
               <ClipboardCheck size={15} /> Inspect record ↗
             </Btn>
           )}
         </div>
       </div>
+
+      {importPreview && (
+        <div onClick={() => !importing && setImportPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 480, maxWidth: '100%', padding: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+              <Upload size={16} style={{ color: 'var(--color-accent)' }} />
+              <strong>Import training record for {member.full_name}</strong>
+              <button onClick={() => setImportPreview(null)} disabled={importing} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 10 }}>Found in the workbook:</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '4px 16px', fontSize: 'var(--fs-sm)' }}>
+                {Object.entries(importPreview.summary.counts).map(([k, n]) => (
+                  <div key={k} style={{ display: 'contents' }}>
+                    <span style={{ color: 'var(--color-text-2)' }}>{k}</span>
+                    <span style={{ textAlign: 'right', fontWeight: 600, color: n > 0 ? 'var(--color-text-1)' : 'var(--color-text-3)' }}>{n}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)' }}>
+                Initials are imported as transcribed text (not locked e-signatures). 1098 / JQS / Qualifications / RAT match the base catalog by name/number — unmatched rows are skipped. 623A, 797, and 803 rows are added to the record. Run once on a fresh record to avoid duplicates.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '12px 16px', borderTop: '1px solid var(--color-border)' }}>
+              <Btn variant="ghost" onClick={() => setImportPreview(null)} disabled={importing}>Cancel</Btn>
+              <Btn variant="primary" onClick={doImport} disabled={importing}>{importing ? 'Importing…' : 'Import'}</Btn>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 16 }}>
         {isOwn ? 'Viewing your own record — Trainee context (you self-initial your own column).'
           : effRole ? `Viewing as ${AMTR_ROLE_LABELS[effRole] ?? effRole}.` : 'View only — no AMTR role assigned.'}
