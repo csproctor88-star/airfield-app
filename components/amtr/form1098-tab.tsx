@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Pencil } from 'lucide-react'
-import { upsertAmtrRow, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Pencil, ExternalLink, Plus, Trash2, X, BookOpen } from 'lucide-react'
+import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { buildSignoff, buildTrainingDue, fireToTrainingTeam, type NotificationDraft } from '@/lib/amtr/notifications'
 import { dueStatus, computeNextDue } from '@/lib/amtr/status'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
@@ -25,10 +25,32 @@ export function Form1098Tab(props: {
   const { catalog, progress, canWrite, canEnterData, canManage, installationId, memberId, member, myRoles, isOwn, highlightItem, sign, reopen, onChange } = props
   const [editMode, setEditMode] = useState(false)
   const currentYear = String(new Date().getUTCFullYear())
-  const years = Array.from(new Set([currentYear, ...progress.map((p) => String(p.year_label)).filter(Boolean)])).sort((a, b) => b.localeCompare(a))
   const [year, setYear] = useState(currentYear)
+  const [extraYears, setExtraYears] = useState<string[]>([])
+  const [resources, setResources] = useState<Map<string, Row[]>>(new Map())
+  const [resourceFor, setResourceFor] = useState<Row | null>(null)
+  const years = Array.from(new Set([currentYear, ...extraYears, ...progress.map((p) => String(p.year_label)).filter(Boolean)])).sort((a, b) => b.localeCompare(a))
   const progByCat = new Map(progress.filter((p) => p.year_label === year).map((p) => [String(p.catalog_id), p]))
   const reopenAllowed = canReopen(myRoles)
+
+  const loadResources = useCallback(async () => {
+    const rows = await fetchAmtrByBase<Row>('amtr_1098_resources', installationId)
+    const m = new Map<string, Row[]>()
+    for (const r of rows) { const k = String(r.catalog_id); if (!m.has(k)) m.set(k, []); m.get(k)!.push(r) }
+    setResources(m)
+  }, [installationId])
+  useEffect(() => {
+    fetchAmtrByBase<Row>('amtr_1098_years', installationId).then((rows) => setExtraYears(rows.map((r) => String(r.year_label)).filter(Boolean)))
+    loadResources()
+  }, [installationId, loadResources])
+
+  const addYear = async () => {
+    const y = window.prompt('Add a prior year (e.g. 2024):')?.trim()
+    if (!y || !/^\d{4}$/.test(y)) return
+    await upsertAmtrRow('amtr_1098_years', { base_id: installationId, year_label: y, is_current: false })
+    setExtraYears((prev) => Array.from(new Set([...prev, y])))
+    setYear(y)
+  }
 
   // Reconcile current-year due/overdue 1098 items → notify the whole training
   // team (trainee + trainers + NAMT + AFM). Idempotent (dedupe upsert); run
@@ -100,16 +122,16 @@ export function Form1098Tab(props: {
         </div>
       ))}
     </div>
-    {years.length > 1 && (
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-        {years.map((y) => (
-          <button key={y} onClick={() => setYear(y)}
-            style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: year === y ? 700 : 600, background: year === y ? 'var(--color-accent)' : 'var(--color-bg-inset)', color: year === y ? '#fff' : 'var(--color-text-2)' }}>
-            {y}
-          </button>
-        ))}
-      </div>
-    )}
+    <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+      {years.map((y) => (
+        <button key={y} onClick={() => setYear(y)}
+          style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: year === y ? 700 : 600, background: year === y ? 'var(--color-accent)' : 'var(--color-bg-inset)', color: year === y ? '#fff' : 'var(--color-text-2)' }}>
+          {y}{y === currentYear ? ' (current)' : ''}
+        </button>
+      ))}
+      {canEnterData && <button onClick={addYear} title="Add a prior year for transcription" style={{ padding: '5px 10px', borderRadius: 6, border: '1px dashed var(--color-border-mid)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-text-3)' }}>+ Add year</button>}
+      <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>1098 records are retained per year (two-year requirement).</span>
+    </div>
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
         <thead>
@@ -149,7 +171,13 @@ export function Form1098Tab(props: {
             )
             return (
               <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
-                <td style={tdStyle}>{String(c.task)}</td>
+                <td style={tdStyle}>
+                  <button onClick={() => setResourceFor(c)} title="Training resources"
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-text-1)', fontFamily: 'inherit', fontSize: 'inherit', textAlign: 'left', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {String(c.task)}
+                    <BookOpen size={13} style={{ color: (resources.get(catId)?.length ?? 0) > 0 ? 'var(--color-accent)' : 'var(--color-text-3)', flexShrink: 0 }} />
+                  </button>
+                </td>
                 <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, freq, 'start_date', e.target.value)} /></td>
                 <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={last ? last.slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, freq, 'last_completed', e.target.value)} /></td>
                 {signCell('certifier')}{signCell('trainee')}
@@ -164,8 +192,71 @@ export function Form1098Tab(props: {
         </tbody>
       </table>
     </div>
+    {resourceFor && (
+      <ResourceDialog task={resourceFor} installationId={installationId} canManage={canManage}
+        resources={resources.get(String(resourceFor.id)) ?? []} onClose={() => setResourceFor(null)} onChanged={loadResources} />
+    )}
     </div>
   )
 }
 
 const di: React.CSSProperties = { padding: '3px 6px', fontSize: 'var(--fs-xs)', width: 130 }
+
+// Per-task training resources — view links; NAMT (canManage) can add/edit/remove.
+function ResourceDialog({ task, installationId, canManage, resources, onClose, onChanged }: {
+  task: Row; installationId: string; canManage: boolean; resources: Row[]; onClose: () => void; onChanged: () => void
+}) {
+  const catId = String(task.id)
+  const [label, setLabel] = useState('')
+  const [url, setUrl] = useState('')
+  const add = async () => {
+    if (!label.trim()) return
+    await upsertAmtrRow('amtr_1098_resources', { base_id: installationId, catalog_id: catId, label: label.trim(), url: url.trim() || null, sort_order: resources.length })
+    setLabel(''); setUrl(''); onChanged()
+  }
+  const remove = async (id: string) => { await deleteAmtrRow('amtr_1098_resources', id); onChanged() }
+  const edit = async (id: string, field: 'label' | 'url', value: string) => { await updateAmtrRow('amtr_1098_resources', id, { [field]: value || null }); onChanged() }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 560, maxWidth: '100%', maxHeight: '80vh', overflow: 'auto', padding: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+          <BookOpen size={16} style={{ color: 'var(--color-accent)' }} />
+          <strong style={{ fontSize: 15 }}>{String(task.task)}</strong>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
+        </div>
+        <div style={{ padding: 16 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 10 }}>Training resources for this task.</div>
+          {resources.length === 0 && <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 10 }}>No resources added yet.</div>}
+          <div style={{ display: 'grid', gap: 8 }}>
+            {resources.map((r) => {
+              const id = String(r.id); const link = (r.url as string) ?? ''
+              return (
+                <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {canManage ? (
+                    <>
+                      <input className="input-dark" style={{ width: 180, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} defaultValue={(r.label as string) ?? ''} placeholder="Label" onBlur={(e) => edit(id, 'label', e.target.value)} />
+                      <input className="input-dark" style={{ flex: 1, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} defaultValue={link} placeholder="https://…" onBlur={(e) => edit(id, 'url', e.target.value)} />
+                      <button onClick={() => remove(id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)' }}><Trash2 size={14} /></button>
+                    </>
+                  ) : (
+                    link
+                      ? <a href={link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--color-accent)', fontSize: 'var(--fs-sm)' }}>{String(r.label)} <ExternalLink size={13} /></a>
+                      : <span style={{ fontSize: 'var(--fs-sm)' }}>{String(r.label)}</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {canManage && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input className="input-dark" style={{ width: 180, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label (e.g. Airfield Driving SOP)" />
+              <input className="input-dark" style={{ flex: 1, minWidth: 160, padding: '4px 6px', fontSize: 'var(--fs-xs)' }} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+              <Btn variant="secondary" onClick={add} disabled={!label.trim()}><Plus size={14} /> Add</Btn>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
