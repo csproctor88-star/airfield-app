@@ -6,21 +6,18 @@ import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  fetchAmtrMembers, fetchAmtrByBase, createAmtrMember, deleteAmtrMember,
-  syncAmtrRosterFromBase, excludeAmtrMember, type AmtrMember,
+  fetchAmtrMembers, fetchAmtrByBase, syncAmtrRosterFromBase, type AmtrMember,
 } from '@/lib/supabase/amtr'
 import { dueStatus, ratApplies } from '@/lib/amtr/status'
 import { buildUnitKpis, type UnitKpis } from '@/lib/amtr/rollup'
-import { AMTR_MEMBER_STATUSES } from '@/lib/amtr/reference-data'
 import { NotificationCenter } from '@/components/amtr/notification-center'
 import { TrainingReferences } from '@/components/amtr/training-references'
 import { HowToGuide } from '@/components/amtr/how-to-guide'
-import { Field, Btn, thStyle, tdStyle } from '@/components/amtr/ui'
+import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
-import { Award, Plus, UsersRound, ChevronRight, BookOpen, ClipboardCheck, HelpCircle, Trash2 } from 'lucide-react'
+import { Award, UsersRound, ChevronRight, BookOpen, HelpCircle } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
@@ -43,14 +40,8 @@ export default function AmtrRosterPage() {
   const [kpis, setKpis] = useState<UnitKpis>({ members: 0, requiredTasks: 0, complete: 0, dueSoon: 0, overdue: 0 })
   const [memberDue, setMemberDue] = useState<Record<string, { overdue: number; dueSoon: number }>>({})
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
   const [showRefs, setShowRefs] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [name, setName] = useState('')
-  const [grade, setGrade] = useState('')
-  const [dafsc, setDafsc] = useState('')
-  const [status, setStatus] = useState<typeof AMTR_MEMBER_STATUSES[number]>('Active')
   const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
@@ -91,29 +82,6 @@ export default function AmtrRosterPage() {
   }, [installationId, canWrite])
 
   useEffect(() => { load() }, [load])
-
-  const addMember = async () => {
-    if (!installationId || !name.trim()) return
-    setSaving(true)
-    const { error } = await createAmtrMember({
-      base_id: installationId, full_name: name.trim(),
-      grade: grade || null, dafsc: dafsc || null, status,
-    })
-    setSaving(false)
-    if (error) { toast.error(error); return }
-    toast.success('Member added')
-    setName(''); setGrade(''); setDafsc(''); setStatus('Active'); setShowForm(false)
-    load()
-  }
-
-  const removeMember = async (m: AmtrMember, e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!window.confirm(`Remove ${m.full_name} from the training roster? Their training record will be deleted and they won't be auto-added again.`)) return
-    if (m.user_id && installationId) await excludeAmtrMember(installationId, m.user_id)
-    await deleteAmtrMember(m.id)
-    toast.success('Removed from roster')
-    load()
-  }
 
   if (permsLoaded && !canView) {
     return <div style={{ padding: 24 }}><EmptyState message="You don't have access to Training Records." /></div>
@@ -169,31 +137,6 @@ export default function AmtrRosterPage() {
 
       <div style={{ marginBottom: 18 }}><NotificationCenter /></div>
 
-      {canWrite && (
-        <div style={{ marginBottom: 12 }}>
-          <Btn variant="primary" onClick={() => setShowForm((s) => !s)}><Plus size={15} /> New Member</Btn>
-        </div>
-      )}
-
-      {showForm && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12 }}>
-            <Field label="Full name"><input className="input-dark" value={name} onChange={(e) => setName(e.target.value)} placeholder="Last, First M." /></Field>
-            <Field label="Grade"><input className="input-dark" value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="SrA / E-4" /></Field>
-            <Field label="DAFSC"><input className="input-dark" value={dafsc} onChange={(e) => setDafsc(e.target.value)} placeholder="1C751" /></Field>
-            <Field label="Status">
-              <select className="input-dark" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
-                {AMTR_MEMBER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </Field>
-          </div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-            <Btn variant="primary" onClick={addMember} disabled={saving || !name.trim()}>Add Member</Btn>
-            <Btn variant="ghost" onClick={() => setShowForm(false)}>Cancel</Btn>
-          </div>
-        </div>
-      )}
-
       <div id="amtr-roster" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <h2 style={{ margin: 0, fontSize: 16 }}>Assigned Members</h2>
         <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>{members.length}</span>
@@ -207,7 +150,7 @@ export default function AmtrRosterPage() {
       </div>
 
       {loading ? <LoadingState message="Loading roster…" />
-        : filtered.length === 0 ? <EmptyState message="No members on the training roster yet." icon="🎓" />
+        : filtered.length === 0 ? <EmptyState message="No members yet — the roster populates automatically from the base's assigned users." icon="🎓" />
         : (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -218,7 +161,6 @@ export default function AmtrRosterPage() {
                   <th style={thStyle}>DAFSC</th>
                   <th style={thStyle}>Status</th>
                   <th style={thStyle}>Currency</th>
-                  <th style={thStyle}>Linked</th>
                   <th style={thStyle} />
                 </tr>
               </thead>
@@ -245,25 +187,7 @@ export default function AmtrRosterPage() {
                             </span>
                           )}
                       </td>
-                      <td style={tdStyle}>
-                        {m.user_id ? <Badge label="Account" color="var(--color-success)" /> : <Badge label="Roster" color="#94A3B8" />}
-                      </td>
-                      <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        {canWrite && (
-                          <button onClick={(e) => { e.stopPropagation(); window.open(`/amtr/${m.id}/inspect`, '_blank') }}
-                            title="Inspect record (new tab)"
-                            style={{ background: 'none', border: '1px solid var(--color-border-mid)', borderRadius: 6, padding: '3px 8px', marginRight: 8, cursor: 'pointer', color: 'var(--color-text-2)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
-                            <ClipboardCheck size={13} style={{ verticalAlign: '-2px' }} /> Inspect
-                          </button>
-                        )}
-                        {canWrite && (
-                          <button onClick={(e) => removeMember(m, e)} title="Remove from roster"
-                            style={{ background: 'none', border: 'none', padding: 4, marginRight: 6, cursor: 'pointer', color: 'var(--color-text-3)', verticalAlign: 'middle' }}>
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                        <ChevronRight size={16} style={{ color: 'var(--color-text-3)', verticalAlign: 'middle' }} />
-                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}><ChevronRight size={16} style={{ color: 'var(--color-text-3)' }} /></td>
                     </tr>
                   )
                 })}

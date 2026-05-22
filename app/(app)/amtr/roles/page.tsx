@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  fetchAmtrRoleAssignments, addAmtrRole, removeAmtrRole,
-  fetchAmtrByBase, upsertAmtrRow, deleteAmtrRow,
-  type AmtrRoleAssignment, type AmtrRole,
+  fetchAmtrRoleAssignments, addAmtrRole, removeAmtrRole, fetchAmtrMembers,
+  fetchAmtrByBase, upsertAmtrRow, deleteAmtrRow, removeAmtrMemberFromRoster, deleteAmtrMember,
+  syncAmtrRosterFromBase,
+  type AmtrRoleAssignment, type AmtrRole, type AmtrMember,
 } from '@/lib/supabase/amtr'
 import { seedBaseCatalogs, SEED_COUNTS } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
@@ -19,10 +19,9 @@ import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Download, ChevronRight, ChevronDown, BarChart3 } from 'lucide-react'
+import { ArrowLeft, Download, ChevronRight, ChevronDown, BarChart3, Trash2 } from 'lucide-react'
 
 type Row = Record<string, unknown>
-type Profile = { id: string; label: string; sortKey: string }
 const ROLES: AmtrRole[] = ['trainee', 'trainer', 'certifier', 'namt', 'afm']
 
 export default function AmtrRolesPage() {
@@ -34,7 +33,7 @@ export default function AmtrRolesPage() {
   const [loading, setLoading] = useState(true)
   const [seeding, setSeeding] = useState(false)
   const [assignments, setAssignments] = useState<AmtrRoleAssignment[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [members, setMembers] = useState<AmtrMember[]>([])
   const [search, setSearch] = useState('')
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [cat1098, setCat1098] = useState<Row[]>([])
@@ -47,9 +46,11 @@ export default function AmtrRolesPage() {
   const load = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
-    const supabase = createClient()
-    const [a, c1098, crat, cjqs, cinsp, cet, cmile] = await Promise.all([
+    // Roster mirrors the base's assigned users — pull in any new ones.
+    await syncAmtrRosterFromBase(installationId)
+    const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
+      fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_rat_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
@@ -57,35 +58,7 @@ export default function AmtrRolesPage() {
       fetchAmtrByBase<Row>('amtr_623a_entry_types', installationId),
       fetchAmtrByBase<Row>('amtr_milestone_catalog', installationId),
     ])
-    setAssignments(a); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile)
-    if (supabase) {
-      try {
-        // Only personnel assigned to THIS base (base_members), not all Glidepath users.
-        const { data: bm } = await supabase.from('base_members').select('user_id').eq('base_id', installationId)
-        const ids = ((bm ?? []) as unknown as { user_id: string }[]).map((m) => m.user_id).filter(Boolean)
-        let pq = supabase.from('profiles').select('*')
-        if (ids.length) pq = pq.in('id', ids)
-        const { data } = await pq
-        const rows = (data ?? []) as unknown as {
-          id: string; rank?: string | null; first_name?: string | null
-          last_name?: string | null; name?: string | null; email?: string | null
-        }[]
-        const mapped = rows.map((r) => {
-          const last = (r.last_name || '').trim()
-          const first = (r.first_name || '').trim()
-          const rank = (r.rank || '').trim()
-          let label: string
-          if (last || first) {
-            label = `${rank ? rank + ' ' : ''}${last}${last && first ? ', ' : ''}${first}`.trim()
-          } else {
-            label = r.name || r.email || r.id
-          }
-          return { id: r.id, label, sortKey: (last || r.name || r.email || '').toLowerCase() }
-        })
-        mapped.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-        setProfiles(mapped)
-      } catch { /* RLS may block; manual entry still possible */ }
-    }
+    setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile)
     setLoading(false)
   }, [installationId])
 
@@ -115,6 +88,16 @@ export default function AmtrRolesPage() {
     if (error) { toast.error(error); return }
     load()
   }
+
+  const removeFromRoster = async (m: AmtrMember) => {
+    if (!installationId) return
+    if (!window.confirm(`Remove ${m.full_name} from the training roster? Their training record will be deleted and they won't be auto-added again.`)) return
+    const { error } = m.user_id
+      ? await removeAmtrMemberFromRoster(installationId, m.user_id)
+      : await deleteAmtrMember(m.id)
+    if (error) { toast.error(error); return }
+    toast.success('Removed from training roster'); load()
+  }
   const addTask = async (table: 'amtr_1098_catalog' | 'amtr_rat_catalog', field: 'task' | 'course') => {
     if (!installationId) return
     const value = window.prompt('Name:')?.trim()
@@ -128,9 +111,10 @@ export default function AmtrRolesPage() {
   // (user_id:role) → assignment id, for the matrix checkboxes.
   const assignByKey = new Map<string, string>()
   for (const a of assignments) assignByKey.set(`${a.user_id}:${a.role}`, a.id)
-  const filteredProfiles = search.trim()
-    ? profiles.filter((p) => p.label.toLowerCase().includes(search.trim().toLowerCase()))
-    : profiles
+  const sortedMembers = [...members].sort((a, b) => a.full_name.localeCompare(b.full_name))
+  const filteredMembers = search.trim()
+    ? sortedMembers.filter((m) => m.full_name.toLowerCase().includes(search.trim().toLowerCase()))
+    : sortedMembers
   const catalogsLoaded = catJqs.length > 0
 
   return (
@@ -157,39 +141,50 @@ export default function AmtrRolesPage() {
           <CollapsibleCard title="Role Assignments"
             actions={<input className="input-dark" placeholder="Search members…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} />}>
             <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
-              Check a box to assign a role; uncheck to remove it. Signing authority is hierarchical — a Certifier may sign the Trainee, Trainer, and Certifier blocks; NAMT signs all but AFM; AFM signs every block. On their own record a member may only sign the Trainee block. Each signature locks its own block.
+              Check a box to assign a role; uncheck to remove it. The roster auto-populates from the base; use the trash icon to remove anyone who doesn&apos;t require a training record. Signing authority is hierarchical — a Certifier may sign the Trainee, Trainer, and Certifier blocks; NAMT signs all but AFM; AFM signs every block. On their own record a member may only sign the Trainee block. Each signature locks its own block.
             </p>
-            {profiles.length === 0 ? <EmptyState message="No personnel found for this base." /> : (
+            {members.length === 0 ? <EmptyState message="No members on the roster yet — they populate automatically from the base's assigned users." /> : (
               <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <th style={{ ...thStyle, textAlign: 'left' }}>Member</th>
                       {ROLES.map((r) => <th key={r} style={{ ...thStyle, textAlign: 'center', width: 90 }}>{AMTR_ROLE_LABELS[r]}</th>)}
+                      <th style={{ ...thStyle, textAlign: 'center', width: 60 }}>Roster</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProfiles.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                        <td style={{ ...tdStyle, fontWeight: 600 }}>{p.label}</td>
-                        {ROLES.map((r) => {
-                          const key = `${p.id}:${r}`
-                          const existingId = assignByKey.get(key)
-                          return (
-                            <td key={r} style={{ ...tdStyle, textAlign: 'center' }}>
-                              <input type="checkbox" checked={!!existingId} disabled={savingKey === key}
-                                onChange={() => toggleAssign(p.id, r, existingId)}
-                                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--color-accent)' }} />
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    ))}
+                    {filteredMembers.map((m) => {
+                      const uid = m.user_id
+                      return (
+                        <tr key={m.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                          <td style={{ ...tdStyle, fontWeight: 600 }}>{m.full_name}</td>
+                          {ROLES.map((r) => {
+                            if (!uid) return <td key={r} style={{ ...tdStyle, textAlign: 'center', color: 'var(--color-text-3)' }} title="No linked account">—</td>
+                            const key = `${uid}:${r}`
+                            const existingId = assignByKey.get(key)
+                            return (
+                              <td key={r} style={{ ...tdStyle, textAlign: 'center' }}>
+                                <input type="checkbox" checked={!!existingId} disabled={savingKey === key}
+                                  onChange={() => toggleAssign(uid, r, existingId)}
+                                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--color-accent)' }} />
+                              </td>
+                            )
+                          })}
+                          <td style={{ ...tdStyle, textAlign: 'center' }}>
+                            <button onClick={() => removeFromRoster(m)} title="Remove from training roster"
+                              style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: 'var(--color-text-3)' }}>
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
-            {search.trim() && filteredProfiles.length === 0 && (
+            {search.trim() && filteredMembers.length === 0 && (
               <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 8 }}>No members match “{search}”.</div>
             )}
           </CollapsibleCard>

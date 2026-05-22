@@ -182,6 +182,17 @@ export async function excludeAmtrMember(baseId: string, userId: string): Promise
   return { error: error ? friendlyError(error.message) : null }
 }
 
+/** Remove a base user from the training roster: exclude them (so auto-sync
+ * won't re-add) and delete their member record. */
+export async function removeAmtrMemberFromRoster(baseId: string, userId: string): Promise<{ error: string | null }> {
+  const supabase = db()
+  if (!supabase) return { error: 'Supabase not configured' }
+  const { error: exclErr } = await excludeAmtrMember(baseId, userId)
+  if (exclErr) return { error: exclErr }
+  const { error } = await supabase.from('amtr_members').delete().eq('base_id', baseId).eq('user_id', userId)
+  return { error: error ? friendlyError(error.message) : null }
+}
+
 /** Create training-record members for every base user not already on the roster
  * and not excluded. Returns how many were created. Requires amtr:write. */
 export async function syncAmtrRosterFromBase(baseId: string): Promise<{ created: number; error: string | null }> {

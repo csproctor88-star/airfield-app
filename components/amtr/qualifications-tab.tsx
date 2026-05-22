@@ -53,7 +53,7 @@ export function QualificationsTab(props: { installationId: string; memberId: str
           {canEnterData && <span style={{ marginLeft: 'auto' }}><Btn variant="secondary" onClick={addQtp}>+ Add</Btn></span>}
         </div>
         {qtps.length === 0 ? <div style={{ padding: 14, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>None.</div> : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: 'auto', borderCollapse: 'collapse' }}>
             <thead><tr><th style={thStyle}>Qualification</th><th style={thStyle}>Complete Date</th><th style={thStyle} /></tr></thead>
             <tbody>
               {qtps.map((r) => (
@@ -71,7 +71,7 @@ export function QualificationsTab(props: { installationId: string; memberId: str
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)' }}><strong>Skill Levels &amp; Special Experience Identifiers</strong></div>
         {quals.length === 0 ? <div style={{ padding: 14, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>None.</div> : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: 'auto', borderCollapse: 'collapse' }}>
             <thead><tr><th style={thStyle}>Qualification</th><th style={thStyle}>Yes / No</th></tr></thead>
             <tbody>
               {quals.map((r) => (
