@@ -17,6 +17,7 @@ import { MilestoneCatalogEditor } from '@/components/amtr/milestone-catalog-edit
 import { Form803CatalogEditor } from '@/components/amtr/form803-catalog-editor'
 import { QualCatalogEditor } from '@/components/amtr/qual-catalog-editor'
 import { SimpleCatalogEditor } from '@/components/amtr/simple-catalog-editor'
+import { ResourceDialog } from '@/components/amtr/resource-dialog'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -39,6 +40,7 @@ export default function AmtrRolesPage() {
   const hafFileRef = useRef<HTMLInputElement>(null)
   const [uploadPreview, setUploadPreview] = useState<{ cfgs: SyncCfg[]; summary: Record<string, number> } | null>(null)
   const [uploadApplying, setUploadApplying] = useState(false)
+  const [resourceFor, setResourceFor] = useState<Row | null>(null)
   const [assignments, setAssignments] = useState<AmtrRoleAssignment[]>([])
   const [members, setMembers] = useState<AmtrMember[]>([])
   const [search, setSearch] = useState('')
@@ -172,6 +174,10 @@ export default function AmtrRolesPage() {
       </div>
       <h1 style={{ marginTop: 0, fontSize: 22 }}>Admin</h1>
 
+      {resourceFor && (
+        <ResourceDialog catalogId={String(resourceFor.id)} taskLabel={String(resourceFor.task ?? 'Task')} installationId={installationId!} canManage={canManage} onClose={() => setResourceFor(null)} />
+      )}
+
       {uploadPreview && (
         <div onClick={() => !uploadApplying && setUploadPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 460, maxWidth: '100%', padding: 0 }}>
@@ -278,7 +284,7 @@ export default function AmtrRolesPage() {
           {/* 1098 catalog */}
           <CollapsibleCard title="DAF 1098 — Recurring Training" count={cat1098.length}
             actions={<Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>}>
-            <CatalogList rows={cat1098} field="task" onDelete={async (id) => { await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
+            <CatalogList rows={cat1098} field="task" onResources={(r) => setResourceFor(r)} onDelete={async (id) => { await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
           </CollapsibleCard>
 
           {/* RAT catalog */}
@@ -355,7 +361,7 @@ function CollapsibleCard({ title, count, actions, children }: {
   )
 }
 
-function CatalogList({ rows, field, onDelete }: { rows: Row[]; field: string; onDelete: (id: string) => void }) {
+function CatalogList({ rows, field, onDelete, onResources }: { rows: Row[]; field: string; onDelete: (id: string) => void; onResources?: (row: Row) => void }) {
   if (rows.length === 0) return <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 8 }}>No items — use “Load standard catalogs” above or add manually.</div>
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
@@ -365,7 +371,8 @@ function CatalogList({ rows, field, onDelete }: { rows: Row[]; field: string; on
           <tr key={String(r.id)} style={{ borderBottom: '1px solid var(--color-border)' }}>
             <td style={tdStyle}>{String(r[field] ?? '')}</td>
             <td style={tdStyle}>{String(r.frequency ?? '')}</td>
-            <td style={{ ...tdStyle, textAlign: 'right' }}>
+            <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
+              {onResources && <Btn variant="ghost" onClick={() => onResources(r)}>Resources</Btn>}
               <Btn variant="ghost" onClick={() => onDelete(String(r.id))}>Remove</Btn>
             </td>
           </tr>
