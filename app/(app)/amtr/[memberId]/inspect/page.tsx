@@ -121,7 +121,7 @@ export default function AmtrInspectPage() {
       r1098Catalog: r1098Cat, r1098Progress: r1098Prog,
       ratCatalog: ratCat, ratProgress: ratProg,
       e623a, items797, items803,
-      milestoneProgress: mileProg,
+      milestoneCatalog: mileCat,
       formalCatalog: formalCat, formalProgress: formalProg,
     }) : ({} as Record<string, { auto: 'yes' | 'no' | 'na' | null; findings: string[] }>)
 

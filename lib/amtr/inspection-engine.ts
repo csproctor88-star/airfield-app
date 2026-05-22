@@ -24,7 +24,7 @@ export type InspectionScanData = {
   e623a: Row[]
   items797: Row[]
   items803: Row[]
-  milestoneProgress: Row[]
+  milestoneCatalog: Row[]
   formalCatalog: Row[]; formalProgress: Row[]
 }
 
@@ -173,11 +173,11 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     }
   }
 
-  // 8.1 — milestones have a target window (color-coding)
+  // 8.1 — milestones have a target window (color-coding); defined in the catalog
   {
-    if (d.milestoneProgress.length === 0) set('milestone_window_set', 'na')
+    if (d.milestoneCatalog.length === 0) set('milestone_window_set', 'na')
     else {
-      const missing = d.milestoneProgress.filter((p) => !has(p.target_window)).map((p) => String(p.catalog_id))
+      const missing = d.milestoneCatalog.filter((c) => !has(c.target_window)).map((c) => String(c.topic ?? c.id))
       set('milestone_window_set', missing.length ? 'no' : 'yes', summarize(missing, 'milestone(s) missing a target window'))
     }
   }

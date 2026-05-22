@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { upsertAmtrRow } from '@/lib/supabase/amtr'
 import { MILESTONE_PATHS } from '@/lib/amtr/reference-data'
 import { thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -15,25 +14,21 @@ const PATH_NOTES: Record<string, string> = {
   afmPcg: 'Completed prior to assuming Airfield Manager duties.',
 }
 
-const TARGET_WINDOWS = ['', '1-30 Days', '30-60 Days', '60-90 Days', '90-120 Days', '120-150 Days', '150-180 Days']
-
+// Read-only display of the base-shared milestone catalog. Milestones (and their
+// target windows) are defined once in Training Admin and shown the same on every
+// record — they identify WHEN each topic should be completed during upgrade
+// training. There is no per-member milestone data.
 export function MilestonesTab(props: {
-  catalog: Row[]; progress: Row[]; canEnterData: boolean
-  installationId: string; memberId: string; onChange: () => void
+  catalog: Row[]; installationId: string; memberId: string
+  // accepted for call-site compatibility; milestones are catalog-only now
+  progress?: Row[]; canEnterData?: boolean; onChange?: () => void
 }) {
-  const { catalog, progress, canEnterData, installationId, memberId, onChange } = props
+  const { catalog } = props
   const [path, setPath] = useState<string>('fiveLevelQtp')
-  const progByCat = new Map(progress.map((p) => [String(p.catalog_id), p]))
   const items = catalog.filter((c) => c.path === path)
   const hafGuidance = items.find((c) => c.haf_milestone)?.haf_milestone as string | undefined
 
-  if (catalog.length === 0) return <div className="card" style={{ color: 'var(--color-text-3)' }}>Milestone catalog is empty — load it from Roles &amp; Catalogs.</div>
-
-  const setWindow = async (catId: string, value: string) => {
-    const p = progByCat.get(catId)
-    await upsertAmtrRow('amtr_milestone_progress', { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, target_window: value || null })
-    onChange()
-  }
+  if (catalog.length === 0) return <div className="card" style={{ color: 'var(--color-text-3)' }}>Milestone catalog is empty — load it from Training Admin.</div>
 
   return (
     <div>
@@ -52,7 +47,7 @@ export function MilestonesTab(props: {
       {hafGuidance && <div className="card" style={{ marginBottom: 12, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}><strong>HAF Milestone:</strong> {hafGuidance}</div>}
       {items.length === 0 ? <EmptyState message="No milestones in this path." /> : (
         <div className="card" style={{ padding: 0, overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 <th style={{ ...thStyle, width: 160 }}>STS Items</th>
@@ -61,22 +56,13 @@ export function MilestonesTab(props: {
               </tr>
             </thead>
             <tbody>
-              {items.map((c) => {
-                const catId = String(c.id)
-                const p = progByCat.get(catId)
-                return (
-                  <tr key={catId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono, monospace)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>{c.sts_items ? String(c.sts_items) : '—'}</td>
-                    <td style={tdStyle}>{String(c.topic)}</td>
-                    <td style={tdStyle}>
-                      <select className="input-dark" style={{ padding: '4px 8px', fontSize: 'var(--fs-sm)', width: '100%' }} disabled={!canEnterData}
-                        defaultValue={(p?.target_window as string) ?? ''} onChange={(e) => setWindow(catId, e.target.value)}>
-                        {TARGET_WINDOWS.map((w) => <option key={w} value={w}>{w || '—'}</option>)}
-                      </select>
-                    </td>
-                  </tr>
-                )
-              })}
+              {items.map((c) => (
+                <tr key={String(c.id)} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  <td style={{ ...tdStyle, fontFamily: 'var(--font-mono, monospace)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>{c.sts_items ? String(c.sts_items) : '—'}</td>
+                  <td style={tdStyle}>{String(c.topic)}</td>
+                  <td style={tdStyle}>{c.target_window ? String(c.target_window) : '—'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -13,6 +13,7 @@ import {
 import { seedBaseCatalogs, SEED_COUNTS } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
 import { InspectionChecklistEditor } from '@/components/amtr/inspection-checklist-editor'
+import { MilestoneCatalogEditor } from '@/components/amtr/milestone-catalog-editor'
 import { SimpleCatalogEditor } from '@/components/amtr/simple-catalog-editor'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -41,20 +42,22 @@ export default function AmtrRolesPage() {
   const [catJqs, setCatJqs] = useState<Row[]>([])
   const [catInsp, setCatInsp] = useState<Row[]>([])
   const [catEntryTypes, setCatEntryTypes] = useState<Row[]>([])
+  const [catMilestone, setCatMilestone] = useState<Row[]>([])
 
   const load = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
     const supabase = createClient()
-    const [a, c1098, crat, cjqs, cinsp, cet] = await Promise.all([
+    const [a, c1098, crat, cjqs, cinsp, cet, cmile] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_rat_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_inspection_checklist', installationId),
       fetchAmtrByBase<Row>('amtr_623a_entry_types', installationId),
+      fetchAmtrByBase<Row>('amtr_milestone_catalog', installationId),
     ])
-    setAssignments(a); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet)
+    setAssignments(a); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile)
     if (supabase) {
       try {
         // Only personnel assigned to THIS base (base_members), not all Glidepath users.
@@ -200,6 +203,14 @@ export default function AmtrRolesPage() {
           <CollapsibleCard title="Ready Airman Training" count={catRat.length}
             actions={<Btn variant="secondary" onClick={() => addTask('amtr_rat_catalog', 'course')}>+ Add course</Btn>}>
             <CatalogList rows={catRat} field="course" onDelete={async (id) => { await deleteAmtrRow('amtr_rat_catalog', id); load() }} />
+          </CollapsibleCard>
+
+          {/* Milestones */}
+          <CollapsibleCard title="QTP / PCG Milestones" count={catMilestone.length}>
+            <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
+              Upgrade milestones and their target windows, defined once here and shown the same on every record. Grouped by upgrade path.
+            </p>
+            <MilestoneCatalogEditor catalog={catMilestone} installationId={installationId!} onChange={load} />
           </CollapsibleCard>
 
           {/* 623A entry types */}

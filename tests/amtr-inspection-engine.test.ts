@@ -11,7 +11,7 @@ function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
     e623a: [],
     items797: [],
     items803: [],
-    milestoneProgress: [],
+    milestoneCatalog: [],
     formalCatalog: [], formalProgress: [],
     ...over,
   }
