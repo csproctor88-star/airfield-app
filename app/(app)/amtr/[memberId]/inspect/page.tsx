@@ -108,8 +108,9 @@ export default function AmtrInspectPage() {
     }
 
     // Checklist source: configured rows, else the bundled standard checklist.
-    const cl: ChecklistRow[] = checklistRows.length
-      ? checklistRows.map((r) => ({ kind: r.kind, item_number: r.item_number, label: r.label, auto_key: r.auto_key }))
+    const liveRows = checklistRows.filter((r) => !(r as { retired?: boolean }).retired)
+    const cl: ChecklistRow[] = liveRows.length
+      ? liveRows.map((r) => ({ kind: r.kind, item_number: r.item_number, label: r.label, auto_key: r.auto_key }))
       : DEFAULT_INSPECTION_CHECKLIST.map((r) => ({ kind: r.kind, item_number: r.item_number, label: r.label, auto_key: r.auto_key ?? null }))
     setChecklist(cl)
 

@@ -362,6 +362,20 @@ export async function reorderAmtrRows(
   return { error: null }
 }
 
+/** The standard-catalog version a base is currently on (null if never synced). */
+export async function fetchAmtrCatalogVersion(baseId: string): Promise<string | null> {
+  const supabase = db()
+  if (!supabase) return null
+  const { data } = await supabase.from('amtr_catalog_version').select('version').eq('base_id', baseId).maybeSingle()
+  return (data as { version?: string } | null)?.version ?? null
+}
+
+export async function setAmtrCatalogVersion(baseId: string, version: string): Promise<void> {
+  const supabase = db()
+  if (!supabase) return
+  await supabase.from('amtr_catalog_version').upsert({ base_id: baseId, version, updated_at: new Date().toISOString() } as never, { onConflict: 'base_id' })
+}
+
 export async function deleteAmtrRow(table: string, id: string): Promise<{ error: string | null }> {
   const supabase = db()
   if (!supabase) return { error: 'Supabase not configured' }

@@ -35,7 +35,7 @@ export function FormalTab(props: {
     </div>
     <div style={{ display: 'grid', gap: 16 }}>
       {FORMAL_SECTIONS.map((sec) => {
-        const courses = catalog.filter((c) => c.section === sec.key)
+        const courses = catalog.filter((c) => c.section === sec.key && !c.retired)
         if (courses.length === 0) return null
         return (
           <div key={sec.key} className="card" style={{ padding: 0, overflow: 'hidden' }}>

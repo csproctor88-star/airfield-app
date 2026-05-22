@@ -29,6 +29,7 @@ export function RatTab(props: {
     reconciledFor.current = memberId
     const byCat = new Map(progress.map((p) => [String(p.catalog_id), p]))
     for (const c of catalog) {
+      if (c.retired) continue
       const p = byCat.get(String(c.id))
       const due = (p?.due as string) ?? null
       if (!due) continue
@@ -61,7 +62,7 @@ export function RatTab(props: {
         <h2 style={{ margin: 0, fontSize: 18 }}>Ready Airman Training</h2>
         {canManage && <div style={{ marginLeft: 'auto' }}><Btn variant="secondary" onClick={() => setEditMode(true)}><Pencil size={14} /> Edit catalog</Btn></div>}
       </div>
-      {catalog.length === 0 ? (
+      {catalog.filter((c) => !c.retired).length === 0 ? (
         <EmptyState message="RAT catalog is empty — use Edit catalog to add courses (or load standard catalogs under Roles & Catalogs)." />
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -72,7 +73,7 @@ export function RatTab(props: {
               </tr>
             </thead>
             <tbody>
-              {catalog.map((c) => {
+              {catalog.filter((c) => !c.retired).map((c) => {
                 const p = progByCat.get(String(c.id))
                 const completed = (p?.completed as string) ?? ''
                 const due = (p?.due as string) ?? ''

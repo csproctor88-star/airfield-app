@@ -102,6 +102,7 @@ export function JqsTab(props: {
   // Build section → items grouping in catalog order.
   const groups: { section: Row | null; items: Row[] }[] = []
   for (const c of catalog) {
+    if (c.retired) continue
     if (c.kind === 'section') groups.push({ section: c, items: [] })
     else {
       if (groups.length === 0) groups.push({ section: null, items: [] })

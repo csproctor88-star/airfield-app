@@ -13,7 +13,12 @@ import milestones from './data/milestones.json'
 import { DEFAULT_INSPECTION_CHECKLIST } from './inspection-checklist'
 import { DEFAULT_623A_ENTRY_TYPES } from './reference-data'
 import std803 from './data/std-803.json'
-import { insertAmtrRows, countAmtrRows } from '@/lib/supabase/amtr'
+import {
+  insertAmtrRows, countAmtrRows, fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, setAmtrCatalogVersion,
+} from '@/lib/supabase/amtr'
+
+// Bump when the bundled standard catalogs are updated to a new HAF release.
+export const CATALOG_VERSION = '2026.05 (1C7X1)'
 
 const STD_803 = std803 as Record<string, unknown>[]
 
@@ -61,7 +66,7 @@ export const SEED_COUNTS = {
 }
 
 const withBase = (baseId: string, rows: Record<string, unknown>[]) =>
-  rows.map((r) => ({ ...r, base_id: baseId }))
+  rows.map((r) => ({ ...r, base_id: baseId, managed: true }))
 
 export type SeedResult = { table: string; inserted: number; skipped: boolean; error: string | null }
 
@@ -101,5 +106,59 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
       { base_id: baseId, year_label: String(year - 1), is_current: false },
     ])
   }
+  await setAmtrCatalogVersion(baseId, CATALOG_VERSION)
   return results
+}
+
+// ── Version-aware standard-catalog sync ────────────────────
+type SyncRow = Record<string, unknown>
+type SyncCfg = { table: string; rows: SyncRow[]; key: (r: SyncRow) => string; fields: string[] }
+const SYNC: SyncCfg[] = [
+  { table: 'amtr_jqs_catalog', rows: JQS_CATALOG as unknown as SyncRow[], key: (r) => `${r.kind}|${r.number ?? r.title}`, fields: ['kind', 'number', 'title', 'depth', 'required', 'training_refs', 'core_cert', 'deploy_sei', 'prof3', 'prof5', 'prof7', 'prof9', 'sort_order'] },
+  { table: 'amtr_1098_catalog', rows: RECURRING_1098 as unknown as SyncRow[], key: (r) => String(r.task), fields: ['task', 'type', 'frequency', 'score_or_hours', 'sort_order'] },
+  { table: 'amtr_formal_catalog', rows: FORMAL_COURSES as unknown as SyncRow[], key: (r) => `${r.section}|${r.course}`, fields: ['section', 'course', 'sort_order'] },
+  { table: 'amtr_rat_catalog', rows: RAT_COURSES as unknown as SyncRow[], key: (r) => String(r.course), fields: ['course', 'category', 'method', 'frequency', 'sort_order'] },
+  { table: 'amtr_milestone_catalog', rows: MILESTONES as unknown as SyncRow[], key: (r) => `${r.path}|${r.topic}`, fields: ['path', 'phase_label', 'sts_items', 'topic', 'sort_order'] },
+  { table: 'amtr_inspection_checklist', rows: INSPECTION_CHECKLIST, key: (r) => `${r.kind}|${r.item_number ?? r.label}`, fields: ['kind', 'label', 'item_number', 'auto_key', 'sort_order'] },
+  { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A, key: (r) => String(r.label), fields: ['label', 'sort_order'] },
+  { table: 'amtr_803_catalog', rows: STD_803, key: (r) => `${r.section}|${r.sts_item}`, fields: ['section', 'sts_item', 'sort_order'] },
+  { table: 'amtr_qual_catalog', rows: QUAL_CATALOG, key: (r) => `${r.category}|${r.name}`, fields: ['category', 'name', 'sort_order'] },
+]
+
+export type SyncResult = { table: string; added: number; updated: number; retired: number; error: string | null }
+
+/**
+ * Merge the bundled standard catalogs into a base BY NATURAL KEY: update
+ * changed managed rows in place (preserving their id → member progress
+ * stays attached), insert new items, and soft-retire managed items dropped
+ * from the new version. NAMT-added custom rows (managed=false) are untouched.
+ * Never deletes — records survive a version change.
+ */
+export async function syncStandardCatalogs(baseId: string): Promise<SyncResult[]> {
+  const out: SyncResult[] = []
+  for (const cfg of SYNC) {
+    const existing = await fetchAmtrByBase<SyncRow>(cfg.table, baseId)
+    const exByKey = new Map(existing.map((r) => [cfg.key(r), r]))
+    const bundledKeys = new Set(cfg.rows.map(cfg.key))
+    let added = 0, updated = 0, retired = 0, error: string | null = null
+    for (const b of cfg.rows) {
+      const ex = exByKey.get(cfg.key(b))
+      const payload: SyncRow = { managed: true, retired: false }
+      for (const f of cfg.fields) payload[f] = b[f] ?? null
+      if (ex) {
+        const changed = ex.retired === true || ex.managed !== true || cfg.fields.some((f) => String(ex[f] ?? '') !== String(b[f] ?? ''))
+        if (changed) { const { error: e } = await updateAmtrRow(cfg.table, String(ex.id), payload); if (e) error = e; else updated++ }
+      } else {
+        const { error: e } = await upsertAmtrRow(cfg.table, { base_id: baseId, ...payload }); if (e) error = e; else added++
+      }
+    }
+    for (const ex of existing) {
+      if (ex.managed === true && ex.retired !== true && !bundledKeys.has(cfg.key(ex))) {
+        const { error: e } = await updateAmtrRow(cfg.table, String(ex.id), { retired: true }); if (e) error = e; else retired++
+      }
+    }
+    out.push({ table: cfg.table, added, updated, retired, error })
+  }
+  await setAmtrCatalogVersion(baseId, CATALOG_VERSION)
+  return out
 }

@@ -42,7 +42,7 @@ export function Form803Tab(props: {
     onChange()
   }
   const populateStandard = async () => {
-    const std = catalog.filter((c) => c.section === section)
+    const std = catalog.filter((c) => c.section === section && !c.retired)
     const existing = new Set(sectionRows.map((r) => String(r.sts_item ?? '').trim()).filter(Boolean))
     const toAdd = std.filter((c) => !existing.has(String(c.sts_item ?? '').trim()))
     if (toAdd.length === 0) { toast.info('All standard items already added for this section.'); return }
@@ -53,7 +53,7 @@ export function Form803Tab(props: {
     toast.success(`Added ${toAdd.length} standard item${toAdd.length === 1 ? '' : 's'}`)
     onChange()
   }
-  const stdCount = catalog.filter((c) => c.section === section).length
+  const stdCount = catalog.filter((c) => c.section === section && !c.retired).length
   const setField = async (r: Row, field: string, value: unknown) => {
     await upsertAmtrRow('amtr_803', { ...r, [field]: value })
     onChange()

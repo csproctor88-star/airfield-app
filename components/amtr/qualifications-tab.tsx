@@ -40,7 +40,7 @@ export function QualificationsTab(props: { installationId: string; memberId: str
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       {GROUPS.map((g) => {
-        const items = catalog.filter((c) => c.category === g.category)
+        const items = catalog.filter((c) => c.category === g.category && !c.retired)
         if (items.length === 0) return null
         return (
           <div key={g.category} className="card" style={{ padding: 0, overflow: 'hidden' }}>

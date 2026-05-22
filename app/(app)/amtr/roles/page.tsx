@@ -7,10 +7,10 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchAmtrRoleAssignments, addAmtrRole, removeAmtrRole, fetchAmtrMembers,
   fetchAmtrByBase, upsertAmtrRow, deleteAmtrRow, removeAmtrMemberFromRoster, deleteAmtrMember,
-  syncAmtrRosterFromBase,
+  syncAmtrRosterFromBase, fetchAmtrCatalogVersion,
   type AmtrRoleAssignment, type AmtrRole, type AmtrMember,
 } from '@/lib/supabase/amtr'
-import { seedBaseCatalogs, SEED_COUNTS } from '@/lib/amtr/seed-data'
+import { seedBaseCatalogs, syncStandardCatalogs, SEED_COUNTS, CATALOG_VERSION } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
 import { InspectionChecklistEditor } from '@/components/amtr/inspection-checklist-editor'
 import { MilestoneCatalogEditor } from '@/components/amtr/milestone-catalog-editor'
@@ -34,6 +34,8 @@ export default function AmtrRolesPage() {
 
   const [loading, setLoading] = useState(true)
   const [seeding, setSeeding] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [catalogVersion, setCatalogVersion] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<AmtrRoleAssignment[]>([])
   const [members, setMembers] = useState<AmtrMember[]>([])
   const [search, setSearch] = useState('')
@@ -52,7 +54,7 @@ export default function AmtrRolesPage() {
     setLoading(true)
     // Roster mirrors the base's assigned users — pull in any new ones.
     await syncAmtrRosterFromBase(installationId)
-    const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile, c803, cqual] = await Promise.all([
+    const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile, c803, cqual, ver] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
@@ -63,8 +65,9 @@ export default function AmtrRolesPage() {
       fetchAmtrByBase<Row>('amtr_milestone_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_803_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
+      fetchAmtrCatalogVersion(installationId),
     ])
-    setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual)
+    setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual); setCatalogVersion(ver)
     setLoading(false)
   }, [installationId])
 
@@ -79,6 +82,18 @@ export default function AmtrRolesPage() {
     if (err) { toast.error(err.error!); return }
     const inserted = results.reduce((n, r) => n + r.inserted, 0)
     toast.success(inserted > 0 ? `Loaded standard catalogs (${inserted} rows)` : 'Standard catalogs already present')
+    load()
+  }
+  const updateStandard = async () => {
+    if (!installationId) return
+    if (!window.confirm(`Update standard catalogs to ${CATALOG_VERSION}? Existing records are preserved — items are matched by name/number, new ones added, and removed ones retired (not deleted).`)) return
+    setSyncing(true)
+    const results = await syncStandardCatalogs(installationId)
+    setSyncing(false)
+    const err = results.find((r) => r.error)
+    if (err) { toast.error(err.error!); return }
+    const a = results.reduce((n, r) => n + r.added, 0), u = results.reduce((n, r) => n + r.updated, 0), rt = results.reduce((n, r) => n + r.retired, 0)
+    toast.success(a + u + rt === 0 ? 'Already up to date' : `Updated catalogs — ${a} added, ${u} updated, ${rt} retired`)
     load()
   }
 
@@ -135,11 +150,18 @@ export default function AmtrRolesPage() {
         <>
           {/* Standard catalog adopt */}
           <CollapsibleCard title="Standard 1C7X1 Catalogs"
-            actions={<Btn variant="primary" onClick={loadStandard} disabled={seeding}>
-              <Download size={15} /> {seeding ? 'Loading…' : catalogsLoaded ? 'Re-check / load missing' : 'Load standard catalogs'}
-            </Btn>}>
+            actions={catalogsLoaded
+              ? <Btn variant={catalogVersion === CATALOG_VERSION ? 'secondary' : 'primary'} onClick={updateStandard} disabled={syncing}><Download size={15} /> {syncing ? 'Updating…' : `Update to ${CATALOG_VERSION}`}</Btn>
+              : <Btn variant="primary" onClick={loadStandard} disabled={seeding}><Download size={15} /> {seeding ? 'Loading…' : 'Load standard catalogs'}</Btn>}>
             <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-              Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), milestone ({SEED_COUNTS.milestones}), inspection checklist ({SEED_COUNTS.inspection}), standard 803 ({SEED_COUNTS.std803}), and qualifications ({SEED_COUNTS.quals}) catalogs for this base. Already-populated catalogs are skipped.
+              Standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), milestone ({SEED_COUNTS.milestones}), inspection checklist ({SEED_COUNTS.inspection}), 803 ({SEED_COUNTS.std803}), and qualifications ({SEED_COUNTS.quals}) catalogs.
+            </div>
+            <div style={{ marginTop: 8, fontSize: 'var(--fs-sm)' }}>
+              On version: <strong>{catalogVersion ?? '—'}</strong> · Available: <strong>{CATALOG_VERSION}</strong>
+              {catalogsLoaded && catalogVersion !== CATALOG_VERSION && <span style={{ marginLeft: 8, color: 'var(--color-warning)', fontWeight: 600 }}>Update available</span>}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              Updating merges the new standard by name/number: existing records are kept, new items added, removed items retired (not deleted). Your custom additions are untouched.
             </div>
           </CollapsibleCard>
 

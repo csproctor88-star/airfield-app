@@ -73,6 +73,7 @@ export function Form1098Tab(props: {
     reconciledFor.current = memberId
     const curYearProg = new Map(progress.filter((p) => p.year_label === currentYear).map((p) => [String(p.catalog_id), p]))
     for (const c of catalog) {
+      if (c.retired) continue
       const p = curYearProg.get(String(c.id))
       const next = (p?.next_due as string) ?? null
       if (!next) continue
@@ -92,6 +93,7 @@ export function Form1098Tab(props: {
   }
 
   if (catalog.length === 0) return <div className="card" style={{ color: 'var(--color-text-3)' }}>1098 catalog is empty — load it from Roles &amp; Catalogs.</div>
+  const activeCatalog = catalog.filter((c) => !c.retired)
 
   const ensure = async (catId: string): Promise<string> => {
     const ex = progByCat.get(catId)
@@ -117,8 +119,8 @@ export function Form1098Tab(props: {
     onChange()
   }
 
-  const kpi = { required: catalog.length, complete: 0, dueSoon: 0, overdue: 0 }
-  for (const c of catalog) {
+  const kpi = { required: activeCatalog.length, complete: 0, dueSoon: 0, overdue: 0 }
+  for (const c of activeCatalog) {
     const p = progByCat.get(String(c.id))
     const s = dueStatus({ dueDate: (p?.next_due as string) ?? null, completedDate: (p?.last_completed as string) ?? '' })
     if (s === 'complete') kpi.complete++; else if (s === 'due_soon') kpi.dueSoon++; else if (s === 'overdue') kpi.overdue++
@@ -167,7 +169,7 @@ export function Form1098Tab(props: {
           </tr>
         </thead>
         <tbody>
-          {catalog.map((c) => {
+          {activeCatalog.map((c) => {
             const catId = String(c.id)
             const p = progByCat.get(catId)
             const freq = String(c.frequency ?? 'Annual')
