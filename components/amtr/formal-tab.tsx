@@ -41,7 +41,7 @@ export function FormalTab(props: {
           <div key={sec.key} className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)' }}><strong>{sec.label}</strong></div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr><th style={thStyle}>Course</th><th style={thStyle}>Start</th><th style={thStyle}>Complete</th></tr></thead>
+              <thead><tr><th style={thStyle}>Course</th><th style={{ ...thStyle, width: 160 }}>Start</th><th style={{ ...thStyle, width: 160 }}>Complete</th></tr></thead>
               <tbody>
                 {courses.map((c) => {
                   const catId = String(c.id)
