@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRight, ChevronDown, X } from 'lucide-react'
-import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
+import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { buildSignoff } from '@/lib/amtr/notifications'
+import { DEFAULT_623A_ENTRY_TYPES } from '@/lib/amtr/reference-data'
 import { canSignSlot, canReopen, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn } from '@/components/amtr/ui'
@@ -12,12 +13,6 @@ import { EmptyState } from '@/components/ui/empty-state'
 type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_623a', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
 type ReopenFn = (table: 'amtr_623a', rowId: string, slot: SignSlot) => Promise<void>
-
-const ENTRY_TYPES = [
-  'Quarterly Training Records Inspection', 'Initial Training', 'Recurring Training',
-  'Monthly Proficiency Training', 'Trainer Appointment', 'Certifier Appointment',
-  'ALS / PME', 'AFFSA Message Review', 'Records Transcription', 'General Comment',
-]
 
 const COLS: { slot: SignSlot; label: string; sig: string; ph: string }[] = [
   { slot: 'trainee', label: 'Trainee Comment', sig: 'Trainee signature', ph: 'What was worked on, started, or completed…' },
@@ -34,7 +29,16 @@ export function Form623aTab(props: {
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(highlightItem ? [highlightItem] : []))
+  const [entryTypes, setEntryTypes] = useState<string[]>([...DEFAULT_623A_ENTRY_TYPES])
   const reopenAllowed = canReopen(myRoles)
+
+  useEffect(() => {
+    let active = true
+    fetchAmtrByBase<Row>('amtr_623a_entry_types', installationId).then((rows) => {
+      if (active && rows.length) setEntryTypes(rows.map((r) => String(r.label)).filter(Boolean))
+    })
+    return () => { active = false }
+  }, [installationId])
 
   const toggle = (id: string) => setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
 
@@ -135,7 +139,7 @@ export function Form623aTab(props: {
           })}
         </div>
       )}
-      <datalist id="amtr-623a-types">{ENTRY_TYPES.map((t) => <option key={t} value={t} />)}</datalist>
+      <datalist id="amtr-623a-types">{entryTypes.map((t) => <option key={t} value={t} />)}</datalist>
     </div>
   )
 }

@@ -11,11 +11,14 @@ import formalCourses from './data/formal-courses.json'
 import ratCourses from './data/rat-courses.json'
 import milestones from './data/milestones.json'
 import { DEFAULT_INSPECTION_CHECKLIST } from './inspection-checklist'
+import { DEFAULT_623A_ENTRY_TYPES } from './reference-data'
 import { insertAmtrRows, countAmtrRows } from '@/lib/supabase/amtr'
 
 const INSPECTION_CHECKLIST = DEFAULT_INSPECTION_CHECKLIST.map((r, i) => ({
   kind: r.kind, label: r.label, item_number: r.item_number, auto_key: r.auto_key ?? null, sort_order: i,
 })) as Record<string, unknown>[]
+
+const ENTRY_TYPES_623A = DEFAULT_623A_ENTRY_TYPES.map((label, i) => ({ label, sort_order: i })) as Record<string, unknown>[]
 
 export type JqsSeedRow = {
   kind: 'section' | 'item'; number: string | null; title: string; depth: number
@@ -61,6 +64,7 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
     { table: 'amtr_rat_catalog', rows: RAT_COURSES as unknown as Record<string, unknown>[] },
     { table: 'amtr_milestone_catalog', rows: MILESTONES as unknown as Record<string, unknown>[] },
     { table: 'amtr_inspection_checklist', rows: INSPECTION_CHECKLIST },
+    { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A },
   ]
   const results: SeedResult[] = []
   for (const job of jobs) {

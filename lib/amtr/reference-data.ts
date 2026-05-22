@@ -94,6 +94,14 @@ export const FORMAL_SECTIONS = [
   { key: 'continuation', label: 'Optional Continuation Training' },
 ] as const
 
+// Standard DAF 623A entry types — seeded into the editable per-base catalog.
+export const DEFAULT_623A_ENTRY_TYPES = [
+  'Initial Training', 'Recurring Training', 'Monthly Proficiency Training',
+  'Monthly Training Records Inspection', 'Quarterly Training Records Inspection',
+  'Trainer Appointment', 'Certifier Appointment', 'ALS / PME',
+  'AFFSA Message Review', 'Records Transcription', 'General Comment',
+] as const
+
 export const MILESTONE_PATHS = [
   { key: 'fiveLevelQtp', label: '5-Level QTP' },
   { key: 'amosAmslPcg', label: 'AMOS/AMSL PCG' },
