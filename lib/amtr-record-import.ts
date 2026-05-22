@@ -85,14 +85,25 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
     }
   }
 
-  // JQS-CFETP — item rows keyed by leading number
+  // JQS-CFETP — item rows keyed by leading number. Section/heading rows are
+  // merged across the row, so skip them (their merged title bleeds into the
+  // initials columns otherwise).
   const j = get('JQS-CFETP')
   if (j) {
+    const colNum = (s: string) => s.split('').reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0)
+    const sectionRows = new Set<number>()
+    for (const rng of ((j.model.merges as string[]) ?? [])) {
+      const mm = String(rng).match(/^A(\d+):([A-Z]+)(\d+)$/)
+      if (mm && mm[1] === mm[3] && colNum(mm[2]) >= 3) sectionRows.add(Number(mm[1]))
+    }
     for (let r = 7; r <= j.rowCount; r++) {
+      if (sectionRows.has(r)) continue
       const a = cell(j, `A${r}`); const m = a.match(/^\s*(\d+(?:\.\d+)*)/)
       if (!m) continue
       const start = parseAmtrDate(cell(j, `D${r}`)), comp = parseAmtrDate(cell(j, `E${r}`))
-      const tr = cell(j, `F${r}`), trn = cell(j, `G${r}`), cert = cell(j, `H${r}`)
+      let tr = cell(j, `F${r}`), trn = cell(j, `G${r}`), cert = cell(j, `H${r}`)
+      // Guard against merged-title bleed: a "value" equal to the row title isn't an initial.
+      if (tr === a) tr = ''; if (trn === a) trn = ''; if (cert === a) cert = ''
       if (start || comp || tr || trn || cert) out.jqs.push({ number: m[1].replace(/\.$/, ''), start_date: start, complete_date: comp, trainee: tr, trainer: trn, certifier: cert })
     }
   }
