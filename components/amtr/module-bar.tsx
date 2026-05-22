@@ -35,7 +35,7 @@ export function AmtrModuleBar() {
     <>
       <div style={{
         height: AMTR_BAR_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 8,
-        padding: '0 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
+        padding: '0 24px', borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg-elevated)',
         position: 'sticky', top: 0, zIndex: 50,
       }}>
         <Link href="/amtr" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--color-text-1)', textDecoration: 'none', fontWeight: 600, fontSize: 'var(--fs-sm)' }}>
