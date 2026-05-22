@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
@@ -10,7 +10,7 @@ import {
   syncAmtrRosterFromBase, fetchAmtrCatalogVersion,
   type AmtrRoleAssignment, type AmtrRole, type AmtrMember,
 } from '@/lib/supabase/amtr'
-import { seedBaseCatalogs, syncStandardCatalogs, SEED_COUNTS, CATALOG_VERSION } from '@/lib/amtr/seed-data'
+import { seedBaseCatalogs, syncStandardCatalogs, runSyncCatalogs, SEED_COUNTS, CATALOG_VERSION, type SyncCfg } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
 import { InspectionChecklistEditor } from '@/components/amtr/inspection-checklist-editor'
 import { MilestoneCatalogEditor } from '@/components/amtr/milestone-catalog-editor'
@@ -21,7 +21,7 @@ import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
-import { ArrowLeft, Download, ChevronRight, ChevronDown, BarChart3, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, ChevronRight, ChevronDown, BarChart3, Trash2, Upload, X } from 'lucide-react'
 
 type Row = Record<string, unknown>
 const ROLES: AmtrRole[] = ['trainee', 'trainer', 'certifier', 'namt', 'afm']
@@ -36,6 +36,9 @@ export default function AmtrRolesPage() {
   const [seeding, setSeeding] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [catalogVersion, setCatalogVersion] = useState<string | null>(null)
+  const hafFileRef = useRef<HTMLInputElement>(null)
+  const [uploadPreview, setUploadPreview] = useState<{ cfgs: SyncCfg[]; summary: Record<string, number> } | null>(null)
+  const [uploadApplying, setUploadApplying] = useState(false)
   const [assignments, setAssignments] = useState<AmtrRoleAssignment[]>([])
   const [members, setMembers] = useState<AmtrMember[]>([])
   const [search, setSearch] = useState('')
@@ -96,6 +99,29 @@ export default function AmtrRolesPage() {
     toast.success(a + u + rt === 0 ? 'Already up to date' : `Updated catalogs — ${a} added, ${u} updated, ${rt} retired`)
     load()
   }
+  const onHafFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    try {
+      const buf = await file.arrayBuffer()
+      const { parseStandardCatalogsWorkbook } = await import('@/lib/amtr-catalog-import')
+      const { cfgs, summary } = await parseStandardCatalogsWorkbook(buf)
+      if (cfgs.length === 0) { toast.error('No standard catalog content found in that workbook'); return }
+      setUploadPreview({ cfgs, summary })
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not read the workbook') }
+  }
+  const applyHafUpload = async () => {
+    if (!installationId || !uploadPreview) return
+    setUploadApplying(true)
+    const version = `HAF upload ${new Date().toISOString().slice(0, 10)}`
+    const results = await runSyncCatalogs(installationId, uploadPreview.cfgs, version)
+    setUploadApplying(false)
+    const err = results.find((r) => r.error)
+    if (err) { toast.error(err.error!); return }
+    const a = results.reduce((n, r) => n + r.added, 0), u = results.reduce((n, r) => n + r.updated, 0), rt = results.reduce((n, r) => n + r.retired, 0)
+    toast.success(`Updated from workbook — ${a} added, ${u} updated, ${rt} retired`)
+    setUploadPreview(null); load()
+  }
 
   // Matrix toggle: assignment present → revoke; absent → grant. Saves instantly.
   const toggleAssign = async (uid: string, role: AmtrRole, existingId: string | undefined) => {
@@ -146,6 +172,33 @@ export default function AmtrRolesPage() {
       </div>
       <h1 style={{ marginTop: 0, fontSize: 22 }}>Admin</h1>
 
+      {uploadPreview && (
+        <div onClick={() => !uploadApplying && setUploadPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 460, maxWidth: '100%', padding: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+              <Upload size={16} style={{ color: 'var(--color-accent)' }} />
+              <strong>Update standard catalogs from workbook</strong>
+              <button onClick={() => setUploadPreview(null)} disabled={uploadApplying} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
+            </div>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 10 }}>Catalog content found in the workbook:</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '4px 16px', fontSize: 'var(--fs-sm)' }}>
+                {Object.entries(uploadPreview.summary).map(([k, n]) => (
+                  <div key={k} style={{ display: 'contents' }}><span style={{ color: 'var(--color-text-2)' }}>{k}</span><span style={{ textAlign: 'right', fontWeight: 600 }}>{n}</span></div>
+                ))}
+              </div>
+              <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)' }}>
+                Items match by name/number: existing records are kept, new items added, removed standard items retired (not deleted). Custom additions and catalogs not in this workbook (formal, 623A types, inspection checklist) are untouched.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '12px 16px', borderTop: '1px solid var(--color-border)' }}>
+              <Btn variant="ghost" onClick={() => setUploadPreview(null)} disabled={uploadApplying}>Cancel</Btn>
+              <Btn variant="primary" onClick={applyHafUpload} disabled={uploadApplying}>{uploadApplying ? 'Updating…' : 'Update catalogs'}</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? <LoadingState /> : (
         <>
           {/* Standard catalog adopt */}
@@ -162,6 +215,11 @@ export default function AmtrRolesPage() {
             </div>
             <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
               Updating merges the new standard by name/number: existing records are kept, new items added, removed items retired (not deleted). Your custom additions are untouched.
+            </div>
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <Btn variant="secondary" onClick={() => hafFileRef.current?.click()}><Upload size={15} /> Update from HAF workbook…</Btn>
+              <input ref={hafFileRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={onHafFile} />
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Upload a newer official HAF training-record workbook to update the standard without a new app release.</span>
             </div>
           </CollapsibleCard>
 

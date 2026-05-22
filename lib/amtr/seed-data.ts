@@ -111,35 +111,57 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
 }
 
 // ── Version-aware standard-catalog sync ────────────────────
-type SyncRow = Record<string, unknown>
-type SyncCfg = { table: string; rows: SyncRow[]; key: (r: SyncRow) => string; fields: string[] }
-const SYNC: SyncCfg[] = [
-  { table: 'amtr_jqs_catalog', rows: JQS_CATALOG as unknown as SyncRow[], key: (r) => `${r.kind}|${r.number ?? r.title}`, fields: ['kind', 'number', 'title', 'depth', 'required', 'training_refs', 'core_cert', 'deploy_sei', 'prof3', 'prof5', 'prof7', 'prof9', 'sort_order'] },
-  { table: 'amtr_1098_catalog', rows: RECURRING_1098 as unknown as SyncRow[], key: (r) => String(r.task), fields: ['task', 'type', 'frequency', 'score_or_hours', 'sort_order'] },
-  { table: 'amtr_formal_catalog', rows: FORMAL_COURSES as unknown as SyncRow[], key: (r) => `${r.section}|${r.course}`, fields: ['section', 'course', 'sort_order'] },
-  { table: 'amtr_rat_catalog', rows: RAT_COURSES as unknown as SyncRow[], key: (r) => String(r.course), fields: ['course', 'category', 'method', 'frequency', 'sort_order'] },
-  { table: 'amtr_milestone_catalog', rows: MILESTONES as unknown as SyncRow[], key: (r) => `${r.path}|${r.topic}`, fields: ['path', 'phase_label', 'sts_items', 'topic', 'sort_order'] },
-  { table: 'amtr_inspection_checklist', rows: INSPECTION_CHECKLIST, key: (r) => `${r.kind}|${r.item_number ?? r.label}`, fields: ['kind', 'label', 'item_number', 'auto_key', 'sort_order'] },
-  { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A, key: (r) => String(r.label), fields: ['label', 'sort_order'] },
-  { table: 'amtr_803_catalog', rows: STD_803, key: (r) => `${r.section}|${r.sts_item}`, fields: ['section', 'sts_item', 'sort_order'] },
-  { table: 'amtr_qual_catalog', rows: QUAL_CATALOG, key: (r) => `${r.category}|${r.name}`, fields: ['category', 'name', 'sort_order'] },
-]
+export type SyncRow = Record<string, unknown>
+export type SyncCfg = { table: string; rows: SyncRow[]; key: (r: SyncRow) => string; fields: string[] }
+
+// Natural key + synced fields per standard catalog (shared by the bundled sync
+// and the uploaded-workbook sync so matching is identical).
+export const CATALOG_SYNC_META: Record<string, { key: (r: SyncRow) => string; fields: string[] }> = {
+  amtr_jqs_catalog: { key: (r) => `${r.kind}|${r.number ?? r.title}`, fields: ['kind', 'number', 'title', 'depth', 'required', 'training_refs', 'core_cert', 'deploy_sei', 'prof3', 'prof5', 'prof7', 'prof9', 'sort_order'] },
+  amtr_1098_catalog: { key: (r) => String(r.task), fields: ['task', 'type', 'frequency', 'score_or_hours', 'sort_order'] },
+  amtr_formal_catalog: { key: (r) => `${r.section}|${r.course}`, fields: ['section', 'course', 'sort_order'] },
+  amtr_rat_catalog: { key: (r) => String(r.course), fields: ['course', 'category', 'method', 'frequency', 'sort_order'] },
+  amtr_milestone_catalog: { key: (r) => `${r.path}|${r.topic}`, fields: ['path', 'phase_label', 'sts_items', 'topic', 'sort_order'] },
+  amtr_inspection_checklist: { key: (r) => `${r.kind}|${r.item_number ?? r.label}`, fields: ['kind', 'label', 'item_number', 'auto_key', 'sort_order'] },
+  amtr_623a_entry_types: { key: (r) => String(r.label), fields: ['label', 'sort_order'] },
+  amtr_803_catalog: { key: (r) => `${r.section}|${r.sts_item}`, fields: ['section', 'sts_item', 'sort_order'] },
+  amtr_qual_catalog: { key: (r) => `${r.category}|${r.name}`, fields: ['category', 'name', 'sort_order'] },
+}
+
+const BUNDLED: Record<string, SyncRow[]> = {
+  amtr_jqs_catalog: JQS_CATALOG as unknown as SyncRow[],
+  amtr_1098_catalog: RECURRING_1098 as unknown as SyncRow[],
+  amtr_formal_catalog: FORMAL_COURSES as unknown as SyncRow[],
+  amtr_rat_catalog: RAT_COURSES as unknown as SyncRow[],
+  amtr_milestone_catalog: MILESTONES as unknown as SyncRow[],
+  amtr_inspection_checklist: INSPECTION_CHECKLIST,
+  amtr_623a_entry_types: ENTRY_TYPES_623A,
+  amtr_803_catalog: STD_803,
+  amtr_qual_catalog: QUAL_CATALOG,
+}
+
+/** Build a SyncCfg for a table from a set of source rows (bundled or uploaded). */
+export function buildSyncCfg(table: string, rows: SyncRow[]): SyncCfg {
+  const m = CATALOG_SYNC_META[table]
+  return { table, rows, key: m.key, fields: m.fields }
+}
 
 export type SyncResult = { table: string; added: number; updated: number; retired: number; error: string | null }
 
 /**
- * Merge the bundled standard catalogs into a base BY NATURAL KEY: update
- * changed managed rows in place (preserving their id → member progress
- * stays attached), insert new items, and soft-retire managed items dropped
- * from the new version. NAMT-added custom rows (managed=false) are untouched.
- * Never deletes — records survive a version change.
+ * Merge a set of standard-catalog configs into a base BY NATURAL KEY: update
+ * changed managed rows in place (preserving their id → member progress stays
+ * attached), insert new items, and soft-retire managed items dropped from the
+ * new version. NAMT-added custom rows (managed=false) are untouched. Never
+ * deletes — records survive a version change. Only the catalogs present in
+ * `cfgs` are touched.
  */
-export async function syncStandardCatalogs(baseId: string): Promise<SyncResult[]> {
+export async function runSyncCatalogs(baseId: string, cfgs: SyncCfg[], version: string): Promise<SyncResult[]> {
   const out: SyncResult[] = []
-  for (const cfg of SYNC) {
+  for (const cfg of cfgs) {
     const existing = await fetchAmtrByBase<SyncRow>(cfg.table, baseId)
     const exByKey = new Map(existing.map((r) => [cfg.key(r), r]))
-    const bundledKeys = new Set(cfg.rows.map(cfg.key))
+    const newKeys = new Set(cfg.rows.map(cfg.key))
     let added = 0, updated = 0, retired = 0, error: string | null = null
     for (const b of cfg.rows) {
       const ex = exByKey.get(cfg.key(b))
@@ -153,12 +175,18 @@ export async function syncStandardCatalogs(baseId: string): Promise<SyncResult[]
       }
     }
     for (const ex of existing) {
-      if (ex.managed === true && ex.retired !== true && !bundledKeys.has(cfg.key(ex))) {
+      if (ex.managed === true && ex.retired !== true && !newKeys.has(cfg.key(ex))) {
         const { error: e } = await updateAmtrRow(cfg.table, String(ex.id), { retired: true }); if (e) error = e; else retired++
       }
     }
     out.push({ table: cfg.table, added, updated, retired, error })
   }
-  await setAmtrCatalogVersion(baseId, CATALOG_VERSION)
+  await setAmtrCatalogVersion(baseId, version)
   return out
+}
+
+/** Sync the base to the bundled standard catalogs (the app's current version). */
+export async function syncStandardCatalogs(baseId: string): Promise<SyncResult[]> {
+  const cfgs = Object.keys(CATALOG_SYNC_META).map((t) => buildSyncCfg(t, BUNDLED[t] ?? []))
+  return runSyncCatalogs(baseId, cfgs, CATALOG_VERSION)
 }
