@@ -23,6 +23,15 @@ const INSPECTION_CHECKLIST = DEFAULT_INSPECTION_CHECKLIST.map((r, i) => ({
 
 const ENTRY_TYPES_623A = DEFAULT_623A_ENTRY_TYPES.map((label, i) => ({ label, sort_order: i })) as Record<string, unknown>[]
 
+// Standard qualification training packages, skill levels, and SEIs.
+const QUAL_CATALOG = ([
+  ['qtp', 'KMTC Local PCG'], ['qtp', '5-Level QTP'], ['qtp', 'AMOPS Supervisor/Shift Lead PCG'],
+  ['qtp', '7-Level QTP'], ['qtp', 'Airfield Manager PCG'],
+  ['skill_level', 'Trainer'], ['skill_level', 'Certifier'], ['skill_level', '1C731 Skill Level'],
+  ['skill_level', '1C751 Skill Level'], ['skill_level', '1C771 Skill Level'], ['skill_level', '1C791 Skill Level'],
+  ['sei', 'SEI 155'], ['sei', 'SEI 368'], ['sei', 'SEI 090'], ['sei', 'SEI 3LZ'],
+] as [string, string][]).map(([category, name], i) => ({ category, name, sort_order: i })) as Record<string, unknown>[]
+
 export type JqsSeedRow = {
   kind: 'section' | 'item'; number: string | null; title: string; depth: number
   required: boolean; training_refs: string | null; core_cert: string | null
@@ -48,6 +57,7 @@ export const SEED_COUNTS = {
   milestones: MILESTONES.length,
   inspection: DEFAULT_INSPECTION_CHECKLIST.length,
   std803: STD_803.length,
+  quals: QUAL_CATALOG.length,
 }
 
 const withBase = (baseId: string, rows: Record<string, unknown>[]) =>
@@ -70,6 +80,7 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
     { table: 'amtr_inspection_checklist', rows: INSPECTION_CHECKLIST },
     { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A },
     { table: 'amtr_803_catalog', rows: STD_803 },
+    { table: 'amtr_qual_catalog', rows: QUAL_CATALOG },
   ]
   const results: SeedResult[] = []
   for (const job of jobs) {

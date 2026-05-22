@@ -15,6 +15,7 @@ import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
 import { InspectionChecklistEditor } from '@/components/amtr/inspection-checklist-editor'
 import { MilestoneCatalogEditor } from '@/components/amtr/milestone-catalog-editor'
 import { Form803CatalogEditor } from '@/components/amtr/form803-catalog-editor'
+import { QualCatalogEditor } from '@/components/amtr/qual-catalog-editor'
 import { SimpleCatalogEditor } from '@/components/amtr/simple-catalog-editor'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -44,13 +45,14 @@ export default function AmtrRolesPage() {
   const [catEntryTypes, setCatEntryTypes] = useState<Row[]>([])
   const [catMilestone, setCatMilestone] = useState<Row[]>([])
   const [cat803, setCat803] = useState<Row[]>([])
+  const [catQual, setCatQual] = useState<Row[]>([])
 
   const load = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
     // Roster mirrors the base's assigned users — pull in any new ones.
     await syncAmtrRosterFromBase(installationId)
-    const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile, c803] = await Promise.all([
+    const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile, c803, cqual] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
@@ -60,8 +62,9 @@ export default function AmtrRolesPage() {
       fetchAmtrByBase<Row>('amtr_623a_entry_types', installationId),
       fetchAmtrByBase<Row>('amtr_milestone_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_803_catalog', installationId),
+      fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
     ])
-    setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803)
+    setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual)
     setLoading(false)
   }, [installationId])
 
@@ -136,7 +139,7 @@ export default function AmtrRolesPage() {
               <Download size={15} /> {seeding ? 'Loading…' : catalogsLoaded ? 'Re-check / load missing' : 'Load standard catalogs'}
             </Btn>}>
             <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-              Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), milestone ({SEED_COUNTS.milestones}), inspection checklist ({SEED_COUNTS.inspection}), and standard 803 ({SEED_COUNTS.std803}) catalogs for this base. Already-populated catalogs are skipped.
+              Load the standard JQS-CFETP ({SEED_COUNTS.jqs}), DAF 1098 ({SEED_COUNTS.recurring1098}), formal ({SEED_COUNTS.formal}), RAT ({SEED_COUNTS.rat}), milestone ({SEED_COUNTS.milestones}), inspection checklist ({SEED_COUNTS.inspection}), standard 803 ({SEED_COUNTS.std803}), and qualifications ({SEED_COUNTS.quals}) catalogs for this base. Already-populated catalogs are skipped.
             </div>
           </CollapsibleCard>
 
@@ -210,6 +213,14 @@ export default function AmtrRolesPage() {
               Upgrade milestones and their target windows, defined once here and shown the same on every record. Grouped by upgrade path.
             </p>
             <MilestoneCatalogEditor catalog={catMilestone} installationId={installationId!} onChange={load} />
+          </CollapsibleCard>
+
+          {/* Qualifications / skill levels / SEIs */}
+          <CollapsibleCard title="Qualifications, Skill Levels & SEIs" count={catQual.length}>
+            <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
+              Qualification training packages, skill levels, and SEIs — defined once here and shown the same on every record. Members only track attained / completion date.
+            </p>
+            <QualCatalogEditor catalog={catQual} installationId={installationId!} onChange={load} />
           </CollapsibleCard>
 
           {/* 803 standard task evaluations */}

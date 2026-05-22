@@ -59,11 +59,11 @@ export default function AmtrReportsPage() {
       fetchAmtrByBase<Row>('amtr_rat_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_rat_progress', installationId, 'member_id'),
       fetchAmtrByBase<Row>('amtr_797', installationId, 'member_id'),
-      fetchAmtrByBase<Row>('amtr_quals', installationId, 'member_id'),
-      fetchAmtrByBase<Row>('amtr_qtp', installationId, 'member_id'),
+      fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
+      fetchAmtrByBase<Row>('amtr_qual_progress', installationId, 'member_id'),
     ])
     setMembers(mem)
-    setData({ jqsCat, jqsProg, formalCat, formalProg, r1098Cat, r1098Prog, ratCat, ratProg, items797, quals, qtps })
+    setData({ jqsCat, jqsProg, formalCat, formalProg, r1098Cat, r1098Prog, ratCat, ratProg, items797, qualCat: quals, qualProg: qtps })
     setLatestInsp(await fetchLatestInspectionPerMember(installationId))
 
     const jqsRequired = jqsCat.filter((c) => c.kind === 'item').length
@@ -437,17 +437,13 @@ function InspectionsTable({ members, latest, onMember }: { members: AmtrMember[]
 }
 
 function QualsMatrix({ members, data }: { members: AmtrMember[]; data: Record<string, Row[]> }) {
-  const quals = data.quals ?? []; const qtps = data.qtps ?? []
-  const qtpNames = Array.from(new Set(qtps.map((q) => String(q.name)))).filter(Boolean)
-  const qualNames = Array.from(new Set(quals.map((q) => String(q.name)))).filter(Boolean)
-  const cols = [...qtpNames, ...qualNames]
-  const filled = (memberId: string, col: string) => {
-    const q = qtps.find((x) => x.member_id === memberId && x.name === col)
-    if (q) return !!q.complete_date
-    const v = quals.find((x) => x.member_id === memberId && x.name === col)
-    return v?.value === 'Yes'
+  const cat = data.qualCat ?? []; const prog = data.qualProg ?? []
+  const cols = cat.map((c) => ({ id: String(c.id), name: String(c.name) }))
+  const filled = (memberId: string, catId: string) => {
+    const p = prog.find((x) => String(x.member_id) === memberId && String(x.catalog_id) === catId)
+    return !!p && (p.attained === true || !!p.complete_date)
   }
-  if (cols.length === 0) return <EmptyState message="No qualifications recorded yet." />
+  if (cols.length === 0) return <EmptyState message="No qualifications configured yet — load them on the Admin page." />
   // Compact column styling so the full qualification matrix fits without
   // horizontal scrolling — small wrapped headers + narrow dot columns.
   const qTh: React.CSSProperties = { fontSize: 10, lineHeight: 1.15, padding: '6px 4px', textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--color-text-3)', fontWeight: 700, textAlign: 'center', verticalAlign: 'bottom', whiteSpace: 'normal', width: 56 }
@@ -455,12 +451,12 @@ function QualsMatrix({ members, data }: { members: AmtrMember[]; data: Record<st
   return (
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <thead><tr><th style={{ ...qTh, textAlign: 'left', width: 'auto' }}>Member</th>{cols.map((c) => <th key={c} style={qTh}>{c}</th>)}</tr></thead>
+        <thead><tr><th style={{ ...qTh, textAlign: 'left', width: 'auto' }}>Member</th>{cols.map((c) => <th key={c.id} style={qTh}>{c.name}</th>)}</tr></thead>
         <tbody>
           {members.map((m) => (
             <tr key={m.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
               <td style={{ ...qTd, textAlign: 'left', width: 'auto', fontSize: 'var(--fs-sm)', fontWeight: 600, whiteSpace: 'nowrap' }}>{m.full_name}</td>
-              {cols.map((c) => <td key={c} style={{ ...qTd, color: filled(m.id, c) ? 'var(--color-success)' : 'var(--color-text-3)' }}>{filled(m.id, c) ? '●' : '○'}</td>)}
+              {cols.map((c) => <td key={c.id} style={{ ...qTd, color: filled(m.id, c.id) ? 'var(--color-success)' : 'var(--color-text-3)' }}>{filled(m.id, c.id) ? '●' : '○'}</td>)}
             </tr>
           ))}
         </tbody>
