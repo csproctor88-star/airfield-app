@@ -946,6 +946,8 @@ export type Database = {
         Row: {
           activity_templates: Json | null
           amops_email: string | null
+          aoc_number: string | null
+          airport_type: 'usaf' | 'faa_part139'
           arff_config: Json
           ce_shops: string[]
           checklist_reset_time: string
@@ -956,6 +958,7 @@ export type Database = {
           discrepancy_type_shop_map: Json | null
           elevation_msl: number | null
           enabled_modules: string[]
+          faa_site_number: string | null
           feedback_form_config: Json
           icao: string | null
           id: string
@@ -965,6 +968,8 @@ export type Database = {
           majcom: string | null
           map_provider: 'google' | 'bing' | 'esri'
           name: string
+          obstruction_surface_set: 'ufc_3_260_01' | 'faa_part77'
+          part139_class: 'I' | 'II' | 'III' | 'IV' | null
           qrc_review_interval: 'monthly' | 'quarterly'
           setup_progress: Json
           shift_count: number
@@ -976,6 +981,8 @@ export type Database = {
         Insert: {
           activity_templates?: Json | null
           amops_email?: string | null
+          aoc_number?: string | null
+          airport_type?: 'usaf' | 'faa_part139'
           arff_config?: Json
           ce_shops?: string[]
           checklist_reset_time?: string
@@ -986,6 +993,7 @@ export type Database = {
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
           enabled_modules?: string[]
+          faa_site_number?: string | null
           feedback_form_config?: Json
           icao?: string | null
           id?: string
@@ -995,6 +1003,8 @@ export type Database = {
           majcom?: string | null
           map_provider?: 'google' | 'bing' | 'esri'
           name: string
+          obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
+          part139_class?: 'I' | 'II' | 'III' | 'IV' | null
           qrc_review_interval?: 'monthly' | 'quarterly'
           setup_progress?: Json
           shift_count?: number
@@ -1006,6 +1016,8 @@ export type Database = {
         Update: {
           activity_templates?: Json | null
           amops_email?: string | null
+          aoc_number?: string | null
+          airport_type?: 'usaf' | 'faa_part139'
           arff_config?: Json
           ce_shops?: string[]
           checklist_reset_time?: string
@@ -1016,6 +1028,7 @@ export type Database = {
           discrepancy_type_shop_map?: Json | null
           elevation_msl?: number | null
           enabled_modules?: string[]
+          faa_site_number?: string | null
           feedback_form_config?: Json
           icao?: string | null
           id?: string
@@ -1025,6 +1038,8 @@ export type Database = {
           majcom?: string | null
           map_provider?: 'google' | 'bing' | 'esri'
           name?: string
+          obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
+          part139_class?: 'I' | 'II' | 'III' | 'IV' | null
           qrc_review_interval?: 'monthly' | 'quarterly'
           setup_progress?: Json
           shift_count?: number
