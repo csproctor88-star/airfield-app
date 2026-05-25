@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useInstallation } from '@/lib/installation-context'
+import { getTerm, type TermKey } from '@/lib/airport-mode'
 import { createClient } from '@/lib/supabase/client'
 import {
   fetchRecentReviews,
@@ -19,16 +20,17 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import { Check } from 'lucide-react'
 
-// Slot labels shrunk so all 4 (or 5, on 3-shift bases) tile headers
-// fit on one line in the grid layout. The "Shift" word is redundant
-// inside an AMSL pill; "AFM" matches the slot key + the rest of the
-// codebase nomenclature for Airfield Manager.
-const SLOT_LABELS_SHORT: Record<DailyReviewSlot, string> = {
-  day_amsl: 'Day AMSL',
-  swing_amsl: 'Swing AMSL',
-  mid_amsl: 'Mid AMSL',
-  namo: 'NAMO',
-  afm: 'AFM',
+// Slot keys are USAF-derived (day_amsl / swing_amsl / mid_amsl / namo /
+// afm) and remain unchanged in the DB. Display labels resolve through
+// getTerm() so civilian Part 139 bases see Day Shift / Evening Shift /
+// Night Shift / Supervisor / Manager, while USAF bases keep the
+// canonical Day AMSL / Swing AMSL / Mid AMSL / NAMO / AFM strings.
+const SLOT_TO_TERM: Record<DailyReviewSlot, TermKey> = {
+  day_amsl: 'shift_day',
+  swing_amsl: 'shift_swing',
+  mid_amsl: 'shift_mid',
+  namo: 'shift_supervisor',
+  afm: 'shift_manager',
 }
 
 // "Today" / "Yesterday" / "Wed, May 1" — the user's mental model is
@@ -282,7 +284,7 @@ export default function DailyReviewsPage() {
                     return (
                       <SlotTile
                         key={slot}
-                        label={SLOT_LABELS_SHORT[slot as DailyReviewSlot]}
+                        label={getTerm(SLOT_TO_TERM[slot as DailyReviewSlot], currentInstallation)}
                         signed={!!signedAt}
                         signer={signer ?? null}
                       />
