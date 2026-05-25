@@ -9,13 +9,14 @@ import {
   canUserSignSlot,
   currentAmslSlot,
   formatSigner,
-  SLOT_LABELS,
+  getSlotLabel,
   requiredSlotsForShifts,
   getReviewWindowUtc,
   type DailyReviewRow,
   type DailyReviewSlot,
   type SignerInfo,
 } from '@/lib/supabase/daily-reviews'
+import { useInstallation } from '@/lib/installation-context'
 import { getWriteQueue } from '@/lib/sync/write-queue'
 import type { DailyReviewSignPayload, DailyReviewSignResult } from '@/lib/sync/handlers'
 import { ConflictError } from '@/lib/sync/types'
@@ -51,6 +52,8 @@ export default function DailyReviewSignModal({
   timezone, resetTime, userId, userName, defaultPdfEmail, onSigned,
 }: SignModalProps) {
   const { has } = usePermissions()
+  const { currentInstallation } = useInstallation()
+  const labelFor = (slot: DailyReviewSlot) => getSlotLabel(slot, currentInstallation)
   const [loading, setLoading] = useState(false)
   const [row, setRow] = useState<DailyReviewRow | null>(null)
   const [signers, setSigners] = useState<Partial<Record<DailyReviewSlot, SignerInfo>>>({})
@@ -83,7 +86,7 @@ export default function DailyReviewSignModal({
       const notes = r[`${slot}_notes` as keyof DailyReviewRow] as string | null
       const signer = signerMap[slot]
       const signerStr = signer ? formatSigner(signer) : null
-      return { label: SLOT_LABELS[slot], signer: signerStr, signedAt, notes }
+      return { label: labelFor(slot), signer: signerStr, signedAt, notes }
     })
     return { slots, fullyCertifiedAt: r.fully_certified_at }
   }
@@ -198,7 +201,7 @@ export default function DailyReviewSignModal({
       if (result.status === 'queued') {
         setNotes('')
         toast.success(
-          `${SLOT_LABELS[selectedSlot]} sign queued — will commit when the network returns.`,
+          `${labelFor(selectedSlot)} sign queued — will commit when the network returns.`,
           { duration: 6000 },
         )
         onSigned()
@@ -220,7 +223,7 @@ export default function DailyReviewSignModal({
     }
     setRow(data)
     setNotes('')
-    toast.success(`Signed as ${SLOT_LABELS[selectedSlot]}`)
+    toast.success(`Signed as ${labelFor(selectedSlot)}`)
     onSigned()
 
     // Refresh signer profiles and regenerate the preview PDF
@@ -344,7 +347,7 @@ export default function DailyReviewSignModal({
                       : 'var(--color-border)'}`,
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{SLOT_LABELS[slot]}</span>
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 600 }}>{labelFor(slot)}</span>
                       <span style={{ fontSize: 'var(--fs-xs)', color: signedAt ? 'var(--color-success)' : 'var(--color-text-3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
                         {signedAt ? <><Check size={11} strokeWidth={3} /> Signed</> : 'Pending'}
                       </span>
@@ -383,7 +386,7 @@ export default function DailyReviewSignModal({
                 <option value="">— Select —</option>
                 {required.filter((s) => canUserSignSlot(has, s)).map((s) => {
                   const already = !!(row?.[`${s}_signed_at` as keyof DailyReviewRow])
-                  return <option key={s} value={s} disabled={already}>{SLOT_LABELS[s]}{already ? ' (signed)' : ''}</option>
+                  return <option key={s} value={s} disabled={already}>{labelFor(s)}{already ? ' (signed)' : ''}</option>
                 })}
               </select>
               <textarea

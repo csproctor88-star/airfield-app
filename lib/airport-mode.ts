@@ -143,22 +143,22 @@ export type TermKey =
   | 'compliance_inspection'
 
 const TERMS: Record<TermKey, { usaf: string; faa: string }> = {
-  afm:                   { usaf: 'AFM',                              faa: 'Manager' },
-  amsl:                  { usaf: 'AMSL',                             faa: 'Shift Supervisor' },
+  afm:                   { usaf: 'AFM',                              faa: 'Operations Manager' },
+  amsl:                  { usaf: 'AMSL',                             faa: 'Shift Lead' },
   namo:                  { usaf: 'NAMO',                             faa: 'Ops Supervisor' },
   ces:                   { usaf: 'CES',                              faa: 'Maintenance' },
-  amops:                 { usaf: 'AMOPS',                            faa: 'Ops' },
+  amops:                 { usaf: 'AMOPS',                            faa: 'Airside Ops' },
 
   manager_full:          { usaf: 'Airfield Manager',                 faa: 'Airport Operations Manager' },
-  ops_office_full:       { usaf: 'Airfield Management Operations',   faa: 'Airport Operations' },
+  ops_office_full:       { usaf: 'Airfield Management Operations',   faa: 'Airside Operations' },
   maintenance_full:      { usaf: 'Civil Engineer Squadron',          faa: 'Airport Maintenance' },
   safety_office:         { usaf: 'Wing Safety',                      faa: 'Safety Office' },
 
-  shift_day:             { usaf: 'Day AMSL',                         faa: 'Day Shift' },
-  shift_swing:           { usaf: 'Swing AMSL',                       faa: 'Evening Shift' },
-  shift_mid:             { usaf: 'Mid AMSL',                         faa: 'Night Shift' },
-  shift_supervisor:      { usaf: 'NAMO',                             faa: 'Supervisor' },
-  shift_manager:         { usaf: 'AFM',                              faa: 'Manager' },
+  shift_day:             { usaf: 'Day Shift AMSL',                   faa: 'Day Shift Lead' },
+  shift_swing:           { usaf: 'Swing Shift AMSL',                 faa: 'Swing Shift Lead' },
+  shift_mid:             { usaf: 'Mid Shift AMSL',                   faa: 'Mid Shift Lead' },
+  shift_supervisor:      { usaf: 'NAMO',                             faa: 'Ops Supervisor' },
+  shift_manager:         { usaf: 'Airfield Manager',                 faa: 'Operations Manager' },
 
   form_505:              { usaf: 'AF Form 505 (Waiver)',             faa: 'Modification to Standards' },
   form_483:              { usaf: 'AF Form 483',                      faa: 'SIDA Badge Log' },

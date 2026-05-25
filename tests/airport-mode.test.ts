@@ -87,8 +87,8 @@ describe('getTerm', () => {
     expect(getTerm('maintenance_full', faaBase)).toBe('Airport Maintenance')
   })
   it('translates shift slot labels', () => {
-    expect(getTerm('shift_day', usafBase)).toBe('Day AMSL')
-    expect(getTerm('shift_day', faaBase)).toBe('Day Shift')
+    expect(getTerm('shift_day', usafBase)).toBe('Day Shift AMSL')
+    expect(getTerm('shift_day', faaBase)).toBe('Day Shift Lead')
   })
   it('translates regulatory anchors', () => {
     expect(getTerm('primary_reg', usafBase)).toBe('DAFMAN 13-204')

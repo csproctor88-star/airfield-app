@@ -570,12 +570,12 @@ export default function ContractorsPage() {
                 {usingTemplate.contact && <> &bull; <strong>Contact:</strong> {usingTemplate.contact}</>}
                 {usingTemplate.callsign && <> &bull; <strong>Callsign:</strong> {usingTemplate.callsign}</>}
                 {usingTemplate.contact_phone && <> &bull; <strong>Phone:</strong> {usingTemplate.contact_phone}</>}
-                {usingTemplate.af_form_483 && <> &bull; <strong>AF 483:</strong> {usingTemplate.af_form_483}</>}
+                {usingTemplate.af_form_483 && <> &bull; <strong>Credential:</strong> {usingTemplate.af_form_483}</>}
                 {usingTemplate.af_form_483_expiration && <> &bull; <strong>Expires:</strong> {usingTemplate.af_form_483_expiration}</>}
               </div>
               {usingTemplate.af_form_483_expiration && new Date(usingTemplate.af_form_483_expiration) < new Date() && (
                 <div style={{ marginTop: 4, fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)' }}>
-                  AF Form 483 EXPIRED
+                  CREDENTIAL EXPIRED
                 </div>
               )}
             </div>
@@ -630,11 +630,11 @@ export default function ContractorsPage() {
                   <input value={formCallsign} onChange={e => setFormCallsign(e.target.value)} placeholder="e.g. Bravo-1" style={inputStyle} />
                 </div>
                 <div>
-                  <div style={labelStyle}>AF Form 483 #</div>
+                  <div style={labelStyle}>Credential / Badge #</div>
                   <input value={formAf483} onChange={e => setFormAf483(e.target.value)} placeholder="e.g. 2026-0042" style={inputStyle} />
                 </div>
                 <div>
-                  <div style={labelStyle}>AF Form 483 Expiration Date</div>
+                  <div style={labelStyle}>Credential Expiration</div>
                   <input type="date" value={formAf483Exp} onChange={e => setFormAf483Exp(e.target.value)} style={inputStyle} />
                   {formAf483Exp && new Date(formAf483Exp) < new Date() && (
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 700, marginTop: 2 }}>EXPIRED</div>

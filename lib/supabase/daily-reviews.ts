@@ -1,7 +1,26 @@
 import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
+import { getTerm, type TermKey } from '@/lib/airport-mode'
 
 export type DailyReviewSlot = 'day_amsl' | 'swing_amsl' | 'mid_amsl' | 'namo' | 'afm'
+
+/** Each slot's TermKey for mode-aware label resolution via getTerm. */
+const SLOT_TO_TERM: Record<DailyReviewSlot, TermKey> = {
+  day_amsl:   'shift_day',
+  swing_amsl: 'shift_swing',
+  mid_amsl:   'shift_mid',
+  namo:       'shift_supervisor',
+  afm:        'shift_manager',
+}
+
+/**
+ * Returns the mode-appropriate label for a daily-review slot.
+ * USAF: 'Day Shift AMSL' / 'Swing Shift AMSL' / 'Mid Shift AMSL' / 'NAMO' / 'Airfield Manager'.
+ * Civilian: 'Day Shift Lead' / 'Swing Shift Lead' / 'Mid Shift Lead' / 'Ops Supervisor' / 'Operations Manager'.
+ */
+export function getSlotLabel(slot: DailyReviewSlot, base: { airport_type?: 'usaf' | 'faa_part139' | null } | null | undefined): string {
+  return getTerm(SLOT_TO_TERM[slot], base)
+}
 
 export interface DailyReviewRow {
   id: string
@@ -111,6 +130,12 @@ export function isFullyCertified(row: DailyReviewRow, shiftCount: number): boole
   return requiredSlotsForShifts(shiftCount).every((slot) => row[`${slot}_signed_at` as keyof DailyReviewRow])
 }
 
+/**
+ * Static USAF-default slot labels — kept for back-compat with any
+ * caller that hasn't been wired through getSlotLabel(slot, base) yet.
+ * Prefer getSlotLabel for new code so civilian Part 139 bases render
+ * "Day Shift Lead" / "Operations Manager" etc.
+ */
 export const SLOT_LABELS: Record<DailyReviewSlot, string> = {
   day_amsl: 'Day Shift AMSL',
   swing_amsl: 'Swing Shift AMSL',
