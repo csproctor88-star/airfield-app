@@ -21,6 +21,12 @@ export type RegulationEntry = {
   is_cross_ref: boolean
   is_scrubbed: boolean
   tags: string[]
+  /**
+   * Regulatory authority for dual-mode (FAA Part 139) filtering. Optional
+   * on the static fallback because the seed file pre-dates the column;
+   * missing values are treated as 'usaf'. DB rows always have this set.
+   */
+  source?: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
 }
 
 // ═══════════════════════════════════════════════════════════════════

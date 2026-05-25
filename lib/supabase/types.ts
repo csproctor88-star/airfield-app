@@ -3477,6 +3477,7 @@ export type Database = {
           pub_type: string
           publication_date: string | null
           reg_id: string
+          source: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
           source_section: string
           source_volume: string | null
           storage_path: string | null
@@ -3498,6 +3499,7 @@ export type Database = {
           pub_type: string
           publication_date?: string | null
           reg_id: string
+          source?: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
           source_section: string
           source_volume?: string | null
           storage_path?: string | null
@@ -3519,6 +3521,7 @@ export type Database = {
           pub_type?: string
           publication_date?: string | null
           reg_id?: string
+          source?: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
           source_section?: string
           source_volume?: string | null
           storage_path?: string | null

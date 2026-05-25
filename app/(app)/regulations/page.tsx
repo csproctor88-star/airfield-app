@@ -7,6 +7,8 @@ import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS, USER_ROLES } from '@/lib/constants'
 import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
+import { useInstallation } from '@/lib/installation-context'
+import { getRegSource } from '@/lib/airport-mode'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName, formatZuluDate } from '@/lib/utils'
@@ -159,6 +161,7 @@ interface ContentMatch {
 }
 
 function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?: number) => void }) {
+  const { currentInstallation } = useInstallation()
   const [search, setSearch] = useState('')
   const [contentResults, setContentResults] = useState<ContentMatch[]>([])
   const [contentSearching, setContentSearching] = useState(false)
@@ -199,7 +202,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
       try {
         const { data } = await supabase
           .from('regulations')
-          .select('reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags')
+          .select('reg_id, title, description, publication_date, url, source_section, source_volume, category, pub_type, is_core, is_cross_ref, is_scrubbed, tags, source')
           .order('reg_id', { ascending: true })
         if (data && data.length > 0) {
           setDbRegs(data as RegulationEntry[])
@@ -209,11 +212,15 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
     init()
   }, [])
 
-  // Use Supabase data when available, otherwise fall back to static
+  // Use Supabase data when available, otherwise fall back to static.
+  // Filter by airport mode: civilian bases see FAA + ICAO + 'both'; USAF
+  // bases see USAF + UFC + ICAO + 'both'. Static-fallback entries that
+  // pre-date the source column are treated as 'usaf'.
   const regulations = useMemo(() => {
-    if (dbRegs !== null) return dbRegs
-    return ALL_REGULATIONS
-  }, [dbRegs])
+    const allowed = new Set(getRegSource(currentInstallation))
+    const raw = dbRegs !== null ? dbRegs : ALL_REGULATIONS
+    return raw.filter(r => allowed.has(r.source ?? 'usaf'))
+  }, [dbRegs, currentInstallation])
 
   // Cross-PDF content search via the Postgres full-text function.
   // Falls back to an IDB scan when the server returns no rows (covers the
