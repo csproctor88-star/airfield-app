@@ -295,6 +295,7 @@ export default function DiscrepancyDetailPage() {
       systemMapDataUrl: systemMapUrl,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
+      airportType: currentInstallation?.airport_type,
       notesHistory: statusUpdates.map((u) => ({
         created_at: u.created_at,
         user_name: u.user_name,

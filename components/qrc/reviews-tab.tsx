@@ -21,6 +21,7 @@ interface Props {
   baseId: string | null
   baseName?: string | null
   baseIcao?: string | null
+  airportType?: 'usaf' | 'faa_part139'
   /** "Rank Name" string — used as the generated-by line on the PDF cover page. */
   generatedByLabel?: string | null
   /** Lifted hook from the parent so badge count and tab body share state. */
@@ -52,7 +53,7 @@ function defaultQuarter(): { quarter: 1 | 2 | 3 | 4; year: number } {
   return { quarter: q, year: d.getUTCFullYear() }
 }
 
-export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByLabel, monthlyReviews }: Props) {
+export function ReviewsTab({ templates, baseId, baseName, baseIcao, airportType, generatedByLabel, monthlyReviews }: Props) {
   const { reviews, loaded, getStatus, markReviewed, interval } = monthlyReviews
   const { has } = usePermissions()
   const [openTemplateId, setOpenTemplateId] = useState<string | null>(null)
@@ -120,6 +121,7 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, generatedByL
     return generateQrcMonthlyReviewPdf({
       baseName,
       baseIcao,
+      airportType,
       interval,
       month: interval === 'monthly' ? pickerMonth.month : undefined,
       quarter: interval === 'quarterly' ? pickerQuarter.quarter : undefined,

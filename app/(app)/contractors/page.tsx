@@ -228,6 +228,7 @@ export default function ContractorsPage() {
       searchQuery: search || undefined,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao || undefined,
+      airportType: currentInstallation?.airport_type,
     })
   }
 

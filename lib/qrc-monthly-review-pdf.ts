@@ -7,10 +7,13 @@ import { formatZuluDateTime } from '@/lib/utils'
 import type { QrcTemplate } from '@/lib/supabase/types'
 import type { QrcMonthlyReviewWithUser, EligibleReviewer } from '@/lib/supabase/qrc-reviews'
 import type { ReviewInterval } from '@/lib/qrc/monthly-review-status'
+import { getRoleLabel, type AirportType } from '@/lib/airport-mode'
 
 export interface QrcMonthlyReviewPdfInput {
   baseName?: string | null
   baseIcao?: string | null
+  /** Drives mode-aware role labels (Airfield Manager → Airport Operations Manager, NAMO → Operations Supervisor). */
+  airportType?: AirportType
   /** Per-base review interval. Drives title, subtitle, window, filename. */
   interval?: ReviewInterval
   /** Calendar month (1–12) — required when interval='monthly'. */
@@ -55,7 +58,8 @@ function operatorShortLabel(u: EligibleReviewer): string {
 export async function generateQrcMonthlyReviewPdf(
   input: QrcMonthlyReviewPdfInput,
 ): Promise<{ doc: jsPDF; filename: string }> {
-  const { baseName, baseIcao, year, templates, eligibleUsers, reviews, generatedBy } = input
+  const { baseName, baseIcao, year, templates, eligibleUsers, reviews, generatedBy, airportType } = input
+  const mode: AirportType = airportType ?? 'usaf'
   const interval: ReviewInterval = input.interval ?? 'monthly'
   const month = interval === 'monthly' ? (input.month ?? 1) : 1
   const quarter = interval === 'quarterly' ? (input.quarter ?? 1) : 1
@@ -148,7 +152,7 @@ export async function generateQrcMonthlyReviewPdf(
           s.user.rank ?? '',
           s.user.name,
           s.user.operating_initials ?? '',
-          formatRole(s.user.role),
+          formatRole(s.user.role, mode),
           String(s.reviewedCount),
           String(s.pendingCount),
           `${s.compliance}%`,
@@ -274,14 +278,11 @@ export async function generateQrcMonthlyReviewPdf(
   return { doc, filename }
 }
 
-function formatRole(role: string): string {
-  switch (role) {
-    case 'airfield_manager': return 'Airfield Manager'
-    case 'namo': return 'NAMO'
-    case 'amops': return 'AMOPS'
-    case 'base_admin': return 'Base Admin'
-    case 'sys_admin': return 'Sys Admin'
-    case 'other': return 'Other'
-    default: return role
-  }
+function formatRole(role: string, mode: AirportType): string {
+  // Special-case 'other' (no Glidepath role binding) and 'sys_admin'
+  // (label is fine either way). All other roles route through
+  // getRoleLabel for mode-aware translation.
+  if (role === 'other') return 'Other'
+  const label = getRoleLabel(role, mode)
+  return label || role
 }

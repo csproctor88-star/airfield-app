@@ -319,6 +319,7 @@ export default function QrcPage() {
           baseId={installationId}
           baseName={currentInstallation?.name}
           baseIcao={currentInstallation?.icao}
+          airportType={currentInstallation?.airport_type}
           monthlyReviews={monthlyReviews}
         />
       ) : tab === 'active' ? (

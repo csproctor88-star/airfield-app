@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
-import { DISCREPANCY_TYPES, STATUS_CONFIG, LOCATION_OPTIONS, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, STATUS_CONFIG, LOCATION_OPTIONS } from '@/lib/constants'
+import { getDiscrepancyStatusLabel, type AirportType } from '@/lib/airport-mode'
 import { formatZuluDateTime, formatZuluDate } from '@/lib/utils'
 
 export interface DiscrepancyNoteEntry {
@@ -20,10 +21,14 @@ interface DiscrepancyPdfInput {
   baseName?: string | null
   baseIcao?: string | null
   notesHistory?: DiscrepancyNoteEntry[]
+  /** Drives mode-aware label rendering (status text, section header).
+   *  Defaults to 'usaf' when omitted for back-compat. */
+  airportType?: AirportType
 }
 
 export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
-  const { discrepancy: d, photoDataUrls, mapDataUrl, systemMapDataUrl, baseName, baseIcao, notesHistory } = input
+  const { discrepancy: d, photoDataUrls, mapDataUrl, systemMapDataUrl, baseName, baseIcao, notesHistory, airportType } = input
+  const mode: AirportType = airportType ?? 'usaf'
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -52,15 +57,18 @@ export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {
   })()
   const currentStatusLabel = (() => {
     const cs = d.current_status
-    return CURRENT_STATUS_OPTIONS.find((o) => o.value === cs)?.label || cs || 'N/A'
+    return getDiscrepancyStatusLabel(cs, mode) || cs || 'N/A'
   })()
+  const sectionHeader = mode === 'faa_part139'
+    ? 'AIRPORT OPERATIONS SECTION'
+    : 'AIRFIELD MANAGEMENT SECTION'
 
   // -- Header --
   doc.setFontSize(8)
   doc.setTextColor(100)
   doc.text(baseName ? `${baseName.toUpperCase()}${baseIcao ? ` (${baseIcao})` : ''}` : 'AIRFIELD OPERATIONS', margin, y)
   y += 4
-  doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
+  doc.text(sectionHeader, margin, y)
   y += 8
 
   // -- Title --

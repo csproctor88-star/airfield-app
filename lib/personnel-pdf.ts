@@ -12,6 +12,7 @@ import {
   todayIso,
 } from '@/lib/pdf-utils'
 import type { ContractorRow } from '@/lib/supabase/contractors'
+import { getTerm, type AirportType } from '@/lib/airport-mode'
 
 interface PersonnelPdfInput {
   contractors: ContractorRow[]
@@ -19,6 +20,8 @@ interface PersonnelPdfInput {
   searchQuery?: string
   baseName?: string | null
   baseIcao?: string | null
+  /** Drives mode-aware label rendering ("AF Form 483" → "SIDA Badge" on civilian). */
+  airportType?: AirportType
 }
 
 function af483Status(exp: string | null): string {
@@ -34,7 +37,9 @@ function af483Status(exp: string | null): string {
 }
 
 export async function generatePersonnelPdf(input: PersonnelPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const { contractors, filterLabel, searchQuery, baseName, baseIcao } = input
+  const { contractors, filterLabel, searchQuery, baseName, baseIcao, airportType } = input
+  const mode: AirportType = airportType ?? 'usaf'
+  const credentialLabel = getTerm('form_483', mode) // "AF Form 483" or "SIDA Badge Log"
   const ctx = createPdf({ orientation: 'landscape' })
   const { doc, margin } = ctx
   let y = margin
@@ -62,7 +67,7 @@ export async function generatePersonnelPdf(input: PersonnelPdfInput): Promise<{ 
     autoTable(doc, {
       ...tableStyles(ctx),
       startY: y,
-      head: [['Status', 'Company', 'Contact', 'Phone', 'Location', 'Work', 'Radio', 'Flag', 'Callsign', 'AF Form 483', 'Start', 'End']],
+      head: [['Status', 'Company', 'Contact', 'Phone', 'Location', 'Work', 'Radio', 'Flag', 'Callsign', credentialLabel, 'Start', 'End']],
       body: contractors.map(c => {
         const af483 = c.af_form_483
           ? `${c.af_form_483}${af483Status(c.af_form_483_expiration)}`
@@ -90,7 +95,7 @@ export async function generatePersonnelPdf(input: PersonnelPdfInput): Promise<{ 
       },
       didParseCell: (hookData) => {
         if (hookData.section === 'body' && hookData.column.index === 9) {
-          // AF Form 483 column — color expired entries red
+          // Credential column (AF Form 483 / SIDA Badge) — color expired entries red
           const text = hookData.cell.text.join(' ')
           if (text.includes('EXPIRED')) {
             hookData.cell.styles.textColor = [220, 38, 38]
