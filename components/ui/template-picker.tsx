@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Pencil, Trash2, Plus, RotateCcw } from 'lucide-react'
 import { ACTIVITY_TEMPLATES, type ActivityTemplate, type TemplateCategory, type TemplateField } from '@/lib/activity-templates'
+import { useInstallation } from '@/lib/installation-context'
+import { getAirportType } from '@/lib/airport-mode'
 import { toast } from 'sonner'
 
 function assembleText(template: ActivityTemplate, values: Record<string, string>): string {
@@ -42,9 +44,16 @@ interface Props {
 }
 
 export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, customTemplates, onTemplatesSaved, icao }: Props) {
+  const { currentInstallation } = useInstallation()
+  const airportType = getAirportType(currentInstallation)
+  // Filter categories by airport_type: civilian Part 139 bases drop
+  // categories tagged appliesTo: ['usaf'] (AMOPS Reporting, PCAS/SCN).
+  // Categories with no appliesTo apply to both modes.
+  const filterByMode = (cats: TemplateCategory[]) =>
+    cats.filter(c => !c.appliesTo || c.appliesTo.includes(airportType))
   // Use custom templates if provided, otherwise hardcoded defaults
   const [templates, setTemplates] = useState<TemplateCategory[]>(
-    () => customTemplates ? cloneTemplates(customTemplates) : cloneTemplates(ACTIVITY_TEMPLATES)
+    () => customTemplates ? cloneTemplates(filterByMode(customTemplates)) : cloneTemplates(filterByMode(ACTIVITY_TEMPLATES))
   )
   const [selectedCat, setSelectedCat] = useState<string>(templates[0]?.category || '')
   const [selectedTemplate, setSelectedTemplate] = useState<ActivityTemplate | null>(null)
@@ -257,8 +266,9 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
 
   function resetToDefaults() {
     if (!confirm('Reset all templates to defaults? Custom changes will be lost.')) return
-    setTemplates(cloneTemplates(ACTIVITY_TEMPLATES))
-    setSelectedCat(ACTIVITY_TEMPLATES[0]?.category || '')
+    const defaults = filterByMode(ACTIVITY_TEMPLATES)
+    setTemplates(cloneTemplates(defaults))
+    setSelectedCat(defaults[0]?.category || '')
     setEditingIdx(null)
     setHasChanges(true)
   }

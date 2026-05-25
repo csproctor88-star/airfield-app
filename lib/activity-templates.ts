@@ -17,6 +17,13 @@ export type ActivityTemplate = {
 export type TemplateCategory = {
   category: string
   templates: ActivityTemplate[]
+  /**
+   * Which airport_type modes this category should surface in. Defaults
+   * to both when omitted. Categories that reference military-only
+   * roles (AMSL, AMOC, NAMO) or military-only concepts (SCN, PCAS)
+   * are scoped to 'usaf' so civilian Part 139 bases never see them.
+   */
+  appliesTo?: ('usaf' | 'faa_part139')[]
 }
 
 // Shared field helpers
@@ -74,7 +81,10 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
   },
 
   // ─── AMOPS REPORTING ───
+  // USAF-only: every template references AMOPS / AMSL / AMOC / NAMO,
+  // none of which exist in civilian Part 139 operations.
   {
+    appliesTo: ['usaf'],
     category: 'AMOPS Reporting',
     templates: [
       {
@@ -216,7 +226,11 @@ export const ACTIVITY_TEMPLATES: TemplateCategory[] = [
   },
 
   // ─── PCAS/SCN TESTS & ACTIVATIONS ───
+  // USAF-only: Secondary Crash Net is a military-only emergency comms
+  // network (DAFMAN 13-204v2 §4.2.2.3.7). Civilian airports use the
+  // Airport Emergency Plan cascade, modeled separately in Phase 3.
   {
+    appliesTo: ['usaf'],
     category: 'PCAS/SCN Tests & Activations',
     templates: [
       {
