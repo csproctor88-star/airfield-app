@@ -11,7 +11,7 @@ import {
   AlertTriangle, MapPin, Lightbulb, PlaneLanding, Plane, Library,
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
   BookOpen, Users, Settings as SettingsIcon,
-  Wrench, FolderOpen, Shield,
+  Wrench, FolderOpen, Shield, SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
@@ -60,6 +60,7 @@ const refItems: ModuleItem[] = [
 
 // Admin
 const adminItems: ModuleItem[] = [
+  { name: 'Base Configuration', icon: SlidersHorizontal, color: 'var(--color-cyan)', href: '/base-config' },
   { name: 'Activity Log', icon: Clock, color: 'var(--color-success)', href: '/recent-activity' },
   { name: 'Daily Reviews', icon: CalendarCheck, color: 'var(--color-purple)', href: '/daily-reviews' },
   { name: 'Waivers', icon: FileText, color: 'var(--color-purple)', href: '/waivers' },
@@ -260,6 +261,7 @@ function SignOutButton() {
 // Map each admin href to its gating permission so the filter below
 // stays in sync with the sidebar's HREF_TO_VIEW_PERM.
 const HREF_PERMISSION: Partial<Record<string, string>> = {
+  '/base-config':    PERM.BASE_SETUP_WRITE,
   '/library':        PERM.LIBRARY_VIEW,
   '/users':          PERM.USERS_VIEW,
   '/feedback':       PERM.FEEDBACK_VIEW,
