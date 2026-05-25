@@ -25,6 +25,7 @@ import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-st
 export default function AMDashboardPage() {
   const router = useRouter()
   const { installationId, currentInstallation, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
+  const airportType = currentInstallation?.airport_type ?? null
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed } = useDashboard()
   const { has } = usePermissions()
   // Out-of-office + closed-for-day toggles share the airfield_status:write
@@ -253,7 +254,7 @@ export default function AMDashboardPage() {
           { label: 'Airfield Checks', Icon: ShieldAlert,   iconColor: 'var(--color-accent)', href: '/checks' },
           { label: 'New Discrepancy', Icon: AlertTriangle, iconColor: 'var(--color-danger)', href: '/discrepancies/new' },
         ] as const)
-          .filter(q => isModuleEnabled(q.href, enabledModules))
+          .filter(q => isModuleEnabled(q.href, enabledModules, airportType))
           .map(q => (
           <Link key={q.label} href={q.href} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -266,7 +267,7 @@ export default function AMDashboardPage() {
             <span>{q.label}</span>
           </Link>
         ))}
-        {isModuleEnabled('/contractors', enabledModules) && (
+        {isModuleEnabled('/contractors', enabledModules, airportType) && (
           <button onClick={() => setShowContractorForm(true)} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
@@ -278,7 +279,7 @@ export default function AMDashboardPage() {
             <span>Personnel on Airfield</span>
           </button>
         )}
-        {isModuleEnabled('/shift-checklist', enabledModules) && (
+        {isModuleEnabled('/shift-checklist', enabledModules, airportType) && (
           <button onClick={() => setShowShiftChecklist(true)} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
@@ -290,7 +291,7 @@ export default function AMDashboardPage() {
             <span>Shift Checklist</span>
           </button>
         )}
-        {isModuleEnabled('/qrc', enabledModules) && (
+        {isModuleEnabled('/qrc', enabledModules, airportType) && (
           <button onClick={() => setShowQrc(true)} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
@@ -302,7 +303,7 @@ export default function AMDashboardPage() {
             <span>QRCs</span>
           </button>
         )}
-        {isModuleEnabled('/scn', enabledModules) && (
+        {isModuleEnabled('/scn', enabledModules, airportType) && (
           <Link href="/scn" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
@@ -314,7 +315,7 @@ export default function AMDashboardPage() {
             <span>SCN</span>
           </Link>
         )}
-        {isModuleEnabled('/ppr', enabledModules) && (
+        {isModuleEnabled('/ppr', enabledModules, airportType) && (
           <Link href="/ppr" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
@@ -326,7 +327,7 @@ export default function AMDashboardPage() {
             <span>PPR Log</span>
           </Link>
         )}
-        {isModuleEnabled('/wildlife', enabledModules) && (
+        {isModuleEnabled('/wildlife', enabledModules, airportType) && (
           <Link href="/wildlife" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,

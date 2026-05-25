@@ -10,6 +10,10 @@
 -- here so Phase 2/3 modules can wire them without further migrations.
 -- New civilian role presets (sms_manager, aep_coordinator, etc.) get
 -- their grants here.
+--
+-- NB: grants use explicit INSERT VALUES per (role, key) rather than
+-- CROSS JOIN, so the static SQL parser in the test suite can replay
+-- them.
 -- ============================================================
 
 -- ── 1. permissions.applies_to ──────────────────────────────
@@ -59,51 +63,213 @@ ON CONFLICT (key) DO UPDATE SET
   description = COALESCE(EXCLUDED.description, permissions.description),
   applies_to = EXCLUDED.applies_to;
 
--- ── 4. Seed role_permissions for new civilian roles ────────
+-- ── 4. Civilian role presets ──────────────────────────────
 --
--- The role names are TEXT (no enum), so adding new ones is purely
--- additive. lib/constants.ts USER_ROLES will be updated in code in
--- a parallel commit to surface them in the UI.
+-- Five new civilian roles with explicit grants. Modeled on existing
+-- USAF roles where there's a clean analog (sms_manager ≈ namo,
+-- ops_supervisor ≈ namo, accountable_executive ≈ base_admin), with
+-- mode-specific additions for SMS/AEP/Training.
 
-INSERT INTO role_permissions (role, permission_key)
-SELECT r.role, p.key FROM permissions p
-CROSS JOIN (VALUES ('sms_manager'), ('aep_coordinator'), ('ops_supervisor'), ('arff_chief'), ('accountable_executive')) AS r(role)
-WHERE p.applies_to && '{faa_part139}'::text[]
-  AND (
-    -- Accountable Executive: broad read + signing authority
-    (r.role = 'accountable_executive' AND (p.key LIKE '%:read%' OR p.key LIKE '%:view%' OR p.key IN ('sms:sign_policy','sms:approve_moc','aep:sign')))
-    -- SMS Manager: full SMS + read everything else
-    OR (r.role = 'sms_manager' AND (p.key LIKE 'sms:%' OR p.key LIKE '%:view%' OR p.key LIKE '%:read%'))
-    -- AEP Coordinator: full AEP + read SMS + drills/comms
-    OR (r.role = 'aep_coordinator' AND (p.key LIKE 'aep:%' OR p.key = 'sms:read' OR p.key LIKE '%:view%'))
-    -- ARFF Chief: AEP read + drills, ARFF-relevant views
-    OR (r.role = 'arff_chief' AND (p.key IN ('aep:read','aep:write') OR p.key IN ('airfield_status:view','notams:view','wildlife:view','contractors:view','sms:read')))
-    -- Ops Supervisor: NAMO-equivalent — broad ops write, signs supervisor slot
-    OR (r.role = 'ops_supervisor' AND (p.key LIKE '%:view%' OR p.key LIKE '%:write%' OR p.key = 'daily_reviews:sign:supervisor'))
-  )
-ON CONFLICT (role, permission_key) DO NOTHING;
-
--- sys_admin gets every civilian perm too (idempotent)
-INSERT INTO role_permissions (role, permission_key)
-SELECT 'sys_admin', key FROM permissions WHERE applies_to && '{faa_part139}'::text[]
-ON CONFLICT (role, permission_key) DO NOTHING;
-
--- airfield_manager gets the dual-applicable training perms + civilian sign-offs
--- (they're the Airport Operations Manager in civilian mode and the AFM in USAF mode)
+-- accountable_executive: signing authority + broad read access
 INSERT INTO role_permissions (role, permission_key) VALUES
-  ('airfield_manager', 'training_part139:read'),
-  ('airfield_manager', 'training_part139:write'),
-  ('airfield_manager', 'training_part139:export'),
-  ('airfield_manager', 'daily_reviews:sign:manager'),
+  ('accountable_executive', 'sms:read'),
+  ('accountable_executive', 'sms:sign_policy'),
+  ('accountable_executive', 'sms:approve_moc'),
+  ('accountable_executive', 'aep:read'),
+  ('accountable_executive', 'aep:sign'),
+  ('accountable_executive', 'training_part139:read'),
+  ('accountable_executive', 'training_part139:export'),
+  ('accountable_executive', 'airfield_status:view'),
+  ('accountable_executive', 'dashboard:view'),
+  ('accountable_executive', 'checks:view'),
+  ('accountable_executive', 'inspections:view'),
+  ('accountable_executive', 'discrepancies:view'),
+  ('accountable_executive', 'ces:view'),
+  ('accountable_executive', 'infrastructure:view'),
+  ('accountable_executive', 'parking:view'),
+  ('accountable_executive', 'obstructions:view'),
+  ('accountable_executive', 'qrc:view'),
+  ('accountable_executive', 'shift_checklist:view'),
+  ('accountable_executive', 'wildlife:view'),
+  ('accountable_executive', 'waivers:view'),
+  ('accountable_executive', 'notams:view'),
+  ('accountable_executive', 'ppr:view'),
+  ('accountable_executive', 'contractors:view'),
+  ('accountable_executive', 'daily_reviews:view'),
+  ('accountable_executive', 'reports:view'),
+  ('accountable_executive', 'reports:export'),
+  ('accountable_executive', 'activity_log:view'),
+  ('accountable_executive', 'feedback:view'),
+  ('accountable_executive', 'training:view'),
+  ('accountable_executive', 'library:view'),
+  ('accountable_executive', 'settings:view'),
+  ('accountable_executive', 'photos:write')
+ON CONFLICT (role, permission_key) DO NOTHING;
+
+-- sms_manager: full SMS, plus broad read for hazard investigation
+INSERT INTO role_permissions (role, permission_key) VALUES
+  ('sms_manager', 'sms:read'),
+  ('sms_manager', 'sms:write'),
+  ('sms_manager', 'sms:triage_reports'),
+  ('sms_manager', 'aep:read'),
+  ('sms_manager', 'training_part139:read'),
+  ('sms_manager', 'airfield_status:view'),
+  ('sms_manager', 'dashboard:view'),
+  ('sms_manager', 'checks:view'),
+  ('sms_manager', 'inspections:view'),
+  ('sms_manager', 'discrepancies:view'),
+  ('sms_manager', 'discrepancies:write'),
+  ('sms_manager', 'infrastructure:view'),
+  ('sms_manager', 'parking:view'),
+  ('sms_manager', 'obstructions:view'),
+  ('sms_manager', 'qrc:view'),
+  ('sms_manager', 'shift_checklist:view'),
+  ('sms_manager', 'wildlife:view'),
+  ('sms_manager', 'wildlife:write'),
+  ('sms_manager', 'waivers:view'),
+  ('sms_manager', 'notams:view'),
+  ('sms_manager', 'ppr:view'),
+  ('sms_manager', 'contractors:view'),
+  ('sms_manager', 'daily_reviews:view'),
+  ('sms_manager', 'reports:view'),
+  ('sms_manager', 'reports:export'),
+  ('sms_manager', 'activity_log:view'),
+  ('sms_manager', 'feedback:view'),
+  ('sms_manager', 'training:view'),
+  ('sms_manager', 'library:view'),
+  ('sms_manager', 'settings:view'),
+  ('sms_manager', 'photos:write')
+ON CONFLICT (role, permission_key) DO NOTHING;
+
+-- aep_coordinator: full AEP + read SMS, drills + comms
+INSERT INTO role_permissions (role, permission_key) VALUES
+  ('aep_coordinator', 'aep:read'),
+  ('aep_coordinator', 'aep:write'),
+  ('aep_coordinator', 'sms:read'),
+  ('aep_coordinator', 'airfield_status:view'),
+  ('aep_coordinator', 'dashboard:view'),
+  ('aep_coordinator', 'qrc:view'),
+  ('aep_coordinator', 'qrc:execute'),
+  ('aep_coordinator', 'wildlife:view'),
+  ('aep_coordinator', 'contractors:view'),
+  ('aep_coordinator', 'notams:view'),
+  ('aep_coordinator', 'activity_log:view'),
+  ('aep_coordinator', 'training:view'),
+  ('aep_coordinator', 'settings:view'),
+  ('aep_coordinator', 'photos:write')
+ON CONFLICT (role, permission_key) DO NOTHING;
+
+-- arff_chief: ARFF-relevant views + AEP read + drills (aep:write)
+INSERT INTO role_permissions (role, permission_key) VALUES
+  ('arff_chief', 'aep:read'),
+  ('arff_chief', 'aep:write'),
+  ('arff_chief', 'sms:read'),
+  ('arff_chief', 'airfield_status:view'),
+  ('arff_chief', 'dashboard:view'),
+  ('arff_chief', 'wildlife:view'),
+  ('arff_chief', 'contractors:view'),
+  ('arff_chief', 'notams:view'),
+  ('arff_chief', 'qrc:view'),
+  ('arff_chief', 'qrc:execute'),
+  ('arff_chief', 'training:view'),
+  ('arff_chief', 'settings:view')
+ON CONFLICT (role, permission_key) DO NOTHING;
+
+-- ops_supervisor: NAMO-equivalent — broad ops write + supervisor sign
+INSERT INTO role_permissions (role, permission_key) VALUES
+  ('ops_supervisor', 'sms:read'),
+  ('ops_supervisor', 'sms:write'),
+  ('ops_supervisor', 'aep:read'),
+  ('ops_supervisor', 'training_part139:read'),
+  ('ops_supervisor', 'training_part139:write'),
+  ('ops_supervisor', 'daily_reviews:view'),
+  ('ops_supervisor', 'daily_reviews:sign:supervisor'),
+  ('ops_supervisor', 'airfield_status:view'),
+  ('ops_supervisor', 'airfield_status:write'),
+  ('ops_supervisor', 'dashboard:view'),
+  ('ops_supervisor', 'checks:view'),
+  ('ops_supervisor', 'checks:write'),
+  ('ops_supervisor', 'inspections:view'),
+  ('ops_supervisor', 'inspections:write'),
+  ('ops_supervisor', 'discrepancies:view'),
+  ('ops_supervisor', 'discrepancies:write'),
+  ('ops_supervisor', 'discrepancies:add_note'),
+  ('ops_supervisor', 'ces:view'),
+  ('ops_supervisor', 'infrastructure:view'),
+  ('ops_supervisor', 'infrastructure:write'),
+  ('ops_supervisor', 'parking:view'),
+  ('ops_supervisor', 'parking:write'),
+  ('ops_supervisor', 'obstructions:view'),
+  ('ops_supervisor', 'obstructions:write'),
+  ('ops_supervisor', 'qrc:view'),
+  ('ops_supervisor', 'qrc:execute'),
+  ('ops_supervisor', 'shift_checklist:view'),
+  ('ops_supervisor', 'shift_checklist:write'),
+  ('ops_supervisor', 'wildlife:view'),
+  ('ops_supervisor', 'wildlife:write'),
+  ('ops_supervisor', 'waivers:view'),
+  ('ops_supervisor', 'waivers:write'),
+  ('ops_supervisor', 'notams:view'),
+  ('ops_supervisor', 'notams:write'),
+  ('ops_supervisor', 'ppr:view'),
+  ('ops_supervisor', 'ppr:write'),
+  ('ops_supervisor', 'contractors:view'),
+  ('ops_supervisor', 'contractors:write'),
+  ('ops_supervisor', 'reports:view'),
+  ('ops_supervisor', 'reports:export'),
+  ('ops_supervisor', 'activity_log:view'),
+  ('ops_supervisor', 'activity_log:write_manual'),
+  ('ops_supervisor', 'feedback:view'),
+  ('ops_supervisor', 'training:view'),
+  ('ops_supervisor', 'library:view'),
+  ('ops_supervisor', 'settings:view'),
+  ('ops_supervisor', 'photos:write')
+ON CONFLICT (role, permission_key) DO NOTHING;
+
+-- ── 5. Sys_admin / airfield_manager / base_admin grants ──────
+--
+-- Grant the new perm keys to roles that should already have parity
+-- coverage. sys_admin gets everything (mirrors the AMTR pattern).
+
+INSERT INTO role_permissions (role, permission_key) VALUES
+  ('sys_admin', 'sms:read'),
+  ('sys_admin', 'sms:write'),
+  ('sys_admin', 'sms:sign_policy'),
+  ('sys_admin', 'sms:approve_moc'),
+  ('sys_admin', 'sms:triage_reports'),
+  ('sys_admin', 'aep:read'),
+  ('sys_admin', 'aep:write'),
+  ('sys_admin', 'aep:sign'),
+  ('sys_admin', 'training_part139:read'),
+  ('sys_admin', 'training_part139:write'),
+  ('sys_admin', 'training_part139:export'),
+  ('sys_admin', 'daily_reviews:sign:supervisor'),
+  ('sys_admin', 'daily_reviews:sign:manager')
+ON CONFLICT (role, permission_key) DO NOTHING;
+
+-- airfield_manager is Airport Operations Manager in civilian mode
+INSERT INTO role_permissions (role, permission_key) VALUES
   ('airfield_manager', 'sms:read'),
   ('airfield_manager', 'sms:write'),
   ('airfield_manager', 'aep:read'),
-  ('airfield_manager', 'aep:write')
+  ('airfield_manager', 'aep:write'),
+  ('airfield_manager', 'training_part139:read'),
+  ('airfield_manager', 'training_part139:write'),
+  ('airfield_manager', 'training_part139:export'),
+  ('airfield_manager', 'daily_reviews:sign:manager')
 ON CONFLICT (role, permission_key) DO NOTHING;
 
--- base_admin gets civilian admin perms (parallels their USAF privileges)
-INSERT INTO role_permissions (role, permission_key)
-SELECT 'base_admin', key FROM permissions
-WHERE applies_to && '{faa_part139}'::text[]
-  AND key NOT IN ('sms:sign_policy','aep:sign')  -- AE signing is reserved
+-- base_admin is Airport Admin in civilian mode; gets every civilian
+-- write key EXCEPT the AE-reserved signing keys.
+INSERT INTO role_permissions (role, permission_key) VALUES
+  ('base_admin', 'sms:read'),
+  ('base_admin', 'sms:write'),
+  ('base_admin', 'sms:triage_reports'),
+  ('base_admin', 'aep:read'),
+  ('base_admin', 'aep:write'),
+  ('base_admin', 'training_part139:read'),
+  ('base_admin', 'training_part139:write'),
+  ('base_admin', 'training_part139:export'),
+  ('base_admin', 'daily_reviews:sign:supervisor'),
+  ('base_admin', 'daily_reviews:sign:manager')
 ON CONFLICT (role, permission_key) DO NOTHING;

@@ -45,6 +45,31 @@ describe('isModuleEnabled', () => {
     expect(isModuleEnabled('/scn', null)).toBe(false)
     expect(isModuleEnabled('/scn', undefined)).toBe(false)
   })
+
+  it('honors airport_type to hide USAF-only modules on civilian bases', () => {
+    // SCN, AMTR, ACSI are USAF-only — hidden on civilian airports
+    // even when the module key is in enabledModules.
+    expect(isModuleEnabled('/scn',  ['scn'],  'usaf')).toBe(true)
+    expect(isModuleEnabled('/scn',  ['scn'],  'faa_part139')).toBe(false)
+    expect(isModuleEnabled('/amtr', ['amtr'], 'usaf')).toBe(true)
+    expect(isModuleEnabled('/amtr', ['amtr'], 'faa_part139')).toBe(false)
+    expect(isModuleEnabled('/acsi', ['acsi'], 'usaf')).toBe(true)
+    expect(isModuleEnabled('/acsi', ['acsi'], 'faa_part139')).toBe(false)
+  })
+
+  it('dual-applicable modules surface in both modes', () => {
+    expect(isModuleEnabled('/checks',        ['checks'],        'usaf')).toBe(true)
+    expect(isModuleEnabled('/checks',        ['checks'],        'faa_part139')).toBe(true)
+    expect(isModuleEnabled('/discrepancies', ['discrepancies'], 'faa_part139')).toBe(true)
+    expect(isModuleEnabled('/wildlife',      ['wildlife'],      'faa_part139')).toBe(true)
+  })
+
+  it('omitting airport_type preserves prior behavior (back-compat)', () => {
+    // Existing call sites that haven't been updated continue to work
+    // the same way they did before the dual-mode change.
+    expect(isModuleEnabled('/scn',  ['scn'])).toBe(true)
+    expect(isModuleEnabled('/amtr', ['amtr'])).toBe(true)
+  })
 })
 
 describe('isWizardStepEnabled', () => {

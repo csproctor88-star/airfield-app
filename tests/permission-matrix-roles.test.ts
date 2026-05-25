@@ -87,9 +87,44 @@ function replayMigrations(
         continue
       }
 
-      // DELETE FROM role_permissions WHERE role IN (...)
-      if ((m = stmt.match(/^DELETE\s+FROM\s+role_permissions\s+WHERE\s+role\s+IN\s*\(([^)]+)\)/i))) {
-        Array.from(m[1].matchAll(/'([^']+)'/g)).forEach((x) => map.delete(x[1]))
+      // DELETE FROM role_permissions WHERE role IN (...) [AND permission_key ...]
+      //
+      // Three shapes:
+      //   (a) plain role IN (...)               → wipe all perms for those roles
+      //   (b) ... AND permission_key LIKE 'X%'  → drop matching perms only
+      //   (c) ... AND permission_key IN (...)   → drop those exact perms only
+      //   (d) ... AND permission_key = 'X'      → drop that one perm only
+      if ((m = stmt.match(/^DELETE\s+FROM\s+role_permissions\s+WHERE\s+role\s+IN\s*\(([^)]+)\)\s*(AND[\s\S]+)?$/i))) {
+        const roles = Array.from(m[1].matchAll(/'([^']+)'/g)).map((x) => x[1])
+        const andClause = (m[2] ?? '').replace(/^AND\s+/i, '').trim()
+        if (!andClause) {
+          roles.forEach((r) => map.delete(r))
+          continue
+        }
+        // Build a key-match predicate from the AND clause
+        let keyMatches: ((k: string) => boolean) | null = null
+        const likeMatch = andClause.match(/^permission_key\s+LIKE\s+'([^']+)'/i)
+        const inMatch = andClause.match(/^permission_key\s+IN\s*\(([^)]+)\)/i)
+        const eqMatch = andClause.match(/^permission_key\s*=\s*'([^']+)'/i)
+        if (likeMatch) {
+          const re = new RegExp('^' + likeMatch[1].replace(/%/g, '.*') + '$')
+          keyMatches = (k) => re.test(k)
+        } else if (inMatch) {
+          const keys = new Set(Array.from(inMatch[1].matchAll(/'([^']+)'/g)).map((x) => x[1]))
+          keyMatches = (k) => keys.has(k)
+        } else if (eqMatch) {
+          const target = eqMatch[1]
+          keyMatches = (k) => k === target
+        }
+        if (keyMatches) {
+          roles.forEach((r) => {
+            const set = map.get(r)
+            if (!set) return
+            for (const k of Array.from(set)) {
+              if (keyMatches!(k)) set.delete(k)
+            }
+          })
+        }
         continue
       }
 
@@ -270,7 +305,15 @@ describe('permission matrix — role preset contracts', () => {
 
   it('read_only — every :view key + installations:switch; no writes', () => {
     expect(has('read_only', PERM.INSTALLATIONS_SWITCH)).toBe(true)
-    const viewKeys = Array.from(ALL_PERM_KEYS).filter((k) => k.endsWith(':view'))
+    // AMTR personnel-training data is intentionally carved out of the
+    // "global read" scope — read_only / safety / atc had `amtr:view`
+    // revoked by migration 2026052400. The contract here is "every
+    // :view key EXCEPT amtr:*" (training records are AMOPS-internal
+    // and not part of the general read-all surface).
+    const EXCLUDED_VIEWS = new Set<string>([PERM.AMTR_VIEW])
+    const viewKeys = Array.from(ALL_PERM_KEYS)
+      .filter((k) => k.endsWith(':view'))
+      .filter((k) => !EXCLUDED_VIEWS.has(k))
     const missingViews = viewKeys.filter((k) => !has('read_only', k))
     expect(missingViews).toEqual([])
     expect(restrictedKeys('read_only')).toEqual([])

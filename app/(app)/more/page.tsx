@@ -269,7 +269,8 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
 }
 
 export default function MorePage() {
-  const { enabledModules } = useInstallation()
+  const { enabledModules, currentInstallation } = useInstallation()
+  const airportType = currentInstallation?.airport_type ?? null
   const { has, loaded: permsLoaded } = usePermissions()
   const badgeCounts = useSidebarBadgeCounts()
   const expiringNotamCount = useExpiringNotamCount()
@@ -288,8 +289,9 @@ export default function MorePage() {
       const perm = HREF_PERMISSION[m.href]
       if (perm && !has(perm)) return false
       // Remaining items: module-toggle gate only (permission gate is
-      // subsumed by the sidebar matrix now).
-      if (!isModuleEnabled(m.href, enabledModules)) return false
+      // subsumed by the sidebar matrix now). airport_type filter hides
+      // USAF-only modules (AMTR, SCN, ACSI) on civilian bases.
+      if (!isModuleEnabled(m.href, enabledModules, airportType)) return false
       return true
     })
   }
@@ -304,7 +306,7 @@ export default function MorePage() {
         if (perm && !has(perm)) return false
         return true
       })
-      .filter(m => isModuleEnabled(m.href, enabledModules))
+      .filter(m => isModuleEnabled(m.href, enabledModules, airportType))
     return (
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>More</div>

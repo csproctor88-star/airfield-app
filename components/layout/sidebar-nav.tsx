@@ -133,7 +133,8 @@ export function SidebarNav() {
   const { resolvedTheme } = useTheme()
   const expiringNotamCount = useExpiringNotamCount()
   const badgeCounts = useSidebarBadgeCounts()
-  const { enabledModules } = useInstallation()
+  const { enabledModules, currentInstallation } = useInstallation()
+  const airportType = currentInstallation?.airport_type ?? null
   const { has, loaded: permsLoaded } = usePermissions()
   const [isKioskRole, setIsKioskRole] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
@@ -227,8 +228,10 @@ export function SidebarNav() {
     const requiredPerm = HREF_TO_VIEW_PERM[href]
     if (requiredPerm && permsLoaded && !has(requiredPerm)) return false
 
-    // Base-level module-on-off toggle (independent of role).
-    if (!isModuleEnabled(href, enabledModules)) return false
+    // Base-level module-on-off toggle (independent of role), plus
+    // airport_type filter — civilian bases hide USAF-only modules
+    // (AMTR, SCN, ACSI) and vice-versa.
+    if (!isModuleEnabled(href, enabledModules, airportType)) return false
     return true
   }
 

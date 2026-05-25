@@ -84,13 +84,33 @@ export const PERM = {
   DAILY_REVIEWS_SIGN_AMSL:              'daily_reviews:sign:amsl',
   DAILY_REVIEWS_SIGN_NAMO:              'daily_reviews:sign:namo',
   DAILY_REVIEWS_SIGN_AFM:               'daily_reviews:sign:afm',
+  // Civilian-mode daily-review signing (Part 139 shifts)
+  DAILY_REVIEWS_SIGN_SUPERVISOR:        'daily_reviews:sign:supervisor',
+  DAILY_REVIEWS_SIGN_MANAGER:           'daily_reviews:sign:manager',
 
-  // AMTR — Airfield Management Training Record
+  // AMTR — Airfield Management Training Record (USAF only)
   AMTR_VIEW:                            'amtr:view',
   AMTR_WRITE:                           'amtr:write',
   AMTR_DELETE:                          'amtr:delete',
   AMTR_MANAGE:                          'amtr:manage',
   AMTR_EXPORT:                          'amtr:export',
+
+  // SMS — Safety Management System (Part 139 §139.401-415)
+  SMS_READ:                             'sms:read',
+  SMS_WRITE:                            'sms:write',
+  SMS_SIGN_POLICY:                      'sms:sign_policy',
+  SMS_APPROVE_MOC:                      'sms:approve_moc',
+  SMS_TRIAGE_REPORTS:                   'sms:triage_reports',
+
+  // AEP — Airport Emergency Plan (Part 139 §139.325 + AC 150/5200-31C)
+  AEP_READ:                             'aep:read',
+  AEP_WRITE:                            'aep:write',
+  AEP_SIGN:                             'aep:sign',
+
+  // §139.303 Training (civilian) — also usable in USAF mode for non-1C7X1 staff
+  TRAINING_PART139_READ:                'training_part139:read',
+  TRAINING_PART139_WRITE:               'training_part139:write',
+  TRAINING_PART139_EXPORT:              'training_part139:export',
 
   // Reporting / activity
   DASHBOARD_VIEW:                       'dashboard:view',

@@ -1,4 +1,5 @@
 import type { UserRole } from '@/lib/supabase/types'
+import type { AirportType } from '@/lib/airport-mode'
 
 export type ModuleKey =
   | 'checks'
@@ -50,6 +51,13 @@ export type ModuleDef = {
   setupSteps: WizardStepKey[]
   defaultEnabled: boolean
   roleRestrictions?: UserRole[]
+  /**
+   * Which airport_type modes this module applies to. Defaults to
+   * ['usaf', 'faa_part139'] (both) when omitted. SCN and AMTR are
+   * USAF-only; SMS / AEP / §139.303 Training (when added) are
+   * civilian-only.
+   */
+  appliesTo?: AirportType[]
 }
 
 export const MODULES: ModuleDef[] = [
@@ -82,6 +90,7 @@ export const MODULES: ModuleDef[] = [
     hrefs: ['/acsi'],
     setupSteps: [],
     defaultEnabled: true,
+    appliesTo: ['usaf'],
   },
   {
     key: 'discrepancies',
@@ -153,6 +162,7 @@ export const MODULES: ModuleDef[] = [
     hrefs: ['/scn'],
     setupSteps: ['scnagencies'],
     defaultEnabled: true,
+    appliesTo: ['usaf'],
   },
   {
     key: 'shift-checklist',
@@ -233,6 +243,7 @@ export const MODULES: ModuleDef[] = [
     hrefs: ['/amtr'],
     setupSteps: [],
     defaultEnabled: true,
+    appliesTo: ['usaf'],
   },
 ]
 
@@ -283,8 +294,25 @@ export const CORE_WIZARD_STEPS: ReadonlySet<WizardStepKey> = new Set<WizardStepK
 
 const ALWAYS_ON_HREFS_ARR: string[] = Array.from(ALWAYS_ON_HREFS)
 const HREF_TO_MODULE_ENTRIES: Array<[string, ModuleKey]> = Array.from(HREF_TO_MODULE.entries())
+const MODULE_BY_KEY: ReadonlyMap<ModuleKey, ModuleDef> = new Map(MODULES.map(m => [m.key, m]))
 
-export function isModuleEnabled(href: string, enabledModules: readonly string[] | null | undefined): boolean {
+/**
+ * Returns true when a module is permitted for an airport_type. A
+ * module without `appliesTo` applies to both modes (default). Used
+ * by isModuleEnabled to filter civilian-only / USAF-only modules.
+ */
+function moduleAppliesToAirport(key: ModuleKey, airportType: AirportType | null | undefined): boolean {
+  const mod = MODULE_BY_KEY.get(key)
+  if (!mod?.appliesTo) return true
+  if (!airportType) return true // unknown mode → fail open
+  return mod.appliesTo.includes(airportType)
+}
+
+export function isModuleEnabled(
+  href: string,
+  enabledModules: readonly string[] | null | undefined,
+  airportType?: AirportType | null,
+): boolean {
   if (ALWAYS_ON_HREFS.has(href)) return true
   // Allow sub-paths like /discrepancies/new, /reports/lighting
   for (const alwaysOn of ALWAYS_ON_HREFS_ARR) {
@@ -292,10 +320,14 @@ export function isModuleEnabled(href: string, enabledModules: readonly string[] 
   }
   const enabled = new Set(enabledModules ?? [])
   const directKey = HREF_TO_MODULE.get(href)
-  if (directKey) return enabled.has(directKey)
+  if (directKey) {
+    return enabled.has(directKey) && moduleAppliesToAirport(directKey, airportType)
+  }
   // Sub-path fallback: /discrepancies/abc → /discrepancies
   for (const [prefix, key] of HREF_TO_MODULE_ENTRIES) {
-    if (href.startsWith(prefix + '/')) return enabled.has(key)
+    if (href.startsWith(prefix + '/')) {
+      return enabled.has(key) && moduleAppliesToAirport(key, airportType)
+    }
   }
   // Unknown href: fail open so unrelated pages aren't accidentally hidden.
   return true
