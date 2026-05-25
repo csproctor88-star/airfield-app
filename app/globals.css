@@ -385,9 +385,12 @@ html, body {
     outline: none;
     border-color: var(--color-border-active);
   }
+  /* The root `color-scheme` (dark/light) already tints the native calendar
+     glyph to match the theme — do NOT invert it (that flips the correctly
+     colored icon back to invisible). Just make it interactive + visible. */
   .input-dark::-webkit-calendar-picker-indicator {
-    filter: invert(1);
     cursor: pointer;
+    opacity: 0.9;
   }
 
   /* Primary CTA button gradient */

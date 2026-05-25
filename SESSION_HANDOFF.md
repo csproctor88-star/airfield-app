@@ -1,101 +1,126 @@
 # Session Handoff
 
-**Date:** 2026-05-20
-**Branch:** `main` (the `feat/alternate-map-provider` work was merged this session)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (253 pass)
-**HEAD:** `8b93a1b` (origin/main)
+**Date:** 2026-05-22
+**Branch:** `feat/amtr-module` (pushed to origin)
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (306 pass / 30 files)
+**HEAD:** `75a0b26` (origin/feat/amtr-module)
 
 ---
 
 ## What shipped this session
 
-Two things. First, a focused **PPR export upgrade** — arrival time on the
-PDF, a base-local time conversion alongside Zulu, and the ability to
-export a single PPR or a hand-picked subset instead of only the full
-filtered range. Second, the **`feat/alternate-map-provider` branch was
-merged to `main`** (fast-forward, 9 commits) and pushed, clearing the
-prior handoff's top-priority "branch not merged" item. Note the
-AF-network Bing performance verification (see Known issues) is still
-unverified — the merge does not change that.
+A focused follow-up to the AMTR build: the access-control layer is now
+actually enforced in the UI, plus a batch of UX fixes driven by walking the
+module on a live Demo AFB. Four commits, no new migrations. The headline is
+that record visibility and editing finally consult the per-user AMTR role
+layer instead of raw app permissions — a user with `amtr:write` but no role
+assigned could previously see and edit every record. Still off-nav
+(`/amtr`, direct URL only).
 
-### PPR export: arrival ETA + base-local time + per-PPR/selection export (`8b93a1b`)
+### Enforce AMTR role gating + UX batch (`de6936a`)
+Seven user-requested items in one pass:
 
-Three sub-changes, all driven from a screenshot of a real export where
-the Arrival header showed only `2026-05-21` while Departure showed
-`5/21/2026 1630Z`.
+1. **Role-based visibility/edit (the security fix).** The roster and member
+   pages now call the `lib/amtr/roles.ts` helpers. A member with no
+   non-trainee role sees **only their own record** and can self-initial the
+   Trainee block; Trainer/Certifier/NAMT/AFM see the whole roster. Program
+   managers (`amtr:manage` — AFM / NAMT / Base Admin) **bypass** the role
+   layer: they operate with AFM authority on every record (computed as
+   `signingRoles = canManage ? [...myRoles, 'afm'] : myRoles`), so the program
+   can be bootstrapped and managed. The self-certification guard still holds
+   on a manager's own record. Data-entry actions that were wrongly gated on
+   raw `canWrite` (Cover, Files, Import, RAT dates, 623A add/remove) moved to
+   the role-aware `canEnterData`. The `/amtr/[memberId]` page added a
+   `canViewRecord` block screen and restricted the member-jump dropdown; the
+   inspect page now requires an oversight role even via direct URL.
+2. **Resource dialog** shows resources as clickable links by default; managers
+   get an Edit toggle to switch into the add/rename/remove UI (a task with no
+   resources yet opens straight into edit).
+3. **1098 resource icon** pinned to a consistent column edge
+   (`justify-content: space-between`) instead of flowing after variable-length
+   task text.
+4. **Landing KPI badges** (Members / Complete / Due Soon / Overdue) now filter
+   the roster, with toggle + active-ring + "showing X of Y · clear" chip.
+5. **Help guide** rewritten from a feature list into how the 1C7X1 record is
+   executed in practice — in-process → OJT → skill-level upgrade →
+   recurring/proficiency → evaluation, what each role does day-to-day, and the
+   training office's monthly cycle.
+6. **Persistent module bar** — new `app/(app)/amtr/layout.tsx` +
+   `components/amtr/module-bar.tsx` keep Help / Training References / Admin
+   reachable on every AMTR route (Help & References as overlays). Removed the
+   now-duplicate buttons/panels from the landing page.
+7. **1098 record KPI badges** (Required / Complete / Due Soon / Overdue) filter
+   the task table by status, same toggle treatment.
 
-**Arrival time on the export.** The Arrival cell (both the summary
-table and each detail card's header strip) now renders date + ETA time
-the same way Departure does, and the arrival date is formatted
-consistently with departure (it was previously printed as the raw ISO
-spine value). The ETA wasn't surfacing because the old column lookup
-only matched the substrings `eta` / `arrival time`. Detection is now
-**type-aware** (only `time`-type columns, so a broad keyword can't grab
-a date column), checks more synonyms (`arrival`, `arrive`, `inbound`,
-`land`, `on block`, `wheels down`), and **falls back to the lone
-remaining time column** when nothing matches by name. So an
-arrival-time column surfaces regardless of what a base named it. The
-departure-time matcher was broadened the same way and is resolved
-first so the arrival matcher can exclude it.
+### Keep AMTR Admin cards open on edit (`8b9cc4e`)
+`/amtr/roles` `load()` flipped the page-level `loading` flag on every refresh,
+swapping the content for `<LoadingState>` — which unmounts every
+`CollapsibleCard` (open state is local) and bounces the user to the collapsed
+top of the page on every matrix checkbox / catalog edit. Guarded with an
+`initialLoaded` ref so the full-page loader fires only on first load; later
+refreshes update data in place.
 
-**Base-local subline.** Each Arrival/Departure value now carries a
-smaller grey subline with the base-local equivalent (e.g. `1130L`). The
-new `zuluToLocalDateTime(dateISO, zuluHHMM, tz)` helper in `lib/utils.ts`
-does this **date-aware**, unlike the existing time-only `formatLocalTime`
-— so a near-midnight Zulu time that rolls into a different local day
-shows the local date too (`5/20/2026 1930L`). Suppressed for UTC bases
-and when local == Zulu. The user confirmed PPR times are entered as
-Zulu wall-clock, which is what `formatPprColumnValue` already assumes,
-so the `Z` value is authoritative and the `L` subline is a true
-conversion (not the other way around). `STRIP_HEIGHT` bumped 13→16mm to
-fit the subline; `measureCard` uses the same constant so card chrome
-stays in sync.
-
-**Export a specific PPR or a subset.** Added checkbox selection to the
-PPR log — per-row plus a select-all header checkbox. Any selection
-reveals an action bar (Export PDF / Email / Clear) that exports only
-the checked rows. The detail dialog header gained a PDF button that
-exports just that one PPR. `generatePprPdf` took two new optional
-inputs (`subtitle`, `filename`); the page's `preparePdf(entriesOverride?)`
-sets them per scope — single PPR → `ppr-<number>.pdf` / subtitle
-`PPR <number>`; subset → `ppr-selection-N.pdf` / `Selected PPRs (N)`.
-The existing top-bar PDF/Email buttons still export all visible rows
-(their `onClick` was wrapped in arrows so the click event isn't passed
-as the override arg). Selection is intersected with `filteredEntries`
-on export so a stale id from a since-hidden row can't leak in.
+### Module bar opaque + locked below header (`8f17444`, `75a0b26`)
+The new bar used `--color-bg-inset`, which is only 60% opaque, so page content
+bled through it while scrolling — switched to the solid `--color-bg-elevated`.
+Then it was sticky at `top:0`, the same line as the global app header, so it
+rode up over the header on scroll. The header height is dynamic, so the bar now
+measures it via `ResizeObserver` (`.app-main`'s first child) and sets its sticky
+`top` to that offset, with z-index dropped to 40 (below the header's 50) so it
+always sits beneath.
 
 ---
 
 ## Migrations status
 
-No new migrations this session. The most recent migration
-(`2026051900_bases_map_provider.sql`, from the merged branch) was
-applied manually by the user in the prior session.
+No new migrations this session. The AMTR migrations `2026052010`–`2026052018`
+remain **applied** to the working environment (confirmed in prior sessions).
+The tracker is empty project-wide — apply new ones with
+`supabase db query --linked --file`.
+
+| File | Applied | What it does |
+|---|---|---|
+| `2026052010_amtr_signing_v2` | ✅ | hierarchical per-block signing; `score_or_hours` on 1098 catalog |
+| `2026052011_amtr_inspections` | ✅ | `amtr_inspections` + `amtr_inspection_checklist` |
+| `2026052012_amtr_623a_entry_types` | ✅ | editable 623A entry-type catalog |
+| `2026052013_amtr_milestone_window_catalog` | ✅ | milestone `target_window` on the catalog |
+| `2026052014_amtr_member_exclusions` | ✅ | roster auto-populate exclusions |
+| `2026052015_amtr_803_catalog` | ✅ | standard 803 STS catalog |
+| `2026052016_amtr_qual_catalog` | ✅ | shared quals/skill/SEI catalog + progress |
+| `2026052017_amtr_1098_resources` | ✅ | per-1098-task resource links |
+| `2026052018_amtr_catalog_versioning` | ✅ | `managed`/`retired` + `amtr_catalog_version` |
 
 ---
 
 ## Bugs fixed during the session
 
-(None — this session was a scoped feature add. The arrival-time gap was
-a detection-naming limitation, not a bug, and is described above.)
+| Symptom | Root cause | Commit |
+|---|---|---|
+| User with no AMTR role saw and edited every record | roster + member pages gated only on app perms, never consulted the AMTR-role layer | `de6936a` |
+| Every checkbox / edit on the Admin page collapsed all cards and jumped to the top | `load()` flipped page-level `loading`, unmounting the `CollapsibleCard`s (open state is local) | `8b9cc4e` |
+| Page content bled through the sticky module bar | `--color-bg-inset` is `rgba(8,12,24,0.6)` — only 60% opaque | `8f17444` |
+| Module bar rode up over the global header on scroll | both the header and the bar were `position: sticky; top: 0` | `75a0b26` |
 
 ---
 
 ## Lessons from this session
 
-- **PPR time values are stored as Zulu wall-clock.** `formatPprColumnValue`
-  treats raw HHMM digits as Zulu and only converts to local when a
-  column's `time_display='local'`. Any new display/conversion code must
-  start from that assumption — the stored digit is Zulu, the local
-  value is derived. The user confirmed this is how they enter times.
-- **The PPR header strip pairs a date column with a time column by
-  fuzzy name match.** When adding fields that should appear in the
-  Arrival/Departure strip, prefer the type-aware `findTimeColumn`
-  helper over the substring `findColumn`, and remember the lone-time-
-  column fallback exists so bases with idiosyncratic naming still work.
-- **`formatLocalTime` is time-of-day only and cannot shift the date.**
-  Use the new `zuluToLocalDateTime` when a local conversion needs to
-  handle midnight rollover (anything anchored to a real calendar date).
+- **AMTR has two independent permission layers and the UI must honor both.**
+  App perms (`amtr:view/write/manage`) decide whether you can open the module;
+  the per-user AMTR roles (trainee/trainer/certifier/namt/afm) decide record
+  visibility and signing authority. A page that gates only on app perms leaks
+  every record. `amtr:manage` is the deliberate bypass — those holders act as
+  AFM (this was a confirmed product decision, see below).
+- **A page-level `loading` flag that swaps content for a spinner unmounts the
+  children** — any local state they hold (a `CollapsibleCard`'s open/closed,
+  scroll position) is lost on every background refresh. Guard refreshes with an
+  `initialLoaded` ref so only the first load shows the full-page loader.
+- `--color-bg-inset` is translucent (60%); anything sticky/overlaying needs the
+  solid `--color-bg-elevated`.
+- Two sibling sticky elements both at `top: 0` in the same scroll container
+  overlap. The global app header (`.app-main`'s first child) is sticky with a
+  *dynamic* height — measure it (`ResizeObserver`) rather than hard-coding an
+  offset.
 
 ---
 
@@ -103,72 +128,28 @@ a detection-naming limitation, not a bug, and is described above.)
 
 | Item | Severity | Notes |
 |---|---|---|
-| **AF-network performance check on Bing tiles is unverified** | Medium | Still the single most important pre-ship validation for the alternate-provider work (now on `main`). Bing's CDN is global so it *should* be snappy on the AF network, but AF-network behavior is exactly what ruled out Mapbox. Pick a representative OCONUS base + connection and confirm `/infrastructure` and `/parking` stay interactive with `map_provider='bing'`. |
-| **PPR "triage" identifiers still in code + DB** | Medium | (Carryover.) Display strings are clean ("Review" everywhere) but DB enum `pending_amops_triage`, columns `triaged_by`/`triaged_at`, permission key `ppr:triage`, function `triagePprEntry`, and ~25 comments still use "triage". Full rename = 1 migration + ~25 file edits. |
-| Mobile parking PDF export not verified end-to-end | Low–Medium | (Carryover.) Desktop is solid. |
-| Backup feature plan parked | Low | (Carryover.) Full plan at `docs/Backup_And_Data_Export_Plan.md`. 8–11 sessions total. |
-| Standalone mobile app plan exists in conversation | Low | (Carryover.) React Native + Expo extraction sketched but not parked. |
-| Supabase migration tracker empty for the entire project | Medium | (Carryover.) Per-migration applies via manual `db query --linked --file`. Eventual cleanup is a `migration repair --status applied <ts>` sweep. |
-| Sidebar + `/more` parallel hardcoded module lists | Low | (Carryover.) |
-| `lib/tours/pages/*.ts` still present | Low | (Carryover.) 28 files retained as content seed, no imports. |
-| `data-tour` anchors throughout `page.tsx` files | Low | (Carryover.) 70+ unused. |
-| `/training` Quick Start + Base Setup tabs use stub content | Medium | (Carryover.) |
-| FAQ entries on every module are empty | Low | (Carryover.) |
-| `lib/permissions-server.ts` imports `resolveEffectivePermissions` from `'use client'` module | Medium | (Carryover.) Move to a shared module. |
-| `audit-panel.tsx` per-row internal styling | Low | (Carryover.) 1.6K LOC. |
-| `/infrastructure` perf | Low–Medium | (Carryover.) AdvancedMarkerElement migration target. |
-| Largest source files | Held | `parking/page.tsx` ~4.8K LOC, `base-config/setup/page.tsx` ~4.8K LOC, `infrastructure/page.tsx` ~4.1K LOC. `ppr/page.tsx` grew to ~2.4K LOC this session. |
-| Untracked carryover files | Low | `.claude/`, `docs/Backup_And_Data_Export_Plan.md`, `docs/DEMO_LOGINS.md`, `docs/base-setup-guide-review.md`, `docs/training-modules-review.md`, `public/glidepath-logo-dark.jpg`. |
-| ~124 `as any` casts | Low | (Carryover.) |
-| Check draft real-time sync deferred | Low | (Carryover.) |
-| "Advisories" → "WWA Notifications" UI sweep | Deferred | (Carryover.) |
-| Trademark | Held | CDW holds "GLIDEPATH" Class 42 (SaaS) registration. |
+| `amtr:manage` holders sign with AFM authority | by design | confirmed with the user this session. If managers should be able to edit but need an explicit `afm` role to *sign*, it's a one-line change in `signingRoles` on `/amtr/[memberId]/page.tsx` |
+| Excel export needs training-manager accuracy review | high | inspection-facing; verify cell-by-cell. JQS fills only where task numbers match; 1098 shows app catalog tasks (names differ from template by design) |
+| 803 remarks not carried into the export sheet | med | per-eval remarks omitted from the 803 sheets; add if the manager needs them |
+| Bases on the old JQS catalog still have 7.8 as an item | med | run **Admin → Update standard catalogs** (or flip 7.8 Item→Section) to fix existing data |
+| Import adds free-form rows (623A/797/803) | low | run once on a fresh record or it duplicates; catalog sheets upsert and are safe to re-run |
+| `/amtr` off all navigation | by design | re-add to `lib/sidebar-config.ts` + grant matrix perms + bump version when launching broadly |
+| Landing KPI strip is unit-wide even for own-record-only viewers | low | a trainee on the roster sees their own record only, but the KPI counts above are still unit-wide aggregates (counts only, no names). Scope to the visible set if it matters |
+| Untracked artifacts in working tree | low | `docs/Training Record.xlsx`, `~$…` Office lock files, review docs, `public/glidepath-logo-dark.jpg` — not committed intentionally |
 
 ---
 
 ## Next session tasks
 
-No required next step — pick up wherever the user wants. The two
-highest-value open items:
+No required next step — this session's requested batch shipped clean. Pick up
+wherever the user wants. Likely candidates (carried from prior handoff):
 
-- **AF-network Bing performance verification.** Now that the
-  alternate-provider work is on `main`, this is the load-bearing
-  pre-ship test. Get an OCONUS user on a Belgian/German base with a
-  representative AF-network connection to load `/infrastructure` and
-  `/parking` with `map_provider='bing'` and confirm interactions stay
-  snappy.
-- **Bump to v2.34** if shipping this as a tagged release. Per memory,
-  version strings live in five-plus places: `package.json`,
-  `app/(app)/settings/page.tsx` (About), `app/(public)/login/page.tsx`
-  (footer), `app/(app)/training/page.tsx` (header), `CHANGELOG.md`,
-  `README.md` (and a new entry in `lib/release-notes.ts` if present).
-
-Other open candidates, none blocking:
-
-- **Eyeball a generated PPR export** to confirm the new Arrival
-  date+time line and the `L` subline render the way the user wants —
-  this was not verified in a browser this session.
-- **Full Triage → Review code + DB rename** (carryover). 1 migration +
-  ~25 file edits.
-- **Manual backup feature** Phase 1 from
-  `docs/Backup_And_Data_Export_Plan.md` (carryover).
-- **Verify Bing imagery at a German installation** (Ramstein,
-  Spangdahlem) — if blurred there, German bases fall back to Esri,
-  whose status at those bases is unverified.
-- **Sidebar / `/more` shared config refactor** (carryover).
-
-### Long-running carryover (bandwidth-permitting)
-
-- Sweep `lib/tours/pages/*.ts` and dead `data-tour` attributes.
-- Move `resolveEffectivePermissions` out of `lib/permissions.ts` into a
-  shared module.
-- Component extraction in `parking/page.tsx` (~4.8K LOC),
-  `base-config/setup/page.tsx` (~4.8K LOC), `ppr/page.tsx` (~2.4K LOC).
-- `audit-panel.tsx` per-row styling refresh (1.6K LOC).
-- "Advisories" → "WWA Notifications" UI sweep.
-- Outage analytics, training management, Part 139 civilian template.
-- CAC/PIV authentication (blocked on Platform One).
-- Supabase migration tracker repair sweep.
+- **Training manager verifies the Excel export** in Excel against the official
+  template; tune the per-sheet cell mapping in `lib/amtr-record-excel.ts` from
+  their feedback (the importer reuses the same maps, so fixes carry both ways).
+- Carry **803 remarks** into the export.
+- When launching broadly: re-add `/amtr` to the sidebar, grant permissions,
+  bump version strings (5 places) + CHANGELOG, merge `feat/amtr-module`.
 
 ---
 
@@ -176,16 +157,19 @@ Other open candidates, none blocking:
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 253 pass / 25 files
-Build: npm run build clean — Compiled successfully, no warnings, no errors.
-No new migrations this session.
+Tests: 306 pass / 30 files
+Build: npm run build clean (rm -rf .next first if a stale /api/admin or
+  /_document PageNotFoundError appears during page-data collection — second
+  run is clean).
 
-First Load JS (changed route this session):
-  /ppr                  17.5 kB / 186 kB   (selection UI + scope-aware export)
-
-Largest static page (unchanged): /wildlife 459 kB / 795 kB.
-Middleware: 74.5 kB.
-Shared by all: 91.2 kB.
+AMTR routes (First Load JS):
+  /amtr                     5.35 kB / 164 kB   (was ~178 kB — Help/References
+                                                moved to the layout bar)
+  /amtr/[memberId]          9.75 kB / 202 kB
+  /amtr/[memberId]/inspect  11.3 kB / 366 kB
+  /amtr/reports             12.6 kB / 329 kB
+  /amtr/roles               27.3 kB / 201 kB
+  (ExcelJS is code-split — only loads on export/import/upload)
 ```
 
 ---
@@ -194,35 +178,18 @@ Shared by all: 91.2 kB.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | **PPR export upgrade** — Arrival now shows date + ETA time (type-aware/robust column detection); each Arrival/Departure carries a base-local subline alongside Zulu (date-aware conversion handling midnight rollover); export a single PPR (detail-dialog button) or a checkbox-selected subset, not just the full filtered range. **Alternate satellite tile provider per base** for OCONUS bases where Google blurs the airfield (Bing Maps Aerial or Esri World Imagery via `google.maps.ImageMapType`, Google Maps JS SDK retained everywhere because the AF network throttles WebGL-heavy renderers). Unified **Use My Location** across every map and form (one shared component, overlay + inline variants). **AMOPS courtesy-copied** on every automated PPR email. v2.34 **capabilities brief** in markdown + docx. Plus prior unreleased: parking PDF capture rebuild, QRC create-from-scratch + per-base review interval, full /training content sync. |
-| 2.33.0 | 2026-05-02 | Glidepath Training rebuilt at /training as role-filterable hub + per-module deep-dive subpages; PPR module; Daily Reviews; offline write queue + Workbox runtime caching; permission matrix overhaul + 3 new roles; Events Log structure-first refresh; auth fix for invite/signup/reset emails landing on correct screen; forgot-password sends branded email. |
-| v2.32.0 | 2026-04-21 | Modular Onboarding, SCN, Close-for-Day, What's New modal |
-| v2.31.0 | 2026-04-07 | Full Google Maps migration, Custom Status Boards, PPR Log |
-| v2.30.0 | 2026-04-14 | Daily Reviews + shift sign-off, ARFF status log, Vitest scaffold |
-
-See `CHANGELOG.md` for full history.
+| **Unreleased** | — | AMTR module hardening on `feat/amtr-module` (signing, inspections, Admin catalogs, HAF Excel export/import, no-wipe version sync, **role-based access enforcement + UX batch**) — not merged to `main` |
+| v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
 
-## Key docs / files touched this session
+## Key files touched this session
 
-### Modified files
+### New
+- `app/(app)/amtr/layout.tsx` — wraps every AMTR route with the module bar
+- `components/amtr/module-bar.tsx` — persistent Help / References / Admin bar
+  (`AMTR_BAR_HEIGHT` exported; measures the global header offset)
 
-- `lib/utils.ts` — new `zuluToLocalDateTime(dateISO, zuluHHMM, tz)`
-  date-aware Zulu→base-local converter (handles midnight rollover).
-- `lib/ppr-pdf.ts` — type-aware `findTimeColumn` + lone-time-column
-  fallback for ETA/ETD detection; `buildArrivalDisplay` /
-  `buildDepartureDisplay` (Zulu main line + local subline) used by both
-  the summary table and the card header strip; `STRIP_HEIGHT` 13→16;
-  `subtitle` / `filename` overrides on `PprPdfInput`.
-- `app/(app)/ppr/page.tsx` — row + select-all checkboxes, selection
-  action bar, single-PPR PDF button in the detail dialog, and
-  `preparePdf(entriesOverride?)` / `handleExportPdf` / `handleEmailPdf`
-  refactored to take an entries override with scope-aware subtitle +
-  filename.
-
----
-
-*1 feature commit this session (`8b93a1b`), plus the fast-forward merge
-of `feat/alternate-map-provider` → `main` (9 commits) — both pushed to
-`origin/main`. No new migrations. Untracked carryover files unchanged.*
+### Modified
+- `app/(app)/amtr/{page,roles/page,[memberId]/page,[memberId]/inspect/page}.tsx`
+- `components/amtr/{form1098-tab,form623a-tab,resource-dialog,how-to-guide}.tsx`

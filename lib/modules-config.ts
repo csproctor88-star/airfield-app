@@ -18,6 +18,7 @@ export type ModuleKey =
   | 'ppr'
   | 'feedback'
   | 'contractors'
+  | 'amtr'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -220,6 +221,16 @@ export const MODULES: ModuleDef[] = [
     description: 'AF Form 483 Personnel on Airfield log with escort credentials and expiry tracking.',
     useCase: 'Bases actively escorting contractors or tracking airfield access credentials.',
     hrefs: ['/contractors'],
+    setupSteps: [],
+    defaultEnabled: true,
+  },
+  {
+    key: 'amtr',
+    label: 'Training Records (AMTR)',
+    category: 'compliance',
+    description: 'Airfield Management Training Record — roster + per-member electronic record covering AF Forms 623A, 797, 803, 1098, JQS-CFETP, QTP/PCG milestones, formal courses, qualifications, and Ready Airman Training, with role-based signatures and due-date notifications.',
+    useCase: 'Bases managing mandatory airfield-management personnel training and upgrade qualifications.',
+    hrefs: ['/amtr'],
     setupSteps: [],
     defaultEnabled: true,
   },

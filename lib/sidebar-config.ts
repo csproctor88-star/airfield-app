@@ -36,6 +36,9 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen' },
   { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare' },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
+  // 'Training Records' (/amtr) is intentionally omitted from navigation while
+  // in limited testing — the route stays live and is reachable by direct URL,
+  // gated by the `amtr:view` permission. Re-add here to surface it in the sidebar.
   { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
   { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin' },
