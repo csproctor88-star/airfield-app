@@ -5023,6 +5023,12 @@ export type UserRole =
   | 'ppr'
   | 'airfield_status'
   | 'majcom_rfm'
+  // Civilian Part 139 roles
+  | 'accountable_executive'
+  | 'sms_manager'
+  | 'aep_coordinator'
+  | 'ops_supervisor'
+  | 'arff_chief'
 
 export type ProfileStatus = 'active' | 'deactivated' | 'pending'
 

@@ -619,7 +619,13 @@ export const WAIVER_REVIEW_RECOMMENDATIONS = [
 
 // Display labels only. Authorization lives in the permission matrix
 // (role_permissions + user_has_permission); do not add capability flags here.
+//
+// For mode-aware labels (Airfield Manager → Airport Operations Manager
+// on civilian bases), use getRoleLabel(role, base) from lib/airport-mode.
+// The label here is the USAF default — UI surfaces that need civilian
+// translation should route through getRoleLabel.
 export const USER_ROLES = {
+  // Shared roles (relabeled per mode via getRoleLabel)
   airfield_manager: { label: 'Airfield Manager' },
   namo:             { label: 'NAMO' },
   amops:            { label: 'AMOPS' },
@@ -631,7 +637,14 @@ export const USER_ROLES = {
   sys_admin:        { label: 'System Admin' },
   ppr:              { label: 'PPR' },
   airfield_status:  { label: 'Airfield Status' },
+  // USAF-only
   majcom_rfm:       { label: 'MAJCOM / RFM' },
+  // Civilian-only — visible only on FAA Part 139 bases (filtered in role pickers)
+  accountable_executive: { label: 'Accountable Executive' },
+  sms_manager:           { label: 'SMS Manager' },
+  aep_coordinator:       { label: 'AEP Coordinator' },
+  ops_supervisor:        { label: 'Operations Supervisor' },
+  arff_chief:            { label: 'ARFF Chief' },
 } as const
 
 // Rank options for user management
