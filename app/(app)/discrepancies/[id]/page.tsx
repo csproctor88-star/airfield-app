@@ -44,7 +44,7 @@ import { DetailGrid } from '@/components/ui/detail-grid'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import {
-  Pencil, Camera, FileUp, RefreshCw, FileText, Mail, Trash2,
+  Pencil, Camera, RefreshCw, FileText, Mail, Trash2,
   ArrowLeft, MapPin,
 } from 'lucide-react'
 
@@ -67,7 +67,6 @@ export default function DiscrepancyDetailPage() {
   const { installationId, defaultPdfEmail, currentInstallation } = useInstallation()
   const { has } = usePermissions()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const [dbPhotos, setDbPhotos] = useState<PhotoRow[]>([])
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdateRow[]>([])
@@ -611,7 +610,6 @@ export default function DiscrepancyDetailPage() {
       {/* System overview map + photo thumbnails moved into the
           actions/map/photos two-col cluster below. */}
 
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
       <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
       {/* ===== Horizontal action toolbar =====
           Buttons grouped by intent so the toolbar reads as four
@@ -666,11 +664,8 @@ export default function DiscrepancyDetailPage() {
             </div>
             <Separator />
             <div style={groupStyle}>
-              <ActionButton color="var(--color-accent-secondary)" onClick={() => cameraInputRef.current?.click()} disabled={uploading} style={compactStyle}>
-                <Camera size={12} strokeWidth={2.25} />{uploading ? '...' : 'Capture'}
-              </ActionButton>
               <ActionButton color="var(--color-cyan)" onClick={() => fileInputRef.current?.click()} disabled={uploading} style={compactStyle}>
-                <FileUp size={12} strokeWidth={2.25} />{uploading ? '...' : `Upload${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
+                <Camera size={12} strokeWidth={2.25} />{uploading ? '...' : `Add Photo${allPhotos.length > 0 ? ` (${allPhotos.length})` : ''}`}
               </ActionButton>
             </div>
             <Separator />

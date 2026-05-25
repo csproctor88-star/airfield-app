@@ -31,7 +31,6 @@ export default function CheckDetailPage() {
   const params = useParams()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const captureInputRef = useRef<HTMLInputElement>(null)
 
   const [liveData, setLiveData] = useState<CheckRow | null>(null)
   const [comments, setComments] = useState<CheckCommentRow[]>([])
@@ -52,7 +51,6 @@ export default function CheckDetailPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
   const issueFileInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
-  const issueCaptureInputRefs = useRef<Record<number, HTMLInputElement | null>>({})
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const { has } = usePermissions()
   const canWriteChecks = has(PERM.CHECKS_WRITE)
@@ -613,16 +611,9 @@ export default function CheckDetailPage() {
                       onChange={(e) => handleIssuePhoto(e, idx)}
                       style={{ display: 'none' }}
                     />
-                    <input
-                      ref={(el) => { issueCaptureInputRefs.current[idx] = el }}
-                      type="file" accept="image/*" capture="environment"
-                      onChange={(e) => handleIssuePhoto(e, idx)}
-                      style={{ display: 'none' }}
-                    />
                     <PhotoPickerButton
                       variant="compact"
                       onUpload={() => issueFileInputRefs.current[idx]?.click()}
-                      onCapture={() => issueCaptureInputRefs.current[idx]?.click()}
                       disabled={uploadingIssueIdx === idx}
                       label={uploadingIssueIdx === idx ? 'Uploading...' : `+ Add Photo to Issue ${idx + 1}`}
                     />
@@ -688,10 +679,8 @@ export default function CheckDetailPage() {
       {canEdit && (
         <div style={{ marginBottom: 8 }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={captureInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => captureInputRef.current?.click()}
             disabled={uploading}
             label={uploading ? 'Uploading...' : undefined}
           />

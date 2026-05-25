@@ -8,19 +8,19 @@ type Props = {
   disabled?: boolean
   variant?: 'full' | 'compact'
   label?: string
-  /** Allow selecting multiple files from the library (capture is always single). */
+  /** Allow selecting multiple files from the library. */
   multiple?: boolean
 }
 
 /**
- * Combined Upload / Capture photo input. Renders a single button that opens a
- * small popover offering "Take Photo" (camera) or "Upload from Library"
- * (gallery / files). Handles the two hidden file inputs internally so call
- * sites only wire `onFiles`.
+ * Combined photo input. Renders an "Add Photo" button that opens the OS's
+ * native file picker — on iOS that's the Photo Library / Take Photo /
+ * Choose Files action sheet; on Android it's the equivalent chooser.
+ * Owns one hidden `<input type="file" accept="image/*">` so call sites
+ * only wire `onFiles`.
  */
 export function PhotoPickerInput({ onFiles, disabled, variant = 'full', label, multiple = true }: Props) {
   const uploadRef = useRef<HTMLInputElement>(null)
-  const captureRef = useRef<HTMLInputElement>(null)
 
   const handle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -38,17 +38,8 @@ export function PhotoPickerInput({ onFiles, disabled, variant = 'full', label, m
         onChange={handle}
         style={{ display: 'none' }}
       />
-      <input
-        ref={captureRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handle}
-        style={{ display: 'none' }}
-      />
       <PhotoPickerButton
         onUpload={() => uploadRef.current?.click()}
-        onCapture={() => captureRef.current?.click()}
         disabled={disabled}
         variant={variant}
         label={label}

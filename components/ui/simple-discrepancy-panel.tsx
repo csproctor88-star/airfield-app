@@ -70,7 +70,6 @@ export function SimpleDiscrepancyPanel({
   facilityOptions,
 }: SimpleDiscrepancyPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const captureInputRef = useRef<HTMLInputElement>(null)
 
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
@@ -252,12 +251,10 @@ export function SimpleDiscrepancyPanel({
             {gpsLoading ? 'Getting Location…' : 'Use My Location'}
           </button>
 
-          {/* Upload Photos */}
+          {/* Upload Photos — single OS-native picker covers camera + library + files */}
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhoto} style={{ display: 'none' }} />
-          <input ref={captureInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
           <PhotoPickerButton
             onUpload={() => fileInputRef.current?.click()}
-            onCapture={() => captureInputRef.current?.click()}
             variant="full"
             label={localPhotos.length > 0 ? `Add Photo (${localPhotos.length})` : 'Add Photo'}
           />
