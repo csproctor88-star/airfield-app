@@ -11,7 +11,7 @@ import {
   AlertTriangle, MapPin, Lightbulb, PlaneLanding, Plane, Library,
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
   BookOpen, Users, Settings as SettingsIcon,
-  Wrench, FolderOpen, Shield, SlidersHorizontal,
+  Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   type LucideIcon,
 } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
@@ -67,6 +67,7 @@ const adminItems: ModuleItem[] = [
   { name: 'Reports & Analytics', icon: TrendingUp, color: 'var(--color-cyan)', href: '/reports' },
   { name: 'PDF Library', icon: BookOpen, color: 'var(--color-purple)', href: '/library', adminOnly: true },
   { name: 'User Management', icon: Users, color: 'var(--color-text-3)', href: '/users', adminOnly: true },
+  { name: 'Customer Feedback', icon: MessageSquare, color: 'var(--color-accent)', href: '/feedback' },
 ]
 
 // Settings
