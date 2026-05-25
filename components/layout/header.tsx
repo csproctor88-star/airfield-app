@@ -215,6 +215,12 @@ export function Header() {
           : '#ffffff',
         borderBottom: resolvedTheme === 'dark' ? 'none' : '2px solid var(--color-header-border)',
         padding: 'var(--header-padding)',
+        // iOS PWA: status bar overlays the webview (statusBarStyle:
+        // black-translucent + viewport-fit: cover). Pad the top edge by
+        // safe-area-inset-top so the iPhone status bar (time / battery)
+        // doesn't sit on top of the app's first row. Non-iOS / non-PWA:
+        // env() is 0, so this is a no-op.
+        paddingTop: 'calc(var(--header-padding-y) + env(safe-area-inset-top))',
         position: 'sticky',
         top: 0,
         zIndex: 50,

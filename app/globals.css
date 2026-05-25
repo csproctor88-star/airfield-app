@@ -144,7 +144,11 @@
   --fs-5xl: 26px;
 
   /* ── Header scaling ── */
-  --header-padding: 6px 16px;
+  /* Split into y/x so the iOS PWA can stack env(safe-area-inset-top)
+     onto the vertical pad without disturbing horizontal padding. */
+  --header-padding-y: 6px;
+  --header-padding-x: 16px;
+  --header-padding: var(--header-padding-y) var(--header-padding-x);
   --header-icon-size: 20px;
   --header-row-gap: 6px;
 
@@ -820,7 +824,9 @@ html, body {
     --obs-map-height: 40vh;
     --obs-map-height-expanded: 50vh;
 
-    --header-padding: 8px 24px;
+    --header-padding-y: 8px;
+    --header-padding-x: 24px;
+    --header-padding: var(--header-padding-y) var(--header-padding-x);
     --header-icon-size: 22px;
     --header-row-gap: 8px;
 
@@ -1021,7 +1027,9 @@ html, body {
     --obs-map-height: 42vh;
     --obs-map-height-expanded: 55vh;
 
-    --header-padding: 8px 32px;
+    --header-padding-y: 8px;
+    --header-padding-x: 32px;
+    --header-padding: var(--header-padding-y) var(--header-padding-x);
     --header-icon-size: 24px;
     --header-row-gap: 10px;
 

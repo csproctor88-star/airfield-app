@@ -91,7 +91,11 @@ export function BottomNav() {
           justifyContent: 'space-around',
           borderTop: '1px solid var(--color-border)',
           paddingTop: 6,
-          paddingBottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
+          // 4px above the home-indicator safe-area inset — matches Apple's
+          // own tab-bar spacing where icons sit just above the indicator zone
+          // rather than floating well above it. iPhones contribute
+          // ~34px via env(); Android/desktop contribute 0.
+          paddingBottom: 'calc(4px + env(safe-area-inset-bottom, 0px))',
         }}
       >
         {tabs.map(({ href, label, icon: Icon }) => {
