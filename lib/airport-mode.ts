@@ -188,6 +188,63 @@ export function getTerm(key: TermKey, base: BaseLike): string {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Discrepancy status labels (mirrors discrepancy_statuses table)
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Status keys remain USAF-derived in the DB (`submitted_to_afm` etc.);
+ * only the display label varies by mode. Mirrors the seed in migration
+ * 2026052505_discrepancy_statuses_lookup.sql. Helpers expose the
+ * mode-aware label without a DB round-trip.
+ */
+const DISCREPANCY_STATUS_LABELS: Record<string, { usaf: string; faa: string; sort: number }> = {
+  submitted_to_afm: {
+    usaf: 'Submitted to AFM',
+    faa:  'Submitted to Operations Manager',
+    sort: 1,
+  },
+  submitted_to_ces: {
+    usaf: 'Submitted to CES',
+    faa:  'Submitted to Maintenance',
+    sort: 2,
+  },
+  awaiting_action_by_ces: {
+    usaf: 'Awaiting Action by CES',
+    faa:  'Awaiting Maintenance Action',
+    sort: 3,
+  },
+  waiting_for_project: {
+    usaf: 'Waiting for Project Design/Execution',
+    faa:  'Waiting for Project',
+    sort: 4,
+  },
+  work_completed_awaiting_verification: {
+    usaf: 'Work Completed and Awaiting Verification',
+    faa:  'Work Completed (Awaiting Verification)',
+    sort: 5,
+  },
+}
+
+/** Returns the mode-appropriate label for a discrepancy status key. */
+export function getDiscrepancyStatusLabel(value: string | null | undefined, base: BaseLike): string {
+  if (!value) return ''
+  const entry = DISCREPANCY_STATUS_LABELS[value]
+  if (!entry) return value
+  return getAirportType(base) === 'faa_part139' ? entry.faa : entry.usaf
+}
+
+/** Returns the full list of {value,label} options ordered for UI rendering. */
+export function getDiscrepancyStatusOptions(base: BaseLike): { value: string; label: string }[] {
+  const mode = getAirportType(base)
+  return Object.entries(DISCREPANCY_STATUS_LABELS)
+    .sort((a, b) => a[1].sort - b[1].sort)
+    .map(([value, labels]) => ({
+      value,
+      label: mode === 'faa_part139' ? labels.faa : labels.usaf,
+    }))
+}
+
+// ────────────────────────────────────────────────────────────────
 // Reference library filter
 // ────────────────────────────────────────────────────────────────
 

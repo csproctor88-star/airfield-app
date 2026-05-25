@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react'
 import dynamic from 'next/dynamic'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
-import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES, ALLOWED_TRANSITIONS, STATUS_CONFIG } from '@/lib/constants'
+import { getDiscrepancyStatusOptions } from '@/lib/airport-mode'
 import { useInstallation } from '@/lib/installation-context'
 import UseMyLocationButton from '@/components/ui/use-my-location-button'
 
@@ -70,7 +71,8 @@ export function EditDiscrepancyModal({
   onClose: () => void
   onSaved: (updated: DiscrepancyRow) => void
 }) {
-  const { areas: installationAreas, facilities, installationId, ceShops } = useInstallation()
+  const { areas: installationAreas, facilities, installationId, ceShops, currentInstallation } = useInstallation()
+  const statusOptions = getDiscrepancyStatusOptions(currentInstallation)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     title: discrepancy.title,
@@ -211,7 +213,7 @@ export function EditDiscrepancyModal({
         <FieldLabel>Current Status</FieldLabel>
         <select className="input-dark" value={form.current_status}
           onChange={(e) => setForm(p => ({ ...p, current_status: e.target.value }))}>
-          {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 
@@ -414,9 +416,10 @@ export function StatusUpdateModal({
   onSaved: (updated: DiscrepancyRow) => void
   onDeleted?: () => void
 }) {
-  const { ceShops, userRole } = useInstallation()
+  const { ceShops, userRole, currentInstallation } = useInstallation()
   const isCes = userRole === 'ces'
   const allowed = isCes ? [] : (ALLOWED_TRANSITIONS[discrepancy.status] || [])
+  const statusOptions = getDiscrepancyStatusOptions(currentInstallation)
   const [saving, setSaving] = useState(false)
   const [newStatus, setNewStatus] = useState('')
   const [currentStatus, setCurrentStatus] = useState(
@@ -638,7 +641,7 @@ export function StatusUpdateModal({
         ) : (
           <select className="input-dark" value={currentStatus}
             onChange={(e) => setCurrentStatus(e.target.value)}>
-            {CURRENT_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         )}
       </div>

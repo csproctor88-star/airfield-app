@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { getDiscrepancyStatusOptions } from '@/lib/airport-mode'
 import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
@@ -37,7 +38,8 @@ const InfraFeaturePicker = dynamic(
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
-  const { installationId, areas: installationAreas, facilities, ceShops, typeShopMap } = useInstallation()
+  const { installationId, currentInstallation, areas: installationAreas, facilities, ceShops, typeShopMap } = useInstallation()
+  const statusOptions = getDiscrepancyStatusOptions(currentInstallation)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -337,7 +339,7 @@ export default function NewDiscrepancyPage() {
         <div style={{ marginBottom: 12 }}>
           <span className="section-label">Current Status</span>
           <select className="input-dark" value={formData.current_status} onChange={(e) => setFormData((p) => ({ ...p, current_status: e.target.value }))}>
-            {CURRENT_STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 

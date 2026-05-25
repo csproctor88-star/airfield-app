@@ -7,7 +7,8 @@ import { StatusBadge } from '@/components/ui/badge'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
-import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { getDiscrepancyStatusLabel } from '@/lib/airport-mode'
 import { fetchMapImageDataUrl, fetchSystemMapImageDataUrl, formatZuluDate, formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { fetchSystemFeaturesForFeature } from '@/lib/supabase/infrastructure-features'
 import {
@@ -236,10 +237,7 @@ export default function DiscrepanciesPage() {
     }).join(', ')
   }
 
-  const getCurrentStatusLabel = (cs: string) => {
-    const opt = CURRENT_STATUS_OPTIONS.find(o => o.value === cs)
-    return opt ? opt.label : cs
-  }
+  const getCurrentStatusLabel = (cs: string) => getDiscrepancyStatusLabel(cs, currentInstallation) || cs
 
   const handleExportExcel = async () => {
     const { createStyledWorkbook, addStyledSheet, saveWorkbook, titleCase } = await import('@/lib/excel-export')

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { StatusBadge } from '@/components/ui/badge'
 import { useInstallation } from '@/lib/installation-context'
-import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { getDiscrepancyStatusLabel } from '@/lib/airport-mode'
 import { createClient } from '@/lib/supabase/client'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
@@ -15,10 +16,6 @@ import { StatusUpdateModal } from '@/components/discrepancies/modals'
 import { toast } from 'sonner'
 
 type ShopTab = string | '__all'
-
-const CURRENT_STATUS_LABELS: Record<string, string> = Object.fromEntries(
-  CURRENT_STATUS_OPTIONS.map(o => [o.value, o.label])
-)
 
 const CURRENT_STATUS_COLORS: Record<string, string> = {
   submitted_to_afm: 'var(--color-status-inwork)',
@@ -290,7 +287,7 @@ export default function CESDashboardPage() {
                             background: `color-mix(in srgb, ${statusColor} 12%, transparent)`,
                             color: statusColor, flexShrink: 0,
                           }}>
-                            {CURRENT_STATUS_LABELS[d.current_status] || d.current_status}
+                            {getDiscrepancyStatusLabel(d.current_status, currentInstallation) || d.current_status}
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>

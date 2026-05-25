@@ -8,7 +8,8 @@ import { generateOpenDiscrepanciesPdf } from '@/lib/reports/open-discrepancies-p
 import { getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
-import { DISCREPANCY_TYPES, CURRENT_STATUS_OPTIONS } from '@/lib/constants'
+import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { getDiscrepancyStatusLabel, getDiscrepancyStatusOptions } from '@/lib/airport-mode'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import PdfExportDialog from '@/components/ui/pdf-template-selector'
 import { toast } from 'sonner'
@@ -57,8 +58,7 @@ export default function DiscrepancyReportPage() {
       parts.push('All')
     }
     if (currentStatusFilter !== 'all') {
-      const opt = CURRENT_STATUS_OPTIONS.find(o => o.value === currentStatusFilter)
-      parts.push(opt?.label || currentStatusFilter)
+      parts.push(getDiscrepancyStatusLabel(currentStatusFilter, currentInstallation) || currentStatusFilter)
     }
     if (typeFilter !== 'all') {
       const t = DISCREPANCY_TYPES.find(d => d.value === typeFilter)
@@ -226,7 +226,7 @@ export default function DiscrepancyReportPage() {
             <span style={labelStyle}>Workflow Status</span>
             <select style={selectStyle} value={currentStatusFilter} onChange={e => { setCurrentStatusFilter(e.target.value); setData(null) }}>
               <option value="all">All</option>
-              {CURRENT_STATUS_OPTIONS.map(o => (
+              {getDiscrepancyStatusOptions(currentInstallation).map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>

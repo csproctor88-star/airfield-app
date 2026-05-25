@@ -9,7 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
-import { CURRENT_STATUS_OPTIONS, LOCATION_OPTIONS, DISCREPANCY_TYPES, STATUS_CONFIG } from '@/lib/constants'
+import { LOCATION_OPTIONS, DISCREPANCY_TYPES, STATUS_CONFIG } from '@/lib/constants'
+import { getDiscrepancyStatusLabel } from '@/lib/airport-mode'
 
 // Render a status_updates.notes value as plain language. Handles two
 // shapes: the new "Status changed to: <Label>" prefix written by
@@ -19,8 +20,11 @@ function formatStatusUpdateNotes(notes: string | null | undefined): string {
   if (!notes) return ''
   const legacy = notes.match(/^CURRENT_STATUS:\s*(\S+)/)
   if (legacy) {
-    const match = CURRENT_STATUS_OPTIONS.find(o => o.value === legacy[1])
-    return `Status changed to: ${match ? match.label : legacy[1]}`
+    // Legacy text rows pre-date the dual-mode flag; show the USAF label
+    // since these rows were always written by USAF users. Civilian
+    // bases generate new-format rows with the mode-correct label baked
+    // in by updateDiscrepancy at write time.
+    return `Status changed to: ${getDiscrepancyStatusLabel(legacy[1], 'usaf') || legacy[1]}`
   }
   return notes
 }
@@ -324,7 +328,7 @@ export default function DiscrepancyDetailPage() {
               const cs = (d as typeof d & { current_status?: string }).current_status
               if (!cs) return null
               const meta = CURRENT_STATUS_COLORS[cs] || { color: 'var(--color-text-3)', rgb: '148,163,184' }
-              const label = CURRENT_STATUS_OPTIONS.find(o => o.value === cs)?.label || cs
+              const label = getDiscrepancyStatusLabel(cs, currentInstallation) || cs
               return (
                 <span style={{
                   display: 'inline-block', padding: '2px 8px', borderRadius: 12,
@@ -353,7 +357,7 @@ export default function DiscrepancyDetailPage() {
             gap between pairs so the eye lands on each value. */}
         {(() => {
           const csValue = (d as typeof d & { current_status?: string }).current_status
-          const csLabel = csValue ? (CURRENT_STATUS_OPTIONS.find(o => o.value === csValue)?.label || csValue) : '—'
+          const csLabel = csValue ? (getDiscrepancyStatusLabel(csValue, currentInstallation) || csValue) : '—'
           const reporter = 'reporter' in d ? d.reporter : null
           const createdBy = reporter && reporter.name
             ? (reporter.rank ? `${reporter.rank} ${reporter.name}` : reporter.name)
