@@ -20,8 +20,13 @@
  */
 
 export type AirportType = 'usaf' | 'faa_part139'
+export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77'
 
-type BaseLike = { airport_type?: AirportType | null } | AirportType | null | undefined
+type BaseLike =
+  | { airport_type?: AirportType | null; obstruction_surface_set?: SurfaceSet | null }
+  | AirportType
+  | null
+  | undefined
 
 /** Resolve any input shape to an AirportType, defaulting to 'usaf'. */
 export function getAirportType(base: BaseLike): AirportType {
@@ -200,8 +205,6 @@ export function getRegSource(base: BaseLike): string[] {
 // ────────────────────────────────────────────────────────────────
 // Obstruction surface set
 // ────────────────────────────────────────────────────────────────
-
-export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77'
 
 /**
  * Which imaginary-surface set to evaluate obstructions against.
