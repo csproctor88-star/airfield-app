@@ -4716,6 +4716,430 @@ export type Database = {
           },
         ]
       }
+      sms_policies: {
+        Row: {
+          id: string
+          base_id: string
+          version: number
+          status: string
+          effective_date: string | null
+          review_due_date: string | null
+          document_url: string | null
+          safety_objectives: Json
+          employee_reporting_pledge: string | null
+          accountable_executive_user_id: string | null
+          signed_at: string | null
+          signature_image_url: string | null
+          replaced_by_id: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          version?: number
+          status?: string
+          effective_date?: string | null
+          review_due_date?: string | null
+          document_url?: string | null
+          safety_objectives?: Json
+          employee_reporting_pledge?: string | null
+          accountable_executive_user_id?: string | null
+          signed_at?: string | null
+          signature_image_url?: string | null
+          replaced_by_id?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_policies"]["Insert"]>
+        Relationships: []
+      }
+      sms_hazards: {
+        Row: {
+          id: string
+          base_id: string
+          hazard_code: string
+          title: string
+          description: string | null
+          source_type: string
+          source_ref_id: string | null
+          status: string
+          closed_at: string | null
+          closed_by: string | null
+          closure_rationale: string | null
+          risk_owner_user_id: string | null
+          identified_by: string | null
+          identified_at: string
+          latest_assessment_id: string | null
+          current_band: string | null
+          residual_band: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          hazard_code: string
+          title: string
+          description?: string | null
+          source_type?: string
+          source_ref_id?: string | null
+          status?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_rationale?: string | null
+          risk_owner_user_id?: string | null
+          identified_by?: string | null
+          identified_at?: string
+          latest_assessment_id?: string | null
+          current_band?: string | null
+          residual_band?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_hazards"]["Insert"]>
+        Relationships: []
+      }
+      sms_risk_assessments: {
+        Row: {
+          id: string
+          hazard_id: string
+          base_id: string
+          assessed_at: string
+          assessed_by: string | null
+          likelihood: number
+          severity: number
+          risk_index: number
+          risk_band: string
+          residual_likelihood: number | null
+          residual_severity: number | null
+          residual_risk_index: number
+          residual_risk_band: string | null
+          likelihood_rationale: string | null
+          severity_rationale: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          hazard_id: string
+          base_id: string
+          assessed_at?: string
+          assessed_by?: string | null
+          likelihood: number
+          severity: number
+          residual_likelihood?: number | null
+          residual_severity?: number | null
+          likelihood_rationale?: string | null
+          severity_rationale?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_risk_assessments"]["Insert"]>
+        Relationships: []
+      }
+      sms_mitigations: {
+        Row: {
+          id: string
+          hazard_id: string
+          base_id: string
+          title: string
+          description: string | null
+          control_type: string
+          owner_user_id: string | null
+          due_date: string | null
+          status: string
+          completed_at: string | null
+          completed_by: string | null
+          evidence_url: string | null
+          notes: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          hazard_id: string
+          base_id: string
+          title: string
+          description?: string | null
+          control_type?: string
+          owner_user_id?: string | null
+          due_date?: string | null
+          status?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          evidence_url?: string | null
+          notes?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_mitigations"]["Insert"]>
+        Relationships: []
+      }
+      sms_spis: {
+        Row: {
+          id: string
+          base_id: string
+          code: string
+          title: string
+          description: string | null
+          unit: string
+          target_value: number | null
+          target_direction: string
+          alert_threshold: number | null
+          computation_key: string | null
+          measurement_frequency: string
+          active: boolean
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          code: string
+          title: string
+          description?: string | null
+          unit?: string
+          target_value?: number | null
+          target_direction?: string
+          alert_threshold?: number | null
+          computation_key?: string | null
+          measurement_frequency?: string
+          active?: boolean
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_spis"]["Insert"]>
+        Relationships: []
+      }
+      sms_spi_measurements: {
+        Row: {
+          id: string
+          spi_id: string
+          base_id: string
+          period_start: string
+          period_end: string
+          value: number
+          status: string
+          computed_by: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          spi_id: string
+          base_id: string
+          period_start: string
+          period_end: string
+          value: number
+          status?: string
+          computed_by?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_spi_measurements"]["Insert"]>
+        Relationships: []
+      }
+      sms_audits: {
+        Row: {
+          id: string
+          base_id: string
+          audit_code: string
+          title: string
+          audit_type: string
+          scope: string | null
+          scheduled_date: string | null
+          performed_date: string | null
+          performed_by: string | null
+          status: string
+          findings: Json
+          findings_open: number
+          findings_closed: number
+          report_url: string | null
+          notes: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          audit_code: string
+          title: string
+          audit_type?: string
+          scope?: string | null
+          scheduled_date?: string | null
+          performed_date?: string | null
+          performed_by?: string | null
+          status?: string
+          findings?: Json
+          findings_open?: number
+          findings_closed?: number
+          report_url?: string | null
+          notes?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_audits"]["Insert"]>
+        Relationships: []
+      }
+      sms_management_of_change: {
+        Row: {
+          id: string
+          base_id: string
+          moc_code: string
+          title: string
+          change_description: string
+          change_category: string
+          triggered_by: string | null
+          proposed_by: string | null
+          proposed_at: string
+          effective_date: string | null
+          status: string
+          linked_hazard_id: string | null
+          risk_analysis_summary: string | null
+          approved_by: string | null
+          approved_at: string | null
+          approval_notes: string | null
+          rejection_reason: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          moc_code: string
+          title: string
+          change_description: string
+          change_category?: string
+          triggered_by?: string | null
+          proposed_by?: string | null
+          proposed_at?: string
+          effective_date?: string | null
+          status?: string
+          linked_hazard_id?: string | null
+          risk_analysis_summary?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          approval_notes?: string | null
+          rejection_reason?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_management_of_change"]["Insert"]>
+        Relationships: []
+      }
+      sms_safety_reports: {
+        Row: {
+          id: string
+          base_id: string
+          report_code: string
+          reporter_name: string | null
+          reporter_email: string | null
+          reporter_phone: string | null
+          reporter_role: string | null
+          is_anonymous: boolean
+          category: string
+          occurred_at: string | null
+          location_text: string | null
+          description: string
+          immediate_action: string | null
+          source: string
+          triage_status: string
+          triaged_by: string | null
+          triaged_at: string | null
+          promoted_hazard_id: string | null
+          triage_notes: string | null
+          submitted_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          report_code: string
+          reporter_name?: string | null
+          reporter_email?: string | null
+          reporter_phone?: string | null
+          reporter_role?: string | null
+          is_anonymous?: boolean
+          category: string
+          occurred_at?: string | null
+          location_text?: string | null
+          description: string
+          immediate_action?: string | null
+          source?: string
+          triage_status?: string
+          triaged_by?: string | null
+          triaged_at?: string | null
+          promoted_hazard_id?: string | null
+          triage_notes?: string | null
+          submitted_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_safety_reports"]["Insert"]>
+        Relationships: []
+      }
+      sms_communications: {
+        Row: {
+          id: string
+          base_id: string
+          title: string
+          body: string
+          channel: string
+          audience: string | null
+          published_at: string | null
+          attachment_url: string | null
+          related_hazard_id: string | null
+          created_by: string | null
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          title: string
+          body: string
+          channel?: string
+          audience?: string | null
+          published_at?: string | null
+          attachment_url?: string | null
+          related_hazard_id?: string | null
+          created_by?: string | null
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["sms_communications"]["Insert"]>
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

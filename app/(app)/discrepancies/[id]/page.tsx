@@ -10,7 +10,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
 import { LOCATION_OPTIONS, DISCREPANCY_TYPES, STATUS_CONFIG } from '@/lib/constants'
-import { getDiscrepancyStatusLabel } from '@/lib/airport-mode'
+import { getDiscrepancyStatusLabel, isCivilian } from '@/lib/airport-mode'
+import { createHazard } from '@/lib/supabase/sms'
 
 // Render a status_updates.notes value as plain language. Handles two
 // shapes: the new "Status changed to: <Label>" prefix written by
@@ -49,7 +50,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import {
   Pencil, Camera, RefreshCw, FileText, Mail, Trash2,
-  ArrowLeft, MapPin,
+  ArrowLeft, MapPin, ShieldAlert,
 } from 'lucide-react'
 
 // Centralized color map for the `current_status` enum. Used by the
@@ -90,6 +91,12 @@ export default function DiscrepancyDetailPage() {
   const [linkedSystemInfo, setLinkedSystemInfo] = useState<{ systemName: string; componentLabel: string } | null>(null)
   const [systemMapUrl, setSystemMapUrl] = useState<string | null>(null)
   const canDeleteDiscrepancy = has(PERM.DISCREPANCIES_DELETE)
+  // Discrepancy → SMS Hazard promotion is civilian-mode only and gated
+  // on sms:write. Any discrepancy can be promoted — the SMS Manager
+  // decides if it warrants hazard tracking; categorical filtering would
+  // be too restrictive (e.g. a recurring CES delay IS a safety hazard).
+  const canPromoteToHazard = isCivilian(currentInstallation) && has(PERM.SMS_WRITE)
+  const [promotingToHazard, setPromotingToHazard] = useState(false)
 
   const loadData = useCallback(async () => {
     const supabase = createClient()
@@ -666,6 +673,33 @@ export default function DiscrepancyDetailPage() {
               <ActionButton color="var(--color-warning)" onClick={() => setActiveModal('status')} style={compactStyle}>
                 <RefreshCw size={12} strokeWidth={2.25} />Status
               </ActionButton>
+              {canPromoteToHazard && installationId && (
+                <ActionButton
+                  color="var(--color-orange)"
+                  style={compactStyle}
+                  onClick={async () => {
+                    if (promotingToHazard) return
+                    if (!confirm('Promote this discrepancy to an SMS Hazard for risk assessment and mitigation tracking?')) return
+                    setPromotingToHazard(true)
+                    const r = await createHazard({
+                      base_id: installationId,
+                      title: d.title,
+                      description: d.description,
+                      source_type: 'discrepancy',
+                      source_ref_id: d.id,
+                    })
+                    setPromotingToHazard(false)
+                    if (!r.ok || !r.hazard) {
+                      toast.error(r.error || 'Promote failed')
+                      return
+                    }
+                    toast.success(`Hazard ${r.hazard.hazard_code} created`)
+                    router.push(`/sms/hazards/${r.hazard.id}`)
+                  }}
+                >
+                  <ShieldAlert size={12} strokeWidth={2.25} />{promotingToHazard ? '...' : 'Promote to Hazard'}
+                </ActionButton>
+              )}
             </div>
             <Separator />
             <div style={groupStyle}>

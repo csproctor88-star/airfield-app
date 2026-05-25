@@ -20,6 +20,7 @@ export type ModuleKey =
   | 'feedback'
   | 'contractors'
   | 'amtr'
+  | 'sms'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -244,6 +245,17 @@ export const MODULES: ModuleDef[] = [
     setupSteps: [],
     defaultEnabled: true,
     appliesTo: ['usaf'],
+  },
+  {
+    key: 'sms',
+    label: 'Safety Management System',
+    category: 'compliance',
+    description: 'Safety Management System per 14 CFR §139.401–415 (Part 139 SMS Final Rule) — Safety Policy, hazard register with 5×5 risk matrix, mitigations, Safety Performance Indicators, internal audits, Management of Change, and anonymous public safety reporting.',
+    useCase: 'Required for Class I–III commercial-service airports per the FAA SMS Final Rule (April 2025 deadline for Class III). Implements all four AC 150/5200-37A pillars: Policy, SRM, SA, and Promotion.',
+    hrefs: ['/sms', '/sms/policy', '/sms/hazards', '/sms/spis', '/sms/audits', '/sms/moc', '/sms/reports', '/sms/communications'],
+    setupSteps: [],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
   },
 ]
 

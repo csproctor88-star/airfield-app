@@ -8,6 +8,9 @@ import {
   ClipboardList, Cloud, MessageSquare,
 } from 'lucide-react'
 import { createStrike, updateStrike, type WildlifeStrikeRow } from '@/lib/supabase/wildlife'
+import { createHazard } from '@/lib/supabase/sms'
+import { isCivilian } from '@/lib/airport-mode'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchBaseSpecies } from '@/lib/supabase/base-wildlife-species'
@@ -45,7 +48,8 @@ type Props = {
 
 export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData, checkId, inline }: Props) {
   const { bwcValue: currentBwc } = useDashboard()
-  const { installationId, areas: installationAreas } = useInstallation()
+  const { installationId, areas: installationAreas, currentInstallation } = useInstallation()
+  const { has } = usePermissions()
   const isEdit = !!initialData
 
   const [baseSpeciesNames, setBaseSpeciesNames] = useState<Set<string> | null>(null)
@@ -266,6 +270,41 @@ export function StrikeForm({ currentUser, baseId, onClose, onSaved, initialData,
     setSaving(false)
     if (error) { toast.error(error); return }
     toast.success('Wildlife strike reported')
+
+    // Auto-prompt to promote ≥ Damaging strikes to an SMS Hazard on
+    // civilian Part 139 bases. Per AC 150/5200-37A §6.3, damaging
+    // wildlife strikes are an SMS-trackable hazard event. The user
+    // can decline if the hazard is already covered by an existing row.
+    const damaging = damageLevel === 'substantial' || damageLevel === 'destroyed'
+    if (
+      damaging
+      && created
+      && installationId
+      && isCivilian(currentInstallation)
+      && has(PERM.SMS_WRITE)
+    ) {
+      const species = (selectedSpecies?.common_name ?? 'Wildlife').toUpperCase()
+      const damageWord = damageLevel === 'destroyed' ? 'DESTROYED' : 'SUBSTANTIAL'
+      const promptText = `This ${damageWord} ${species} strike meets the AC 150/5200-37A §6.3 ` +
+        `threshold for SMS hazard tracking. Create a Hazard register entry now?`
+      if (confirm(promptText)) {
+        const r = await createHazard({
+          base_id: installationId,
+          title: `${species} strike — ${damageWord.toLowerCase()} damage`,
+          description: `Auto-promoted from wildlife strike ${created.display_id}. ` +
+            (locationText ? `Location: ${locationText}. ` : '') +
+            (notes ? `Notes: ${notes}` : ''),
+          source_type: 'wildlife_strike',
+          source_ref_id: created.id,
+        })
+        if (r.ok && r.hazard) {
+          toast.success(`Hazard ${r.hazard.hazard_code} created`)
+        } else if (!r.ok) {
+          toast.error(r.error || 'Failed to create hazard')
+        }
+      }
+    }
+
     onSaved(created?.display_id)
   }
 

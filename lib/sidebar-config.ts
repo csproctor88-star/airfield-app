@@ -36,6 +36,14 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen' },
   { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare' },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
+  // SMS — civilian Part 139 only; the modules-config `appliesTo: ['faa_part139']`
+  // filter hides this from USAF sidebars at render time.
+  { name: 'Safety Management', href: '/sms', iconName: 'ShieldAlert' },
+  { name: 'Hazard Register',   href: '/sms/hazards', iconName: 'AlertTriangle' },
+  { name: 'Safety Indicators', href: '/sms/spis', iconName: 'TrendingUp' },
+  { name: 'Safety Reports',    href: '/sms/reports', iconName: 'MessageSquareWarning' },
+  { name: 'SMS Audits',        href: '/sms/audits', iconName: 'ClipboardCheck' },
+  { name: 'Management of Change', href: '/sms/moc', iconName: 'GitBranch' },
   // 'Training Records' (/amtr) is intentionally omitted from navigation while
   // in limited testing — the route stays live and is reachable by direct URL,
   // gated by the `amtr:view` permission. Re-add here to surface it in the sidebar.
@@ -70,6 +78,10 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       label: 'Airfield Management',
       items: ['/discrepancies', '/ces', '/obstructions', '/infrastructure', '/parking'],
+    },
+    {
+      label: 'Safety Management System',
+      items: ['/sms', '/sms/hazards', '/sms/spis', '/sms/reports', '/sms/audits', '/sms/moc'],
     },
     {
       label: 'Reference',
