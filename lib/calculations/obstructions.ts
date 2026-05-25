@@ -114,6 +114,82 @@ export const IMAGINARY_SURFACES = {
 } as const
 
 // ---------------------------------------------------------------------------
+// FAA Part 77 imaginary surfaces (civilian / Part 139 airports)
+//
+// Numeric dimensions reflect the "larger-than-utility, non-precision-instrument
+// approach with visibility < 3/4 mile" defaults (14 CFR §77.19 + AC 150/5300-13B).
+// This covers the typical Class III/IV non-hub commercial airport. Per-runway
+// overrides (utility / precision-instrument) are runway-category data that
+// land in Phase 3 when the obstruction UI ships; the engine will then pick the
+// right row based on the runway's faa_approach_category column.
+//
+// Names are kept parallel to IMAGINARY_SURFACES where there's a 1:1 analog so
+// existing report layouts and PDF templates can iterate without a key map.
+// ---------------------------------------------------------------------------
+
+export const PART77_SURFACES = {
+  primary: {
+    name: 'Primary Surface',
+    criteria: { halfWidth: 500, extension: 200, maxHeight: 0 },
+    ufcRef: '14 CFR §77.19(a) — Primary surface',
+    ufcCriteria: 'No object may protrude above the primary surface elevation (runway elevation) within {halfWidth} ft of centerline and {extension} ft beyond each runway end. Width varies by runway category (250–1,000 ft); this default is larger-than-utility non-precision.',
+    description: 'No objects above runway elevation within the primary surface (default 1,000 ft wide x runway length + 200 ft).',
+    color: '#EF4444',
+  },
+  approach: {
+    name: 'Approach Surface',
+    criteria: {
+      slope: 34,           // 34:1 for larger-than-utility non-precision <3/4 mi visibility
+      innerHalfWidth: 500, // matches primary half-width
+      outerHalfWidth: 2000,// 4,000 ft outer width / 2
+      length: 10000,
+    },
+    ufcRef: '14 CFR §77.19(c) — Approach surface',
+    ufcCriteria: 'No object may penetrate the 34:1 approach surface extending {length} ft from the primary surface end (larger-than-utility non-precision, <3/4 mi vis). For precision instrument runways use 50:1 first 10,000 ft + 40:1 next 40,000 ft.',
+    description: 'Sloped surface extending from each runway end at 34:1, 10,000 ft long.',
+    color: '#F97316',
+  },
+  horizontal: {
+    name: 'Horizontal Surface',
+    criteria: { height: 150, radius: 10000 },
+    ufcRef: '14 CFR §77.19(b) — Horizontal surface',
+    ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a {radius} ft radius of each runway end. Utility / visual runways use 5,000 ft radius instead.',
+    description: '150 ft above airport elevation within 10,000 ft of each runway end (larger-than-utility default).',
+    color: '#22C55E',
+  },
+  conical: {
+    name: 'Conical Surface',
+    criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+    ufcRef: '14 CFR §77.19(d) — Conical surface',
+    ufcCriteria: 'No object may penetrate the 20:1 conical surface extending 4,000 ft outward from the horizontal surface boundary.',
+    description: '20:1 slope outward from horizontal surface boundary, 4,000 ft horizontal.',
+    color: '#3B82F6',
+  },
+  transitional: {
+    name: 'Transitional Surface',
+    criteria: { slope: 7, primaryHalfWidth: 500 },
+    ufcRef: '14 CFR §77.19(e) — Transitional surface',
+    ufcCriteria: 'No object may penetrate the 7:1 transitional surface extending from the primary and approach surface edges upward and outward to the horizontal surface (150 ft above airport elevation).',
+    description: '7:1 slope from primary/approach edges to horizontal surface height.',
+    color: '#EAB308',
+  },
+} as const
+
+/**
+ * Resolves the correct imaginary-surface set for a base. Returns the
+ * IMAGINARY_SURFACES (UFC) set by default; pass surfaceSet='faa_part77'
+ * for civilian Part 139 airports. Keys differ between sets — UFC has
+ * clear_zone / graded_area / apz_i / apz_ii / inner_horizontal /
+ * outer_horizontal that Part 77 doesn't, and Part 77 collapses inner/
+ * outer horizontal into a single horizontal surface. Callers iterating
+ * should treat each set's keys as authoritative for that mode.
+ */
+export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77'
+export function getSurfaces(surfaceSet: SurfaceSet = 'ufc_3_260_01') {
+  return surfaceSet === 'faa_part77' ? PART77_SURFACES : IMAGINARY_SURFACES
+}
+
+// ---------------------------------------------------------------------------
 // Result types
 // ---------------------------------------------------------------------------
 
