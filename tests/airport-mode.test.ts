@@ -80,7 +80,7 @@ describe('getTerm', () => {
   it('translates form names', () => {
     expect(getTerm('form_505', usafBase)).toBe('AF Form 505 (Waiver)')
     expect(getTerm('form_505', faaBase)).toBe('Modification to Standards')
-    expect(getTerm('form_483', faaBase)).toBe('SIDA Badge Log')
+    expect(getTerm('form_483', faaBase)).toBe('SIDA Badge')
   })
   it('translates org units', () => {
     expect(getTerm('maintenance_full', usafBase)).toBe('Civil Engineer Squadron')

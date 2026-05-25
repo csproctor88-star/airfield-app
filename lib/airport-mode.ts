@@ -161,7 +161,7 @@ const TERMS: Record<TermKey, { usaf: string; faa: string }> = {
   shift_manager:         { usaf: 'Airfield Manager',                 faa: 'Operations Manager' },
 
   form_505:              { usaf: 'AF Form 505 (Waiver)',             faa: 'Modification to Standards' },
-  form_483:              { usaf: 'AF Form 483',                      faa: 'SIDA Badge Log' },
+  form_483:              { usaf: 'AF Form 483',                      faa: 'SIDA Badge' },
   form_3616:             { usaf: 'AF Form 3616 (Daily Events Log)',  faa: 'Daily Ops Log' },
 
   scn:                   { usaf: 'Secondary Crash Net',              faa: 'Emergency Notification Cascade' },

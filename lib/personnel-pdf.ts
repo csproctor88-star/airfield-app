@@ -12,7 +12,7 @@ import {
   todayIso,
 } from '@/lib/pdf-utils'
 import type { ContractorRow } from '@/lib/supabase/contractors'
-import type { AirportType } from '@/lib/airport-mode'
+import { getTerm, type AirportType } from '@/lib/airport-mode'
 
 interface PersonnelPdfInput {
   contractors: ContractorRow[]
@@ -20,7 +20,7 @@ interface PersonnelPdfInput {
   searchQuery?: string
   baseName?: string | null
   baseIcao?: string | null
-  /** Mode flag — retained for header text only; the credential column is generic in both modes. */
+  /** Drives the credential column header ('AF Form 483' on USAF, 'SIDA Badge' on civilian). */
   airportType?: AirportType
 }
 
@@ -37,11 +37,13 @@ function af483Status(exp: string | null): string {
 }
 
 export async function generatePersonnelPdf(input: PersonnelPdfInput): Promise<{ doc: jsPDF; filename: string }> {
-  const { contractors, filterLabel, searchQuery, baseName, baseIcao } = input
-  // Personnel-on-Airfield is a tracking module, not a 483 tracker.
-  // The credential column is generic in both modes; specific paperwork
-  // (AF Form 483 / SIDA badge / vendor pass) goes in the cell value.
-  const credentialLabel = 'Credential'
+  const { contractors, filterLabel, searchQuery, baseName, baseIcao, airportType } = input
+  const mode: AirportType = airportType ?? 'usaf'
+  // The Personnel-on-Airfield module tracks all airfield access, not just
+  // credentialed contractors — but the credential column itself is the
+  // canonical paperwork reference for the airport: AF Form 483 on USAF
+  // airfields, SIDA Badge on civilian Part 139.
+  const credentialLabel = getTerm('form_483', mode)
   const ctx = createPdf({ orientation: 'landscape' })
   const { doc, margin } = ctx
   let y = margin
