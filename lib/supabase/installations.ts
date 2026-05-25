@@ -188,11 +188,16 @@ export async function addInstallationMember(
 
 // ── Create a new installation (via API route to bypass RLS) ──
 // Throws with a descriptive message on failure so the UI can display it.
-export async function createInstallation(name: string, icao?: string, userId?: string): Promise<Installation> {
+export async function createInstallation(
+  name: string,
+  icao?: string,
+  userId?: string,
+  airportType: 'usaf' | 'faa_part139' = 'usaf',
+): Promise<Installation> {
   const res = await fetch('/api/installations', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, icao, userId }),
+    body: JSON.stringify({ name, icao, userId, airportType }),
   })
 
   const json = await res.json().catch(() => null)

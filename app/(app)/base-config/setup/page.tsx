@@ -129,7 +129,8 @@ export default function BaseSetupPage() {
     setSaveStatus('error')
   }, [])
 
-  const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules))
+  const airportType = currentInstallation?.airport_type ?? null
+  const visibleSteps = WIZARD_STEPS.filter(s => isWizardStepEnabled(s.key, enabledModules, airportType))
 
   // Load any pending Quick Setup draft on mount / installation switch.
   useEffect(() => {

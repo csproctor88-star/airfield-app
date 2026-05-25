@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, icao, userId } = body as { name?: string; icao?: string; userId?: string }
+    const { name, icao, userId, airportType } = body as { name?: string; icao?: string; userId?: string; airportType?: string }
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Installation name is required' }, { status: 400 })
@@ -54,6 +54,9 @@ export async function POST(request: Request) {
 
     const trimmedName = name.trim()
     const trimmedIcao = icao?.trim().toUpperCase() || null
+    // airport_type: validate against the DB CHECK constraint values; default to 'usaf'
+    const normalizedAirportType: 'usaf' | 'faa_part139' =
+      airportType === 'faa_part139' ? 'faa_part139' : 'usaf'
 
     // Unauthenticated requests (signup flow) can only create bases from BASE_DIRECTORY
     if (!isAuthenticated) {
@@ -106,6 +109,15 @@ export async function POST(request: Request) {
           ce_shops: [],
           enabled_modules: TYPICAL_BASE_PRESET,
           setup_progress: {},
+          // Set at creation time and immutable thereafter (DB trigger
+          // bases_airport_type_immutable forbids change once activity_log
+          // has rows). Drives every downstream mode-specific behavior.
+          airport_type: normalizedAirportType,
+          // Civilian bases default to Part 77 obstruction surfaces;
+          // USAF bases default to UFC 3-260-01.
+          obstruction_surface_set: normalizedAirportType === 'faa_part139'
+            ? 'faa_part77'
+            : 'ufc_3_260_01',
         })
         .select()
         .single()

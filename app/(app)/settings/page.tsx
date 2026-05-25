@@ -397,6 +397,7 @@ function InstallationSectionContent() {
   const [addingNew, setAddingNew] = useState(false)
   const [newName, setNewName] = useState('')
   const [newIcao, setNewIcao] = useState('')
+  const [newAirportType, setNewAirportType] = useState<'usaf' | 'faa_part139'>('usaf')
   const [saving, setSaving] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
@@ -444,12 +445,13 @@ function InstallationSectionContent() {
   const handleAddNew = async () => {
     if (!newName.trim()) return
     setSaving(true)
-    const inst = await createInstallation(newName.trim(), newIcao.trim() || undefined, userId)
+    const inst = await createInstallation(newName.trim(), newIcao.trim() || undefined, userId, newAirportType)
     if (inst) {
       await switchInstallation(inst.id)
       setAddingNew(false)
       setNewName('')
       setNewIcao('')
+      setNewAirportType('usaf')
       toast.success('Installation created')
     } else {
       toast.error('Failed to create installation')
@@ -587,6 +589,24 @@ function InstallationSectionContent() {
               style={{ width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
               maxLength={4}
             />
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>
+                AIRPORT TYPE
+              </div>
+              <select
+                className="input-dark"
+                value={newAirportType}
+                onChange={(e) => setNewAirportType(e.target.value as 'usaf' | 'faa_part139')}
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              >
+                <option value="usaf">USAF Airfield (DAFMAN 13-204)</option>
+                <option value="faa_part139">FAA Part 139 (Civilian)</option>
+              </select>
+              <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 4, lineHeight: 1.3 }}>
+                Drives terminology, regulatory bindings, module visibility, and obstruction surfaces.
+                Locked after the first activity-log entry; choose carefully.
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={handleAddNew}
@@ -606,7 +626,7 @@ function InstallationSectionContent() {
               </button>
               <button
                 type="button"
-                onClick={() => { setAddingNew(false); setNewName(''); setNewIcao('') }}
+                onClick={() => { setAddingNew(false); setNewName(''); setNewIcao(''); setNewAirportType('usaf') }}
                 style={{
                   padding: '10px 16px',
                   background: 'var(--color-border)', border: '1px solid var(--color-border-mid)',

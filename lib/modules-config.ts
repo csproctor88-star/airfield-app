@@ -333,11 +333,16 @@ export function isModuleEnabled(
   return true
 }
 
-export function isWizardStepEnabled(step: WizardStepKey, enabledModules: readonly string[] | null | undefined): boolean {
+export function isWizardStepEnabled(
+  step: WizardStepKey,
+  enabledModules: readonly string[] | null | undefined,
+  airportType?: AirportType | null,
+): boolean {
   if (CORE_WIZARD_STEPS.has(step)) return true
   const key = SETUP_STEP_TO_MODULE.get(step)
   if (!key) return true
-  return new Set(enabledModules ?? []).has(key)
+  if (!new Set(enabledModules ?? []).has(key)) return false
+  return moduleAppliesToAirport(key, airportType)
 }
 
 export type SetupStepStatus = 'complete' | 'skipped' | 'in_progress'
