@@ -2,15 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import {
   ShieldAlert, FileText, Users, Radio, Siren,
   CheckCircle2, AlertTriangle, ChevronRight, Plus,
+  Download,
 } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import {
   fetchActivePlan,
+  fetchPlanHistory,
   fetchLatestFullScale,
   fetchCurrentMonthCheck,
+  fetchChecksInRange,
+  fetchDrills,
   fetchResponseAgencies,
   nextAnnualReviewDue,
   nextFullScaleDue,
@@ -35,7 +40,9 @@ import { LoadingState } from '@/components/ui/loading-state'
  * Cluster E once `lib/aep-pdf.ts` ships.
  */
 export default function AepDashboardPage() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
+  const installationName = (currentInstallation as { name?: string | null } | null)?.name ?? null
+  const installationIcao = (currentInstallation as { icao?: string | null } | null)?.icao ?? null
   const [loaded, setLoaded] = useState(false)
   const [plan, setPlan] = useState<AepPlan | null>(null)
   const [latestFs, setLatestFs] = useState<AepDrill | null>(null)
@@ -111,6 +118,12 @@ export default function AepDashboardPage() {
         <QuickLink href="/aep/drills" icon={Siren} title="Drills" />
       </div>
 
+      <PdfExportRow
+        installationId={installationId}
+        installationName={installationName}
+        installationIcao={installationIcao}
+      />
+
       <div style={{
         marginTop: 24,
         padding: 14,
@@ -127,6 +140,141 @@ export default function AepDashboardPage() {
     </div>
   )
 }
+
+// ────────────────────────────────────────────────────────────────
+// PDF export row
+// ────────────────────────────────────────────────────────────────
+
+function PdfExportRow({ installationId, installationName, installationIcao }: {
+  installationId: string | null
+  installationName: string | null
+  installationIcao: string | null
+}) {
+  const [busy, setBusy] = useState<'plan' | 'drills' | 'comms' | null>(null)
+  const [year, setYear] = useState(new Date().getUTCFullYear())
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+
+  async function downloadPlan() {
+    if (!installationId) return
+    setBusy('plan')
+    try {
+      const [plan, history, agencies, { generateAepPlanPdf }] = await Promise.all([
+        fetchActivePlan(installationId),
+        fetchPlanHistory(installationId),
+        fetchResponseAgencies(installationId),
+        import('@/lib/aep-pdf'),
+      ])
+      const { doc, filename } = generateAepPlanPdf({
+        base: { name: installationName, icao: installationIcao },
+        plan, planHistory: history, agencies,
+      })
+      doc.save(filename)
+      toast.success('AEP plan PDF downloaded')
+    } catch (e) {
+      console.error(e); toast.error('Failed to generate plan PDF')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function downloadDrills() {
+    if (!installationId) return
+    setBusy('drills')
+    try {
+      const [drills, latestFs, { generateAepDrillLogPdf }] = await Promise.all([
+        fetchDrills({
+          base_id: installationId,
+          start_date: `${year}-01-01`,
+          end_date: `${year}-12-31`,
+        }),
+        fetchLatestFullScale(installationId),
+        import('@/lib/aep-pdf'),
+      ])
+      const { doc, filename } = generateAepDrillLogPdf({
+        base: { name: installationName, icao: installationIcao },
+        drills, year, latestFullScale: latestFs,
+      })
+      doc.save(filename)
+      toast.success('AEP drill log PDF downloaded')
+    } catch (e) {
+      console.error(e); toast.error('Failed to generate drill log PDF')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function downloadComms() {
+    if (!installationId) return
+    setBusy('comms')
+    try {
+      const [y, m] = month.split('-').map(n => parseInt(n, 10))
+      const start = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 10)
+      const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10)
+      const [agencies, checks, { generateAepCommsCheckMonthlyPdf }] = await Promise.all([
+        fetchResponseAgencies(installationId, true),
+        fetchChecksInRange(installationId, start, end),
+        import('@/lib/aep-pdf'),
+      ])
+      const { doc, filename } = generateAepCommsCheckMonthlyPdf({
+        base: { name: installationName, icao: installationIcao },
+        monthYyyyMm: month, agencies, checks,
+      })
+      doc.save(filename)
+      toast.success('AEP monthly comms PDF downloaded')
+    } catch (e) {
+      console.error(e); toast.error('Failed to generate comms PDF')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div style={{
+      marginTop: 18, padding: 14, borderRadius: 'var(--radius-md)',
+      background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+      display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
+    }}>
+      <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)' }}>
+        Exports
+      </div>
+      <button onClick={downloadPlan} disabled={busy !== null} style={pdfBtnStyle(busy === 'plan')}>
+        <Download size={12} style={{ marginRight: 4 }} /> {busy === 'plan' ? 'Generating…' : 'Plan PDF'}
+      </button>
+      <div style={pdfGroupStyle}>
+        <select value={year} onChange={e => setYear(parseInt(e.target.value, 10))} style={pdfSelectStyle}>
+          {[year - 2, year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <button onClick={downloadDrills} disabled={busy !== null} style={pdfBtnStyle(busy === 'drills')}>
+          <Download size={12} style={{ marginRight: 4 }} /> {busy === 'drills' ? 'Generating…' : 'Drill Log PDF'}
+        </button>
+      </div>
+      <div style={pdfGroupStyle}>
+        <input type="month" value={month} onChange={e => setMonth(e.target.value)} style={pdfSelectStyle} />
+        <button onClick={downloadComms} disabled={busy !== null} style={pdfBtnStyle(busy === 'comms')}>
+          <Download size={12} style={{ marginRight: 4 }} /> {busy === 'comms' ? 'Generating…' : 'Monthly Comms PDF'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const pdfGroupStyle: React.CSSProperties = {
+  display: 'flex', gap: 6, alignItems: 'center',
+}
+const pdfSelectStyle: React.CSSProperties = {
+  padding: '6px 8px', borderRadius: 'var(--radius-sm)',
+  background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+  color: 'var(--color-text-1)', fontFamily: 'inherit', fontSize: 'var(--fs-xs)',
+}
+const pdfBtnStyle = (busy: boolean): React.CSSProperties => ({
+  display: 'inline-flex', alignItems: 'center',
+  padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--color-border)',
+  background: busy ? 'var(--color-bg-elevated)' : 'var(--color-bg-inset)',
+  color: busy ? 'var(--color-text-4)' : 'var(--color-text-2)',
+  fontSize: 'var(--fs-xs)', fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer',
+  fontFamily: 'inherit',
+})
 
 // ────────────────────────────────────────────────────────────────
 // Cards

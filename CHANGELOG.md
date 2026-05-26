@@ -4,6 +4,31 @@ All notable changes to Glidepath.
 
 ## [Unreleased]
 
+### Added — FAA Part 139 Phase 3b: Airport Emergency Plan module
+- **`/aep` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — AE dashboard with four status cards (plan currency, full-scale drill due, this month's comms check, response-agency count), four sub-pages, and one-click PDF exports.
+- **`/aep/plan`** — versioned plan document with FAA acceptance metadata, AE annual sign-off, supersede chain (`replaced_by_id`), and history table. Plan PDFs upload to `aep-plans/<base>/<plan>/...` in the photos bucket via a separate INSERT policy gated on `aep:write`.
+- **`/aep/agencies`** — response-agency roster grouped by role (ARFF / mutual-aid fire / EMS / police / hospital / ATC / FAA RO / NTSB / FBI / public works / utility / other). Primary + backup contact (name / phone / radio) + notes per agency. Within-role reorder + soft-delete (history-preserving inactive toggle).
+- **`/aep/comms-checks`** — monthly response-agency comms verification per AC 150/5200-31C §2.3. Forks `app/(app)/scn/page.tsx` with monthly cadence + additional `not_reached` status + 12-month history grouping. Each completion writes an `aep_comms` Events Log entry.
+- **`/aep/drills`** — drill program log per §139.325(h) (triennial full-scale) and §139.325(j) (annual tabletop/functional). Schedule modal with date + type + scenario + agency multi-select; complete modal with per-participant attendance + after-action notes + findings + AAR PDF upload to `aep-drills/<base>/<drill>/...`.
+- **`aepagencies` wizard step** at base-setup slot 11 (shares the slot with `scnagencies`; mutually exclusive via `appliesTo`). Quick-entry form with name + role + primary phone; deep-link to `/aep/agencies` for richer editing.
+- **SMS SPI feed** — `_sms_seed_default_spis` extended with `SPI-005 (AEP Full-Scale Drill Overdue)` and `SPI-006 (AEP Comms Checks last 90 days)`. `_sms_compute_spi_measurements` handles both new computation keys. Existing pg_cron at 02:30 UTC picks them up automatically — no new infrastructure needed. Backfill DO-block seeds the SPIs on every civilian base.
+- **PDF generators** (`lib/aep-pdf.ts`) — plan document, year-scoped drill log with per-drill detail blocks, monthly comms-check agency × date matrix with status-tinted cells.
+- **Pure-function tests** (`tests/aep.test.ts`, +23 cases) — `daysBetween` calendar-day truncation; `nextFullScaleDue` covering never / current / due_soon / overdue / 36-month boundary; `nextAnnualReviewDue` thresholds; `summarizeCommsCheck` Events Log format; PDF smoke (empty + populated) for all three generators.
+- 7 migrations: `2026060700_aep_plans`, `..._aep_response_agencies`, `..._aep_drills`, `..._aep_comms_checks`, `..._aep_rls` (matrix-helper policies on all 5 tables, with EXISTS parent-gate on `aep_comms_check_results`), `..._aep_storage_rls`, `..._aep_sms_spi_feed`.
+
+### Added — FAA Part 139 Phase 3a: §139.303 Training module
+- **`/training` module** (civilian Part 139 only) — §139.303 training records per 14 CFR Part 139: 13 seeded topics (movement-area familiarization, NOTAM issuance, ARFF coord, public protection, wildlife, fueling supervision, AEP, ground vehicle, self-inspection, security ID, hazmat, sign/marking/lighting, snow & ice control), per-user records with stored expiry (set by `_training_set_expiry` trigger at INSERT from the topic's current `recurrent_frequency_months`), explicit renewal chains, AAAE-CM / ACE-Ops / ACE-Comm / ACE-Sec / ACE-WHC certificates.
+- **`/training/topics`** lists the 13 system topics + base-custom; **`/training/roster`** shows per-user status bulk-fetched; **`/training/[userId]`** is the per-user detail with Records / Certificates / History tabs + Log Training modal with evidence upload + Renewal chain link; **`/training/compliance`** is the users × topics matrix with sticky-left member column and sticky-top topic header, CSV export, drill modal.
+- **30-day expiry digest cron** — Vercel cron daily at 13:00 UTC hits `/api/training-expiry-digest`, dedupes via `training_digest_log`, sends Resend email to `bases.default_pdf_email`. Requires `CRON_SECRET` env var.
+- **Per-user PDF transcript** (`lib/training-part139-pdf.ts`) with status-tinted cells + chain history per topic + AAAE-ACE certificates table.
+- 7 migrations: `2026053000`–`2026053006` covering topics, records (+ trigger), renewals, certificates, RLS, role grants, storage RLS, and the per-day dedup table.
+
+### Changed — Help/Training rename
+- The previous `/training` route (in-app Glidepath help with 27 module deep-dives) moved to `/help` so the §139.303 Training module could take the `/training` slug. `loadSidebarConfig` has a one-time href rewrite shim to migrate saved user sidebar configs inline on next load.
+
+### Fixed — Sidebar icon registry
+- `sidebar-nav.tsx` was referencing `ShieldAlert` / `TrendingUp` / `MessageSquareWarning` / `GitBranch` from Phase 2 SMS without registering them in `ICON_MAP` — all silently fell back to the `Home` icon. Added them plus `Siren` for AEP Drills, and the missing GROUP_ICONS for the SMS / Training / AEP sections.
+
 ### Planned
 - Per-page Help / launcher for opt-in module tours (Stage 3 — registry already supports `scope: 'page'`)
 - Screenshot capture for the rebuilt Glidepath Training modules (placeholders in place)
