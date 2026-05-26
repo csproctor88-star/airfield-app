@@ -299,8 +299,13 @@ export async function fetchLatestRecord(
  * should pass `renewPriorRecordId` so a chain link is inserted.
  * (UI auto-detects this; the function itself does not look up the
  * prior — passing it explicitly keeps the writes deterministic.)
+ *
+ * Caller can optionally pass `id` (pre-generated UUID) when they
+ * need it known before the insert — useful when the evidence upload
+ * path is built from the record id.
  */
 export async function createTrainingRecord(input: {
+  id?: string
   base_id: string
   user_id: string
   topic_id: string
@@ -317,20 +322,23 @@ export async function createTrainingRecord(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated' }
 
+  const insertRow: Record<string, unknown> = {
+    base_id: input.base_id,
+    user_id: input.user_id,
+    topic_id: input.topic_id,
+    completed_at: input.completed_at,
+    training_type: input.training_type,
+    instructor_user_id: input.instructor_user_id ?? null,
+    instructor_name_external: input.instructor_name_external ?? null,
+    evidence_url: input.evidence_url ?? null,
+    notes: input.notes ?? null,
+    created_by: user.id,
+  }
+  if (input.id) insertRow.id = input.id
+
   const { data, error } = await supabase
     .from('training_records')
-    .insert({
-      base_id: input.base_id,
-      user_id: input.user_id,
-      topic_id: input.topic_id,
-      completed_at: input.completed_at,
-      training_type: input.training_type,
-      instructor_user_id: input.instructor_user_id ?? null,
-      instructor_name_external: input.instructor_name_external ?? null,
-      evidence_url: input.evidence_url ?? null,
-      notes: input.notes ?? null,
-      created_by: user.id,
-    })
+    .insert(insertRow as never)
     .select()
     .single()
   if (error || !data) return { ok: false, error: error ? friendlyError(error.message) : 'Insert failed' }
@@ -351,6 +359,35 @@ export async function createTrainingRecord(input: {
     { details: `topic=${input.topic_id.slice(0, 8)}…` },
     input.base_id)
   return { ok: true, record }
+}
+
+/**
+ * Upload a training-evidence file to the photos bucket under
+ *   training-evidence/<base_id>/<user_id>/<record_id>/<filename>
+ *
+ * Caller pre-generates the record_id (uuid) so the path is stable
+ * before the record itself is inserted. Returns a public URL the
+ * caller stores on training_records.evidence_url.
+ *
+ * If the parent record insert fails after a successful upload, the
+ * storage file is orphan. Cleanup is a future maintenance sweep.
+ */
+export async function uploadTrainingEvidence(input: {
+  file: File
+  base_id: string
+  user_id: string
+  record_id: string
+}): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+  const lastDot = input.file.name.lastIndexOf('.')
+  const ext = lastDot > 0 ? input.file.name.slice(lastDot + 1).toLowerCase() : 'bin'
+  const safeExt = /^[a-z0-9]+$/.test(ext) ? ext : 'bin'
+  const path = `training-evidence/${input.base_id}/${input.user_id}/${input.record_id}/evidence-${Date.now()}.${safeExt}`
+  const { error: upErr } = await supabase.storage.from('photos').upload(path, input.file, { upsert: false, contentType: input.file.type || undefined })
+  if (upErr) return { ok: false, error: friendlyError(upErr.message) }
+  const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+  return { ok: true, url: urlData.publicUrl }
 }
 
 export async function deleteTrainingRecord(id: string, baseId: string): Promise<{ ok: boolean; error?: string }> {
