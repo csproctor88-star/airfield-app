@@ -4,6 +4,19 @@ All notable changes to Glidepath.
 
 ## [Unreleased]
 
+### Added — FAA Part 139 Phase 3e: Wildlife Hazard Management Plan module
+- **`/wildlife/whmp` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — Annual Wildlife Hazard Management Plan per 14 CFR §139.337. One row per (base, assessment_year); in-year revisions supersede via `replaced_by_id` chain (mirrors `aep_plans` + `sms_policies`). Reuses existing `wildlife:read` / `wildlife:write` permission keys.
+- **Active assessment card** — green-bordered card with FAA acceptance metadata, AE annual sign-off chip (with annual review countdown — green > 60d, amber ≤ 60d, red overdue per §139.337(c)), uploaded WHMP PDF link, hazardous-species rows (left-rule colored by hazard level — low/medium/high/severe), mitigation summary, and findings list.
+- **"+ New Year" modal** — single-screen form with Year + Performed Date + External performer + FAA acceptance + PDF upload + repeatable hazardous-species inline editors (species + hazard level dropdown + attractants + mitigations) + Mitigation Summary + repeatable Findings inline editors (narrative + category + recommended action) + Notes.
+- **"Amend / Supersede"** — pre-fills the modal from the active year; saves a new row and back-fills `replaced_by_id` on the prior. Prior years collapsible history at the bottom of the page.
+- **"Promote to SMS Hazard" deep-link** — each finding has a button that opens `/sms/hazards/new` with `prefill_title`, `prefill_description`, `prefill_source=whmp`, `prefill_source_ref_id` query params. After creating the SMS hazard, operator returns to WHMP and clicks "Mark Linked" to back-fill `sms_hazard_id` on the finding (manual paste of the hazard code).
+- **AE annual review** — `recordWhmpAnnualReview` stamps `last_reviewed_at` + `reviewed_by_user_id`; if `ae_signed_at` is null also stamps the initial sign-off (mirrors `aep.recordAnnualReview`).
+- **Schema** — `wildlife_hazard_assessments` with JSONB hazardous_species + findings (typed at the application layer); matrix-helper RLS reusing `wildlife:*` keys (4 policies on the table + 1 storage policy on `whmp/<base>/...` path prefix). Migration `2026061000`.
+- **Sidebar**: "Wildlife / WHMP" added to the Operations section right after "Wildlife / BASH" so it's contextual to the data feed that narrates the assessment.
+- **Tests** (`tests/whmp.test.ts`, +8 cases): `nextWhmpReviewDue` thresholds (never / current / due_soon / overdue / >60d boundary) reusing `daysBetween` from `aep.ts`; `buildSmsHazardPromoteUrl` query-param encoding for title / description / source / source-ref / special-character / URLSearchParams round-trip.
+
+**Phase 3 complete.** Phase 3a (§139.303 Training) → 3b (AEP) → 3c (Part 77 obstruction UI) → 3d (Field Conditions / TALPA) → 3e (WHMP) all shipped. Civilian Part 139 retrofit set is now feature-complete for Class III/IV airports.
+
 ### Added — FAA Part 139 Phase 3d: Field Conditions / TALPA module
 - **`/field-conditions` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — TALPA Field Condition Reports per 14 CFR §139.313 and AC 150/5200-30D. Per-runway "current" card with the per-third RwyCC tuple (touchdown / midpoint / rollout), contaminant + depth + coverage detail rows, treatments, and the materialized FICON NOTAM body in a monospace box with one-click copy.
 - **RwyCC engine** (`lib/calculations/rwycc.ts`) — `deriveRwycc(contaminant, depth?, temperatureC?)` implements AC 30D Table 4-1 across all 13 single-contaminant cases (dry / wet / frost / slush / dry snow / wet snow / compacted snow / ice / ice patches / wet ice / slippery when wet / water on compacted snow / slush on ice). Compacted snow upgrades to RwyCC 4 below -15°C, drops to 2 above -3°C. Operator override per AC 30D §4.2 supported at the data layer (requires reason).

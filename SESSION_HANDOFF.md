@@ -1,13 +1,90 @@
 # Session Handoff
 
 **Date:** 2026-05-26
-**Branch:** `main` (Phase 3b + 3c + 3d commits land directly on main per project convention)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (444 pass / 36 files)
-**HEAD:** (latest Phase 3d-C commit — see `git log -1`)
+**Branch:** `main` (Phase 3b + 3c + 3d + 3e commits land directly on main per project convention)
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (452 pass / 37 files)
+**HEAD:** (latest Phase 3e-C commit — see `git log -1`)
 
 ---
 
-## What shipped this session — Phase 3d (3c + 3b + 3a recaps below)
+## 🎉 Phase 3 sequence COMPLETE
+
+Phase 3a (§139.303 Training) → 3b (AEP) → 3c (Part 77 obstruction UI) → 3d (Field Conditions / TALPA) → 3e (WHMP) all shipped end-to-end. The civilian Part 139 retrofit is now **feature-complete** for Class III/IV airports. Next major milestone: polish pass / pilot recruitment / commercial launch readiness.
+
+---
+
+## What shipped this session — Phase 3e (3d + 3c + 3b + 3a recaps below)
+
+**Phase 3e of the FAA Part 139 commercial expansion** — the **Wildlife
+Hazard Management Plan (WHMP) module** — landed end-to-end on `main`
+in two clusters (B → C). Civilian Part 139 airports can now host their
+annual WHMP artifact, enumerate hazardous species, track mitigation
+plans, log findings, and deep-link findings into the SMS hazard
+register. 452 tests pass (444 baseline + 8 new WHMP).
+
+### Phase 3e Cluster B — Schema + CRUD + UI + tests (commit `319464a`)
+
+- **Migration `2026061000_wildlife_hazard_assessments.sql`** applied:
+  one table (`wildlife_hazard_assessments`) with append-only
+  supersede chain via `replaced_by_id`, JSONB hazardous_species +
+  findings, AE annual sign-off trio, FAA acceptance metadata.
+  Matrix-helper RLS reusing existing `wildlife:read` / `wildlife:write`
+  keys (WHMP is a wildlife sub-feature, no new perm keys needed).
+  Separate storage RLS policy for `whmp/<base>/<assessment>/...`
+  paths.
+- **`lib/supabase/whmp.ts`** (~330 LOC) — types + display constants +
+  `nextWhmpReviewDue` (reuses `daysBetween` from `aep.ts`) +
+  `buildSmsHazardPromoteUrl` (deep-link query-param encoder) + full
+  CRUD with two-step supersede + `recordWhmpAnnualReview` (stamps
+  `last_reviewed_at` + initial `ae_signed_at` if null).
+- **UI page** (`/wildlife/whmp`, ~640 LOC) — active assessment card,
+  prior-years history, single-screen "+ New Year" modal with
+  repeatable inline species + findings editors, PDF upload, "Promote
+  to SMS Hazard" deep-link buttons + "Mark Linked" dialog to back-fill
+  the linked hazard code manually.
+- **Module + sidebar + more page** wired with ModuleKey `'whmp'` +
+  `appliesTo: ['faa_part139']`. ClipboardCheck icon (already in
+  ICON_MAP per Phase 2).
+- **8 new tests** in `tests/whmp.test.ts` covering
+  `nextWhmpReviewDue` thresholds + `buildSmsHazardPromoteUrl`
+  query-param shape.
+
+### Phase 3e Cluster C — Verification doc + CHANGELOG + handoff (this commit)
+
+- **`docs/PHASE_3E_VERIFICATION.md`** following the
+  Phase 3b/3c/3d template — pre-flight, mode-gating, four worked
+  flows (first WHMP / AE sign / mid-year amendment / promote finding
+  to SMS hazard), permission matrix, theme + mobile audit,
+  regression smoke, failure triage, sign-off.
+- **CHANGELOG entry** added under `[Unreleased]` with the
+  "Phase 3 complete" milestone callout.
+- **SESSION_HANDOFF updated** marking Phase 3 sequence complete.
+
+---
+
+## Migrations status (Phase 3e)
+
+| File | Applied | What it does |
+|---|---|---|
+| `2026061000_wildlife_hazard_assessments.sql` | ✅ | wildlife_hazard_assessments table + RLS + storage RLS |
+
+---
+
+## Phase 3e known issues / tech debt
+
+| Item | Severity | Notes |
+|---|---|---|
+| `/sms/hazards/new` doesn't yet read the `prefill_*` query params | Medium | "Promote to SMS Hazard" deep-link opens a fresh form; operator must manually copy the finding text from the URL or the WHMP page. Wiring the prefill is a small follow-up edit in the SMS hazard create form. |
+| `findings.sms_hazard_id` is a string (no FK) | Low | Lives inside JSONB; UI doesn't enforce the linked hazard exists. Operator pastes the code manually after creating the SMS hazard. Future PR could add a lookup-validate step. |
+| WHMP PDF can be large (12-50 MB) | Low | No special handling — browser upload progress visible via "Uploading…" indicator. |
+| Annual reminder via background cron | Low | Active-card chip turning amber/red is the in-app cue. Future scope: extend Phase 3a expiry-digest cron to WHMP reviews. |
+| KDRA seed has no WHMP data | Low | First-use is part of the demo story. Optional seed refresh deferred. |
+| Multi-year trend visualization | Held | Out of scope for v1 — prior-years list only. |
+| Strike-rate threshold auto-flagging | Held | Out of scope — could derive from `wildlife_strikes`. |
+
+---
+
+## What shipped earlier this session — Phase 3d (Field Conditions)
 
 **Phase 3d of the FAA Part 139 commercial expansion** — the **Field
 Conditions / TALPA module** — landed end-to-end on `main` in two
@@ -344,7 +421,7 @@ Tracker remains empty project-wide.
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 444 pass / 36 files (+91 from baseline 353; new this session:
+Tests: 452 pass / 37 files (+99 from baseline 353; new this session:
        tests/aep.test.ts (+23) — daysBetween, nextFullScaleDue /
          nextAnnualReviewDue thresholds, summarizeCommsCheck, AEP PDFs
        tests/obstruction-evaluation.test.ts (+14) — UFC regression,
@@ -352,7 +429,9 @@ Tests: 444 pass / 36 files (+91 from baseline 353; new this session:
        tests/part77-surfaces.test.ts (refactored 11 → 30) — per-type
          primary widths, approach slopes / lengths, horizontal radii
        tests/rwycc.test.ts (+34) — every Contaminant case × depth ×
-         temperature thresholds + FICON text generator format cases)
+         temperature thresholds + FICON text generator format cases
+       tests/whmp.test.ts (+8) — nextWhmpReviewDue thresholds +
+         buildSmsHazardPromoteUrl query-param encoding)
 Build: npm run build compiled successfully.
 
 AEP routes (Phase 3b):
@@ -369,6 +448,9 @@ Obstructions routes (Phase 3c picker + legend):
 Field Conditions route (Phase 3d):
   /field-conditions      11 kB / 185 kB
 
+WHMP route (Phase 3e):
+  /wildlife/whmp         10.9 kB / 189 kB
+
 Middleware: 74.5 kB (unchanged).
 Shared by all: 91.2 kB (unchanged).
 ```
@@ -379,26 +461,30 @@ Shared by all: 91.2 kB (unchanged).
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b + 3c + 3d of FAA Part 139 commercial expansion** — `airport_type` dual-mode flag, SMS module (Phase 2), §139.303 Training module (Phase 3a, daily Vercel cron digest), AEP module (Phase 3b) with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs, Part 77 obstruction surface UI (Phase 3c) with per-approach-type engine + runway editor dropdowns + surface picker + detail-page legend, **Field Conditions / TALPA module (Phase 3d)** with RwyCC engine across all 13 contaminants + FICON NOTAM text generator + per-third assessment + append-with-supersede + 34 new tests. AMTR module merged to `main` (off-nav). Not merged-tag yet. |
+| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b + 3c + 3d + 3e of FAA Part 139 commercial expansion (Phase 3 complete)** — `airport_type` dual-mode flag, SMS module (Phase 2), §139.303 Training module (Phase 3a, daily Vercel cron digest), AEP module (Phase 3b) with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs, Part 77 obstruction surface UI (Phase 3c) with per-approach-type engine + runway editor dropdowns + surface picker + detail-page legend, Field Conditions / TALPA module (Phase 3d) with RwyCC engine across all 13 contaminants + FICON NOTAM text generator + per-third assessment + append-with-supersede, **WHMP module (Phase 3e)** with annual assessment + hazardous species register + findings → SMS hazard deep-link. AMTR module merged to `main` (off-nav). Not merged-tag yet. **Civilian Part 139 retrofit feature-complete.** |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
 
 ## Next session tasks
 
-**First:** verify Phase 3d end-to-end via `docs/PHASE_3D_VERIFICATION.md` on KDRA — modal + per-third RwyCC + supersede chain + FICON copy. Walk Phase 3b/3c verification docs at the same time if not yet completed.
+**First:** verify Phase 3e end-to-end via `docs/PHASE_3E_VERIFICATION.md` on KDRA — empty state → first WHMP → AE sign → mid-year amendment → promote finding to SMS hazard. Walk Phase 3b/3c/3d docs in the same session if not yet completed.
 
-**Then choose**:
+**Then choose** (with Phase 3 sub-modules all shipped, the menu shifts to commercial-launch posture):
 
-1. **Phase 3e — Wildlife Hazard Management Plan (WHMP) hooks.** Annual report upload + hazardous species list + mitigation summary, feeds SMS hazards. Lightweight — last of the four Phase 3 sub-modules and completes the civilian retrofit set.
+1. **Push `main` to origin.** Phase 3b/3c/3d/3e commits + 4 verification docs all local-only — ~13 commits ahead.
 
-2. **Push `main` to origin** — Phase 3b/3c/3d commits + verification docs all local-only (now 12+ commits ahead).
+2. **Set `CRON_SECRET` in Vercel** — required for the Phase 3a training-expiry-digest to function. Generate a long random secret in Vercel dashboard → env vars → production + preview.
 
-3. **Set `CRON_SECRET` in Vercel.** Required for the Phase 3a training-expiry-digest to function.
+3. **Cross-phase super-doc** — `docs/VERIFICATION_ALL_PHASES.md` stitching PHASE_3B + PHASE_3C + PHASE_3D + PHASE_3E (and a Phase 3a section we'd write from the prior handoff) into one master walkthrough. Flagged when Phase 3b's doc landed.
 
-4. **Demo seed refresh** — backfill KDRA with: AEP plan + 11 agencies + 1 prior drill (Phase 3b) + `faa_approach_type='non_utility_non_precision_3_4'` on each runway (Phase 3c) + 1-2 historical FCRs (Phase 3d) so the demo tour story is end-to-end for pilot conversations.
+4. **Demo seed refresh** — backfill KDRA with: AEP plan + 11 agencies + 1 prior drill (3b) + `faa_approach_type='non_utility_non_precision_3_4'` per runway (3c) + 1-2 historical FCRs (3d) + 2026 WHMP assessment with 3-4 species + 2 findings (3e). End-to-end demo story for pilot conversations.
 
-5. **Cross-phase super-doc** — composable `docs/VERIFICATION_ALL_PHASES.md` stitching `PHASE_3B_VERIFICATION.md` + `PHASE_3C_VERIFICATION.md` + `PHASE_3D_VERIFICATION.md` (and the future 3e) into one master walkthrough. Flagged when Phase 3b's verification doc landed.
+5. **Wire SMS hazard prefill** — small follow-up to the Phase 3e "Promote to SMS Hazard" deep-link: `/sms/hazards/new` reads `prefill_title` / `prefill_description` / `prefill_source` / `prefill_source_ref_id` query params and pre-fills the form. Currently the operator copies finding text manually.
+
+6. **Polish pass / release prep** — bundle audit, lint pass, version bump in 5 places (per memory), v2.34.0 CHANGELOG header, README + capabilities-doc updates, tag + push.
+
+7. **Pilot recruitment kickoff** — Phase 3 is feature-complete; the build-first commitment is done. Time to identify the 3 Class III non-hub airports per the parent plan (FAA Great Lakes region recommended) and start outreach with a complete-product demo. **Trademark resolution** (CDW "GLIDEPATH" Class 42 registration) is the only true blocker before commercial launch.
 
 ### Long-running carryover
 
