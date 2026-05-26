@@ -40,6 +40,10 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   // `appliesTo: ['faa_part139']` filters this from USAF sidebars). Lives
   // under Operations since ops staff use it daily during winter / wet ops.
   { name: 'Field Conditions',  href: '/field-conditions', iconName: 'CloudSnow' },
+  // Wildlife Hazard Management Plan — civilian Part 139 only.
+  // Sits under Operations next to /wildlife since that module's
+  // sightings + strikes data feeds the annual assessment narrative.
+  { name: 'Wildlife / WHMP',   href: '/wildlife/whmp', iconName: 'ClipboardCheck' },
   // SMS — civilian Part 139 only; the modules-config `appliesTo: ['faa_part139']`
   // filter hides this from USAF sidebars at render time.
   { name: 'Safety Management', href: '/sms', iconName: 'ShieldAlert' },
@@ -91,7 +95,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/field-conditions'],
+      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions'],
     },
     {
       label: 'Airfield Management',

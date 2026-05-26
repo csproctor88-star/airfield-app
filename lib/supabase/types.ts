@@ -5532,6 +5532,60 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["field_condition_thirds"]["Insert"]>
         Relationships: []
       }
+      wildlife_hazard_assessments: {
+        Row: {
+          id: string
+          base_id: string
+          assessment_year: number
+          performed_by_user_id: string | null
+          performed_by_external: string | null
+          performed_at: string
+          report_url: string | null
+          storage_path: string | null
+          faa_accepted_at: string | null
+          faa_acceptance_ref: string | null
+          ae_user_id: string | null
+          ae_signed_at: string | null
+          last_reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          review_notes: string | null
+          hazardous_species: unknown
+          mitigation_summary: string | null
+          findings: unknown
+          notes: string | null
+          replaced_by_id: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          assessment_year: number
+          performed_by_user_id?: string | null
+          performed_by_external?: string | null
+          performed_at: string
+          report_url?: string | null
+          storage_path?: string | null
+          faa_accepted_at?: string | null
+          faa_acceptance_ref?: string | null
+          ae_user_id?: string | null
+          ae_signed_at?: string | null
+          last_reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          review_notes?: string | null
+          hazardous_species?: unknown
+          mitigation_summary?: string | null
+          findings?: unknown
+          notes?: string | null
+          replaced_by_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["wildlife_hazard_assessments"]["Insert"]>
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

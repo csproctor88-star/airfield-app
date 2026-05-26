@@ -24,6 +24,7 @@ export type ModuleKey =
   | 'training_part139'
   | 'aep'
   | 'field_conditions'
+  | 'whmp'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -290,6 +291,17 @@ export const MODULES: ModuleDef[] = [
     description: 'Runway condition assessment per AC 150/5200-30D — per-third RwyCC matrix, treatment log, FICON NOTAM text generator for FAA NOTAM Manager. Required when surface conditions degrade.',
     useCase: 'Required for all Part 139 airports issuing winter / wet-pavement field conditions. Replaces ad-hoc spreadsheets with auditable per-third tracking.',
     hrefs: ['/field-conditions'],
+    setupSteps: [],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
+  },
+  {
+    key: 'whmp',
+    label: 'Wildlife Hazard Management Plan',
+    category: 'compliance',
+    description: 'Annual Wildlife Hazard Management Plan per 14 CFR §139.337 — versioned WHMP artifact with FAA acceptance + AE annual sign-off + hazardous species register + mitigation summary. Findings deep-link into the SMS hazard register.',
+    useCase: 'Required for Part 139 airports with significant wildlife hazards. The strike + sighting capture in the existing /wildlife module feeds the annual assessment narrative.',
+    hrefs: ['/wildlife/whmp'],
     setupSteps: [],
     defaultEnabled: true,
     appliesTo: ['faa_part139'],

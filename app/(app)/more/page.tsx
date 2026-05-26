@@ -43,6 +43,7 @@ const opsItems: ModuleItem[] = [
   { name: 'Personnel on Airfield', icon: HardHat, color: 'var(--color-amber)', href: '/contractors' },
   // Civilian-only — module-config appliesTo: ['faa_part139'] hides on USAF bases.
   { name: 'Field Conditions / TALPA', icon: CloudSnow, color: 'var(--color-cyan)', href: '/field-conditions' },
+  { name: 'Wildlife / WHMP', icon: ClipboardCheck, color: 'var(--color-success)', href: '/wildlife/whmp' },
 ]
 
 // Airfield Management
