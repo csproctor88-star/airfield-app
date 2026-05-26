@@ -14,11 +14,14 @@ import {
   evaluateObstructionAllRunways,
   evaluateObstructionTaxiways,
   identifySurface,
+  FAA_APPROACH_TYPE_LABELS,
   type ObstructionAnalysis,
   type MultiRunwayAnalysis,
   type TaxiwayGeometry,
   type TaxiwaySurfaceEvaluation,
+  type FaaApproachType,
 } from '@/lib/calculations/obstructions'
+import { getSurfaceSet, isCivilian, type SurfaceSet } from '@/lib/airport-mode'
 import { fetchTaxiways } from '@/lib/supabase/taxiways'
 import { fetchElevation } from '@/lib/calculations/geometry'
 import {
@@ -74,8 +77,14 @@ function ObstructionsContent() {
   // Edit mode
   const editId = searchParams.get('edit')
 
-  // Build runway geometries from ALL base runways
-  const getAllRunways = useCallback((): { label: string; geometry: RunwayGeometry }[] => {
+  // Build runway geometries from ALL base runways. Each entry carries the
+  // per-runway faa_approach_type so multi-runway Part 77 evaluations can
+  // mix visual / non-precision / precision dimensions per runway.
+  const getAllRunways = useCallback((): {
+    label: string
+    geometry: RunwayGeometry
+    approachType?: FaaApproachType | null
+  }[] => {
     if (runways.length > 0) {
       return runways.map((rwy) => ({
         label: rwy.runway_id ?? 'Unknown',
@@ -90,6 +99,7 @@ function ObstructionsContent() {
           end1_designator: rwy.end1_designator,
           end2_designator: rwy.end2_designator,
         }),
+        approachType: (rwy as { faa_approach_type?: FaaApproachType | null }).faa_approach_type ?? null,
       }))
     }
     return [{
@@ -100,6 +110,7 @@ function ObstructionsContent() {
         length_ft: 9000,
         width_ft: 150,
       }),
+      approachType: null,
     }]
   }, [runways])
 
@@ -116,6 +127,13 @@ function ObstructionsContent() {
 
   // GPS location state
   const [flyToPoint, setFlyToPoint] = useState<LatLon | null>(null)
+
+  // Surface set selection — defaults per base mode (UFC for USAF,
+  // Part 77 for civilian). User can override per-evaluation.
+  const [surfaceSet, setSurfaceSet] = useState<SurfaceSet>(() => getSurfaceSet(currentInstallation))
+  useEffect(() => {
+    setSurfaceSet(getSurfaceSet(currentInstallation))
+  }, [currentInstallation])
 
   // Evaluation result — supports multi-runway
   const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
@@ -281,6 +299,7 @@ function ObstructionsContent() {
       getAllRunways(),
       airfieldElevMSL,
       runwayClass,
+      surfaceSet,
     )
     setMultiAnalysis(result)
 
@@ -640,6 +659,76 @@ function ObstructionsContent() {
       {/* Evaluation Form */}
       <div className="card" style={{ marginTop: 10 }}>
         <span className="section-label">Obstruction Details</span>
+
+        {/* Surface Set picker — defaults per base mode but operator can
+            override for a what-if evaluation. Disabled in edit mode so
+            the saved evaluation's set is preserved. */}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+            Surface Set
+          </label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {([
+              { key: 'ufc_3_260_01' as SurfaceSet, label: 'UFC 3-260-01', sub: 'USAF airfields' },
+              { key: 'faa_part77' as SurfaceSet,   label: 'FAA Part 77',  sub: '14 CFR §77.19 — civilian' },
+            ]).map(opt => {
+              const active = surfaceSet === opt.key
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setSurfaceSet(opt.key)}
+                  disabled={!!editId}
+                  title={editId ? 'Cannot change surface set when editing a saved evaluation' : undefined}
+                  style={{
+                    flex: '1 1 200px',
+                    minWidth: 0,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-md)',
+                    border: `1px solid ${active
+                      ? 'color-mix(in srgb, var(--color-cyan) 55%, transparent)'
+                      : 'var(--color-border)'}`,
+                    background: active
+                      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                      : 'var(--color-bg-inset)',
+                    color: active ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                    fontFamily: 'inherit',
+                    fontSize: 'var(--fs-sm)',
+                    fontWeight: active ? 700 : 500,
+                    cursor: editId ? 'not-allowed' : 'pointer',
+                    opacity: editId && !active ? 0.5 : 1,
+                    textAlign: 'left',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                  }}
+                >
+                  <span>{active ? '◉' : '○'}  {opt.label}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400 }}>
+                    {opt.sub}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {surfaceSet === 'faa_part77' && runways.length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              Per-runway approach types drive Part 77 dimensions. Bases with mixed runway
+              categories should configure each runway&apos;s FAA Approach Type in{' '}
+              <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Setup → Runways</a>.
+              {runways.some(r => !(r as { faa_approach_type?: string | null }).faa_approach_type) && (
+                <span style={{ color: 'var(--color-warning)', marginLeft: 4 }}>
+                  {runways.filter(r => !(r as { faa_approach_type?: string | null }).faa_approach_type).length} runway(s) not configured — defaulting to non-utility non-precision (&lt;¾ mi vis).
+                </span>
+              )}
+            </div>
+          )}
+          {!isCivilian(currentInstallation) && surfaceSet === 'faa_part77' && (
+            <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-warning)' }}>
+              Evaluating under Part 77 on a non-civilian base — what-if scenario only.
+            </div>
+          )}
+        </div>
 
         <div style={{ marginBottom: 10 }}>
           <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>

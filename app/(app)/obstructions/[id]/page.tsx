@@ -34,7 +34,9 @@ import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { DetailGrid } from '@/components/ui/detail-grid'
 import { toast } from 'sonner'
-import { ArrowLeft, AlertTriangle, FileDown, Mail, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, FileDown, Mail, Pencil, Trash2, ChevronDown, ChevronRight, BookOpen } from 'lucide-react'
+import { getSurfaceSet } from '@/lib/airport-mode'
+import { IMAGINARY_SURFACES, getPart77Surfaces } from '@/lib/calculations/obstructions'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -401,6 +403,9 @@ export default function ObstructionDetailPage() {
         </div>
       )}
 
+      {/* Surface set reference legend (collapsible) */}
+      <SurfaceSetLegend base={currentInstallation} />
+
       {/* Surface-by-surface results */}
       <div className="card" style={{ marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
@@ -708,6 +713,108 @@ export default function ObstructionDetailPage() {
                 <Trash2 size={14} /> Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// Surface set legend — collapsible reference for the active set
+// ─────────────────────────────────────────────────────────────
+
+function SurfaceSetLegend({ base }: { base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | null } | null }) {
+  const [open, setOpen] = useState(false)
+  const set = getSurfaceSet(base)
+  const isPart77 = set === 'faa_part77'
+  // For Part 77 we show the default approach type's surfaces; per-runway types
+  // are documented in /base-config/setup. UFC iterates IMAGINARY_SURFACES.
+  const surfaces = isPart77
+    ? Object.values(getPart77Surfaces())
+    : Object.values(IMAGINARY_SURFACES)
+  const setLabel = isPart77 ? 'FAA Part 77' : 'UFC 3-260-01'
+  const setSubtitle = isPart77
+    ? '14 CFR §77.19 (default approach type — per-runway types in Base Setup)'
+    : 'UFC 3-260-01 Ch. 3 + DoD Instruction 4165.57 (USAF airfields)'
+
+  return (
+    <div className="card" style={{ marginBottom: 10 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width: '100%',
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          textAlign: 'left',
+        }}
+      >
+        {open ? <ChevronDown size={14} color="var(--color-text-3)" /> : <ChevronRight size={14} color="var(--color-text-3)" />}
+        <BookOpen size={14} color="var(--color-cyan)" />
+        <span className="section-label" style={{ margin: 0, flex: 1 }}>
+          Surface Set Reference — {setLabel}
+        </span>
+        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+          {surfaces.length} surfaces
+        </span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>
+            {setSubtitle}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {surfaces.map((s) => (
+              <div
+                key={s.name}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '14px 1fr auto',
+                  gap: 10,
+                  alignItems: 'baseline',
+                  padding: '6px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-bg-inset)',
+                  border: '1px solid var(--color-border)',
+                }}
+              >
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    background: s.color,
+                    marginTop: 4,
+                  }}
+                  aria-hidden
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>
+                    {s.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 1 }}>
+                    {s.description}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 'var(--fs-2xs)',
+                    color: 'var(--color-text-4)',
+                    textAlign: 'right',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {s.ufcRef.split('—')[0].trim()}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

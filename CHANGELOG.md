@@ -4,6 +4,17 @@ All notable changes to Glidepath.
 
 ## [Unreleased]
 
+### Added — FAA Part 139 Phase 3c: Part 77 obstruction surface UI
+- **Per-approach-type Part 77 engine** — `PART77_SURFACES` extracted into `PART77_DIMENSIONS`, a `Record<FaaApproachType, Part77SurfaceSet>` with all 6 §77.19 dimension variants (utility/non-utility × visual/non-precision/precision plus a ¾-mi visibility split). `getPart77Surfaces(approachType)` returns the right per-type set; old `PART77_SURFACES` re-exported as a backward-compat alias for the default `non_utility_non_precision_low` set.
+- **`evaluateObstructionPart77()`** — new evaluator with 5-surface Part 77 path (primary / approach / transitional / horizontal / conical — no UFC-only outer-horizontal / clear-zone / APZ I-II). Recomputes `withinPrimary` from Part 77 halfWidth (geometry helper hardcodes UFC's 1,000 ft). Encodes precision approach's two-segment slope (50:1 first 10 kft + 40:1 next 40 kft) via `secondSegmentSlope` + `segmentLength`. Emits FAA-flavored waiver guidance (Form 7460-1, FAA Regional Office coordination, AEP cross-link, SMS hazard register).
+- **`evaluateObstructionAllRunways()`** extended with `surfaceSet` arg + per-runway `approachType` via `RunwayEvalInput`. Dispatches to UFC or Part 77 evaluator per runway. Existing USAF callers compile unchanged (defaults preserve behavior).
+- **`base_runways.faa_approach_type`** (6-value CHECK enum per §77.19) + **`base_runways.faa_approach_category`** (A–E aircraft landing speed per §1.1, informational only). Migration `2026060800`.
+- **Runway editor** (`/base-config/setup` → Runways) gains two civilian-only dropdowns (gated on `isCivilian()`). Inserts between basic-info row and End 1 fields.
+- **Obstruction evaluation form** (`/obstructions`) gains a Surface Set picker (UFC 3-260-01 / FAA Part 77) defaulting to `getSurfaceSet(base)`. Warning chips for: any runway without a configured approach type (defaults to non_utility_non_precision_low), or USAF base with Part 77 selected (what-if mode).
+- **Obstruction detail page** (`/obstructions/[id]`) gains a collapsible "Surface Set Reference" legend listing every surface in the active set with color swatch + name + description + §77.19 / UFC reference.
+- **Spec correction**: the original Phase 1 `PART77_SURFACES.primary.halfWidth = 500` was actually the §77.19 precision-instrument width (1,000 ft total), not the non-precision default the comment claimed. The new per-type map encodes spec-correct numbers across all 6 categories.
+- **Tests**: `tests/part77-surfaces.test.ts` expanded from 11 to 30 cases (per-type primary widths, approach slopes / lengths / outer widths, horizontal radii, conical + transitional constants, dispatcher behavior, precision two-segment encoding). NEW `tests/obstruction-evaluation.test.ts` (14 cases) pinning UFC regression + Part 77 per-type behavior + multi-runway mixed-approach-type dispatch on a synthetic east-west runway fixture.
+
 ### Added — FAA Part 139 Phase 3b: Airport Emergency Plan module
 - **`/aep` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — AE dashboard with four status cards (plan currency, full-scale drill due, this month's comms check, response-agency count), four sub-pages, and one-click PDF exports.
 - **`/aep/plan`** — versioned plan document with FAA acceptance metadata, AE annual sign-off, supersede chain (`replaced_by_id`), and history table. Plan PDFs upload to `aep-plans/<base>/<plan>/...` in the photos bucket via a separate INSERT policy gated on `aep:write`.

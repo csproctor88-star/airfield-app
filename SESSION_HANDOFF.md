@@ -1,13 +1,101 @@
 # Session Handoff
 
 **Date:** 2026-05-26
-**Branch:** `main` (Phase 3b commits land directly on main per project convention)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (376 pass / 34 files)
-**HEAD:** (latest Phase 3b-E commit — see `git log -1`)
+**Branch:** `main` (Phase 3b + 3c commits land directly on main per project convention)
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (410 pass / 35 files)
+**HEAD:** (latest Phase 3c-C commit — see `git log -1`)
 
 ---
 
-## What shipped this session
+## What shipped this session — Phase 3c (AEP recap below)
+
+**Phase 3c of the FAA Part 139 commercial expansion** — the **Part 77
+obstruction surface UI** — landed end-to-end on `main` in two
+review-gated clusters (B → C). The Phase 1 engine foundation
+(`PART77_SURFACES` + `getSurfaceSet` + `bases.obstruction_surface_set`)
+was extended into a per-approach-type lookup, the evaluator gained a
+Part 77 path, the obstruction tool gained a UFC/Part 77 picker, the
+runway editor gained civilian-only FAA Approach Type + Category
+dropdowns, and the detail page gained a collapsible surface-set
+legend. 410 tests pass (376 baseline + 34 new across part77 +
+obstruction-evaluation).
+
+### Cluster B — Engine + schema + runway editor + tests (commit `1abe42d`)
+
+- **Migration `2026060800_runways_faa_approach.sql`** applied: adds
+  `base_runways.faa_approach_type` (6 §77.19 CHECK options) and
+  `base_runways.faa_approach_category` (A-E informational).
+- **Engine refactor (`lib/calculations/obstructions.ts`)**:
+  `PART77_SURFACES` extracted into `PART77_DIMENSIONS` per-type map
+  + `getPart77Surfaces(approachType)` lookup. `getSurfaces` and
+  `evaluateObstructionAllRunways` signatures extended with
+  `surfaceSet` + per-runway `approachType` (via `RunwayEvalInput`).
+  New `evaluateObstructionPart77()` evaluator with 5 §77.19 surfaces,
+  precision-approach two-segment slope encoding, Part-77-localized
+  withinPrimary calc (geometry helper still hardcodes UFC 1,000 ft).
+- **Spec correction**: the original Phase 1 `PART77_SURFACES.primary.halfWidth
+  = 500` was actually the §77.19 precision width (1,000 ft total) not
+  the non-precision default the comment claimed. New per-type map is
+  spec-correct.
+- **Runway editor** (`/base-config/setup` → Runways → Edit): two
+  civilian-only dropdowns (FAA Approach Type + FAA Approach Category)
+  inserted between basic-info row and End 1 fields, gated on
+  `isCivilian()`.
+- **Tests**: `tests/part77-surfaces.test.ts` 11 → 30 cases; new
+  `tests/obstruction-evaluation.test.ts` (14 cases) on a synthetic
+  east-west runway fixture pinning UFC regression + Part 77 per-type
+  + multi-runway mixed-approach-type dispatch.
+
+### Cluster C — Form picker + detail legend + handoff (this commit)
+
+- **Surface Set picker** on `/obstructions` evaluation form: two
+  side-by-side toggle cards (UFC 3-260-01 / FAA Part 77) defaulting
+  to `getSurfaceSet(currentInstallation)`. Disabled when editing a
+  saved evaluation (prevents silent recalculation drift). Warning
+  chips for: any runway without a configured approach type, USAF base
+  selecting Part 77 (what-if mode).
+- **Collapsible "Surface Set Reference" legend** on
+  `/obstructions/[id]` between the Controlling Surface and Surface
+  Analysis cards. Lists every surface in the active set with color
+  swatch + name + description + §77.19 / UFC reference. Defaults
+  closed; uses base's current `obstruction_surface_set` (per-eval
+  recording is future work — would need a new column on
+  `obstruction_evaluations`).
+- **`getAllRunways()`** in the obstruction page now passes each
+  runway's `faa_approach_type` through `RunwayEvalInput.approachType`
+  so multi-runway Part 77 evaluations correctly mix dimensions per
+  runway.
+- **Theme audit**: zero raw zinc / filled-amber classes; all picker /
+  legend chrome uses `color-mix()` + theme vars.
+- **`docs/PHASE_3C_VERIFICATION.md`** written following the Phase 3b
+  template (pre-flight · mode-gating · per-route flow · cross-cutting
+  · regression · failure triage · sign-off).
+- **CHANGELOG entry** added under `[Unreleased]`.
+
+---
+
+## Migrations status (Phase 3c)
+
+| File | Applied | What it does |
+|---|---|---|
+| `2026060800_runways_faa_approach.sql` | ✅ | base_runways gains faa_approach_type (6-value CHECK) + faa_approach_category (A-E CHECK) |
+
+---
+
+## Phase 3c known issues / tech debt
+
+| Item | Severity | Notes |
+|---|---|---|
+| `obstruction_evaluations.surface_set` not persisted per-row | Medium | The detail-page legend uses the base's current `obstruction_surface_set`. If an admin changes the base setting after a save, prior evaluations re-render with the new set's legend. Add a per-row column in a future migration if pilots flag this. |
+| `pointToRunwayRelation` still hardcodes UFC's 1,000 ft primary halfWidth | Low | `evaluateObstructionPart77` recomputes `withinPrimary` locally to work around it. Cleaner long-term: parameterize `pointToRunwayRelation`. Deferred to keep the Phase 3c diff focused. |
+| Precision 2nd-segment edge cases | Low | The 50:1 / 40:1 split is encoded but real precision evaluations at 30-50 kft distances haven't been pilot-tested. Test fixture covers the math; real-world calibration during pilot phase. |
+| KDRA demo seed doesn't set `faa_approach_type` | Low | Engine defaults to `non_utility_non_precision_low` on civilian bases when null — matches Phase 1 behavior. Demo seed refresh (deferred) should backfill with `non_utility_non_precision_3_4` or similar to match a Class IV story. |
+| Map visualization of imaginary surfaces (overlay polygons) | Held | Engine + legend ship; visual overlay on the obstruction map is a future feature explicitly held out of Phase 3c scope. |
+| Bulk "set all runways to type X" in the wizard | Held | Per-runway editing only. Multi-runway airports edit each runway individually. |
+
+---
+
+## What shipped earlier this session — Phase 3b recap (kept for context)
 
 **Phase 3b of the FAA Part 139 commercial expansion** — the
 **Airport Emergency Plan (AEP) module** — landed end-to-end on
@@ -171,18 +259,25 @@ Tracker remains empty project-wide.
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 376 pass / 34 files (+23 from baseline 353; new file:
-       tests/aep.test.ts — 23 cases covering daysBetween,
-       nextFullScaleDue / nextAnnualReviewDue thresholds,
-       summarizeCommsCheck, and PDF smoke for all three generators)
+Tests: 410 pass / 35 files (+57 from baseline 353; new this session:
+       tests/aep.test.ts (+23) — daysBetween, nextFullScaleDue /
+         nextAnnualReviewDue thresholds, summarizeCommsCheck, AEP PDFs
+       tests/obstruction-evaluation.test.ts (+14) — UFC regression,
+         per-approach-type Part 77 evaluation, multi-runway dispatch
+       tests/part77-surfaces.test.ts (refactored 11 → 30) — per-type
+         primary widths, approach slopes / lengths, horizontal radii)
 Build: npm run build compiled successfully.
 
-AEP routes (new this session):
+AEP routes (Phase 3b):
   /aep                   5.18 kB / 183 kB
   /aep/agencies          6.58 kB / 185 kB
   /aep/comms-checks      7.21 kB / 185 kB
   /aep/drills            7.46 kB / 186 kB
   /aep/plan              7.28 kB / 185 kB
+
+Obstructions routes (Phase 3c picker + legend):
+  /obstructions          13.6 kB / 189 kB  (was 11.2 kB / 187 kB)
+  /obstructions/[id]     13.8 kB / 345 kB  (was 13.7 kB / 334 kB)
 
 Middleware: 74.5 kB (unchanged).
 Shared by all: 91.2 kB (unchanged).
@@ -194,26 +289,28 @@ Shared by all: 91.2 kB (unchanged).
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b of FAA Part 139 commercial expansion** — `airport_type` dual-mode flag, civilian terminology / reg filter / PDF generators / wizard, Part 77 obstruction surface constants, Demo Regional Airport (KDRA) civilian test base, SMS module (Phase 2), §139.303 Training module (Phase 3a) with daily Vercel cron digest, **Airport Emergency Plan module (Phase 3b)** with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs. AMTR module merged to `main` (off-nav). Not merged-tag yet. |
+| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b + 3c of FAA Part 139 commercial expansion** — `airport_type` dual-mode flag, civilian terminology / reg filter / PDF generators / wizard, SMS module (Phase 2), §139.303 Training module (Phase 3a, daily Vercel cron digest), **Airport Emergency Plan module (Phase 3b)** with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs, **Part 77 obstruction surface UI (Phase 3c)** with per-approach-type engine (6 §77.19 variants), runway editor faa_approach_type/category dropdowns, surface picker, detail-page legend, 34 new tests. AMTR module merged to `main` (off-nav). Not merged-tag yet. |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
 
 ## Next session tasks
 
-**First:** create the verification/test plan per user request — a walk-through document covering every new AEP surface end-to-end on KDRA via `npm run dev`. The user signaled they want this immediately after Phase 3b lands.
+**First:** verify Phase 3c end-to-end via `docs/PHASE_3C_VERIFICATION.md` on KDRA — wizard runway dropdowns + obstruction picker + detail legend + spec-correct dimensions. Walk Phase 3b verification doc at the same time if not yet completed.
 
 **Then choose**:
 
-1. **Phase 3c — Part 77 obstruction surface UI.** Engine already in place from Phase 1. Wire the surface picker on new evaluations, color-keyed legend, per-runway-category dimensions (utility / non-precision / precision approach).
+1. **Phase 3d — Winter Ops / TALPA Field Condition Reports.** FICON NOTAM generator per AC 150/5200-30D: thirds-based RwyCC matrix, contaminants/depth/treatments, copy-paste output for FAA NOTAM Manager. Self-contained, smaller than AEP. Recommended next per parent plan sequence.
 
-2. **Phase 3d — Winter Ops / TALPA Field Condition Reports.** FICON NOTAM generator per AC 150/5200-30D: thirds-based RwyCC matrix, contaminants/depth/treatments, copy-paste output for FAA NOTAM Manager. Self-contained, smaller than AEP.
+2. **Phase 3e — Wildlife Hazard Management Plan (WHMP) hooks.** Annual report upload + hazardous species list + mitigation summary, feeds SMS hazards. Lightweight — quickest of the remaining sub-modules.
 
-3. **Phase 3e — Wildlife Hazard Management Plan (WHMP) hooks.** Annual report upload + hazardous species list + mitigation summary, feeds SMS hazards. Lightweight — quickest of the four.
+3. **Set `CRON_SECRET` in Vercel.** Required for the Phase 3a training-expiry-digest to function. Generate a long random secret in Vercel dashboard → env vars → both production + preview.
 
-4. **Set `CRON_SECRET` in Vercel.** Required for the Phase 3a training-expiry-digest to function. Generate a long random secret in Vercel dashboard → env vars → both production + preview.
+4. **Push `main` to origin** — five Phase 3b commits + two Phase 3c commits + verification docs are all local-only.
 
-5. **Demo seed refresh** — backfill KDRA with an AEP plan + 11 agencies + 1 prior drill so the demo tour story works end-to-end for pilot conversations.
+5. **Demo seed refresh** — backfill KDRA with an AEP plan + 11 agencies + 1 prior drill + `faa_approach_type='non_utility_non_precision_3_4'` on each runway so the demo tour story works end-to-end for pilot conversations.
+
+6. **Cross-phase super-doc** — composable `docs/VERIFICATION_ALL_PHASES.md` stitching `PHASE_3B_VERIFICATION.md` + `PHASE_3C_VERIFICATION.md` (and future 3d/3e) into one master walkthrough. User flagged this when Phase 3b's verification doc landed.
 
 ### Long-running carryover
 
