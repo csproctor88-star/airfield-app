@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, GraduationCap, BookOpen, Award, History,
+  ArrowLeft, GraduationCap, BookOpen, Award, History, Download,
   Plus, X, Info, Pencil, Trash2, ExternalLink, ChevronDown, ChevronRight,
   CheckCircle2, AlertTriangle, AlertCircle, Circle,
 } from 'lucide-react'
+import { generateTrainingTranscriptPdf } from '@/lib/training-part139-pdf'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions } from '@/lib/permissions'
 import { getRoleLabel } from '@/lib/airport-mode'
@@ -171,6 +172,31 @@ export default function TrainingUserDetailPage() {
             </div>
           </div>
         </div>
+        {member && !loading && (
+          <button
+            type="button"
+            onClick={() => {
+              const { doc, filename } = generateTrainingTranscriptPdf({
+                base: { name: currentInstallation?.name ?? null, icao: currentInstallation?.icao ?? null },
+                user: {
+                  name: member.name,
+                  rank: member.rank,
+                  email: member.email,
+                  role: getRoleLabel(member.role, currentInstallation) || member.role,
+                },
+                topics: activeTopics,
+                records,
+                certificates: certs,
+              })
+              doc.save(filename)
+              toast.success('Transcript downloaded')
+            }}
+            style={secondaryHeaderBtnStyle}
+            title="Download PDF transcript"
+          >
+            <Download size={14} /> Transcript
+          </button>
+        )}
       </div>
 
       <div style={tabBarStyle}>
@@ -804,6 +830,7 @@ const iconBtnStyle: React.CSSProperties = { background: 'transparent', border: '
 const primaryBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6, background: 'var(--color-cyan)', color: '#fff', border: 'none', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }
 const smallPrimaryBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 4, background: 'var(--color-cyan)', color: '#fff', border: 'none', fontFamily: 'inherit', fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer' }
 const secondaryBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6, background: 'transparent', color: 'var(--color-text-2)', border: '1px solid var(--color-border)', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer' }
+const secondaryHeaderBtnStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 6, background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)', color: 'rgb(3,105,161)', border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }
 const fieldGroupStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }
 const fieldRowStyle: React.CSSProperties = { display: 'flex', gap: 12 }
 const labelStyle: React.CSSProperties = { fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-2)' }

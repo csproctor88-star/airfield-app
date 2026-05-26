@@ -5262,6 +5262,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["training_certificates"]["Insert"]>
         Relationships: []
       }
+      training_digest_log: {
+        Row: {
+          id: string
+          base_id: string
+          user_id: string
+          send_date: string
+          topic_codes: string[]
+          recipient: string
+          sent_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          user_id: string
+          send_date: string
+          topic_codes?: string[]
+          recipient: string
+          sent_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["training_digest_log"]["Insert"]>
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
