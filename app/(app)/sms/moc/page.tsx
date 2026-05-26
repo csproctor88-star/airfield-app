@@ -105,13 +105,13 @@ export default function SmsMocPage() {
   return (
     <div className="space-y-5 p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
+        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-muted-dark hover:text-foreground">
           <ArrowLeft className="w-4 h-4" /> SMS Dashboard
         </Link>
         {canWrite && (
           <button
             onClick={() => setNewOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-sky-600/20 border border-sky-600/50 text-sky-300 hover:bg-sky-600/30"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-sky-600/20 border border-sky-600/50 text-[color:var(--color-accent)] hover:bg-sky-600/30"
           >
             <Plus className="w-4 h-4" /> New MoC
           </button>
@@ -119,10 +119,10 @@ export default function SmsMocPage() {
       </div>
 
       <header>
-        <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-          <GitBranch className="w-6 h-6 text-sky-400" /> Management of Change
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <GitBranch className="w-6 h-6 text-[color:var(--color-accent)]" /> Management of Change
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-dark">
           §139.401(e) — every operational, organizational, equipment, or procedural change with
           potential safety impact gets a risk analysis and Accountable Executive approval.
         </p>
@@ -131,19 +131,19 @@ export default function SmsMocPage() {
       {rows.length === 0 ? (
         <EmptyState message="No Management of Change records. Capture the first MoC when a safety-relevant change is proposed." />
       ) : (
-        <div className="border border-zinc-700 rounded-lg overflow-hidden">
+        <div className="border border-border-active rounded-lg overflow-hidden">
           {rows.map((m) => (
-            <div key={m.id} className="px-3 py-2.5 border-b border-zinc-800 last:border-0 hover:bg-zinc-800/40 transition-colors">
+            <div key={m.id} className="px-3 py-2.5 border-b border-border last:border-0 hover:bg-elevated transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <button onClick={() => setEditing(m)} className="text-left min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs text-zinc-400">{m.moc_code}</span>
-                    <span className="text-sm font-medium text-zinc-100 truncate">{m.title}</span>
+                    <span className="font-mono text-xs text-muted-dark">{m.moc_code}</span>
+                    <span className="text-sm font-medium text-foreground truncate">{m.title}</span>
                     <MocStatusPill status={m.status} />
-                    <span className="text-[10px] uppercase tracking-wider text-zinc-500">{m.change_category}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-darker">{m.change_category}</span>
                   </div>
-                  <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{m.change_description}</p>
-                  <div className="text-[10px] text-zinc-500 mt-1">
+                  <p className="text-xs text-muted-dark mt-1 line-clamp-2">{m.change_description}</p>
+                  <div className="text-[10px] text-muted-darker mt-1">
                     Proposed {formatZuluDate(m.proposed_at.slice(0, 10))}
                     {m.effective_date && ` · Effective ${formatZuluDate(m.effective_date)}`}
                     {m.approved_at && ` · Approved ${formatZuluDate(m.approved_at.slice(0, 10))}`}
@@ -154,14 +154,16 @@ export default function SmsMocPage() {
                     <button
                       onClick={() => handleApprove(m)}
                       title="Approve"
-                      className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/30"
+                      className="p-1.5 rounded hover:opacity-80"
+                      style={{ color: 'var(--color-success)' }}
                     >
                       <CheckCircle2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleReject(m)}
                       title="Reject"
-                      className="p-1.5 rounded text-red-400 hover:bg-red-900/30"
+                      className="p-1.5 rounded hover:opacity-80"
+                      style={{ color: 'var(--color-danger)' }}
                     >
                       <XCircle className="w-4 h-4" />
                     </button>
@@ -176,31 +178,31 @@ export default function SmsMocPage() {
       {newOpen && (
         <Modal title="New Management of Change" onClose={() => setNewOpen(false)}>
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Title *</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Title *</label>
             <input
               value={draft.title}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               placeholder="e.g. Relocate ARFF Station to North Apron"
-              className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+              className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
               autoFocus
             />
           </div>
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Change Description *</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Change Description *</label>
             <textarea
               value={draft.change_description}
               onChange={(e) => setDraft({ ...draft, change_description: e.target.value })}
               rows={4}
-              className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+              className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">Category</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">Category</label>
               <select
                 value={draft.change_category}
                 onChange={(e) => setDraft({ ...draft, change_category: e.target.value as SmsMoc['change_category'] })}
-                className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200"
+                className="w-full mt-1 bg-inset border border-border-active rounded px-2 py-1.5 text-sm text-foreground"
               >
                 <option value="operational">Operational</option>
                 <option value="organizational">Organizational</option>
@@ -212,18 +214,18 @@ export default function SmsMocPage() {
               </select>
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">Effective</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">Effective</label>
               <input
                 type="date"
                 value={draft.effective_date}
                 onChange={(e) => setDraft({ ...draft, effective_date: e.target.value })}
-                className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200"
+                className="w-full mt-1 bg-inset border border-border-active rounded px-2 py-1.5 text-sm text-foreground"
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button onClick={() => setNewOpen(false)} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
-            <button onClick={handleCreate} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-zinc-800 text-white">
+            <button onClick={() => setNewOpen(false)} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Cancel</button>
+            <button onClick={handleCreate} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-elevated text-white">
               {saving ? 'Saving…' : 'Create'}
             </button>
           </div>
@@ -233,11 +235,11 @@ export default function SmsMocPage() {
       {editing && (
         <Modal title={`${editing.moc_code} — ${editing.title}`} onClose={() => setEditing(null)} wide>
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Status</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Status</label>
             <select
               value={editing.status}
               onChange={(e) => setEditing({ ...editing, status: e.target.value as SmsMocStatus })}
-              className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200"
+              className="w-full mt-1 bg-inset border border-border-active rounded px-2 py-1.5 text-sm text-foreground"
             >
               <option value="proposed">Proposed</option>
               <option value="risk_analysis">Risk Analysis</option>
@@ -249,13 +251,13 @@ export default function SmsMocPage() {
             </select>
           </div>
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Risk Analysis Summary</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Risk Analysis Summary</label>
             <textarea
               value={editing.risk_analysis_summary ?? ''}
               onChange={(e) => setEditing({ ...editing, risk_analysis_summary: e.target.value || null })}
               rows={4}
               placeholder="Hazards identified, likelihood × severity per affected operation, mitigation plan…"
-              className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+              className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -289,10 +291,10 @@ function MocStatusPill({ status }: { status: string }) {
 function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className={`bg-zinc-900 border border-zinc-700 rounded-lg p-5 ${wide ? 'max-w-2xl' : 'max-w-md'} w-full space-y-3 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between sticky top-0 bg-zinc-900 pb-2 border-b border-zinc-800">
-          <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-zinc-400 hover:text-zinc-200" /></button>
+      <div className={`bg-card border border-border-active rounded-lg p-5 ${wide ? 'max-w-2xl' : 'max-w-md'} w-full space-y-3 max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between sticky top-0 bg-card pb-2 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-dark hover:text-foreground" /></button>
         </div>
         {children}
       </div>

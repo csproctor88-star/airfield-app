@@ -72,14 +72,14 @@ export default function SmsSpisPage() {
   return (
     <div className="space-y-5 p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
+        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-muted-dark hover:text-foreground">
           <ArrowLeft className="w-4 h-4" /> SMS Dashboard
         </Link>
         {canWrite && (
           <button
             onClick={handleRecompute}
             disabled={recomputing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-zinc-800 border border-zinc-700 text-zinc-200 hover:bg-zinc-700 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-elevated border border-border-active text-foreground hover:bg-elevated disabled:opacity-60"
           >
             <RefreshCw className={`w-4 h-4 ${recomputing ? 'animate-spin' : ''}`} />
             {recomputing ? 'Computing…' : 'Recompute Now'}
@@ -88,10 +88,10 @@ export default function SmsSpisPage() {
       </div>
 
       <header>
-        <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-sky-400" /> Safety Performance Indicators
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-[color:var(--color-accent)]" /> Safety Performance Indicators
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-dark">
           AC 150/5200-37A §6.4 — measurable indicators of safety performance with targets and
           alert thresholds. Nightly Supabase cron writes monthly measurements; the four seeded
           indicators draw on existing module data.
@@ -120,27 +120,27 @@ function SpiCard({ spi, latest, series }: { spi: SmsSpi; latest: SmsSpiMeasureme
   const status = latest?.status ?? 'no_data'
   const palette = STATUS_PALETTE[status]
   return (
-    <div className="border rounded-lg p-4 bg-zinc-900/40" style={{ borderColor: palette.border }}>
+    <div className="border rounded-lg p-4 bg-card" style={{ borderColor: palette.border }}>
       <div className="flex items-start justify-between">
         <div>
           <div className="text-[10px] uppercase tracking-wider font-mono" style={{ color: palette.text }}>
             {spi.code}
           </div>
-          <h3 className="text-sm font-semibold text-zinc-100">{spi.title}</h3>
+          <h3 className="text-sm font-semibold text-foreground">{spi.title}</h3>
         </div>
         <StatusBadge status={status} />
       </div>
 
       <div className="flex items-baseline gap-2 mt-3">
-        <div className="text-3xl font-semibold text-zinc-100">
+        <div className="text-3xl font-semibold text-foreground">
           {latest ? formatValue(latest.value, spi.unit) : '—'}
         </div>
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-muted-darker">
           {spi.unit === 'percent' ? '%' : spi.unit === 'rate' ? '/1k ops' : ''}
         </div>
       </div>
 
-      <div className="text-xs text-zinc-500 mt-1">
+      <div className="text-xs text-muted-darker mt-1">
         Target: {spi.target_direction === 'lower' ? '≤' : '≥'} {spi.target_value ?? '—'}{spi.unit === 'percent' ? '%' : ''}
         {spi.alert_threshold != null && (
           <> · Alert at {spi.target_direction === 'lower' ? '≥' : '≤'} {spi.alert_threshold}{spi.unit === 'percent' ? '%' : ''}</>
@@ -150,11 +150,11 @@ function SpiCard({ spi, latest, series }: { spi: SmsSpi; latest: SmsSpiMeasureme
       {series.length > 0 && <Sparkline data={series} target={spi.target_value} direction={spi.target_direction} />}
 
       {spi.description && (
-        <p className="text-xs text-zinc-400 mt-3 leading-relaxed">{spi.description}</p>
+        <p className="text-xs text-muted-dark mt-3 leading-relaxed">{spi.description}</p>
       )}
 
       {latest && (
-        <p className="text-[10px] text-zinc-500 mt-2">
+        <p className="text-[10px] text-muted-darker mt-2">
           Last measurement: {formatZuluDate(latest.period_start)} → {formatZuluDate(latest.period_end)} · {latest.computed_by}
         </p>
       )}

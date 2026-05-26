@@ -119,18 +119,18 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <div className="text-zinc-400 text-sm">Loading…</div>
+      <div className="min-h-screen bg-inset flex items-center justify-center p-4">
+        <div className="text-muted-dark text-sm">Loading…</div>
       </div>
     )
   }
 
   if (!baseFound) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-inset flex items-center justify-center p-4">
         <div className="max-w-md text-center">
-          <h1 className="text-xl font-semibold text-zinc-100 mb-2">Airport not found</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="text-xl font-semibold text-foreground mb-2">Airport not found</h1>
+          <p className="text-sm text-muted-dark">
             We couldn&apos;t find an airport with ICAO <code className="font-mono">{icao}</code>.
             Verify the address and try again.
           </p>
@@ -141,10 +141,10 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
 
   if (config && !config.moduleEnabled) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-inset flex items-center justify-center p-4">
         <div className="max-w-md text-center">
-          <h1 className="text-xl font-semibold text-zinc-100 mb-2">Reporting unavailable</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="text-xl font-semibold text-foreground mb-2">Reporting unavailable</h1>
+          <p className="text-sm text-muted-dark">
             The Safety Management System module is not enabled at {config.baseName}. Contact
             airport operations directly for safety concerns.
           </p>
@@ -155,15 +155,15 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-inset flex items-center justify-center p-4">
         <div className="max-w-md text-center space-y-4">
-          <CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto" />
-          <h1 className="text-2xl font-semibold text-zinc-100">Report submitted</h1>
-          <p className="text-sm text-zinc-300">
-            Your safety report has been recorded as <span className="font-mono text-emerald-300">{submitted.code}</span>.
+          <CheckCircle2 className="w-16 h-16 text-[color:var(--color-success)] mx-auto" />
+          <h1 className="text-2xl font-semibold text-foreground">Report submitted</h1>
+          <p className="text-sm text-secondary">
+            Your safety report has been recorded as <span className="font-mono text-[color:var(--color-success)]">{submitted.code}</span>.
             {config && <> Airport operations at {config.baseName} will review it.</>}
           </p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-darker">
             Per 14 CFR §139.401(c)(2), reports submitted in good faith will not result in
             disciplinary action. Thank you for helping keep the airport safe.
           </p>
@@ -173,22 +173,28 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-inset text-foreground">
       <div className="max-w-2xl mx-auto p-4 sm:p-6">
         <header className="mb-6">
-          <div className="flex items-center gap-2 text-emerald-400 mb-1">
+          <div className="flex items-center gap-2 text-[color:var(--color-success)] mb-1">
             <ShieldAlert className="w-6 h-6" />
             <span className="text-xs uppercase tracking-wider font-medium">Safety Management System</span>
           </div>
           <h1 className="text-2xl font-semibold">Submit a Safety Report</h1>
-          {config && <p className="text-sm text-zinc-400 mt-0.5">{config.baseName} ({icao.toUpperCase()})</p>}
+          {config && <p className="text-sm text-muted-dark mt-0.5">{config.baseName} ({icao.toUpperCase()})</p>}
         </header>
 
-        <div className="border border-emerald-700/40 bg-emerald-950/15 rounded-lg p-3 mb-5 text-xs text-emerald-100/80">
+        <div
+          className="border rounded-lg p-3 mb-5 text-xs text-secondary"
+          style={{
+            background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--color-success) 40%, transparent)',
+          }}
+        >
           <div className="flex items-start gap-2">
-            <Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            <Lock className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-success)' }} />
             <div>
-              <strong className="text-emerald-300">Anonymous by default.</strong>{' '}
+              <strong style={{ color: 'var(--color-success)' }}>Anonymous by default.</strong>{' '}
               You don&apos;t need to identify yourself. Per 14 CFR §139.401(c)(2),
               reports submitted in good faith are protected — no disciplinary action,
               no retribution. Provide contact only if you&apos;d like a follow-up.
@@ -198,19 +204,19 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Category</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as Category)}
-              className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+              className="w-full mt-1 bg-card border border-border-active rounded px-3 py-2 text-sm"
             >
               {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">
-              Description <span className="text-red-400">*</span>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">
+              Description <span className="text-[color:var(--color-danger)]">*</span>
             </label>
             <textarea
               value={description}
@@ -218,42 +224,42 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
               rows={5}
               required
               placeholder="What happened? Be as specific as you can — when, where, who was affected, what could go wrong next time."
-              className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+              className="w-full mt-1 bg-card border border-border-active rounded px-3 py-2 text-sm"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">When did it happen?</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">When did it happen?</label>
               <input
                 type="datetime-local"
                 value={occurredAt}
                 onChange={(e) => setOccurredAt(e.target.value)}
-                className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+                className="w-full mt-1 bg-card border border-border-active rounded px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">Where?</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">Where?</label>
               <input
                 value={locationText}
                 onChange={(e) => setLocationText(e.target.value)}
                 placeholder="e.g. Taxiway A, GA ramp, hangar 3"
-                className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+                className="w-full mt-1 bg-card border border-border-active rounded px-3 py-2 text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Immediate action taken (if any)</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Immediate action taken (if any)</label>
             <textarea
               value={immediateAction}
               onChange={(e) => setImmediateAction(e.target.value)}
               rows={2}
-              className="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+              className="w-full mt-1 bg-card border border-border-active rounded px-3 py-2 text-sm"
             />
           </div>
 
-          <div className="border-t border-zinc-800 pt-4">
+          <div className="border-t border-border pt-4">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -263,23 +269,23 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
               />
               <span>Include my contact info so operations can follow up</span>
             </label>
-            <p className="text-xs text-zinc-500 mt-1 ml-6">
+            <p className="text-xs text-muted-darker mt-1 ml-6">
               Only SMS triagers see this. It&apos;s not shared internally beyond the safety team.
             </p>
             {includeContact && (
-              <div className="mt-3 space-y-3 pl-6 border-l-2 border-zinc-800">
+              <div className="mt-3 space-y-3 pl-6 border-l-2 border-border">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <input
                     value={reporterName}
                     onChange={(e) => setReporterName(e.target.value)}
                     placeholder="Name"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+                    className="w-full bg-card border border-border-active rounded px-3 py-2 text-sm"
                   />
                   <input
                     value={reporterRole}
                     onChange={(e) => setReporterRole(e.target.value)}
                     placeholder="Role / company"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+                    className="w-full bg-card border border-border-active rounded px-3 py-2 text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -288,14 +294,14 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
                     value={reporterEmail}
                     onChange={(e) => setReporterEmail(e.target.value)}
                     placeholder="Email"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+                    className="w-full bg-card border border-border-active rounded px-3 py-2 text-sm"
                   />
                   <input
                     type="tel"
                     value={reporterPhone}
                     onChange={(e) => setReporterPhone(e.target.value)}
                     placeholder="Phone"
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm"
+                    className="w-full bg-card border border-border-active rounded px-3 py-2 text-sm"
                   />
                 </div>
               </div>
@@ -303,7 +309,14 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
           </div>
 
           {error && (
-            <div className="text-sm text-red-300 bg-red-950/30 border border-red-700/40 rounded p-2.5">
+            <div
+              className="text-sm rounded p-2.5 border"
+              style={{
+                color: 'var(--color-danger)',
+                background: 'color-mix(in srgb, var(--color-danger) 10%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--color-danger) 40%, transparent)',
+              }}
+            >
               {error}
             </div>
           )}
@@ -311,12 +324,12 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full px-4 py-2.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-medium"
+            className="w-full px-4 py-2.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:bg-elevated disabled:text-muted-darker text-white font-medium"
           >
             {submitting ? 'Submitting…' : 'Submit Safety Report'}
           </button>
 
-          <p className="text-[11px] text-zinc-500 text-center pt-1">
+          <p className="text-[11px] text-muted-darker text-center pt-1">
             Reports are reviewed under 14 CFR §139.401. False reports submitted in bad faith may
             result in disciplinary action. Reports submitted in good faith are protected from
             retribution.

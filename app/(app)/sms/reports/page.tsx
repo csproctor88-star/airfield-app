@@ -55,21 +55,21 @@ export default function SmsReportsPage() {
   return (
     <div className="space-y-5 p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
+        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-muted-dark hover:text-foreground">
           <ArrowLeft className="w-4 h-4" /> SMS Dashboard
         </Link>
       </div>
 
       <header>
-        <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-          <MessageSquareWarning className="w-6 h-6 text-amber-400" /> Safety Reports
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <MessageSquareWarning className="w-6 h-6 text-[color:var(--color-warning)]" /> Safety Reports
           {newCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-600/20 border border-amber-600/50 text-amber-300">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-600/20 border border-amber-600/50 text-[color:var(--color-warning)]">
               {newCount} new
             </span>
           )}
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-dark">
           Anonymous public submissions arrive here for triage. Per AC 150/5200-37A §6.5.2,
           non-retribution is critical — reporter contact details (when present) are visible
           only to SMS triagers and never to the public.
@@ -94,29 +94,29 @@ export default function SmsReportsPage() {
           }
         />
       ) : (
-        <div className="border border-zinc-700 rounded-lg overflow-hidden">
+        <div className="border border-border-active rounded-lg overflow-hidden">
           {filtered.map((r) => (
             <button
               key={r.id}
               onClick={() => setEditing(r)}
-              className="w-full text-left px-3 py-3 border-b border-zinc-800 last:border-0 hover:bg-zinc-800/40 transition-colors"
+              className="w-full text-left px-3 py-3 border-b border-border last:border-0 hover:bg-elevated transition-colors"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs text-zinc-400">{r.report_code}</span>
+                    <span className="font-mono text-xs text-muted-dark">{r.report_code}</span>
                     <CategoryChip cat={r.category} />
                     <TriagePill status={r.triage_status} />
                     {r.is_anonymous ? (
-                      <span className="text-[10px] text-zinc-500 inline-flex items-center gap-0.5">
+                      <span className="text-[10px] text-muted-darker inline-flex items-center gap-0.5">
                         <EyeOff className="w-3 h-3" /> Anonymous
                       </span>
                     ) : (
-                      <span className="text-[10px] text-zinc-400">From {r.reporter_name || r.reporter_email}</span>
+                      <span className="text-[10px] text-muted-dark">From {r.reporter_name || r.reporter_email}</span>
                     )}
                   </div>
-                  <p className="text-sm text-zinc-200 mt-1 line-clamp-2">{r.description}</p>
-                  <div className="text-[10px] text-zinc-500 mt-1">
+                  <p className="text-sm text-foreground mt-1 line-clamp-2">{r.description}</p>
+                  <div className="text-[10px] text-muted-darker mt-1">
                     Submitted {formatZuluDateTime(r.submitted_at)}
                     {r.occurred_at && ` · Occurred ${formatZuluDateTime(r.occurred_at)}`}
                     {r.location_text && ` · ${r.location_text}`}
@@ -179,37 +179,45 @@ function ReportDetailModal({ report, baseId, canTriage, onClose, onChanged }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-5 max-w-2xl w-full space-y-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between sticky top-0 bg-zinc-900 pb-2 border-b border-zinc-800">
+      <div className="bg-card border border-border-active rounded-lg p-5 max-w-2xl w-full space-y-3 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between sticky top-0 bg-card pb-2 border-b border-border">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-100">{report.report_code}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{report.report_code}</h2>
             <div className="flex items-center gap-2 mt-0.5">
               <CategoryChip cat={report.category} />
               <TriagePill status={report.triage_status} />
             </div>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-zinc-400 hover:text-zinc-200" /></button>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-dark hover:text-foreground" /></button>
         </div>
 
         <div className="space-y-3 text-sm">
-          <Field label="Description"><p className="text-zinc-200 whitespace-pre-wrap">{report.description}</p></Field>
-          {report.immediate_action && <Field label="Immediate Action Taken"><p className="text-zinc-200 whitespace-pre-wrap">{report.immediate_action}</p></Field>}
+          <Field label="Description"><p className="text-foreground whitespace-pre-wrap">{report.description}</p></Field>
+          {report.immediate_action && <Field label="Immediate Action Taken"><p className="text-foreground whitespace-pre-wrap">{report.immediate_action}</p></Field>}
 
           <div className="grid grid-cols-2 gap-3">
-            {report.occurred_at && <Field label="Occurred"><span className="text-zinc-200">{formatZuluDateTime(report.occurred_at)}</span></Field>}
-            <Field label="Submitted"><span className="text-zinc-200">{formatZuluDateTime(report.submitted_at)}</span></Field>
-            {report.location_text && <Field label="Location"><span className="text-zinc-200">{report.location_text}</span></Field>}
-            <Field label="Source"><span className="text-zinc-200">{report.source.replace('_', ' ')}</span></Field>
+            {report.occurred_at && <Field label="Occurred"><span className="text-foreground">{formatZuluDateTime(report.occurred_at)}</span></Field>}
+            <Field label="Submitted"><span className="text-foreground">{formatZuluDateTime(report.submitted_at)}</span></Field>
+            {report.location_text && <Field label="Location"><span className="text-foreground">{report.location_text}</span></Field>}
+            <Field label="Source"><span className="text-foreground">{report.source.replace('_', ' ')}</span></Field>
           </div>
 
           {!report.is_anonymous && (
-            <div className="border-l-2 border-amber-600/50 pl-3 py-1 bg-amber-950/10">
-              <div className="text-[10px] uppercase tracking-wider text-amber-400 mb-1">Reporter (confidential — visible to triagers only)</div>
-              <div className="text-zinc-200">
+            <div
+              className="border-l-2 pl-3 py-1"
+              style={{
+                background: 'color-mix(in srgb, var(--color-warning) 8%, transparent)',
+                borderColor: 'color-mix(in srgb, var(--color-warning) 50%, transparent)',
+              }}
+            >
+              <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--color-warning)' }}>
+                Reporter (confidential — visible to triagers only)
+              </div>
+              <div className="text-foreground">
                 {report.reporter_name && <div>{report.reporter_name}</div>}
-                {report.reporter_role && <div className="text-zinc-400">{report.reporter_role}</div>}
-                {report.reporter_email && <div className="text-xs text-zinc-400">{report.reporter_email}</div>}
-                {report.reporter_phone && <div className="text-xs text-zinc-400">{report.reporter_phone}</div>}
+                {report.reporter_role && <div className="text-muted-dark">{report.reporter_role}</div>}
+                {report.reporter_email && <div className="text-xs text-muted-dark">{report.reporter_email}</div>}
+                {report.reporter_phone && <div className="text-xs text-muted-dark">{report.reporter_phone}</div>}
               </div>
             </div>
           )}
@@ -218,34 +226,34 @@ function ReportDetailModal({ report, baseId, canTriage, onClose, onChanged }: {
         {canTriage && (
           <>
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">Triage Notes</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">Triage Notes</label>
               <textarea
                 value={triageNotes}
                 onChange={(e) => setTriageNotes(e.target.value)}
                 rows={3}
-                className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+                className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-800">
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
               {report.triage_status === 'new' && (
-                <button onClick={() => setStatus('reviewing')} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-200">
+                <button onClick={() => setStatus('reviewing')} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-foreground">
                   Mark Reviewing
                 </button>
               )}
               {report.triage_status !== 'promoted' && (
-                <button onClick={promote} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-800 text-white inline-flex items-center gap-1.5">
+                <button onClick={promote} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-elevated text-white inline-flex items-center gap-1.5">
                   <ShieldAlert className="w-4 h-4" /> Promote to Hazard
                 </button>
               )}
-              <button onClick={() => setStatus('closed_no_action')} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Close — No Action</button>
-              <button onClick={() => setStatus('duplicate')} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Duplicate</button>
+              <button onClick={() => setStatus('closed_no_action')} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Close — No Action</button>
+              <button onClick={() => setStatus('duplicate')} disabled={busy} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Duplicate</button>
             </div>
           </>
         )}
 
         {report.promoted_hazard_id && (
-          <Link href={`/sms/hazards/${report.promoted_hazard_id}`} className="text-sm text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
+          <Link href={`/sms/hazards/${report.promoted_hazard_id}`} className="text-sm text-[color:var(--color-accent)] hover:text-[color:var(--color-accent)] inline-flex items-center gap-1">
             <ExternalLink className="w-3 h-3" /> View linked hazard
           </Link>
         )}
@@ -257,7 +265,7 @@ function ReportDetailModal({ report, baseId, canTriage, onClose, onChanged }: {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-darker mb-0.5">{label}</div>
       {children}
     </div>
   )
@@ -267,7 +275,7 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
-      className={`px-2.5 py-1 rounded text-xs uppercase tracking-wider border ${active ? 'bg-zinc-700 border-zinc-600 text-zinc-100' : 'border-zinc-800 text-zinc-400 hover:bg-zinc-800'}`}
+      className={`px-2.5 py-1 rounded text-xs uppercase tracking-wider border ${active ? 'bg-accent border-accent text-foreground' : 'border-border text-muted-dark hover:bg-elevated'}`}
     >
       {label}
     </button>
@@ -276,7 +284,7 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
 
 function CategoryChip({ cat }: { cat: string }) {
   return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider bg-zinc-700/40 text-zinc-300">
+    <span className="text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider bg-inset text-secondary">
       {cat.replace('_', ' ')}
     </span>
   )

@@ -87,17 +87,17 @@ export default function SmsDashboardPage() {
     <div className="space-y-5 p-4 max-w-5xl mx-auto">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-            <ShieldAlert className="w-7 h-7 text-emerald-400" /> Safety Management System
+          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+            <ShieldAlert className="w-7 h-7 text-[color:var(--color-success)]" /> Safety Management System
           </h1>
-          <p className="text-sm text-zinc-400 mt-0.5">
+          <p className="text-sm text-muted-dark mt-0.5">
             Accountable Executive overview — 14 CFR §139.401 / AC 150/5200-37A
           </p>
         </div>
         <button
           onClick={exportManual}
           disabled={exporting}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-zinc-800 border border-zinc-700 text-zinc-200 hover:bg-zinc-700 disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-elevated border border-border-active text-foreground hover:bg-elevated disabled:opacity-60"
         >
           <Download className="w-4 h-4" />
           {exporting ? 'Generating…' : 'SMS Manual PDF'}
@@ -123,11 +123,19 @@ export default function SmsDashboardPage() {
       </div>
 
       {/* Public reporting hint */}
-      <div className="border border-emerald-700/30 bg-emerald-950/15 rounded-lg p-3 text-xs">
-        <div className="text-emerald-300 font-medium mb-1">Public Safety Reporting</div>
-        <p className="text-emerald-100/80 leading-relaxed">
+      <div
+        className="border rounded-lg p-3 text-xs"
+        style={{
+          background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
+          borderColor: 'color-mix(in srgb, var(--color-success) 35%, transparent)',
+        }}
+      >
+        <div className="font-medium mb-1" style={{ color: 'var(--color-success)' }}>
+          Public Safety Reporting
+        </div>
+        <p className="leading-relaxed text-secondary">
           Anonymous safety reports may be submitted by anyone at{' '}
-          <code className="px-1 py-0.5 rounded bg-zinc-900 text-emerald-200">
+          <code className="px-1 py-0.5 rounded bg-card text-foreground">
             {typeof window !== 'undefined' ? window.location.origin : ''}/{currentInstallation?.icao?.toLowerCase() ?? 'icao'}/sms-report
           </code>{' '}
           — share this QR-friendly URL on terminal walls, ramp entrances, and AEP briefings.
@@ -149,23 +157,23 @@ function PolicyCard({ summary }: { summary: SmsAeSummary }) {
       <div className="text-3xl font-semibold flex items-center gap-2">
         {ok ? (
           <>
-            <CheckCircle2 className="w-7 h-7 text-emerald-400" />
-            <span className="text-emerald-300">Current</span>
+            <CheckCircle2 className="w-7 h-7 text-[color:var(--color-success)]" />
+            <span className="text-[color:var(--color-success)]">Current</span>
           </>
         ) : (
           <>
-            <XCircle className="w-7 h-7 text-red-400" />
-            <span className="text-red-300">Missing</span>
+            <XCircle className="w-7 h-7 text-[color:var(--color-danger)]" />
+            <span className="text-[color:var(--color-danger)]">Missing</span>
           </>
         )}
       </div>
       {summary.policyEffectiveDate && (
-        <div className="text-xs text-zinc-500 mt-2">
+        <div className="text-xs text-muted-darker mt-2">
           Effective {formatZuluDate(summary.policyEffectiveDate)}
         </div>
       )}
       {summary.policyReviewDueDate && (
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-muted-darker">
           Review due {formatZuluDate(summary.policyReviewDueDate)}
         </div>
       )}
@@ -194,16 +202,16 @@ function SpisCard({ summary }: { summary: SmsAeSummary }) {
     <Card icon={TrendingUp} label={`SPIs (${summary.spisTotal})`} tone={tone} href="/sms/spis">
       <div className="space-y-1.5 mt-1">
         <div className="flex justify-between items-center">
-          <span className="text-xs text-zinc-400 inline-flex items-center gap-1"><AlertCircle className="w-3 h-3 text-red-400" /> Alert</span>
-          <span className="text-lg font-semibold text-red-300">{summary.spisInAlert}</span>
+          <span className="text-xs text-muted-dark inline-flex items-center gap-1"><AlertCircle className="w-3 h-3 text-[color:var(--color-danger)]" /> Alert</span>
+          <span className="text-lg font-semibold text-[color:var(--color-danger)]">{summary.spisInAlert}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-zinc-400 inline-flex items-center gap-1"><AlertCircle className="w-3 h-3 text-amber-400" /> Warning</span>
-          <span className="text-lg font-semibold text-amber-300">{summary.spisInWarning}</span>
+          <span className="text-xs text-muted-dark inline-flex items-center gap-1"><AlertCircle className="w-3 h-3 text-[color:var(--color-warning)]" /> Warning</span>
+          <span className="text-lg font-semibold text-[color:var(--color-warning)]">{summary.spisInWarning}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-xs text-zinc-400 inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-400" /> On target</span>
-          <span className="text-lg font-semibold text-emerald-300">{summary.spisTotal - summary.spisInAlert - summary.spisInWarning}</span>
+          <span className="text-xs text-muted-dark inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[color:var(--color-success)]" /> On target</span>
+          <span className="text-lg font-semibold text-[color:var(--color-success)]">{summary.spisTotal - summary.spisInAlert - summary.spisInWarning}</span>
         </div>
       </div>
     </Card>
@@ -216,19 +224,19 @@ function MocsCard({ summary }: { summary: SmsAeSummary }) {
     <Card icon={GitBranch} label="Management of Change" tone={tone} href="/sms/moc">
       <div className="space-y-1.5 mt-1">
         <div className="flex justify-between items-baseline">
-          <span className="text-xs text-zinc-400">Open MoCs</span>
-          <span className="text-2xl font-semibold text-zinc-100">{summary.openMocs}</span>
+          <span className="text-xs text-muted-dark">Open MoCs</span>
+          <span className="text-2xl font-semibold text-foreground">{summary.openMocs}</span>
         </div>
         <div className="flex justify-between items-baseline">
-          <span className="text-xs text-zinc-400">Awaiting your approval</span>
-          <span className={`text-lg font-semibold ${summary.pendingMocApproval > 0 ? 'text-amber-300' : 'text-zinc-400'}`}>
+          <span className="text-xs text-muted-dark">Awaiting your approval</span>
+          <span className={`text-lg font-semibold ${summary.pendingMocApproval > 0 ? 'text-[color:var(--color-warning)]' : 'text-muted-dark'}`}>
             {summary.pendingMocApproval}
           </span>
         </div>
         {summary.openSafetyReports > 0 && (
-          <div className="pt-2 mt-2 border-t border-zinc-800 flex justify-between items-baseline">
-            <span className="text-xs text-zinc-400">Reports to triage</span>
-            <span className="text-lg font-semibold text-amber-300">{summary.openSafetyReports}</span>
+          <div className="pt-2 mt-2 border-t border-border flex justify-between items-baseline">
+            <span className="text-xs text-muted-dark">Reports to triage</span>
+            <span className="text-lg font-semibold text-[color:var(--color-warning)]">{summary.openSafetyReports}</span>
           </div>
         )}
       </div>
@@ -251,10 +259,10 @@ function Card({ icon: Icon, label, tone, href, children }: {
   return (
     <Link
       href={href}
-      className="block rounded-lg p-4 transition-colors hover:bg-zinc-800/30"
+      className="block rounded-lg p-4 transition-colors hover:bg-elevated/30"
       style={{ border: `1px solid ${palette.border}`, background: palette.bg }}
     >
-      <div className="text-xs uppercase tracking-wider font-medium text-zinc-400 inline-flex items-center gap-1.5">
+      <div className="text-xs uppercase tracking-wider font-medium text-muted-dark inline-flex items-center gap-1.5">
         <Icon className="w-3.5 h-3.5" /> {label}
       </div>
       {children}
@@ -282,10 +290,10 @@ function QuickLink({ href, icon: Icon, label }: { href: string; icon: typeof Fil
   return (
     <Link
       href={href}
-      className="border border-zinc-800 rounded-lg p-3 flex flex-col items-center text-center gap-1.5 hover:bg-zinc-800/40 transition-colors"
+      className="border border-border rounded-lg p-3 flex flex-col items-center text-center gap-1.5 hover:bg-elevated transition-colors"
     >
-      <Icon className="w-5 h-5 text-zinc-300" />
-      <span className="text-xs text-zinc-300">{label}</span>
+      <Icon className="w-5 h-5 text-secondary" />
+      <span className="text-xs text-secondary">{label}</span>
     </Link>
   )
 }

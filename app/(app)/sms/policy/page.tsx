@@ -113,13 +113,13 @@ export default function SmsPolicyPage() {
   return (
     <div className="space-y-5 p-4 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
+        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-muted-dark hover:text-foreground">
           <ArrowLeft className="w-4 h-4" /> SMS Dashboard
         </Link>
         {!draftToEdit && canWrite && (
           <button
             onClick={handleNewDraft}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-emerald-600/20 border border-emerald-600/50 text-emerald-300 hover:bg-emerald-600/30"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-emerald-600/20 border border-emerald-600/50 text-[color:var(--color-success)] hover:bg-emerald-600/30"
           >
             <Plus className="w-4 h-4" /> New Draft
           </button>
@@ -127,10 +127,10 @@ export default function SmsPolicyPage() {
       </div>
 
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-          <FileSignature className="w-6 h-6 text-emerald-400" /> Safety Policy
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <FileSignature className="w-6 h-6 text-[color:var(--color-success)]" /> Safety Policy
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-dark">
           Required by 14 CFR §139.401. The Accountable Executive signs the policy commitment;
           it must be reviewed at least annually per AC 150/5200-37A §6.2.
         </p>
@@ -140,8 +140,8 @@ export default function SmsPolicyPage() {
       {active ? (
         <ActivePolicyCard policy={active} />
       ) : (
-        <div className="border border-zinc-700 rounded-lg p-5 bg-zinc-900/40">
-          <p className="text-sm text-zinc-300">
+        <div className="border border-border-active rounded-lg p-5 bg-card">
+          <p className="text-sm text-secondary">
             No active Safety Policy on file. The first signed policy version satisfies the
             §139.401(c)(1) requirement.
           </p>
@@ -163,20 +163,20 @@ export default function SmsPolicyPage() {
       {/* Version history */}
       {history.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold text-zinc-300 flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold text-secondary flex items-center gap-1.5">
             <History className="w-4 h-4" /> Version History
           </h2>
-          <div className="border border-zinc-700 rounded-lg overflow-hidden">
+          <div className="border border-border-active rounded-lg overflow-hidden">
             {history.map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-3 py-2 border-b border-zinc-800 last:border-0 text-sm">
+              <div key={p.id} className="flex items-center justify-between px-3 py-2 border-b border-border last:border-0 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-zinc-300">v{p.version}</span>
+                  <span className="font-mono text-secondary">v{p.version}</span>
                   <StatusPill status={p.status} />
                   {p.effective_date && (
-                    <span className="text-xs text-zinc-500">Effective {formatZuluDate(p.effective_date)}</span>
+                    <span className="text-xs text-muted-darker">Effective {formatZuluDate(p.effective_date)}</span>
                   )}
                 </div>
-                <div className="text-xs text-zinc-500">
+                <div className="text-xs text-muted-darker">
                   {p.signed_at ? `Signed ${formatZuluDate(p.signed_at.slice(0, 10))}` : 'Unsigned'}
                 </div>
               </div>
@@ -190,13 +190,19 @@ export default function SmsPolicyPage() {
 
 function ActivePolicyCard({ policy }: { policy: SmsPolicy }) {
   return (
-    <div className="border border-emerald-700/50 rounded-lg p-5 bg-emerald-950/20 space-y-3">
+    <div
+      className="border rounded-lg p-5 space-y-3"
+      style={{
+        background: 'color-mix(in srgb, var(--color-success) 10%, transparent)',
+        borderColor: 'color-mix(in srgb, var(--color-success) 45%, transparent)',
+      }}
+    >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-emerald-300">
+        <div className="flex items-center gap-2" style={{ color: 'var(--color-success)' }}>
           <CheckCircle2 className="w-5 h-5" />
           <span className="font-semibold">Active — v{policy.version}</span>
         </div>
-        <div className="text-xs text-zinc-400">
+        <div className="text-xs text-muted-dark">
           Effective {policy.effective_date ? formatZuluDate(policy.effective_date) : '—'}
           {policy.review_due_date && ` · Review due ${formatZuluDate(policy.review_due_date)}`}
         </div>
@@ -205,16 +211,16 @@ function ActivePolicyCard({ policy }: { policy: SmsPolicy }) {
       {policy.document_url && (
         <a
           href={policy.document_url} target="_blank" rel="noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-sky-400 hover:text-sky-300"
+          className="inline-flex items-center gap-1.5 text-sm text-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
         >
           <ExternalLink className="w-4 h-4" /> View signed policy document
         </a>
       )}
 
       <div>
-        <h3 className="text-xs uppercase tracking-wider text-zinc-400 mb-1.5">Safety Objectives</h3>
-        <ul className="space-y-1.5 text-sm text-zinc-200 list-disc list-inside">
-          {policy.safety_objectives.length === 0 && <li className="text-zinc-500 list-none">No objectives recorded.</li>}
+        <h3 className="text-xs uppercase tracking-wider text-muted-dark mb-1.5">Safety Objectives</h3>
+        <ul className="space-y-1.5 text-sm text-foreground list-disc list-inside">
+          {policy.safety_objectives.length === 0 && <li className="text-muted-darker list-none">No objectives recorded.</li>}
           {policy.safety_objectives.map((o) => (
             <li key={o.id}><span className="font-medium">{o.title}</span>{o.description ? ` — ${o.description}` : ''}</li>
           ))}
@@ -223,12 +229,12 @@ function ActivePolicyCard({ policy }: { policy: SmsPolicy }) {
 
       {policy.employee_reporting_pledge && (
         <div>
-          <h3 className="text-xs uppercase tracking-wider text-zinc-400 mb-1.5">Employee Reporting Pledge</h3>
-          <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{policy.employee_reporting_pledge}</p>
+          <h3 className="text-xs uppercase tracking-wider text-muted-dark mb-1.5">Employee Reporting Pledge</h3>
+          <p className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">{policy.employee_reporting_pledge}</p>
         </div>
       )}
 
-      <div className="pt-2 text-xs text-zinc-500">
+      <div className="pt-2 text-xs text-muted-darker">
         IAW 14 CFR §139.401(c)(1), an AE-signed policy on file satisfies the requirement to
         establish a documented Safety Policy commitment.
       </div>
@@ -261,73 +267,79 @@ function DraftEditor({
   }
 
   return (
-    <div className="border border-amber-700/50 rounded-lg p-5 bg-amber-950/10 space-y-4">
+    <div
+      className="border rounded-lg p-5 space-y-4"
+      style={{
+        background: 'color-mix(in srgb, var(--color-warning) 8%, transparent)',
+        borderColor: 'color-mix(in srgb, var(--color-warning) 45%, transparent)',
+      }}
+    >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-amber-300">
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--color-warning)' }}>
           Editing draft v{policy.version}
         </h2>
-        <span className="text-xs text-zinc-500">Unsigned — won&apos;t replace the active policy until signed</span>
+        <span className="text-xs text-muted-darker">Unsigned — won&apos;t replace the active policy until signed</span>
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs uppercase tracking-wider text-zinc-400">Signed Document URL <span className="text-zinc-600">(optional)</span></label>
+        <label className="text-xs uppercase tracking-wider text-muted-dark">Signed Document URL <span className="text-muted-darker">(optional)</span></label>
         <input
           type="url"
           value={policy.document_url ?? ''}
           onChange={(e) => onChange({ ...policy, document_url: e.target.value || null })}
           placeholder="https://…/safety-policy-v1.pdf"
-          className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
+          className="w-full bg-card border border-border-active rounded px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-accent"
         />
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs uppercase tracking-wider text-zinc-400">Review Due Date</label>
+        <label className="text-xs uppercase tracking-wider text-muted-dark">Review Due Date</label>
         <input
           type="date"
           value={policy.review_due_date ?? ''}
           onChange={(e) => onChange({ ...policy, review_due_date: e.target.value || null })}
-          className="bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
+          className="bg-card border border-border-active rounded px-3 py-1.5 text-sm text-foreground focus:outline-none focus:border-accent"
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-xs uppercase tracking-wider text-zinc-400">Safety Objectives</label>
-          <button onClick={addObjective} className="text-xs px-2 py-0.5 rounded border border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+          <label className="text-xs uppercase tracking-wider text-muted-dark">Safety Objectives</label>
+          <button onClick={addObjective} className="text-xs px-2 py-0.5 rounded border border-border-active hover:bg-elevated text-secondary">
             <Plus className="inline w-3 h-3 mr-0.5" /> Add
           </button>
         </div>
         {policy.safety_objectives.map((o, idx) => (
-          <div key={o.id} className="border border-zinc-700 rounded p-2 space-y-1.5">
+          <div key={o.id} className="border border-border-active rounded p-2 space-y-1.5">
             <div className="flex gap-2">
               <input
                 value={o.title}
                 onChange={(e) => setObjective(idx, { title: e.target.value })}
                 placeholder="Objective title"
-                className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200"
+                className="flex-1 bg-card border border-border-active rounded px-2 py-1 text-sm text-foreground"
               />
-              <button onClick={() => removeObjective(idx)} className="text-xs text-red-400 hover:text-red-300 px-2">Remove</button>
+              <button onClick={() => removeObjective(idx)} className="text-xs text-[color:var(--color-danger)] hover:text-[color:var(--color-danger)] px-2">Remove</button>
             </div>
             <textarea
               value={o.description ?? ''}
               onChange={(e) => setObjective(idx, { description: e.target.value })}
               placeholder="Description (optional)"
               rows={2}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-sm text-zinc-200"
+              className="w-full bg-card border border-border-active rounded px-2 py-1 text-sm text-foreground"
             />
           </div>
         ))}
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs uppercase tracking-wider text-zinc-400">Employee Reporting Pledge</label>
+        <label className="text-xs uppercase tracking-wider text-muted-dark">Employee Reporting Pledge</label>
         <textarea
           value={policy.employee_reporting_pledge ?? ''}
           onChange={(e) => onChange({ ...policy, employee_reporting_pledge: e.target.value || null })}
           rows={5}
-          className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+          className="w-full bg-card border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
         />
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-darker">
           IAW 14 CFR §139.401(c)(2), a documented non-retribution reporting pledge satisfies the
           requirement to encourage employee safety reporting.
         </p>
@@ -336,7 +348,7 @@ function DraftEditor({
       <div className="flex gap-2 pt-2">
         <button
           onClick={onSave}
-          className="px-3 py-1.5 rounded text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-100"
+          className="px-3 py-1.5 rounded text-sm bg-accent hover:opacity-90 text-foreground"
         >
           Save Draft
         </button>
@@ -344,7 +356,7 @@ function DraftEditor({
           onClick={onSign}
           disabled={!canSign || signing}
           title={canSign ? 'Sign and activate this policy' : 'Requires Accountable Executive role'}
-          className="px-3 py-1.5 rounded text-sm bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white inline-flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded text-sm bg-emerald-600 hover:bg-emerald-500 disabled:bg-elevated disabled:text-muted-darker text-white inline-flex items-center gap-1.5"
         >
           <FileSignature className="w-4 h-4" /> {signing ? 'Signing…' : 'Sign + Activate'}
         </button>

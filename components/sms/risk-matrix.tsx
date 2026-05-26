@@ -54,7 +54,7 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
     <div className="inline-block">
       <div className="flex">
         {/* Y-axis label (rotated) */}
-        <div className={`flex items-center justify-center pr-2 ${labelClass} text-zinc-400`}
+        <div className={`flex items-center justify-center pr-2 ${labelClass} text-muted-dark`}
              style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
           Likelihood →
         </div>
@@ -67,7 +67,7 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
               <div
                 key={s}
                 style={{ width: cellSize }}
-                className={`text-center ${labelClass} text-zinc-400 pb-1`}
+                className={`text-center ${labelClass} text-muted-dark pb-1`}
                 title={SEVERITY_LABELS[s]}
               >
                 {s}
@@ -82,7 +82,7 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
               <div key={lForRow} className="flex">
                 <div
                   style={{ width: cellSize, height: cellSize }}
-                  className={`flex items-center justify-end pr-2 ${labelClass} text-zinc-400`}
+                  className={`flex items-center justify-end pr-2 ${labelClass} text-muted-dark`}
                   title={LIKELIHOOD_LABELS[lForRow]}
                 >
                   {lForRow}
@@ -112,7 +112,7 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
                         compact ? 'text-xs' : 'text-sm',
                         interactive && pickingFor === 'current'  ? 'hover:ring-2 hover:ring-sky-400/60' : '',
                         interactive && pickingFor === 'residual' ? 'hover:ring-2 hover:ring-emerald-400/60' : '',
-                        interactive && !pickingFor               ? 'hover:ring-2 hover:ring-zinc-400/40' : '',
+                        interactive && !pickingFor               ? 'hover:ring-2 hover:ring-accent/40' : '',
                       ].join(' ')}
                     >
                       {idx}
@@ -136,13 +136,13 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
           })}
 
           {/* Severity axis caption */}
-          <div className={`text-center ${labelClass} text-zinc-400 pt-1`}>Severity →</div>
+          <div className={`text-center ${labelClass} text-muted-dark pt-1`}>Severity →</div>
         </div>
       </div>
 
       {/* Legend */}
       {!compact && (
-        <div className="flex items-center gap-3 mt-3 text-xs text-zinc-400">
+        <div className="flex items-center gap-3 mt-3 text-xs text-muted-dark">
           {(['low', 'medium', 'high'] as const).map((b) => (
             <span key={b} className="inline-flex items-center gap-1.5">
               <span
@@ -152,7 +152,7 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
               {BAND_COLORS[b].label}
             </span>
           ))}
-          {(current || residual) && <span className="text-zinc-600 mx-1">|</span>}
+          {(current || residual) && <span className="text-muted-darker mx-1">|</span>}
           {current && (
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-block w-3 h-3 rounded-sm ring-2 ring-sky-400" />
@@ -178,7 +178,7 @@ export function RiskMatrix({ current, residual, onPick, pickingFor, compact }: R
 export function BandChip({ band, label }: { band: 'low' | 'medium' | 'high' | null; label?: string }) {
   if (!band) {
     return (
-      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider bg-zinc-700/40 text-zinc-400">
+      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider bg-inset text-muted-dark">
         {label ?? 'Unassessed'}
       </span>
     )

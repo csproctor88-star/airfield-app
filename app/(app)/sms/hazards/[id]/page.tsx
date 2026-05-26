@@ -70,10 +70,10 @@ export default function HazardDetailPage() {
   if (!hazard) {
     return (
       <div className="p-6 max-w-3xl mx-auto">
-        <Link href="/sms/hazards" className="text-sm text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1.5">
+        <Link href="/sms/hazards" className="text-sm text-muted-dark hover:text-foreground inline-flex items-center gap-1.5">
           <ArrowLeft className="w-4 h-4" /> Hazard Register
         </Link>
-        <p className="mt-4 text-zinc-400">Hazard not found.</p>
+        <p className="mt-4 text-muted-dark">Hazard not found.</p>
       </div>
     )
   }
@@ -85,14 +85,14 @@ export default function HazardDetailPage() {
   return (
     <div className="space-y-5 p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link href="/sms/hazards" className="text-sm text-zinc-400 hover:text-zinc-200 inline-flex items-center gap-1.5">
+        <Link href="/sms/hazards" className="text-sm text-muted-dark hover:text-foreground inline-flex items-center gap-1.5">
           <ArrowLeft className="w-4 h-4" /> Hazard Register
         </Link>
         {canWrite && (
           <select
             value={hazard.status}
             onChange={(e) => changeStatus(e.target.value as SmsHazardStatus)}
-            className="text-sm bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-zinc-200"
+            className="text-sm bg-card border border-border-active rounded px-2 py-1.5 text-foreground"
           >
             <option value="open">Open</option>
             <option value="under_review">Under review</option>
@@ -104,21 +104,21 @@ export default function HazardDetailPage() {
       </div>
 
       {/* Header */}
-      <header className="border border-zinc-700 rounded-lg p-4 bg-zinc-900/40">
+      <header className="border border-border-active rounded-lg p-4 bg-card">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-xs text-zinc-400">{hazard.hazard_code}</span>
+              <span className="font-mono text-xs text-muted-dark">{hazard.hazard_code}</span>
               <BandChip band={currentBand} label={currentBand ? `Current: ${BAND_COLORS[currentBand].label}` : 'Unassessed'} />
               {residualBand && residualBand !== currentBand && (
                 <BandChip band={residualBand} label={`Residual: ${BAND_COLORS[residualBand].label}`} />
               )}
             </div>
-            <h1 className="text-xl font-semibold text-zinc-100 mt-1 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-400" /> {hazard.title}
+            <h1 className="text-xl font-semibold text-foreground mt-1 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-[color:var(--color-warning)]" /> {hazard.title}
             </h1>
             {hazard.description && (
-              <p className="text-sm text-zinc-300 mt-2 leading-relaxed">{hazard.description}</p>
+              <p className="text-sm text-secondary mt-2 leading-relaxed">{hazard.description}</p>
             )}
           </div>
         </div>
@@ -131,13 +131,13 @@ export default function HazardDetailPage() {
       </header>
 
       {/* Risk matrix */}
-      <section className="border border-zinc-700 rounded-lg p-4 bg-zinc-900/40">
+      <section className="border border-border-active rounded-lg p-4 bg-card">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-200">Risk Position (5×5 Matrix)</h2>
+          <h2 className="text-sm font-semibold text-foreground">Risk Position (5×5 Matrix)</h2>
           {canWrite && (
             <button
               onClick={() => setReassessOpen(true)}
-              className="text-xs px-2 py-1 rounded border border-zinc-700 hover:bg-zinc-800 text-zinc-300"
+              className="text-xs px-2 py-1 rounded border border-border-active hover:bg-elevated text-secondary"
             >
               Reassess
             </button>
@@ -153,25 +153,25 @@ export default function HazardDetailPage() {
             }
           />
           {latest ? (
-            <div className="text-sm text-zinc-300 space-y-2 min-w-[260px]">
+            <div className="text-sm text-secondary space-y-2 min-w-[260px]">
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Current</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-darker">Current</div>
                 <div>L{latest.likelihood} ({LIKELIHOOD_LABELS[latest.likelihood]}) × S{latest.severity} ({SEVERITY_LABELS[latest.severity]})</div>
-                <div className="text-xs text-zinc-400">Index {latest.risk_index} — {BAND_COLORS[latest.risk_band].label}</div>
+                <div className="text-xs text-muted-dark">Index {latest.risk_index} — {BAND_COLORS[latest.risk_band].label}</div>
               </div>
               {latest.residual_likelihood && latest.residual_severity && (
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-500">Residual (post-mitigation)</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-darker">Residual (post-mitigation)</div>
                   <div>L{latest.residual_likelihood} × S{latest.residual_severity}</div>
-                  <div className="text-xs text-zinc-400">Index {latest.residual_risk_index} — {latest.residual_risk_band ? BAND_COLORS[latest.residual_risk_band as 'low' | 'medium' | 'high'].label : '—'}</div>
+                  <div className="text-xs text-muted-dark">Index {latest.residual_risk_index} — {latest.residual_risk_band ? BAND_COLORS[latest.residual_risk_band as 'low' | 'medium' | 'high'].label : '—'}</div>
                 </div>
               )}
-              {latest.notes && <p className="text-xs text-zinc-400 italic">&ldquo;{latest.notes}&rdquo;</p>}
-              <div className="text-[10px] text-zinc-500">Assessed {formatZuluDateTime(latest.assessed_at)}</div>
+              {latest.notes && <p className="text-xs text-muted-dark italic">&ldquo;{latest.notes}&rdquo;</p>}
+              <div className="text-[10px] text-muted-darker">Assessed {formatZuluDateTime(latest.assessed_at)}</div>
             </div>
           ) : (
-            <div className="text-sm text-zinc-400">
-              No assessment yet — use <span className="text-zinc-200">Reassess</span> to record the
+            <div className="text-sm text-muted-dark">
+              No assessment yet — use <span className="text-foreground">Reassess</span> to record the
               initial likelihood and severity per AC 150/5200-37A §6.3.2.
             </div>
           )}
@@ -179,13 +179,13 @@ export default function HazardDetailPage() {
       </section>
 
       {/* Mitigations */}
-      <section className="border border-zinc-700 rounded-lg p-4 bg-zinc-900/40">
+      <section className="border border-border-active rounded-lg p-4 bg-card">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-200">Mitigations</h2>
+          <h2 className="text-sm font-semibold text-foreground">Mitigations</h2>
           {canWrite && (
             <button
               onClick={() => setNewMitOpen(true)}
-              className="text-xs px-2 py-1 rounded border border-zinc-700 hover:bg-zinc-800 text-zinc-300 inline-flex items-center gap-1"
+              className="text-xs px-2 py-1 rounded border border-border-active hover:bg-elevated text-secondary inline-flex items-center gap-1"
             >
               <Plus className="w-3 h-3" /> Add
             </button>
@@ -205,11 +205,11 @@ export default function HazardDetailPage() {
 
       {/* Assessment history */}
       {assessments.length > 1 && (
-        <section className="border border-zinc-700 rounded-lg p-4 bg-zinc-900/40">
-          <h2 className="text-sm font-semibold text-zinc-200 mb-2">Assessment History</h2>
+        <section className="border border-border-active rounded-lg p-4 bg-card">
+          <h2 className="text-sm font-semibold text-foreground mb-2">Assessment History</h2>
           <div className="space-y-1.5">
             {assessments.slice(1).map((a) => (
-              <div key={a.id} className="flex items-center gap-3 text-xs text-zinc-400">
+              <div key={a.id} className="flex items-center gap-3 text-xs text-muted-dark">
                 <span className="font-mono">{formatZuluDate(a.assessed_at.slice(0, 10))}</span>
                 <BandChip band={a.risk_band} />
                 <span>L{a.likelihood} × S{a.severity} → {a.risk_index}</span>
@@ -244,8 +244,8 @@ export default function HazardDetailPage() {
 function Meta({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
-      <div className="text-zinc-200 capitalize">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-darker">{label}</div>
+      <div className="text-foreground capitalize">{value}</div>
     </div>
   )
 }
@@ -283,22 +283,22 @@ function ReassessModal({ hazardId, baseId, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-5 max-w-2xl w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-border-active rounded-lg p-5 max-w-2xl w-full space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-100">Reassess Risk</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-zinc-400 hover:text-zinc-200" /></button>
+          <h2 className="text-lg font-semibold text-foreground">Reassess Risk</h2>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-dark hover:text-foreground" /></button>
         </div>
 
         <div className="flex gap-2 text-xs">
           <button
             onClick={() => setPicking('current')}
-            className={`px-2.5 py-1 rounded border ${picking === 'current' ? 'border-sky-500 bg-sky-500/15 text-sky-300' : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800'}`}
+            className={`px-2.5 py-1 rounded border ${picking === 'current' ? 'border-sky-500 bg-sky-500/15 text-[color:var(--color-accent)]' : 'border-border-active text-muted-dark hover:bg-elevated'}`}
           >
             Pick CURRENT cell {current && `· L${current.likelihood} S${current.severity}`}
           </button>
           <button
             onClick={() => setPicking('residual')}
-            className={`px-2.5 py-1 rounded border ${picking === 'residual' ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300' : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800'}`}
+            className={`px-2.5 py-1 rounded border ${picking === 'residual' ? 'border-emerald-500 bg-emerald-500/15 text-[color:var(--color-success)]' : 'border-border-active text-muted-dark hover:bg-elevated'}`}
           >
             Pick RESIDUAL cell {residual && `· L${residual.likelihood} S${residual.severity}`}
           </button>
@@ -315,7 +315,7 @@ function ReassessModal({ hazardId, baseId, onClose, onSaved }: {
         />
 
         {current && (
-          <div className="text-xs text-zinc-400">
+          <div className="text-xs text-muted-dark">
             Current: L{current.likelihood} × S{current.severity} = {current.likelihood * current.severity} — {BAND_COLORS[classifyRiskBand(current.likelihood, current.severity)].label}
             {residual && (
               <> · Residual: L{residual.likelihood} × S{residual.severity} = {residual.likelihood * residual.severity} — {BAND_COLORS[classifyRiskBand(residual.likelihood, residual.severity)].label}</>
@@ -324,19 +324,19 @@ function ReassessModal({ hazardId, baseId, onClose, onSaved }: {
         )}
 
         <div>
-          <label className="text-xs uppercase tracking-wider text-zinc-400">Rationale / notes</label>
+          <label className="text-xs uppercase tracking-wider text-muted-dark">Rationale / notes</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Why this likelihood × severity? Cite data, prior incidents, regulatory thresholds…"
-            className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+            className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
           />
         </div>
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
-          <button onClick={save} disabled={saving || !current} className="px-3 py-1.5 rounded text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-zinc-800 text-white">
+          <button onClick={onClose} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Cancel</button>
+          <button onClick={save} disabled={saving || !current} className="px-3 py-1.5 rounded text-sm bg-sky-600 hover:bg-sky-500 disabled:bg-elevated text-white">
             {saving ? 'Saving…' : 'Save Assessment'}
           </button>
         </div>
@@ -377,37 +377,37 @@ function NewMitigationModal({ hazardId, baseId, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-5 max-w-md w-full space-y-3" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-border-active rounded-lg p-5 max-w-md w-full space-y-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-100">Add Mitigation</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-zinc-400 hover:text-zinc-200" /></button>
+          <h2 className="text-lg font-semibold text-foreground">Add Mitigation</h2>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-dark hover:text-foreground" /></button>
         </div>
         <div>
-          <label className="text-xs uppercase tracking-wider text-zinc-400">Title *</label>
+          <label className="text-xs uppercase tracking-wider text-muted-dark">Title *</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Install bird-deterrent lasers near approach"
-            className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+            className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
             autoFocus
           />
         </div>
         <div>
-          <label className="text-xs uppercase tracking-wider text-zinc-400">Description</label>
+          <label className="text-xs uppercase tracking-wider text-muted-dark">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+            className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Control Type</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Control Type</label>
             <select
               value={controlType}
               onChange={(e) => setControlType(e.target.value as SmsMitigationControlType)}
-              className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200"
+              className="w-full mt-1 bg-inset border border-border-active rounded px-2 py-1.5 text-sm text-foreground"
             >
               <option value="elimination">Elimination</option>
               <option value="substitution">Substitution</option>
@@ -419,18 +419,18 @@ function NewMitigationModal({ hazardId, baseId, onClose, onSaved }: {
             </select>
           </div>
           <div>
-            <label className="text-xs uppercase tracking-wider text-zinc-400">Due Date</label>
+            <label className="text-xs uppercase tracking-wider text-muted-dark">Due Date</label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1.5 text-sm text-zinc-200"
+              className="w-full mt-1 bg-inset border border-border-active rounded px-2 py-1.5 text-sm text-foreground"
             />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-800 text-white">
+          <button onClick={onClose} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-elevated text-white">
             {saving ? 'Adding…' : 'Add'}
           </button>
         </div>
@@ -457,7 +457,7 @@ function MitigationKanban({
   ]
   if (mitigations.length === 0) {
     return (
-      <p className="text-sm text-zinc-500 italic">
+      <p className="text-sm text-muted-darker italic">
         No mitigations yet. Add one to record the control measures planned for this hazard.
       </p>
     )
@@ -468,17 +468,17 @@ function MitigationKanban({
         const rows = mitigations.filter((m) => m.status === lane.key)
         const Icon = lane.icon
         return (
-          <div key={lane.key} className="border border-zinc-800 rounded-md bg-zinc-950/40">
-            <div className="px-3 py-1.5 border-b border-zinc-800 text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-              <Icon className="w-3.5 h-3.5" /> {lane.label} <span className="ml-auto text-zinc-500">{rows.length}</span>
+          <div key={lane.key} className="border border-border rounded-md bg-inset">
+            <div className="px-3 py-1.5 border-b border-border text-xs font-semibold text-secondary flex items-center gap-1.5">
+              <Icon className="w-3.5 h-3.5" /> {lane.label} <span className="ml-auto text-muted-darker">{rows.length}</span>
             </div>
             <div className="p-2 space-y-1.5 min-h-[80px]">
               {rows.length === 0 ? (
-                <p className="text-[11px] text-zinc-600 italic px-1">—</p>
+                <p className="text-[11px] text-muted-darker italic px-1">—</p>
               ) : rows.map((m) => (
-                <div key={m.id} className="border border-zinc-800 rounded p-2 bg-zinc-900/60 hover:border-zinc-700">
-                  <div className="text-xs font-medium text-zinc-200">{m.title}</div>
-                  <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                <div key={m.id} className="border border-border rounded p-2 bg-card hover:border-border-active">
+                  <div className="text-xs font-medium text-foreground">{m.title}</div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-darker uppercase tracking-wider">
                     <span>{m.control_type}</span>
                     {m.due_date && <span>Due {formatZuluDate(m.due_date)}</span>}
                   </div>
@@ -486,7 +486,7 @@ function MitigationKanban({
                     <div className="flex justify-end mt-1.5">
                       <button
                         onClick={() => onChange(m, lane.key === 'planned' ? 'in_progress' : 'completed')}
-                        className="text-[10px] text-sky-400 hover:text-sky-300 inline-flex items-center gap-0.5"
+                        className="text-[10px] text-[color:var(--color-accent)] hover:text-[color:var(--color-accent)] inline-flex items-center gap-0.5"
                       >
                         Move on <ChevronRight className="w-2.5 h-2.5" />
                       </button>

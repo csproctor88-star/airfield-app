@@ -96,20 +96,20 @@ export default function SmsHazardsPage() {
   return (
     <div className="space-y-4 p-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
+        <Link href="/sms" className="inline-flex items-center gap-1.5 text-sm text-muted-dark hover:text-foreground">
           <ArrowLeft className="w-4 h-4" /> SMS Dashboard
         </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={exportCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-zinc-800 border border-zinc-700 text-zinc-200 hover:bg-zinc-700"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-elevated border border-border-active text-foreground hover:bg-elevated"
           >
             <Download className="w-4 h-4" /> Export CSV
           </button>
           {canWrite && (
             <button
               onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-amber-600/20 border border-amber-600/50 text-amber-300 hover:bg-amber-600/30"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-amber-600/20 border border-amber-600/50 text-[color:var(--color-warning)] hover:bg-amber-600/30"
             >
               <Plus className="w-4 h-4" /> Add Hazard
             </button>
@@ -118,10 +118,10 @@ export default function SmsHazardsPage() {
       </div>
 
       <header>
-        <h1 className="text-2xl font-semibold text-zinc-100 flex items-center gap-2">
-          <AlertTriangle className="w-6 h-6 text-amber-400" /> Hazard Register
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <AlertTriangle className="w-6 h-6 text-[color:var(--color-warning)]" /> Hazard Register
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-dark">
           AC 150/5200-37A §6.3 — every identified hazard, its current and residual risk position,
           and the mitigation plan tracking it to closure.
         </p>
@@ -138,18 +138,18 @@ export default function SmsHazardsPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-darker" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search hazards…"
-            className="w-full pl-8 pr-3 py-1.5 text-sm bg-zinc-900 border border-zinc-700 rounded text-zinc-200"
+            className="w-full pl-8 pr-3 py-1.5 text-sm bg-card border border-border-active rounded text-foreground"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as 'all' | SmsHazardStatus)}
-          className="text-sm bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-zinc-200"
+          className="text-sm bg-card border border-border-active rounded px-2 py-1.5 text-foreground"
         >
           <option value="all">All statuses</option>
           <option value="open">Open</option>
@@ -161,7 +161,7 @@ export default function SmsHazardsPage() {
         <select
           value={bandFilter}
           onChange={(e) => setBandFilter(e.target.value as 'all' | 'low' | 'medium' | 'high' | 'unassessed')}
-          className="text-sm bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-zinc-200"
+          className="text-sm bg-card border border-border-active rounded px-2 py-1.5 text-foreground"
         >
           <option value="all">All bands</option>
           <option value="high">High</option>
@@ -181,30 +181,30 @@ export default function SmsHazardsPage() {
           }
         />
       ) : (
-        <div className="border border-zinc-700 rounded-lg overflow-hidden">
+        <div className="border border-border-active rounded-lg overflow-hidden">
           {filtered.map((h) => {
             const band = (h.residual_band || h.current_band) as 'low' | 'medium' | 'high' | null
             return (
               <Link
                 key={h.id}
                 href={`/sms/hazards/${h.id}`}
-                className="block px-3 py-2.5 border-b border-zinc-800 last:border-0 hover:bg-zinc-800/40 transition-colors"
+                className="block px-3 py-2.5 border-b border-border last:border-0 hover:bg-elevated transition-colors"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs text-zinc-400">{h.hazard_code}</span>
-                      <span className="text-sm font-medium text-zinc-100 truncate">{h.title}</span>
+                      <span className="font-mono text-xs text-muted-dark">{h.hazard_code}</span>
+                      <span className="text-sm font-medium text-foreground truncate">{h.title}</span>
                       <BandChip band={band} />
                       <StatusPill status={h.status} />
                     </div>
                     {h.description && (
-                      <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{h.description}</p>
+                      <p className="text-xs text-muted-dark mt-1 line-clamp-2">{h.description}</p>
                     )}
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Identified</div>
-                    <div className="text-xs text-zinc-300">{formatZuluDate(h.identified_at.slice(0, 10))}</div>
+                    <div className="text-[10px] text-muted-darker uppercase tracking-wider">Identified</div>
+                    <div className="text-xs text-secondary">{formatZuluDate(h.identified_at.slice(0, 10))}</div>
                   </div>
                 </div>
               </Link>
@@ -216,35 +216,35 @@ export default function SmsHazardsPage() {
       {/* Quick-add modal */}
       {addOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setAddOpen(false)}>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-5 max-w-md w-full space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-zinc-100">Add Hazard</h2>
-            <p className="text-xs text-zinc-400">
+          <div className="bg-card border border-border-active rounded-lg p-5 max-w-md w-full space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold text-foreground">Add Hazard</h2>
+            <p className="text-xs text-muted-dark">
               Capture the hazard now; assess likelihood / severity and define mitigations on the
               detail page after.
             </p>
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">Title *</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">Title *</label>
               <input
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 placeholder="e.g. Geese flocking near approach end of RWY 27"
-                className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+                className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
                 autoFocus
               />
             </div>
             <div>
-              <label className="text-xs uppercase tracking-wider text-zinc-400">Description</label>
+              <label className="text-xs uppercase tracking-wider text-muted-dark">Description</label>
               <textarea
                 value={draft.description}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                 rows={3}
                 placeholder="What's the hazard? Where? When does it surface?"
-                className="w-full mt-1 bg-zinc-950 border border-zinc-700 rounded px-3 py-1.5 text-sm text-zinc-200"
+                className="w-full mt-1 bg-inset border border-border-active rounded px-3 py-1.5 text-sm text-foreground"
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setAddOpen(false)} className="px-3 py-1.5 rounded text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300">Cancel</button>
-              <button onClick={handleAdd} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-800 text-white">
+              <button onClick={() => setAddOpen(false)} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Cancel</button>
+              <button onClick={handleAdd} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-elevated text-white">
                 {saving ? 'Adding…' : 'Add Hazard'}
               </button>
             </div>
@@ -269,9 +269,9 @@ function BandTile({ label, count, band }: { label: string; count: number; band: 
     )
   }
   return (
-    <div className="border border-zinc-700 rounded p-2.5 bg-zinc-900/30">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-400">{label}</div>
-      <div className="text-2xl font-semibold text-zinc-300">{count}</div>
+    <div className="border border-border-active rounded p-2.5 bg-card">
+      <div className="text-[10px] uppercase tracking-wider text-muted-dark">{label}</div>
+      <div className="text-2xl font-semibold text-secondary">{count}</div>
     </div>
   )
 }

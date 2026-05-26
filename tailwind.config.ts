@@ -12,11 +12,18 @@ const config: Config = {
         background: 'var(--color-bg)',
         card: 'var(--color-bg-surface)',
         'card-hover': 'var(--color-bg-surface-solid)',
+        elevated: 'var(--color-bg-elevated)',
+        inset: 'var(--color-bg-inset)',
         border: 'var(--color-border)',
         'border-active': 'var(--color-border-active)',
         accent: 'var(--color-accent)',
         'accent-bg': 'var(--color-accent-secondary)',
         'accent-dark': 'var(--color-accent-dark)',
+        // Theme-aware text — these flip with [data-theme] in globals.css.
+        // Use these instead of Tailwind's zinc-* / slate-* greys for any
+        // text that needs to be readable in both light and dark mode.
+        foreground: 'var(--color-text-1)',
+        secondary: 'var(--color-text-2)',
         muted: {
           DEFAULT: 'var(--color-text-2)',
           dark: 'var(--color-text-3)',
