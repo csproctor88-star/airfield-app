@@ -95,6 +95,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'shiftchecklist', number: 9, label: 'Shift Checklist', description: 'Define the tasks tracked per shift (Day/Swing/Mid) with daily, weekly, or monthly frequency. These appear on the Shift Checklist page and Dashboard.', required: true },
   { key: 'qrc', number: 10, label: 'QRCs', description: 'Configure Quick Reaction Checklists for emergency response. Import the 25 default templates or build your own from scratch.', required: true },
   { key: 'scnagencies', number: 11, label: 'SCN Agencies', description: 'List the agencies checked on the Secondary Crash Net. Each appears as a toggleable badge on the daily SCN check page (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital).', required: true },
+  { key: 'aepagencies', number: 11, label: 'AEP Agencies', description: 'Civilian Part 139 only. List the response agencies the Airport Emergency Plan coordinates with (ARFF, mutual-aid fire, EMS, police, hospital, ATC, FAA, NTSB). Each appears in the monthly comms-check picker and the drill-participant multi-select.', required: true },
   { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
   { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
   { key: 'statusboards', number: 14, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
@@ -400,6 +401,7 @@ export default function BaseSetupPage() {
             {step.key === 'shiftchecklist' && <ShiftChecklistTab installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
             {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
             {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'aepagencies' && <AepAgenciesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} markSaved={markSaved} />}
@@ -2219,6 +2221,199 @@ function ScnAgenciesTab({ installationId, markSaved }: { installationId: string 
           }}
         >
           Save
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AEP Agencies tab (civilian Part 139 only — same wizard slot as SCN)
+// ═══════════════════════════════════════════════════════════════
+
+function AepAgenciesTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
+  type Row = {
+    id: string
+    agency_name: string
+    agency_role: import('@/lib/supabase/aep').AepAgencyRole
+    primary_contact_phone: string | null
+    is_active: boolean
+  }
+  const [loaded, setLoaded] = useState(false)
+  const [rows, setRows] = useState<Row[]>([])
+  const [newName, setNewName] = useState('')
+  const [newRole, setNewRole] = useState<import('@/lib/supabase/aep').AepAgencyRole>('arff')
+  const [newPhone, setNewPhone] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!installationId) { setLoaded(true); return }
+      const { fetchResponseAgencies } = await import('@/lib/supabase/aep')
+      const data = await fetchResponseAgencies(installationId)
+      if (!cancelled) {
+        setRows(data.map(a => ({
+          id: a.id,
+          agency_name: a.agency_name,
+          agency_role: a.agency_role,
+          primary_contact_phone: a.primary_contact_phone,
+          is_active: a.is_active,
+        })))
+        setLoaded(true)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [installationId])
+
+  const handleAdd = async () => {
+    const trimmed = newName.trim()
+    if (!trimmed || !installationId) return
+    const { createResponseAgency } = await import('@/lib/supabase/aep')
+    const res = await createResponseAgency(installationId, {
+      agency_name: trimmed,
+      agency_role: newRole,
+      primary_contact_phone: newPhone.trim() || null,
+    })
+    if (!res.ok || !res.agency) {
+      toast.error(res.error || 'Failed to add agency')
+      return
+    }
+    const created = res.agency
+    setRows(prev => [...prev, {
+      id: created.id,
+      agency_name: created.agency_name,
+      agency_role: created.agency_role,
+      primary_contact_phone: created.primary_contact_phone,
+      is_active: created.is_active,
+    }])
+    setNewName('')
+    setNewPhone('')
+    toast.success(`Added "${created.agency_name}"`)
+    markSaved?.('aepagencies')
+  }
+
+  const handleDelete = async (row: Row) => {
+    if (!confirm(`Delete "${row.agency_name}"?`)) return
+    if (!installationId) return
+    const { deleteResponseAgency } = await import('@/lib/supabase/aep')
+    const res = await deleteResponseAgency(row.id, installationId)
+    if (!res.ok) {
+      toast.error(res.error || 'Delete failed')
+      return
+    }
+    setRows(prev => prev.filter(r => r.id !== row.id))
+    toast.success(`Deleted "${row.agency_name}"`)
+  }
+
+  if (!loaded) return null
+
+  const ROLE_OPTIONS: Array<{ value: import('@/lib/supabase/aep').AepAgencyRole; label: string }> = [
+    { value: 'arff',             label: 'ARFF' },
+    { value: 'mutual_aid_fire',  label: 'Mutual-Aid Fire' },
+    { value: 'ems',              label: 'EMS' },
+    { value: 'police',           label: 'Police' },
+    { value: 'hospital',         label: 'Hospital' },
+    { value: 'atc',              label: 'ATC' },
+    { value: 'faa_ro',           label: 'FAA Regional Office' },
+    { value: 'ntsb',             label: 'NTSB' },
+    { value: 'fbi',              label: 'FBI' },
+    { value: 'public_works',     label: 'Public Works' },
+    { value: 'utility',          label: 'Utility' },
+    { value: 'other',            label: 'Other' },
+  ]
+
+  return (
+    <div>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 14, lineHeight: 1.6 }}>
+        Add the response agencies the Airport Emergency Plan coordinates with. Each one becomes
+        a row in the monthly comms-check picker and the drill-participants multi-select. This
+        quick-entry form covers the basics; head to <Link href="/aep/agencies" style={{ color: 'var(--color-accent)' }}>Response Agencies</Link>{' '}
+        afterward to add backup contacts, radio frequencies, and per-agency notes.
+      </p>
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+        AEP Response Agencies <FieldHint stepKey="aepagencies" fieldId="agency_name" />
+      </h3>
+      {rows.length === 0 && (
+        <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No agencies configured.</p>
+      )}
+      {rows.map(row => (
+        <div
+          key={row.id}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            padding: '8px 0',
+            borderBottom: '1px solid var(--color-border)',
+            fontSize: 'var(--fs-md)',
+            opacity: row.is_active ? 1 : 0.5,
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <span style={{ color: 'var(--color-text-1)', fontWeight: 600 }}>{row.agency_name}</span>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              {ROLE_OPTIONS.find(o => o.value === row.agency_role)?.label ?? row.agency_role}
+              {row.primary_contact_phone ? ` · ${row.primary_contact_phone}` : ''}
+            </span>
+          </div>
+          <button
+            onClick={() => handleDelete(row)}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
+            aria-label="Delete"
+          >&times;</button>
+        </div>
+      ))}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 140px auto', gap: 8, marginTop: 10 }}>
+        <input
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Agency name (e.g. Engine 7, Mercy Hospital)..."
+          style={{
+            padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+          }}
+        />
+        <select
+          value={newRole}
+          onChange={e => setNewRole(e.target.value as import('@/lib/supabase/aep').AepAgencyRole)}
+          style={{
+            padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+          }}
+        >
+          {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <input
+          value={newPhone}
+          onChange={e => setNewPhone(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Primary phone"
+          style={{
+            padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-inset)',
+            color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+          }}
+        />
+        <button
+          onClick={handleAdd}
+          disabled={!newName.trim()}
+          style={{
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            color: '#fff',
+            cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            opacity: !newName.trim() ? 0.5 : 1,
+          }}
+        >
+          Add
         </button>
       </div>
     </div>
