@@ -5140,6 +5140,128 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["sms_communications"]["Insert"]>
         Relationships: []
       }
+      training_topics: {
+        Row: {
+          id: string
+          base_id: string | null
+          code: string
+          title: string
+          description: string | null
+          source: string
+          applies_to: string[]
+          initial_required: boolean
+          recurrent_frequency_months: number
+          retention_months: number
+          material_url: string | null
+          active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id?: string | null
+          code: string
+          title: string
+          description?: string | null
+          source?: string
+          applies_to?: string[]
+          initial_required?: boolean
+          recurrent_frequency_months?: number
+          retention_months?: number
+          material_url?: string | null
+          active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["training_topics"]["Insert"]>
+        Relationships: []
+      }
+      training_records: {
+        Row: {
+          id: string
+          base_id: string
+          user_id: string
+          topic_id: string
+          completed_at: string
+          training_type: string
+          instructor_user_id: string | null
+          instructor_name_external: string | null
+          evidence_url: string | null
+          expires_at: string | null
+          notes: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          user_id: string
+          topic_id: string
+          completed_at: string
+          training_type: string
+          instructor_user_id?: string | null
+          instructor_name_external?: string | null
+          evidence_url?: string | null
+          expires_at?: string | null
+          notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["training_records"]["Insert"]>
+        Relationships: []
+      }
+      training_renewals: {
+        Row: {
+          id: string
+          base_id: string
+          previous_record_id: string
+          renewed_record_id: string
+          renewed_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          previous_record_id: string
+          renewed_record_id: string
+          renewed_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["training_renewals"]["Insert"]>
+        Relationships: []
+      }
+      training_certificates: {
+        Row: {
+          id: string
+          base_id: string
+          user_id: string
+          credential: string
+          issued_at: string
+          expires_at: string | null
+          certificate_url: string | null
+          notes: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          user_id: string
+          credential: string
+          issued_at: string
+          expires_at?: string | null
+          certificate_url?: string | null
+          notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["training_certificates"]["Insert"]>
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
