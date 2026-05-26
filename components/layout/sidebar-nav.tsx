@@ -70,6 +70,7 @@ import {
   TrendingUp,
   MessageSquareWarning,
   GitBranch,
+  CloudSnow,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -82,6 +83,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   // Phase 2 SMS + Phase 3b AEP icons (the previous entries silently
   // fell back to the Home icon because they weren't registered here).
   ShieldAlert, Siren, TrendingUp, MessageSquareWarning, GitBranch,
+  // Phase 3d Field Conditions
+  CloudSnow,
 }
 
 // Group icons

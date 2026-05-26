@@ -12,7 +12,7 @@ import {
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
   BookOpen, Users, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
-  ShieldAlert, MessageSquareWarning, GitBranch, Siren,
+  ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
   type LucideIcon,
 } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
@@ -41,6 +41,8 @@ const opsItems: ModuleItem[] = [
   { name: 'Wildlife / BASH', icon: Bird, color: 'var(--color-success)', href: '/wildlife' },
   { name: 'PPR Log', icon: FileSignature, color: 'var(--color-accent)', href: '/ppr' },
   { name: 'Personnel on Airfield', icon: HardHat, color: 'var(--color-amber)', href: '/contractors' },
+  // Civilian-only — module-config appliesTo: ['faa_part139'] hides on USAF bases.
+  { name: 'Field Conditions / TALPA', icon: CloudSnow, color: 'var(--color-cyan)', href: '/field-conditions' },
 ]
 
 // Airfield Management

@@ -107,6 +107,10 @@ export const PERM = {
   AEP_WRITE:                            'aep:write',
   AEP_SIGN:                             'aep:sign',
 
+  // Field Conditions / TALPA (Part 139 §139.313 + AC 150/5200-30D)
+  FIELD_CONDITIONS_READ:                'field_conditions:read',
+  FIELD_CONDITIONS_WRITE:               'field_conditions:write',
+
   // §139.303 Training (civilian) — also usable in USAF mode for non-1C7X1 staff
   TRAINING_PART139_READ:                'training_part139:read',
   TRAINING_PART139_WRITE:               'training_part139:write',

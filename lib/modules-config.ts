@@ -23,6 +23,7 @@ export type ModuleKey =
   | 'sms'
   | 'training_part139'
   | 'aep'
+  | 'field_conditions'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -279,6 +280,17 @@ export const MODULES: ModuleDef[] = [
     useCase: 'Required for all Part 139 airports. Replaces the USAF Secondary Crash Net module on civilian bases.',
     hrefs: ['/aep', '/aep/plan', '/aep/agencies', '/aep/comms-checks', '/aep/drills'],
     setupSteps: ['aepagencies'],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
+  },
+  {
+    key: 'field_conditions',
+    label: 'Field Conditions / TALPA',
+    category: 'core-ops',
+    description: 'Runway condition assessment per AC 150/5200-30D — per-third RwyCC matrix, treatment log, FICON NOTAM text generator for FAA NOTAM Manager. Required when surface conditions degrade.',
+    useCase: 'Required for all Part 139 airports issuing winter / wet-pavement field conditions. Replaces ad-hoc spreadsheets with auditable per-third tracking.',
+    hrefs: ['/field-conditions'],
+    setupSteps: [],
     defaultEnabled: true,
     appliesTo: ['faa_part139'],
   },

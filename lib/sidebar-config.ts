@@ -36,6 +36,10 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen' },
   { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare' },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
+  // Field Conditions / TALPA — civilian Part 139 only (modules-config
+  // `appliesTo: ['faa_part139']` filters this from USAF sidebars). Lives
+  // under Operations since ops staff use it daily during winter / wet ops.
+  { name: 'Field Conditions',  href: '/field-conditions', iconName: 'CloudSnow' },
   // SMS — civilian Part 139 only; the modules-config `appliesTo: ['faa_part139']`
   // filter hides this from USAF sidebars at render time.
   { name: 'Safety Management', href: '/sms', iconName: 'ShieldAlert' },
@@ -87,7 +91,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Operations',
-      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors'],
+      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/ppr', '/contractors', '/field-conditions'],
     },
     {
       label: 'Airfield Management',

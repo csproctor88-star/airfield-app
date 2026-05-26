@@ -5466,6 +5466,72 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["aep_comms_check_results"]["Insert"]>
         Relationships: []
       }
+      field_condition_reports: {
+        Row: {
+          id: string
+          base_id: string
+          runway_id: string
+          generated_at: string
+          generated_by: string | null
+          generated_by_oi: string | null
+          valid_until: string
+          temperature_f: number | null
+          treatments: string[]
+          conditions_unchanged_since: string | null
+          superseded_by_id: string | null
+          notes: string | null
+          ficon_text: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          runway_id: string
+          generated_at?: string
+          generated_by?: string | null
+          generated_by_oi?: string | null
+          valid_until: string
+          temperature_f?: number | null
+          treatments?: string[]
+          conditions_unchanged_since?: string | null
+          superseded_by_id?: string | null
+          notes?: string | null
+          ficon_text: string
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["field_condition_reports"]["Insert"]>
+        Relationships: []
+      }
+      field_condition_thirds: {
+        Row: {
+          id: string
+          report_id: string
+          third: string
+          contaminant: string
+          depth_in: number | null
+          coverage_percent: number | null
+          rwycc: number
+          rwycc_derived: number
+          rwycc_manual_override: boolean
+          override_reason: string | null
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          third: string
+          contaminant: string
+          depth_in?: number | null
+          coverage_percent?: number | null
+          rwycc: number
+          rwycc_derived: number
+          rwycc_manual_override?: boolean
+          override_reason?: string | null
+          sort_order: number
+        }
+        Update: Partial<Database["public"]["Tables"]["field_condition_thirds"]["Insert"]>
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
