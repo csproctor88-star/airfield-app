@@ -117,24 +117,38 @@ export async function loadSidebarConfig(): Promise<SidebarConfig | null> {
     const cfg = row.sidebar_config as SidebarConfig
     if (!cfg.pinned || !cfg.sections) return null
 
-    // Merge any new nav items from DEFAULT that aren't in the saved config
+    // Merge any new nav items / sections from DEFAULT that aren't in the
+    // saved config. Order matters: if a whole section is new (e.g. SMS
+    // landed after the user saved their layout), insert the section at
+    // the same index it occupies in DEFAULT so existing users don't get
+    // its items dumped into Operations.
     const savedHrefs = new Set([
       ...cfg.pinned,
       ...cfg.sections.flatMap(s => s.items),
     ])
-    for (const section of DEFAULT_SIDEBAR_CONFIG.sections) {
+    DEFAULT_SIDEBAR_CONFIG.sections.forEach((section, defaultIdx) => {
+      const target = cfg.sections.find(s => s.label === section.label)
+      if (!target) {
+        // Entire section is new — clone the DEFAULT entry and insert at
+        // the same index so the natural ordering survives. clamp to the
+        // current sections length so we don't insert past the end.
+        const insertAt = Math.min(defaultIdx, cfg.sections.length)
+        cfg.sections.splice(insertAt, 0, {
+          label: section.label,
+          items: section.items.filter(h => !savedHrefs.has(h)),
+          collapsed: section.collapsed,
+        })
+        for (const h of section.items) savedHrefs.add(h)
+        return
+      }
+      // Section exists — append any new items at the bottom.
       for (const href of section.items) {
         if (!savedHrefs.has(href)) {
-          // Find matching section in saved config, or add to last operational section
-          const target = cfg.sections.find(s => s.label === section.label)
-          if (target) {
-            target.items.push(href)
-          } else if (cfg.sections.length > 0) {
-            cfg.sections[0].items.push(href)
-          }
+          target.items.push(href)
+          savedHrefs.add(href)
         }
       }
-    }
+    })
 
     return cfg
   } catch {

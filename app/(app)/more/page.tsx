@@ -12,6 +12,7 @@ import {
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
   BookOpen, Users, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
+  ShieldAlert, MessageSquareWarning, GitBranch,
   type LucideIcon,
 } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
@@ -48,6 +49,18 @@ const mgmtItems: ModuleItem[] = [
   { name: 'Obstruction Eval Tool', icon: MapPin, color: 'var(--color-orange)', href: '/obstructions' },
   { name: 'Visual NAVAIDs', icon: Lightbulb, color: 'var(--color-warning)', href: '/infrastructure' },
   { name: 'Aircraft Parking', icon: PlaneLanding, color: 'var(--color-accent)', href: '/parking' },
+]
+
+// Safety Management System (civilian Part 139 only — filtered out by
+// isModuleEnabled via the SMS module's appliesTo on USAF bases).
+const smsItems: ModuleItem[] = [
+  { name: 'SMS Dashboard',          icon: ShieldAlert,            color: 'var(--color-success)', href: '/sms' },
+  { name: 'Safety Policy',          icon: FileSignature,          color: 'var(--color-success)', href: '/sms/policy' },
+  { name: 'Hazard Register',        icon: AlertTriangle,          color: 'var(--color-warning)', href: '/sms/hazards' },
+  { name: 'Safety Indicators',      icon: TrendingUp,             color: 'var(--color-cyan)',    href: '/sms/spis' },
+  { name: 'Safety Reports',         icon: MessageSquareWarning,   color: 'var(--color-warning)', href: '/sms/reports' },
+  { name: 'SMS Audits',             icon: ClipboardCheck,         color: 'var(--color-success)', href: '/sms/audits' },
+  { name: 'Management of Change',   icon: GitBranch,              color: 'var(--color-cyan)',    href: '/sms/moc' },
 ]
 
 // Reference
@@ -356,6 +369,9 @@ export default function MorePage() {
 
         {/* Airfield Management */}
         <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} badgeFor={badgeFor} />
+
+        {/* Safety Management System (civilian only — filterItems hides on USAF) */}
+        <CollapsibleGroup label="Safety Management System" icon={ShieldAlert} items={filterItems(smsItems)} badgeFor={badgeFor} />
 
         {/* Reference */}
         <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} badgeFor={badgeFor} />
