@@ -44,6 +44,12 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Safety Reports',    href: '/sms/reports', iconName: 'MessageSquareWarning' },
   { name: 'SMS Audits',        href: '/sms/audits', iconName: 'ClipboardCheck' },
   { name: 'Management of Change', href: '/sms/moc', iconName: 'GitBranch' },
+  // §139.303 Training — civilian Part 139 only (modules-config
+  // `appliesTo: ['faa_part139']` filters this from USAF sidebars).
+  { name: 'Training Overview', href: '/training', iconName: 'GraduationCap' },
+  { name: 'Training Topics',   href: '/training/topics', iconName: 'BookOpen' },
+  { name: 'Training Roster',   href: '/training/roster', iconName: 'Users' },
+  { name: 'Training Compliance', href: '/training/compliance', iconName: 'ClipboardCheck' },
   // 'Training Records' (/amtr) is intentionally omitted from navigation while
   // in limited testing — the route stays live and is reachable by direct URL,
   // gated by the `amtr:view` permission. Re-add here to surface it in the sidebar.
@@ -82,6 +88,10 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       label: 'Safety Management System',
       items: ['/sms', '/sms/hazards', '/sms/spis', '/sms/reports', '/sms/audits', '/sms/moc'],
+    },
+    {
+      label: 'Training & Compliance',
+      items: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
     },
     {
       label: 'Reference',

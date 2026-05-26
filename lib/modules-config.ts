@@ -21,6 +21,7 @@ export type ModuleKey =
   | 'contractors'
   | 'amtr'
   | 'sms'
+  | 'training_part139'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -253,6 +254,17 @@ export const MODULES: ModuleDef[] = [
     description: 'Safety Management System per 14 CFR §139.401–415 (Part 139 SMS Final Rule) — Safety Policy, hazard register with 5×5 risk matrix, mitigations, Safety Performance Indicators, internal audits, Management of Change, and anonymous public safety reporting.',
     useCase: 'Required for Class I–III commercial-service airports per the FAA SMS Final Rule (April 2025 deadline for Class III). Implements all four AC 150/5200-37A pillars: Policy, SRM, SA, and Promotion.',
     hrefs: ['/sms', '/sms/policy', '/sms/hazards', '/sms/spis', '/sms/audits', '/sms/moc', '/sms/reports', '/sms/communications'],
+    setupSteps: [],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
+  },
+  {
+    key: 'training_part139',
+    label: 'Training (§139.303)',
+    category: 'compliance',
+    description: '§139.303 training records per 14 CFR Part 139 — topic catalog, per-user records with 24-month retention, AAAE / ACE professional certificates, compliance matrix, and 30-day expiry digest.',
+    useCase: 'Required for Class I–IV Part 139 airports. Demonstrates personnel training currency to FAA inspectors. Seeds the 13 §139.303(e) topics on every civilian base.',
+    hrefs: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
     setupSteps: [],
     defaultEnabled: true,
     appliesTo: ['faa_part139'],

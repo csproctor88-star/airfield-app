@@ -63,6 +63,15 @@ const smsItems: ModuleItem[] = [
   { name: 'Management of Change',   icon: GitBranch,              color: 'var(--color-cyan)',    href: '/sms/moc' },
 ]
 
+// §139.303 Training & Compliance (civilian Part 139 only — same gating
+// as SMS via the training_part139 module's appliesTo).
+const training139Items: ModuleItem[] = [
+  { name: 'Training Overview',   icon: GraduationCap, color: 'var(--color-cyan)',    href: '/training' },
+  { name: 'Training Topics',     icon: BookOpen,      color: 'var(--color-accent)',  href: '/training/topics' },
+  { name: 'Training Roster',     icon: Users,         color: 'var(--color-success)', href: '/training/roster' },
+  { name: 'Training Compliance', icon: ClipboardCheck, color: 'var(--color-warning)', href: '/training/compliance' },
+]
+
 // Reference
 const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: Plane, color: 'var(--color-accent)', href: '/aircraft' },
@@ -372,6 +381,9 @@ export default function MorePage() {
 
         {/* Safety Management System (civilian only — filterItems hides on USAF) */}
         <CollapsibleGroup label="Safety Management System" icon={ShieldAlert} items={filterItems(smsItems)} badgeFor={badgeFor} />
+
+        {/* §139.303 Training & Compliance (civilian only — same gating as SMS) */}
+        <CollapsibleGroup label="Training & Compliance" icon={GraduationCap} items={filterItems(training139Items)} badgeFor={badgeFor} />
 
         {/* Reference */}
         <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} badgeFor={badgeFor} />
