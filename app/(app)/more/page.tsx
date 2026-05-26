@@ -12,7 +12,7 @@ import {
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
   BookOpen, Users, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
-  ShieldAlert, MessageSquareWarning, GitBranch,
+  ShieldAlert, MessageSquareWarning, GitBranch, Siren,
   type LucideIcon,
 } from 'lucide-react'
 import ContactSupport from '@/components/ui/contact-support'
@@ -70,6 +70,17 @@ const training139Items: ModuleItem[] = [
   { name: 'Training Topics',     icon: BookOpen,      color: 'var(--color-accent)',  href: '/training/topics' },
   { name: 'Training Roster',     icon: Users,         color: 'var(--color-success)', href: '/training/roster' },
   { name: 'Training Compliance', icon: ClipboardCheck, color: 'var(--color-warning)', href: '/training/compliance' },
+]
+
+// Airport Emergency Plan (civilian Part 139 only — same gating via the
+// aep module's appliesTo). On civilian bases this replaces the SCN
+// entry under Operations.
+const aepItems: ModuleItem[] = [
+  { name: 'Emergency Plan',    icon: ShieldAlert, color: 'var(--color-warning)', href: '/aep' },
+  { name: 'AEP Document',      icon: FileText,    color: 'var(--color-accent)',  href: '/aep/plan' },
+  { name: 'Response Agencies', icon: Users,       color: 'var(--color-success)', href: '/aep/agencies' },
+  { name: 'AEP Comms Checks',  icon: Radio,       color: 'var(--color-cyan)',    href: '/aep/comms-checks' },
+  { name: 'AEP Drills',        icon: Siren,       color: 'var(--color-orange)',  href: '/aep/drills' },
 ]
 
 // Reference
@@ -384,6 +395,9 @@ export default function MorePage() {
 
         {/* §139.303 Training & Compliance (civilian only — same gating as SMS) */}
         <CollapsibleGroup label="Training & Compliance" icon={GraduationCap} items={filterItems(training139Items)} badgeFor={badgeFor} />
+
+        {/* Airport Emergency Plan (civilian only — same gating as SMS) */}
+        <CollapsibleGroup label="Airport Emergency Plan" icon={ShieldAlert} items={filterItems(aepItems)} badgeFor={badgeFor} />
 
         {/* Reference */}
         <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} badgeFor={badgeFor} />

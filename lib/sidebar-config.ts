@@ -50,6 +50,14 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Training Topics',   href: '/training/topics', iconName: 'BookOpen' },
   { name: 'Training Roster',   href: '/training/roster', iconName: 'Users' },
   { name: 'Training Compliance', href: '/training/compliance', iconName: 'ClipboardCheck' },
+  // Airport Emergency Plan — civilian Part 139 only (modules-config
+  // `appliesTo: ['faa_part139']` filters this from USAF sidebars). On
+  // civilian bases this replaces the SCN entry.
+  { name: 'Emergency Plan',     href: '/aep',              iconName: 'ShieldAlert' },
+  { name: 'AEP Document',       href: '/aep/plan',         iconName: 'FileText' },
+  { name: 'Response Agencies',  href: '/aep/agencies',     iconName: 'Users' },
+  { name: 'AEP Comms Checks',   href: '/aep/comms-checks', iconName: 'Radio' },
+  { name: 'AEP Drills',         href: '/aep/drills',       iconName: 'Siren' },
   // 'Training Records' (/amtr) is intentionally omitted from navigation while
   // in limited testing — the route stays live and is reachable by direct URL,
   // gated by the `amtr:view` permission. Re-add here to surface it in the sidebar.
@@ -92,6 +100,10 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       label: 'Training & Compliance',
       items: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
+    },
+    {
+      label: 'Airport Emergency Plan',
+      items: ['/aep', '/aep/plan', '/aep/agencies', '/aep/comms-checks', '/aep/drills'],
     },
     {
       label: 'Reference',

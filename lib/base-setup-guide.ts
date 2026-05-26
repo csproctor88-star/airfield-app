@@ -364,6 +364,37 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     },
   },
 
+  aepagencies: {
+    what:
+      'Lists the response agencies the Airport Emergency Plan coordinates with — ARFF, mutual-aid fire, EMS, police, hospital, ATC, ' +
+      'FAA Regional Office, NTSB, FBI, public works, utilities. Each agency carries a role classification, primary and backup contact ' +
+      'info (phone and radio frequency), and free-text notes. The roster drives the monthly comms-check picker and the drill-participants ' +
+      'multi-select, and is exported in the AEP plan PDF for FAA inspector review.',
+    how:
+      'Add one row per agency the AEP touches. Group by role using the dropdown so the comms-check screen reads naturally. Primary contact ' +
+      'should be the dispatcher or duty number you would actually call during an activation — not a general office line. Radio entries are ' +
+      'frequency or channel (e.g. "VHF 154.220 / Ch. 3"). Mark an agency inactive instead of deleting when an agency relationship ends — ' +
+      'this preserves the name on historical comms checks and drills.',
+    why:
+      'AC 150/5200-31C Appendix 1 expects the AEP to enumerate every responding agency with current points of contact. Missing or stale ' +
+      'roster entries are the single most common AEP gap surfaced at the annual review. Keeping the roster authoritative here means the ' +
+      'monthly comms check, drill scheduling, and the exported plan all share one source of truth.',
+    required: 'conditional',
+    examples: ['ARFF (Engine 7)', 'Mutual Aid — Springfield Fire Dept', 'County EMS', 'Mercy Hospital ED', 'Springfield Tower', 'FAA Regional Office'],
+    cite: {
+      reg: 'AC 150/5200-31C',
+      para: 'App. 1',
+      outcome:
+        'A current, role-classified roster of response agencies with primary and backup contacts, ready for the monthly comms check and the annual plan review.',
+    },
+    fields: {
+      agency_name: 'Agency as it should appear on the AEP roster and comms-check log (e.g. "ARFF (Engine 7)", "Springfield Tower").',
+      agency_role: 'Functional category — drives grouping on the agencies page and on the AEP plan PDF roster table.',
+      primary_contact_phone: 'Dispatch / duty number used during an actual activation. Avoid main-office lines that may not be staffed after hours.',
+      primary_contact_radio: 'Radio frequency or channel ID for primary comms (e.g. "VHF 154.220 / Ch. 3").',
+    },
+  },
+
   wildlife: {
     what:
       'Selects the wildlife species commonly observed at the installation. Selected species populate the species picker in the ' +

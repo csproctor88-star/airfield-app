@@ -22,6 +22,7 @@ export type ModuleKey =
   | 'amtr'
   | 'sms'
   | 'training_part139'
+  | 'aep'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -37,6 +38,7 @@ export type WizardStepKey =
   | 'shiftchecklist'
   | 'qrc'
   | 'scnagencies'
+  | 'aepagencies'
   | 'lighting'
   | 'wildlife'
   | 'statusboards'
@@ -266,6 +268,17 @@ export const MODULES: ModuleDef[] = [
     useCase: 'Required for Class I–IV Part 139 airports. Demonstrates personnel training currency to FAA inspectors. Seeds the 13 §139.303(e) topics on every civilian base.',
     hrefs: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
     setupSteps: [],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
+  },
+  {
+    key: 'aep',
+    label: 'Airport Emergency Plan',
+    category: 'emergency',
+    description: 'Airport Emergency Plan per 14 CFR §139.325 — versioned plan document with AE annual sign-off, response-agency roster, periodic comms checks, and the triennial full-scale / annual tabletop drill program. Drill completions feed SMS Safety Performance Indicators.',
+    useCase: 'Required for all Part 139 airports. Replaces the USAF Secondary Crash Net module on civilian bases.',
+    hrefs: ['/aep', '/aep/plan', '/aep/agencies', '/aep/comms-checks', '/aep/drills'],
+    setupSteps: ['aepagencies'],
     defaultEnabled: true,
     appliesTo: ['faa_part139'],
   },

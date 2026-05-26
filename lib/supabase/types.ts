@@ -5284,6 +5284,182 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["training_digest_log"]["Insert"]>
         Relationships: []
       }
+      aep_plans: {
+        Row: {
+          id: string
+          base_id: string
+          version: string
+          effective_date: string
+          document_url: string | null
+          storage_path: string | null
+          approved_by_faa_at: string | null
+          faa_acceptance_ref: string | null
+          ae_user_id: string | null
+          ae_signed_at: string | null
+          last_reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          review_notes: string | null
+          replaced_by_id: string | null
+          notes: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          version: string
+          effective_date: string
+          document_url?: string | null
+          storage_path?: string | null
+          approved_by_faa_at?: string | null
+          faa_acceptance_ref?: string | null
+          ae_user_id?: string | null
+          ae_signed_at?: string | null
+          last_reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          review_notes?: string | null
+          replaced_by_id?: string | null
+          notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["aep_plans"]["Insert"]>
+        Relationships: []
+      }
+      aep_response_agencies: {
+        Row: {
+          id: string
+          base_id: string
+          agency_name: string
+          agency_role: string
+          primary_contact_name: string | null
+          primary_contact_phone: string | null
+          primary_contact_radio: string | null
+          backup_contact_name: string | null
+          backup_contact_phone: string | null
+          notes: string | null
+          sort_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          agency_name: string
+          agency_role: string
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          primary_contact_radio?: string | null
+          backup_contact_name?: string | null
+          backup_contact_phone?: string | null
+          notes?: string | null
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["aep_response_agencies"]["Insert"]>
+        Relationships: []
+      }
+      aep_drills: {
+        Row: {
+          id: string
+          base_id: string
+          drill_date: string
+          drill_type: string
+          scenario: string
+          status: string
+          participants: unknown
+          after_action_notes: string | null
+          findings: string | null
+          evidence_url: string | null
+          storage_path: string | null
+          next_due_at_override: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          drill_date: string
+          drill_type: string
+          scenario: string
+          status?: string
+          participants?: unknown
+          after_action_notes?: string | null
+          findings?: string | null
+          evidence_url?: string | null
+          storage_path?: string | null
+          next_due_at_override?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["aep_drills"]["Insert"]>
+        Relationships: []
+      }
+      aep_comms_checks: {
+        Row: {
+          id: string
+          base_id: string
+          check_date: string
+          check_period: string
+          started_at: string
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_oi: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          base_id: string
+          check_date: string
+          check_period?: string
+          started_at?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["aep_comms_checks"]["Insert"]>
+        Relationships: []
+      }
+      aep_comms_check_results: {
+        Row: {
+          id: string
+          check_id: string
+          agency_id: string | null
+          agency_name: string
+          agency_role: string | null
+          status: string
+          notes: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          check_id: string
+          agency_id?: string | null
+          agency_name: string
+          agency_role?: string | null
+          status: string
+          notes?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["aep_comms_check_results"]["Insert"]>
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

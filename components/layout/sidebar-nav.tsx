@@ -65,6 +65,11 @@ import {
   ArrowDown,
   LogOut,
   Award,
+  ShieldAlert,
+  Siren,
+  TrendingUp,
+  MessageSquareWarning,
+  GitBranch,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -74,12 +79,18 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Bird, HardHat, AlertTriangle, MapPin, Database, Shield, Lightbulb,
   PlaneLanding, Plane, BookOpen, FileText, BarChart3, Settings, BookMarked, Users,
   Wrench, SlidersHorizontal, FolderOpen, GraduationCap, Radio, MessageSquare, History, Award,
+  // Phase 2 SMS + Phase 3b AEP icons (the previous entries silently
+  // fell back to the Home icon because they weren't registered here).
+  ShieldAlert, Siren, TrendingUp, MessageSquareWarning, GitBranch,
 }
 
 // Group icons
 const GROUP_ICONS: Record<string, LucideIcon> = {
   'Operations': Wrench,
   'Airfield Management': FolderOpen,
+  'Safety Management System': ShieldAlert,
+  'Training & Compliance': GraduationCap,
+  'Airport Emergency Plan': Siren,
   'Reference': BookOpen,
   'Admin': Shield,
   'Settings': Settings,
@@ -121,6 +132,9 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   // '/help' intentionally omitted — Help & Training page is visible to all
   // authenticated users (in-app guidance for using the platform).
   '/training':          'training_part139:read',
+  // '/aep/*' intentionally omitted — visibility relies entirely on the
+  // module-config `appliesTo: ['faa_part139']` filter (same convention
+  // SMS uses). Row-level access is gated by aep:{read,write,sign} via RLS.
   '/base-config':       'base_setup:write',
 }
 
