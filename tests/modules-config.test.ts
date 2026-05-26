@@ -13,7 +13,7 @@ describe('isModuleEnabled', () => {
     expect(isModuleEnabled('/', [])).toBe(true)
     expect(isModuleEnabled('/dashboard', [])).toBe(true)
     expect(isModuleEnabled('/settings/base-setup/modules', [])).toBe(true)
-    expect(isModuleEnabled('/training', null)).toBe(true)
+    expect(isModuleEnabled('/help', null)).toBe(true)
   })
 
   it('sub-paths of always-on hrefs return true', () => {

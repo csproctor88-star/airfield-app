@@ -5,8 +5,8 @@ import { ChevronRight, Clock, Check } from 'lucide-react'
 import { type ModuleRef } from '@/lib/training/modules'
 
 /**
- * Tile-grid card for the /training Modules tab. Clicking the card
- * navigates to /training/[id] for the full deep dive.
+ * Tile-grid card for the /help Modules tab. Clicking the card
+ * navigates to /help/[id] for the full deep dive.
  *
  * Visual treatment is intentionally muted across modules — the icon
  * tile carries the module color; the rest of the card uses neutral
@@ -21,7 +21,7 @@ export function ModuleCard({ module: m, reviewed = false }: { module: ModuleRef;
   const Icon = m.icon
   return (
     <Link
-      href={`/training/${m.id}`}
+      href={`/help/${m.id}`}
       style={{
         display: 'flex',
         flexDirection: 'column',

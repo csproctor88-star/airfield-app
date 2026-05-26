@@ -71,7 +71,7 @@ export function WelcomeGate() {
     return () => { cancelled = true }
   }, [])
 
-  async function dismiss(opts: { goToSetup?: boolean; goToTraining?: boolean } = {}) {
+  async function dismiss(opts: { goToSetup?: boolean; goToHelp?: boolean } = {}) {
     if (busy) return
     setBusy(true)
 
@@ -106,8 +106,8 @@ export function WelcomeGate() {
     setShow(false)
     if (opts.goToSetup) {
       router.push('/base-config/setup')
-    } else if (opts.goToTraining) {
-      router.push('/training')
+    } else if (opts.goToHelp) {
+      router.push('/help')
     }
   }
 
@@ -183,7 +183,7 @@ export function WelcomeGate() {
             ) : (
               <>
                 Visit{' '}
-                <strong style={{ color: 'var(--color-text-1)' }}>Glidepath Training</strong>{' '}
+                <strong style={{ color: 'var(--color-text-1)' }}>Help &amp; Training</strong>{' '}
                 in the sidebar to learn how each module works — overviews,
                 screenshots, and step-by-step workflows for every feature.
                 Until your base administrator finishes setup, some modules
@@ -233,11 +233,11 @@ export function WelcomeGate() {
               </button>
               <button
                 type="button"
-                onClick={() => void dismiss({ goToTraining: true })}
+                onClick={() => void dismiss({ goToHelp: true })}
                 disabled={busy}
                 style={primaryBtnStyle}
               >
-                Open Training
+                Open Help &amp; Training
                 <ArrowRight size={14} />
               </button>
             </>

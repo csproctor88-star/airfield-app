@@ -21,6 +21,7 @@ export type ModuleKey =
   | 'contractors'
   | 'amtr'
   | 'sms'
+  | 'training_part139'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -257,6 +258,17 @@ export const MODULES: ModuleDef[] = [
     defaultEnabled: true,
     appliesTo: ['faa_part139'],
   },
+  {
+    key: 'training_part139',
+    label: 'Training (§139.303)',
+    category: 'compliance',
+    description: '§139.303 training records per 14 CFR Part 139 — topic catalog, per-user records with 24-month retention, AAAE / ACE professional certificates, compliance matrix, and 30-day expiry digest.',
+    useCase: 'Required for Class I–IV Part 139 airports. Demonstrates personnel training currency to FAA inspectors. Seeds the 13 §139.303(e) topics on every civilian base.',
+    hrefs: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
+    setupSteps: [],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
+  },
 ]
 
 export const ALWAYS_ON_HREFS: ReadonlySet<string> = new Set([
@@ -265,7 +277,7 @@ export const ALWAYS_ON_HREFS: ReadonlySet<string> = new Set([
   '/activity',
   '/recent-activity',
   '/more',
-  '/training',
+  '/help',
   '/settings',
   '/settings/base-setup',
   '/settings/base-setup/modules',

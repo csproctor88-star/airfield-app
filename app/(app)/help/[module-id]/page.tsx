@@ -445,7 +445,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
               return (
                 <Link
                   key={r.id}
-                  href={`/training/${r.id}`}
+                  href={`/help/${r.id}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -576,7 +576,7 @@ function FaqRow({ q, a, color }: { q: string; a: string; color: string }) {
 function BackLink() {
   return (
     <Link
-      href="/training"
+      href="/help"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
