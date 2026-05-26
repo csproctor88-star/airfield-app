@@ -115,17 +115,24 @@ export function classifyTrainingStatus(
 ): TrainingStatus {
   if (!latestRecord) return 'not_started'
   if (!latestRecord.expires_at) return 'current'
-  const exp = new Date(latestRecord.expires_at)
-  if (isNaN(exp.getTime())) return 'current'
-  const days = Math.floor((exp.getTime() - now.getTime()) / 86_400_000)
+  const days = daysToExpiry(latestRecord.expires_at, now)
+  if (Number.isNaN(days)) return 'current'  // invalid date string
   if (days < 30) return 'expired'
   if (days < 90) return 'expiring'
   return 'current'
 }
 
+/**
+ * Whole calendar days between today and expiresAt, ignoring time-of-day.
+ * Truncates both sides to midnight UTC so a record expiring at
+ * 2027-05-26 read at noon on 2027-04-26 returns exactly 30, not 29.5.
+ */
 export function daysToExpiry(expiresAt: string | Date, now: Date = new Date()): number {
   const exp = typeof expiresAt === 'string' ? new Date(expiresAt) : expiresAt
-  return Math.floor((exp.getTime() - now.getTime()) / 86_400_000)
+  if (isNaN(exp.getTime())) return NaN
+  const nowMidnightUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const expMidnightUtc = Date.UTC(exp.getUTCFullYear(), exp.getUTCMonth(), exp.getUTCDate())
+  return Math.round((expMidnightUtc - nowMidnightUtc) / 86_400_000)
 }
 
 // ────────────────────────────────────────────────────────────────
