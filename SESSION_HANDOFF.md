@@ -1,13 +1,98 @@
 # Session Handoff
 
 **Date:** 2026-05-26
-**Branch:** `main` (Phase 3b + 3c commits land directly on main per project convention)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (410 pass / 35 files)
-**HEAD:** (latest Phase 3c-C commit — see `git log -1`)
+**Branch:** `main` (Phase 3b + 3c + 3d commits land directly on main per project convention)
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (444 pass / 36 files)
+**HEAD:** (latest Phase 3d-C commit — see `git log -1`)
 
 ---
 
-## What shipped this session — Phase 3c (AEP recap below)
+## What shipped this session — Phase 3d (3c + 3b + 3a recaps below)
+
+**Phase 3d of the FAA Part 139 commercial expansion** — the **Field
+Conditions / TALPA module** — landed end-to-end on `main` in two
+review-gated clusters (B → C). Civilian Part 139 airports can now
+issue per-third Runway Condition Code (RwyCC) reports per AC
+150/5200-30D, with engine-derived RwyCC values (overridable with
+reason), treatment tracking, and a materialized FICON NOTAM body the
+operator pastes into the FAA NOTAM Manager. 444 tests pass (410
+baseline + 34 new RwyCC engine + FICON text generator cases).
+
+### Phase 3d Cluster B — Schema + RwyCC engine + CRUD + wiring (commit `24bf162`)
+
+- **Migration `2026060900_field_conditions.sql`** applied: 2 new
+  tables (`field_condition_reports` + `field_condition_thirds`),
+  permission keys `field_conditions:{read,write}`, role grants on AE
+  / ops_supervisor / arff_chief / amops / sms_manager /
+  airfield_manager / base_admin / sys_admin, matrix-helper RLS with
+  EXISTS parent-gate on thirds.
+- **`lib/calculations/rwycc.ts`** (~280 LOC) — types + display
+  constants + `deriveRwycc(contaminant, depth?, temperatureC?)` per
+  AC 30D Table 4-1 across all 13 contaminants + temp-dependent
+  compacted-snow tiers + `buildFiconNotamText({runway, thirds,
+  treatments})` emitting the AC 30D §6 body.
+- **`lib/supabase/field-conditions.ts`** (~330 LOC) — CRUD with
+  per-third RwyCC derivation, override validation (reason required),
+  FICON materialization, and append-with-supersede semantics
+  (back-fill `superseded_by_id` on the prior active row).
+- **Module + sidebar + more page** wired with `CloudSnow` icon (added
+  to `sidebar-nav.tsx` ICON_MAP). `PERM.FIELD_CONDITIONS_READ` /
+  `WRITE` added to `lib/permissions.ts`.
+- **34 new tests** in `tests/rwycc.test.ts` covering all 13
+  contaminants × depth thresholds × temperature edges + 8 FICON text
+  format cases (uniform / mixed / treatment-suffix / depth-formatting
+  / out-of-order-sorting / "none" treatment skip).
+
+### Phase 3d Cluster C — Full UI + verification doc (this commit)
+
+- **`/field-conditions` page** (~580 LOC) — header with "+ New
+  Report", per-runway active cards (or placeholder "presumed dry"
+  card if no active FCR), 30-day history grouped by Zulu date
+  (collapsed by default), and the New Report modal.
+- **Active card** shows the per-third RwyCC tuple as colored chips
+  (green 4-6 / amber 2-3 / red 0-1), contaminant + depth + coverage
+  detail rows with derived-RwyCC annotations, treatments + temp,
+  notes, and the FICON body in a monospace box with **Copy FICON /
+  Issue Update / Delete** buttons.
+- **New Report modal** — single-screen form (not a wizard, to keep
+  the winter-shift cadence fast). Runway picker + temp/validity at
+  the top, 3 per-third assessment rows with live derived-RwyCC chip +
+  override dropdown (override requires reason input that auto-appears
+  when override differs from derived), treatment chip cluster, notes,
+  and a **live FICON preview** updating as the operator edits. Save
+  auto-copies the FICON text to clipboard.
+- **`docs/PHASE_3D_VERIFICATION.md`** following the Phase 3b/3c
+  template: pre-flight, mode-gating smoke, RwyCC engine smoke, three
+  worked flows (uniform snow / mixed-condition supersede / operator
+  override), history rendering, permission gating matrix, theme
+  audit, mobile pass, regression, failure triage, sign-off.
+- **CHANGELOG entry** added under `[Unreleased]`.
+
+---
+
+## Migrations status (Phase 3d)
+
+| File | Applied | What it does |
+|---|---|---|
+| `2026060900_field_conditions.sql` | ✅ | 2 tables + perms + role grants + matrix RLS |
+
+---
+
+## Phase 3d known issues / tech debt
+
+| Item | Severity | Notes |
+|---|---|---|
+| SMS hazard auto-create on RwyCC ≤ 2 | Medium | Out of scope for v1. Future PR can add a trigger in the `createReport` path that calls `promote_safety_report_to_hazard` (or a parallel `promote_field_condition_to_hazard` RPC). Pilots may flag this during winter pilot trials. |
+| Multi-runway "sweep" in one FCR | Low | v1 is one runway per report. "Apply to other runways" button on the New Report modal is a UX optimization for a future polish. |
+| FCR PDF export | Low | The FICON text + the report card render is what operators paste/share. Standalone PDF deferred. |
+| Pilot braking-action (PIREP) integration | Low | Pilots submit braking-action reports through ATC; Glidepath doesn't capture those. Future scope: Pilot Report panel on the active FCR card. |
+| Auto-supersede on `valid_until` expiry | Low | v1: expired reports remain visible in the active section until manually superseded. Could add a background cron or a UI "expired" pill. |
+| KDRA seed has no FCR data | Low | Empty state is a fine demo for first-FCR. Seed refresh (deferred) can backfill if pilot conversations need historical FCRs. |
+| FAA NOTAM format regional variations | Low | The §6 format we emit is the FAA NM web tool's accepted body. If a pilot reports a region wanting different syntax we'll revise — captured in failure-triage doc. |
+
+---
+
+## What shipped earlier this session — Phase 3c (Part 77 obstruction UI)
 
 **Phase 3c of the FAA Part 139 commercial expansion** — the **Part 77
 obstruction surface UI** — landed end-to-end on `main` in two
@@ -259,13 +344,15 @@ Tracker remains empty project-wide.
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 410 pass / 35 files (+57 from baseline 353; new this session:
+Tests: 444 pass / 36 files (+91 from baseline 353; new this session:
        tests/aep.test.ts (+23) — daysBetween, nextFullScaleDue /
          nextAnnualReviewDue thresholds, summarizeCommsCheck, AEP PDFs
        tests/obstruction-evaluation.test.ts (+14) — UFC regression,
          per-approach-type Part 77 evaluation, multi-runway dispatch
        tests/part77-surfaces.test.ts (refactored 11 → 30) — per-type
-         primary widths, approach slopes / lengths, horizontal radii)
+         primary widths, approach slopes / lengths, horizontal radii
+       tests/rwycc.test.ts (+34) — every Contaminant case × depth ×
+         temperature thresholds + FICON text generator format cases)
 Build: npm run build compiled successfully.
 
 AEP routes (Phase 3b):
@@ -279,6 +366,9 @@ Obstructions routes (Phase 3c picker + legend):
   /obstructions          13.6 kB / 189 kB  (was 11.2 kB / 187 kB)
   /obstructions/[id]     13.8 kB / 345 kB  (was 13.7 kB / 334 kB)
 
+Field Conditions route (Phase 3d):
+  /field-conditions      11 kB / 185 kB
+
 Middleware: 74.5 kB (unchanged).
 Shared by all: 91.2 kB (unchanged).
 ```
@@ -289,28 +379,26 @@ Shared by all: 91.2 kB (unchanged).
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b + 3c of FAA Part 139 commercial expansion** — `airport_type` dual-mode flag, civilian terminology / reg filter / PDF generators / wizard, SMS module (Phase 2), §139.303 Training module (Phase 3a, daily Vercel cron digest), **Airport Emergency Plan module (Phase 3b)** with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs, **Part 77 obstruction surface UI (Phase 3c)** with per-approach-type engine (6 §77.19 variants), runway editor faa_approach_type/category dropdowns, surface picker, detail-page legend, 34 new tests. AMTR module merged to `main` (off-nav). Not merged-tag yet. |
+| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b + 3c + 3d of FAA Part 139 commercial expansion** — `airport_type` dual-mode flag, SMS module (Phase 2), §139.303 Training module (Phase 3a, daily Vercel cron digest), AEP module (Phase 3b) with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs, Part 77 obstruction surface UI (Phase 3c) with per-approach-type engine + runway editor dropdowns + surface picker + detail-page legend, **Field Conditions / TALPA module (Phase 3d)** with RwyCC engine across all 13 contaminants + FICON NOTAM text generator + per-third assessment + append-with-supersede + 34 new tests. AMTR module merged to `main` (off-nav). Not merged-tag yet. |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
 
 ## Next session tasks
 
-**First:** verify Phase 3c end-to-end via `docs/PHASE_3C_VERIFICATION.md` on KDRA — wizard runway dropdowns + obstruction picker + detail legend + spec-correct dimensions. Walk Phase 3b verification doc at the same time if not yet completed.
+**First:** verify Phase 3d end-to-end via `docs/PHASE_3D_VERIFICATION.md` on KDRA — modal + per-third RwyCC + supersede chain + FICON copy. Walk Phase 3b/3c verification docs at the same time if not yet completed.
 
 **Then choose**:
 
-1. **Phase 3d — Winter Ops / TALPA Field Condition Reports.** FICON NOTAM generator per AC 150/5200-30D: thirds-based RwyCC matrix, contaminants/depth/treatments, copy-paste output for FAA NOTAM Manager. Self-contained, smaller than AEP. Recommended next per parent plan sequence.
+1. **Phase 3e — Wildlife Hazard Management Plan (WHMP) hooks.** Annual report upload + hazardous species list + mitigation summary, feeds SMS hazards. Lightweight — last of the four Phase 3 sub-modules and completes the civilian retrofit set.
 
-2. **Phase 3e — Wildlife Hazard Management Plan (WHMP) hooks.** Annual report upload + hazardous species list + mitigation summary, feeds SMS hazards. Lightweight — quickest of the remaining sub-modules.
+2. **Push `main` to origin** — Phase 3b/3c/3d commits + verification docs all local-only (now 12+ commits ahead).
 
-3. **Set `CRON_SECRET` in Vercel.** Required for the Phase 3a training-expiry-digest to function. Generate a long random secret in Vercel dashboard → env vars → both production + preview.
+3. **Set `CRON_SECRET` in Vercel.** Required for the Phase 3a training-expiry-digest to function.
 
-4. **Push `main` to origin** — five Phase 3b commits + two Phase 3c commits + verification docs are all local-only.
+4. **Demo seed refresh** — backfill KDRA with: AEP plan + 11 agencies + 1 prior drill (Phase 3b) + `faa_approach_type='non_utility_non_precision_3_4'` on each runway (Phase 3c) + 1-2 historical FCRs (Phase 3d) so the demo tour story is end-to-end for pilot conversations.
 
-5. **Demo seed refresh** — backfill KDRA with an AEP plan + 11 agencies + 1 prior drill + `faa_approach_type='non_utility_non_precision_3_4'` on each runway so the demo tour story works end-to-end for pilot conversations.
-
-6. **Cross-phase super-doc** — composable `docs/VERIFICATION_ALL_PHASES.md` stitching `PHASE_3B_VERIFICATION.md` + `PHASE_3C_VERIFICATION.md` (and future 3d/3e) into one master walkthrough. User flagged this when Phase 3b's verification doc landed.
+5. **Cross-phase super-doc** — composable `docs/VERIFICATION_ALL_PHASES.md` stitching `PHASE_3B_VERIFICATION.md` + `PHASE_3C_VERIFICATION.md` + `PHASE_3D_VERIFICATION.md` (and the future 3e) into one master walkthrough. Flagged when Phase 3b's verification doc landed.
 
 ### Long-running carryover
 
