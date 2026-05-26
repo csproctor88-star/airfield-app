@@ -278,11 +278,11 @@ function BandTile({ label, count, band }: { label: string; count: number; band: 
 
 function StatusPill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
-    open:         { bg: 'rgba(239,68,68,0.15)',  text: 'rgb(252,165,165)', label: 'Open' },
-    under_review: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(252,211,77)', label: 'Review' },
-    controlled:   { bg: 'rgba(56,189,248,0.15)', text: 'rgb(125,211,252)', label: 'Controlled' },
-    closed:       { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(134,239,172)', label: 'Closed' },
-    duplicate:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(148,163,184)', label: 'Duplicate' },
+    open:         { bg: 'rgba(239,68,68,0.15)',  text: 'rgb(185,28,28)', label: 'Open' },
+    under_review: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'Review' },
+    controlled:   { bg: 'rgba(56,189,248,0.15)', text: 'rgb(3,105,161)', label: 'Controlled' },
+    closed:       { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(21,128,61)', label: 'Closed' },
+    duplicate:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Duplicate' },
   }
   const p = palette[status] ?? palette.open
   return (

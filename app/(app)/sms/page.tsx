@@ -276,9 +276,9 @@ function BandRow({ label, count, band }: { label: string; count: number; band: '
     <div className="flex justify-between items-center">
       <span
         className="text-xs flex items-center gap-1.5"
-        style={{ color: palette?.text ?? 'rgb(148,163,184)' }}
+        style={{ color: palette?.text ?? 'rgb(71,85,105)' }}
       >
-        <span className="inline-block w-2 h-2 rounded-sm" style={{ background: palette?.text ?? 'rgb(148,163,184)' }} />
+        <span className="inline-block w-2 h-2 rounded-sm" style={{ background: palette?.text ?? 'rgb(71,85,105)' }} />
         {label}
       </span>
       <span className="text-lg font-semibold" style={{ color: palette?.text ?? 'rgb(212,212,216)' }}>{count}</span>

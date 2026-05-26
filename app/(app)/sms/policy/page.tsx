@@ -367,10 +367,10 @@ function DraftEditor({
 
 function StatusPill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
-    active:     { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(74,222,128)', label: 'Active' },
-    draft:      { bg: 'rgba(245,158,11,0.15)', text: 'rgb(252,211,77)', label: 'Draft' },
-    superseded: { bg: 'rgba(100,116,139,0.18)', text: 'rgb(148,163,184)', label: 'Superseded' },
-    retired:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(148,163,184)', label: 'Retired' },
+    active:     { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(21,128,61)', label: 'Active' },
+    draft:      { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'Draft' },
+    superseded: { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Superseded' },
+    retired:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Retired' },
   }
   const p = palette[status] ?? palette.draft
   return (

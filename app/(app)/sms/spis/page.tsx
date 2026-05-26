@@ -163,10 +163,10 @@ function SpiCard({ spi, latest, series }: { spi: SmsSpi; latest: SmsSpiMeasureme
 }
 
 const STATUS_PALETTE: Record<string, { text: string; border: string; bg: string; label: string }> = {
-  on_target: { text: 'rgb(74,222,128)',  border: 'rgba(34,197,94,0.55)',  bg: 'rgba(34,197,94,0.10)',  label: 'On target' },
-  warning:   { text: 'rgb(252,211,77)',  border: 'rgba(245,158,11,0.55)', bg: 'rgba(245,158,11,0.10)', label: 'Warning' },
-  alert:     { text: 'rgb(252,165,165)', border: 'rgba(239,68,68,0.65)',  bg: 'rgba(239,68,68,0.10)',  label: 'Alert' },
-  no_data:   { text: 'rgb(148,163,184)', border: 'rgba(100,116,139,0.45)', bg: 'rgba(100,116,139,0.10)', label: 'No data' },
+  on_target: { text: 'rgb(21,128,61)',  border: 'rgba(34,197,94,0.55)',  bg: 'rgba(34,197,94,0.10)',  label: 'On target' },
+  warning:   { text: 'rgb(180,83,9)',  border: 'rgba(245,158,11,0.55)', bg: 'rgba(245,158,11,0.10)', label: 'Warning' },
+  alert:     { text: 'rgb(185,28,28)', border: 'rgba(239,68,68,0.65)',  bg: 'rgba(239,68,68,0.10)',  label: 'Alert' },
+  no_data:   { text: 'rgb(71,85,105)', border: 'rgba(100,116,139,0.45)', bg: 'rgba(100,116,139,0.10)', label: 'No data' },
 }
 
 function StatusBadge({ status }: { status: string }) {

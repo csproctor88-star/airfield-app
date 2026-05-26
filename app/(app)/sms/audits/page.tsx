@@ -309,11 +309,11 @@ function AuditEditor({ audit, onChange, onSave }: {
 
 function AuditStatusPill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
-    scheduled:   { bg: 'rgba(56,189,248,0.15)', text: 'rgb(125,211,252)', label: 'Scheduled' },
-    in_progress: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(252,211,77)', label: 'In Progress' },
-    completed:   { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(134,239,172)', label: 'Completed' },
-    closed:      { bg: 'rgba(100,116,139,0.18)', text: 'rgb(148,163,184)', label: 'Closed' },
-    canceled:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(148,163,184)', label: 'Canceled' },
+    scheduled:   { bg: 'rgba(56,189,248,0.15)', text: 'rgb(3,105,161)', label: 'Scheduled' },
+    in_progress: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'In Progress' },
+    completed:   { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(21,128,61)', label: 'Completed' },
+    closed:      { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Closed' },
+    canceled:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Canceled' },
   }
   const p = palette[status] ?? palette.scheduled
   return (
