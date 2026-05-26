@@ -118,7 +118,9 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/settings':          'settings:view',
   '/library':           'library:view',
   '/users':             'users:view',
-  '/training':          'training:view',
+  // '/help' intentionally omitted — Help & Training page is visible to all
+  // authenticated users (in-app guidance for using the platform).
+  '/training':          'training_part139:read',
   '/base-config':       'base_setup:write',
 }
 

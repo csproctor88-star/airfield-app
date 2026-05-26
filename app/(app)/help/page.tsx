@@ -125,7 +125,7 @@ export default function TrainingPage() {
           <Rocket size={20} color="var(--color-cyan)" />
           <div>
             <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
-              Glidepath Training
+              Glidepath Help &amp; Training
             </div>
             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
               Module reference + onboarding for using the platform

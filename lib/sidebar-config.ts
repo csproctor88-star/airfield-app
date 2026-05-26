@@ -60,7 +60,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Settings', href: '/settings', iconName: 'Settings' },
   { name: 'PDF Library', href: '/library', iconName: 'BookMarked' },
   { name: 'User Management', href: '/users', iconName: 'Users' },
-  { name: 'Glidepath Training', href: '/training', iconName: 'GraduationCap' },
+  { name: 'Help & Training', href: '/help', iconName: 'GraduationCap' },
   { name: 'Base Configuration', href: '/base-config', iconName: 'SlidersHorizontal' },
 ]
 
@@ -85,7 +85,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     },
     {
       label: 'Reference',
-      items: ['/aircraft', '/regulations', '/notams', '/training'],
+      items: ['/aircraft', '/regulations', '/notams', '/help'],
     },
     {
       label: 'Admin',
@@ -116,6 +116,14 @@ export async function loadSidebarConfig(): Promise<SidebarConfig | null> {
     // Validate shape
     const cfg = row.sidebar_config as SidebarConfig
     if (!cfg.pinned || !cfg.sections) return null
+
+    // Migrate legacy hrefs from prior renames (one-time inline rewrite — safe
+    // to run every load because Set.has() will skip already-migrated entries).
+    // Currently mapping: `/training` (the old in-app help) → `/help`, freed up
+    // for the new §139.303 Training module that took the `/training` slug.
+    const HREF_REWRITES: Record<string, string> = { '/training': '/help' }
+    cfg.pinned = cfg.pinned.map(h => HREF_REWRITES[h] ?? h)
+    cfg.sections.forEach(s => { s.items = s.items.map(h => HREF_REWRITES[h] ?? h) })
 
     // Merge any new nav items / sections from DEFAULT that aren't in the
     // saved config. Order matters: if a whole section is new (e.g. SMS

@@ -68,7 +68,7 @@ const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: Plane, color: 'var(--color-accent)', href: '/aircraft' },
   { name: 'Reference Library', icon: Library, color: 'var(--color-cyan)', href: '/regulations' },
   { name: 'NOTAMs', icon: RadioTower, color: 'var(--color-cyan)', href: '/notams' },
-  { name: 'Glidepath Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/training' },
+  { name: 'Help & Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/help' },
 ]
 
 // Admin

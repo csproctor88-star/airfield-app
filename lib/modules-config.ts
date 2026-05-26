@@ -265,7 +265,7 @@ export const ALWAYS_ON_HREFS: ReadonlySet<string> = new Set([
   '/activity',
   '/recent-activity',
   '/more',
-  '/training',
+  '/help',
   '/settings',
   '/settings/base-setup',
   '/settings/base-setup/modules',

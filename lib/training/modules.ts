@@ -45,7 +45,7 @@ export const ROLE_LABELS: Record<TrainingRole, string> = {
  * a superset, not a breaking change.
  */
 export type ModuleRef = {
-  id: string                // url slug for /training/[module-id]
+  id: string                // url slug for /help/[module-id]
   name: string
   icon: LucideIcon
   color: string             // CSS var or hex used for the module accent

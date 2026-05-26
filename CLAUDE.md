@@ -46,7 +46,7 @@ Glidepath — Progressive Web App for USAF Airfield Management. Replaces paper l
 | `/contractors` | ✅ | `app/(app)/contractors/page.tsx` — Personnel on Airfield + AF Form 483 |
 | `/reports` | ✅ | `app/(app)/reports/{page,daily,trends,aging,discrepancies,lighting}.tsx` |
 | `/activity` | ✅ | `app/(app)/activity/page.tsx` — Events Log |
-| `/training` | ✅ | `app/(app)/training/page.tsx` — Glidepath Training (in-app guidance for using the platform; nav label disambiguates from airfield management training records) |
+| `/help` | ✅ | `app/(app)/help/page.tsx` — Help & Training (in-app guidance for using the platform; the `/training` slug is held by the §139.303 Training module on civilian bases) |
 | `/regulations` · `/aircraft` · `/library` | ✅ | reference data (70 regs, 200+ aircraft) |
 | `/settings/base-setup` | ✅ | `app/(app)/settings/base-setup/page.tsx` — 15-step wizard (~4k LOC) |
 | `/users` · `/settings/users` | ✅ | `app/(app)/users/page.tsx` (top-level) · `app/(app)/settings/users/page.tsx` (settings nav entry) |
