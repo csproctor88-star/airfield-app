@@ -127,66 +127,353 @@ export const IMAGINARY_SURFACES = {
 // existing report layouts and PDF templates can iterate without a key map.
 // ---------------------------------------------------------------------------
 
-export const PART77_SURFACES = {
-  primary: {
-    name: 'Primary Surface',
-    criteria: { halfWidth: 500, extension: 200, maxHeight: 0 },
-    ufcRef: '14 CFR §77.19(a) — Primary surface',
-    ufcCriteria: 'No object may protrude above the primary surface elevation (runway elevation) within {halfWidth} ft of centerline and {extension} ft beyond each runway end. Width varies by runway category (250–1,000 ft); this default is larger-than-utility non-precision.',
-    description: 'No objects above runway elevation within the primary surface (default 1,000 ft wide x runway length + 200 ft).',
-    color: '#EF4444',
-  },
-  approach: {
-    name: 'Approach Surface',
-    criteria: {
-      slope: 34,           // 34:1 for larger-than-utility non-precision <3/4 mi visibility
-      innerHalfWidth: 500, // matches primary half-width
-      outerHalfWidth: 2000,// 4,000 ft outer width / 2
-      length: 10000,
+/**
+ * FAA approach types per 14 CFR §77.19 — drives Part 77 surface dimensions.
+ * Six explicit options because the dimensional differences matter operationally
+ * (e.g. utility-visual primary is 250 ft vs precision is 1,000 ft).
+ */
+export type FaaApproachType =
+  | 'utility_visual'
+  | 'utility_non_precision'
+  | 'non_utility_visual'
+  | 'non_utility_non_precision_3_4'
+  | 'non_utility_non_precision_low'
+  | 'non_utility_precision'
+
+export const FAA_APPROACH_TYPE_LABELS: Record<FaaApproachType, string> = {
+  utility_visual:                'Utility / Visual',
+  utility_non_precision:         'Utility / Non-Precision',
+  non_utility_visual:            'Non-Utility / Visual',
+  non_utility_non_precision_3_4: 'Non-Utility / Non-Precision (≥ ¾ mi visibility)',
+  non_utility_non_precision_low: 'Non-Utility / Non-Precision (< ¾ mi visibility)',
+  non_utility_precision:         'Non-Utility / Precision Instrument',
+}
+
+type Part77SurfaceMeta = {
+  name: string
+  criteria: Record<string, number>
+  ufcRef: string
+  ufcCriteria: string
+  description: string
+  color: string
+}
+
+type Part77SurfaceSet = {
+  primary:      Part77SurfaceMeta
+  approach:     Part77SurfaceMeta
+  horizontal:   Part77SurfaceMeta
+  conical:      Part77SurfaceMeta
+  transitional: Part77SurfaceMeta
+}
+
+/**
+ * Per-approach-type Part 77 dimension table. Each row is the full
+ * surface-metadata set used by both the engine (numeric criteria) and
+ * the UI legend (color / ref / description). Conical and transitional
+ * slopes are constant across all approach types per §77.19(d-e).
+ *
+ * Default (when faa_approach_type is NULL) is `non_utility_non_precision_low`
+ * which matches the Phase 1 hardcoded PART77_SURFACES constant — preserves
+ * backward compatibility on bases that haven't picked a type yet.
+ */
+const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
+  utility_visual: {
+    primary: {
+      name: 'Primary Surface',
+      criteria: { halfWidth: 125, extension: 200, maxHeight: 0 }, // 250 ft total width
+      ufcRef: '14 CFR §77.19(a) — Primary surface (utility / visual)',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 125 ft of centerline (250 ft total width) and 200 ft beyond each runway end.',
+      description: '250 ft wide × runway length + 200 ft (utility / visual).',
+      color: '#EF4444',
     },
-    ufcRef: '14 CFR §77.19(c) — Approach surface',
-    ufcCriteria: 'No object may penetrate the 34:1 approach surface extending {length} ft from the primary surface end (larger-than-utility non-precision, <3/4 mi vis). For precision instrument runways use 50:1 first 10,000 ft + 40:1 next 40,000 ft.',
-    description: 'Sloped surface extending from each runway end at 34:1, 10,000 ft long.',
-    color: '#F97316',
+    approach: {
+      name: 'Approach Surface',
+      criteria: { slope: 20, innerHalfWidth: 125, outerHalfWidth: 625, length: 5000 },
+      ufcRef: '14 CFR §77.19(c) — Approach surface (utility / visual)',
+      ufcCriteria: '20:1 slope extending 5,000 ft from the runway end, expanding from 250 ft to 1,250 ft wide.',
+      description: '20:1 slope, 5,000 ft long, 1,250 ft outer width.',
+      color: '#F97316',
+    },
+    horizontal: {
+      name: 'Horizontal Surface',
+      criteria: { height: 150, radius: 5000 },
+      ufcRef: '14 CFR §77.19(b) — Horizontal surface (utility)',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 5,000 ft radius of each runway end (utility runway).',
+      description: '150 ft above airport elevation within 5,000 ft (utility).',
+      color: '#22C55E',
+    },
+    conical: {
+      name: 'Conical Surface',
+      criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
+      description: '20:1 slope, 4,000 ft horizontal extent.',
+      color: '#3B82F6',
+    },
+    transitional: {
+      name: 'Transitional Surface',
+      criteria: { slope: 7, primaryHalfWidth: 125 },
+      ufcRef: '14 CFR §77.19(e) — Transitional surface',
+      ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
+      description: '7:1 slope from edges to horizontal height.',
+      color: '#EAB308',
+    },
   },
-  horizontal: {
-    name: 'Horizontal Surface',
-    criteria: { height: 150, radius: 10000 },
-    ufcRef: '14 CFR §77.19(b) — Horizontal surface',
-    ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a {radius} ft radius of each runway end. Utility / visual runways use 5,000 ft radius instead.',
-    description: '150 ft above airport elevation within 10,000 ft of each runway end (larger-than-utility default).',
-    color: '#22C55E',
+  utility_non_precision: {
+    primary: {
+      name: 'Primary Surface',
+      criteria: { halfWidth: 250, extension: 200, maxHeight: 0 }, // 500 ft total
+      ufcRef: '14 CFR §77.19(a) — Primary surface (utility / non-precision)',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
+      description: '500 ft wide × runway length + 200 ft (utility / non-precision).',
+      color: '#EF4444',
+    },
+    approach: {
+      name: 'Approach Surface',
+      criteria: { slope: 20, innerHalfWidth: 250, outerHalfWidth: 1000, length: 5000 },
+      ufcRef: '14 CFR §77.19(c) — Approach surface (utility / non-precision)',
+      ufcCriteria: '20:1 slope extending 5,000 ft from the runway end, expanding from 500 ft to 2,000 ft wide.',
+      description: '20:1 slope, 5,000 ft long, 2,000 ft outer width.',
+      color: '#F97316',
+    },
+    horizontal: {
+      name: 'Horizontal Surface',
+      criteria: { height: 150, radius: 5000 },
+      ufcRef: '14 CFR §77.19(b) — Horizontal surface (utility)',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 5,000 ft radius of each runway end (utility runway).',
+      description: '150 ft above airport elevation within 5,000 ft (utility).',
+      color: '#22C55E',
+    },
+    conical: {
+      name: 'Conical Surface',
+      criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
+      description: '20:1 slope, 4,000 ft horizontal extent.',
+      color: '#3B82F6',
+    },
+    transitional: {
+      name: 'Transitional Surface',
+      criteria: { slope: 7, primaryHalfWidth: 250 },
+      ufcRef: '14 CFR §77.19(e) — Transitional surface',
+      ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
+      description: '7:1 slope from edges to horizontal height.',
+      color: '#EAB308',
+    },
   },
-  conical: {
-    name: 'Conical Surface',
-    criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-    ufcRef: '14 CFR §77.19(d) — Conical surface',
-    ufcCriteria: 'No object may penetrate the 20:1 conical surface extending 4,000 ft outward from the horizontal surface boundary.',
-    description: '20:1 slope outward from horizontal surface boundary, 4,000 ft horizontal.',
-    color: '#3B82F6',
+  non_utility_visual: {
+    primary: {
+      name: 'Primary Surface',
+      criteria: { halfWidth: 250, extension: 200, maxHeight: 0 }, // 500 ft total
+      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility / visual)',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
+      description: '500 ft wide × runway length + 200 ft (non-utility / visual).',
+      color: '#EF4444',
+    },
+    approach: {
+      name: 'Approach Surface',
+      criteria: { slope: 20, innerHalfWidth: 250, outerHalfWidth: 750, length: 5000 },
+      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility / visual)',
+      ufcCriteria: '20:1 slope extending 5,000 ft from the runway end, expanding from 500 ft to 1,500 ft wide.',
+      description: '20:1 slope, 5,000 ft long, 1,500 ft outer width.',
+      color: '#F97316',
+    },
+    horizontal: {
+      name: 'Horizontal Surface',
+      criteria: { height: 150, radius: 10000 },
+      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
+      description: '150 ft above airport elevation within 10,000 ft (non-utility).',
+      color: '#22C55E',
+    },
+    conical: {
+      name: 'Conical Surface',
+      criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
+      description: '20:1 slope, 4,000 ft horizontal extent.',
+      color: '#3B82F6',
+    },
+    transitional: {
+      name: 'Transitional Surface',
+      criteria: { slope: 7, primaryHalfWidth: 250 },
+      ufcRef: '14 CFR §77.19(e) — Transitional surface',
+      ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
+      description: '7:1 slope from edges to horizontal height.',
+      color: '#EAB308',
+    },
   },
-  transitional: {
-    name: 'Transitional Surface',
-    criteria: { slope: 7, primaryHalfWidth: 500 },
-    ufcRef: '14 CFR §77.19(e) — Transitional surface',
-    ufcCriteria: 'No object may penetrate the 7:1 transitional surface extending from the primary and approach surface edges upward and outward to the horizontal surface (150 ft above airport elevation).',
-    description: '7:1 slope from primary/approach edges to horizontal surface height.',
-    color: '#EAB308',
+  non_utility_non_precision_3_4: {
+    primary: {
+      name: 'Primary Surface',
+      criteria: { halfWidth: 250, extension: 200, maxHeight: 0 },
+      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility non-precision ≥¾ mi)',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
+      description: '500 ft wide × runway length + 200 ft (non-utility non-precision ≥¾ mi).',
+      color: '#EF4444',
+    },
+    approach: {
+      name: 'Approach Surface',
+      criteria: { slope: 34, innerHalfWidth: 250, outerHalfWidth: 1000, length: 10000 },
+      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility non-precision ≥¾ mi)',
+      ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 500 ft to 2,000 ft wide (visibility ≥ ¾ mile).',
+      description: '34:1 slope, 10,000 ft long, 2,000 ft outer width.',
+      color: '#F97316',
+    },
+    horizontal: {
+      name: 'Horizontal Surface',
+      criteria: { height: 150, radius: 10000 },
+      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
+      description: '150 ft above airport elevation within 10,000 ft (non-utility).',
+      color: '#22C55E',
+    },
+    conical: {
+      name: 'Conical Surface',
+      criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
+      description: '20:1 slope, 4,000 ft horizontal extent.',
+      color: '#3B82F6',
+    },
+    transitional: {
+      name: 'Transitional Surface',
+      criteria: { slope: 7, primaryHalfWidth: 250 },
+      ufcRef: '14 CFR §77.19(e) — Transitional surface',
+      ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
+      description: '7:1 slope from edges to horizontal height.',
+      color: '#EAB308',
+    },
   },
-} as const
+  non_utility_non_precision_low: {
+    // Phase 1 hardcoded default — preserves backward compat for any callers
+    // that don't yet pass an approach type.
+    primary: {
+      name: 'Primary Surface',
+      criteria: { halfWidth: 250, extension: 200, maxHeight: 0 },
+      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility non-precision <¾ mi)',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
+      description: '500 ft wide × runway length + 200 ft (non-utility non-precision <¾ mi).',
+      color: '#EF4444',
+    },
+    approach: {
+      name: 'Approach Surface',
+      criteria: { slope: 34, innerHalfWidth: 250, outerHalfWidth: 2000, length: 10000 },
+      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility non-precision <¾ mi)',
+      ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 500 ft to 4,000 ft wide (visibility < ¾ mile).',
+      description: '34:1 slope, 10,000 ft long, 4,000 ft outer width.',
+      color: '#F97316',
+    },
+    horizontal: {
+      name: 'Horizontal Surface',
+      criteria: { height: 150, radius: 10000 },
+      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
+      description: '150 ft above airport elevation within 10,000 ft (non-utility).',
+      color: '#22C55E',
+    },
+    conical: {
+      name: 'Conical Surface',
+      criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
+      description: '20:1 slope, 4,000 ft horizontal extent.',
+      color: '#3B82F6',
+    },
+    transitional: {
+      name: 'Transitional Surface',
+      criteria: { slope: 7, primaryHalfWidth: 250 },
+      ufcRef: '14 CFR §77.19(e) — Transitional surface',
+      ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
+      description: '7:1 slope from edges to horizontal height.',
+      color: '#EAB308',
+    },
+  },
+  non_utility_precision: {
+    primary: {
+      name: 'Primary Surface',
+      criteria: { halfWidth: 500, extension: 200, maxHeight: 0 }, // 1000 ft total
+      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility precision)',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 500 ft of centerline (1,000 ft total width) and 200 ft beyond each runway end.',
+      description: '1,000 ft wide × runway length + 200 ft (non-utility precision).',
+      color: '#EF4444',
+    },
+    approach: {
+      // Precision: 50:1 first 10,000 ft + 40:1 next 40,000 ft. Engine
+      // encodes both via secondSegmentSlope + segmentLength.
+      name: 'Approach Surface',
+      criteria: {
+        slope: 50,
+        innerHalfWidth: 500,
+        outerHalfWidth: 8000,
+        length: 50000,
+        secondSegmentSlope: 40,
+        segmentLength: 10000,
+      },
+      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility precision instrument)',
+      ufcCriteria: '50:1 slope for first 10,000 ft then 40:1 for the next 40,000 ft, expanding from 1,000 ft to 16,000 ft wide.',
+      description: '50:1 (first 10kft) then 40:1 (next 40kft), 50,000 ft long, 16,000 ft outer width.',
+      color: '#F97316',
+    },
+    horizontal: {
+      name: 'Horizontal Surface',
+      criteria: { height: 150, radius: 10000 },
+      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
+      description: '150 ft above airport elevation within 10,000 ft (non-utility).',
+      color: '#22C55E',
+    },
+    conical: {
+      name: 'Conical Surface',
+      criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
+      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
+      description: '20:1 slope, 4,000 ft horizontal extent.',
+      color: '#3B82F6',
+    },
+    transitional: {
+      name: 'Transitional Surface',
+      criteria: { slope: 7, primaryHalfWidth: 500 },
+      ufcRef: '14 CFR §77.19(e) — Transitional surface',
+      ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
+      description: '7:1 slope from edges to horizontal height.',
+      color: '#EAB308',
+    },
+  },
+}
+
+/** Looks up the per-type Part 77 surface set. Defaults to the
+ * non_utility_non_precision_low set (the Phase 1 hardcoded values) so
+ * callers that don't yet pass a type see the same numbers as before. */
+export function getPart77Surfaces(
+  approachType: FaaApproachType = 'non_utility_non_precision_low',
+): Part77SurfaceSet {
+  return PART77_DIMENSIONS[approachType]
+}
+
+/**
+ * Backward-compat re-export: callers that imported `PART77_SURFACES`
+ * directly get the default (non_utility_non_precision_low) set. The
+ * test file has been refactored to call `getPart77Surfaces(type)`.
+ */
+export const PART77_SURFACES = PART77_DIMENSIONS.non_utility_non_precision_low
 
 /**
  * Resolves the correct imaginary-surface set for a base. Returns the
  * IMAGINARY_SURFACES (UFC) set by default; pass surfaceSet='faa_part77'
- * for civilian Part 139 airports. Keys differ between sets — UFC has
- * clear_zone / graded_area / apz_i / apz_ii / inner_horizontal /
- * outer_horizontal that Part 77 doesn't, and Part 77 collapses inner/
- * outer horizontal into a single horizontal surface. Callers iterating
- * should treat each set's keys as authoritative for that mode.
+ * + optional approachType for civilian Part 139 airports. Keys differ
+ * between sets — UFC has clear_zone / graded_area / apz_i / apz_ii /
+ * inner_horizontal / outer_horizontal that Part 77 doesn't, and Part 77
+ * collapses inner/outer horizontal into a single horizontal surface.
+ * Callers iterating should treat each set's keys as authoritative for
+ * that mode.
  */
 export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77'
-export function getSurfaces(surfaceSet: SurfaceSet = 'ufc_3_260_01') {
-  return surfaceSet === 'faa_part77' ? PART77_SURFACES : IMAGINARY_SURFACES
+export function getSurfaces(
+  surfaceSet: SurfaceSet = 'ufc_3_260_01',
+  approachType: FaaApproachType = 'non_utility_non_precision_low',
+) {
+  return surfaceSet === 'faa_part77' ? getPart77Surfaces(approachType) : IMAGINARY_SURFACES
 }
 
 // ---------------------------------------------------------------------------
@@ -764,27 +1051,346 @@ export function evaluateObstruction(
 }
 
 /**
+ * Full obstruction evaluation against the 5 FAA Part 77 §77.19 imaginary surfaces.
+ * Surface dimensions are determined by `approachType` (defaults to the Phase 1
+ * non_utility_non_precision_low set so callers without a per-runway type pinned
+ * see the same numbers as before).
+ *
+ * Mirrors evaluateObstruction's per-surface structure but with only the 5 Part
+ * 77 surfaces (primary, approach, transitional, horizontal, conical) — no
+ * outer-horizontal, clear-zone, graded-area, or APZ zones; those are UFC-only.
+ *
+ * `withinPrimary` is recomputed locally from `relation.distanceFromCenterline`
+ * because the geometry helper hardcodes UFC's 1,000-ft primary halfWidth.
+ */
+export function evaluateObstructionPart77(
+  point: LatLon,
+  obstructionHeightAGL: number,
+  groundElevationMSL: number | null,
+  rwy: RunwayGeometry,
+  airfieldElevMSL = 580,
+  approachType: FaaApproachType = 'non_utility_non_precision_low',
+): ObstructionAnalysis {
+  const runway = rwy
+  const airfieldElev = airfieldElevMSL
+  const surfacesMeta = getPart77Surfaces(approachType)
+  const groundElev = groundElevationMSL ?? airfieldElev
+  const obstructionTopMSL = groundElev + obstructionHeightAGL
+
+  const relation = pointToRunwayRelation(point, runway)
+  const stadiumDist = distanceFromStadiumCenter(point, runway)
+
+  const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 })
+  const airfieldBaselineLabel = 'Airport elevation'
+
+  const surfaces: SurfaceEvaluation[] = []
+  const halfLength = runway.lengthFt / 2
+
+  // Recompute withinPrimary against Part 77 halfWidth (geometry helper uses UFC 1,000 ft).
+  const primaryHW = surfacesMeta.primary.criteria.halfWidth
+  const primaryExt = surfacesMeta.primary.criteria.extension
+  const withinPrimary =
+    relation.distanceFromCenterline <= primaryHW &&
+    Math.abs(relation.alongTrackFromMidpoint) <= halfLength + primaryExt
+
+  // --- 1. Primary Surface ---
+  {
+    const c = surfacesMeta.primary.criteria
+    const maxAGL = c.maxHeight
+    const maxMSL = airfieldElev + maxAGL
+    const violated = withinPrimary && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'primary',
+      surfaceName: surfacesMeta.primary.name,
+      isWithinBounds: withinPrimary,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: surfacesMeta.primary.ufcRef,
+      ufcCriteria: surfacesMeta.primary.ufcCriteria,
+      color: surfacesMeta.primary.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airport elev) + ${maxAGL} ft = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- 2. Approach Surface ---
+  // Precision approach has a 2nd slope segment (50:1 first 10kft + 40:1 next 40kft)
+  // encoded via secondSegmentSlope + segmentLength on the criteria.
+  {
+    const c = surfacesMeta.approach.criteria
+    const distAlongApproach = relation.distanceFromNearestPrimaryEnd
+    const beyondPrimary = !withinPrimary && distAlongApproach > 0
+    const withinLength = distAlongApproach <= c.length
+
+    const widthAtDistance =
+      c.innerHalfWidth +
+      (distAlongApproach / c.length) * (c.outerHalfWidth - c.innerHalfWidth)
+    const withinWidth = relation.distanceFromCenterline <= widthAtDistance
+    const isWithin = beyondPrimary && withinLength && withinWidth
+
+    // Threshold elevation baseline (matches UFC pattern)
+    const primaryEndInfo = distanceFromNearestPrimaryEndCenter(point, runway)
+    const thresholdElev = primaryEndInfo.end === 'end1'
+      ? (runway.end1ElevationMSL ?? airfieldElev)
+      : (runway.end2ElevationMSL ?? airfieldElev)
+    const nearerDesignator = primaryEndInfo.end === 'end1'
+      ? runway.end1Designator
+      : runway.end2Designator
+    const usedThreshold = primaryEndInfo.end === 'end1'
+      ? runway.end1ElevationMSL !== undefined
+      : runway.end2ElevationMSL !== undefined
+    const thresholdLabel = nearerDesignator
+      ? `RWY ${nearerDesignator} threshold`
+      : usedThreshold
+        ? `Nearest threshold (${primaryEndInfo.end})`
+        : 'Airport elevation (threshold not set)'
+
+    // Two-segment slope for precision approach
+    let maxHeightAboveThreshold: number
+    let slopeBreakdown: string
+    const seg2Slope = c.secondSegmentSlope
+    const seg1Length = c.segmentLength
+    if (seg2Slope !== undefined && seg1Length !== undefined && distAlongApproach > seg1Length) {
+      const firstSeg = seg1Length / c.slope
+      const secondSeg = (distAlongApproach - seg1Length) / seg2Slope
+      maxHeightAboveThreshold = firstSeg + secondSeg
+      slopeBreakdown = `${seg1Length}/${c.slope} (1st segment) + ${fmt(distAlongApproach - seg1Length)}/${seg2Slope} (2nd segment) = ${fmt(maxHeightAboveThreshold)} ft`
+    } else {
+      maxHeightAboveThreshold = distAlongApproach / c.slope
+      slopeBreakdown = `${fmt(distAlongApproach)} ft / ${c.slope} (slope) = ${fmt(maxHeightAboveThreshold)} ft`
+    }
+
+    const maxMSL = thresholdElev + maxHeightAboveThreshold
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'approach',
+      surfaceName: surfacesMeta.approach.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: surfacesMeta.approach.ufcRef,
+      ufcCriteria: surfacesMeta.approach.ufcCriteria,
+      color: surfacesMeta.approach.color,
+      baselineElevation: thresholdElev,
+      baselineLabel: thresholdLabel,
+      calculationBreakdown: `${fmt(thresholdElev)} ft (${thresholdLabel}) + ${slopeBreakdown} = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- 3. Transitional Surface ---
+  // Mirrors the UFC transitional logic but bounded against Part 77
+  // primary + approach dimensions.
+  {
+    const tc = surfacesMeta.transitional.criteria
+    const ac = surfacesMeta.approach.criteria
+    const maxTransitionalExtent = 150 * tc.slope // 1,050 ft
+
+    // Case A: alongside primary surface
+    const distFromPrimaryEdge = Math.max(0, relation.distanceFromCenterline - primaryHW)
+    const withinPrimaryTransitional =
+      distFromPrimaryEdge > 0 &&
+      distFromPrimaryEdge <= maxTransitionalExtent &&
+      !withinPrimary &&
+      Math.abs(relation.alongTrackFromMidpoint) <= halfLength + primaryExt
+
+    // Case B: alongside approach trapezoid (up to where the approach surface reaches 150 ft)
+    const approachCutoff = 150 * ac.slope
+    const distAlongApproach = relation.distanceFromNearestPrimaryEnd
+    const beyondPrimary = !withinPrimary && distAlongApproach > 0
+    const withinApproachCutoff = distAlongApproach <= approachCutoff
+
+    const approachEdgeHalfWidth = beyondPrimary
+      ? ac.innerHalfWidth +
+        (distAlongApproach / ac.length) * (ac.outerHalfWidth - ac.innerHalfWidth)
+      : primaryHW
+    const distFromApproachEdge = beyondPrimary
+      ? Math.max(0, relation.distanceFromCenterline - approachEdgeHalfWidth)
+      : Infinity
+    const withinApproachTransitional =
+      beyondPrimary &&
+      withinApproachCutoff &&
+      distFromApproachEdge > 0 &&
+      distFromApproachEdge <= maxTransitionalExtent
+
+    const isWithin = withinPrimaryTransitional || withinApproachTransitional
+    const distFromEdge = Math.min(
+      withinPrimaryTransitional ? distFromPrimaryEdge : Infinity,
+      withinApproachTransitional ? distFromApproachEdge : Infinity,
+    )
+
+    const maxHeightAboveField = isWithin ? distFromEdge / tc.slope : 0
+    const maxMSL = airfieldElev + maxHeightAboveField
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+
+    surfaces.push({
+      surfaceKey: 'transitional',
+      surfaceName: surfacesMeta.transitional.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: surfacesMeta.transitional.ufcRef,
+      ufcCriteria: surfacesMeta.transitional.ufcCriteria,
+      color: surfacesMeta.transitional.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: isWithin
+        ? `${fmt(airfieldElev)} ft (airport elev) + ${fmt(distFromEdge)} ft / ${tc.slope} (slope) = ${fmt(maxMSL)} ft MSL`
+        : undefined,
+    })
+  }
+
+  // --- 4. Horizontal Surface ---
+  // Excludes areas already governed by primary, approach, or transitional.
+  {
+    const hc = surfacesMeta.horizontal.criteria
+    const inMoreSpecific = surfaces.some(
+      (s) => s.isWithinBounds && (s.surfaceKey === 'primary' || s.surfaceKey === 'approach' || s.surfaceKey === 'transitional'),
+    )
+    const isWithin = stadiumDist <= hc.radius && !inMoreSpecific
+    const maxMSL = airfieldElev + hc.height
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+
+    surfaces.push({
+      surfaceKey: 'horizontal',
+      surfaceName: surfacesMeta.horizontal.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: surfacesMeta.horizontal.ufcRef,
+      ufcCriteria: surfacesMeta.horizontal.ufcCriteria,
+      color: surfacesMeta.horizontal.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airport elev) + ${hc.height} ft = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- 5. Conical Surface ---
+  {
+    const cc = surfacesMeta.conical.criteria
+    const innerR = surfacesMeta.horizontal.criteria.radius
+    const distFromHoriz = Math.max(0, stadiumDist - innerR)
+    const isWithin = stadiumDist > innerR && distFromHoriz <= cc.horizontalExtent
+    const maxHeightAboveField = cc.baseHeight + distFromHoriz / cc.slope
+    const maxMSL = airfieldElev + maxHeightAboveField
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+
+    surfaces.push({
+      surfaceKey: 'conical',
+      surfaceName: surfacesMeta.conical.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: surfacesMeta.conical.ufcRef,
+      ufcCriteria: surfacesMeta.conical.ufcCriteria,
+      color: surfacesMeta.conical.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airport elev) + ${cc.baseHeight} ft + ${fmt(distFromHoriz)} ft / ${cc.slope} (slope) = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- Aggregate ---
+  const violatedSurfaces = surfaces.filter((s) => s.violated)
+  const hasViolation = violatedSurfaces.length > 0
+  const applicable = surfaces.filter((s) => s.isWithinBounds && s.maxAllowableHeightMSL !== -1)
+  const controllingSurface = applicable.length > 0
+    ? applicable.reduce((min, s) => s.maxAllowableHeightMSL < min.maxAllowableHeightMSL ? s : min)
+    : null
+
+  const waiverGuidance: string[] = []
+  if (hasViolation) {
+    waiverGuidance.push('PART 77 OBSTRUCTION DETECTED — Required actions:')
+    waiverGuidance.push('1. File FAA Form 7460-1 "Notice of Proposed Construction or Alteration" per 14 CFR Part 77.')
+    waiverGuidance.push('2. Coordinate with the FAA Regional Office for an aeronautical study to determine if the obstruction is a hazard to air navigation.')
+    waiverGuidance.push('3. Update airport NOTAM and AEP coordination as appropriate; flag the discrepancy in the SMS hazard register if it affects ongoing operations.')
+    for (const vs of violatedSurfaces) {
+      waiverGuidance.push(`4. ${vs.surfaceName} penetration ${vs.penetrationFt.toFixed(1)} ft — ${vs.ufcReference}`)
+    }
+  }
+
+  return {
+    point,
+    groundElevationMSL: groundElev,
+    obstructionHeightAGL,
+    obstructionTopMSL,
+    distanceFromCenterline: relation.distanceFromCenterline,
+    alongTrackFromMidpoint: relation.alongTrackFromMidpoint,
+    nearerEnd: relation.nearerEnd,
+    side: relation.side,
+    surfaces,
+    hasViolation,
+    controllingSurface,
+    violatedSurfaces,
+    waiverGuidance,
+  }
+}
+
+/**
+ * Per-runway input shape — includes optional Part 77 approach type so
+ * each runway can drive its own surface dimensions. Class III/IV airports
+ * commonly mix visual GA runways with non-precision commercial runways.
+ */
+export type RunwayEvalInput = {
+  label: string
+  geometry: RunwayGeometry
+  approachType?: FaaApproachType | null
+}
+
+/**
  * Evaluate an obstruction against ALL runways at an airfield.
  * Returns per-runway results plus a merged summary with the most restrictive
- * controlling surface across all runways.
+ * controlling surface across all runways. Dispatches to the UFC or Part 77
+ * evaluator based on `surfaceSet`; per-runway `approachType` drives Part 77
+ * surface selection (defaults to `non_utility_non_precision_low`).
  */
 export function evaluateObstructionAllRunways(
   point: LatLon,
   obstructionHeightAGL: number,
   groundElevationMSL: number | null,
-  runwayGeometries: { label: string; geometry: RunwayGeometry }[],
+  runwayGeometries: RunwayEvalInput[],
   airfieldElevMSL = 580,
   runwayClass = 'B',
+  surfaceSet: SurfaceSet = 'ufc_3_260_01',
 ): MultiRunwayAnalysis {
-  const perRunway = runwayGeometries.map(({ label, geometry }) => {
-    const analysis = evaluateObstruction(
-      point,
-      obstructionHeightAGL,
-      groundElevationMSL,
-      geometry,
-      airfieldElevMSL,
-      runwayClass,
-    )
+  const perRunway = runwayGeometries.map(({ label, geometry, approachType }) => {
+    const analysis = surfaceSet === 'faa_part77'
+      ? evaluateObstructionPart77(
+          point,
+          obstructionHeightAGL,
+          groundElevationMSL,
+          geometry,
+          airfieldElevMSL,
+          approachType ?? 'non_utility_non_precision_low',
+        )
+      : evaluateObstruction(
+          point,
+          obstructionHeightAGL,
+          groundElevationMSL,
+          geometry,
+          airfieldElevMSL,
+          runwayClass,
+        )
     // Tag each surface evaluation with the runway label
     for (const s of analysis.surfaces) {
       s.runwayLabel = label

@@ -770,6 +770,8 @@ export type Database = {
           end2_heading: number | null
           end2_latitude: number | null
           end2_longitude: number | null
+          faa_approach_category: string | null
+          faa_approach_type: string | null
           id: string
           length_ft: number
           runway_class: string
@@ -793,6 +795,8 @@ export type Database = {
           end2_heading?: number | null
           end2_latitude?: number | null
           end2_longitude?: number | null
+          faa_approach_category?: string | null
+          faa_approach_type?: string | null
           id?: string
           length_ft: number
           runway_class?: string
@@ -816,6 +820,8 @@ export type Database = {
           end2_heading?: number | null
           end2_latitude?: number | null
           end2_longitude?: number | null
+          faa_approach_category?: string | null
+          faa_approach_type?: string | null
           id?: string
           length_ft?: number
           runway_class?: string

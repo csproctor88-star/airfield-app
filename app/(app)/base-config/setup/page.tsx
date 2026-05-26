@@ -8,6 +8,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
+import { isCivilian } from '@/lib/airport-mode'
+import { FAA_APPROACH_TYPE_LABELS, type FaaApproachType } from '@/lib/calculations/obstructions'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import QrcEditorDialog from '@/components/admin/qrc-editor-dialog'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
@@ -514,9 +516,13 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   onSave: (updates: Record<string, any>) => void
   onCancel: () => void
 }) {
+  const { currentInstallation } = useInstallation()
+  const civilian = isCivilian(currentInstallation)
   const [f, setF] = useState({
     runway_id: rwy.runway_id || '', length_ft: String(rwy.length_ft || ''), width_ft: String(rwy.width_ft || ''),
     surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''), runway_class: rwy.runway_class || 'B',
+    faa_approach_type: rwy.faa_approach_type || '',
+    faa_approach_category: rwy.faa_approach_category || '',
     end1_designator: rwy.end1_designator || '', end1_latitude: String(rwy.end1_latitude ?? ''),
     end1_longitude: String(rwy.end1_longitude ?? ''), end1_elevation_msl: String(rwy.end1_elevation_msl ?? ''),
     end1_heading: String(rwy.end1_heading ?? ''), end1_approach_lighting: rwy.end1_approach_lighting || '',
@@ -529,6 +535,8 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
     onSave({
       runway_id: f.runway_id, length_ft: parseInt(f.length_ft) || 0, width_ft: parseInt(f.width_ft) || 0,
       surface: f.surface, true_heading: parseFloat(f.true_heading) || null, runway_class: f.runway_class,
+      faa_approach_type: f.faa_approach_type || null,
+      faa_approach_category: f.faa_approach_category || null,
       end1_designator: f.end1_designator, end1_latitude: parseFloat(f.end1_latitude) || null,
       end1_longitude: parseFloat(f.end1_longitude) || null, end1_elevation_msl: parseFloat(f.end1_elevation_msl) || null,
       end1_heading: parseFloat(f.end1_heading) || null, end1_approach_lighting: f.end1_approach_lighting || null,
@@ -557,6 +565,40 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
         </div>
         <div><label style={labelStyle}>True Heading (°) <FieldHint stepKey="runways" fieldId="true_heading" /></label><input type="number" value={f.true_heading} onChange={e => setF(p => ({ ...p, true_heading: e.target.value }))} style={fieldStyle} /></div>
       </div>
+      {civilian && (
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+          <div>
+            <label style={labelStyle}>FAA Approach Type</label>
+            <select
+              value={f.faa_approach_type}
+              onChange={e => setF(p => ({ ...p, faa_approach_type: e.target.value as FaaApproachType | '' }))}
+              style={fieldStyle}
+              title="Drives Part 77 surface dimensions per 14 CFR §77.19"
+            >
+              <option value="">— Not set (uses default) —</option>
+              {(Object.keys(FAA_APPROACH_TYPE_LABELS) as FaaApproachType[]).map(k => (
+                <option key={k} value={k}>{FAA_APPROACH_TYPE_LABELS[k]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>FAA Approach Category</label>
+            <select
+              value={f.faa_approach_category}
+              onChange={e => setF(p => ({ ...p, faa_approach_category: e.target.value }))}
+              style={fieldStyle}
+              title="Aircraft landing-speed category per 14 CFR §1.1. Informational — does not drive Part 77 dimensions."
+            >
+              <option value="">— Not set —</option>
+              <option value="A">A — &lt; 91 kts</option>
+              <option value="B">B — 91-120 kts</option>
+              <option value="C">C — 121-140 kts</option>
+              <option value="D">D — 141-165 kts</option>
+              <option value="E">E — &gt; 165 kts</option>
+            </select>
+          </div>
+        </div>
+      )}
       <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1 — {f.end1_designator || '?'}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
         <div><label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end1_designator" /></label><input value={f.end1_designator} onChange={e => setF(p => ({ ...p, end1_designator: e.target.value }))} style={fieldStyle} /></div>
