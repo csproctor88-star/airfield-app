@@ -61,6 +61,7 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/setup-account')
     || pathname.startsWith('/auth/confirm')
     || pathname.startsWith('/api/installations')
+    || pathname.startsWith('/api/signup-email')
     || pathname.startsWith('/api/send-ppr-confirmation')
     || pathname.startsWith('/feedback')
     || pathname.startsWith('/ppr-request')

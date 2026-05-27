@@ -149,7 +149,7 @@ export async function POST(request: Request) {
 </html>`
 
     const { error: sendError } = await resend.emails.send({
-      from: 'Glidepath <noreply@glidepathops.com>',
+      from: 'Glidepath <info@glidepathops.com>',
       replyTo: 'info@glidepathops.com',
       to: email,
       subject: 'Verify Your Glidepath Account',
