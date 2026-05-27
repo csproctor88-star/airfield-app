@@ -153,20 +153,31 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
     }
   }
 
-  // DAF 1098 — scan every worksheet for "1098 YYYY" anywhere in the name so
-  // bases on any year (not just 2025/2026) get their data picked up. Also
-  // tolerates variants like "Form 1098 (2024)" or "1098-2027".
+  // DAF 1098 — scan every worksheet for "1098" in the name. A 4-digit
+  // year anywhere in the sheet name is taken as the year_label;
+  // otherwise the sheet is treated as the current year. Tolerates
+  // variants: "DAF Form 1098 2024", "Form 1098 (2024)", "1098-2027",
+  // and the bare "DAF Form 1098" the AFFSA template uses for the
+  // current year.
+  const currentYearStr = String(new Date().getUTCFullYear())
   for (const ws of wb.worksheets) {
+    if (!/1098/i.test(ws.name)) continue
     const m = ws.name.match(/1098[\s_().\-/]*(\d{4})/i)
-    if (!m) continue
-    const year = m[1]
+    const year = m ? m[1] : currentYearStr
     seen.add(ws.name)
     const rows: ParsedRecord['r1098'][string] = []
     for (let r = 4; r <= ws.rowCount; r++) {
       const task = cell(ws, `A${r}`); if (!task) continue
       rows.push({ task, start_date: parseAmtrDate(cell(ws, `B${r}`)), last_completed: parseAmtrDate(cell(ws, `C${r}`)), certifier: cell(ws, `D${r}`), trainee: cell(ws, `E${r}`) })
     }
-    if (rows.length) out.r1098[year] = rows
+    if (rows.length) {
+      // If multiple sheets map to the same year (e.g. both "DAF Form
+      // 1098" and "DAF Form 1098 2026" exist), merge the rows rather
+      // than overwriting — the parser doesn't dedupe by task, the
+      // catalog-match step skips duplicates.
+      const existing = out.r1098[year] ?? []
+      out.r1098[year] = [...existing, ...rows]
+    }
   }
 
   // DAF 797
@@ -176,8 +187,9 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
     out.items797.push({ task, start_date: parseAmtrDate(cell(f797, `B${r}`)), complete_date: parseAmtrDate(cell(f797, `C${r}`)), trainee: cell(f797, `D${r}`), trainer: cell(f797, `E${r}`), certifier: cell(f797, `F${r}`), milestone_window: cell(f797, `G${r}`) })
   }
 
-  // 623A
-  const f623 = get('623A')
+  // 623A — canonical AFFSA template name is "DAF Form 623A"; tolerate
+  // the older bare "623A" sheet name too.
+  const f623 = get('DAF Form 623A', '623A')
   if (f623) for (let r = 2; r <= f623.rowCount; r++) {
     const type = cell(f623, `B${r}`); const date = cell(f623, `A${r}`)
     if (!type && !date) continue

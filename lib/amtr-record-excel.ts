@@ -216,7 +216,10 @@ export async function exportAmtrRecord(installationId: string, member: AmtrMembe
   fill1098(wb.getWorksheet('DAF Form 1098 2026'), currentYear, data.r1098Cat, data.r1098Prog)
   fill1098(wb.getWorksheet('DAF Form 1098 2025'), String(Number(currentYear) - 1), data.r1098Cat, data.r1098Prog)
   fill797(wb.getWorksheet('DAF Form 797'), data.items797)
-  fill623a(wb.getWorksheet('623A'), data.e623a)
+  // Canonical AFFSA template name is "DAF Form 623A"; fall back to the
+  // older bare "623A" in case a customer is still on a pre-rename
+  // template.
+  fill623a(wb.getWorksheet('DAF Form 623A') ?? wb.getWorksheet('623A'), data.e623a)
   fillRat(wb.getWorksheet('Ready Airman Training'), data.ratCat, data.ratProg)
   for (const [section, sheet] of Object.entries(SECTION_SHEET)) {
     fill803(wb.getWorksheet(sheet), data.items803.filter((r) => r.section === section))
