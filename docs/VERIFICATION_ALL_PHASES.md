@@ -11,7 +11,7 @@
 - **Phase 3d** — Field Conditions / TALPA
 - **Phase 3e** — Wildlife Hazard Management Plan (WHMP)
 
-**Build state at composition:** `tsc` ✓ · `build` ✓ · `vitest` ✓ 452 / 452 · 12 commits on origin/main
+**Build state at composition:** `tsc` ✓ · `build` ✓ · `vitest` ✓ 466 / 466 · Phase 3 closeout + 7 tech-debt fixes (migrations `2026061100` – `2026061201`)
 
 > 📘 **Standalone phase deep-dive docs** (referenced inline below):
 > - `docs/PHASE_3B_VERIFICATION.md`
@@ -38,7 +38,7 @@ npx vitest run | tail -3                # 452 / 452 pass (will grow as phases sh
 ### 0.2 All foundation + module tables present
 
 ```sql
--- All FAA Part 139 expansion tables across phases (should return ~21 rows):
+-- All FAA Part 139 expansion tables across phases (should return ~22 rows):
 SELECT table_name FROM information_schema.tables
  WHERE table_schema = 'public'
    AND table_name IN (
@@ -55,7 +55,9 @@ SELECT table_name FROM information_schema.tables
      -- Phase 3d Field Conditions
      'field_condition_reports','field_condition_thirds',
      -- Phase 3e WHMP
-     'wildlife_hazard_assessments'
+     'wildlife_hazard_assessments',
+     -- Post-Phase-3 tech-debt: annual-review digest dedup (2026061201)
+     'annual_review_digest_log'
    )
  ORDER BY table_name;
 
@@ -70,6 +72,26 @@ SELECT column_name FROM information_schema.columns
  WHERE table_name = 'base_runways'
    AND column_name IN ('faa_approach_type','faa_approach_category');
 -- → 2 rows
+
+-- runway_class is nullable for civilian (2026061101):
+SELECT is_nullable FROM information_schema.columns
+ WHERE table_name = 'base_runways' AND column_name = 'runway_class';
+-- → 'YES'
+
+-- Per-row surface_set pinned on obstruction_evaluations (2026061200):
+SELECT column_name FROM information_schema.columns
+ WHERE table_name = 'obstruction_evaluations' AND column_name = 'surface_set';
+-- → 1 row
+
+-- 'whmp' allowed as sms_hazards.source_type (2026061100):
+SELECT check_clause FROM information_schema.check_constraints
+ WHERE constraint_name = 'sms_hazards_source_type_check';
+-- → clause contains 'whmp'
+
+-- AEP atomic supersede RPC (2026061102):
+SELECT proname FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+ WHERE n.nspname = 'public' AND proname = 'supersede_aep_plan';
+-- → 1 row
 
 -- Phase 1 + Phase 2 + Phase 3 permission keys:
 SELECT key FROM permissions WHERE key LIKE 'sms:%' OR key LIKE 'aep:%'
@@ -97,11 +119,23 @@ SELECT 'phase_3e' AS phase, assessment_year, jsonb_array_length(hazardous_specie
                             jsonb_array_length(findings) AS findings
   FROM wildlife_hazard_assessments WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA');
 -- → 1 row, 2026, 3 species, 2 findings
+
+-- Post-Phase-3 seed enrichment (idempotent — landed alongside the seed refresh):
+SELECT 'phase_2_hazards' AS phase, COUNT(*) AS demo_hazards FROM sms_hazards WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA'); -- → 4+ (wildlife / discrepancy / inspection / safety_report sources)
+SELECT 'phase_2_audits'  AS phase, COUNT(*) FROM sms_audits  WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA'); -- → 1 (Q1 2026 internal)
+SELECT 'phase_3b_comms'  AS phase, COUNT(*) FROM aep_comms_checks WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA'); -- → 3 (Feb / Mar / Apr 2026)
 ```
 
-### 0.4 CRON_SECRET in Vercel (Phase 3a deploy blocker)
+### 0.4 CRON_SECRET in Vercel (covers both digests)
 
-Open Vercel dashboard → airfield-app → Settings → Environment Variables. Verify `CRON_SECRET` is set on Production + Preview. Without it, `/api/training-expiry-digest` returns 500 every fire at 13:00 UTC. SMS SPI pg_cron is unaffected (runs in-database).
+Open Vercel dashboard → airfield-app → Settings → Environment Variables. Verify `CRON_SECRET` is set on Production + Preview. Without it both crons return 500 every fire:
+
+| Cron path | Schedule | What it does |
+|---|---|---|
+| `/api/training-expiry-digest`  | `0 13 * * *`  (13:00 UTC) | Phase 3a — per-user training records within 30 days of expiry |
+| `/api/annual-review-digest`    | `30 13 * * *` (13:30 UTC) | AEP §139.325(d) + WHMP §139.337(c) annual reviews inside the 60-day amber window or already overdue |
+
+SMS SPI pg_cron is unaffected (runs in-database, no secret needed).
 
 ---
 
@@ -184,6 +218,8 @@ Walk each phase in order. Phase 1 + 2 establish the foundation; Phases 3a-3e are
 #### Pre-checks
 - `SELECT COUNT(*) FROM sms_policies WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA');` — may be 0 if no policy filed yet, or 1+ if seeded
 - `SELECT COUNT(*) FROM sms_spis WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA');` → 6 (4 baseline + 2 AEP-fed from Phase 3b: SPI-005 + SPI-006)
+- `SELECT COUNT(*) FROM sms_hazards WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA');` → 4+ after the post-Phase-3 seed refresh (wildlife / discrepancy / inspection / safety_report)
+- `SELECT COUNT(*) FROM sms_audits WHERE base_id = (SELECT id FROM bases WHERE icao='KDRA');` → 1 (Q1 2026 internal audit, both findings closed)
 
 #### Worked flow
 1. **AE dashboard `/sms`** → four cards: Safety Policy (current Y/N), Hazards by band, SPIs in red, Open MOCs. PDF export buttons at top.
@@ -270,16 +306,18 @@ Walk each phase in order. Phase 1 + 2 establish the foundation; Phases 3a-3e are
 **Routes:** `/aep` (AE dashboard) · `/aep/plan` · `/aep/agencies` · `/aep/comms-checks` · `/aep/drills`
 
 #### Pre-checks
-- KDRA seed has: 1 active plan v2026.1 (AE-signed), 6 response agencies, 1 completed tabletop drill from 2026-03-18.
+- KDRA seed has: 1 active plan v2026.1 (AE-signed), 6 response agencies, 1 completed tabletop drill from 2026-03-18, 3 monthly comms checks Feb/Mar/Apr 2026 (Mar has a no_response on Mercy Hospital).
 
 #### Worked flow
-1. **AE dashboard `/aep`** → 4 cards: Plan status (green), Full-Scale drill (amber — never recorded), Comms check (amber — pending), Response Agencies (green — 6 active).
+1. **AE dashboard `/aep`** → 4 cards: Plan status (green), Full-Scale drill (amber — never recorded), Comms check (green — 3 recent in last 90 days), Response Agencies (green — 6 active).
 2. **`/aep/plan`** → active plan card v2026.1, AE signed. Click "Record Annual Review" → stamps `last_reviewed_at`.
-3. **`/aep/agencies`** → 6 agencies grouped by role. Add one; reorder; toggle inactive.
-4. **`/aep/comms-checks`** → "Run Check" → 6 agency rows; set Engine 7 OOS + Mercy Hospital No Response. Save → Events Log entry lands with AC 30D §6 summary.
-5. **`/aep/drills`** → Schedule a Full-Scale drill, complete it → Full-Scale chip flips green "Due in 36 months".
-6. **SMS SPI smoke:** From `/sms/spis` → recomputeSpisNow. SPI-005 flips 1 → 0; SPI-006 increments.
-7. **3 PDF exports** from `/aep` header: Plan PDF · Drill Log PDF · Monthly Comms PDF.
+3. **Atomic supersede** — Click "Supersede with new version" on the plan card. Fill v2026.2 + effective date + (optional) FAA acceptance. Save → fires `supersede_aep_plan` RPC (single DB transaction). Verify the prior row's `replaced_by_id` points at the new row in one shot — no transient window where both rows look active.
+4. **`/aep/agencies`** → 6 agencies grouped by role. Add one; reorder; toggle inactive.
+5. **`/aep/comms-checks`** → 3 historical cycles in the list. "Run Check" → 6 agency rows; set Engine 7 OOS + Mercy Hospital No Response. Save → Events Log entry lands with AC 30D §6 summary.
+6. **`/aep/drills`** → Schedule a Full-Scale drill, complete it → Full-Scale chip flips green "Due in 36 months".
+7. **SMS SPI smoke:** From `/sms/spis` → recomputeSpisNow. SPI-005 flips 1 → 0; SPI-006 increments (3 comms cycles already in the 90-day window).
+8. **3 PDF exports** from `/aep` header: Plan PDF · Drill Log PDF · Monthly Comms PDF.
+9. **Annual review reminder smoke** (production cron): hit `/api/annual-review-digest` with `Bearer $CRON_SECRET` while the plan's `last_reviewed_at` is > 305 days old. Email lands at `bases.default_pdf_email` with AEP row marked Amber / Overdue. Dedup row inserts into `annual_review_digest_log`; same-day re-run is a no-op.
 
 #### Permission gating
 - `accountable_executive` (read + sign): record annual review only; no new plan version.
@@ -300,11 +338,12 @@ Walk each phase in order. Phase 1 + 2 establish the foundation; Phases 3a-3e are
 - KDRA RWY 01/19 has `faa_approach_type='non_utility_non_precision_3_4'` + `faa_approach_category='C'` (demo seed).
 
 #### Worked flow
-1. **Base Setup runway editor** → Edit RWY 01/19 → confirm the two civilian-only dropdowns show seeded values. Change category to D, save, reload — persists.
+1. **Base Setup runway editor** → Edit RWY 01/19 → confirm the two civilian-only dropdowns show seeded values. **Runway Class dropdown is hidden on civilian bases** (it's UFC-specific; civilian uses FAA Approach Type instead). Change category to D, save, reload — persists. The row header line reads `01/19 — Non-utility runway · non-precision approach ≥¾ mi` (FAA approach type label) rather than `— Class B`.
 2. **`/obstructions`** → Surface Set picker visible at top; defaults to FAA Part 77 (cyan border). Helper line confirms approach type configured (no warning chip).
 3. Pick a point ~1.5 mi off RWY 01 threshold. Enter height 110 ft. Click **Evaluate Obstruction** → results show 5 Part 77 surfaces (no UFC-only).
 4. Switch picker to UFC → re-evaluate → 10 UFC surfaces; different numbers.
-5. **Detail page legend:** Open a saved evaluation. Expand "Surface Set Reference" → 5 Part 77 (or 10 UFC) surfaces with color swatch + name + description + §77.19 / UFC reference.
+5. **Detail page legend (now pinned to the saved evaluation):** Open a saved evaluation. Expand "Surface Set Reference" → 5 Part 77 (or 10 UFC) surfaces with color swatch + name + description + §77.19 / UFC reference.
+6. **Surface-set pinning regression:** Flip `bases.obstruction_surface_set` for KDRA (e.g. via `/base-config/setup` or direct SQL). Reload the saved evaluation from step 5 → the legend **still** shows the originally-saved set (Part 77 with 5 surfaces), not the new base default. Row's `surface_set` column was pinned at create-time — column added by `2026061200`. Legacy rows pre-dating that migration fall back to the base default.
 
 #### Engine spec smoke (browser console)
 ```js
@@ -312,6 +351,12 @@ const { getPart77Surfaces } = await import('@/lib/calculations/obstructions')
 getPart77Surfaces('utility_visual').primary.criteria.halfWidth         // 125 (250 ft total)
 getPart77Surfaces('non_utility_precision').approach.criteria.slope     // 50 (first segment)
 getPart77Surfaces('non_utility_precision').approach.criteria.secondSegmentSlope // 40
+
+// pointToRunwayRelation now accepts an opts.primaryHalfWidth override
+// (defaults to UFC 1,000 ft if omitted — UFC callers unchanged):
+const { pointToRunwayRelation } = await import('@/lib/calculations/geometry')
+// UFC default: 1000-ft halfWidth controls relation.withinPrimary
+// Part 77 caller: pass opts.primaryHalfWidth: 125 / 250 / 500 per approach type
 ```
 
 ---
@@ -359,12 +404,13 @@ deriveRwycc({ contaminant: 'wet_ice' })                            // 0
 
 #### Worked flow
 1. `/wildlife/whmp` → active 2026 card. 3 species rows (Canada Goose HIGH, Red-Tailed Hawk MEDIUM, White-Tailed Deer SEVERE). 2 findings with "Promote to SMS Hazard" + "Mark Linked".
-2. Click **Promote to SMS Hazard** on finding #1 → opens `/sms/hazards/new?prefill_*=...` in new tab. (SMS form may not yet read params — manual paste from URL is the v1 workaround.)
-3. Create SMS hazard, note code (e.g. `HZ-2026-014`).
-4. Return to WHMP → **Mark Linked** → paste code → finding shows green "Linked: HZ-2026-014" chip.
+2. Click **Promote to SMS Hazard** on finding #1 → opens `/sms/hazards?prefill_title=…&prefill_description=…&prefill_source=whmp&prefill_source_ref_id=…`. The Add Hazard modal auto-opens with the finding's title + description pre-filled and a "Pre-filled from WHMP" pill in the modal header. The URL strips the prefill params via `router.replace` so a refresh doesn't re-open the modal.
+3. Click **Add Hazard** → row saves with `source_type='whmp'` (extended to the CHECK enum by `2026061100`) and `source_ref_id` pointing at the WHMP assessment. Note the hazard code (e.g. `HZ-0005`).
+4. Return to WHMP → **Mark Linked** → paste code → finding shows green "Linked: HZ-0005" chip.
 5. Click **Amend / Supersede** → modal pre-fills; add a 4th species. Save → original 2026 row gets `superseded_by_id` set.
 6. Prior Years collapse → expand → original 2026 row shows with "Superseded" label.
 7. Click **Record Annual Review** → notes prompt → `last_reviewed_at` stamps.
+8. **Annual review reminder smoke** (production cron, mirror of §3b step 9): when WHMP's `last_reviewed_at` is > 305 days old, `/api/annual-review-digest` includes the WHMP row in the daily email. AEP + WHMP roll into one per-base digest message; same-day re-runs are deduped via `annual_review_digest_log`.
 
 ---
 
@@ -375,12 +421,14 @@ deriveRwycc({ contaminant: 'wet_ice' })                            // 0
 | `/scn` on Demo AFB (USAF) | Unchanged — primary + backup check cards, agency editor, monthly PDF work as before |
 | `/wildlife/*` on Demo AFB (USAF) | Sightings + strikes + heatmap + analytics tabs unchanged; no WHMP entry in sidebar |
 | `/obstructions` on Demo AFB | Picker defaults to UFC; evaluation produces identical results to pre-Phase 3c (10 UFC surfaces, same numbers) |
+| `/base-config/setup` Runways on Demo AFB | Runway Class dropdown still visible (B / Army_B); existing USAF runways unchanged. Civilian KDRA has the dropdown hidden — gated by `isCivilian()`, runway_class persists as NULL. |
+| `/obstructions/[id]` legend after a base-setting flip | Legend reflects the **saved** evaluation's `surface_set`, not the current `bases.obstruction_surface_set`. Pinned per row by `2026061200`. |
 | `/sms/*` on KDRA | Phase 2 SMS unchanged; sidebar icons render correctly (Phase 2 SMS icon bug fixed incidentally in Phase 3b Cluster B) |
 | `/training/*` on KDRA | Phase 3a unchanged; module-config gate filters USAF |
 | `/aep/*` on KDRA | Phase 3b unchanged |
 | `/help` (renamed from old `/training`) | Glidepath in-app help with 27 module deep-dives unchanged |
 | All sidebar group icons | Correct icons; no `Home` fallback for SMS / Training / AEP / WHMP section labels |
-| Test suite | 452 / 452 pass — all 99 new tests this cycle + 353 baseline |
+| Test suite | 466 / 466 pass — 99 Phase 3 tests + 14 post-Phase-3 annual-review-due tests + 353 baseline |
 | Existing USAF discrepancy / inspection / check flows on Demo AFB | Zero behavioral change — all USAF surfaces unaffected by civilian retrofit |
 | `/users` role grid on USAF base | Civilian-only roles (sms_manager, aep_coordinator, etc.) absent or marked civilian-only |
 
@@ -421,11 +469,15 @@ Expected: zero raw `text-zinc-*` / `bg-zinc-*` / filled-amber classes anywhere. 
 | PDF storage upload returns 403 | Path-scoped storage policy not applied | Re-apply `2026053005` (training) / `2026060705` (aep) / `2026061000` (whmp) |
 | SMS SPI doesn't update after AEP drill / comms check | pg_cron 02:30 UTC hasn't fired yet | Manual: `SELECT public._sms_compute_spi_measurements(CURRENT_DATE);` |
 | `/api/training-expiry-digest` returns 500 | `CRON_SECRET` not set in Vercel | Set in dashboard, redeploy |
+| `/api/annual-review-digest` returns 500 | Same — `CRON_SECRET` missing (or `RESEND_API_KEY`) | Set in Vercel dashboard, redeploy |
+| Annual-review digest emails the same base twice in one day | Bug — `UNIQUE (base_id, send_date)` on `annual_review_digest_log` should prevent it | Confirm migration `2026061201` applied; inspect dedup row by hand |
 | Field Conditions FICON missing depth | Depth IN required for snow/slush types | Add depth in modal before save |
-| WHMP "Promote to SMS Hazard" opens empty form | `/sms/hazards/new` doesn't yet read `prefill_*` query params | Manual paste from URL; follow-up wiring planned |
+| WHMP "Promote to SMS Hazard" opens empty form | Bug — `/sms/hazards` should auto-open modal from `prefill_*` query params (wired by `ee7110b` / migration `2026061100`) | Confirm SMS_WRITE permission; check that the encoder URL points to `/sms/hazards?...` (no `/new`) — if it still has `/new`, the WHMP build is stale |
+| AEP supersede leaves both rows looking active | Bug — atomic RPC `supersede_aep_plan` (migration `2026061102`) should make this impossible | Confirm RPC exists: `SELECT proname FROM pg_proc WHERE proname='supersede_aep_plan';` |
+| Civilian runway shows "Class null" in setup row | Display path didn't fall back to FAA approach type — regression vs `2c9f202` | Confirm `runway_class IS NULL` for the row and the display falls through to `faa_approach_type` label |
 | WHMP year already exists error | UNIQUE (base, year) constraint | Click "Amend / Supersede" on the active card instead |
 | Phase 3c picker doesn't change defaults | `bases.obstruction_surface_set` overrides mode default | `SELECT obstruction_surface_set FROM bases WHERE icao='KDRA';` should be `'faa_part77'` |
-| Test suite drops below 452 | Regression introduced | `npx vitest run --reporter=verbose` to find the failing test |
+| Test suite drops below 466 | Regression introduced | `npx vitest run --reporter=verbose` to find the failing test |
 
 ---
 
