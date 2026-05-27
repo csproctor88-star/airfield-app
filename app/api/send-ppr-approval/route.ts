@@ -6,6 +6,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 import { formatPprColumnValue } from '@/lib/supabase/ppr'
+import { notifyCoordinatingAgencies } from '@/lib/ppr-agency-notify'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -90,10 +91,6 @@ export async function POST(request: Request) {
     if (entry.status !== 'approved') {
       return NextResponse.json({ error: `Entry status is ${entry.status}, not approved` }, { status: 400 })
     }
-    if (!entry.requester_email) {
-      // Internal create: no public requester to email. Treat as no-op success.
-      return NextResponse.json({ success: true, skipped: 'no_requester_email' })
-    }
 
     const { data: base } = await reader
       .from('bases')
@@ -105,6 +102,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
+    // Internal-create PPRs (no public requester) skip the requester
+    // email but STILL notify the coordinating agencies below if any
+    // coord rows exist on the entry.
+    if (entry.requester_email) {
     // Pull human-readable column names for the email body. We fetch
     // column_type + info_text so we can split the rendering: regular
     // columns get the value table, info_only columns get rendered as
@@ -177,8 +178,26 @@ export async function POST(request: Request) {
       console.error('[send-ppr-approval] Resend error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+    }
 
-    return NextResponse.json({ success: true })
+    // Best-effort: also notify every agency that coordinated on this PPR.
+    // Fire-and-forget after the requester email — agency failures shouldn't
+    // surface as a route-level error since the primary recipient was emailed.
+    const agencyResult = await notifyCoordinatingAgencies({
+      reader,
+      resend: getResend(),
+      entry: {
+        id: entry.id,
+        base_id: entry.base_id,
+        ppr_number: entry.ppr_number,
+        arrival_date: entry.arrival_date,
+        requester_name: entry.requester_name,
+      },
+      base: { name: base.name, amops_email: base.amops_email },
+      outcome: 'approved',
+    })
+
+    return NextResponse.json({ success: true, agencies: agencyResult })
   } catch (err) {
     console.error('[send-ppr-approval] Error:', err)
     return NextResponse.json(

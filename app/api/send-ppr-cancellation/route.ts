@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
+import { notifyCoordinatingAgencies } from '@/lib/ppr-agency-notify'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -83,9 +84,6 @@ export async function POST(request: Request) {
     if (entry.status !== 'canceled') {
       return NextResponse.json({ error: `Entry status is ${entry.status}, not canceled` }, { status: 400 })
     }
-    if (!entry.requester_email) {
-      return NextResponse.json({ success: true, skipped: 'no_requester_email' })
-    }
 
     const { data: base } = await reader
       .from('bases')
@@ -97,6 +95,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
+    // Internal-create PPRs (no public requester) skip the requester
+    // email but STILL notify coordinating agencies below if any
+    // coord rows exist on the entry.
+    if (entry.requester_email) {
     const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
     const safeName = escapeHtml(entry.requester_name || 'Aircrew')
     const safeBase = escapeHtml(base.name)
@@ -132,8 +134,24 @@ export async function POST(request: Request) {
       console.error('[send-ppr-cancellation] Resend error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+    }
 
-    return NextResponse.json({ success: true })
+    const agencyResult = await notifyCoordinatingAgencies({
+      reader,
+      resend: getResend(),
+      entry: {
+        id: entry.id,
+        base_id: entry.base_id,
+        ppr_number: entry.ppr_number,
+        arrival_date: entry.arrival_date,
+        requester_name: entry.requester_name,
+      },
+      base: { name: base.name, amops_email: base.amops_email },
+      outcome: 'canceled',
+      reason: entry.cancellation_reason,
+    })
+
+    return NextResponse.json({ success: true, agencies: agencyResult })
   } catch (err) {
     console.error('[send-ppr-cancellation] Error:', err)
     return NextResponse.json(
