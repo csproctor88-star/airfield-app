@@ -20,25 +20,25 @@ describe('1098 archive lock — migration shape', () => {
   })
 
   it('amtr_1098_progress INSERT policy includes archive guard', () => {
-    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_progress_insert[^;]*?;/s)
+    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_progress_insert[\s\S]*?;/)
     expect(block, 'INSERT policy block not found').toBeTruthy()
     expect(block![0]).toMatch(/NOT is_1098_year_archived\(base_id,\s*year_label\)/)
   })
 
   it('amtr_1098_progress UPDATE policy includes archive guard', () => {
-    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_progress_update[^;]*?;/s)
+    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_progress_update[\s\S]*?;/)
     expect(block, 'UPDATE policy block not found').toBeTruthy()
     expect(block![0]).toMatch(/NOT is_1098_year_archived\(base_id,\s*year_label\)/)
   })
 
   it('amtr_1098_progress DELETE policy includes archive guard', () => {
-    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_progress_delete[^;]*?;/s)
+    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_progress_delete[\s\S]*?;/)
     expect(block, 'DELETE policy block not found').toBeTruthy()
     expect(block![0]).toMatch(/NOT is_1098_year_archived\(base_id,\s*year_label\)/)
   })
 
   it('amtr_1098_catalog write policy includes archive guard', () => {
-    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_catalog_write[^;]*?;/s)
+    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_catalog_write[\s\S]*?;/)
     expect(block, 'catalog write policy block not found').toBeTruthy()
     expect(block![0]).toMatch(/NOT is_1098_year_archived\(base_id,\s*year_label\)/)
   })
@@ -46,7 +46,7 @@ describe('1098 archive lock — migration shape', () => {
   it('amtr_1098_years write policy does NOT include archive guard (needed for unarchive)', () => {
     // Intentional carve-out — managers must be able to flip archived=false
     // on the years table itself or there's no way to unarchive.
-    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_years_write[^;]*?;/s)
+    const block = sql.match(/CREATE POLICY[^;]*amtr_1098_years_write[\s\S]*?;/)
     expect(block, 'years write policy block not found').toBeTruthy()
     expect(block![0]).not.toMatch(/is_1098_year_archived/)
   })
@@ -56,7 +56,7 @@ describe('1098 archive lock — migration shape', () => {
   })
 
   it('catalog per-year uniqueness index is created', () => {
-    expect(sql).toMatch(/CREATE UNIQUE INDEX[^;]*amtr_1098_catalog[^;]*base_id,\s*year_label,\s*task/s)
+    expect(sql).toMatch(/CREATE UNIQUE INDEX[\s\S]*?amtr_1098_catalog[\s\S]*?base_id,\s*year_label,\s*task/)
   })
 
   it('next_due_manual column is added with default false', () => {
