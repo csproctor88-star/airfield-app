@@ -40,6 +40,8 @@ export async function POST(request: Request) {
       firstName,
       lastName,
       rank,
+      unit,
+      officeSymbol,
       role,
       primaryBaseId,
     } = body as {
@@ -48,6 +50,8 @@ export async function POST(request: Request) {
       firstName: string
       lastName: string
       rank?: string
+      unit?: string
+      officeSymbol?: string
       role: string
       primaryBaseId: string
     }
@@ -73,6 +77,8 @@ export async function POST(request: Request) {
         last_name: lastName.trim(),
         name: fullName,
         rank: rank || undefined,
+        unit: unit?.trim() || undefined,
+        office_symbol: officeSymbol?.trim() || undefined,
         role: role || 'read_only',
         primary_base_id: primaryBaseId,
       },

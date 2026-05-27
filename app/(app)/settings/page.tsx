@@ -131,11 +131,17 @@ function ProfileSectionContent() {
     role: UserRole
     installationName: string | null
     operatingInitials: string | null
+    unit: string | null
+    officeSymbol: string | null
   } | null>(null)
   const [pdfEmail, setPdfEmail] = useState(defaultPdfEmail || '')
   const [savingEmail, setSavingEmail] = useState(false)
   const [oi, setOi] = useState('')
   const [savingOi, setSavingOi] = useState(false)
+  const [unit, setUnit] = useState('')
+  const [savingUnit, setSavingUnit] = useState(false)
+  const [officeSymbol, setOfficeSymbol] = useState('')
+  const [savingOfficeSymbol, setSavingOfficeSymbol] = useState(false)
   const [newAccountEmail, setNewAccountEmail] = useState('')
   const [savingAccountEmail, setSavingAccountEmail] = useState(false)
   const [showAccountEmailConfirm, setShowAccountEmailConfirm] = useState(false)
@@ -148,8 +154,10 @@ function ProfileSectionContent() {
     async function load() {
       const supabase = createClient()
       if (!supabase) {
-        setProfile({ name: 'Demo User', rank: 'MSgt', email: 'demo@glidepath.app', role: 'sys_admin', installationName: currentInstallation?.name ?? 'Demo Base', operatingInitials: 'DU' })
+        setProfile({ name: 'Demo User', rank: 'MSgt', email: 'demo@glidepath.app', role: 'sys_admin', installationName: currentInstallation?.name ?? 'Demo Base', operatingInitials: 'DU', unit: '127th OSS', officeSymbol: 'OSAA' })
         setOi('DU')
+        setUnit('127th OSS')
+        setOfficeSymbol('OSAA')
         return
       }
 
@@ -158,9 +166,17 @@ function ProfileSectionContent() {
 
       const { data: p } = await supabase
         .from('profiles')
-        .select('name, rank, role, primary_base_id, operating_initials')
+        .select('name, rank, role, primary_base_id, operating_initials, unit, office_symbol')
         .eq('id', user.id)
-        .single()
+        .single<{
+          name: string | null
+          rank: string | null
+          role: string | null
+          primary_base_id: string | null
+          operating_initials: string | null
+          unit: string | null
+          office_symbol: string | null
+        }>()
 
       let installationName: string | null = null
       if (p?.primary_base_id) {
@@ -184,8 +200,12 @@ function ProfileSectionContent() {
         role: (p?.role || 'read_only') as UserRole,
         installationName,
         operatingInitials: p?.operating_initials || null,
+        unit: p?.unit || null,
+        officeSymbol: p?.office_symbol || null,
       })
       setOi(p?.operating_initials || '')
+      setUnit(p?.unit || '')
+      setOfficeSymbol(p?.office_symbol || '')
       setNewAccountEmail(user.email || '')
     }
     load()
@@ -227,6 +247,46 @@ function ProfileSectionContent() {
     }
   }
 
+  const handleSaveUnit = async () => {
+    setSavingUnit(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const val = unit.trim() || null
+        const { error } = await supabase.from('profiles').update({ unit: val } as any).eq('id', user.id)
+        if (error) {
+          toast.error(`Failed to save: ${error.message}`)
+          setSavingUnit(false)
+          return
+        }
+        setProfile((prev) => prev ? { ...prev, unit: val } : prev)
+      }
+    }
+    toast.success('Unit saved')
+    setSavingUnit(false)
+  }
+
+  const handleSaveOfficeSymbol = async () => {
+    setSavingOfficeSymbol(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const val = officeSymbol.trim() || null
+        const { error } = await supabase.from('profiles').update({ office_symbol: val } as any).eq('id', user.id)
+        if (error) {
+          toast.error(`Failed to save: ${error.message}`)
+          setSavingOfficeSymbol(false)
+          return
+        }
+        setProfile((prev) => prev ? { ...prev, officeSymbol: val } : prev)
+      }
+    }
+    toast.success('Office symbol saved')
+    setSavingOfficeSymbol(false)
+  }
+
   const handleSaveOi = async () => {
     setSavingOi(true)
     const supabase = createClient()
@@ -257,6 +317,8 @@ function ProfileSectionContent() {
   const displayName = [profile.rank, profile.name].filter(Boolean).join(' ')
   const emailChanged = (pdfEmail.trim() || '') !== (defaultPdfEmail || '')
   const accountEmailChanged = newAccountEmail.trim().toLowerCase() !== (profile.email || '').toLowerCase()
+  const unitChanged = (unit.trim() || '') !== (profile.unit || '')
+  const officeSymbolChanged = (officeSymbol.trim() || '') !== (profile.officeSymbol || '')
 
   return (
     <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -319,6 +381,76 @@ function ProfileSectionContent() {
                   color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: savingOi ? 'default' : 'pointer', fontFamily: 'inherit',
                   opacity: savingOi ? 0.7 : 1,
+                }}
+              >
+                Save
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Unit */}
+        <div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>UNIT</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              type="text"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="e.g. 115th OSS"
+              style={{
+                flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                background: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            {unitChanged && (
+              <button
+                onClick={handleSaveUnit}
+                disabled={savingUnit}
+                style={{
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-status-pass)', border: 'none',
+                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: savingUnit ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: savingUnit ? 0.7 : 1,
+                }}
+              >
+                Save
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Office Symbol */}
+        <div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>OFFICE SYMBOL</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              type="text"
+              value={officeSymbol}
+              onChange={(e) => setOfficeSymbol(e.target.value)}
+              placeholder="e.g. OSAA"
+              style={{
+                flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                background: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            {officeSymbolChanged && (
+              <button
+                onClick={handleSaveOfficeSymbol}
+                disabled={savingOfficeSymbol}
+                style={{
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-status-pass)', border: 'none',
+                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: savingOfficeSymbol ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: savingOfficeSymbol ? 0.7 : 1,
                 }}
               >
                 Save

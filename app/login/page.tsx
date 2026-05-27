@@ -26,6 +26,8 @@ function LoginContent() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [rank, setRank] = useState('')
+  const [unit, setUnit] = useState('')
+  const [officeSymbol, setOfficeSymbol] = useState('')
   const [role, setRole] = useState<UserRole>('read_only')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -226,6 +228,8 @@ function LoginContent() {
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             rank: rank || undefined,
+            unit: unit.trim() || undefined,
+            officeSymbol: officeSymbol.trim() || undefined,
             role,
             primaryBaseId: inst.id,
           }),
@@ -395,6 +399,34 @@ function LoginContent() {
                       onChange={(e) => setLastName(e.target.value)}
                       required
                       autoComplete="family-name"
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Unit & Office Symbol — both optional, USAF identity context */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                  <div>
+                    <span className="section-label">Unit</span>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="e.g. 115th OSS"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      autoComplete="organization"
+                      style={{ width: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <span className="section-label">Office Symbol</span>
+                    <input
+                      type="text"
+                      className="input-dark"
+                      placeholder="e.g. OSAA"
+                      value={officeSymbol}
+                      onChange={(e) => setOfficeSymbol(e.target.value)}
+                      autoComplete="off"
                       style={{ width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
