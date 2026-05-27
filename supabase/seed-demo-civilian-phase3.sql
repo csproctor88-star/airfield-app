@@ -1,13 +1,15 @@
 -- ============================================================
--- KDRA (Demo Regional Airport) — Phase 3 data refresh
+-- KDRA (Demo Regional Airport) — Phase 2 + Phase 3 data refresh
 --
--- Backfills the Demo Regional Airport with sample data for each
--- Phase 3 sub-module so the demo tour story is end-to-end:
+-- Backfills the Demo Regional Airport with sample data so the demo
+-- tour story is end-to-end across Phase 2 (SMS) and Phase 3:
 --
 --   3c — FAA approach type + category on each runway
 --   3b — AEP plan + response agencies + 1 completed tabletop drill
 --   3d — 2 historical FCRs (winter snow event narrative)
 --   3e — 2026 WHMP assessment with 3 species + 2 findings
+--   2  — 4 SMS hazards + assessments + mitigations + 1 internal audit
+--   2  — 3 monthly AEP comms checks (Feb / Mar / Apr 2026)
 --
 -- Idempotent: re-running won't duplicate rows. Each section uses
 -- ON CONFLICT or check-first-then-insert.
@@ -15,12 +17,15 @@
 -- Run via:
 --   npx supabase db query --linked --file supabase/seed-demo-civilian-phase3.sql
 --
--- To reset Phase 3 demo data only (leaves base + runways intact):
---   DELETE FROM aep_plans              WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
---   DELETE FROM aep_response_agencies  WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
---   DELETE FROM aep_drills             WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
---   DELETE FROM field_condition_reports WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
---   DELETE FROM wildlife_hazard_assessments WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+-- To reset demo data only (leaves base + runways intact):
+--   DELETE FROM aep_plans                     WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM aep_response_agencies         WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM aep_drills                    WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM aep_comms_checks              WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM field_condition_reports       WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM wildlife_hazard_assessments   WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM sms_hazards                   WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
+--   DELETE FROM sms_audits                    WHERE base_id = 'ea2b542e-72cc-4300-9037-bfe18c0bf7ae';
 -- ============================================================
 
 DO $$
@@ -33,8 +38,14 @@ DECLARE
   v_aep_agency_ems UUID;
   v_aep_agency_hosp UUID;
   v_aep_agency_atc UUID;
+  v_aep_agency_police UUID;
+  v_aep_agency_mutual UUID;
   v_aep_drill_id UUID;
   v_whmp_id UUID;
+  v_haz_id UUID;
+  v_haz_code TEXT;
+  v_audit_id UUID;
+  v_comms_check_id UUID;
 BEGIN
 
   -- ── 1. Phase 3c — runway FAA approach data ──────────────────
@@ -95,10 +106,12 @@ BEGIN
   RAISE NOTICE 'Phase 3b: ensured 6 AEP response agencies';
 
   -- Pull a couple of agency ids for the drill participants snapshot
-  SELECT id INTO v_aep_agency_arff FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'ARFF Engine 7';
-  SELECT id INTO v_aep_agency_ems  FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'County EMS';
-  SELECT id INTO v_aep_agency_hosp FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'Mercy Hospital ED';
-  SELECT id INTO v_aep_agency_atc  FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'Demo Tower';
+  SELECT id INTO v_aep_agency_arff   FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'ARFF Engine 7';
+  SELECT id INTO v_aep_agency_ems    FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'County EMS';
+  SELECT id INTO v_aep_agency_hosp   FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'Mercy Hospital ED';
+  SELECT id INTO v_aep_agency_atc    FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'Demo Tower';
+  SELECT id INTO v_aep_agency_police FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'County Sheriff';
+  SELECT id INTO v_aep_agency_mutual FROM aep_response_agencies WHERE base_id = v_kdra_id AND agency_name = 'Springfield Fire Dept';
 
   -- 2c. AEP drill — 1 completed tabletop earlier this year per §139.325(j)
   INSERT INTO aep_drills (
@@ -259,6 +272,293 @@ BEGIN
   RETURNING id INTO v_whmp_id;
   IF v_whmp_id IS NOT NULL THEN
     RAISE NOTICE 'Phase 3e: created 2026 WHMP assessment id=%', v_whmp_id;
+  END IF;
+
+  -- ── 5. Phase 2 SMS — 4 hazards + assessments + mitigations + 1 audit ──
+  -- A small but representative hazard register so the SMS dashboard,
+  -- hazard register, risk matrix, and SPI cards have content to render
+  -- during pilot demos. Each insert is title-keyed for idempotency.
+
+  -- 5a. Hazard #1 — wildlife strike recurring (sourced from WHMP)
+  IF NOT EXISTS (SELECT 1 FROM sms_hazards WHERE base_id = v_kdra_id AND title = 'Recurring goose strikes on RWY 01 approach') THEN
+    v_haz_code := _sms_next_code(v_kdra_id, 'HZ', 'sms_hazards');
+    INSERT INTO sms_hazards (
+      base_id, hazard_code, title, description,
+      source_type, status, risk_owner_user_id,
+      identified_by, identified_at, created_by
+    ) VALUES (
+      v_kdra_id, v_haz_code,
+      'Recurring goose strikes on RWY 01 approach',
+      'Three confirmed Canada Goose strikes on RWY 01 short final in the past 18 months. Stormwater retention pond on the east side acts as a year-round attractant; spring migration intensifies risk substantially.',
+      'wildlife_strike', 'under_review', v_demo_user,
+      v_demo_user, '2026-04-10T13:00:00Z', v_demo_user
+    ) RETURNING id INTO v_haz_id;
+
+    INSERT INTO sms_risk_assessments (
+      hazard_id, base_id, assessed_at, assessed_by,
+      likelihood, severity,
+      residual_likelihood, residual_severity,
+      likelihood_rationale, severity_rationale, notes
+    ) VALUES (
+      v_haz_id, v_kdra_id, '2026-04-12T15:00:00Z', v_demo_user,
+      4, 4,
+      2, 4,
+      'Three strikes in 18 months at one threshold; geese present 9 months/year. Likelihood = Frequent (4).',
+      'Engine ingestion at low altitude on final approach. Severity = Hazardous (4) — possible loss of aircraft if multiple engine ingestion.',
+      'Residual likelihood drops to Remote (2) after habitat modification + pyrotechnic dispersal protocol; severity unchanged because the consequence path is intrinsic to the operation.'
+    );
+
+    INSERT INTO sms_mitigations (
+      hazard_id, base_id, title, description,
+      control_type, owner_user_id, due_date, status, completed_at, completed_by, created_by
+    ) VALUES (
+      v_haz_id, v_kdra_id,
+      'Add 2nd propane cannon south of stormwater pond + weekly habitat sweep',
+      'Operations crew to deploy additional propane cannon by 2026-05-15 and add a Friday habitat sweep on the cannon rotation. USDA Wildlife Services on-call for goose-removal events > 25 birds.',
+      'engineering', v_demo_user, '2026-05-15', 'completed',
+      '2026-05-14T18:00:00Z', v_demo_user, v_demo_user
+    );
+
+    RAISE NOTICE 'Phase 2 SMS: created hazard %', v_haz_code;
+  END IF;
+
+  -- 5b. Hazard #2 — apron pavement cracking (sourced from a discrepancy)
+  IF NOT EXISTS (SELECT 1 FROM sms_hazards WHERE base_id = v_kdra_id AND title = 'Progressive transverse cracking on north apron') THEN
+    v_haz_code := _sms_next_code(v_kdra_id, 'HZ', 'sms_hazards');
+    INSERT INTO sms_hazards (
+      base_id, hazard_code, title, description,
+      source_type, status, risk_owner_user_id,
+      identified_by, identified_at, created_by
+    ) VALUES (
+      v_kdra_id, v_haz_code,
+      'Progressive transverse cracking on north apron',
+      'Three transverse cracks > 1/2" wide along the north apron tie-down rows. FOD ejection risk increasing as winter freeze-thaw cycles propagate the cracks.',
+      'discrepancy', 'controlled', v_demo_user,
+      v_demo_user, '2026-02-22T10:00:00Z', v_demo_user
+    ) RETURNING id INTO v_haz_id;
+
+    INSERT INTO sms_risk_assessments (
+      hazard_id, base_id, assessed_at, assessed_by,
+      likelihood, severity,
+      residual_likelihood, residual_severity,
+      likelihood_rationale, severity_rationale, notes
+    ) VALUES (
+      v_haz_id, v_kdra_id, '2026-02-23T11:30:00Z', v_demo_user,
+      3, 3,
+      1, 3,
+      'Occasional FOD events traceable to apron cracking — Likelihood = Occasional (3).',
+      'FOD ingestion or tire damage — Severity = Major (3).',
+      'After crack-sealing + biweekly apron sweep, likelihood drops to Improbable (1).'
+    );
+
+    INSERT INTO sms_mitigations (
+      hazard_id, base_id, title, description,
+      control_type, owner_user_id, due_date, status, completed_at, completed_by, created_by
+    ) VALUES (
+      v_haz_id, v_kdra_id,
+      'Crack-seal all transverse cracks > 1/4" and add to FY26 mill-and-overlay scope',
+      'Maintenance to crack-seal in next dry window. Engineering to add the north apron to the FY26 mill-and-overlay project envelope.',
+      'engineering', v_demo_user, '2026-04-01', 'completed',
+      '2026-03-28T16:00:00Z', v_demo_user, v_demo_user
+    );
+
+    RAISE NOTICE 'Phase 2 SMS: created hazard %', v_haz_code;
+  END IF;
+
+  -- 5c. Hazard #3 — taxiway lighting cluster outage (sourced from inspection)
+  IF NOT EXISTS (SELECT 1 FROM sms_hazards WHERE base_id = v_kdra_id AND title = 'Clustered taxiway centerline outages on Taxiway A') THEN
+    v_haz_code := _sms_next_code(v_kdra_id, 'HZ', 'sms_hazards');
+    INSERT INTO sms_hazards (
+      base_id, hazard_code, title, description,
+      source_type, status, risk_owner_user_id,
+      identified_by, identified_at, created_by
+    ) VALUES (
+      v_kdra_id, v_haz_code,
+      'Clustered taxiway centerline outages on Taxiway A',
+      'Multiple inspection cycles showing 4-6 adjacent centerline lights out near Taxiway A intersection with RWY 01. Pattern suggests buried cable damage rather than individual lamp failures.',
+      'inspection', 'open', v_demo_user,
+      v_demo_user, '2026-05-01T08:00:00Z', v_demo_user
+    ) RETURNING id INTO v_haz_id;
+
+    INSERT INTO sms_risk_assessments (
+      hazard_id, base_id, assessed_at, assessed_by,
+      likelihood, severity,
+      residual_likelihood, residual_severity,
+      likelihood_rationale, severity_rationale, notes
+    ) VALUES (
+      v_haz_id, v_kdra_id, '2026-05-02T13:00:00Z', v_demo_user,
+      3, 3,
+      2, 3,
+      'Recurring outages observed across last 4 inspection cycles — Likelihood = Occasional (3).',
+      'Centerline cues at night/low-vis are safety-critical for taxi routing — Severity = Major (3).',
+      'After cable replacement (planned Q3) the residual likelihood drops to Remote (2).'
+    );
+
+    INSERT INTO sms_mitigations (
+      hazard_id, base_id, title, description,
+      control_type, owner_user_id, due_date, status, created_by
+    ) VALUES (
+      v_haz_id, v_kdra_id,
+      'Targeted cable replacement segment between TWY A2 and A4',
+      'CES electrical to scope cable replacement for the 4-light cluster. Interim: NOTAM published; affected taxi segment routed via TWY B at night.',
+      'engineering', v_demo_user, '2026-08-15', 'in_progress',
+      v_demo_user
+    );
+
+    RAISE NOTICE 'Phase 2 SMS: created hazard %', v_haz_code;
+  END IF;
+
+  -- 5d. Hazard #4 — wet-runway braking action (sourced from a pilot safety report)
+  IF NOT EXISTS (SELECT 1 FROM sms_hazards WHERE base_id = v_kdra_id AND title = 'Wet-runway braking action reports below expected on RWY 19') THEN
+    v_haz_code := _sms_next_code(v_kdra_id, 'HZ', 'sms_hazards');
+    INSERT INTO sms_hazards (
+      base_id, hazard_code, title, description,
+      source_type, status, risk_owner_user_id,
+      identified_by, identified_at, created_by
+    ) VALUES (
+      v_kdra_id, v_haz_code,
+      'Wet-runway braking action reports below expected on RWY 19',
+      'Two PIREPs from regional turboprop operators reporting wet braking action "fair" where "good" was expected. Last friction survey was 13 months ago; macrotexture may be degrading on the rollout third.',
+      'safety_report', 'open', v_demo_user,
+      v_demo_user, '2026-05-08T19:30:00Z', v_demo_user
+    ) RETURNING id INTO v_haz_id;
+
+    INSERT INTO sms_risk_assessments (
+      hazard_id, base_id, assessed_at, assessed_by,
+      likelihood, severity,
+      likelihood_rationale, severity_rationale, notes
+    ) VALUES (
+      v_haz_id, v_kdra_id, '2026-05-09T10:00:00Z', v_demo_user,
+      3, 3,
+      'Two reports in 30 days; wet conditions ~40 days/year — Likelihood = Occasional (3).',
+      'Runway excursion risk in adverse braking — Severity = Major (3).',
+      'Awaiting friction survey results before sizing residual mitigation.'
+    );
+
+    INSERT INTO sms_mitigations (
+      hazard_id, base_id, title, description,
+      control_type, owner_user_id, due_date, status, created_by
+    ) VALUES (
+      v_haz_id, v_kdra_id,
+      'Conduct CFME friction survey on RWY 19 and FICON if degraded',
+      'Operations to schedule continuous-friction survey within 14 days. If µ < 0.5 over the rollout third in wet condition, issue FICON and request maintenance prioritization for grooving rejuvenation.',
+      'administrative', v_demo_user, '2026-05-23', 'planned',
+      v_demo_user
+    );
+
+    RAISE NOTICE 'Phase 2 SMS: created hazard %', v_haz_code;
+  END IF;
+
+  -- 5e. SMS audit — 1 completed internal audit (DAFMAN/AC 150/5200-37A §6.4)
+  IF NOT EXISTS (SELECT 1 FROM sms_audits WHERE base_id = v_kdra_id AND title = 'Q1 2026 internal SMS audit') THEN
+    INSERT INTO sms_audits (
+      base_id, audit_code, title, audit_type, scope,
+      scheduled_date, performed_date, performed_by, status,
+      findings, findings_open, findings_closed,
+      notes, created_by
+    ) VALUES (
+      v_kdra_id, _sms_next_code(v_kdra_id, 'AUD', 'sms_audits'),
+      'Q1 2026 internal SMS audit', 'internal',
+      'Sample of safety policy, SRM workflow, and hazard-to-mitigation traceability across the prior quarter.',
+      '2026-03-25', '2026-04-08', v_demo_user, 'completed',
+      jsonb_build_array(
+        jsonb_build_object(
+          'id', gen_random_uuid()::text,
+          'title', 'Hazard register lacks risk-owner assignment on 1 of 4 sampled hazards',
+          'severity', 'minor',
+          'status', 'closed',
+          'closed_at', '2026-04-15',
+          'notes', 'Closed after risk owner assigned within 7 days of finding.'
+        ),
+        jsonb_build_object(
+          'id', gen_random_uuid()::text,
+          'title', 'Mitigation due-date tracking inconsistent across SRM register and SPIs',
+          'severity', 'observation',
+          'status', 'closed',
+          'closed_at', '2026-04-20',
+          'notes', 'Closed after process note added to monthly SMS review checklist.'
+        )
+      ),
+      0, 2,
+      'Audit performed by ASO; both findings closed within 30 days. Next audit scheduled Q3 2026.',
+      v_demo_user
+    );
+    RAISE NOTICE 'Phase 2 SMS: created Q1 2026 internal audit';
+  END IF;
+
+  -- ── 6. Phase 2 AEP comms checks — 3 monthly cycles backfilled ──
+  -- Per AC 150/5200-31C §2.3 the airport runs periodic comms checks
+  -- against the AEP response roster. Backfill the last 3 completed
+  -- monthly cycles so the dashboard SPI feed has data (the cron picks
+  -- up aep_comms_checks_last_90d on its next run).
+
+  -- 6a. February 2026 — clean cycle (all loud_clear)
+  IF NOT EXISTS (SELECT 1 FROM aep_comms_checks WHERE base_id = v_kdra_id AND check_date = '2026-02-15' AND check_period = 'monthly') THEN
+    INSERT INTO aep_comms_checks (
+      base_id, check_date, check_period, started_at, completed_at,
+      completed_by, completed_by_oi, notes
+    ) VALUES (
+      v_kdra_id, '2026-02-15', 'monthly',
+      '2026-02-15T14:00:00Z', '2026-02-15T14:35:00Z',
+      v_demo_user, 'JD',
+      'All agencies loud and clear. EMS dispatcher confirmed the revised channel from the March drill is now in their playbook.'
+    ) RETURNING id INTO v_comms_check_id;
+
+    INSERT INTO aep_comms_check_results (check_id, agency_id, agency_name, agency_role, status, notes, sort_order) VALUES
+      (v_comms_check_id, v_aep_agency_arff,   'ARFF Engine 7',         'arff',            'loud_clear', NULL, 10),
+      (v_comms_check_id, v_aep_agency_mutual, 'Springfield Fire Dept', 'mutual_aid_fire', 'loud_clear', NULL, 20),
+      (v_comms_check_id, v_aep_agency_ems,    'County EMS',            'ems',             'loud_clear', NULL, 30),
+      (v_comms_check_id, v_aep_agency_hosp,   'Mercy Hospital ED',     'hospital',        'loud_clear', NULL, 40),
+      (v_comms_check_id, v_aep_agency_atc,    'Demo Tower',            'atc',             'loud_clear', NULL, 50),
+      (v_comms_check_id, v_aep_agency_police, 'County Sheriff',        'police',          'loud_clear', NULL, 60);
+
+    RAISE NOTICE 'Phase 2 AEP: created Feb 2026 comms check';
+  END IF;
+
+  -- 6b. March 2026 — Mercy Hospital no_response, retry next day
+  IF NOT EXISTS (SELECT 1 FROM aep_comms_checks WHERE base_id = v_kdra_id AND check_date = '2026-03-15' AND check_period = 'monthly') THEN
+    INSERT INTO aep_comms_checks (
+      base_id, check_date, check_period, started_at, completed_at,
+      completed_by, completed_by_oi, notes
+    ) VALUES (
+      v_kdra_id, '2026-03-15', 'monthly',
+      '2026-03-15T14:00:00Z', '2026-03-15T14:45:00Z',
+      v_demo_user, 'JD',
+      'Mercy Hospital ED did not respond on Med-9 — confirmed via backup phone that ED radio was off-air for maintenance. Retried 2026-03-16 with successful loud-clear. AEP radio plan reviewed; no changes.'
+    ) RETURNING id INTO v_comms_check_id;
+
+    INSERT INTO aep_comms_check_results (check_id, agency_id, agency_name, agency_role, status, notes, sort_order) VALUES
+      (v_comms_check_id, v_aep_agency_arff,   'ARFF Engine 7',         'arff',            'loud_clear',  NULL, 10),
+      (v_comms_check_id, v_aep_agency_mutual, 'Springfield Fire Dept', 'mutual_aid_fire', 'loud_clear',  NULL, 20),
+      (v_comms_check_id, v_aep_agency_ems,    'County EMS',            'ems',             'loud_clear',  NULL, 30),
+      (v_comms_check_id, v_aep_agency_hosp,   'Mercy Hospital ED',     'hospital',        'no_response', 'Med-9 dead; confirmed via backup phone that radio was off-air for scheduled maintenance.', 40),
+      (v_comms_check_id, v_aep_agency_atc,    'Demo Tower',            'atc',             'loud_clear',  NULL, 50),
+      (v_comms_check_id, v_aep_agency_police, 'County Sheriff',        'police',          'loud_clear',  NULL, 60);
+
+    RAISE NOTICE 'Phase 2 AEP: created Mar 2026 comms check';
+  END IF;
+
+  -- 6c. April 2026 — clean cycle
+  IF NOT EXISTS (SELECT 1 FROM aep_comms_checks WHERE base_id = v_kdra_id AND check_date = '2026-04-15' AND check_period = 'monthly') THEN
+    INSERT INTO aep_comms_checks (
+      base_id, check_date, check_period, started_at, completed_at,
+      completed_by, completed_by_oi, notes
+    ) VALUES (
+      v_kdra_id, '2026-04-15', 'monthly',
+      '2026-04-15T14:00:00Z', '2026-04-15T14:30:00Z',
+      v_demo_user, 'JD',
+      'All loud and clear.'
+    ) RETURNING id INTO v_comms_check_id;
+
+    INSERT INTO aep_comms_check_results (check_id, agency_id, agency_name, agency_role, status, notes, sort_order) VALUES
+      (v_comms_check_id, v_aep_agency_arff,   'ARFF Engine 7',         'arff',            'loud_clear', NULL, 10),
+      (v_comms_check_id, v_aep_agency_mutual, 'Springfield Fire Dept', 'mutual_aid_fire', 'loud_clear', NULL, 20),
+      (v_comms_check_id, v_aep_agency_ems,    'County EMS',            'ems',             'loud_clear', NULL, 30),
+      (v_comms_check_id, v_aep_agency_hosp,   'Mercy Hospital ED',     'hospital',        'loud_clear', NULL, 40),
+      (v_comms_check_id, v_aep_agency_atc,    'Demo Tower',            'atc',             'loud_clear', NULL, 50),
+      (v_comms_check_id, v_aep_agency_police, 'County Sheriff',        'police',          'loud_clear', NULL, 60);
+
+    RAISE NOTICE 'Phase 2 AEP: created Apr 2026 comms check';
   END IF;
 
   RAISE NOTICE '=== KDRA Phase 3 demo data refresh complete ===';
