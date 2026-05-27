@@ -294,10 +294,21 @@ export async function fetchAmtrByMember<T = Record<string, unknown>>(
 
 export async function upsertAmtrRow(
   table: string, row: Record<string, unknown>,
+  opts?: { onConflict?: string },
 ): Promise<{ data: Record<string, unknown> | null; error: string | null }> {
   const supabase = db()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
-  const { data, error } = await supabase.from(table).upsert(row as never).select().single()
+  // Without explicit onConflict, supabase-js defaults to primary-key
+  // detection. Callers whose row may already exist by a UNIQUE
+  // constraint but whose `id` isn't in the spread should pass the
+  // unique-constraint columns (e.g. 'member_id,catalog_id') so the
+  // upsert idempotently UPDATES instead of failing as a duplicate
+  // INSERT.
+  const { data, error } = await supabase
+    .from(table)
+    .upsert(row as never, opts?.onConflict ? { onConflict: opts.onConflict } : undefined)
+    .select()
+    .single()
   if (error) {
     console.error(`Failed to upsert ${table}:`, error.message)
     return { data: null, error: friendlyError(error.message) }

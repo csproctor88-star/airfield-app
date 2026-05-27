@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import { fetchAmtrByBase, fetchAmtrByMember, upsertAmtrRow } from '@/lib/supabase/amtr'
 import { thStyle, tdStyle } from '@/components/amtr/ui'
 
@@ -29,7 +30,18 @@ export function QualificationsTab(props: { installationId: string; memberId: str
   const progByCat = new Map(progress.map((p) => [String(p.catalog_id), p]))
   const setField = async (catId: string, field: 'attained' | 'complete_date', value: unknown) => {
     const p = progByCat.get(catId)
-    await upsertAmtrRow('amtr_qual_progress', { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value })
+    // onConflict on the UNIQUE(member_id, catalog_id) constraint so the
+    // upsert UPDATES the existing row when there is one and INSERTS a
+    // fresh row otherwise — regardless of whether `id` made it into the
+    // spread. The earlier default-PK behavior silently failed on UPDATE
+    // when the client-side cache lacked the row's id (e.g. on first
+    // edit after the page mounted with a stale fetch).
+    const { error } = await upsertAmtrRow(
+      'amtr_qual_progress',
+      { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value },
+      { onConflict: 'member_id,catalog_id' },
+    )
+    if (error) { toast.error(error); return }
     load()
   }
 
