@@ -1,237 +1,376 @@
 # Session Handoff
 
-**Date:** 2026-05-26
+**Date:** 2026-05-27
 **Branch:** `main` (in sync with `origin/main`)
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (471 pass / 38 files)
-**HEAD:** `8a754b9`
+**HEAD:** `d9541a2`
 
 ---
 
 ## What shipped this session
 
-**Post-Phase-3 cleanup, then AMTR follow-ups.** Eleven commits, 5 new
-migrations applied. The whole "quick wins" + "medium effort" tranches
-from the prior handoff's tech-debt table cleared (7 items, 7 commits),
-the master verification super-doc was refreshed to match the new
-state, and then four AMTR member-page polish items landed in a quick
-second half of the session. No new modules or routes — every change
-is a fix or follow-up on already-shipped surfaces.
+**Two threads.** The first half was a deep `.mil` email deliverability
+diagnostic that surfaced *the* generalizable lesson of the day:
+Defender for Office 365 quarantines emails containing external HTTP
+links to non-allowlisted domains, regardless of how clean the rest of
+the email looks. Six commits stripped phishing-pattern markers and
+deep links across the signup + user-approval + PPR transactional email
+routes. The second half was feature work — PPR agency notifications,
+email self-service / admin override, post-creation PPR coordination
+edits, Unit / Office Symbol profile fields, a user-delete FK fix,
+an invite-flow rewrite that converts the invite from "click this
+link" to "admin-set temp password + forced change on first
+sign-in," and (closing the day) a brief detour into Supabase's
+secure-password-change guard that ended with toggling that setting
+off project-side. Thirteen commits total, two migrations applied.
 
-### Tech-debt quick wins (4 commits)
+### Signup: fix 405 on Create Account + switch From to info@ (`c19871f`)
 
-#### Wire SMS hazard prefill from WHMP deep-link (`ee7110b`)
+Two related deliverability fixes opened the session. The 405 was a
+real bug: `middleware.ts` whitelisted `/api/installations` and the
+public PPR confirmation route but not `/api/signup-email`. Browser
+POSTs to the new-account endpoint were getting redirected to `/login`
+(307 preserves the method), which is a page-only route → 405 Method
+Not Allowed. Added the missing line.
 
-Phase 3e shipped the WHMP → SMS deep-link encoder
-(`buildSmsHazardPromoteUrl`) but the URL pointed at
-`/sms/hazards/new` which doesn't exist (the create flow is a modal on
-the index page) and the modal didn't read `prefill_*` query params
-even if you'd routed correctly. Operator workaround was a manual
-copy-paste from the URL.
+The From swap (`noreply@glidepathops.com` → `info@glidepathops.com`)
+was the first hypothesis on why .mil never received the verification
+emails. PPR coord/approval/denial emails were reaching the same .mil
+inbox using `info@`; signup was using `noreply@`. DoD tenants commonly
+reject `noreply@` as a "non-deliverable sender" policy. The swap
+turned out *not* to be the root cause (see `d7155dd` below) but it
+was still the right hardening — the four other `noreply@` routes
+should follow the same pattern eventually.
 
-Fix: migration `2026061100` extends the `sms_hazards.source_type`
-CHECK with `'whmp'` (WHMP findings are conceptually distinct from
-`wildlife_strike` — planning-doc finding vs. logged incident, so it
-gets its own first-class source rather than aliasing). The encoder
-URL drops `/new`. `app/(app)/sms/hazards/page.tsx` grew a
-`useSearchParams` effect that reads the four prefill params, auto-
-opens the Add modal with title + description populated, threads
-`source_type` + `source_ref_id` through `createHazard`, then strips
-the params via `router.replace` so a refresh doesn't re-open. A
-"Pre-filled from WHMP" pill on the modal shows the operator the
-provenance. Lacks-SMS_WRITE callers get a toast and the URL cleared.
+### PPR: notify coordinating agencies on approve / deny / cancel (`f8cadc6`)
 
-#### Allow `runway_class` NULL for civilian Part 139 (`2c9f202`)
+The agencies that signed off on a PPR have a stake in the outcome
+(they planned around the arrival) but until this commit only the
+requester was emailed when the PPR was approved, denied, or
+canceled. New `lib/ppr-agency-notify.ts` helper handles fan-out:
 
-UFC runway classes (B / Army_B) don't apply to civilian operations —
-the new `faa_approach_type` field (shipped in Phase 3c) is the
-civilian-correct driver of Part 77 surface dimensions. Civilian rows
-were being saved with `runway_class='B'` as a stopgap.
+- Looks up every distinct `agency_id` from `ppr_coordination` rows
+  on the entry, joins agency name + members.
+- Sends one email per agency to all that agency's members, with
+  outcome-specific styling (green / red / slate) and the denial /
+  cancellation reason block when applicable.
+- Returns `{ sent, skipped, reason? }`. All errors logged + counted,
+  never thrown — fire-and-forget from call sites after the requester
+  email already landed.
 
-Migration `2026061101` drops NOT NULL + DEFAULT 'B' on
-`base_runways.runway_class` and widens the CHECK to `NULL OR 'A' /
-'B' / 'Army_B'` (Class A added since UFC 3-260-01 defines both
-tactical-training A and B — Phase 1 only seeded B). The runway editor
-hides the dropdown on civilian bases (collapses to single-column
-grid), emits NULL on save for civilian and `'B'` for USAF, and the
-read-only row header falls through to the FAA approach type label
-when `runway_class` is null. The base-setup quick-setup pipeline +
-ICAO-lookup-import paths got the same gating.
+Wired into approval / denial / cancellation routes. PPRs that never
+went through coordination trip the helper's `no_coordinating_agencies`
+early return — pre-coordinated / manual-pending / public-still-in-triage
+all skip the agency fan-out. Restructured the `no_requester_email`
+short-circuit in each route so internal-create PPRs that DID go
+through coordination still notify their agencies.
 
-#### KDRA demo seed enrichment (`0c8af66`)
+### docs: PPR coordination briefing + one-page leave-behind (`7d599bd`)
 
-Phase 3 seed covered Phase 3 sub-modules end-to-end but the SMS
-hazard register and AEP comms-check history were empty on KDRA —
-pilot demos through `/sms` and `/aep` had nothing to show.
+Operator asked for source material to feed to a slide-deck generator.
+`docs/PPR_Coordination_Briefing.md` is the long-form (17 sections + a
+suggested 22-slide outline) covering problem statement, lifecycle,
+configuration, both submission paths, triage / coordination / approval
+/ cancellation, emails, PPR# format, audit trail, permissions,
+realtime, DAFMAN compliance mapping, known limitations.
+`docs/PPR_Coordination_Leave_Behind.md` is the one-page printable
+reference. Neither doc was updated to reflect later same-session
+agency-notification changes — flag if reused before that catches up.
 
-`supabase/seed-demo-civilian-phase3.sql` grew two new sections
-(idempotent via NOT EXISTS title/date checks): 4 SMS hazards across
-realistic sources (`wildlife_strike` / `discrepancy` / `inspection` /
-`safety_report`) each with current+residual assessment + 1
-mitigation, plus a Q1 2026 internal audit with 2 closed findings.
-And 3 monthly AEP comms cycles (Feb / Mar / Apr 2026) against the
-full 6-agency roster — 18 result rows — with March intentionally
-including a `no_response` on Mercy Hospital ED narrated as a
-maintenance off-air event to exercise the SPI feed's failure-counting
-path. `hazard_code` minted via `_sms_next_code()` so the demo plays
-with any prior data.
+### Signup email: strip phishing-pattern markers (`e75e9b0`)
 
-#### Wrap AEP supersede in `supersede_aep_plan` RPC (`e318cdf`)
+Resend confirmed the signup verification email as **Delivered** to
+the .mil recipient but the inbox stayed empty — server-side Defender
+quarantine. Cross-reference against the PPR confirmation that DID
+reach the same .mil inbox revealed phishing-pattern markers in the
+signup email that PPR confirmation lacked: "Verify Your X Account"
+subject (canonical phishing template), prominent gradient CTA button,
+"link expires in 24 hours" urgency, dark gradient marketing HTML.
 
-`supersedePlan()` was two writes — INSERT new plan row, UPDATE prior
-row's `replaced_by_id`. If the client crashed (or RLS rejected one of
-the writes) between them, the base was briefly left with two rows
-where `replaced_by_id IS NULL` — both rows looking active.
+Rewrote the email to mirror PPR confirmation's properties: subject
+`Glidepath account confirmation` (no "Verify"), plain `<p>` tags,
+no styled buttons, verification link as a normal hyperlink, no
+urgency language, no "What happens next?" bullet list, no
+multi-section styled footer. Added `text:` plain-text alternative —
+multipart/alternative scores better with anti-spam.
 
-Migration `2026061102` adds the `supersede_aep_plan` SECURITY
-DEFINER RPC modeled on `sign_sms_policy`. Validates auth + base
-access + `aep:write`, rejects double-supersede (prior plan must have
-`replaced_by_id IS NULL`), inserts the new row + updates the prior
-in one transaction, returns the new row as JSONB. `lib/supabase/aep.ts
-supersedePlan` rewritten to call the RPC; the `base_id` arg on the
-input shape is ignored (RPC derives from the prior plan to reject
-cross-base writes) but kept for callsite stability.
+Did **not** fix the underlying problem. The email still got
+quarantined. Reason became clear in `d7155dd`.
 
-### Tech-debt medium effort (3 commits)
+### Email change: self-service + admin override (`7672a92`)
 
-#### Pin `surface_set` on `obstruction_evaluations` rows (`9cde5ca`)
+Operator request: no path for users to change their sign-in email
+after account creation, and admins couldn't fix typos. Three pieces:
 
-Phase 3c's detail-page `SurfaceSetLegend` read the base's *current*
-`bases.obstruction_surface_set` to choose which surfaces to display.
-The evaluation's `results` JSONB was already pinned at compute time,
-but the legend was not — so if an admin flipped the base default
-after a save, prior evaluations re-rendered with a legend that didn't
-match their saved results.
+- **`app/api/profile/email/route.ts`** (new) — authenticated user
+  changes their own email via `admin.auth.admin.updateUserById(callerId,
+  { email, email_confirm: true })`. Bypasses Supabase's double-
+  confirmation flow because that flow doesn't reach .mil. `profiles.email`
+  updated alongside `auth.users.email` since there's no sync trigger.
+- **`/api/admin/users/[id]` PATCH** (extended) — when body contains
+  `email`, also calls the auth admin API before applying the profiles
+  update. Existing `isAdmin` gate applies; base admins still
+  constrained to their own base via `canBaseAdminManageUser`.
+- **Settings → Profile + admin user-detail modal** — new editable
+  "SIGN-IN EMAIL" field on Settings (with FROM/TO confirmation modal
+  before applying). Admin modal email display flipped to an editable
+  input gated behind the existing show/hide eye toggle so accidental
+  edits aren't possible.
 
-Migration `2026061200` adds `surface_set TEXT` to
-`obstruction_evaluations` with CHECK `(NULL OR 'ufc_3_260_01' /
-'faa_part77')`, backfills via `UPDATE FROM bases` join (15 existing
-demo rows took the base's current default — best available signal
-since there's no per-row history). The create/update paths thread
-the picker state into the payload; the detail-page `SurfaceSetLegend`
-prefers the pinned `surface_set` and falls back to the base default
-for legacy rows. PDF generator unchanged (it renders the saved
-`results` array, doesn't care about surface_set).
+Tradeoff captured in the commit message: no verification email is
+sent on change, so typos can lock a user out. Mitigations are the
+confirmation modal + admin-side warning copy + the fact that an
+admin can re-fix.
 
-#### Annual review digest cron — AEP §139.325(d) + WHMP §139.337(c) (`75cc9c6`)
+### PPR emails: strip deep-link CTA buttons for .mil deliverability (`d7155dd`)
 
-Phase 3a shipped a daily training-expiry digest. AEP and WHMP both
-have 12-month review cycles per their regs but had no automated nag
-when the next review approached.
+The operator made the diagnostic catch of the day. After we'd
+stripped phishing-pattern markers from the signup email and it
+*still* didn't deliver to .mil, they observed: PDF Export emails
+work, PPR confirmation works, but PPR coordination-request and
+signup verification don't. The only consistent difference was the
+presence of external HTTP links to `glidepathops.com` in the body.
 
-Migration `2026061201` adds `annual_review_digest_log` (per-day dedup
-with UNIQUE(base, send_date), same pattern as `training_digest_log`).
-`lib/annual-review-due.ts` holds the pure-function date math
-(`nextAnnualReviewDate`, `annualReviewDaysOut`,
-`classifyAnnualReview`) — kept out of `lib/supabase/*` so the server
-route can import without dragging the browser Supabase client into
-the API bundle. `app/api/annual-review-digest/route.ts` (POST,
-Bearer `CRON_SECRET` auth, service-role client) scans civilian
-bases, joins active AEP plan + active WHMP assessment, classifies
-both via the 60-day amber window, dedups, and emits a Resend
-transactional email with overdue/amber rows. `vercel.json` got the
-13:30 UTC cron entry — offset 30 min from the training digest at
-13:00 to keep logs untangled. 14 new tests cover boundary cases,
-leap-year Feb-29 → Mar-1 rollover, and same-day classification.
+Defender for Office 365 routes every URL in incoming mail through
+its **Safe Links / URL reputation engine**. `glidepathops.com` has
+no reputation history with .mil tenants and isn't on any standard
+allowlist — any `https://glidepathops.com/...` link in the body
+trips the scanner. `mailto:` links and PDF attachments are exempt
+from URL scanning. That fully explains the observed pattern.
 
-#### Parameterize `pointToRunwayRelation` half-width (`2e33c6d`)
+Stripped the `Review the PPR` CTA button from
+`app/api/send-ppr-coordination-request/route.ts` and the
+`Open the PPR` button from `lib/ppr-agency-notify.ts` (which powers
+the new agency notifications from `f8cadc6`). Replaced both with
+plain-text instructions ("Sign in to Glidepath and open the PPR
+module to review and respond"). Simplified the styled "PPR NUMBER"
+callout to a plain paragraph. Added `text:` alternatives.
 
-The geometry helper hardcoded UFC's 1,000-ft primary half-width;
-Phase 3c's `evaluateObstructionPart77` worked around this by re-
-computing `withinPrimary` locally against the per-approach-type Part
-77 half-width (125-500 ft).
+This is the commit that made things work for `.mil`. Operator
+confirmed `Hell yes, it went through!!!!!!!!!!`. The lesson lives in
+`memory/feedback_mil_email_deliverability.md`.
 
-`pointToRunwayRelation` now accepts optional
-`opts.primaryHalfWidth`. Default 1,000 ft preserves every UFC
-callsite bit-identically. The Part 77 evaluator passes its
-per-approach-type value through and drops the local recompute. The
-200-ft primary extension past each threshold stays hardcoded — UFC
-3-260-01 and 14 CFR §77.19 agree on it.
+### Signup form: drop the "personal email" advisory copy (`47657ac`)
 
-### Verification super-doc refresh (`9be5d1c`)
+Five-line cleanup. With .mil deliverability resolved via the deep-link
+strip + Supabase Confirm Email toggle off (done outside any commit —
+see the Supabase settings note below), the "Please use a personal
+email on a non-government network" warning is no longer accurate.
+Users can sign up with .mil / .gov / personal addresses.
 
-`docs/VERIFICATION_ALL_PHASES.md` was still phrased as if the seven
-tech-debt items were known limitations. Updated header to 466 tests
-+ migrations 2026061100 – 2026061201; §0.2 SQL pre-flight gained
-schema probes for the new column / nullability / RPC / CHECK
-extension; §0.3 KDRA section grew probes for the 4 demo hazards + 3
-comms cycles; §0.4 turned into a two-cron table; per-phase walkthrough
-steps were rewritten where behavior changed (Phase 3b atomic
-supersede step, Phase 3c surface_set pinning regression step, Phase
-3e WHMP→SMS auto-fill); §5 master triage dropped the stale "Promote
-opens empty form" known-limitation line and added 4 new bug-framed
-rows. Final 525 lines (+72/-20).
+### PPR edit: allow adding coordinating agencies after creation (`39afb49`)
 
-### AMTR follow-ups (3 commits)
+Operator: *"the edit button does not really unlock that much"*. The
+edit modal previously only changed `arrival_date`, `column_values`,
+`notes`, and (for approved PPRs) the approver OI. No way to add
+agencies post-triage if one was forgotten.
 
-#### JQS catalog: drop full-row amber tint (`0ad0921`)
+New `addPprCoordinationAgencies({entryId, baseId, agencyIds})` in
+`lib/supabase/ppr.ts`:
 
-Required JQS catalog items had both an inset-shadow side bar on the
-first cell AND a full-row amber background. Operator feedback: the
-combination made the table noisy. Dropped the row-bg wash; the 3-px
-`var(--color-warning)` inset-shadow on the first cell still flags
-required items cleanly. URL-anchor highlight + zebra striping
-unchanged. `components/amtr/jqs-tab.tsx` only.
+- Gates on entry status — only allowed when `pending_coordination`
+  or `pending_amops_approval`. Returns an error for terminal statuses.
+- De-dupes against existing coord rows. A coord row for the same
+  agency is never re-issued; a prior concur or non-concur stands.
+- Inserts new `ppr_coordination` rows at `status: 'pending'`.
+- If entry was `pending_amops_approval`, reverts to
+  `pending_coordination` (idempotent guard via `.eq('status',
+  'pending_amops_approval')`). Audit-logged as a status revert so the
+  timeline shows the reason.
+- Fires the coord-request email for newly added agencies only —
+  inherits the deep-link strip from `d7155dd` so .mil recipients get
+  a deliverable email.
 
-#### Qualifications updates not persisting (`1663cdd`)
+UI: new COORDINATION section in the edit modal shows existing coord
+rows read-only with Concur / Non-concur / Pending status pills.
+Chip-cluster picker for agencies NOT already on the entry, filtered
+by `canTriage` + entry status. Warning copy on the
+`pending_amops_approval` path explains the upcoming status revert.
 
-`QualificationsTab.setField` called `upsertAmtrRow` without an
-explicit `onConflict`. supabase-js's default is primary-key conflict
-detection, which silently no-ops on UPDATE when the client-side cache
-lacked the row's id — first edit after a stale fetch or a race
-between two clients. Symptom: operator types a date, navigates away,
-returns, and the change is gone.
+### Account approval flow: consolidate buttons + strip email risk surface (`cc49085`)
 
-`upsertAmtrRow` grew an optional `opts.onConflict` param;
-`qualifications-tab.tsx` passes `'member_id,catalog_id'` matching
-the UNIQUE constraint declared in migration `2026052016`. Now the
-upsert UPDATES regardless of whether `id` made it into the spread.
-Also surfaces upsert errors via toast — the previous code fire-and-
-forgot the result, hiding silent failures from the operator.
+Three coordinated changes to the signup → approval → notification
+pipeline:
 
-#### Remove duplicate References tab + NAMT self-edit carve-out (`8a754b9`)
+1. **Modal cleanup** — removed the inline "Pending Approval" yellow
+   banner from `components/admin/user-detail-modal.tsx`. It duplicated
+   Approve/Reject actions that the bottom Email Actions row already
+   provided, but the bottom row also fires the corresponding
+   `/api/user-emails` template AND flips the user's status. Single
+   canonical action.
 
-Two related changes to `app/(app)/amtr/[memberId]/page.tsx`; bundled
-because they touched adjacent regions of the same file.
+2. **Email template rewrites** in `app/api/user-emails/route.ts` —
+   the three admin-action emails (Approved / Request Info / Rejected)
+   were using the heavy `brandedEmail` wrapper (dark gradient
+   backgrounds, multi-section layout). Approved email had a "Log In
+   to Glidepath" gradient CTA button + a "Reset it here" deep link.
+   All deep links removed. Wrapper replaced with plain `<p>` tags
+   mirroring the PPR confirmation pattern. From flipped to
+   `info@`. Added text/plain alternatives. Dropped the unused
+   `pendingApprovalEmail` template + `getSiteUrl` import + `loginUrl`
+   plumbing.
 
-References tab: the per-record tab duplicated the module-level
-References view (rendered by `module-bar.tsx` via the help-overlay
-button). Operators flagged it as redundant clutter inside the record.
-Removed from `TAB_LABELS`, the render branch, and the import. The
-module-level References surface at the top of `/amtr` remains the
-single source of truth.
+3. **Signup email send eliminated entirely** in
+   `app/api/signup-email/route.ts`. With Supabase project-level
+   "Confirm email" toggled OFF (operator did this in the dashboard
+   mid-session), the verification step is no longer required for
+   sign-in — admin approval is the verification step. The link in
+   the email did nothing functional; the email itself was misleading.
+   Switched from `generateLink({type:'signup'})` to
+   `admin.auth.admin.createUser({email_confirm: true, user_metadata:
+   {...}})`. The same `handle_new_user()` trigger still fires on
+   INSERT, so the profile row is created with `status: 'pending'`.
+   No Resend send at all.
 
-NAMT self-edit carve-out: the default AMTR self-cert guard locks
-both data entry AND signing on your own record — the model assumes
-someone above you transcribes. For one-person shops where the NAMT
-runs the program, there's no supervisor available, so they were
-stuck. New `canEnterDataOnRecord(myRoles, isOwn)` helper in
-`lib/amtr/roles.ts`: on your own record, returns true if you hold
-NAMT or AFM; on others' records, falls through to the original
-supervisor-driven `canEnterData` rule. The page-level
-`dataEntryAllowed` switches to this. **The signing self-cert guard
-is unchanged** — `slotsUserCanSign(myRoles, isOwn=true)` still
-short-circuits to `{'trainee'}` regardless of held roles. The
-carve-out is strictly transcription / data entry; the audit-critical
-signing path is intact. The own-record header subtitle now
-distinguishes the carve-out case ("Training Manager carve-out…")
-from the default trainee context. 5 new tests cover the carve-out
-plus a regression-guard assertion that the signing invariant doesn't
-move (`slotsUserCanSign(['namt'], true)` still returns
-`{'trainee'}`).
+Login page success message updated from "check your email for a
+verification link..." to "your account is pending approval by your
+base administrator."
+
+### Profiles: add Unit + Office Symbol fields (`55f05fe`)
+
+USAF identity fields commonly captured alongside Rank and EDIPI.
+Both nullable — civilians and contractors don't always have them
+and signup shouldn't gate on military-specific identity.
+
+Migration `2026061300_profile_unit_office_symbol.sql` adds both
+columns to `profiles` and `CREATE OR REPLACE`s `handle_new_user()`
+to also read `unit` and `office_symbol` from `raw_user_meta_data`
+on INSERT. Trigger remains, only function body replaced.
+
+Signup form gets Unit + Office Symbol inputs side-by-side after
+First/Last Name. Both optional, free text (no format validation —
+USAF office symbols vary widely across MAJCOMs). Settings → Profile
+gets editable Unit + Office Symbol fields with the same
+Save-when-changed pattern as Operating Initials. Admin modal not yet
+updated to let admins edit these on someone else's profile — flagged
+as follow-up.
+
+### User mgmt: fix delete FK block + rewrite invite for .mil (`d4bed5d`)
+
+Closing the day with two coordinated user-management fixes.
+
+**Delete unblocked.** Trying to delete a user who had acted on any
+PPR coordination row failed with `update or delete on table "profiles"
+violates foreign key constraint "ppr_coordination_coordinated_by_fkey"
+on table "ppr_coordination"`. Six PPR FK constraints to `profiles(id)`
+were created without an `ON DELETE` clause, defaulting to `NO ACTION`.
+The existing user-delete route's nullify list pre-dated the PPR module
+and didn't include any PPR tables. Migration `2026061301` ALTERs all
+six to `ON DELETE SET NULL`: `ppr_entries.created_by` / `updated_by` /
+`triaged_by` / `approval_user_id`, `ppr_coordination.coordinated_by`,
+`ppr_remarks.created_by`. `ppr_agency_members.user_id` was already
+`ON DELETE CASCADE` (correct semantic — a membership without a user
+makes no sense). PostgreSQL now nullifies references automatically;
+the route doesn't need PPR-aware code.
+
+**Invite rewrite.** The original invite flow used `generateLink({type:
+'invite'})` which mints a verification link the user clicks to set
+their password. That link was the .mil-blocking deep link, and unlike
+the other email routes we cleaned today there's no way to keep the
+link AND make it deliverable — the link is the entire point of the
+email.
+
+Switched to admin-set temp password:
+- Migration adds `profiles.must_change_password BOOLEAN DEFAULT
+  FALSE`. New self-signups stay false (they pick a password at signup
+  time); admin invites flip it true.
+- `/api/admin/invite` uses `createUser({email_confirm: true, password:
+  'glidepathpassword'})`. Fixed sentinel password is operator-chosen;
+  security model relies on `must_change_password` as the actual gate,
+  not password secrecy. Profile flipped `status='active'` (admin
+  invite is admin pre-approval) and `must_change_password=true` after
+  the `handle_new_user()` trigger fires.
+- Email is plain HTML, no deep links, `info@` sender, text/plain
+  alternative. Body contains the sign-in email + temp password and
+  tells the user they'll be prompted to change it on first sign-in.
+- `/login` checks `must_change_password` after sign-in and redirects
+  to `/setup-account` before serving the app. The pending-status
+  block stays in place for self-signups.
+- `/setup-account` (existing page from the old invite-link flow)
+  collects the new password, clears `must_change_password`, stamps
+  `last_seen_at`. Minor change to keep the flag flip in sync.
+
+Admin UX bonus: the `/users` page's invite success toast now
+surfaces the temp password (`glidepathpassword`) for 15 seconds so
+if the email gets quarantined the admin can communicate it OOB.
+
+### Setup account: secure-password-change detour (`3a1cc95` → `d9541a2`)
+
+First sign-in of an admin-invited user failed at `/setup-account`
+with `current password required when setting a new password` —
+Supabase's secure-password-change guard. Initial fix (`3a1cc95`)
+added a Current Password field + `signInWithPassword` reauth flow
+before `updateUser({password})`, which is the secure pattern and
+what I should have built first.
+
+A prior unkept fix attempt routed the change through a service-
+role admin endpoint to bypass the guard entirely — operator
+correctly pushed back that this was a security hole. Reverted that
+file (`app/api/profile/password/route.ts`, never committed) before
+shipping the secure version. Pattern worth pinning: when stuck on
+a recent-reauth or secure-change guard, the right fix is to
+collect the current password client-side and call
+`signInWithPassword` to satisfy the guard — never to bypass via
+the service role.
+
+Then the operator reported the current-password verification flow
+also wasn't behaving cleanly and toggled the Supabase project's
+"Secure password change" setting OFF instead. Final commit
+(`d9541a2`) simplified `/setup-account` to a two-field form (New
+Password + Confirm) with no reauth. Documented the trade-off in
+the code: project-level setting accepts the session-hijack risk;
+if anyone flips the guard back on, the page will start failing
+again and `3a1cc95`'s pattern needs to come back.
 
 ---
 
 ## Migrations status
 
-All 5 new migrations applied to the linked Supabase instance.
+Two new migrations this session, both applied to the linked Supabase
+instance via `npx supabase db query --linked --file ...`.
 
 | File | Applied | What it does |
 |---|---|---|
-| `2026061100_sms_hazard_source_whmp.sql` | ✅ | Extends `sms_hazards.source_type` CHECK with `'whmp'` |
-| `2026061101_runway_class_nullable.sql` | ✅ | `base_runways.runway_class` drops NOT NULL + DEFAULT 'B'; CHECK widens to `NULL OR 'A' / 'B' / 'Army_B'` |
-| `2026061102_aep_supersede_rpc.sql` | ✅ | `supersede_aep_plan(...)` SECURITY DEFINER RPC — atomic two-write supersede mirroring `sign_sms_policy` |
-| `2026061200_obstruction_evaluations_surface_set.sql` | ✅ | Adds `surface_set TEXT` column + CHECK, backfills from `bases.obstruction_surface_set` |
-| `2026061201_annual_review_digest_log.sql` | ✅ | Per-day dedup table for the annual-review cron, UNIQUE(base, send_date) |
+| `2026061300_profile_unit_office_symbol.sql` | ✅ | `ALTER TABLE profiles ADD COLUMN unit TEXT, office_symbol TEXT` (both nullable). `CREATE OR REPLACE handle_new_user()` to read both fields from `raw_user_meta_data` on INSERT. Existing trigger preserved. |
+| `2026061301_user_delete_fk_and_temp_password.sql` | ✅ | Two changes: ALTERs six PPR FK constraints (ppr_entries.created_by / updated_by / triaged_by / approval_user_id, ppr_coordination.coordinated_by, ppr_remarks.created_by) from default NO ACTION to ON DELETE SET NULL. Adds `profiles.must_change_password BOOLEAN DEFAULT FALSE` for the new admin-invite flow. |
+
+---
+
+## Supabase project settings changed
+
+Two settings flipped in the dashboard this session — not in code,
+but load-bearing for the signup + setup-account flows and worth
+recording:
+
+- **Authentication → Sign In / Sign Up → Email → Confirm email** set to **OFF**.
+  Users are now permitted to sign in without first clicking a
+  verification link. Combined with `handle_new_user()` setting
+  `status: 'pending'`, the login page's pending-status check gates
+  access until an admin approves. Account verification is now the
+  admin approval step, not a verification email click. The
+  signup-email route was updated in `cc49085` to align (switched
+  from `generateLink` to `createUser` with `email_confirm: true`,
+  no email sent).
+
+  If flipped back on, the signup-email route will silently create
+  accounts that *bypass* the verification flow Supabase suddenly
+  thinks is required — breaking new signups for everyone. Don't
+  flip it back without re-introducing a verification email send
+  path.
+
+- **Authentication → Password protection → Secure password change** set to **OFF**.
+  Toggled off late in the session because the current-password
+  verification flow wasn't behaving cleanly during the admin-invite
+  forced-change UX. `app/setup-account/page.tsx` (`d9541a2`) was
+  simplified to a two-field form without reauthentication. The
+  trade-off accepted: a session-hijack attacker with a stolen
+  cookie can change the password silently.
+
+  If flipped back on, `/setup-account` will start failing again
+  with `current password required when setting a new password`.
+  The recovery path is in `3a1cc95` — restore the Current
+  Password field + `signInWithPassword` reauth before
+  `updateUser`.
 
 ---
 
@@ -239,66 +378,89 @@ All 5 new migrations applied to the linked Supabase instance.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| WHMP "Promote to SMS Hazard" deep-link 404 | URL pointed at non-existent `/sms/hazards/new` route (create is a modal on the index page); modal didn't read prefill params either | `ee7110b` |
-| Qualifications updates appear to save but vanish on refresh | `upsertAmtrRow` default-PK conflict detection silently no-ops on UPDATE when `id` isn't in the spread (stale client cache); fire-and-forget result-checking hid the failure | `1663cdd` |
-| Detail-page Surface Set legend re-renders against a flipped base default | Legend read `bases.obstruction_surface_set` at render time instead of the saved evaluation's set; results JSONB was already pinned but the legend wasn't | `9cde5ca` |
-| AEP supersede leaves both rows briefly active if client crashes mid-flow | Two separate writes (INSERT new + UPDATE prior pointer), neither transactional | `e318cdf` |
-
-The qualifications bug surfaced a broader anti-pattern: AMTR's
-upsert helper was the same shape everywhere, so any other tab using
-similar uncached saves could share the silent-update failure mode.
-Only Qualifications was patched in this session — JQS / 1098 / RAT
-tabs use the same helper but their callsites all carry `id` via
-`ensureProgress` first, so they're safe. Worth a sweep if any of
-those tabs report a similar symptom later.
+| 405 Method Not Allowed on Create Account | `middleware.ts` whitelisted other public-write API routes but not `/api/signup-email`; the POST got redirected (307) to `/login` (page-only), which doesn't accept POST → 405 | `c19871f` |
+| Signup verification email never lands in `.mil` inbox despite Resend showing Delivered | Defender for Office 365 quarantines emails containing external HTTP links to non-allowlisted domains. `glidepathops.com` isn't on .mil tenants' Safe Links allowlists. Phishing-pattern markers in the email content were a red herring; URL reputation scanning was the gate | `d7155dd` (and `e75e9b0` as the wrong-hypothesis attempt) |
+| PPR coordination-request emails not landing on .mil after agency members were configured | Same root cause as signup: the email body had a `Review the PPR` CTA button linking to `glidepathops.com/ppr`. Defender quarantine | `d7155dd` |
+| User delete fails for any user who has acted on a PPR coordination row | PPR-module FK constraints to `profiles(id)` were created without an `ON DELETE` clause, defaulting to NO ACTION. The user-delete route's nullify list pre-dated the PPR module and didn't include any PPR tables | `d4bed5d` |
+| Admin invite emails not reaching .mil inboxes | Same Defender deep-link issue as the rest of the day. Unlike other emails the invite link IS the email's entire purpose (used to set the user's password), so couldn't just strip it. Switched to admin-set temp password + must_change_password gate, no link in body | `d4bed5d` |
+| First sign-in of admin-invited user fails at /setup-account with "current password required when setting a new password" | Supabase's secure-password-change guard requires the current password or a recent reauthentication; `auth.updateUser({password})` alone doesn't satisfy it. Initial fix added a Current Password field + signInWithPassword reauth, then operator toggled the Supabase project setting off and removed the field | `3a1cc95` → `d9541a2` |
 
 ---
 
 ## Lessons from this session
 
-- **`defaultValue` on uncontrolled inputs hides silent save failures.**
-  A `<input type="date" defaultValue={…}>` shows whatever the user
-  typed regardless of whether the save actually persisted. If
-  `upsertAmtrRow` silently no-ops (which it did in the Qualifications
-  bug), the user sees their typed value, navigates away, and returns
-  to find the value gone. Every uncontrolled-input save path needs
-  an error toast on the save call — fire-and-forget is invisible.
-  Saved as `feedback_default_value_silent_save.md`.
+- **`.mil` email deliverability is gated on URL reputation, not
+  content classification.** Defender for Office 365 routes every URL
+  in incoming mail through its Safe Links engine. A domain that
+  hasn't been allowlisted by the recipient's tenant — like
+  `glidepathops.com` — is scored suspicious purely by presence in
+  the body, regardless of the surrounding HTML, button styling, or
+  subject line. `mailto:` links and PDF attachments are exempt
+  because they don't go through URL reputation. **Resend
+  "Delivered" status means the .mil mail relay accepted the message;
+  it says nothing about whether the inbox actually receives it.**
+  Server-side quarantine happens after relay acceptance. Saved as
+  `feedback_mil_email_deliverability.md`.
 
-- **Audit invariants need explicit regression-guard tests.** The
-  NAMT data-entry carve-out is fine because data entry ≠
-  certification, but the signing self-cert guard
-  (`slotsUserCanSign(myRoles, isOwn=true)` returns `{'trainee'}`
-  *regardless of held roles*) is the audit-critical line that must
-  never move. Added `slotsUserCanSign(['namt'], true) === Set(['trainee'])`
-  + `slotsUserCanSign(['afm'], true) === Set(['trainee'])` as an
-  explicit guard with a comment naming what they protect. Pattern:
-  when carving out a permission exception, pin the unchanged
-  invariant in a test with a comment. Saved as
-  `feedback_audit_invariant_guard_test.md`.
+- **Operator-observed pattern beats lab diagnostic.** I spent the
+  first half of the day stripping phishing-pattern markers (subject
+  lines, CTA buttons, urgency language, dark gradient HTML) based on
+  what *looks* like phishing to a classifier. None of it mattered —
+  the operator's cross-reference between PDF Export (no links →
+  works) and PPR coordination-request (with link → doesn't) was the
+  actual signal. Next time something doesn't deliver and Resend
+  shows Delivered, lead with "what URLs are in the body?" before
+  redesigning the email.
 
-- **Default-PK conflict detection silently fails on UPDATE more
-  often than you'd expect.** Supabase's `.upsert()` without an
-  explicit `onConflict` defaults to the primary key. If the
-  client-side row spread is missing the `id`, the upsert tries to
-  INSERT and either silently no-ops (PostgREST sometimes returns
-  success with 0 rows) or fails the UNIQUE constraint with an
-  obscure error. Always pass `onConflict` matching the actual
-  unique constraint you intend the upsert to resolve.
+- **Don't trust Supabase project settings to fix code-level email
+  sends.** Toggling "Confirm email" OFF in Supabase prevents
+  Supabase's *own* confirmation emails and unblocks sign-in for
+  unconfirmed accounts. It does **not** affect our independent
+  Resend-based signup-email route — that route continued to mint a
+  verification token via `generateLink` and send an email regardless.
+  The two layers are independent; both need to be in sync or the
+  signup flow becomes confusing (link in email does nothing because
+  no confirmation needed). After the toggle, switch the route to
+  `createUser({email_confirm: true})` and stop sending the email.
 
-- **Per-cluster review gating pays off even after the build
-  phase.** The seven tech-debt items each shipped clean on the
-  first pass — zero round-trip fixes. Same pattern as the Phase 3
-  per-cluster gates: small, contained, with build + tsc + tests
-  between each. Worth keeping as the default cadence rather than
-  batching follow-ups.
+- **Plain HTML transactional emails are the durable answer for
+  mixed-recipient deliverability.** Mirror the working PPR
+  confirmation: `<p>` tags, no buttons, no gradient wrappers, no
+  external HTTP links, `mailto:` only, plain-text alternative via
+  Resend's `text:` field, `info@` sender. Every email route touched
+  this session now follows this pattern. The four `noreply@` routes
+  that weren't audited (forgot-password, user-emails was caught,
+  admin/invite, admin/reset-password) still likely violate it.
 
-- **The verification super-doc decays fast if not refreshed
-  alongside fixes.** Within a single session of tech-debt cleanup,
-  `docs/VERIFICATION_ALL_PHASES.md` had 4-5 lines that read as
-  "known limitation" but were actually fixed. Refreshing the doc
-  is part of fixing the bug — left to a future pass, it accumulates
-  contradiction.
+- **`docs/PPR_Coordination_Briefing.md` decays fast.** The briefing
+  was written before this session's coordination-related changes
+  (agency outcome notifications, post-creation agency adds). If the
+  operator hands it to a slide-deck generator, the resulting deck
+  won't reflect current capability. Worth a refresh pass before
+  using as marketing material.
+
+- **PPR-module FK constraints to `profiles(id)` were missing `ON
+  DELETE` clauses.** This was found via user-delete failure, but
+  the same pattern likely exists on other modules added after the
+  user-delete route's nullify list was written (AMTR, SMS, AEP,
+  WHMP all touch profiles via `created_by` / `updated_by` /
+  `signed_by` / etc.). When adding a new table that references
+  `profiles(id)`, default to `ON DELETE SET NULL` for audit
+  columns and `ON DELETE CASCADE` for true ownership (e.g.,
+  `ppr_agency_members.user_id`). Saves a future regression of
+  this exact bug.
+
+- **Never bypass a Supabase auth guard via the service-role admin
+  API.** When `auth.updateUser({password})` hit Supabase's
+  secure-password-change guard, my first instinct was to route
+  through a service-role endpoint that called
+  `admin.auth.admin.updateUserById` — which neutralized the guard
+  entirely. Operator correctly flagged it as a security hole. The
+  correct fix is to satisfy the guard: collect the current
+  password client-side and call `signInWithPassword` first. The
+  service-role admin API is for legitimately-cross-user actions
+  (admin updating another user's email, deleting a user, etc.),
+  not for routing around protections on the caller's own data.
 
 ---
 
@@ -306,50 +468,61 @@ those tabs report a similar symptom later.
 
 | Item | Severity | Notes |
 |---|---|---|
-| NAMT self-edit signing path — should NAMT/AFM be able to sign Trainer/Certifier/NAMT blocks on their own record? | Open policy question | This session intentionally lifted only the data-entry carve-out and kept the signing self-cert guard intact. If the user wants signing too, it's a 2-line change in `slotsUserCanSign` to remove the `isOwn=true` short-circuit for NAMT/AFM. Audit-trail implications — confirm before lifting. |
-| `pointToRunwayRelation` primary extension still hardcoded at 200 ft | Low | UFC 3-260-01 and 14 CFR §77.19 happen to agree on 200 ft today, so no observable bug. If a future regime uses a different extension, this becomes the next parameterization (mirroring the halfWidth change). |
-| Precision approach 2nd-segment evaluation lacks real-pilot calibration | Low | 50:1 first 10 kft + 40:1 next 40 kft encoded mathematically and tested. Real-world precision-instrument calibration during pilot phase. |
-| AEP drill `participants` snapshot can drift from `aep_response_agencies` | Low | JSONB snapshots agency names at save time; rename / delete doesn't retroactively update drill history. UI degrades gracefully. |
-| WHMP `findings.sms_hazard_id` is a string with no FK | Low | Stored inside JSONB; cross-module reference without tight coupling. UI doesn't enforce the linked hazard exists. |
-| Annual review digest cron not yet exercised against production data | Low | Vercel cron entry shipped; needs a manual `curl -X POST -H "Authorization: Bearer $CRON_SECRET" …/api/annual-review-digest` after the next deploy to confirm the email format renders correctly. Same shape as training-expiry-digest, so risk is small. |
-| SMS hazard auto-create on RwyCC ≤ 2 or WHMP severe species | Medium | Out of scope for v1 by plan; pilot trials should surface whether the auto-promote vs. manual handoff is right. |
-| Other AMTR tabs using `upsertAmtrRow` without `onConflict` | Low | JQS / 1098 / RAT callsites all `ensureProgress` first so `id` is always present — safe today. But the helper accepts an optional `onConflict` arg now; future contributors should default to passing it to avoid the qualifications-style silent-update failure. |
-| Trademark: CDW holds the live "GLIDEPATH" Class 42 (SaaS) registration | Held | Legal critical path before commercial launch. |
+| Three `noreply@` transactional email routes still unaudited | Medium | `/api/forgot-password`, `/api/admin/reset-password` still use `noreply@` + likely contain external HTTP links. `/api/admin/invite` got fixed in `d4bed5d`; `/api/user-emails` in `cc49085`. Apply the same pattern — strip deep links, switch to `info@`, plain HTML, text/plain alternative — when any starts producing .mil deliverability complaints. |
+| FK constraints to `profiles(id)` on other modules (AMTR, SMS, AEP, WHMP) likely also missing `ON DELETE SET NULL` | Medium | The PPR FKs (fixed in `d4bed5d`) were the symptom that surfaced. The same gap likely exists on tables like `amtr_progress`, `sms_hazards.created_by`, `aep_*.created_by`, `whmp_*.created_by`. Will surface as user-delete failures with different `_fkey` names. Worth a sweep migration before any pilot user gets deleted. |
+| `glidepathops.com` not on .mil Safe Links allowlists | High (long-term) | The durable fix for the email deliverability story. Operator needs to file a Comm Sq ticket: *"Please add `glidepathops.com` to our tenant's Safe Links allowlist + Anti-Spam allowed senders."* Once allowlisted, the deep-link CTAs can come back, and we don't have to maintain the bare-bones email pattern forever. |
+| Admin user-detail modal can't edit Unit / Office Symbol | Low | The fields exist on `profiles` (migration `2026061300`) and are editable via Settings (self-service), but the admin modal in `components/admin/user-detail-modal.tsx` doesn't expose them. Add to the existing PATCH payload + a pair of inputs in the modal — small change. |
+| `lib/supabase/types.ts` doesn't reflect new profile columns | Low | `unit` and `office_symbol` are read via `as any` cast or via the narrowed `.single<{...}>()` generic in `app/(app)/settings/page.tsx`. Existing code patterns already use casts heavily in these spots, so no immediate problem. |
+| `/auth/confirm` route is now orphaned | Low | No signup flow uses it anymore (verification link path is gone). The route still exists at `app/auth/confirm/` and the success message on the login page still references `/login?signup_verified=1`. Harmless but cruft — could be removed. |
+| `PPR_Coordination_Briefing.md` doesn't mention agency outcome notifications | Low | Briefing was written earlier in the session; `f8cadc6` shipped after. If the doc is used as a deck source, add a section on §10 (Email notifications) to cover the new approve/deny/cancel agency emails. |
+| Trademark: CDW holds the live "GLIDEPATH" Class 42 (SaaS) registration | Held | Legal critical path before commercial launch. Carryover from prior handoffs. |
 
 ---
 
 ## Next session tasks
 
-**Backlog empty after this session.** All Phase-3-aftermath tech debt
-that wasn't pilot-blocked is done. Pick from the menu based on
-appetite:
+Backlog from the prior handoff was empty; this session's work
+generated a fresh menu. Pick based on appetite:
 
-1. **Release prep (v2.34.0).** Bundle audit, lint sweep, version
-   bump in 5 places (per the project memory's "5 places" rule),
-   v2.34.0 CHANGELOG header covering Phase 3 + this session's seven
-   tech-debt fixes + AMTR follow-ups, README + capabilities-doc
-   updates, tag and push. Closes a real release boundary.
+1. **v2.34.0 release prep.** Still pending from the prior handoff,
+   plus this session's email-deliverability and PPR-coordination
+   work pushes the unreleased delta further. Bundle audit, lint
+   sweep, version bump in 5 places (per project memory's "5 places"
+   rule), v2.34.0 CHANGELOG header covering all post-`v2.33.0` work,
+   README + capabilities-doc updates, tag and push. Closes a real
+   release boundary.
 
-2. **Verify on iPhone PWA.** Walk `docs/VERIFICATION_ALL_PHASES.md`
-   end-to-end via the Vercel preview. The doc was refreshed this
-   session to reflect the new state — should be self-consistent
-   with what the operator actually finds. Surfaces any mobile UX
-   issues before pilot recruitment.
+2. **Audit the remaining two `noreply@` routes.**
+   `/api/forgot-password` and `/api/admin/reset-password`. If any
+   recipient is on .mil, apply the same fix pattern from `cc49085`
+   + `d7155dd` + `d4bed5d`. Otherwise leave alone until they
+   surface a complaint.
 
-3. **NAMT signing-guard policy decision.** If the user wants NAMT
-   to also sign Trainer/Certifier/NAMT blocks on their own record
-   (not just transcribe data), it's a 2-line change to
-   `slotsUserCanSign`. Confirm the audit-trail tradeoff before
-   lifting — currently held as an open policy question above.
+7. **Sweep migration for other modules' FK gaps.** AMTR / SMS /
+   AEP / WHMP tables that reference `profiles(id)` likely lack
+   `ON DELETE SET NULL` the same way PPR did before `d4bed5d`.
+   Will surface as user-delete failures with a different
+   `_fkey` name. One migration that ALTERs them all to SET NULL
+   would close the class of bug before any pilot user gets
+   deleted.
 
-4. **Manual cron smoke after next deploy.** Curl
-   `/api/annual-review-digest` with `CRON_SECRET` to confirm the
-   email format renders correctly. One-shot, no code change needed.
+3. **Comm Sq whitelist ticket for `glidepathops.com`.** Out of
+   code's reach but the durable fix. Filed once, benefits every
+   email going forward.
 
-5. **Pilot recruitment kickoff.** Identify the 3 Class III non-hub
-   airports per the parent plan (FAA Great Lakes region recommended)
-   and start outreach with a complete-product demo. **Trademark
-   resolution** is the only true blocker before commercial launch.
+4. **Admin can edit Unit / Office Symbol on other users.** Extend
+   `components/admin/user-detail-modal.tsx` with two new inputs +
+   thread `unit` / `office_symbol` through the existing PATCH
+   payload. The `/api/admin/users/[id]` route already accepts an
+   arbitrary updates object, so backend is free.
+
+5. **Verify on iPhone PWA.** Walk
+   `docs/VERIFICATION_ALL_PHASES.md` end-to-end via the Vercel
+   preview. Already in the prior backlog; still applies.
+
+6. **Refresh `docs/PPR_Coordination_Briefing.md`** to cover agency
+   outcome notifications + post-creation agency adds. Small edit;
+   makes the briefing usable as deck-generator input again.
 
 ### Long-running carryover
 
@@ -366,20 +539,15 @@ appetite:
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 471 pass / 38 files (+19 from prior 452)
-       tests/annual-review-due.test.ts (+14) — 1-year math, UTC truncation, boundary classification, leap-year rollover
-       tests/amtr-roles.test.ts (+5) — NAMT/AFM own-record carve-out, signing-guard regression
+Tests: 471 pass / 38 files (unchanged from prior 471)
 Build: npm run build compiled successfully.
 
 Notable First Load JS (changed routes this session):
-  /sms/hazards          4.84 kB / 339 kB   (+0.1 kB from prefill effect)
-  /amtr                 5.35 kB / 166 kB
-  /amtr/[memberId]      9.79 kB / 201 kB   (References tab removed)
-  /obstructions         13.6 kB / 189 kB
-  /obstructions/[id]    13.9 kB / 346 kB   (legend now reads pinned set)
-  /aep                  5.18 kB / 184 kB
-  /wildlife/whmp        10.9 kB / 189 kB
-  /api/annual-review-digest  0 B / 0 B    (server-only route)
+  /login                 12 kB    / 168 kB   (signup form gained Unit + Office Symbol fields; must_change_password redirect)
+  /ppr                   17.9 kB  / 189 kB   (edit modal now shows existing coord + add-agency picker)
+  /setup-account         4.95 kB  / 151 kB   (clears must_change_password after new password set; current-password field added then removed)
+  /settings              15.7 kB  / 204 kB   (sign-in email + unit + office_symbol editable fields)
+  /users                 20.1 kB  / 186 kB   (modal: email editable; pending-approval banner removed; invite toast surfaces temp pw)
 
 Middleware: 74.5 kB (unchanged).
 Shared by all: 91.2 kB (unchanged).
@@ -391,7 +559,7 @@ Shared by all: 91.2 kB (unchanged).
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | Phase 1 + 2 + 3a-3e of FAA Part 139 commercial expansion (Phase 3 complete), plus seven post-Phase-3 tech-debt fixes: SMS hazard prefill from WHMP deep-link (with `'whmp'` source_type), `runway_class` nullable for civilian airports, atomic `supersede_aep_plan` RPC, per-row `surface_set` pinning on obstruction evaluations, annual review digest cron for AEP §139.325(d) + WHMP §139.337(c), parameterized `pointToRunwayRelation` half-width, KDRA demo seed enriched with Phase 2 SMS data + AEP comms history. Master verification super-doc refreshed. AMTR member-record polish: JQS row tint removed (side bar only), Qualifications upsert fixed (onConflict on unique constraint), per-record References tab removed (module-level kept), NAMT/AFM self-edit data-entry carve-out (signing guard intact). Not merged-tag yet. |
+| **Unreleased** | — | Phase 1 + 2 + 3a-3e of FAA Part 139 commercial expansion (Phase 3 complete), plus seven post-Phase-3 tech-debt fixes, the AMTR member-record polish from the prior session, and this session's email-deliverability + PPR-coordination + profile-fields + user-management work. Email pipeline (signup-email, user-emails, admin invite, PPR coord-request, PPR agency-notify) all converted to plain HTML / `info@` sender / no external HTTP links / text/plain alternative for `.mil` recipient compatibility. Supabase "Confirm email" + "Secure password change" toggled off; signup creates auto-confirmed users via `createUser`, no verification email sent. Admin invite switched from verification-link flow to admin-set temp password ('glidepathpassword') with must_change_password gate that forces /setup-account on first sign-in. PPR edit modal can add coordinating agencies post-creation with status revert. PPR agencies are notified on approve/deny/cancel. Self-service email change in Settings + admin override in user modal. Unit + Office Symbol fields on profiles (signup form + Settings). PPR Coordination Briefing + leave-behind docs. User delete unblocked by ALTERing PPR FK constraints to ON DELETE SET NULL. Not merged-tag yet. |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
@@ -400,36 +568,30 @@ Shared by all: 91.2 kB (unchanged).
 
 ### New
 
-- `supabase/migrations/2026061100_sms_hazard_source_whmp.sql`
-- `supabase/migrations/2026061101_runway_class_nullable.sql`
-- `supabase/migrations/2026061102_aep_supersede_rpc.sql`
-- `supabase/migrations/2026061200_obstruction_evaluations_surface_set.sql`
-- `supabase/migrations/2026061201_annual_review_digest_log.sql`
-- `app/api/annual-review-digest/route.ts`
-- `lib/annual-review-due.ts`
-- `tests/annual-review-due.test.ts`
+- `supabase/migrations/2026061300_profile_unit_office_symbol.sql`
+- `supabase/migrations/2026061301_user_delete_fk_and_temp_password.sql`
+- `app/api/profile/email/route.ts`
+- `lib/ppr-agency-notify.ts`
+- `docs/PPR_Coordination_Briefing.md`
+- `docs/PPR_Coordination_Leave_Behind.md`
+- `memory/feedback_mil_email_deliverability.md` (in user-level auto-memory)
 
 ### Modified
 
-- `app/(app)/sms/hazards/page.tsx` — prefill effect + Pre-filled-from pill
-- `app/(app)/base-config/setup/page.tsx` — civilian gating on runway_class
-- `app/(app)/obstructions/page.tsx` — threads surface_set into payload
-- `app/(app)/obstructions/[id]/page.tsx` — SurfaceSetLegend takes pinnedSet
-- `app/(app)/amtr/[memberId]/page.tsx` — References tab removed, NAMT carve-out
-- `lib/supabase/whmp.ts` — encoder URL changed to `/sms/hazards?...`
-- `lib/supabase/sms.ts` — `SmsHazardSourceType` union extended with `'whmp'`
-- `lib/supabase/aep.ts` — `supersedePlan` calls the RPC
-- `lib/supabase/obstructions.ts` — accept optional `surface_set` on create/update
-- `lib/supabase/amtr.ts` — `upsertAmtrRow` optional `onConflict` param
-- `lib/supabase/types.ts` — `runway_class string|null`; `surface_set` on obstruction_evaluations
-- `lib/base-setup-quick-setup.ts` + `lib/base-setup-guide.ts` — civilian runway_class behavior
-- `lib/calculations/geometry.ts` — `pointToRunwayRelation` `opts.primaryHalfWidth`
-- `lib/calculations/obstructions.ts` — drops local `withinPrimary` recompute
-- `lib/amtr/roles.ts` — new `canEnterDataOnRecord` helper
-- `components/amtr/jqs-tab.tsx` — row-bg tint removed
-- `components/amtr/qualifications-tab.tsx` — onConflict + toast on error
-- `vercel.json` — 13:30 UTC cron entry for annual-review-digest
-- `tests/amtr-roles.test.ts` — NAMT carve-out + signing-guard regression
-- `tests/whmp.test.ts` — URL assertion updated
-- `supabase/seed-demo-civilian-phase3.sql` — Phase 2 SMS + AEP comms sections
-- `docs/VERIFICATION_ALL_PHASES.md` — full refresh, +72/-20 lines
+- `middleware.ts` — whitelisted `/api/signup-email`
+- `app/login/page.tsx` — signup form gains Unit + Office Symbol + dropped personal-email advisory; success message updated; must_change_password post-sign-in redirect to /setup-account
+- `app/setup-account/page.tsx` — clears must_change_password + stamps last_seen_at after password set; brief current-password-field detour during the secure-password-change debug, removed after the Supabase setting was toggled off
+- `app/api/signup-email/route.ts` — `generateLink` → `createUser`; Resend send removed entirely; new fields threaded through `user_metadata`
+- `app/api/admin/invite/route.ts` — full rewrite: `createUser` with fixed temp password `glidepathpassword`, status='active', must_change_password=true; plain-HTML email with no deep link, info@ sender, text/plain alternative
+- `app/api/user-emails/route.ts` — full rewrite of 3 templates: plain HTML, no deep links, `info@`, text/plain alternative
+- `app/api/send-ppr-coordination-request/route.ts` — drops "Review the PPR" CTA button; simplifies PPR-number callout; adds text/plain alternative
+- `app/api/send-ppr-approval/route.ts` — calls `notifyCoordinatingAgencies` after requester email; restructured no_requester_email short-circuit
+- `app/api/send-ppr-denial/route.ts` — same agency-notify pattern
+- `app/api/send-ppr-cancellation/route.ts` — same agency-notify pattern
+- `app/api/admin/users/[id]/route.ts` — PATCH handles `email` field via auth admin API
+- `app/(app)/ppr/page.tsx` — edit modal: existing coord display + add-agency chip picker + handleSave threads `addPprCoordinationAgencies`
+- `app/(app)/settings/page.tsx` — sign-in email editable field (with FROM/TO confirmation modal); Unit + Office Symbol editable fields
+- `app/(app)/users/page.tsx` — invite toast surfaces temp password for 15s when invite returns one
+- `components/admin/user-detail-modal.tsx` — email editable for admins (gated behind reveal toggle); inline "Pending Approval" banner removed
+- `lib/supabase/ppr.ts` — `addPprCoordinationAgencies` exported
+- `lib/ppr-agency-notify.ts` — drops `Open the PPR` deep-link button; adds text/plain alternative
