@@ -29,16 +29,16 @@ export function QualificationsTab(props: { installationId: string; memberId: str
 
   const progByCat = new Map(progress.map((p) => [String(p.catalog_id), p]))
   const setField = async (catId: string, field: 'attained' | 'complete_date', value: unknown) => {
-    const p = progByCat.get(catId)
-    // onConflict on the UNIQUE(member_id, catalog_id) constraint so the
-    // upsert UPDATES the existing row when there is one and INSERTS a
-    // fresh row otherwise — regardless of whether `id` made it into the
-    // spread. The earlier default-PK behavior silently failed on UPDATE
-    // when the client-side cache lacked the row's id (e.g. on first
-    // edit after the page mounted with a stale fetch).
+    // Minimal payload — only the keys + the changing field. PostgreSQL's
+    // ON CONFLICT (member_id, catalog_id) DO UPDATE SET clause only
+    // touches columns present in the payload, so other columns
+    // (created_at, the unchanged of attained/complete_date) keep their
+    // existing values. Sending the full {...p} spread risks dragging
+    // a stale `id` or `updated_at` into the EXCLUDED set; keeping the
+    // payload minimal eliminates that whole class of upsert quirk.
     const { error } = await upsertAmtrRow(
       'amtr_qual_progress',
-      { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value },
+      { base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value },
       { onConflict: 'member_id,catalog_id' },
     )
     if (error) { toast.error(error); return }
@@ -68,15 +68,36 @@ export function QualificationsTab(props: { installationId: string; memberId: str
                 {items.map((c) => {
                   const catId = String(c.id)
                   const p = progByCat.get(catId)
+                  const savedDate = p?.complete_date ? String(p.complete_date).slice(0, 10) : ''
+                  const attained = !!p?.attained
                   return (
                     <tr key={catId} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td style={tdStyle}>{String(c.name)}</td>
                       <td style={tdStyle}>
                         {g.mode === 'date'
-                          ? <input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={p?.complete_date ? String(p.complete_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, 'complete_date', e.target.value || null)} />
+                          // Uncontrolled input keyed by the saved value — when the value
+                          // changes after a save+reload, React remounts the input with the
+                          // new defaultValue. Without the key the DOM value persists from
+                          // user interaction and a failed save would silently revert on
+                          // refresh.
+                          ? <input
+                              key={`date-${catId}-${savedDate}`}
+                              type="date" className="input-dark" style={di} disabled={!canEnterData}
+                              defaultValue={savedDate}
+                              onBlur={(e) => canEnterData && setField(catId, 'complete_date', e.target.value || null)}
+                            />
                           : (
-                            <select className="input-dark" style={{ ...di, width: 90 }} disabled={!canEnterData} defaultValue={p?.attained ? 'Yes' : 'No'} onChange={(e) => setField(catId, 'attained', e.target.value === 'Yes')}>
-                              <option>No</option><option>Yes</option>
+                            // Controlled select with explicit option values. The previous
+                            // uncontrolled select with options lacking value attributes
+                            // produced an `e.target.value === 'Yes'` read that didn't
+                            // match cleanly when React re-rendered after a save+reload.
+                            <select
+                              className="input-dark" style={{ ...di, width: 90 }} disabled={!canEnterData}
+                              value={attained ? 'Yes' : 'No'}
+                              onChange={(e) => setField(catId, 'attained', e.target.value === 'Yes')}
+                            >
+                              <option value="No">No</option>
+                              <option value="Yes">Yes</option>
                             </select>
                           )}
                       </td>
