@@ -537,11 +537,6 @@ function LoginContent() {
                 required
                 autoComplete="email"
               />
-              {mode === 'signup' && (
-                <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                  Please use a personal email on a non-government network.
-                </div>
-              )}
             </div>
             <div style={{ marginBottom: mode === 'signin' ? 8 : 16 }}>
               <span className="section-label">Password</span>
