@@ -59,6 +59,9 @@ export async function fetchObstructionEvaluation(id: string): Promise<Obstructio
 
 export async function createObstructionEvaluation(input: {
   runway_class: 'B' | 'Army_B'
+  // Pinned at create-time so the detail-page legend stays accurate
+  // even if admin later flips bases.obstruction_surface_set.
+  surface_set?: 'ufc_3_260_01' | 'faa_part77' | null
   object_height_agl: number
   object_distance_ft: number | null
   distance_from_centerline_ft: number | null
@@ -191,6 +194,9 @@ export async function updateObstructionEvaluation(
     violated_surfaces: string[]
     has_violation: boolean
     notes: string | null
+    // When the user re-evaluates with a different surface set, persist
+    // it so the detail page legend matches the new results.
+    surface_set?: 'ufc_3_260_01' | 'faa_part77' | null
   },
 ): Promise<{ data: ObstructionRow | null; error: string | null }> {
   const supabase = createClient()

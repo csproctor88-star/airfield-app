@@ -449,6 +449,10 @@ function ObstructionsContent() {
       ),
       has_violation: multiAnalysis.hasViolation,
       notes: description || null,
+      // Pin the surface set that produced these results so the
+      // detail-page legend stays in sync even if admin later flips
+      // bases.obstruction_surface_set.
+      surface_set: surfaceSet,
     }
 
     let data, error

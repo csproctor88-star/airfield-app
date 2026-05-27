@@ -2147,6 +2147,7 @@ export type Database = {
           photo_storage_path: string | null
           results: Json
           runway_class: string
+          surface_set: string | null
           violated_surfaces: string[] | null
         }
         Insert: {
@@ -2170,6 +2171,7 @@ export type Database = {
           photo_storage_path?: string | null
           results?: Json
           runway_class: string
+          surface_set?: string | null
           violated_surfaces?: string[] | null
         }
         Update: {
@@ -2193,6 +2195,7 @@ export type Database = {
           photo_storage_path?: string | null
           results?: Json
           runway_class?: string
+          surface_set?: string | null
           violated_surfaces?: string[] | null
         }
         Relationships: [

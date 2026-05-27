@@ -403,8 +403,15 @@ export default function ObstructionDetailPage() {
         </div>
       )}
 
-      {/* Surface set reference legend (collapsible) */}
-      <SurfaceSetLegend base={currentInstallation} />
+      {/* Surface set reference legend (collapsible). Prefer the row's
+          pinned surface_set so old evaluations show the legend that
+          matches their saved results, even if admin later flipped the
+          base default. Legacy rows (NULL surface_set) fall back to
+          the base's current default. */}
+      <SurfaceSetLegend
+        base={currentInstallation}
+        pinnedSet={(evaluation.surface_set as 'ufc_3_260_01' | 'faa_part77' | null | undefined) ?? null}
+      />
 
       {/* Surface-by-surface results */}
       <div className="card" style={{ marginBottom: 10 }}>
@@ -724,9 +731,17 @@ export default function ObstructionDetailPage() {
 // Surface set legend — collapsible reference for the active set
 // ─────────────────────────────────────────────────────────────
 
-function SurfaceSetLegend({ base }: { base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | null } | null }) {
+function SurfaceSetLegend({
+  base,
+  pinnedSet,
+}: {
+  base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | null } | null
+  pinnedSet?: 'ufc_3_260_01' | 'faa_part77' | null
+}) {
   const [open, setOpen] = useState(false)
-  const set = getSurfaceSet(base)
+  // Pinned row value wins; fall back to the base default for legacy
+  // rows that pre-date the surface_set column.
+  const set = pinnedSet ?? getSurfaceSet(base)
   const isPart77 = set === 'faa_part77'
   // For Part 77 we show the default approach type's surfaces; per-runway types
   // are documented in /base-config/setup. UFC iterates IMAGINARY_SURFACES.
