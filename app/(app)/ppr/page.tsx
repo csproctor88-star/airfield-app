@@ -42,7 +42,7 @@ import {
   Plus, FileText, Mail, Search, SlidersHorizontal, X,
   Inbox, MailQuestion, Clock, CheckCircle2, XCircle, Hourglass,
   CheckCircle, AlertTriangle, AlertCircle,
-  Route, Check, CheckSquare, Bookmark,
+  Route, Check, CheckSquare, Bookmark, Link as LinkIcon,
 } from 'lucide-react'
 
 type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'pending_amops_approval' | 'approved' | 'denied' | 'canceled'
@@ -490,6 +490,27 @@ export default function PprPage() {
     [dataColumns],
   )
 
+  // Copy the public PPR request URL to clipboard. Prefers the short
+  // ICAO-based URL when the base has an ICAO; falls back to the
+  // legacy UUID URL otherwise (mirrors generatePublicQr in
+  // base-config/setup).
+  const publicPprUrl = useMemo(() => {
+    if (typeof window === 'undefined') return ''
+    const icao = (currentInstallation as { icao?: string | null } | null)?.icao
+    if (icao) return `${window.location.origin}/${icao.toLowerCase()}/ppr-request`
+    if (installationId) return `${window.location.origin}/ppr-request/${installationId}`
+    return ''
+  }, [currentInstallation, installationId])
+  const handleCopyPublicUrl = async () => {
+    if (!publicPprUrl) { toast.error("Base ICAO isn't configured yet."); return }
+    try {
+      await navigator.clipboard.writeText(publicPprUrl)
+      toast.success('Public PPR URL copied')
+    } catch {
+      toast.error('Could not copy — clipboard unavailable')
+    }
+  }
+
   // Open create modal
   const handleNew = () => {
     setEditingEntry(null)
@@ -815,6 +836,15 @@ export default function PprPage() {
           PPR Log
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={handleCopyPublicUrl}
+            disabled={!publicPprUrl}
+            title={publicPprUrl ? `Copy public PPR request URL — ${publicPprUrl}` : "Base ICAO isn't configured"}
+            style={utilityBtnStyle(!publicPprUrl)}
+          >
+            <LinkIcon size={14} color="var(--color-accent)" />
+            Copy Public URL
+          </button>
           <button
             onClick={() => handleExportPdf()}
             disabled={generatingPdf || filteredEntries.length === 0}
