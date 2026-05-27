@@ -330,7 +330,10 @@ export function Form1098Tab(props: {
           : `Completing a task auto-creates next year's 1098. Catalog edits in ${year} don't affect other years.`}
       </span>
     </div>
-    <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+    <div className="card" style={{ padding: 0, overflow: 'auto', position: 'relative', opacity: isArchived ? 0.55 : 1, transition: 'opacity 120ms ease' }}>
+      {isArchived && (
+        <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: 'repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--color-text-3) 6%, transparent) 14px 15px)' }} />
+      )}
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
         <thead>
           <tr>
