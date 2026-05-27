@@ -80,7 +80,7 @@ describe('buildSmsHazardPromoteUrl', () => {
       finding: makeFinding(),
       assessmentId: 'abc-123',
     })
-    expect(url).toContain('/sms/hazards/new?')
+    expect(url).toContain('/sms/hazards?')
     expect(url).toContain('prefill_source=whmp')
     expect(url).toContain('prefill_source_ref_id=abc-123')
     expect(url).toContain('prefill_title=Grass+height+exceeded+8+inches+in+May+survey')

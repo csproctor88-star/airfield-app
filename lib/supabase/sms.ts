@@ -60,7 +60,7 @@ export type SmsSafetyObjective = {
 export type SmsHazardStatus = 'open' | 'under_review' | 'controlled' | 'closed' | 'duplicate'
 export type SmsHazardSourceType =
   | 'manual' | 'discrepancy' | 'inspection' | 'wildlife_strike'
-  | 'safety_report' | 'audit' | 'moc' | 'reg_review' | 'other'
+  | 'safety_report' | 'audit' | 'moc' | 'reg_review' | 'whmp' | 'other'
 
 export type SmsRiskBand = 'low' | 'medium' | 'high' | null
 

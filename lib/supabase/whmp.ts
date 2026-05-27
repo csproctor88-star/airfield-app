@@ -147,7 +147,9 @@ export function buildSmsHazardPromoteUrl(input: {
     prefill_source: 'whmp',
     prefill_source_ref_id: input.assessmentId,
   })
-  return `/sms/hazards/new?${params.toString()}`
+  // /sms/hazards is the index page; the Add Hazard modal lives there
+  // and reads prefill_* params to auto-open with values populated.
+  return `/sms/hazards?${params.toString()}`
 }
 
 // ────────────────────────────────────────────────────────────────

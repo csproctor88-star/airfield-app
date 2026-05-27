@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowLeft, Plus, Search, Filter, Download } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
-import { fetchHazards, createHazard, type SmsHazard, type SmsHazardStatus, BAND_COLORS } from '@/lib/supabase/sms'
+import { fetchHazards, createHazard, type SmsHazard, type SmsHazardSourceType, type SmsHazardStatus, BAND_COLORS } from '@/lib/supabase/sms'
 import { BandChip } from '@/components/sms/risk-matrix'
 import { formatZuluDate } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -22,9 +23,20 @@ import { hazardRegisterToCsv, downloadBlob } from '@/lib/sms-pdf'
  * description + risk owner). Filters narrow by status + source +
  * band. CSV export hits the dedicated formatter in lib/sms-pdf.
  */
+// Source types that can arrive via the prefill_source query param. Map
+// arbitrary inbound values to a recognised SmsHazardSourceType (DB
+// CHECK enforces the canonical set); 'whmp' is the live deep-link
+// caller today via lib/supabase/whmp.ts buildSmsHazardPromoteUrl.
+const PREFILL_SOURCE_WHITELIST: ReadonlyArray<SmsHazardSourceType> = [
+  'whmp', 'discrepancy', 'inspection', 'wildlife_strike',
+  'safety_report', 'audit', 'moc', 'reg_review', 'other',
+]
+
 export default function SmsHazardsPage() {
   const { installationId } = useInstallation()
   const { has } = usePermissions()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [loaded, setLoaded] = useState(false)
   const [rows, setRows] = useState<SmsHazard[]>([])
   const [query, setQuery] = useState('')
@@ -32,6 +44,7 @@ export default function SmsHazardsPage() {
   const [bandFilter, setBandFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'unassessed'>('all')
   const [addOpen, setAddOpen] = useState(false)
   const [draft, setDraft] = useState({ title: '', description: '' })
+  const [prefillSource, setPrefillSource] = useState<{ source_type: SmsHazardSourceType; source_ref_id: string | null } | null>(null)
   const [saving, setSaving] = useState(false)
 
   const canWrite = has(PERM.SMS_WRITE)
@@ -45,6 +58,33 @@ export default function SmsHazardsPage() {
   }, [installationId])
 
   useEffect(() => { reload() }, [reload])
+
+  // Prefill-from-query-params handler. Callers like the WHMP "Promote
+  // to SMS Hazard" deep-link (lib/supabase/whmp.ts buildSmsHazardPromoteUrl)
+  // land here with prefill_title / prefill_description / prefill_source /
+  // prefill_source_ref_id populated. Auto-open the Add modal, populate
+  // the draft, remember the source for createHazard, then strip the
+  // params so a refresh doesn't re-open the modal.
+  useEffect(() => {
+    const title = searchParams.get('prefill_title')
+    if (!title) return
+    if (!canWrite) {
+      toast.error('You do not have permission to create SMS hazards')
+      router.replace('/sms/hazards')
+      return
+    }
+    const description = searchParams.get('prefill_description') ?? ''
+    const rawSource = searchParams.get('prefill_source')
+    const sourceRefId = searchParams.get('prefill_source_ref_id')
+    const source_type: SmsHazardSourceType =
+      rawSource && (PREFILL_SOURCE_WHITELIST as readonly string[]).includes(rawSource)
+        ? (rawSource as SmsHazardSourceType)
+        : 'other'
+    setDraft({ title, description })
+    setPrefillSource({ source_type, source_ref_id: sourceRefId || null })
+    setAddOpen(true)
+    router.replace('/sms/hazards')
+  }, [searchParams, router, canWrite])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -69,13 +109,22 @@ export default function SmsHazardsPage() {
       base_id: installationId,
       title: draft.title.trim(),
       description: draft.description.trim() || null,
+      source_type: prefillSource?.source_type,
+      source_ref_id: prefillSource?.source_ref_id ?? null,
     })
     setSaving(false)
     if (!r.ok || !r.hazard) { toast.error(r.error || 'Insert failed'); return }
     toast.success(`Hazard ${r.hazard.hazard_code} created`)
     setAddOpen(false)
     setDraft({ title: '', description: '' })
+    setPrefillSource(null)
     reload()
+  }
+
+  function closeAdd() {
+    setAddOpen(false)
+    setPrefillSource(null)
+    setDraft({ title: '', description: '' })
   }
 
   function exportCsv() {
@@ -215,9 +264,16 @@ export default function SmsHazardsPage() {
 
       {/* Quick-add modal */}
       {addOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setAddOpen(false)}>
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={closeAdd}>
           <div className="bg-card border border-border-active rounded-lg p-5 max-w-md w-full space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold text-foreground">Add Hazard</h2>
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-lg font-semibold text-foreground">Add Hazard</h2>
+              {prefillSource && (
+                <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium bg-sky-500/15 text-sky-700">
+                  Pre-filled from {prefillSource.source_type === 'whmp' ? 'WHMP' : prefillSource.source_type.replace('_', ' ')}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-dark">
               Capture the hazard now; assess likelihood / severity and define mitigations on the
               detail page after.
@@ -243,7 +299,7 @@ export default function SmsHazardsPage() {
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setAddOpen(false)} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Cancel</button>
+              <button onClick={closeAdd} className="px-3 py-1.5 rounded text-sm bg-elevated hover:bg-elevated text-secondary">Cancel</button>
               <button onClick={handleAdd} disabled={saving} className="px-3 py-1.5 rounded text-sm bg-amber-600 hover:bg-amber-500 disabled:bg-elevated text-white">
                 {saving ? 'Adding…' : 'Add Hazard'}
               </button>
