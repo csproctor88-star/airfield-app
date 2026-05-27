@@ -87,6 +87,7 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
     { table: 'amtr_803_catalog', rows: STD_803 },
     { table: 'amtr_qual_catalog', rows: QUAL_CATALOG },
   ]
+  const currentYearStr = String(new Date().getUTCFullYear())
   const results: SeedResult[] = []
   for (const job of jobs) {
     const existing = await countAmtrRows(job.table, baseId)
@@ -94,7 +95,11 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
       results.push({ table: job.table, inserted: 0, skipped: true, error: null })
       continue
     }
-    const { inserted, error } = await insertAmtrRows(job.table, withBase(baseId, job.rows))
+    // 1098 catalog is per-year (Phase B) — tag seed rows with current year.
+    const rows = job.table === 'amtr_1098_catalog'
+      ? job.rows.map((r) => ({ ...r, year_label: currentYearStr }))
+      : job.rows
+    const { inserted, error } = await insertAmtrRows(job.table, withBase(baseId, rows))
     results.push({ table: job.table, inserted, skipped: false, error })
   }
   // 1098 needs current/prior year rows for the progress UI.
@@ -157,9 +162,16 @@ export type SyncResult = { table: string; added: number; updated: number; retire
  * `cfgs` are touched.
  */
 export async function runSyncCatalogs(baseId: string, cfgs: SyncCfg[], version: string): Promise<SyncResult[]> {
+  const currentYearStr = String(new Date().getUTCFullYear())
   const out: SyncResult[] = []
   for (const cfg of cfgs) {
-    const existing = await fetchAmtrByBase<SyncRow>(cfg.table, baseId)
+    let existing = await fetchAmtrByBase<SyncRow>(cfg.table, baseId)
+    // 1098 catalog is per-year (Phase B). Sync only affects the current
+    // year — historical years are frozen so updating to a new standard
+    // version doesn't rewrite archived 1098 catalogs.
+    if (cfg.table === 'amtr_1098_catalog') {
+      existing = existing.filter((r) => String(r.year_label) === currentYearStr)
+    }
     const exByKey = new Map(existing.map((r) => [cfg.key(r), r]))
     const newKeys = new Set(cfg.rows.map(cfg.key))
     let added = 0, updated = 0, retired = 0, error: string | null = null
@@ -167,6 +179,9 @@ export async function runSyncCatalogs(baseId: string, cfgs: SyncCfg[], version: 
       const ex = exByKey.get(cfg.key(b))
       const payload: SyncRow = { managed: true, retired: false }
       for (const f of cfg.fields) payload[f] = b[f] ?? null
+      // Tag 1098 inserts with the current year so they pass NOT NULL +
+      // UNIQUE (base_id, year_label, task) constraints.
+      if (cfg.table === 'amtr_1098_catalog') payload.year_label = currentYearStr
       if (ex) {
         const changed = ex.retired === true || ex.managed !== true || cfg.fields.some((f) => String(ex[f] ?? '') !== String(b[f] ?? ''))
         if (changed) { const { error: e } = await updateAmtrRow(cfg.table, String(ex.id), payload); if (e) error = e; else updated++ }

@@ -157,7 +157,13 @@ export default function AmtrRolesPage() {
     if (!installationId) return
     const value = window.prompt('Name:')?.trim()
     if (!value) return
-    const { error } = await upsertAmtrRow(table, { base_id: installationId, [field]: value, frequency: 'Annual' })
+    // 1098 catalog is per-year — tag the new task to the current year so
+    // it lands in the active year's catalog and doesn't violate the
+    // (base_id, year_label, task) UNIQUE / NOT NULL constraints.
+    const payload: Row = table === 'amtr_1098_catalog'
+      ? { base_id: installationId, [field]: value, frequency: 'Annual', year_label: String(new Date().getUTCFullYear()) }
+      : { base_id: installationId, [field]: value, frequency: 'Annual' }
+    const { error } = await upsertAmtrRow(table, payload)
     if (error) { toast.error(error); return }
     load()
   }
@@ -288,11 +294,20 @@ export default function AmtrRolesPage() {
             )}
           </CollapsibleCard>
 
-          {/* 1098 catalog */}
-          <CollapsibleCard title="DAF 1098 — Recurring Training" count={cat1098.length}
-            actions={<Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>}>
-            <CatalogList rows={cat1098} field="task" onResources={(r) => setResourceFor(r)} onDelete={async (id) => { await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
-          </CollapsibleCard>
+          {/* 1098 catalog — per-year after Phase B. Show only the current
+              year here; historical-year catalogs are edited per-record on
+              the 1098 tab so this admin view stays focused on the active
+              task list. */}
+          {(() => {
+            const currentYear = String(new Date().getUTCFullYear())
+            const cat1098Current = cat1098.filter((c) => String(c.year_label) === currentYear)
+            return (
+              <CollapsibleCard title={`DAF 1098 — Recurring Training (${currentYear})`} count={cat1098Current.length}
+                actions={<Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>}>
+                <CatalogList rows={cat1098Current} field="task" onResources={(r) => setResourceFor(r)} onDelete={async (id) => { await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
+              </CollapsibleCard>
+            )
+          })()}
 
           {/* RAT catalog */}
           <CollapsibleCard title="Ready Airman Training" count={catRat.length}

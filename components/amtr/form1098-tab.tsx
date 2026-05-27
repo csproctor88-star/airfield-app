@@ -66,12 +66,18 @@ export function Form1098Tab(props: {
     loadResources()
   }, [loadYears, loadResources])
 
-  // Clone the current-year catalog into a new year_label so the new year
-  // starts with the same task list. No-op if the target year already has
-  // catalog rows. Called on year creation + auto-rollover.
+  // Clone an existing year's catalog into a new year_label so the new year
+  // starts with the same task list. Source is the most-recent populated
+  // year (which handles bases where currentYear's catalog isn't yet
+  // populated — e.g., a base that's still transcribing 2024). No-op if
+  // the target year already has catalog rows. Called on year creation +
+  // auto-rollover.
   const cloneCatalogForYear = useCallback(async (targetYear: string) => {
     if (catalog.some((c) => String(c.year_label) === targetYear)) return
-    const source = catalog.filter((c) => String(c.year_label) === currentYear)
+    const populated = Array.from(new Set(catalog.map((c) => String(c.year_label)).filter(Boolean))).sort().reverse()
+    const sourceYear = populated[0]
+    if (!sourceYear) return
+    const source = catalog.filter((c) => String(c.year_label) === sourceYear)
     if (source.length === 0) return
     const rows = source.map((c) => ({
       base_id: installationId,
@@ -83,7 +89,7 @@ export function Form1098Tab(props: {
     }))
     const { error } = await insertAmtrRows('amtr_1098_catalog', rows)
     if (error) toast.error(error)
-  }, [catalog, currentYear, installationId])
+  }, [catalog, installationId])
 
   const addYear = async () => {
     const y = window.prompt('Add a prior year (e.g. 2024):')?.trim()
@@ -219,24 +225,44 @@ export function Form1098Tab(props: {
     const nextDue = (patch.next_due as string | undefined) ?? (existing?.next_due as string | undefined)
     if (field === 'last_completed' && value && nextDue) {
       const nextYear = String(new Date(`${String(nextDue).slice(0, 10)}T00:00:00Z`).getUTCFullYear())
-      const exists = progress.some((x) => String(x.catalog_id) === catId && String(x.year_label) === nextYear)
-      if (Number(nextYear) > Number(year) && !exists) {
-        // Make sure next year's catalog has a row for this task before
-        // we seed a progress row referencing it. Find the equivalent
-        // catalog row in nextYear (same task name); clone if missing.
+      if (Number(nextYear) > Number(year)) {
         const thisYearCat = yearCatalog.find((c) => String(c.id) === catId)
         if (thisYearCat) {
-          await cloneCatalogForYear(nextYear)
-          // Re-fetch the catalog list to find the cloned row's UUID.
-          const nextYearCat = await fetchAmtrByBase<Row>('amtr_1098_catalog', installationId)
-          const target = nextYearCat.find((c) => String(c.year_label) === nextYear && String(c.task) === String(thisYearCat.task))
+          // Look for an existing catalog row in nextYear matching this
+          // task. Two scenarios to handle:
+          //   1) nextYear has no catalog at all → clone the source year.
+          //   2) nextYear has a catalog but is missing this specific task
+          //      (e.g., catalog drifted over the years) → upsert just
+          //      this task into nextYear.
+          let nextYearCatRows = catalog.filter((c) => String(c.year_label) === nextYear)
+          let target = nextYearCatRows.find((c) => String(c.task) === String(thisYearCat.task))
+          if (!target) {
+            if (nextYearCatRows.length === 0) {
+              await cloneCatalogForYear(nextYear)
+            } else {
+              await upsertAmtrRow(
+                'amtr_1098_catalog',
+                { base_id: installationId, year_label: nextYear, task: thisYearCat.task, type: thisYearCat.type ?? null, frequency: thisYearCat.frequency ?? 'Annual', sort_order: thisYearCat.sort_order ?? 0 },
+                { onConflict: 'base_id,year_label,task' },
+              )
+            }
+            const refreshed = await fetchAmtrByBase<Row>('amtr_1098_catalog', installationId)
+            nextYearCatRows = refreshed.filter((c) => String(c.year_label) === nextYear)
+            target = nextYearCatRows.find((c) => String(c.task) === String(thisYearCat.task))
+          }
           if (target) {
-            const { error: rolloverErr } = await upsertAmtrRow(
-              'amtr_1098_progress',
-              { base_id: installationId, member_id: memberId, catalog_id: String(target.id), year_label: nextYear, next_due: nextDue },
-              { onConflict: 'member_id,catalog_id,year_label' },
+            // Don't reseed if nextYear already has progress for this task.
+            const existsNext = progress.some((x) =>
+              String(x.year_label) === nextYear && String(x.catalog_id) === String(target!.id),
             )
-            if (rolloverErr) { toast.error(rolloverErr); return }
+            if (!existsNext) {
+              const { error: rolloverErr } = await upsertAmtrRow(
+                'amtr_1098_progress',
+                { base_id: installationId, member_id: memberId, catalog_id: String(target.id), year_label: nextYear, next_due: nextDue },
+                { onConflict: 'member_id,catalog_id,year_label' },
+              )
+              if (rolloverErr) { toast.error(rolloverErr); return }
+            }
           }
         }
       }
