@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Plane } from 'lucide-react'
 
 export default function SetupAccountPage() {
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -38,13 +39,23 @@ export default function SetupAccountPage() {
     e.preventDefault()
     setError(null)
 
+    if (!currentPassword) {
+      setError('Current password is required')
+      return
+    }
+
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('New password must be at least 6 characters')
       return
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('New passwords do not match')
+      return
+    }
+
+    if (currentPassword === password) {
+      setError('New password must be different from current password')
       return
     }
 
@@ -57,34 +68,55 @@ export default function SetupAccountPage() {
         return
       }
 
+      // Reauthenticate with the current password before updating.
+      // Supabase's secure-password-change guard requires either a
+      // recent reauthentication or a nonce — re-signing in is the
+      // simplest way to satisfy it AND it verifies the user actually
+      // knows the current password (defense against session hijack
+      // where someone with a stolen cookie tries to lock the real
+      // owner out by changing the password).
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) {
+        setError('Could not identify your account. Sign in again and retry.')
+        return
+      }
+
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      })
+
+      if (reauthError) {
+        const msg = reauthError.message?.toLowerCase() || ''
+        if (msg.includes('invalid') || msg.includes('credentials')) {
+          setError('Current password is incorrect')
+        } else {
+          setError(reauthError.message || 'Could not verify current password')
+        }
+        return
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       })
 
       if (updateError) {
-        setError(
-          updateError.message === 'Unauthorized' || updateError.message?.toLowerCase().includes('unauthorized')
-            ? 'Contact Base Admin for Account Access'
-            : updateError.message,
-        )
+        setError(updateError.message)
         return
       }
 
       // Clear must_change_password so subsequent sign-ins skip the
       // setup redirect, stamp last_seen_at, and (legacy invite-link
-      // flow) flip status active → active in case the user came in
-      // via the old pending-status path.
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase
-          .from('profiles')
-          .update({
-            status: 'active',
-            must_change_password: false,
-            last_seen_at: new Date().toISOString(),
-          } as any)
-          .eq('id', user.id)
-      }
+      // flow) flip status active → active for any user that arrived
+      // via the old /auth/confirm path with status='pending'.
+      await supabase
+        .from('profiles')
+        .update({
+          status: 'active',
+          must_change_password: false,
+          last_seen_at: new Date().toISOString(),
+        } as any)
+        .eq('id', user.id)
 
       setSuccess(true)
       setTimeout(() => {
@@ -172,7 +204,7 @@ export default function SetupAccountPage() {
                   color: 'var(--color-text-1)',
                 }}
               >
-                Create Your Password
+                Set a New Password
               </div>
               <div
                 style={{
@@ -181,12 +213,26 @@ export default function SetupAccountPage() {
                   marginBottom: 16,
                 }}
               >
-                You&apos;ve been invited to Glidepath. Set a password to get started.
+                Enter your current (temporary) password, then choose a new one.
               </div>
 
               <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: 12 }}>
-                  <span className="section-label">Password</span>
+                  <span className="section-label">Current Password</span>
+                  <input
+                    type="password"
+                    className="input-dark"
+                    placeholder="Temporary password from invite"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    disabled={!sessionReady}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <span className="section-label">New Password</span>
                   <input
                     type="password"
                     className="input-dark"
@@ -201,7 +247,7 @@ export default function SetupAccountPage() {
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
-                  <span className="section-label">Confirm Password</span>
+                  <span className="section-label">Confirm New Password</span>
                   <input
                     type="password"
                     className="input-dark"
