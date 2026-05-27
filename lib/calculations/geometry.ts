@@ -204,8 +204,19 @@ export type RunwayRelation = {
 /**
  * Given a point and runway geometry, compute the spatial relationship.
  * Uses a local tangent-plane projection for accuracy at airfield scale.
+ *
+ * `opts.primaryHalfWidth` lets callers override the primary-surface
+ * half-width (default 1,000 ft per UFC 3-260-01). Part 77 callers
+ * supply the per-approach-type half-width (125–500 ft); UFC callers
+ * omit the override and pick up the default. The 200-ft extension
+ * past each threshold is consistent between UFC and Part 77 §77.19,
+ * so it stays hardcoded.
  */
-export function pointToRunwayRelation(point: LatLon, rwy: RunwayGeometry): RunwayRelation {
+export function pointToRunwayRelation(
+  point: LatLon,
+  rwy: RunwayGeometry,
+  opts?: { primaryHalfWidth?: number },
+): RunwayRelation {
   // Convert everything to a local XY coordinate system (feet)
   // Origin = runway midpoint, X = along runway (end1→end2), Y = perpendicular
   const cosLat = Math.cos(rwy.midpoint.lat * DEG_TO_RAD)
@@ -227,8 +238,8 @@ export function pointToRunwayRelation(point: LatLon, rwy: RunwayGeometry): Runwa
 
   const pLocal = toLocal(point)
   const halfLength = rwy.lengthFt / 2
-  const primaryExtension = 200 // ft past each threshold per UFC 3-260-01
-  const primaryHalfWidth = 1000
+  const primaryExtension = 200 // ft past each threshold per UFC 3-260-01 and 14 CFR §77.19
+  const primaryHalfWidth = opts?.primaryHalfWidth ?? 1000
 
   const distFromCL = Math.abs(pLocal.y)
   const side: 'left' | 'right' = pLocal.y < 0 ? 'left' : 'right'

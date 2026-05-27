@@ -1060,8 +1060,11 @@ export function evaluateObstruction(
  * 77 surfaces (primary, approach, transitional, horizontal, conical) — no
  * outer-horizontal, clear-zone, graded-area, or APZ zones; those are UFC-only.
  *
- * `withinPrimary` is recomputed locally from `relation.distanceFromCenterline`
- * because the geometry helper hardcodes UFC's 1,000-ft primary halfWidth.
+ * The geometry helper used to hardcode UFC's 1,000-ft primary
+ * halfWidth, which forced this evaluator to recompute `withinPrimary`
+ * locally. After geometry.ts grew the `opts.primaryHalfWidth` knob,
+ * the per-approach-type half-width is passed straight through to
+ * `pointToRunwayRelation` and `relation.withinPrimary` is the truth.
  */
 export function evaluateObstructionPart77(
   point: LatLon,
@@ -1077,7 +1080,9 @@ export function evaluateObstructionPart77(
   const groundElev = groundElevationMSL ?? airfieldElev
   const obstructionTopMSL = groundElev + obstructionHeightAGL
 
-  const relation = pointToRunwayRelation(point, runway)
+  const relation = pointToRunwayRelation(point, runway, {
+    primaryHalfWidth: surfacesMeta.primary.criteria.halfWidth,
+  })
   const stadiumDist = distanceFromStadiumCenter(point, runway)
 
   const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 })
@@ -1086,12 +1091,13 @@ export function evaluateObstructionPart77(
   const surfaces: SurfaceEvaluation[] = []
   const halfLength = runway.lengthFt / 2
 
-  // Recompute withinPrimary against Part 77 halfWidth (geometry helper uses UFC 1,000 ft).
+  // Per-approach-type primary dimensions; used by the transitional-
+  // surface block below to compute "alongside primary" extent.
   const primaryHW = surfacesMeta.primary.criteria.halfWidth
   const primaryExt = surfacesMeta.primary.criteria.extension
-  const withinPrimary =
-    relation.distanceFromCenterline <= primaryHW &&
-    Math.abs(relation.alongTrackFromMidpoint) <= halfLength + primaryExt
+
+  // relation.withinPrimary now reflects Part 77's narrower half-width.
+  const withinPrimary = relation.withinPrimary
 
   // --- 1. Primary Surface ---
   {
