@@ -61,15 +61,20 @@ async function fetchRecordData(installationId: string, memberId: string) {
 
 // ── Generic flat-table writer ──────────────────────────────
 // Clears the value columns over the data region, then writes `rows`
-// (each an array of [colLetter, value] pairs), appending rows (with the
-// first data row's style) when there are more rows than blanks.
+// (each an array of [colLetter, value] pairs). Relies on ExcelJS's
+// auto-row-creation when you write to a cell beyond rowCount — calling
+// ws.insertRow() here used to trigger "Cannot read properties of
+// undefined (reading 'anchors')" on sheets with drawings whenever a
+// member's import (e.g. 107 imported 623a entries) exceeded the
+// template's pre-blanked rows and required dozens of insertions. Just
+// touching ws.getCell(addr).value creates the row without touching the
+// drawing-anchor adjustment path.
 function writeFlatTable(ws: WS, startRow: number, cols: string[], rows: [string, unknown][][]) {
   // Clear a generous window of existing data so example rows don't linger.
   const clearTo = Math.max(startRow + rows.length, startRow + 60)
   for (let r = startRow; r <= clearTo; r++) for (const c of cols) set(ws, `${c}${r}`, null)
   rows.forEach((cells, i) => {
     const rn = startRow + i
-    if (rn > ws.rowCount) ws.insertRow(rn, [], 'i')
     for (const [c, v] of cells) set(ws, `${c}${rn}`, v)
   })
 }
@@ -92,9 +97,12 @@ function fillQualifications(ws: WS | undefined, member: AmtrMember, cat: Row[], 
   const qtp = cat.filter((c) => c.category === 'qtp')
   const yn = cat.filter((c) => c.category === 'skill_level' || c.category === 'sei')
   for (let r = 7; r <= 11; r++) { set(ws, `A${r}`, null); set(ws, `B${r}`, null) }
-  qtp.forEach((c, i) => { const r = 7 + i; if (r > ws.rowCount) ws.insertRow(r, [], 'i'); set(ws, `A${r}`, str(c.name)); const p = progByCat.get(String(c.id)); set(ws, `B${r}`, dt(p?.complete_date)) })
+  // Set values directly — ExcelJS auto-creates rows when you reference
+  // a cell beyond rowCount. Calling insertRow() triggers a drawing-anchor
+  // bug on sheets with drawings; same root cause as writeFlatTable above.
+  qtp.forEach((c, i) => { const r = 7 + i; set(ws, `A${r}`, str(c.name)); const p = progByCat.get(String(c.id)); set(ws, `B${r}`, dt(p?.complete_date)) })
   for (let r = 13; r <= 22; r++) { set(ws, `A${r}`, null); set(ws, `B${r}`, null) }
-  yn.forEach((c, i) => { const r = 13 + i; if (r > ws.rowCount) ws.insertRow(r, [], 'i'); set(ws, `A${r}`, str(c.name)); const p = progByCat.get(String(c.id)); set(ws, `B${r}`, p?.attained ? 'Yes' : 'No') })
+  yn.forEach((c, i) => { const r = 13 + i; set(ws, `A${r}`, str(c.name)); const p = progByCat.get(String(c.id)); set(ws, `B${r}`, p?.attained ? 'Yes' : 'No') })
 }
 
 function fill1098(ws: WS | undefined, yearLabel: string, cat: Row[], prog: Row[]) {
@@ -183,7 +191,8 @@ function fill803(ws: WS | undefined, items: Row[]) {
   for (let r = start; r <= clearTo; r++) for (const c of ['A', 'K', 'L', 'M', 'N']) set(ws, `${c}${r}`, null)
   items.forEach((it, i) => {
     const r = start + i
-    if (r > ws.rowCount) ws.insertRow(r, [], 'i')
+    // ExcelJS auto-creates rows on cell access; don't call insertRow
+    // (triggers drawing-anchor bug on sheets with drawings).
     set(ws, `A${r}`, str(it.sts_item))
     set(ws, `K${r}`, dt(it.eval_date))
     set(ws, `L${r}`, str(it.in_ugt))
