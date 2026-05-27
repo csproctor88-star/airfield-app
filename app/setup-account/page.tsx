@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Plane } from 'lucide-react'
 
 export default function SetupAccountPage() {
-  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -39,23 +38,13 @@ export default function SetupAccountPage() {
     e.preventDefault()
     setError(null)
 
-    if (!currentPassword) {
-      setError('Current password is required')
-      return
-    }
-
     if (password.length < 6) {
-      setError('New password must be at least 6 characters')
+      setError('Password must be at least 6 characters')
       return
     }
 
     if (password !== confirmPassword) {
-      setError('New passwords do not match')
-      return
-    }
-
-    if (currentPassword === password) {
-      setError('New password must be different from current password')
+      setError('Passwords do not match')
       return
     }
 
@@ -68,34 +57,10 @@ export default function SetupAccountPage() {
         return
       }
 
-      // Reauthenticate with the current password before updating.
-      // Supabase's secure-password-change guard requires either a
-      // recent reauthentication or a nonce — re-signing in is the
-      // simplest way to satisfy it AND it verifies the user actually
-      // knows the current password (defense against session hijack
-      // where someone with a stolen cookie tries to lock the real
-      // owner out by changing the password).
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user?.email) {
-        setError('Could not identify your account. Sign in again and retry.')
-        return
-      }
-
-      const { error: reauthError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
-      })
-
-      if (reauthError) {
-        const msg = reauthError.message?.toLowerCase() || ''
-        if (msg.includes('invalid') || msg.includes('credentials')) {
-          setError('Current password is incorrect')
-        } else {
-          setError(reauthError.message || 'Could not verify current password')
-        }
-        return
-      }
-
+      // Supabase project setting "Secure password change" is OFF, so
+      // the session-based updateUser call works without re-providing
+      // the current password or reauthenticating. The trade-off
+      // (session hijack risk) is accepted at the project level.
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       })
@@ -109,14 +74,17 @@ export default function SetupAccountPage() {
       // setup redirect, stamp last_seen_at, and (legacy invite-link
       // flow) flip status active → active for any user that arrived
       // via the old /auth/confirm path with status='pending'.
-      await supabase
-        .from('profiles')
-        .update({
-          status: 'active',
-          must_change_password: false,
-          last_seen_at: new Date().toISOString(),
-        } as any)
-        .eq('id', user.id)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({
+            status: 'active',
+            must_change_password: false,
+            last_seen_at: new Date().toISOString(),
+          } as any)
+          .eq('id', user.id)
+      }
 
       setSuccess(true)
       setTimeout(() => {
@@ -204,7 +172,7 @@ export default function SetupAccountPage() {
                   color: 'var(--color-text-1)',
                 }}
               >
-                Set a New Password
+                Create Your Password
               </div>
               <div
                 style={{
@@ -213,24 +181,10 @@ export default function SetupAccountPage() {
                   marginBottom: 16,
                 }}
               >
-                Enter your current (temporary) password, then choose a new one.
+                Choose a new password to replace your temporary one.
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: 12 }}>
-                  <span className="section-label">Current Password</span>
-                  <input
-                    type="password"
-                    className="input-dark"
-                    placeholder="Temporary password from invite"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                    autoComplete="current-password"
-                    disabled={!sessionReady}
-                  />
-                </div>
-
                 <div style={{ marginBottom: 12 }}>
                   <span className="section-label">New Password</span>
                   <input
