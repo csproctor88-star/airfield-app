@@ -210,16 +210,21 @@ export async function exportAmtrRecord(installationId: string, member: AmtrMembe
   const [wb, data] = await Promise.all([loadTemplate(), fetchRecordData(installationId, member.id)])
   const currentYear = String(new Date().getUTCFullYear())
 
+  // Rename the bare "623A" sheet to the canonical "DAF Form 623A" at
+  // runtime so the exported workbook matches the AFFSA naming. We do
+  // this through ExcelJS (not openpyxl on the binary template) because
+  // a prior attempt to rename the sheet inside the template file with
+  // openpyxl corrupted drawing anchors and broke export entirely.
+  const ws623a = wb.getWorksheet('DAF Form 623A') ?? wb.getWorksheet('623A')
+  if (ws623a && ws623a.name !== 'DAF Form 623A') ws623a.name = 'DAF Form 623A'
+
   fillCover(wb.getWorksheet('Cover'), member)
   fillQualifications(wb.getWorksheet('Qualifications'), member, data.qualCat, data.qualProg)
   fillJqs(wb.getWorksheet('JQS-CFETP'), data.jqsCat, data.jqsProg)
   fill1098(wb.getWorksheet('DAF Form 1098 2026'), currentYear, data.r1098Cat, data.r1098Prog)
   fill1098(wb.getWorksheet('DAF Form 1098 2025'), String(Number(currentYear) - 1), data.r1098Cat, data.r1098Prog)
   fill797(wb.getWorksheet('DAF Form 797'), data.items797)
-  // Canonical AFFSA template name is "DAF Form 623A"; fall back to the
-  // older bare "623A" in case a customer is still on a pre-rename
-  // template.
-  fill623a(wb.getWorksheet('DAF Form 623A') ?? wb.getWorksheet('623A'), data.e623a)
+  fill623a(ws623a, data.e623a)
   fillRat(wb.getWorksheet('Ready Airman Training'), data.ratCat, data.ratProg)
   for (const [section, sheet] of Object.entries(SECTION_SHEET)) {
     fill803(wb.getWorksheet(sheet), data.items803.filter((r) => r.section === section))
