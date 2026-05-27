@@ -284,10 +284,46 @@ export async function applyAmtrImport(
   ])
   const byName = (cat: Row[], field: string) => { const m = new Map<string, Row>(); for (const c of cat) m.set(norm(String(c[field] ?? '')), c); return m }
   const qualByName = byName(qualCat, 'name')
-  const c1098ByName = byName(c1098, 'task')
   const ratByName = byName(ratCat, 'course')
   const jqsByNum = new Map<string, Row>()
   for (const c of jqsCat) { if (c.kind === 'section') continue; const n = String(c.number ?? '').replace(/[.\s]+$/, '').trim(); if (n) jqsByNum.set(n, c) }
+  // 1098 catalog is per-year now. Build a {year_label → {normTask → row}}
+  // index and a helper that clones the most-recent year's catalog into a
+  // missing target year on first reference.
+  let c1098Mut = [...c1098]
+  const c1098ByYearTask = (): Map<string, Map<string, Row>> => {
+    const m = new Map<string, Map<string, Row>>()
+    for (const c of c1098Mut) {
+      const yr = String(c.year_label ?? '')
+      if (!yr) continue
+      if (!m.has(yr)) m.set(yr, new Map())
+      m.get(yr)!.set(norm(String(c.task ?? '')), c)
+    }
+    return m
+  }
+  const ensure1098YearCatalog = async (targetYear: string): Promise<void> => {
+    const index = c1098ByYearTask()
+    if (index.has(targetYear) && index.get(targetYear)!.size > 0) return
+    // Pick the most-recent populated year as the source. If no year has
+    // any rows, the catalog itself is empty and there's nothing to clone.
+    const populatedYears = Array.from(index.keys()).sort().reverse()
+    const sourceYear = populatedYears[0]
+    if (!sourceYear) return
+    const sourceRows = c1098Mut.filter((c) => String(c.year_label) === sourceYear)
+    const clones = sourceRows.map((c) => ({
+      base_id: installationId,
+      year_label: targetYear,
+      task: c.task,
+      type: c.type ?? null,
+      frequency: c.frequency ?? 'Annual',
+      sort_order: c.sort_order ?? 0,
+    }))
+    const { error } = await insertAmtrRows('amtr_1098_catalog', clones)
+    if (error) onErr(`1098 catalog clone -> ${targetYear}`, error)
+    // Refresh the in-memory catalog list with the new rows. We refetch
+    // from the DB to get the generated UUIDs.
+    c1098Mut = await fetchAmtrByBase<Row>('amtr_1098_catalog', installationId)
+  }
 
   // Qualifications — QTP (complete date) and skill/SEI (attained).
   for (const item of p.qtp) {
@@ -311,17 +347,23 @@ export async function applyAmtrImport(
     if (error) onErr(`Qual ${item.name}`, error); else written++
   }
 
-  // 1098 by year.
-  for (const [year, rows] of Object.entries(p.r1098)) for (const row of rows) {
-    const c = c1098ByName.get(norm(row.task))
-    if (!c) { unmatched.push(`1098 ${year}: ${row.task}`); continue }
-    const next = computeNextDue(row.last_completed, String(c.frequency ?? 'Annual'))
-    const { error } = await upsertAmtrRow(
-      'amtr_1098_progress',
-      { base_id: installationId, member_id: memberId, catalog_id: c.id, year_label: year, start_date: row.start_date || null, last_completed: row.last_completed || null, next_due: next, certifier_initials: row.certifier || null, trainee_initials: row.trainee || null },
-      { onConflict: 'member_id,catalog_id,year_label' },
-    )
-    if (error) onErr(`1098 ${year} ${row.task}`, error); else written++
+  // 1098 by year. Catalog is per-year — make sure each year referenced in
+  // the workbook has its own catalog rows (clone from the most-recent
+  // populated year if missing) before matching.
+  for (const [year, rows] of Object.entries(p.r1098)) {
+    await ensure1098YearCatalog(year)
+    const yearIndex = c1098ByYearTask().get(year) ?? new Map<string, Row>()
+    for (const row of rows) {
+      const c = yearIndex.get(norm(row.task))
+      if (!c) { unmatched.push(`1098 ${year}: ${row.task}`); continue }
+      const next = computeNextDue(row.last_completed, String(c.frequency ?? 'Annual'))
+      const { error } = await upsertAmtrRow(
+        'amtr_1098_progress',
+        { base_id: installationId, member_id: memberId, catalog_id: c.id, year_label: year, start_date: row.start_date || null, last_completed: row.last_completed || null, next_due: next, certifier_initials: row.certifier || null, trainee_initials: row.trainee || null },
+        { onConflict: 'member_id,catalog_id,year_label' },
+      )
+      if (error) onErr(`1098 ${year} ${row.task}`, error); else written++
+    }
   }
 
   // JQS by number.

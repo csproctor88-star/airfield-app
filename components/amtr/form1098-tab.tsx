@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Pencil, BookOpen } from 'lucide-react'
+import { Pencil, BookOpen, Lock, RotateCcw, Archive } from 'lucide-react'
 import { toast } from 'sonner'
-import { upsertAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
+import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, insertAmtrRows, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { ResourceDialog } from '@/components/amtr/resource-dialog'
 import { buildSignoff, buildTrainingDue, fireToTrainingTeam, type NotificationDraft } from '@/lib/amtr/notifications'
 import { dueStatus, computeNextDue } from '@/lib/amtr/status'
@@ -30,12 +30,26 @@ export function Form1098Tab(props: {
   const [statusFilter, setStatusFilter] = useState<'complete' | 'due_soon' | 'overdue' | null>(null)
   const currentYear = String(new Date().getUTCFullYear())
   const [year, setYear] = useState(currentYear)
-  const [extraYears, setExtraYears] = useState<string[]>([])
+  // Full year rows (with archive state) — needed to render the lock
+  // indicator and gate edits/sign/archive actions per-year.
+  const [yearRows, setYearRows] = useState<Row[]>([])
   const [resources, setResources] = useState<Map<string, Row[]>>(new Map())
   const [resourceFor, setResourceFor] = useState<Row | null>(null)
-  const years = Array.from(new Set([currentYear, ...extraYears, ...progress.map((p) => String(p.year_label)).filter(Boolean)])).sort((a, b) => b.localeCompare(a))
+  const years = Array.from(new Set([
+    currentYear,
+    ...yearRows.map((r) => String(r.year_label)).filter(Boolean),
+    ...progress.map((p) => String(p.year_label)).filter(Boolean),
+    ...catalog.map((c) => String(c.year_label)).filter(Boolean),
+  ])).sort((a, b) => b.localeCompare(a))
+  const yearRowByLabel = new Map(yearRows.map((r) => [String(r.year_label), r]))
+  const isArchived = !!yearRowByLabel.get(year)?.archived
+  // Catalog is now per-year; only show rows tagged for the active year.
+  const yearCatalog = catalog.filter((c) => String(c.year_label) === year)
   const progByCat = new Map(progress.filter((p) => p.year_label === year).map((p) => [String(p.catalog_id), p]))
-  const reopenAllowed = canReopen(myRoles)
+  const reopenAllowed = canReopen(myRoles) && !isArchived
+  // Effective "can enter data" gate — archive overrides everything.
+  const canEditThisYear = canEnterData && !isArchived
+  const canManageThisYear = canManage && !isArchived
 
   const loadResources = useCallback(async () => {
     const rows = await fetchAmtrByBase<Row>('amtr_1098_resources', installationId)
@@ -43,10 +57,32 @@ export function Form1098Tab(props: {
     for (const r of rows) { const k = String(r.catalog_id); if (!m.has(k)) m.set(k, []); m.get(k)!.push(r) }
     setResources(m)
   }, [installationId])
+  const loadYears = useCallback(async () => {
+    setYearRows(await fetchAmtrByBase<Row>('amtr_1098_years', installationId))
+  }, [installationId])
   useEffect(() => {
-    fetchAmtrByBase<Row>('amtr_1098_years', installationId).then((rows) => setExtraYears(rows.map((r) => String(r.year_label)).filter(Boolean)))
+    loadYears()
     loadResources()
-  }, [installationId, loadResources])
+  }, [loadYears, loadResources])
+
+  // Clone the current-year catalog into a new year_label so the new year
+  // starts with the same task list. No-op if the target year already has
+  // catalog rows. Called on year creation + auto-rollover.
+  const cloneCatalogForYear = useCallback(async (targetYear: string) => {
+    if (catalog.some((c) => String(c.year_label) === targetYear)) return
+    const source = catalog.filter((c) => String(c.year_label) === currentYear)
+    if (source.length === 0) return
+    const rows = source.map((c) => ({
+      base_id: installationId,
+      year_label: targetYear,
+      task: c.task,
+      type: c.type ?? null,
+      frequency: c.frequency ?? 'Annual',
+      sort_order: c.sort_order ?? 0,
+    }))
+    const { error } = await insertAmtrRows('amtr_1098_catalog', rows)
+    if (error) toast.error(error)
+  }, [catalog, currentYear, installationId])
 
   const addYear = async () => {
     const y = window.prompt('Add a prior year (e.g. 2024):')?.trim()
@@ -57,20 +93,56 @@ export function Form1098Tab(props: {
       { onConflict: 'base_id,year_label' },
     )
     if (error) { toast.error(error); return }
-    setExtraYears((prev) => Array.from(new Set([...prev, y])))
+    // Seed the new year's catalog from the current year's catalog so the
+    // task list starts populated rather than empty.
+    await cloneCatalogForYear(y)
+    await loadYears()
+    onChange()
     setYear(y)
   }
   const deleteYear = async () => {
     if (year === currentYear) return
+    if (isArchived) { toast.error('Unarchive this year before deleting.'); return }
     if (!window.confirm(`Delete the ${year} 1098 for ${member.full_name}? This removes their ${year} entries (use to purge years past the retention requirement).`)) return
     // Remove this member's progress rows for the year.
     for (const p of progress.filter((x) => String(x.year_label) === year)) await deleteAmtrRow('amtr_1098_progress', String(p.id))
     // Remove the base year-tab row(s) for that label so the empty tab goes away.
-    const yearRows = await fetchAmtrByBase<Row>('amtr_1098_years', installationId)
-    for (const yr of yearRows.filter((r) => String(r.year_label) === year)) await deleteAmtrRow('amtr_1098_years', String(yr.id))
-    setExtraYears((prev) => prev.filter((y) => y !== year))
+    const allYears = await fetchAmtrByBase<Row>('amtr_1098_years', installationId)
+    for (const yr of allYears.filter((r) => String(r.year_label) === year)) await deleteAmtrRow('amtr_1098_years', String(yr.id))
+    await loadYears()
     setYear(currentYear)
     onChange()
+  }
+  const archiveYear = async () => {
+    if (year === currentYear) { toast.error("Can't archive the current year."); return }
+    if (!window.confirm(`Archive ${year}? All records for ${year} become read-only — no date edits, no signatures, no catalog changes. Only NAMT/AFM/Base Admin can unarchive.`)) return
+    // Ensure a year row exists for this label (may not if year was inferred
+    // from progress rows only), then flip archived = true.
+    const existing = yearRowByLabel.get(year)
+    if (existing?.id) {
+      const { error } = await updateAmtrRow('amtr_1098_years', String(existing.id), {
+        archived: true, archived_at: new Date().toISOString(),
+      })
+      if (error) { toast.error(error); return }
+    } else {
+      const { error } = await upsertAmtrRow('amtr_1098_years',
+        { base_id: installationId, year_label: year, is_current: false, archived: true, archived_at: new Date().toISOString() },
+        { onConflict: 'base_id,year_label' })
+      if (error) { toast.error(error); return }
+    }
+    await loadYears()
+    toast.success(`${year} archived — records frozen.`)
+  }
+  const unarchiveYear = async () => {
+    const existing = yearRowByLabel.get(year)
+    if (!existing?.id) return
+    if (!window.confirm(`Unarchive ${year}? Records will become editable again.`)) return
+    const { error } = await updateAmtrRow('amtr_1098_years', String(existing.id), {
+      archived: false, archived_at: null, archived_by: null,
+    })
+    if (error) { toast.error(error); return }
+    await loadYears()
+    toast.success(`${year} unarchived.`)
   }
 
   // Reconcile current-year due/overdue 1098 items → notify the whole training
@@ -81,7 +153,8 @@ export function Form1098Tab(props: {
     if (catalog.length === 0 || reconciledFor.current === memberId) return
     reconciledFor.current = memberId
     const curYearProg = new Map(progress.filter((p) => p.year_label === currentYear).map((p) => [String(p.catalog_id), p]))
-    for (const c of catalog) {
+    const curYearCatalog = catalog.filter((c) => String(c.year_label) === currentYear)
+    for (const c of curYearCatalog) {
       if (c.retired) continue
       const p = curYearProg.get(String(c.id))
       const next = (p?.next_due as string) ?? null
@@ -95,14 +168,20 @@ export function Form1098Tab(props: {
 
   if (editMode) {
     return (
-      <SimpleCatalogEditor table="amtr_1098_catalog" rows={catalog} installationId={installationId}
+      <SimpleCatalogEditor table="amtr_1098_catalog" rows={yearCatalog} installationId={installationId}
         columns={[{ key: 'task', label: 'Task', flex: true }, { key: 'type', label: 'Type', width: 110 }, { key: 'frequency', label: 'Frequency', type: 'select', options: FREQ_OPTIONS, width: 130 }, { key: 'score_or_hours', label: 'Score/Hrs', width: 90 }]}
-        defaults={{ task: 'New Task', frequency: 'Annual' }} onDone={() => setEditMode(false)} onChange={onChange} />
+        defaults={{ task: 'New Task', frequency: 'Annual', year_label: year }} onDone={() => setEditMode(false)} onChange={onChange} />
     )
   }
 
-  if (catalog.length === 0) return <div className="card" style={{ color: 'var(--color-text-3)' }}>1098 catalog is empty — load it from Roles &amp; Catalogs.</div>
-  const activeCatalog = catalog.filter((c) => !c.retired)
+  if (yearCatalog.length === 0) return (
+    <div className="card" style={{ color: 'var(--color-text-3)' }}>
+      No 1098 catalog for {year}. {year === currentYear
+        ? 'Load it from Roles & Catalogs.'
+        : <button onClick={() => cloneCatalogForYear(year).then(onChange)} style={{ background: 'none', border: 'none', color: 'var(--color-accent)', cursor: 'pointer', textDecoration: 'underline', font: 'inherit' }}>Clone the current year&apos;s catalog into {year}</button>}
+    </div>
+  )
+  const activeCatalog = yearCatalog.filter((c) => !c.retired)
 
   const ensure = async (catId: string): Promise<string> => {
     const ex = progByCat.get(catId)
@@ -116,25 +195,64 @@ export function Form1098Tab(props: {
     return String(data?.id ?? '')
   }
   const setField = async (catId: string, freq: string, field: string, value: string) => {
+    const existing = progByCat.get(catId)
     const patch: Row = { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, [field]: value || null }
-    if (field === 'last_completed') patch.next_due = computeNextDue(value, freq)
+    if (field === 'last_completed') {
+      // Manual override wins until the user explicitly clears it (per
+      // feedback_due_date_override semantics). Only recompute next_due
+      // automatically if the row has no manual override flag.
+      if (!existing?.next_due_manual) {
+        patch.next_due = computeNextDue(value, freq)
+      }
+    }
+    if (field === 'next_due') {
+      // Manual edit of the due date flips the override flag so that
+      // future last_completed edits won't overwrite it.
+      patch.next_due_manual = !!value
+    }
     const { error } = await upsertAmtrRow('amtr_1098_progress', patch, { onConflict: 'member_id,catalog_id,year_label' })
     if (error) { toast.error(error); return }
     // Auto-rollover: completing a task whose next due lands in a later year
     // seeds that task on the next year's 1098 (carrying the due date), so the
     // next year's record generates itself and shows the task as coming due.
-    if (field === 'last_completed' && value && patch.next_due) {
-      const nextYear = String(new Date(`${String(patch.next_due).slice(0, 10)}T00:00:00Z`).getUTCFullYear())
+    const nextDue = (patch.next_due as string | undefined) ?? (existing?.next_due as string | undefined)
+    if (field === 'last_completed' && value && nextDue) {
+      const nextYear = String(new Date(`${String(nextDue).slice(0, 10)}T00:00:00Z`).getUTCFullYear())
       const exists = progress.some((x) => String(x.catalog_id) === catId && String(x.year_label) === nextYear)
       if (Number(nextYear) > Number(year) && !exists) {
-        const { error: rolloverErr } = await upsertAmtrRow(
-          'amtr_1098_progress',
-          { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: nextYear, next_due: patch.next_due },
-          { onConflict: 'member_id,catalog_id,year_label' },
-        )
-        if (rolloverErr) { toast.error(rolloverErr); return }
+        // Make sure next year's catalog has a row for this task before
+        // we seed a progress row referencing it. Find the equivalent
+        // catalog row in nextYear (same task name); clone if missing.
+        const thisYearCat = yearCatalog.find((c) => String(c.id) === catId)
+        if (thisYearCat) {
+          await cloneCatalogForYear(nextYear)
+          // Re-fetch the catalog list to find the cloned row's UUID.
+          const nextYearCat = await fetchAmtrByBase<Row>('amtr_1098_catalog', installationId)
+          const target = nextYearCat.find((c) => String(c.year_label) === nextYear && String(c.task) === String(thisYearCat.task))
+          if (target) {
+            const { error: rolloverErr } = await upsertAmtrRow(
+              'amtr_1098_progress',
+              { base_id: installationId, member_id: memberId, catalog_id: String(target.id), year_label: nextYear, next_due: nextDue },
+              { onConflict: 'member_id,catalog_id,year_label' },
+            )
+            if (rolloverErr) { toast.error(rolloverErr); return }
+          }
+        }
       }
     }
+    onChange()
+  }
+  // Clear a manual due-date override and recompute from last_completed +
+  // frequency. NAMT-only (gated at call site).
+  const resetAutoDue = async (catId: string, freq: string) => {
+    const existing = progByCat.get(catId)
+    const recomputed = computeNextDue((existing?.last_completed as string) ?? '', freq)
+    const { error } = await upsertAmtrRow(
+      'amtr_1098_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, next_due: recomputed, next_due_manual: false },
+      { onConflict: 'member_id,catalog_id,year_label' },
+    )
+    if (error) { toast.error(error); return }
     onChange()
   }
 
@@ -163,7 +281,20 @@ export function Form1098Tab(props: {
     <div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
       <h2 style={{ margin: 0, fontSize: 18 }}>DAF Form 1098 — Special Task Certification &amp; Recurring Training</h2>
-      {canManage && <div style={{ marginLeft: 'auto' }}><Btn variant="secondary" onClick={() => setEditMode(true)}><Pencil size={14} /> Edit catalog</Btn></div>}
+      {isArchived && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 6, fontSize: 'var(--fs-xs)', fontWeight: 700, background: 'color-mix(in srgb, var(--color-text-3) 18%, transparent)', color: 'var(--color-text-2)', border: '1px solid var(--color-border-mid)' }}>
+          <Lock size={12} /> ARCHIVED — READ ONLY
+        </span>
+      )}
+      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        {canManage && year !== currentYear && !isArchived && (
+          <Btn variant="secondary" onClick={archiveYear} title="Archive this year — freezes all records (NAMT/AFM/Base Admin only)"><Archive size={14} /> Archive {year}</Btn>
+        )}
+        {canManage && isArchived && (
+          <Btn variant="secondary" onClick={unarchiveYear} title="Unarchive — restores write access"><Archive size={14} /> Unarchive {year}</Btn>
+        )}
+        {canManageThisYear && <Btn variant="secondary" onClick={() => setEditMode(true)}><Pencil size={14} /> Edit {year} catalog</Btn>}
+      </div>
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
       {kpiCards.map((k) => (
@@ -180,15 +311,23 @@ export function Form1098Tab(props: {
       ))}
     </div>
     <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-      {years.map((y) => (
-        <button key={y} onClick={() => setYear(y)}
-          style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: year === y ? 700 : 600, background: year === y ? 'var(--color-accent)' : 'var(--color-bg-inset)', color: year === y ? '#fff' : 'var(--color-text-2)' }}>
-          {y}{y === currentYear ? ' (current)' : ''}
-        </button>
-      ))}
-      {canEnterData && <button onClick={addYear} title="Add a prior year for transcription" style={{ padding: '5px 10px', borderRadius: 6, border: '1px dashed var(--color-border-mid)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-text-3)' }}>+ Add year</button>}
-      {canEnterData && year !== currentYear && <button onClick={deleteYear} title="Delete this year's records" style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-danger)' }}>Delete {year}</button>}
-      <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Completing a task auto-creates next year&apos;s 1098. Records are retained per year (two-year requirement).</span>
+      {years.map((y) => {
+        const archived = !!yearRowByLabel.get(y)?.archived
+        return (
+          <button key={y} onClick={() => setYear(y)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: year === y ? 700 : 600, background: year === y ? 'var(--color-accent)' : 'var(--color-bg-inset)', color: year === y ? '#fff' : 'var(--color-text-2)' }}>
+            {archived && <Lock size={11} />}
+            {y}{y === currentYear ? ' (current)' : ''}
+          </button>
+        )
+      })}
+      {canManage && <button onClick={addYear} title="Add a prior year for transcription" style={{ padding: '5px 10px', borderRadius: 6, border: '1px dashed var(--color-border-mid)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-text-3)' }}>+ Add year</button>}
+      {canManageThisYear && year !== currentYear && <button onClick={deleteYear} title="Delete this year's records" style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', background: 'transparent', color: 'var(--color-danger)' }}>Delete {year}</button>}
+      <span style={{ marginLeft: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+        {isArchived
+          ? `This year is archived — records are read-only. Unarchive to enable editing.`
+          : `Completing a task auto-creates next year's 1098. Catalog edits in ${year} don't affect other years.`}
+      </span>
     </div>
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
@@ -216,7 +355,7 @@ export function Form1098Tab(props: {
             const signCell = (slot: SignSlot) => (
               <td style={tdStyle}>
                 <SignCell value={(p?.[`${slot}_initials`] as string) ?? null}
-                  canSign={canWrite && canSignSlot(myRoles, slot, isOwn)}
+                  canSign={canWrite && !isArchived && canSignSlot(myRoles, slot, isOwn)}
                   canReopenSlot={reopenAllowed && !!p?.[`${slot}_signed_by`]}
                   onReopen={() => p?.id && reopen('amtr_1098_progress', String(p.id), slot)}
                   onSign={async () => {
@@ -230,6 +369,7 @@ export function Form1098Tab(props: {
                   }} />
               </td>
             )
+            const isManualDue = !!p?.next_due_manual
             return (
               <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
                 <td style={tdStyle}>
@@ -239,13 +379,33 @@ export function Form1098Tab(props: {
                     <BookOpen size={13} style={{ color: (resources.get(catId)?.length ?? 0) > 0 ? 'var(--color-accent)' : 'var(--color-text-3)', flexShrink: 0 }} />
                   </button>
                 </td>
-                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, freq, 'start_date', e.target.value)} /></td>
-                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={last ? last.slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(catId, freq, 'last_completed', e.target.value)} /></td>
+                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEditThisYear} defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''} onBlur={(e) => canEditThisYear && setField(catId, freq, 'start_date', e.target.value)} /></td>
+                <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEditThisYear} defaultValue={last ? last.slice(0, 10) : ''} onBlur={(e) => canEditThisYear && setField(catId, freq, 'last_completed', e.target.value)} /></td>
                 {signCell('certifier')}{signCell('trainee')}
                 <td style={tdStyle}>{c.score_or_hours ? String(c.score_or_hours) : '—'}</td>
                 <td style={tdStyle}>{c.type ? String(c.type) : '—'}</td>
                 <td style={tdStyle}>{freq}</td>
-                <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{next ? next.slice(0, 10) : '—'}</td>
+                <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                  {canManageThisYear ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <input
+                        key={`${catId}-${next ?? ''}-${isManualDue}`}
+                        type="date"
+                        className="input-dark"
+                        style={di}
+                        defaultValue={next ? String(next).slice(0, 10) : ''}
+                        title={isManualDue ? 'Manual override — won\'t auto-recompute on completion' : 'Auto-computed from last completed + frequency'}
+                        onBlur={(e) => setField(catId, freq, 'next_due', e.target.value)}
+                      />
+                      {isManualDue && (
+                        <button onClick={() => resetAutoDue(catId, freq)} title="Clear manual override and recompute from frequency"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-warning)', padding: 1, display: 'inline-flex' }}><RotateCcw size={12} /></button>
+                      )}
+                    </span>
+                  ) : (
+                    <>{next ? String(next).slice(0, 10) : '—'}{isManualDue && <span title="Manually set due date" style={{ marginLeft: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-warning)' }}>*</span>}</>
+                  )}
+                </td>
                 <td style={tdStyle}><StatusPill status={status} /></td>
               </tr>
             )
