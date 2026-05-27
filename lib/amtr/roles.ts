@@ -36,6 +36,35 @@ export function canEnterData(effectiveRole: AmtrRole | null): boolean {
   return effectiveRole !== null && effectiveRole !== 'trainee'
 }
 
+/** Roles that may transcribe data on their OWN record despite the
+ * supervisor-driven default. The Training Manager (NAMT) and Airfield
+ * Manager (AFM) run the program — for one-person shops there's no
+ * supervisor above them to transcribe their training history, so
+ * they're permitted to enter data on their own record. The signing
+ * guard is unaffected: on your own record you can still only sign
+ * the Trainee block (see slotsUserCanSign). Data entry ≠ certifying. */
+const SELF_DATA_ENTRY_ROLES: AmtrRole[] = ['namt', 'afm']
+
+/**
+ * Records-context-aware version of canEnterData. Returns true when
+ *   - the user is on someone else's record AND holds a non-trainee role
+ *     (the original supervisor-driven default), OR
+ *   - the user is on their OWN record AND holds NAMT or AFM (carve-out).
+ * The signing self-certification guard is enforced elsewhere
+ * (slotsUserCanSign) and is intentionally NOT lifted here.
+ */
+export function canEnterDataOnRecord(
+  myRoles: Iterable<AmtrRole>,
+  isOwnRecord: boolean,
+): boolean {
+  const roles = new Set(myRoles)
+  if (isOwnRecord) {
+    return SELF_DATA_ENTRY_ROLES.some((r) => roles.has(r))
+  }
+  const effRole = effectiveRoleForRecord(myRoles, false)
+  return canEnterData(effRole)
+}
+
 /** A signed item is locked once all required signatures are present. */
 export function isRecordLocked(row: { locked_at?: string | null }): boolean {
   return !!row.locked_at

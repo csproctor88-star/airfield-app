@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   effectiveRoleForRecord, canViewRecord, canSignSlot, slotsUserCanSign, rolesForSlot,
-  canEnterData, canReopen, isRecordLocked, AMTR_ROLE_LABELS,
+  canEnterData, canEnterDataOnRecord, canReopen, isRecordLocked, AMTR_ROLE_LABELS,
 } from '@/lib/amtr/roles'
 import type { AmtrRole } from '@/lib/supabase/amtr'
 
@@ -92,6 +92,29 @@ describe('AMTR role layer', () => {
       expect(canEnterData('afm')).toBe(true)
       expect(canEnterData('trainee')).toBe(false)
       expect(canEnterData(null)).toBe(false)
+    })
+    it('canEnterDataOnRecord: NAMT may transcribe data on their own record', () => {
+      expect(canEnterDataOnRecord(['namt'] as AmtrRole[], true)).toBe(true)
+    })
+    it('canEnterDataOnRecord: AFM may transcribe data on their own record', () => {
+      expect(canEnterDataOnRecord(['afm'] as AmtrRole[], true)).toBe(true)
+    })
+    it('canEnterDataOnRecord: trainee/trainer/certifier still locked out of own record', () => {
+      expect(canEnterDataOnRecord(['trainee'] as AmtrRole[], true)).toBe(false)
+      expect(canEnterDataOnRecord(['trainer'] as AmtrRole[], true)).toBe(false)
+      expect(canEnterDataOnRecord(['certifier'] as AmtrRole[], true)).toBe(false)
+    })
+    it('canEnterDataOnRecord: on someone else\'s record, supervisor-driven default applies', () => {
+      expect(canEnterDataOnRecord(['certifier'] as AmtrRole[], false)).toBe(true)
+      expect(canEnterDataOnRecord(['trainee'] as AmtrRole[], false)).toBe(false)
+      expect(canEnterDataOnRecord([] as AmtrRole[], false)).toBe(false)
+    })
+    it('NAMT carve-out does NOT lift the signing self-cert guard', () => {
+      // Hard constraint: even with the data-entry carve-out, NAMT/AFM on
+      // their own record can still only sign the Trainee block. This is
+      // the audit-critical line that must not regress.
+      expect(slotsUserCanSign(['namt'] as AmtrRole[], true)).toEqual(new Set(['trainee']))
+      expect(slotsUserCanSign(['afm'] as AmtrRole[], true)).toEqual(new Set(['trainee']))
     })
     it('canReopen: only NAMT or AFM', () => {
       expect(canReopen(['namt'] as AmtrRole[])).toBe(true)

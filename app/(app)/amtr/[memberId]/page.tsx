@@ -13,7 +13,7 @@ import {
 } from '@/lib/supabase/amtr'
 import { AMTR_MEMBER_STATUSES } from '@/lib/amtr/reference-data'
 import { amtrReopen } from '@/lib/supabase/amtr'
-import { canSignSlot, effectiveRoleForRecord, canEnterData, canViewRecord, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
+import { canSignSlot, effectiveRoleForRecord, canEnterDataOnRecord, canViewRecord, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
 import { buildSignoff } from '@/lib/amtr/notifications'
 import { Field, Btn } from '@/components/amtr/ui'
 import { RecordSidebar } from '@/components/amtr/record-sidebar'
@@ -27,7 +27,6 @@ import { MilestonesTab } from '@/components/amtr/milestones-tab'
 import { QualificationsTab } from '@/components/amtr/qualifications-tab'
 import { FormalTab } from '@/components/amtr/formal-tab'
 import { HistoryTab } from '@/components/amtr/history-tab'
-import { TrainingReferences } from '@/components/amtr/training-references'
 import { MemberOverview } from '@/components/amtr/member-overview'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -41,7 +40,7 @@ const TAB_LABELS: Record<string, string> = {
   cover: 'Cover', qualifications: 'Qualifications', formal: 'Formal Training',
   '623a': 'DAF 623A', '797': 'DAF 797', '803': 'DAF 803',
   milestones: 'Milestones', '1098': 'DAF 1098', jqs: 'JQS-CFETP',
-  rat: 'RAT', files: 'Files', references: 'References', history: 'History',
+  rat: 'RAT', files: 'Files', history: 'History',
 }
 
 const RAT_EXEMPT = new Set(['Contractor', 'Civilian', 'Separated'])
@@ -249,7 +248,11 @@ export default function AmtrMemberPage() {
     </div>
   )
 
-  const dataEntryAllowed = canEnterData(effRole)
+  // Program managers (NAMT/AFM) may transcribe data on their OWN record —
+  // a carve-out for one-person shops with no supervisor above them. The
+  // signing self-certification guard is enforced separately in
+  // slotsUserCanSign(isOwn=true) → only the Trainee block is self-signable.
+  const dataEntryAllowed = canEnterDataOnRecord(signingRoles, isOwn)
   // Only managers / users with a non-trainee role may jump to other members.
   const memberOptions = hasOversight ? allMembers : allMembers.filter((m) => m.user_id === myUserId)
   const hiddenTabs = RAT_EXEMPT.has(member.status) ? new Set(['rat']) : undefined
@@ -323,7 +326,10 @@ export default function AmtrMemberPage() {
         </div>
       )}
       <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 16 }}>
-        {isOwn ? 'Viewing your own record — Trainee context (you self-initial your own column).'
+        {isOwn
+          ? dataEntryAllowed
+            ? 'Viewing your own record — Training Manager carve-out: you may transcribe data on your own record; only the Trainee block is self-signable.'
+            : 'Viewing your own record — Trainee context (you self-initial your own column).'
           : effRole ? `Viewing as ${AMTR_ROLE_LABELS[effRole] ?? effRole}.` : 'View only — no AMTR role assigned.'}
       </div>
 
@@ -338,7 +344,6 @@ export default function AmtrMemberPage() {
           <CoverTab member={member} canWrite={canWrite && dataEntryAllowed} onSaved={loadMember} />
         </>
       )}
-      {tab === 'references' && <TrainingReferences installationId={installationId} canManage={canManage} />}
       {tab === 'history' && <HistoryTab memberId={memberId} userLabels={userLabels} />}
 
       {tab === 'jqs' && (
