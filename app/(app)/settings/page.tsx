@@ -136,6 +136,9 @@ function ProfileSectionContent() {
   const [savingEmail, setSavingEmail] = useState(false)
   const [oi, setOi] = useState('')
   const [savingOi, setSavingOi] = useState(false)
+  const [newAccountEmail, setNewAccountEmail] = useState('')
+  const [savingAccountEmail, setSavingAccountEmail] = useState(false)
+  const [showAccountEmailConfirm, setShowAccountEmailConfirm] = useState(false)
 
   useEffect(() => {
     setPdfEmail(defaultPdfEmail || '')
@@ -183,6 +186,7 @@ function ProfileSectionContent() {
         operatingInitials: p?.operating_initials || null,
       })
       setOi(p?.operating_initials || '')
+      setNewAccountEmail(user.email || '')
     }
     load()
   }, [])
@@ -192,6 +196,35 @@ function ProfileSectionContent() {
     await updateDefaultPdfEmail(pdfEmail.trim() || null)
     toast.success('Default email saved')
     setSavingEmail(false)
+  }
+
+  const handleSaveAccountEmail = async () => {
+    const trimmed = newAccountEmail.trim().toLowerCase()
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error('Enter a valid email address')
+      return
+    }
+    setSavingAccountEmail(true)
+    try {
+      const res = await fetch('/api/profile/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(json?.error || `Failed to update email (${res.status})`)
+        return
+      }
+      setProfile((prev) => prev ? { ...prev, email: trimmed } : prev)
+      setNewAccountEmail(trimmed)
+      setShowAccountEmailConfirm(false)
+      toast.success('Sign-in email updated')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update email')
+    } finally {
+      setSavingAccountEmail(false)
+    }
   }
 
   const handleSaveOi = async () => {
@@ -223,6 +256,7 @@ function ProfileSectionContent() {
   const roleConfig = USER_ROLES[profile.role]
   const displayName = [profile.rank, profile.name].filter(Boolean).join(' ')
   const emailChanged = (pdfEmail.trim() || '') !== (defaultPdfEmail || '')
+  const accountEmailChanged = newAccountEmail.trim().toLowerCase() !== (profile.email || '').toLowerCase()
 
   return (
     <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -293,6 +327,45 @@ function ProfileSectionContent() {
           </div>
         </div>
 
+        {/* Account Email (sign-in) */}
+        <div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>SIGN-IN EMAIL</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <input
+              type="email"
+              value={newAccountEmail}
+              onChange={(e) => setNewAccountEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="off"
+              style={{
+                flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                background: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border)',
+                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)',
+                fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            {accountEmailChanged && (
+              <button
+                onClick={() => setShowAccountEmailConfirm(true)}
+                disabled={savingAccountEmail}
+                style={{
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-status-pass)', border: 'none',
+                  color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                  cursor: savingAccountEmail ? 'default' : 'pointer', fontFamily: 'inherit',
+                  opacity: savingAccountEmail ? 0.7 : 1,
+                }}
+              >
+                Save
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+            You'll use this address to sign in. Changes take effect immediately.
+          </div>
+        </div>
+
         {/* Default PDF Email */}
         <div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>DEFAULT PDF EMAIL</div>
@@ -330,6 +403,67 @@ function ProfileSectionContent() {
             Pre-fills the email field when using Email PDF
           </div>
         </div>
+
+        {/* Account Email confirmation modal */}
+        {showAccountEmailConfirm && (
+          <div
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 1000, padding: 16,
+            }}
+            onClick={() => !savingAccountEmail && setShowAccountEmailConfirm(false)}
+          >
+            <div
+              className="card"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: 480, width: '100%', padding: 20,
+                display: 'flex', flexDirection: 'column', gap: 14,
+              }}
+            >
+              <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+                Change sign-in email?
+              </div>
+              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+                You&apos;ll use the new address to sign in starting now. Make sure it&apos;s correct &mdash; a typo will lock you out and require an admin to fix.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em' }}>FROM</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>{profile.email}</div>
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginTop: 6 }}>TO</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', fontWeight: 700 }}>{newAccountEmail.trim()}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button
+                  onClick={() => setShowAccountEmailConfirm(false)}
+                  disabled={savingAccountEmail}
+                  style={{
+                    padding: '8px 14px', borderRadius: 'var(--radius-sm)',
+                    background: 'transparent', border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', fontWeight: 600,
+                    cursor: savingAccountEmail ? 'default' : 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAccountEmail}
+                  disabled={savingAccountEmail}
+                  style={{
+                    padding: '8px 14px', borderRadius: 'var(--radius-sm)',
+                    background: 'var(--color-status-pass)', border: 'none',
+                    color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                    cursor: savingAccountEmail ? 'default' : 'pointer', fontFamily: 'inherit',
+                    opacity: savingAccountEmail ? 0.7 : 1,
+                  }}
+                >
+                  {savingAccountEmail ? 'Saving…' : 'Change email'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
   )
 }

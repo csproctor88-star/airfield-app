@@ -100,6 +100,29 @@ export async function PATCH(
       updates.name = `${newFirst} ${newLast}`.trim()
     }
 
+    // Email changes go through the auth admin API too — profile-only
+    // updates would silently drift from auth.users.email otherwise
+    // (sign-in still uses the old address). email_confirm: true skips
+    // the Supabase double-confirmation email flow which doesn't reach
+    // .mil reliably (Defender quarantine — same root cause as the
+    // signup-email deliverability fix).
+    if (updates.email && typeof updates.email === 'string') {
+      const newEmail = (updates.email as string).trim().toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+      }
+      const { error: authError } = await admin.auth.admin.updateUserById(targetId, {
+        email: newEmail,
+        email_confirm: true,
+      })
+      if (authError) {
+        console.error('[admin/users/PATCH] Auth email update failed:', authError)
+        const status = /already|exists|registered/i.test(authError.message) ? 409 : 400
+        return NextResponse.json({ error: authError.message }, { status })
+      }
+      updates.email = newEmail
+    }
+
     // Apply update
     const { data: updated, error: updateError } = await admin
       .from('profiles')

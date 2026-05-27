@@ -40,6 +40,7 @@ export function UserDetailModal({
   const [rank, setRank] = useState(user.rank || '')
   const [firstName, setFirstName] = useState(user.first_name || '')
   const [lastName, setLastName] = useState(user.last_name || '')
+  const [email, setEmail] = useState(user.email || '')
   const [edipi, setEdipi] = useState(user.edipi || '')
   const [operatingInitials, setOperatingInitials] = useState(user.operating_initials || '')
   const [role, setRole] = useState(user.role)
@@ -243,6 +244,13 @@ export function UserDetailModal({
         edipi: edipi.trim() || null,
         operating_initials: operatingInitials.trim().toUpperCase() || null,
       }
+      // Only thread the email through if an admin actually changed it.
+      // Sending the same value would still trigger the auth admin call
+      // unnecessarily; sending a different value gates on a real change.
+      const trimmedEmail = email.trim().toLowerCase()
+      if ((isSysAdmin || isBaseAdmin) && trimmedEmail && trimmedEmail !== (user.email || '').toLowerCase()) {
+        updates.email = trimmedEmail
+      }
       if (isSysAdmin) {
         updates.role = role
         updates.primary_base_id = baseId
@@ -380,38 +388,71 @@ export function UserDetailModal({
             </div>
           </div>
 
-          {/* Email (read-only, hidden by default) */}
-          <div>
-            <span className="section-label">Email</span>
-            <div
-              style={{
-                padding: '8px 12px',
-                fontSize: 'var(--fs-md)',
-                color: 'var(--color-text-2)',
-                background: 'var(--color-bg-elevated)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {showEmail ? user.email : user.email.replace(/^(..)[^@]*/, '$1***')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowEmail(!showEmail)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
-                title={showEmail ? 'Hide email' : 'Reveal email'}
-              >
-                {showEmail
-                  ? <EyeOff size={14} color="var(--color-text-3)" />
-                  : <Eye size={14} color="var(--color-text-3)" />}
-              </button>
+          {/* Email — editable for admins; reveal-only for everyone else */}
+          {(isSysAdmin || isBaseAdmin) ? (
+            <div>
+              <span className="section-label">Email</span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <input
+                  type="email"
+                  className="input-dark"
+                  value={showEmail ? email : email.replace(/^(..)[^@]*/, '$1***')}
+                  onChange={(e) => { if (showEmail) setEmail(e.target.value) }}
+                  disabled={anyLoading || !showEmail}
+                  placeholder="user@example.com"
+                  autoComplete="off"
+                  style={{ flex: 1, boxSizing: 'border-box' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowEmail(!showEmail)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}
+                  title={showEmail ? 'Hide email' : 'Reveal and edit email'}
+                >
+                  {showEmail
+                    ? <EyeOff size={14} color="var(--color-text-3)" />
+                    : <Eye size={14} color="var(--color-text-3)" />}
+                </button>
+              </div>
+              {showEmail && email.trim().toLowerCase() !== (user.email || '').toLowerCase() && (
+                <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', marginTop: 4 }}>
+                  Changing email takes effect immediately on next sign-in. The user will need to use the new address.
+                </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <div>
+              <span className="section-label">Email</span>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  fontSize: 'var(--fs-md)',
+                  color: 'var(--color-text-2)',
+                  background: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {showEmail ? user.email : user.email.replace(/^(..)[^@]*/, '$1***')}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowEmail(!showEmail)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+                  title={showEmail ? 'Hide email' : 'Reveal email'}
+                >
+                  {showEmail
+                    ? <EyeOff size={14} color="var(--color-text-3)" />
+                    : <Eye size={14} color="var(--color-text-3)" />}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* EDIPI */}
           <div>
