@@ -213,7 +213,6 @@ export function UserDetailModal({
   }
 
   const isDeactivated = user.status === 'deactivated'
-  const isPending = user.status === 'pending'
 
   const ADMIN_ONLY_ROLES: UserRole[] = ['sys_admin', 'base_admin']
   const roleOptions = Object.entries(USER_ROLES)
@@ -784,67 +783,6 @@ export function UserDetailModal({
             }}
           >
             {errorMsg}
-          </div>
-        )}
-
-        {/* Pending approval banner */}
-        {isPending && (
-          <div style={{
-            marginTop: 16, padding: '12px 14px', borderRadius: 8,
-            background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.25)',
-          }}>
-            <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: '#EAB308', marginBottom: 6 }}>
-              Pending Approval
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 10 }}>
-              This user registered and is waiting for approval. Approve to grant access or reject to deactivate.
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                onClick={async () => {
-                  setToggling(true)
-                  try {
-                    await onSave(user.id, { status: 'active' })
-                    showMessage('User approved')
-                  } catch (err) {
-                    showMessage(err instanceof Error ? err.message : 'Failed to approve', true)
-                  } finally { setToggling(false) }
-                }}
-                disabled={anyLoading}
-                style={{
-                  flex: 1, padding: '8px', borderRadius: 6, border: 'none',
-                  background: '#22C55E', color: '#fff',
-                  fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
-                  fontFamily: 'inherit', opacity: anyLoading ? 0.5 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                }}
-              >
-                <UserCheck size={14} /> Approve
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setToggling(true)
-                  try {
-                    await onDeactivate(user.id)
-                    showMessage('User rejected')
-                  } catch (err) {
-                    showMessage(err instanceof Error ? err.message : 'Failed to reject', true)
-                  } finally { setToggling(false) }
-                }}
-                disabled={anyLoading}
-                style={{
-                  flex: 1, padding: '8px', borderRadius: 6,
-                  border: '1px solid rgba(239, 68, 68, 0.3)', background: 'transparent',
-                  color: '#EF4444', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
-                  fontFamily: 'inherit', opacity: anyLoading ? 0.5 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                }}
-              >
-                <UserX size={14} /> Reject
-              </button>
-            </div>
           </div>
         )}
 

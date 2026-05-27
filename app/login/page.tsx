@@ -236,7 +236,7 @@ function LoginContent() {
           return
         }
 
-        setSuccess('Account created — check your email for a verification link. After verifying, your account will be pending approval by your base administrator.')
+        setSuccess('Account created — your account is pending approval by your base administrator. You\'ll receive an email once you\'re approved.')
         setMode('signin')
         setPassword('')
         return
