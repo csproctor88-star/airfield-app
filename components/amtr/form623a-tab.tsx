@@ -19,7 +19,9 @@ type ReopenFn = (table: 'amtr_623a', rowId: string, slot: SignSlot) => Promise<v
 const COLS: { slot: SignSlot; label: string; sig: string; ph: string }[] = [
   { slot: 'trainee', label: 'Trainee Comment', sig: 'Trainee signature', ph: 'What was worked on, started, or completed…' },
   { slot: 'trainer', label: 'Supervisor / Trainer Comment', sig: 'Trainer signature', ph: 'On-the-job training notes / direction' },
-  { slot: 'namt', label: 'NAMT Comment', sig: 'NAMT signature', ph: 'NAMT review / direction' },
+  // NAMT column also captures certifier sign-offs that flow through the
+  // auto-623A dialog (certifier slot on 1098/JQS/797 maps to this slot).
+  { slot: 'namt', label: 'NAMT / Certifier Comment', sig: 'NAMT / Certifier signature', ph: 'Certifier review / direction' },
   { slot: 'afm', label: 'AFM Comment', sig: 'AFM signature', ph: 'AFM review / endorsement' },
 ]
 export function Form623aTab(props: {

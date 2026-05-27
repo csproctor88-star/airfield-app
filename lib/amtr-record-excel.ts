@@ -123,6 +123,11 @@ function fill797(ws: WS | undefined, items: Row[]) {
 
 function fill623a(ws: WS | undefined, entries: Row[]) {
   if (!ws) return
+  // Override column E's header at runtime to reflect that the NAMT
+  // column also holds certifier sign-offs from the auto-623A flow.
+  // Editing the source template binary used to corrupt drawing anchors;
+  // this approach keeps the template untouched.
+  set(ws, 'E1', 'NAMT / Certifier Initials/Comments')
   const rows = entries.map((e) => ([
     ['A', dt(e.form_date)], ['B', str(e.entry_type)],
     ['C', `${str(e.trainee_initials)}${e.trainee_comment ? ` — ${str(e.trainee_comment)}` : ''}`.trim()],
