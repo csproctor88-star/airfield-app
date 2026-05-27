@@ -50,7 +50,8 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
         'The runway designator pair, e.g. "06L/24R" or "13/31". Use the same format published on the IAP and on signage.',
       runway_class:
         'Class B is standard USAF (ARC III–IV). Army Class B is 5,000 ft. The class drives obstruction surface widths and parking ' +
-        'clearance envelopes per UFC 3-260-01.',
+        'clearance envelopes per UFC 3-260-01. Civilian Part 139 airports leave this blank — the FAA Approach Type field drives ' +
+        'Part 77 surface dimensions instead.',
       length_ft: 'Full landing length in feet, threshold to threshold.',
       width_ft: 'Paved runway width in feet, edge to edge.',
       surface: 'Pavement composition. Drives PCN/ACN and friction-test scheduling.',

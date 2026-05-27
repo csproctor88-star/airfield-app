@@ -774,7 +774,7 @@ export type Database = {
           faa_approach_type: string | null
           id: string
           length_ft: number
-          runway_class: string
+          runway_class: string | null
           runway_id: string
           surface: string
           true_heading: number | null
@@ -799,7 +799,7 @@ export type Database = {
           faa_approach_type?: string | null
           id?: string
           length_ft: number
-          runway_class?: string
+          runway_class?: string | null
           runway_id: string
           surface?: string
           true_heading?: number | null
@@ -824,7 +824,7 @@ export type Database = {
           faa_approach_type?: string | null
           id?: string
           length_ft?: number
-          runway_class?: string
+          runway_class?: string | null
           runway_id?: string
           surface?: string
           true_heading?: number | null

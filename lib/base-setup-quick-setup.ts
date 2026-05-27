@@ -233,11 +233,19 @@ export async function commitQuickSetupStep(
 
   try {
     if (stepKey === 'runways' && draft.runways) {
+      // Civilian airports leave runway_class null (FAA approach type is the
+      // civilian-correct driver); USAF defaults to UFC Class B.
+      const { data: base } = await supabase
+        .from('bases')
+        .select('airport_type')
+        .eq('id', installationId)
+        .maybeSingle()
+      const isCivilian = (base as { airport_type?: string | null } | null)?.airport_type === 'civilian'
       let count = 0
       for (const r of draft.runways) {
         const { error } = await supabase
           .from('base_runways')
-          .insert({ ...r, base_id: installationId, runway_class: 'B' } as any)
+          .insert({ ...r, base_id: installationId, runway_class: isCivilian ? null : 'B' } as any)
         if (!error) count++
       }
       return { ok: true, count }

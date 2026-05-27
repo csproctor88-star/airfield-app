@@ -520,7 +520,8 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   const civilian = isCivilian(currentInstallation)
   const [f, setF] = useState({
     runway_id: rwy.runway_id || '', length_ft: String(rwy.length_ft || ''), width_ft: String(rwy.width_ft || ''),
-    surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''), runway_class: rwy.runway_class || 'B',
+    surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''),
+    runway_class: rwy.runway_class || (civilian ? '' : 'B'),
     faa_approach_type: rwy.faa_approach_type || '',
     faa_approach_category: rwy.faa_approach_category || '',
     end1_designator: rwy.end1_designator || '', end1_latitude: String(rwy.end1_latitude ?? ''),
@@ -534,7 +535,9 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   const handleSave = () => {
     onSave({
       runway_id: f.runway_id, length_ft: parseInt(f.length_ft) || 0, width_ft: parseInt(f.width_ft) || 0,
-      surface: f.surface, true_heading: parseFloat(f.true_heading) || null, runway_class: f.runway_class,
+      surface: f.surface, true_heading: parseFloat(f.true_heading) || null,
+      // Civilian airports persist runway_class as null; FAA approach type is the civilian-correct driver.
+      runway_class: civilian ? null : f.runway_class,
       faa_approach_type: f.faa_approach_type || null,
       faa_approach_category: f.faa_approach_category || null,
       end1_designator: f.end1_designator, end1_latitude: parseFloat(f.end1_latitude) || null,
@@ -547,13 +550,15 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: civilian ? '1fr' : '1fr 1fr', gap: 8 }}>
         <div><label style={labelStyle}>Runway ID <FieldHint stepKey="runways" fieldId="runway_id" /></label><input value={f.runway_id} onChange={e => setF(p => ({ ...p, runway_id: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
-          <select value={f.runway_class} onChange={e => setF(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
-            <option value="B">Class B</option><option value="Army_B">Army Class B</option>
-          </select>
-        </div>
+        {!civilian && (
+          <div><label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
+            <select value={f.runway_class} onChange={e => setF(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
+              <option value="B">Class B</option><option value="Army_B">Army Class B</option>
+            </select>
+          </div>
+        )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
         <div><label style={labelStyle}>Length (ft) <FieldHint stepKey="runways" fieldId="length_ft" /></label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
@@ -651,7 +656,8 @@ function RunwayTab({
   markSaveError?: () => void
 }) {
   void markSaveError // reserved for future explicit error wiring
-  const { mapProvider, refreshCurrentInstallation } = useInstallation()
+  const { mapProvider, refreshCurrentInstallation, currentInstallation } = useInstallation()
+  const civilian = isCivilian(currentInstallation)
   const [runways, setRunways] = useState(initialRunways)
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -738,7 +744,9 @@ function RunwayTab({
       width_ft: rwy.width_ft || 0,
       surface: rwy.surface || 'Unknown',
       true_heading: rwy.end1_heading || null,
-      runway_class: 'B',
+      // UFC runway class doesn't apply to civilian airports; FAA approach type
+      // (set per-runway via the editor) is the civilian-correct driver.
+      runway_class: civilian ? null : 'B',
       end1_designator: rwy.end1_designator || rwy.runway_id.split('/')[0] || '',
       end1_latitude: rwy.end1_latitude || null,
       end1_longitude: rwy.end1_longitude || null,
@@ -784,7 +792,7 @@ function RunwayTab({
           base_id: installationId, runway_id: rwy.runway_id,
           length_ft: rwy.length_ft || 0, width_ft: rwy.width_ft || 0,
           surface: rwy.surface || 'Unknown', true_heading: rwy.end1_heading || null,
-          runway_class: 'B',
+          runway_class: civilian ? null : 'B',
           end1_designator: rwy.end1_designator || '', end1_latitude: rwy.end1_latitude,
           end1_longitude: rwy.end1_longitude, end1_heading: rwy.end1_heading,
           end1_approach_lighting: rwy.end1_approach_lighting, end1_elevation_msl: rwy.end1_elevation_msl,
@@ -1023,7 +1031,8 @@ function RunwayTab({
       width_ft: parseInt(newRunway.width_ft) || 0,
       surface: newRunway.surface,
       true_heading: parseFloat(newRunway.true_heading) || null,
-      runway_class: newRunway.runway_class,
+      // Civilian airports leave runway_class null — FAA approach type drives Part 77 dimensions instead.
+      runway_class: civilian ? null : newRunway.runway_class,
       end1_designator: newRunway.end1_designator.trim() || newRunway.runway_id.split('/')[0] || '',
       end1_latitude: parseFloat(newRunway.end1_latitude) || null,
       end1_longitude: parseFloat(newRunway.end1_longitude) || null,
@@ -1211,7 +1220,12 @@ function RunwayTab({
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
-                  {rwy.runway_id} — {rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}
+                  {rwy.runway_id}
+                  {rwy.runway_class
+                    ? ` — ${rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}`
+                    : rwy.faa_approach_type
+                      ? ` — ${FAA_APPROACH_TYPE_LABELS[rwy.faa_approach_type as FaaApproachType] ?? rwy.faa_approach_type}`
+                      : ''}
                 </div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginTop: 4 }}>
                   {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
@@ -1272,18 +1286,20 @@ function RunwayTab({
         }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Add Runway</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: civilian ? '1fr' : '1fr 1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Runway ID (e.g. 01/19) <FieldHint stepKey="runways" fieldId="runway_id" /></label>
               <input value={newRunway.runway_id} onChange={e => setNewRunway(p => ({ ...p, runway_id: e.target.value }))} placeholder="01/19" style={fieldStyle} />
             </div>
-            <div>
-              <label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
-              <select value={newRunway.runway_class} onChange={e => setNewRunway(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
-                <option value="B">Class B</option>
-                <option value="Army_B">Army Class B</option>
-              </select>
-            </div>
+            {!civilian && (
+              <div>
+                <label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
+                <select value={newRunway.runway_class} onChange={e => setNewRunway(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
+                  <option value="B">Class B</option>
+                  <option value="Army_B">Army Class B</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
