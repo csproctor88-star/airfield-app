@@ -339,7 +339,7 @@ export function Form1098Tab(props: {
           <tr>
             <th style={thStyle}>Task</th><th style={thStyle}>Start</th>
             <th style={{ ...thStyle, whiteSpace: 'normal', width: 90 }}>Last<br />Completed</th>
-            <th style={{ ...thStyle, whiteSpace: 'normal', width: 64 }}>Cert<br />Official</th><th style={thStyle}>Trainee</th>
+            <th style={thStyle}>Trainee</th><th style={{ ...thStyle, whiteSpace: 'normal', width: 64 }}>Cert<br />Official</th>
             <th style={thStyle}>Score/Hrs</th><th style={thStyle}>Type</th><th style={thStyle}>Freq</th>
             <th style={thStyle}>Due</th><th style={thStyle}>Status</th>
           </tr>
@@ -385,7 +385,7 @@ export function Form1098Tab(props: {
                 </td>
                 <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEditThisYear} defaultValue={p?.start_date ? String(p.start_date).slice(0, 10) : ''} onBlur={(e) => canEditThisYear && setField(catId, freq, 'start_date', e.target.value)} /></td>
                 <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEditThisYear} defaultValue={last ? last.slice(0, 10) : ''} onBlur={(e) => canEditThisYear && setField(catId, freq, 'last_completed', e.target.value)} /></td>
-                {signCell('certifier')}{signCell('trainee')}
+                {signCell('trainee')}{signCell('certifier')}
                 <td style={tdStyle}>{c.score_or_hours ? String(c.score_or_hours) : '—'}</td>
                 <td style={tdStyle}>{c.type ? String(c.type) : '—'}</td>
                 <td style={tdStyle}>{freq}</td>

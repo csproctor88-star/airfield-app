@@ -23,7 +23,21 @@ export type SignSource = {
   label: string
 }
 
-export type AutoSlot = 'trainer' | 'certifier' | 'namt' | 'afm'
+// Source slots come from the parent table being signed (1098 / 797 /
+// JQS have certifier, 803 has evaluator). amtr_623a only has trainer /
+// namt / afm slots in addition to trainee, so we fold certifier and
+// evaluator into trainer for the 623a write — the auto-prompt only
+// fires for non-trainee signers, so trainee is intentionally absent.
+export type AutoSlot = 'trainer' | 'certifier' | 'evaluator' | 'namt' | 'afm'
+type Slot623a = 'trainer' | 'namt' | 'afm'
+
+const SLOT_623A: Record<AutoSlot, Slot623a> = {
+  trainer: 'trainer',
+  certifier: 'trainer',
+  evaluator: 'trainer',
+  namt: 'namt',
+  afm: 'afm',
+}
 
 const KIND_LABEL: Record<SignSource['kind'], string> = {
   jqs: 'JQS Task Sign-Off',
@@ -67,12 +81,16 @@ export function Auto623aDialog(props: {
 
   const save = async () => {
     setSaving(true)
+    // Map the parent slot (which may be certifier/evaluator) to the
+    // closest amtr_623a slot (trainer for both). amtr_623a only has
+    // trainee/trainer/namt/afm columns.
+    const slot623a = SLOT_623A[signedSlot]
     // 1. Insert the new 623a row with the signing slot's initials + comment
     //    pre-populated. Slot-signed_by/_at are left null on the insert —
     //    the amtr_sign RPC stamps those with the authenticated identity
     //    in step 2.
-    const slotInitialsField = `${signedSlot}_initials` as const
-    const slotCommentField = `${signedSlot}_comment` as const
+    const slotInitialsField = `${slot623a}_initials` as const
+    const slotCommentField = `${slot623a}_comment` as const
     const insertRow: Row = {
       base_id: installationId,
       member_id: memberId,
@@ -92,7 +110,7 @@ export function Auto623aDialog(props: {
     //    authenticated identity. The slot's initials were already set on
     //    the insert; the RPC will overwrite them with the same value plus
     //    the locked attestation.
-    const { error: signErr } = await amtrSign('amtr_623a', String(data.id), signedSlot, signedInitials)
+    const { error: signErr } = await amtrSign('amtr_623a', String(data.id), slot623a, signedInitials)
     if (signErr) {
       // Row exists but isn't locked — surface the partial state so the
       // operator knows. Don't auto-delete the row; an unsigned 623a row
@@ -116,7 +134,7 @@ export function Auto623aDialog(props: {
 
         <div style={{ padding: 16 }}>
           <div style={{ padding: '8px 12px', marginBottom: 12, borderRadius: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', borderLeft: '3px solid var(--color-accent)', background: 'var(--color-bg-inset)' }}>
-            You just signed the <strong>{signedSlot.toUpperCase()}</strong> block on a {source.kind === '1098' ? 'DAF 1098' : source.kind === '797' ? 'DAF 797' : source.kind === '803' ? 'DAF 803' : source.kind === 'milestone' ? 'milestone' : 'JQS'} item for {member.full_name}. Verify the pre-filled entry below and Save to drop it into their 623A log with your signature locked. Skip if a 623A note isn&apos;t needed for this sign-off.
+            You just signed the <strong>{signedSlot.toUpperCase()}</strong> block on a {source.kind === '1098' ? 'DAF 1098' : source.kind === '797' ? 'DAF 797' : source.kind === '803' ? 'DAF 803' : source.kind === 'milestone' ? 'milestone' : 'JQS'} item for {member.full_name}. Verify the pre-filled entry below and Save to drop it into their 623A log with your signature locked{SLOT_623A[signedSlot] !== signedSlot ? ` in the ${SLOT_623A[signedSlot].toUpperCase()} column` : ''}. Skip if a 623A note isn&apos;t needed for this sign-off.
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: '12px 14px', alignItems: 'center', fontSize: 'var(--fs-sm)' }}>
