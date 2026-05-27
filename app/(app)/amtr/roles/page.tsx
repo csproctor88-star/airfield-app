@@ -6,7 +6,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchAmtrRoleAssignments, addAmtrRole, removeAmtrRole, fetchAmtrMembers,
-  fetchAmtrByBase, upsertAmtrRow, deleteAmtrRow, removeAmtrMemberFromRoster, deleteAmtrMember,
+  fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, deleteAmtrRow, insertAmtrRows,
+  removeAmtrMemberFromRoster, deleteAmtrMember,
   syncAmtrRosterFromBase, fetchAmtrCatalogVersion,
   type AmtrRoleAssignment, type AmtrRole, type AmtrMember,
 } from '@/lib/supabase/amtr'
@@ -47,6 +48,8 @@ export default function AmtrRolesPage() {
   const [search, setSearch] = useState('')
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [cat1098, setCat1098] = useState<Row[]>([])
+  const [years1098, setYears1098] = useState<Row[]>([])
+  const [year1098, setYear1098] = useState<string>(String(new Date().getUTCFullYear()))
   const [catRat, setCatRat] = useState<Row[]>([])
   const [catJqs, setCatJqs] = useState<Row[]>([])
   const [catInsp, setCatInsp] = useState<Row[]>([])
@@ -64,10 +67,11 @@ export default function AmtrRolesPage() {
     if (!initialLoaded.current) setLoading(true)
     // Roster mirrors the base's assigned users — pull in any new ones.
     await syncAmtrRosterFromBase(installationId)
-    const [a, mem, c1098, crat, cjqs, cinsp, cet, cmile, c803, cqual, ver] = await Promise.all([
+    const [a, mem, c1098, y1098, crat, cjqs, cinsp, cet, cmile, c803, cqual, ver] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
+      fetchAmtrByBase<Row>('amtr_1098_years', installationId),
       fetchAmtrByBase<Row>('amtr_rat_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_inspection_checklist', installationId),
@@ -77,7 +81,7 @@ export default function AmtrRolesPage() {
       fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
       fetchAmtrCatalogVersion(installationId),
     ])
-    setAssignments(a); setMembers(mem); setCat1098(c1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual); setCatalogVersion(ver)
+    setAssignments(a); setMembers(mem); setCat1098(c1098); setYears1098(y1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual); setCatalogVersion(ver)
     initialLoaded.current = true
     setLoading(false)
   }, [installationId])
@@ -157,15 +161,69 @@ export default function AmtrRolesPage() {
     if (!installationId) return
     const value = window.prompt('Name:')?.trim()
     if (!value) return
-    // 1098 catalog is per-year — tag the new task to the current year so
-    // it lands in the active year's catalog and doesn't violate the
-    // (base_id, year_label, task) UNIQUE / NOT NULL constraints.
+    // 1098 catalog is per-year — tag the new task to the year the admin
+    // is currently viewing in the 1098 section so it lands in the right
+    // year's catalog. Without year_label the (base_id, year_label, task)
+    // UNIQUE + NOT NULL constraints fail.
     const payload: Row = table === 'amtr_1098_catalog'
-      ? { base_id: installationId, [field]: value, frequency: 'Annual', year_label: String(new Date().getUTCFullYear()) }
+      ? { base_id: installationId, [field]: value, frequency: 'Annual', year_label: year1098 }
       : { base_id: installationId, [field]: value, frequency: 'Annual' }
     const { error } = await upsertAmtrRow(table, payload)
     if (error) { toast.error(error); return }
     load()
+  }
+
+  // Admin opens a new 1098 year from the Roles page. Mirrors the per-
+  // record +Add year flow: insert yearRow, clone catalog from latest
+  // populated year, materialize any carry-forward rollovers.
+  const open1098Year = async () => {
+    if (!installationId) return
+    const y = window.prompt('Open a 1098 year (e.g. 2027 to open next year, 2024 for transcription):')?.trim()
+    if (!y || !/^\d{4}$/.test(y)) return
+    const { error: yErr } = await upsertAmtrRow(
+      'amtr_1098_years',
+      { base_id: installationId, year_label: y, is_current: false },
+      { onConflict: 'base_id,year_label' },
+    )
+    if (yErr) { toast.error(yErr); return }
+    // Clone catalog from the latest populated year so the new year
+    // starts with a reasonable set of tasks the admin can curate.
+    const existsForTarget = cat1098.some((c) => String(c.year_label) === y)
+    if (!existsForTarget) {
+      const populated = Array.from(new Set(cat1098.map((c) => String(c.year_label)).filter(Boolean))).sort().reverse()
+      const sourceYear = populated[0]
+      if (sourceYear) {
+        const sourceRows = cat1098.filter((c) => String(c.year_label) === sourceYear)
+        if (sourceRows.length > 0) {
+          const clones = sourceRows.map((c) => ({
+            base_id: installationId, year_label: y, task: c.task,
+            type: c.type ?? null, frequency: c.frequency ?? 'Annual', sort_order: c.sort_order ?? 0,
+          }))
+          await insertAmtrRows('amtr_1098_catalog', clones)
+        }
+      }
+    }
+    setYear1098(y)
+    toast.success(`Opened 1098 year ${y}`)
+    load()
+  }
+
+  const archive1098Year = async () => {
+    const yr = years1098.find((y) => String(y.year_label) === year1098)
+    if (!yr?.id) { toast.error("Year isn't registered — nothing to archive."); return }
+    if (year1098 === String(new Date().getUTCFullYear())) { toast.error("Can't archive the current year."); return }
+    if (!window.confirm(`Archive ${year1098}? All records for ${year1098} become read-only across the base.`)) return
+    const { error } = await updateAmtrRow('amtr_1098_years', String(yr.id), { archived: true, archived_at: new Date().toISOString() })
+    if (error) { toast.error(error); return }
+    toast.success(`${year1098} archived`); load()
+  }
+  const unarchive1098Year = async () => {
+    const yr = years1098.find((y) => String(y.year_label) === year1098)
+    if (!yr?.id) return
+    if (!window.confirm(`Unarchive ${year1098}? Records become editable again.`)) return
+    const { error } = await updateAmtrRow('amtr_1098_years', String(yr.id), { archived: false, archived_at: null, archived_by: null })
+    if (error) { toast.error(error); return }
+    toast.success(`${year1098} unarchived`); load()
   }
 
   if (!canManage) return <div style={{ padding: 24 }}><EmptyState message="Requires the Manage Training Records permission." /></div>
@@ -294,17 +352,48 @@ export default function AmtrRolesPage() {
             )}
           </CollapsibleCard>
 
-          {/* 1098 catalog — per-year after Phase B. Show only the current
-              year here; historical-year catalogs are edited per-record on
-              the 1098 tab so this admin view stays focused on the active
-              task list. */}
+          {/* 1098 catalog — per-year (Phase B). Year selector switches
+              the displayed catalog; +Open year inserts a new year row
+              and clones the latest year's task list as a starting
+              point for the admin to curate. */}
           {(() => {
             const currentYear = String(new Date().getUTCFullYear())
-            const cat1098Current = cat1098.filter((c) => String(c.year_label) === currentYear)
+            const cat1098Year = cat1098.filter((c) => String(c.year_label) === year1098)
+            const yearLabels = Array.from(new Set([
+              currentYear,
+              ...years1098.map((y) => String(y.year_label)).filter(Boolean),
+              ...cat1098.map((c) => String(c.year_label)).filter(Boolean),
+            ])).sort((a, b) => b.localeCompare(a))
+            const yearMeta = new Map(years1098.map((y) => [String(y.year_label), y]))
+            const selectedArchived = !!yearMeta.get(year1098)?.archived
             return (
-              <CollapsibleCard title={`DAF 1098 — Recurring Training (${currentYear})`} count={cat1098Current.length}
-                actions={<Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>}>
-                <CatalogList rows={cat1098Current} field="task" onResources={(r) => setResourceFor(r)} onDelete={async (id) => { await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
+              <CollapsibleCard title={`DAF 1098 — Recurring Training (${year1098})${selectedArchived ? ' — ARCHIVED' : ''}`} count={cat1098Year.length}
+                actions={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <select className="input-dark" value={year1098} onChange={(e) => setYear1098(e.target.value)} style={{ width: 'auto', minWidth: 110 }}>
+                      {yearLabels.map((y) => {
+                        const arch = !!yearMeta.get(y)?.archived
+                        return <option key={y} value={y}>{y}{y === currentYear ? ' (current)' : ''}{arch ? ' 🔒' : ''}</option>
+                      })}
+                    </select>
+                    <Btn variant="secondary" onClick={open1098Year}>+ Open year</Btn>
+                    {!selectedArchived && year1098 !== currentYear && (
+                      <Btn variant="secondary" onClick={archive1098Year}>Archive {year1098}</Btn>
+                    )}
+                    {selectedArchived && (
+                      <Btn variant="secondary" onClick={unarchive1098Year}>Unarchive {year1098}</Btn>
+                    )}
+                    {!selectedArchived && <Btn variant="secondary" onClick={() => addTask('amtr_1098_catalog', 'task')}>+ Add task</Btn>}
+                  </div>
+                }>
+                {selectedArchived && (
+                  <div style={{ padding: '8px 12px', marginBottom: 8, borderRadius: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', background: 'color-mix(in srgb, var(--color-text-3) 14%, transparent)', border: '1px solid var(--color-border-mid)' }}>
+                    This year is archived — catalog is read-only. Unarchive to make changes.
+                  </div>
+                )}
+                <div style={{ opacity: selectedArchived ? 0.55 : 1 }}>
+                  <CatalogList rows={cat1098Year} field="task" onResources={(r) => setResourceFor(r)} onDelete={async (id) => { if (selectedArchived) return; await deleteAmtrRow('amtr_1098_catalog', id); load() }} />
+                </div>
               </CollapsibleCard>
             )
           })()}
