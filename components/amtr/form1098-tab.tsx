@@ -12,11 +12,12 @@ import { StatusPill } from '@/components/amtr/status-pill'
 import { SignCell } from '@/components/amtr/signable'
 import { SimpleCatalogEditor } from '@/components/amtr/simple-catalog-editor'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
+import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
 const FREQ_OPTIONS = ['', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Biennial', 'Triennial', 'As Required']
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type SignFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot) => Promise<void>
 
 export function Form1098Tab(props: {
@@ -365,7 +366,7 @@ export function Form1098Tab(props: {
                         const draft: NotificationDraft = buildSignoff(member.full_name, slot as AmtrRole, 'DAF 1098', String(c.task), catId, '1098')
                         await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...draft })
                       }
-                    })
+                    }, { kind: '1098', label: String(c.task ?? '') })
                   }} />
               </td>
             )

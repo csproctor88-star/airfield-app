@@ -9,9 +9,10 @@ import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
+import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_797', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type SignFn = (table: 'amtr_797', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_797', rowId: string, slot: SignSlot) => Promise<void>
 const MILESTONE_WINDOWS = ['', '1-30 Days', '30-60 Days', '60-90 Days', '90-120 Days', '120-180 Days']
 
@@ -114,7 +115,7 @@ export function Form797Tab(props: {
                         } else if (member.user_id) {
                           await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...buildSignoff(member.full_name, slot as AmtrRole, 'DAF 797', String(it.task), id, '797') })
                         }
-                      })} />
+                      }, { kind: '797', label: String(it.task ?? '') })} />
                   </td>
                 )
                 return (

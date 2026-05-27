@@ -12,7 +12,8 @@ import { Btn } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_623a', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+import type { SignSource } from '@/components/amtr/auto-623a-dialog'
+type SignFn = (table: 'amtr_623a', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_623a', rowId: string, slot: SignSlot) => Promise<void>
 
 const COLS: { slot: SignSlot; label: string; sig: string; ph: string }[] = [

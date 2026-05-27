@@ -8,9 +8,10 @@ import { SignCell } from '@/components/amtr/signable'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
+import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_803', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type SignFn = (table: 'amtr_803', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_803', rowId: string, slot: SignSlot) => Promise<void>
 
 const SECTION_NOTES: Record<string, string> = {
@@ -119,7 +120,7 @@ export function Form803Tab(props: {
                         canSign={canWrite && canSignSlot(myRoles, 'evaluator', isOwn)}
                         canReopenSlot={reopenAllowed && !!r.evaluator_signed_by}
                         onReopen={() => reopen('amtr_803', id, 'evaluator')}
-                        onSign={() => sign('amtr_803', id, 'evaluator')} />
+                        onSign={() => sign('amtr_803', id, 'evaluator', undefined, { kind: '803', label: String(r.sts_item ?? 'evaluation') })} />
                     </td>
                     <td style={tdStyle}>
                       <input className="input-dark" style={{ ...di, width: 180 }} disabled={!canEnterData} defaultValue={(r.remarks as string) ?? ''} placeholder={r.results === 'UNSAT' ? 'Deficiency + retrain plan' : 'Remarks'} onBlur={(e) => canEnterData && setField(r, 'remarks', e.target.value || null)} />

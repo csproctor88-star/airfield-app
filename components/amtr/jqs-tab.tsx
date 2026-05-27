@@ -7,9 +7,10 @@ import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/
 import type { AmtrMember, AmtrRole } from '@/lib/supabase/amtr'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { Btn } from '@/components/amtr/ui'
+import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
 type Row = Record<string, unknown>
-type SignFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>) => Promise<void>
+type SignFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot) => Promise<void>
 
 // Hierarchical renumber: sections → 1, 2, 3…; items → <section>.<n> by depth.
@@ -245,7 +246,7 @@ function SectionGroup(props: {
                 if (!rowId) return
                 await sign('amtr_jqs_progress', rowId, slot, async () => {
                   if (slot !== 'trainee') await notifySignoff(slot, String(c.number ?? c.title), catId)
-                })
+                }, { kind: 'jqs', label: `${String(c.number ?? '')} ${String(c.title ?? '')}`.trim() })
               }}
             />
           </td>

@@ -28,6 +28,7 @@ import { QualificationsTab } from '@/components/amtr/qualifications-tab'
 import { FormalTab } from '@/components/amtr/formal-tab'
 import { HistoryTab } from '@/components/amtr/history-tab'
 import { MemberOverview } from '@/components/amtr/member-overview'
+import { Auto623aDialog, type SignSource, type AutoSlot } from '@/components/amtr/auto-623a-dialog'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
@@ -173,12 +174,20 @@ export default function AmtrMemberPage() {
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [highlightItem, tab, jqsProg, r1098Prog, ratProg, entries623a, items797, mileProg])
 
+  // Auto-623a prompt: when a non-trainee slot is signed on a signable
+  // surface (JQS / 1098 / 797 / 803 / milestones), pop a dialog to
+  // create a 623a entry capturing the sign-off. Skipped on amtr_623a
+  // itself (would be recursive) and on trainee self-signs (the trainee
+  // shouldn't be the one writing the trainer's narrative).
+  const [auto623a, setAuto623a] = useState<{ source: SignSource; slot: AutoSlot; initials: string } | null>(null)
+
   // ── signature helper ───────────────────────────────────────
   // Per-block: signing fills one block and locks only that block; the rest
   // of the record stays editable. Authority is hierarchical (see roles.ts).
   const sign = async (
     table: AmtrSignableTable, rowId: string, slot: SignSlot,
     onSigned?: () => Promise<void>,
+    source?: SignSource,
   ) => {
     if (!canSignSlot(signingRoles, slot, isOwn)) {
       toast.error(`You can't sign the ${slot} block on this record.`); return
@@ -192,6 +201,11 @@ export default function AmtrMemberPage() {
     toast.success('Signed')
     if (onSigned) await onSigned()
     loadTab()
+    // Auto-623a prompt fires after the parent sign + reload settle.
+    // Trainee self-signs and signs already on amtr_623a don't open it.
+    if (source && table !== 'amtr_623a' && slot !== 'trainee') {
+      setAuto623a({ source, slot: slot as AutoSlot, initials })
+    }
   }
 
   const reopen = async (table: AmtrSignableTable, rowId: string, slot: SignSlot) => {
@@ -357,6 +371,17 @@ export default function AmtrMemberPage() {
             </div>
           </div>
         </div>
+      )}
+      {auto623a && member && installationId && (
+        <Auto623aDialog
+          installationId={installationId}
+          memberId={memberId}
+          member={member}
+          source={auto623a.source}
+          signedSlot={auto623a.slot}
+          signedInitials={auto623a.initials}
+          onClose={() => { setAuto623a(null); loadTab() }}
+        />
       )}
       <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 16 }}>
         {isOwn
