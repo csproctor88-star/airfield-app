@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { Btn } from '@/components/amtr/ui'
 
@@ -19,14 +20,24 @@ export function InspectionChecklistEditor({ rows, installationId, onChange }: {
 
   const add = async (kind: 'section' | 'item') => {
     const maxOrder = rows.reduce((m, r) => Math.max(m, Number(r.sort_order ?? 0)), 0)
-    await upsertAmtrRow('amtr_inspection_checklist', {
+    const { error } = await upsertAmtrRow('amtr_inspection_checklist', {
       base_id: installationId, kind, label: kind === 'section' ? 'New Section' : 'New item',
       item_number: '', auto_key: null, sort_order: maxOrder + 1,
     })
+    if (error) { toast.error(error); return }
     onChange()
   }
-  const update = async (id: string, patch: Row) => { await updateAmtrRow('amtr_inspection_checklist', id, patch); onChange() }
-  const remove = async (id: string) => { if (window.confirm('Delete this checklist row?')) { await deleteAmtrRow('amtr_inspection_checklist', id); onChange() } }
+  const update = async (id: string, patch: Row) => {
+    const { error } = await updateAmtrRow('amtr_inspection_checklist', id, patch)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const remove = async (id: string) => {
+    if (!window.confirm('Delete this checklist row?')) return
+    const { error } = await deleteAmtrRow('amtr_inspection_checklist', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const reorder = async (from: number, to: number) => {
     if (from === to) return
     const arr = [...rows]

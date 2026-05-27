@@ -224,8 +224,21 @@ export default function AmtrMemberPage() {
     setImporting(true)
     try {
       const { applyAmtrImport } = await import('@/lib/amtr-record-import')
-      const { written, unmatched } = await applyAmtrImport(installationId, member, importPreview.parsed)
-      toast.success(`Imported ${written} item${written === 1 ? '' : 's'}${unmatched.length ? ` · ${unmatched.length} unmatched (skipped)` : ''}`)
+      const { written, unmatched, errors } = await applyAmtrImport(installationId, member, importPreview.parsed)
+      const parts = [`Imported ${written} item${written === 1 ? '' : 's'}`]
+      if (unmatched.length) parts.push(`${unmatched.length} unmatched`)
+      if (errors.length) parts.push(`${errors.length} error${errors.length === 1 ? '' : 's'}`)
+      const msg = parts.join(' · ')
+      if (errors.length) {
+        toast.error(msg)
+        // Log full error list to the console so the operator can copy
+        // specifics if any rows failed — toast text is too short for 100+
+        // RLS/constraint messages.
+        // eslint-disable-next-line no-console
+        console.error('[AMTR import errors]', errors)
+      } else {
+        toast.success(msg)
+      }
       setImportPreview(null); loadMember(); loadTab()
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Import failed') }
     finally { setImporting(false) }
@@ -314,6 +327,26 @@ export default function AmtrMemberPage() {
                   </div>
                 ))}
               </div>
+              {Object.keys(importPreview.summary.milestoneTopics).length > 0 && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                  <div style={{ marginBottom: 4 }}>Milestone sheets (catalog reference only — no member data on these tabs):</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2px 16px', fontSize: 'var(--fs-xs)' }}>
+                    {Object.entries(importPreview.summary.milestoneTopics).map(([k, n]) => (
+                      <div key={k} style={{ display: 'contents' }}>
+                        <span>{k}</span>
+                        <span style={{ textAlign: 'right' }}>{n} topic{n === 1 ? '' : 's'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {importPreview.summary.unmatchedSheets.length > 0 && (
+                <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', background: 'color-mix(in srgb, var(--color-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)' }}>
+                  <strong>Unrecognized sheets — data on these tabs will NOT be imported:</strong>
+                  <div style={{ marginTop: 4 }}>{importPreview.summary.unmatchedSheets.join(' · ')}</div>
+                  <div style={{ marginTop: 6, color: 'var(--color-text-3)' }}>Rename them to match the canonical sheet names (see Help → AMTR) and re-import to capture this data.</div>
+                </div>
+              )}
               <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)' }}>
                 Initials are imported as transcribed text (not locked e-signatures). 1098 / JQS / Qualifications / RAT match the base catalog by name/number — unmatched rows are skipped. 623A, 797, and 803 rows are added to the record. Run once on a fresh record to avoid duplicates.
               </div>
@@ -487,7 +520,8 @@ function SimpleListTab(props: { tab: string; memberId: string; installationId: s
     if (tab === 'qualifications') { row.name = value; row.value = 'No' }
     else if (tab === 'files') { row.name = value; row.status = 'Pending'; row.uploaded_at = new Date().toISOString().slice(0, 10) }
     else if (tab === '803') { row.section = 'fiveLevel'; row.sts_item = value }
-    await upsertAmtrRow(cfg.table, row)
+    const { error } = await upsertAmtrRow(cfg.table, row)
+    if (error) { toast.error(error); return }
     load()
   }
 

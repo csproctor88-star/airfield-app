@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { Btn } from '@/components/amtr/ui'
 
 type Row = Record<string, unknown>
 const GROUPS: { key: string; label: string }[] = [
-  { key: 'qtp', label: 'Qualification Training Packages' },
+  { key: 'qtp', label: 'QTP/PCGs' },
   { key: 'skill_level', label: 'Skill Levels' },
   { key: 'sei', label: 'Special Experience Identifiers (SEI)' },
 ]
@@ -25,11 +26,21 @@ export function QualCatalogEditor({ catalog, installationId, onChange }: {
 
   const add = async (category: string) => {
     const maxOrder = catalog.reduce((m, r) => Math.max(m, Number(r.sort_order ?? 0)), 0)
-    await upsertAmtrRow('amtr_qual_catalog', { base_id: installationId, category, name: 'New item', sort_order: maxOrder + 1 })
+    const { error } = await upsertAmtrRow('amtr_qual_catalog', { base_id: installationId, category, name: 'New item', sort_order: maxOrder + 1 })
+    if (error) { toast.error(error); return }
     onChange()
   }
-  const update = async (id: string, patch: Row) => { await updateAmtrRow('amtr_qual_catalog', id, patch); onChange() }
-  const remove = async (id: string) => { if (window.confirm('Delete this item for all records?')) { await deleteAmtrRow('amtr_qual_catalog', id); onChange() } }
+  const update = async (id: string, patch: Row) => {
+    const { error } = await updateAmtrRow('amtr_qual_catalog', id, patch)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const remove = async (id: string) => {
+    if (!window.confirm('Delete this item for all records?')) return
+    const { error } = await deleteAmtrRow('amtr_qual_catalog', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const moveBefore = async (targetId: string) => {
     if (!dragId || dragId === targetId) return
     const moving = flat.find((c) => String(c.id) === dragId)

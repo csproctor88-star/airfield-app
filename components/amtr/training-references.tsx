@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { ExternalLink, Trash2, Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { TSC_TABLE, PROFICIENCY_KEY } from '@/lib/amtr/reference-data'
 import { fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, deleteAmtrRow } from '@/lib/supabase/amtr'
 import { TabBar, Btn, thStyle, tdStyle } from '@/components/amtr/ui'
@@ -95,13 +96,20 @@ function ReferenceIndex({ installationId, canManage }: { installationId: string 
 
   const addRow = async () => {
     if (!installationId) return
-    await upsertAmtrRow('amtr_reference_index', { base_id: installationId, sort_order: rows.length })
+    const { error } = await upsertAmtrRow('amtr_reference_index', { base_id: installationId, sort_order: rows.length })
+    if (error) { toast.error(error); return }
     load()
   }
   const setField = async (id: string, field: 'publication' | 'link', value: string) => {
-    await updateAmtrRow('amtr_reference_index', id, { [field]: value || null }); load()
+    const { error } = await updateAmtrRow('amtr_reference_index', id, { [field]: value || null })
+    if (error) { toast.error(error); return }
+    load()
   }
-  const remove = async (id: string) => { await deleteAmtrRow('amtr_reference_index', id); load() }
+  const remove = async (id: string) => {
+    const { error } = await deleteAmtrRow('amtr_reference_index', id)
+    if (error) { toast.error(error); return }
+    load()
+  }
 
   return (
     <div>

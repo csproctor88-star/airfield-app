@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Pencil, BookOpen } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { ResourceDialog } from '@/components/amtr/resource-dialog'
 import { buildSignoff, buildTrainingDue, fireToTrainingTeam, type NotificationDraft } from '@/lib/amtr/notifications'
@@ -50,7 +51,12 @@ export function Form1098Tab(props: {
   const addYear = async () => {
     const y = window.prompt('Add a prior year (e.g. 2024):')?.trim()
     if (!y || !/^\d{4}$/.test(y)) return
-    await upsertAmtrRow('amtr_1098_years', { base_id: installationId, year_label: y, is_current: false })
+    const { error } = await upsertAmtrRow(
+      'amtr_1098_years',
+      { base_id: installationId, year_label: y, is_current: false },
+      { onConflict: 'base_id,year_label' },
+    )
+    if (error) { toast.error(error); return }
     setExtraYears((prev) => Array.from(new Set([...prev, y])))
     setYear(y)
   }
@@ -101,14 +107,19 @@ export function Form1098Tab(props: {
   const ensure = async (catId: string): Promise<string> => {
     const ex = progByCat.get(catId)
     if (ex) return String(ex.id)
-    const { data } = await upsertAmtrRow('amtr_1098_progress', { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year })
+    const { data, error } = await upsertAmtrRow(
+      'amtr_1098_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year },
+      { onConflict: 'member_id,catalog_id,year_label' },
+    )
+    if (error) { toast.error(error); return '' }
     return String(data?.id ?? '')
   }
   const setField = async (catId: string, freq: string, field: string, value: string) => {
-    const p = progByCat.get(catId)
-    const patch: Row = { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, [field]: value || null }
+    const patch: Row = { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, [field]: value || null }
     if (field === 'last_completed') patch.next_due = computeNextDue(value, freq)
-    await upsertAmtrRow('amtr_1098_progress', patch)
+    const { error } = await upsertAmtrRow('amtr_1098_progress', patch, { onConflict: 'member_id,catalog_id,year_label' })
+    if (error) { toast.error(error); return }
     // Auto-rollover: completing a task whose next due lands in a later year
     // seeds that task on the next year's 1098 (carrying the due date), so the
     // next year's record generates itself and shows the task as coming due.
@@ -116,7 +127,12 @@ export function Form1098Tab(props: {
       const nextYear = String(new Date(`${String(patch.next_due).slice(0, 10)}T00:00:00Z`).getUTCFullYear())
       const exists = progress.some((x) => String(x.catalog_id) === catId && String(x.year_label) === nextYear)
       if (Number(nextYear) > Number(year) && !exists) {
-        await upsertAmtrRow('amtr_1098_progress', { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: nextYear, next_due: patch.next_due })
+        const { error: rolloverErr } = await upsertAmtrRow(
+          'amtr_1098_progress',
+          { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: nextYear, next_due: patch.next_due },
+          { onConflict: 'member_id,catalog_id,year_label' },
+        )
+        if (rolloverErr) { toast.error(rolloverErr); return }
       }
     }
     onChange()

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { MILESTONE_PATHS } from '@/lib/amtr/reference-data'
 import { Btn } from '@/components/amtr/ui'
@@ -22,11 +23,21 @@ export function MilestoneCatalogEditor({ catalog, installationId, onChange }: {
 
   const add = async (path: string) => {
     const maxOrder = catalog.reduce((m, r) => Math.max(m, Number(r.sort_order ?? 0)), 0)
-    await upsertAmtrRow('amtr_milestone_catalog', { base_id: installationId, path, phase_label: 'Required Milestones', topic: 'New milestone', sts_items: null, target_window: null, sort_order: maxOrder + 1 })
+    const { error } = await upsertAmtrRow('amtr_milestone_catalog', { base_id: installationId, path, phase_label: 'Required Milestones', topic: 'New milestone', sts_items: null, target_window: null, sort_order: maxOrder + 1 })
+    if (error) { toast.error(error); return }
     onChange()
   }
-  const update = async (id: string, patch: Row) => { await updateAmtrRow('amtr_milestone_catalog', id, patch); onChange() }
-  const remove = async (id: string) => { if (window.confirm('Delete this milestone for all records?')) { await deleteAmtrRow('amtr_milestone_catalog', id); onChange() } }
+  const update = async (id: string, patch: Row) => {
+    const { error } = await updateAmtrRow('amtr_milestone_catalog', id, patch)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const remove = async (id: string) => {
+    if (!window.confirm('Delete this milestone for all records?')) return
+    const { error } = await deleteAmtrRow('amtr_milestone_catalog', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const moveBefore = async (targetId: string) => {
     if (!dragId || dragId === targetId) return
     const moving = flat.find((c) => String(c.id) === dragId)

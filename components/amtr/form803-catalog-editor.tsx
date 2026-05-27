@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { DAF803_SECTIONS } from '@/lib/amtr/reference-data'
 import { Btn } from '@/components/amtr/ui'
@@ -21,11 +22,21 @@ export function Form803CatalogEditor({ catalog, installationId, onChange }: {
 
   const add = async (section: string) => {
     const maxOrder = catalog.reduce((m, r) => Math.max(m, Number(r.sort_order ?? 0)), 0)
-    await upsertAmtrRow('amtr_803_catalog', { base_id: installationId, section, sts_item: 'New STS item', sort_order: maxOrder + 1 })
+    const { error } = await upsertAmtrRow('amtr_803_catalog', { base_id: installationId, section, sts_item: 'New STS item', sort_order: maxOrder + 1 })
+    if (error) { toast.error(error); return }
     onChange()
   }
-  const update = async (id: string, patch: Row) => { await updateAmtrRow('amtr_803_catalog', id, patch); onChange() }
-  const remove = async (id: string) => { if (window.confirm('Delete this standard 803 item?')) { await deleteAmtrRow('amtr_803_catalog', id); onChange() } }
+  const update = async (id: string, patch: Row) => {
+    const { error } = await updateAmtrRow('amtr_803_catalog', id, patch)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const remove = async (id: string) => {
+    if (!window.confirm('Delete this standard 803 item?')) return
+    const { error } = await deleteAmtrRow('amtr_803_catalog', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const moveBefore = async (targetId: string) => {
     if (!dragId || dragId === targetId) return
     const moving = flat.find((c) => String(c.id) === dragId)

@@ -65,6 +65,21 @@ const SECTIONS: Section[] = [
     heading: 'Getting started (training office)',
     body: 'In Admin: load the standard 1C7X1 catalogs, assign roles to your people in the matrix, and tailor the inspection checklist and resource links to your unit. The roster auto-populates from the base’s assigned users. Open a record to begin entering and signing training. When an updated HAF training-record workbook is released, use “Update standard catalogs” — existing member records are preserved and only the standard items are merged.',
   },
+  {
+    heading: 'Importing a record from the HAF Excel workbook',
+    body: 'On the record header click "Import from Excel" and pick the member\'s training-record workbook. The parser matches sheet tabs by name. If you renamed a tab the data on it is skipped — the import modal will list any unrecognized sheets so you can rename and re-import. 1098 sheets work for any year (DAF Form 1098 2024, 2025, 2026, etc.). Milestone sheets are catalog reference only — no per-member completion data lives on those tabs, so the import surfaces a topic count but doesn\'t write progress.',
+    items: [
+      ['Cover', 'Member identity (grade, DAFSC, duty position, TSC).'],
+      ['Qualifications', 'QTP/PCG complete dates and skill-level / SEI Yes-No.'],
+      ['JQS-CFETP', 'Job qualification standard tasks with start, complete, trainee, trainer, certifier.'],
+      ['DAF Form 1098 YYYY', 'Recurring training for that year. Multiple years supported (one sheet per year).'],
+      ['DAF Form 797', 'Local task list with milestones.'],
+      ['DAF Form 803 (Apprentice Grad / AMSL_AMOS / 5-Level / 7-Level / AFM)', 'Five separate sheets, one per upgrade section.'],
+      ['623A', 'Narrative training log — Date / Type / Trainee / Trainer / NAMT / AFM comments.'],
+      ['Ready Airman Training', 'Course + completed date.'],
+      ['5-Level QTP Milestone / AMOS_AMSL PCG Milestone / 7-Level QTP Milestone / AFM PCG Milestone', 'Reference only — milestone definitions, no member data.'],
+    ],
+  },
 ]
 
 export function HowToGuide() {

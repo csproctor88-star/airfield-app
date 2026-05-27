@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, deleteAmtrRow, reorderAmtrRows, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { build797Added, build797Signature, buildSignoff, fireToAllTrainers } from '@/lib/amtr/notifications'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
@@ -30,18 +31,23 @@ export function Form797Tab(props: {
   const addItem = async () => {
     const task = newTitle.trim()
     if (!task) return
-    const { data } = await upsertAmtrRow('amtr_797', { base_id: installationId, member_id: memberId, task, requires_certifier: newReqCert, added_by: myUserId, sort_order: items.length })
+    const { data, error } = await upsertAmtrRow('amtr_797', { base_id: installationId, member_id: memberId, task, requires_certifier: newReqCert, added_by: myUserId, sort_order: items.length })
+    if (error) { toast.error(error); return }
     if (member.user_id && data?.id) {
       await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...build797Added('A trainer', task, String(data.id)) })
     }
     setNewTitle(''); setNewReqCert(true); setShowAdd(false); onChange()
   }
   const setField = async (it: Row, field: string, value: unknown) => {
-    await upsertAmtrRow('amtr_797', { ...it, [field]: value })
+    const { error } = await upsertAmtrRow('amtr_797', { ...it, [field]: value })
+    if (error) { toast.error(error); return }
     onChange()
   }
   const removeItem = async (id: string) => {
-    if (window.confirm('Delete this 797 task?')) { await deleteAmtrRow('amtr_797', id); onChange() }
+    if (!window.confirm('Delete this 797 task?')) return
+    const { error } = await deleteAmtrRow('amtr_797', id)
+    if (error) { toast.error(error); return }
+    onChange()
   }
   const reorder = async (from: number, to: number) => {
     if (from === to) return

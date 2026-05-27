@@ -38,7 +38,8 @@ export function Form803Tab(props: {
   }, [installationId])
 
   const addRow = async () => {
-    await upsertAmtrRow('amtr_803', { base_id: installationId, member_id: memberId, section, sort_order: sectionRows.length })
+    const { error } = await upsertAmtrRow('amtr_803', { base_id: installationId, member_id: memberId, section, sort_order: sectionRows.length })
+    if (error) { toast.error(error); return }
     onChange()
   }
   const populateStandard = async () => {
@@ -55,7 +56,8 @@ export function Form803Tab(props: {
   }
   const stdCount = catalog.filter((c) => c.section === section && !c.retired).length
   const setField = async (r: Row, field: string, value: unknown) => {
-    await upsertAmtrRow('amtr_803', { ...r, [field]: value })
+    const { error } = await upsertAmtrRow('amtr_803', { ...r, [field]: value })
+    if (error) { toast.error(error); return }
     onChange()
   }
 

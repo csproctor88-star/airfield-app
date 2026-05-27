@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, Unlock, Pencil, GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import type { AmtrMember, AmtrRole } from '@/lib/supabase/amtr'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
@@ -56,11 +57,21 @@ export function JqsTab(props: {
   const reopenAllowed = canReopen(myRoles)
 
   // ── catalog edit helpers (base-shared; affects every member) ──
-  const updateCat = async (id: string, patch: Row) => { await updateAmtrRow('amtr_jqs_catalog', id, patch); onChange() }
-  const deleteCat = async (id: string) => { if (window.confirm('Delete this catalog row for all members?')) { await deleteAmtrRow('amtr_jqs_catalog', id); onChange() } }
+  const updateCat = async (id: string, patch: Row) => {
+    const { error } = await updateAmtrRow('amtr_jqs_catalog', id, patch)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const deleteCat = async (id: string) => {
+    if (!window.confirm('Delete this catalog row for all members?')) return
+    const { error } = await deleteAmtrRow('amtr_jqs_catalog', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const addCat = async (kind: 'section' | 'item') => {
     const maxOrder = catalog.reduce((m, c) => Math.max(m, Number(c.sort_order ?? 0)), 0)
-    await upsertAmtrRow('amtr_jqs_catalog', { base_id: installationId, kind, title: kind === 'section' ? 'New Section' : 'New Task', depth: kind === 'section' ? 0 : 1, sort_order: maxOrder + 1 })
+    const { error } = await upsertAmtrRow('amtr_jqs_catalog', { base_id: installationId, kind, title: kind === 'section' ? 'New Section' : 'New Task', depth: kind === 'section' ? 0 : 1, sort_order: maxOrder + 1 })
+    if (error) { toast.error(error); return }
     onChange()
   }
   const reorderCatalog = async (from: number, to: number) => {
@@ -90,12 +101,21 @@ export function JqsTab(props: {
   const ensureProgress = async (catId: string): Promise<string> => {
     const existing = progByCat.get(catId)
     if (existing) return String(existing.id)
-    const { data } = await upsertAmtrRow('amtr_jqs_progress', { base_id: installationId, member_id: memberId, catalog_id: catId })
+    const { data, error } = await upsertAmtrRow(
+      'amtr_jqs_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId },
+      { onConflict: 'member_id,catalog_id' },
+    )
+    if (error) { toast.error(error); return '' }
     return String(data?.id ?? '')
   }
   const setDate = async (catId: string, field: 'start_date' | 'complete_date', value: string) => {
-    const p = progByCat.get(catId)
-    await upsertAmtrRow('amtr_jqs_progress', { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null })
+    const { error } = await upsertAmtrRow(
+      'amtr_jqs_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null },
+      { onConflict: 'member_id,catalog_id' },
+    )
+    if (error) { toast.error(error); return }
     onChange()
   }
 

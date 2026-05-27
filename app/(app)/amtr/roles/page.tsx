@@ -157,7 +157,8 @@ export default function AmtrRolesPage() {
     if (!installationId) return
     const value = window.prompt('Name:')?.trim()
     if (!value) return
-    await upsertAmtrRow(table, { base_id: installationId, [field]: value, frequency: 'Annual' })
+    const { error } = await upsertAmtrRow(table, { base_id: installationId, [field]: value, frequency: 'Annual' })
+    if (error) { toast.error(error); return }
     load()
   }
 
@@ -310,7 +311,7 @@ export default function AmtrRolesPage() {
           {/* Qualifications / skill levels / SEIs */}
           <CollapsibleCard title="Qualifications, Skill Levels & SEIs" count={catQual.length}>
             <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
-              Qualification training packages, skill levels, and SEIs — defined once here and shown the same on every record. Members only track attained / completion date.
+              QTPs / PCGs, skill levels, and SEIs — defined once here and shown the same on every record. Members only track attained / completion date.
             </p>
             <QualCatalogEditor catalog={catQual} installationId={installationId!} onChange={load} />
           </CollapsibleCard>

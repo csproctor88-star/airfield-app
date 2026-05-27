@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Pencil, GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { FORMAL_SECTIONS } from '@/lib/amtr/reference-data'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
@@ -22,8 +23,15 @@ export function FormalTab(props: {
   if (catalog.length === 0) return <div className="card" style={{ color: 'var(--color-text-3)' }}>Formal training catalog is empty — load it from Roles &amp; Catalogs.</div>
 
   const setField = async (catId: string, field: string, value: string) => {
-    const p = progByCat.get(catId)
-    await upsertAmtrRow('amtr_formal_progress', { ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null })
+    // Minimal payload + explicit onConflict — see qualifications-tab.tsx
+    // for why we don't spread the existing row. Past silent-save bug
+    // (HAF Complete Date) was a missing onConflict here.
+    const { error } = await upsertAmtrRow(
+      'amtr_formal_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null },
+      { onConflict: 'member_id,catalog_id' },
+    )
+    if (error) { toast.error(error); return }
     onChange()
   }
 
@@ -78,11 +86,21 @@ function FormalCatalogEditor({ catalog, installationId, onDone, onChange }: {
 
   const addToSection = async (key: string) => {
     const maxOrder = catalog.reduce((m, c) => Math.max(m, Number(c.sort_order ?? 0)), 0)
-    await upsertAmtrRow('amtr_formal_catalog', { base_id: installationId, course: 'New Course', section: key, sort_order: maxOrder + 1 })
+    const { error } = await upsertAmtrRow('amtr_formal_catalog', { base_id: installationId, course: 'New Course', section: key, sort_order: maxOrder + 1 })
+    if (error) { toast.error(error); return }
     onChange()
   }
-  const updateCourse = async (id: string, course: string) => { await updateAmtrRow('amtr_formal_catalog', id, { course }); onChange() }
-  const removeCourse = async (id: string) => { if (window.confirm('Delete this course for all members?')) { await deleteAmtrRow('amtr_formal_catalog', id); onChange() } }
+  const updateCourse = async (id: string, course: string) => {
+    const { error } = await updateAmtrRow('amtr_formal_catalog', id, { course })
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const removeCourse = async (id: string) => {
+    if (!window.confirm('Delete this course for all members?')) return
+    const { error } = await deleteAmtrRow('amtr_formal_catalog', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
 
   // Normalized flat order: sections in canonical order, items in current order.
   const flat = FORMAL_SECTIONS.flatMap((sec) => catalog.filter((c) => c.section === sec.key))

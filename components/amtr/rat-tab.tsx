@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, type AmtrMember } from '@/lib/supabase/amtr'
 import { buildTrainingDue, fireToTrainingTeam } from '@/lib/amtr/notifications'
 import { dueStatus } from '@/lib/amtr/status'
@@ -49,10 +50,12 @@ export function RatTab(props: {
   }
 
   const setRow = async (catId: string, field: 'completed' | 'due', value: string) => {
-    const p = progByCat.get(catId)
-    await upsertAmtrRow('amtr_rat_progress', {
-      ...(p ?? {}), base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null,
-    })
+    const { error } = await upsertAmtrRow(
+      'amtr_rat_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId, [field]: value || null },
+      { onConflict: 'member_id,catalog_id' },
+    )
+    if (error) { toast.error(error); return }
     onChange()
   }
 

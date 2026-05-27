@@ -8,7 +8,7 @@ import { thStyle, tdStyle } from '@/components/amtr/ui'
 type Row = Record<string, unknown>
 
 const GROUPS: { category: string; title: string; mode: 'date' | 'yesno' }[] = [
-  { category: 'qtp', title: 'Qualification Training Packages', mode: 'date' },
+  { category: 'qtp', title: 'QTP/PCGs', mode: 'date' },
   { category: 'skill_level', title: 'Skill Levels', mode: 'yesno' },
   { category: 'sei', title: 'Special Experience Identifiers (SEI)', mode: 'yesno' },
 ]

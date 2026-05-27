@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { BookOpen, ExternalLink, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, deleteAmtrRow } from '@/lib/supabase/amtr'
 import { Btn } from '@/components/amtr/ui'
 
@@ -33,11 +34,20 @@ export function ResourceDialog({ catalogId, taskLabel, installationId, canManage
   const refresh = () => { load(); onChanged?.() }
   const add = async () => {
     if (!label.trim()) return
-    await upsertAmtrRow('amtr_1098_resources', { base_id: installationId, catalog_id: catalogId, label: label.trim(), url: url.trim() || null, sort_order: resources.length })
+    const { error } = await upsertAmtrRow('amtr_1098_resources', { base_id: installationId, catalog_id: catalogId, label: label.trim(), url: url.trim() || null, sort_order: resources.length })
+    if (error) { toast.error(error); return }
     setLabel(''); setUrl(''); refresh()
   }
-  const remove = async (id: string) => { await deleteAmtrRow('amtr_1098_resources', id); refresh() }
-  const edit = async (id: string, field: 'label' | 'url', value: string) => { await updateAmtrRow('amtr_1098_resources', id, { [field]: value || null }); refresh() }
+  const remove = async (id: string) => {
+    const { error } = await deleteAmtrRow('amtr_1098_resources', id)
+    if (error) { toast.error(error); return }
+    refresh()
+  }
+  const edit = async (id: string, field: 'label' | 'url', value: string) => {
+    const { error } = await updateAmtrRow('amtr_1098_resources', id, { [field]: value || null })
+    if (error) { toast.error(error); return }
+    refresh()
+  }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>

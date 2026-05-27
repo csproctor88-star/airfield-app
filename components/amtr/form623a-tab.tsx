@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronRight, ChevronDown, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { buildSignoff } from '@/lib/amtr/notifications'
 import { DEFAULT_623A_ENTRY_TYPES } from '@/lib/amtr/reference-data'
@@ -43,12 +44,22 @@ export function Form623aTab(props: {
   const toggle = (id: string) => setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   const addEntry = async () => {
-    const { data } = await upsertAmtrRow('amtr_623a', { base_id: installationId, member_id: memberId, form_date: new Date().toISOString().slice(0, 10) })
+    const { data, error } = await upsertAmtrRow('amtr_623a', { base_id: installationId, member_id: memberId, form_date: new Date().toISOString().slice(0, 10) })
+    if (error) { toast.error(error); return }
     if (data?.id) setExpanded((p) => new Set(p).add(String(data.id)))
     onChange()
   }
-  const setField = async (id: string, field: string, value: string) => { await updateAmtrRow('amtr_623a', id, { [field]: value || null }); onChange() }
-  const remove = async (id: string) => { if (window.confirm('Delete this 623A entry?')) { await deleteAmtrRow('amtr_623a', id); onChange() } }
+  const setField = async (id: string, field: string, value: string) => {
+    const { error } = await updateAmtrRow('amtr_623a', id, { [field]: value || null })
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const remove = async (id: string) => {
+    if (!window.confirm('Delete this 623A entry?')) return
+    const { error } = await deleteAmtrRow('amtr_623a', id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
 
   const filtered = entries
     .filter((e) => {

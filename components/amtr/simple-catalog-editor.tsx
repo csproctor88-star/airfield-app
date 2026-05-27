@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GripVertical, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { Btn } from '@/components/amtr/ui'
 
@@ -20,11 +21,22 @@ export function SimpleCatalogEditor({
 }) {
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
-  const update = async (id: string, patch: Row) => { await updateAmtrRow(table, id, patch); onChange() }
-  const remove = async (id: string) => { if (window.confirm('Delete this catalog row for all members?')) { await deleteAmtrRow(table, id); onChange() } }
+  const update = async (id: string, patch: Row) => {
+    const { error } = await updateAmtrRow(table, id, patch)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const remove = async (id: string) => {
+    if (!window.confirm('Delete this catalog row for all members?')) return
+    const { error } = await deleteAmtrRow(table, id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const add = async () => {
     const maxOrder = rows.reduce((m, r) => Math.max(m, Number(r.sort_order ?? 0)), 0)
-    await upsertAmtrRow(table, { base_id: installationId, ...defaults, sort_order: maxOrder + 1 }); onChange()
+    const { error } = await upsertAmtrRow(table, { base_id: installationId, ...defaults, sort_order: maxOrder + 1 })
+    if (error) { toast.error(error); return }
+    onChange()
   }
   const reorder = async (from: number, to: number) => {
     if (from === to) return
