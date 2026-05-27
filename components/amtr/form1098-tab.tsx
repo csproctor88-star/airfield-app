@@ -36,11 +36,18 @@ export function Form1098Tab(props: {
   const [yearRows, setYearRows] = useState<Row[]>([])
   const [resources, setResources] = useState<Map<string, Row[]>>(new Map())
   const [resourceFor, setResourceFor] = useState<Row | null>(null)
+  // Year tab list = currentYear + years explicitly added via the base
+  // amtr_1098_years table + years this member has progress in. We
+  // intentionally DON'T pull from `catalog` here — the 1098 catalog is
+  // base-shared and per-year after Phase B, so every year's catalog
+  // row would create a tab on every member's record. That made the
+  // delete-year action look broken: progress + years row would delete
+  // but the tab persisted because the base catalog still had rows for
+  // that year.
   const years = Array.from(new Set([
     currentYear,
     ...yearRows.map((r) => String(r.year_label)).filter(Boolean),
     ...progress.map((p) => String(p.year_label)).filter(Boolean),
-    ...catalog.map((c) => String(c.year_label)).filter(Boolean),
   ])).sort((a, b) => b.localeCompare(a))
   const yearRowByLabel = new Map(yearRows.map((r) => [String(r.year_label), r]))
   const isArchived = !!yearRowByLabel.get(year)?.archived
