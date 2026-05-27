@@ -2,279 +2,303 @@
 
 **Date:** 2026-05-26
 **Branch:** `main` (in sync with `origin/main`)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (452 pass / 37 files)
-**HEAD:** `81e59d0`
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓ (471 pass / 38 files)
+**HEAD:** `8a754b9`
 
 ---
 
 ## What shipped this session
 
-**Phase 3 of the FAA Part 139 commercial expansion completed end to
-end.** All four remaining sub-modules (3b AEP → 3c Part 77 obstruction
-UI → 3d Field Conditions/TALPA → 3e WHMP) shipped on `main` in 13
-commits across 4 review-gated phases, plus a KDRA demo seed and a
-cross-phase verification super-doc. With Phase 3a (Training) from the
-prior session, the civilian Part 139 retrofit is now feature-complete
-for Class III/IV airports — the build-first commitment is met and the
-codebase is ready for pilot recruitment with a complete-product demo.
+**Post-Phase-3 cleanup, then AMTR follow-ups.** Eleven commits, 5 new
+migrations applied. The whole "quick wins" + "medium effort" tranches
+from the prior handoff's tech-debt table cleared (7 items, 7 commits),
+the master verification super-doc was refreshed to match the new
+state, and then four AMTR member-page polish items landed in a quick
+second half of the session. No new modules or routes — every change
+is a fix or follow-up on already-shipped surfaces.
 
-Per-cluster review gates held: zero post-deploy round-trip fixes
-across all four sub-modules, mirroring the Phase 3a pattern.
+### Tech-debt quick wins (4 commits)
 
-### Phase 3b — Airport Emergency Plan (`f49ced0`, `8730e90`, `ed3efd0`, `867eea6`, `5a5aa41`)
+#### Wire SMS hazard prefill from WHMP deep-link (`ee7110b`)
 
-AEP replaces SCN for civilian Part 139 bases per 14 CFR §139.325. Five
-clusters: schema + module wiring → CRUD + plan/agencies UI →
-comms-checks + drills + AE dashboard → PDFs + tests + handoff →
-verification doc. 7 migrations (`2026060700`–`706`), 5 new routes
-(`/aep`, `/aep/plan`, `/aep/agencies`, `/aep/comms-checks`,
-`/aep/drills`), three PDF generators (plan / drill log / monthly comms
-matrix), 23 new tests. The SMS SPI integration was the cleanest part —
-two new computation keys (`aep_full_scale_drill_overdue` +
-`aep_comms_checks_last_90d`) appended to the existing
-`_sms_compute_spi_measurements` RPC + a `DO` block backfill on every
-civilian base. The pg_cron at 02:30 UTC picks up the new SPIs
-automatically: zero new cron infrastructure (contrast with the
-training-expiry-digest from 3a which needs a Vercel cron + secret).
+Phase 3e shipped the WHMP → SMS deep-link encoder
+(`buildSmsHazardPromoteUrl`) but the URL pointed at
+`/sms/hazards/new` which doesn't exist (the create flow is a modal on
+the index page) and the modal didn't read `prefill_*` query params
+even if you'd routed correctly. Operator workaround was a manual
+copy-paste from the URL.
 
-Incidental Phase 2 fix during Cluster B: `sidebar-nav.tsx` had
-referenced `ShieldAlert`, `TrendingUp`, `MessageSquareWarning`,
-`GitBranch` from the SMS module without registering them in
-`ICON_MAP` — all silently fell back to the `Home` icon. Added those
-plus `Siren` for AEP and `CloudSnow` later for Field Conditions, plus
-GROUP_ICONS for the SMS / Training / AEP section labels.
+Fix: migration `2026061100` extends the `sms_hazards.source_type`
+CHECK with `'whmp'` (WHMP findings are conceptually distinct from
+`wildlife_strike` — planning-doc finding vs. logged incident, so it
+gets its own first-class source rather than aliasing). The encoder
+URL drops `/new`. `app/(app)/sms/hazards/page.tsx` grew a
+`useSearchParams` effect that reads the four prefill params, auto-
+opens the Add modal with title + description populated, threads
+`source_type` + `source_ref_id` through `createHazard`, then strips
+the params via `router.replace` so a refresh doesn't re-open. A
+"Pre-filled from WHMP" pill on the modal shows the operator the
+provenance. Lacks-SMS_WRITE callers get a toast and the URL cleared.
 
-### Phase 3c — Part 77 obstruction surface UI (`1abe42d`, `b9aafc4`)
+#### Allow `runway_class` NULL for civilian Part 139 (`2c9f202`)
 
-Wired the Phase 1 `PART77_SURFACES` engine foundation into the
-obstruction tool UI. Two clusters: engine + schema + runway editor +
-tests → form picker + detail legend + handoff.
+UFC runway classes (B / Army_B) don't apply to civilian operations —
+the new `faa_approach_type` field (shipped in Phase 3c) is the
+civilian-correct driver of Part 77 surface dimensions. Civilian rows
+were being saved with `runway_class='B'` as a stopgap.
 
-The engine work expanded beyond the original parent-plan scope: the
-hardcoded `PART77_SURFACES` constant became `PART77_DIMENSIONS`, a
-`Record<FaaApproachType, Part77SurfaceSet>` with all 6 §77.19 dimension
-variants. A new `evaluateObstructionPart77()` function evaluates the 5
-Part 77 surfaces (no UFC-only outer-horizontal, clear-zone, or APZ
-zones) and handles the precision approach's two-segment slope (50:1
-first 10 kft + 40:1 next 40 kft) via `secondSegmentSlope` +
-`segmentLength`. `evaluateObstructionAllRunways` accepts `surfaceSet`
-+ per-runway `approachType` via a new `RunwayEvalInput` shape; existing
-USAF callers compile unchanged via defaults.
+Migration `2026061101` drops NOT NULL + DEFAULT 'B' on
+`base_runways.runway_class` and widens the CHECK to `NULL OR 'A' /
+'B' / 'Army_B'` (Class A added since UFC 3-260-01 defines both
+tactical-training A and B — Phase 1 only seeded B). The runway editor
+hides the dropdown on civilian bases (collapses to single-column
+grid), emits NULL on save for civilian and `'B'` for USAF, and the
+read-only row header falls through to the FAA approach type label
+when `runway_class` is null. The base-setup quick-setup pipeline +
+ICAO-lookup-import paths got the same gating.
 
-Spec correction surfaced during the refactor: the original Phase 1
-`PART77_SURFACES.primary.halfWidth = 500` was actually the §77.19
-*precision* width (1,000 ft total), not the non-precision default the
-comment claimed. New per-type map encodes spec-correct numbers across
-all 6 categories (utility-visual 250 ft total, non-utility-precision
-1,000 ft total, etc.).
+#### KDRA demo seed enrichment (`0c8af66`)
 
-Migration `2026060800` adds `base_runways.faa_approach_type` (6-value
-CHECK enum) and `.faa_approach_category` (A-E informational). Runway
-editor in `/base-config/setup` gains two civilian-only dropdowns;
-`/obstructions` gains a UFC/Part 77 picker; `/obstructions/[id]` gains
-a collapsible color-keyed legend. 34 new tests across
-`tests/part77-surfaces.test.ts` (refactored 11 → 30) and the new
-`tests/obstruction-evaluation.test.ts`.
+Phase 3 seed covered Phase 3 sub-modules end-to-end but the SMS
+hazard register and AEP comms-check history were empty on KDRA —
+pilot demos through `/sms` and `/aep` had nothing to show.
 
-### Phase 3d — Field Conditions / TALPA (`24bf162`, `3cf2518`)
+`supabase/seed-demo-civilian-phase3.sql` grew two new sections
+(idempotent via NOT EXISTS title/date checks): 4 SMS hazards across
+realistic sources (`wildlife_strike` / `discrepancy` / `inspection` /
+`safety_report`) each with current+residual assessment + 1
+mitigation, plus a Q1 2026 internal audit with 2 closed findings.
+And 3 monthly AEP comms cycles (Feb / Mar / Apr 2026) against the
+full 6-agency roster — 18 result rows — with March intentionally
+including a `no_response` on Mercy Hospital ED narrated as a
+maintenance off-air event to exercise the SPI feed's failure-counting
+path. `hazard_code` minted via `_sms_next_code()` so the demo plays
+with any prior data.
 
-Per AC 150/5200-30D, civilian airports issue Field Condition Reports
-(FCRs) any time runway surface conditions degrade. Two clusters: schema
-+ RwyCC engine + CRUD + module wiring + tests → full UI page +
-verification doc + handoff.
+#### Wrap AEP supersede in `supersede_aep_plan` RPC (`e318cdf`)
 
-Engine in `lib/calculations/rwycc.ts` implements AC 30D Table 4-1
-across all 13 contaminants (dry / wet / frost / slush / dry-snow /
-wet-snow / compacted-snow / ice / ice-patches / wet-ice /
-slippery-when-wet / water-on-compacted-snow / slush-on-ice) with
-depth + temperature edge thresholds (wet >1/8" → 3, dry-snow >1" → 3,
-compacted-snow temp-dependent <-15°C → 4 / -15 to -3 → 3 / >-3 → 2).
-`buildFiconNotamText()` emits the AC 30D §6 body: `RWY <id>
-<CC>/<CC>/<CC> <cov>/<cov>/<cov> PCT <contaminants>[ <depth>IN][ TRTD
-W/<treatments>]`. Depth uses the deepest third; contaminant tokens
-listed in TD→RO order with duplicates collapsed; treatments emit as
-`TRTD W/PLOW W/SAND` etc.
+`supersedePlan()` was two writes — INSERT new plan row, UPDATE prior
+row's `replaced_by_id`. If the client crashed (or RLS rejected one of
+the writes) between them, the base was briefly left with two rows
+where `replaced_by_id IS NULL` — both rows looking active.
 
-`field_condition_reports` is append-only with `superseded_by_id`
-chain; `field_condition_thirds` stores per-third assessment with
-`rwycc_derived` + `rwycc_manual_override` + `override_reason`
-(required if overriding). UI is a single-screen modal (not a wizard —
-operators in cold trucks with gloved fingers need minimum screen
-transitions) with a live FICON preview at the bottom that updates as
-the operator edits. Save auto-copies the FICON text to clipboard.
+Migration `2026061102` adds the `supersede_aep_plan` SECURITY
+DEFINER RPC modeled on `sign_sms_policy`. Validates auth + base
+access + `aep:write`, rejects double-supersede (prior plan must have
+`replaced_by_id IS NULL`), inserts the new row + updates the prior
+in one transaction, returns the new row as JSONB. `lib/supabase/aep.ts
+supersedePlan` rewritten to call the RPC; the `base_id` arg on the
+input shape is ignored (RPC derives from the prior plan to reject
+cross-base writes) but kept for callsite stability.
 
-7 new permission keys (`field_conditions:{read,write}` + role grants
-across 7 roles) seeded in `2026060900`. 34 new tests in
-`tests/rwycc.test.ts`. `/field-conditions` route lands at 11 kB / 185
-kB.
+### Tech-debt medium effort (3 commits)
 
-### Phase 3e — Wildlife Hazard Management Plan (`319464a`, `2648d43`)
+#### Pin `surface_set` on `obstruction_evaluations` rows (`9cde5ca`)
 
-The smallest of the four sub-modules (single table, single CRUD file,
-single page). Two clusters: schema + CRUD + UI + tests → verification
-doc + handoff. Per 14 CFR §139.337, civilian airports with significant
-wildlife hazards maintain an annual WHMP — Glidepath now hosts the PDF
-artifact, the AE annual sign-off, the hazardous-species register
-(JSONB), the mitigation summary, and findings (JSONB) that can deep-
-link into the SMS hazard register.
+Phase 3c's detail-page `SurfaceSetLegend` read the base's *current*
+`bases.obstruction_surface_set` to choose which surfaces to display.
+The evaluation's `results` JSONB was already pinned at compute time,
+but the legend was not — so if an admin flipped the base default
+after a save, prior evaluations re-rendered with a legend that didn't
+match their saved results.
 
-Single migration `2026061000` reuses existing `wildlife:{read,write}`
-permission keys rather than proliferating WHMP-specific keys
-(operationally the wildlife / BASH coordinator is the WHMP owner).
-Append-only with `replaced_by_id` chain for in-year amendments. One
-row per `(base, assessment_year)` enforced by UNIQUE constraint.
+Migration `2026061200` adds `surface_set TEXT` to
+`obstruction_evaluations` with CHECK `(NULL OR 'ufc_3_260_01' /
+'faa_part77')`, backfills via `UPDATE FROM bases` join (15 existing
+demo rows took the base's current default — best available signal
+since there's no per-row history). The create/update paths thread
+the picker state into the payload; the detail-page `SurfaceSetLegend`
+prefers the pinned `surface_set` and falls back to the base default
+for legacy rows. PDF generator unchanged (it renders the saved
+`results` array, doesn't care about surface_set).
 
-"Promote to SMS Hazard" is intentionally a query-param deep-link
-(`/sms/hazards/new?prefill_title=…&prefill_source=whmp&…`) rather than
-a tight RPC integration — the operator completes the SMS hazard form
-manually and returns to WHMP to back-fill the linked hazard code via a
-"Mark Linked" dialog. v1 ships with the deep-link encoder + URL
-generation tested; the SMS hazard form doesn't yet *read* those
-params (known follow-up). 8 new tests in `tests/whmp.test.ts`.
+#### Annual review digest cron — AEP §139.325(d) + WHMP §139.337(c) (`75cc9c6`)
 
-`nextWhmpReviewDue` reuses `daysBetween` from `aep.ts` — the
-midnight-UTC truncation helper from Phase 3a's `daysToExpiry` lesson
-generalized cleanly across three modules now (AEP annual review, WHMP
-annual review, AEP full-scale drill due).
+Phase 3a shipped a daily training-expiry digest. AEP and WHMP both
+have 12-month review cycles per their regs but had no automated nag
+when the next review approached.
 
-### KDRA demo seed refresh (`c16e2fa`)
+Migration `2026061201` adds `annual_review_digest_log` (per-day dedup
+with UNIQUE(base, send_date), same pattern as `training_digest_log`).
+`lib/annual-review-due.ts` holds the pure-function date math
+(`nextAnnualReviewDate`, `annualReviewDaysOut`,
+`classifyAnnualReview`) — kept out of `lib/supabase/*` so the server
+route can import without dragging the browser Supabase client into
+the API bundle. `app/api/annual-review-digest/route.ts` (POST,
+Bearer `CRON_SECRET` auth, service-role client) scans civilian
+bases, joins active AEP plan + active WHMP assessment, classifies
+both via the 60-day amber window, dedups, and emits a Resend
+transactional email with overdue/amber rows. `vercel.json` got the
+13:30 UTC cron entry — offset 30 min from the training digest at
+13:00 to keep logs untangled. 14 new tests cover boundary cases,
+leap-year Feb-29 → Mar-1 rollover, and same-day classification.
 
-Added `supabase/seed-demo-civilian-phase3.sql` — idempotent SQL that
-backfills the Demo Regional Airport with end-to-end sample data for
-each Phase 3 sub-module: runway approach type/category (3c), AEP plan
-+ 6-agency response roster + completed tabletop drill (3b), 2
-historical FCRs from a Feb 8 snow event with proper supersede chain
-(3d), 2026 WHMP filed by USDA Wildlife Services with 3 species + 2
-findings + AE sign-off (3e). Each section uses ON CONFLICT or check-
-first-then-insert; re-runs are no-ops. Demo tour story now works
-end-to-end on KDRA for pilot conversations.
+#### Parameterize `pointToRunwayRelation` half-width (`2e33c6d`)
 
-### Cross-phase verification super-doc (`81e59d0`)
+The geometry helper hardcoded UFC's 1,000-ft primary half-width;
+Phase 3c's `evaluateObstructionPart77` worked around this by re-
+computing `withinPrimary` locally against the per-approach-type Part
+77 half-width (125-500 ft).
 
-`docs/VERIFICATION_ALL_PHASES.md` — master walkthrough composing
-Phase 1 (foundation) + Phase 2 (SMS) + Phase 3a–3e into one ordered
-end-to-end pass on KDRA. Each phase section has pre-checks + worked
-flow + permission gating table + failure triage (~50–80 lines per
-phase). Cross-cutting sections: master pre-flight, mode-gating matrix
-(USAF vs civilian across every divergence point), regression smoke,
-theme + mobile audit, master failure triage, sign-off block with one
-row per phase.
+`pointToRunwayRelation` now accepts optional
+`opts.primaryHalfWidth`. Default 1,000 ft preserves every UFC
+callsite bit-identically. The Part 77 evaluator passes its
+per-approach-type value through and drops the local recompute. The
+200-ft primary extension past each threshold stays hardcoded — UFC
+3-260-01 and 14 CFR §77.19 agree on it.
 
-§7 "Extending This Doc" is the 8-step template for adding new phases
-as they ship — keeps the super-doc growing in lockstep with the
-codebase. Standalone PHASE_<N>_VERIFICATION.md docs remain for deep
-dives; the super-doc holds the master walkthrough.
+### Verification super-doc refresh (`9be5d1c`)
+
+`docs/VERIFICATION_ALL_PHASES.md` was still phrased as if the seven
+tech-debt items were known limitations. Updated header to 466 tests
++ migrations 2026061100 – 2026061201; §0.2 SQL pre-flight gained
+schema probes for the new column / nullability / RPC / CHECK
+extension; §0.3 KDRA section grew probes for the 4 demo hazards + 3
+comms cycles; §0.4 turned into a two-cron table; per-phase walkthrough
+steps were rewritten where behavior changed (Phase 3b atomic
+supersede step, Phase 3c surface_set pinning regression step, Phase
+3e WHMP→SMS auto-fill); §5 master triage dropped the stale "Promote
+opens empty form" known-limitation line and added 4 new bug-framed
+rows. Final 525 lines (+72/-20).
+
+### AMTR follow-ups (3 commits)
+
+#### JQS catalog: drop full-row amber tint (`0ad0921`)
+
+Required JQS catalog items had both an inset-shadow side bar on the
+first cell AND a full-row amber background. Operator feedback: the
+combination made the table noisy. Dropped the row-bg wash; the 3-px
+`var(--color-warning)` inset-shadow on the first cell still flags
+required items cleanly. URL-anchor highlight + zebra striping
+unchanged. `components/amtr/jqs-tab.tsx` only.
+
+#### Qualifications updates not persisting (`1663cdd`)
+
+`QualificationsTab.setField` called `upsertAmtrRow` without an
+explicit `onConflict`. supabase-js's default is primary-key conflict
+detection, which silently no-ops on UPDATE when the client-side cache
+lacked the row's id — first edit after a stale fetch or a race
+between two clients. Symptom: operator types a date, navigates away,
+returns, and the change is gone.
+
+`upsertAmtrRow` grew an optional `opts.onConflict` param;
+`qualifications-tab.tsx` passes `'member_id,catalog_id'` matching
+the UNIQUE constraint declared in migration `2026052016`. Now the
+upsert UPDATES regardless of whether `id` made it into the spread.
+Also surfaces upsert errors via toast — the previous code fire-and-
+forgot the result, hiding silent failures from the operator.
+
+#### Remove duplicate References tab + NAMT self-edit carve-out (`8a754b9`)
+
+Two related changes to `app/(app)/amtr/[memberId]/page.tsx`; bundled
+because they touched adjacent regions of the same file.
+
+References tab: the per-record tab duplicated the module-level
+References view (rendered by `module-bar.tsx` via the help-overlay
+button). Operators flagged it as redundant clutter inside the record.
+Removed from `TAB_LABELS`, the render branch, and the import. The
+module-level References surface at the top of `/amtr` remains the
+single source of truth.
+
+NAMT self-edit carve-out: the default AMTR self-cert guard locks
+both data entry AND signing on your own record — the model assumes
+someone above you transcribes. For one-person shops where the NAMT
+runs the program, there's no supervisor available, so they were
+stuck. New `canEnterDataOnRecord(myRoles, isOwn)` helper in
+`lib/amtr/roles.ts`: on your own record, returns true if you hold
+NAMT or AFM; on others' records, falls through to the original
+supervisor-driven `canEnterData` rule. The page-level
+`dataEntryAllowed` switches to this. **The signing self-cert guard
+is unchanged** — `slotsUserCanSign(myRoles, isOwn=true)` still
+short-circuits to `{'trainee'}` regardless of held roles. The
+carve-out is strictly transcription / data entry; the audit-critical
+signing path is intact. The own-record header subtitle now
+distinguishes the carve-out case ("Training Manager carve-out…")
+from the default trainee context. 5 new tests cover the carve-out
+plus a regression-guard assertion that the signing invariant doesn't
+move (`slotsUserCanSign(['namt'], true)` still returns
+`{'trainee'}`).
 
 ---
 
 ## Migrations status
 
-All 9 migrations applied to the linked Supabase instance. Per
-`reference_supabase_cli_npx.md`: `npx supabase db query --linked --file
-<path>` is the only safe invocation (no global supabase install).
+All 5 new migrations applied to the linked Supabase instance.
 
 | File | Applied | What it does |
 |---|---|---|
-| `2026060700_aep_plans.sql` | ✅ | aep_plans table — versioned + AE annual review + supersede chain |
-| `2026060701_aep_response_agencies.sql` | ✅ | aep_response_agencies + CHECK-enforced role enum |
-| `2026060702_aep_drills.sql` | ✅ | aep_drills + JSONB participants snapshot |
-| `2026060703_aep_comms_checks.sql` | ✅ | aep_comms_checks + child aep_comms_check_results |
-| `2026060704_aep_rls.sql` | ✅ | Matrix RLS on all 5 AEP tables; EXISTS parent-gate on child results |
-| `2026060705_aep_storage_rls.sql` | ✅ | Separate INSERT policy on storage.objects for aep-plans/* + aep-drills/* |
-| `2026060706_aep_sms_spi_feed.sql` | ✅ | Extends `_sms_compute_spi_measurements` + `_sms_seed_default_spis` with 2 AEP-driven SPIs + DO-block backfill on every civilian base |
-| `2026060800_runways_faa_approach.sql` | ✅ | base_runways gains faa_approach_type + faa_approach_category (both CHECK-enforced) |
-| `2026060900_field_conditions.sql` | ✅ | 2 FCR tables + field_conditions:* perms + role grants + matrix RLS |
-| `2026061000_wildlife_hazard_assessments.sql` | ✅ | wildlife_hazard_assessments + matrix RLS (reuses wildlife:*) + storage RLS |
-
-Demo seed `supabase/seed-demo-civilian-phase3.sql` also applied
-(idempotent — re-runnable for KDRA reset workflows).
-
-Migration tracker remains empty project-wide (the convention is
-manual application via `db query --linked --file`).
+| `2026061100_sms_hazard_source_whmp.sql` | ✅ | Extends `sms_hazards.source_type` CHECK with `'whmp'` |
+| `2026061101_runway_class_nullable.sql` | ✅ | `base_runways.runway_class` drops NOT NULL + DEFAULT 'B'; CHECK widens to `NULL OR 'A' / 'B' / 'Army_B'` |
+| `2026061102_aep_supersede_rpc.sql` | ✅ | `supersede_aep_plan(...)` SECURITY DEFINER RPC — atomic two-write supersede mirroring `sign_sms_policy` |
+| `2026061200_obstruction_evaluations_surface_set.sql` | ✅ | Adds `surface_set TEXT` column + CHECK, backfills from `bases.obstruction_surface_set` |
+| `2026061201_annual_review_digest_log.sql` | ✅ | Per-day dedup table for the annual-review cron, UNIQUE(base, send_date) |
 
 ---
 
-## Bugs caught during the build
+## Bugs caught during the session
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Phase 2 SMS sidebar icons all rendered as `Home` | `sidebar-nav.tsx` ICON_MAP missing `ShieldAlert`, `TrendingUp`, `MessageSquareWarning`, `GitBranch` — Phase 2 had imported them but never registered. Silent fallback to `Home`. | `f49ced0` (3b Cluster B) — fixed incidentally while adding Siren + CloudSnow for AEP / Field Conditions |
-| `PART77_SURFACES.primary.halfWidth = 500` claimed "non-precision default" but was actually the §77.19 precision width | Phase 1 implementation typo — 500 = 1,000 ft total (precision); spec-correct non-precision is 250 = 500 ft total | `1abe42d` (3c Cluster B) — new `PART77_DIMENSIONS` map encodes all 6 spec-correct variants |
-| `tests/permission-keys-drift.test.ts` failed after Phase 3d migration | New `field_conditions:read|write` keys in the DB catalogue but not in `lib/permissions.ts` PERM constants — drift test catches this | `24bf162` (3d Cluster B) — added `PERM.FIELD_CONDITIONS_READ` / `WRITE` |
-| Cluster B obstruction-evaluation test fixture off by 200 ft | Test placed a point 100 ft beyond runway end on centerline expecting approach-departure surface, but UFC primary surface extends 200 ft beyond the threshold via `extension` field — point was still inside primary | `1abe42d` (3c Cluster B) — moved fixture to 500 ft beyond threshold |
+| WHMP "Promote to SMS Hazard" deep-link 404 | URL pointed at non-existent `/sms/hazards/new` route (create is a modal on the index page); modal didn't read prefill params either | `ee7110b` |
+| Qualifications updates appear to save but vanish on refresh | `upsertAmtrRow` default-PK conflict detection silently no-ops on UPDATE when `id` isn't in the spread (stale client cache); fire-and-forget result-checking hid the failure | `1663cdd` |
+| Detail-page Surface Set legend re-renders against a flipped base default | Legend read `bases.obstruction_surface_set` at render time instead of the saved evaluation's set; results JSONB was already pinned but the legend wasn't | `9cde5ca` |
+| AEP supersede leaves both rows briefly active if client crashes mid-flow | Two separate writes (INSERT new + UPDATE prior pointer), neither transactional | `e318cdf` |
 
-The `pointToRunwayRelation` geometry helper still hardcodes UFC's
-1,000 ft primary halfWidth (Phase 3c flagged as known tech debt; the
-Part 77 evaluator recomputes `withinPrimary` locally rather than
-parameterizing the helper — deferred to keep the Phase 3c diff
-focused).
+The qualifications bug surfaced a broader anti-pattern: AMTR's
+upsert helper was the same shape everywhere, so any other tab using
+similar uncached saves could share the silent-update failure mode.
+Only Qualifications was patched in this session — JQS / 1098 / RAT
+tabs use the same helper but their callsites all carry `id` via
+`ensureProgress` first, so they're safe. Worth a sweep if any of
+those tabs report a similar symptom later.
 
 ---
 
 ## Lessons from this session
 
-- **The per-cluster review gate pattern compounded.** Phase 3a shipped
-  4 round-trip fixes lower than Phase 2 by adopting per-cluster gates.
-  Phases 3b/3c/3d/3e all extended that pattern (2 clusters for the
-  smaller modules, 4 for AEP) and produced zero round-trip fixes
-  again. The gate cost is real — a forced pause between Cluster B and
-  Cluster C is awkward when momentum is high — but each gate catches
-  something that would otherwise become a post-deploy round-trip. The
-  user explicitly chose to push through clusters in Phase 3b and 3e
-  after seeing the first cluster land cleanly; that's the right call
-  for small sub-modules but the gate option remains valuable for the
-  bigger ones (AEP at 4 clusters benefited from each pause).
+- **`defaultValue` on uncontrolled inputs hides silent save failures.**
+  A `<input type="date" defaultValue={…}>` shows whatever the user
+  typed regardless of whether the save actually persisted. If
+  `upsertAmtrRow` silently no-ops (which it did in the Qualifications
+  bug), the user sees their typed value, navigates away, and returns
+  to find the value gone. Every uncontrolled-input save path needs
+  an error toast on the save call — fire-and-forget is invisible.
+  Saved as `feedback_default_value_silent_save.md`.
 
-- **A pure-function helper that escaped one module saved work in three
-  more.** `daysBetween` was extracted from Phase 3a's `daysToExpiry`
-  test failure (noon-UTC NOW vs midnight-UTC date string → off-by-one),
-  exported as a top-level helper from `lib/supabase/aep.ts` in Phase
-  3b, then re-imported by Phase 3e WHMP without re-deriving the
-  midnight-UTC truncation. Two-line import vs. a duplicate
-  implementation that would have grown its own bug surface. **Pattern
-  worth pinning: extract testable pure functions to module top-level
-  on first use, not the second.**
+- **Audit invariants need explicit regression-guard tests.** The
+  NAMT data-entry carve-out is fine because data entry ≠
+  certification, but the signing self-cert guard
+  (`slotsUserCanSign(myRoles, isOwn=true)` returns `{'trainee'}`
+  *regardless of held roles*) is the audit-critical line that must
+  never move. Added `slotsUserCanSign(['namt'], true) === Set(['trainee'])`
+  + `slotsUserCanSign(['afm'], true) === Set(['trainee'])` as an
+  explicit guard with a comment naming what they protect. Pattern:
+  when carving out a permission exception, pin the unchanged
+  invariant in a test with a comment. Saved as
+  `feedback_audit_invariant_guard_test.md`.
 
-- **A separate Part 77 evaluator was cheaper than refactoring the UFC
-  evaluator.** I considered unifying UFC + Part 77 into one parameterized
-  evaluator that takes a `surfaceSet` arg. The current
-  `evaluateObstruction()` is 800+ LOC of hardcoded per-surface blocks;
-  refactoring it would risk UFC regressions and require a
-  parameterized `pointToRunwayRelation`. A parallel
-  `evaluateObstructionPart77()` (250 LOC, 5 surfaces) was faster to
-  write, regression-safe for USAF, and gave clean separation. The DRY
-  pull is real but the safety + scope-control argument won.
+- **Default-PK conflict detection silently fails on UPDATE more
+  often than you'd expect.** Supabase's `.upsert()` without an
+  explicit `onConflict` defaults to the primary key. If the
+  client-side row spread is missing the `id`, the upsert tries to
+  INSERT and either silently no-ops (PostgREST sometimes returns
+  success with 0 rows) or fails the UNIQUE constraint with an
+  obscure error. Always pass `onConflict` matching the actual
+  unique constraint you intend the upsert to resolve.
 
-- **Spec correctness > backward compatibility when the original was
-  wrong.** The Phase 1 `PART77_SURFACES.primary.halfWidth = 500`
-  numerically matched §77.19 precision-instrument dimensions despite
-  the comment claiming non-precision. Phase 3c could have preserved
-  the wrong number for backward compat; instead the new
-  `PART77_DIMENSIONS` map encodes spec-correct values across all 6
-  approach types and updates the tests to expect the corrected
-  numbers. Re-pinning a buggy constant just propagates the bug;
-  there's no civilian base in production yet so the blast radius is
-  zero.
+- **Per-cluster review gating pays off even after the build
+  phase.** The seven tech-debt items each shipped clean on the
+  first pass — zero round-trip fixes. Same pattern as the Phase 3
+  per-cluster gates: small, contained, with build + tsc + tests
+  between each. Worth keeping as the default cadence rather than
+  batching follow-ups.
 
-- **JSONB for "rich but not relational" data wins on speed and
-  expressiveness.** Phase 3e's `hazardous_species` and `findings` are
-  JSONB arrays on the WHMP row, not separate tables. A future schema
-  migration could promote them, but for v1 the JSONB shape:
-  (1) keeps the WHMP "one row per year" mental model intact,
-  (2) avoids a 3-table CRUD layer, (3) writes/reads atomically with
-  the parent. The "Mark Linked" UI gracefully back-fills
-  `findings[i].sms_hazard_id` without a foreign key. **Pattern: JSONB
-  for child collections that don't need to be queried independently
-  or referenced by other tables.**
-
-- **Materializing derived text at insert time pays off across
-  modules.** Phase 3d's `field_condition_reports.ficon_text` and the
-  pattern of computing the public-facing string once at save time
-  rather than reconstructing it on every render — turned out useful
-  for the FICON paste-into-FAA-NM workflow (operator gets the exact
-  saved bytes, not whatever the renderer regenerates). Same pattern
-  could apply to Phase 3b AEP comms-check summaries and Phase 3e WHMP
-  finding summaries; held for now.
+- **The verification super-doc decays fast if not refreshed
+  alongside fixes.** Within a single session of tech-debt cleanup,
+  `docs/VERIFICATION_ALL_PHASES.md` had 4-5 lines that read as
+  "known limitation" but were actually fixed. Refreshing the doc
+  is part of fixing the bug — left to a future pass, it accumulates
+  contradiction.
 
 ---
 
@@ -282,46 +306,47 @@ focused).
 
 | Item | Severity | Notes |
 |---|---|---|
-| `/sms/hazards/new` doesn't read `prefill_*` query params | Medium | WHMP "Promote to SMS Hazard" deep-link encodes prefill_title / prefill_description / prefill_source / prefill_source_ref_id; the SMS create form ignores them today. Operator manually pastes from URL. Small follow-up. |
-| `pointToRunwayRelation` hardcodes UFC's 1,000 ft primary halfWidth | Low | `evaluateObstructionPart77` recomputes `withinPrimary` locally to work around it. Cleaner long-term: parameterize the geometry helper. Deferred to keep Phase 3c diff focused. |
-| Precision approach 2nd-segment evaluation lacks real-pilot calibration | Low | 50:1 / 40:1 two-segment slope encoded and tested mathematically; real-world precision-instrument calibration during pilot phase. |
-| AEP "supersede" is two writes, not transactional | Low | Idempotent retry resolves; worst case is a transient window with both rows appearing active. Could wrap in a SECURITY DEFINER RPC like SMS's `sign_sms_policy` if pilots flag. |
+| NAMT self-edit signing path — should NAMT/AFM be able to sign Trainer/Certifier/NAMT blocks on their own record? | Open policy question | This session intentionally lifted only the data-entry carve-out and kept the signing self-cert guard intact. If the user wants signing too, it's a 2-line change in `slotsUserCanSign` to remove the `isOwn=true` short-circuit for NAMT/AFM. Audit-trail implications — confirm before lifting. |
+| `pointToRunwayRelation` primary extension still hardcoded at 200 ft | Low | UFC 3-260-01 and 14 CFR §77.19 happen to agree on 200 ft today, so no observable bug. If a future regime uses a different extension, this becomes the next parameterization (mirroring the halfWidth change). |
+| Precision approach 2nd-segment evaluation lacks real-pilot calibration | Low | 50:1 first 10 kft + 40:1 next 40 kft encoded mathematically and tested. Real-world precision-instrument calibration during pilot phase. |
 | AEP drill `participants` snapshot can drift from `aep_response_agencies` | Low | JSONB snapshots agency names at save time; rename / delete doesn't retroactively update drill history. UI degrades gracefully. |
-| `obstruction_evaluations.surface_set` not persisted per-row | Low | Phase 3c detail-page legend uses the base's current `bases.obstruction_surface_set`. If admin changes the base setting after a save, prior evaluations re-render with the new set's legend. Add per-row column in a future migration if pilots flag. |
 | WHMP `findings.sms_hazard_id` is a string with no FK | Low | Stored inside JSONB; cross-module reference without tight coupling. UI doesn't enforce the linked hazard exists. |
-| SMS hazard auto-create on RwyCC ≤ 2 or WHMP severe species | Medium | Out of scope for v1; pilot trials should surface whether the auto-promote vs. manual handoff is right. |
-| Annual reminder digest for AEP review / WHMP review | Medium | Phase 3a expiry digest could be extended to cover the AEP §139.325(d) and WHMP §139.337(c) annual reviews — would catch operators before they're overdue. |
-| KDRA seed could include SMS hazard + AEP comms checks history | Low | Demo seed has Phase 1 + Phase 3 data; Phase 2 SMS hazards / completed comms checks are still empty. Optional enrichment for pilot demos. |
-| `runway_class` CHECK constraint still narrow to `('B', 'Army_B')` | Low | Civilian runways set `runway_class='B'` which works but isn't civilian-accurate. The new `faa_approach_type` field is the civilian-correct driver; `runway_class` could be widened or made nullable. |
+| Annual review digest cron not yet exercised against production data | Low | Vercel cron entry shipped; needs a manual `curl -X POST -H "Authorization: Bearer $CRON_SECRET" …/api/annual-review-digest` after the next deploy to confirm the email format renders correctly. Same shape as training-expiry-digest, so risk is small. |
+| SMS hazard auto-create on RwyCC ≤ 2 or WHMP severe species | Medium | Out of scope for v1 by plan; pilot trials should surface whether the auto-promote vs. manual handoff is right. |
+| Other AMTR tabs using `upsertAmtrRow` without `onConflict` | Low | JQS / 1098 / RAT callsites all `ensureProgress` first so `id` is always present — safe today. But the helper accepts an optional `onConflict` arg now; future contributors should default to passing it to avoid the qualifications-style silent-update failure. |
 | Trademark: CDW holds the live "GLIDEPATH" Class 42 (SaaS) registration | Held | Legal critical path before commercial launch. |
 
 ---
 
 ## Next session tasks
 
-**Phase 3 is complete.** The civilian Part 139 retrofit is feature-
-complete for Class III/IV airports. The build-first commitment from
-the parent plan is met. Next session has no required work — pick from
-the menu based on appetite:
+**Backlog empty after this session.** All Phase-3-aftermath tech debt
+that wasn't pilot-blocked is done. Pick from the menu based on
+appetite:
 
-1. **Polish + release prep (v2.34.0).** Bundle audit, lint sweep,
-   version bump in 5 places (per `feedback_phased_delivery.md` and
-   the project memory's "5 places" rule), v2.34.0 CHANGELOG header,
-   README + capabilities-doc updates, tag and push. Closes a release
-   boundary for the whole Phase 3 cycle.
+1. **Release prep (v2.34.0).** Bundle audit, lint sweep, version
+   bump in 5 places (per the project memory's "5 places" rule),
+   v2.34.0 CHANGELOG header covering Phase 3 + this session's seven
+   tech-debt fixes + AMTR follow-ups, README + capabilities-doc
+   updates, tag and push. Closes a real release boundary.
 
-2. **Wire SMS hazard prefill.** Small follow-up to Phase 3e: edit
-   `/sms/hazards/new` (or wherever the SMS hazard create form lives)
-   to read `prefill_title`, `prefill_description`, `prefill_source`,
-   `prefill_source_ref_id` from query params and pre-fill the form.
-   Closes the one remaining manual-paste step in the WHMP →
-   SMS workflow.
+2. **Verify on iPhone PWA.** Walk `docs/VERIFICATION_ALL_PHASES.md`
+   end-to-end via the Vercel preview. The doc was refreshed this
+   session to reflect the new state — should be self-consistent
+   with what the operator actually finds. Surfaces any mobile UX
+   issues before pilot recruitment.
 
-3. **Verify on iPhone PWA.** Walk
-   `docs/VERIFICATION_ALL_PHASES.md` end to end via the Vercel
-   preview. Surfaces any mobile UX issues before pilot recruitment.
+3. **NAMT signing-guard policy decision.** If the user wants NAMT
+   to also sign Trainer/Certifier/NAMT blocks on their own record
+   (not just transcribe data), it's a 2-line change to
+   `slotsUserCanSign`. Confirm the audit-trail tradeoff before
+   lifting — currently held as an open policy question above.
 
-4. **Pilot recruitment kickoff.** Identify the 3 Class III non-hub
+4. **Manual cron smoke after next deploy.** Curl
+   `/api/annual-review-digest` with `CRON_SECRET` to confirm the
+   email format renders correctly. One-shot, no code change needed.
+
+5. **Pilot recruitment kickoff.** Identify the 3 Class III non-hub
    airports per the parent plan (FAA Great Lakes region recommended)
    and start outreach with a complete-product demo. **Trademark
    resolution** is the only true blocker before commercial launch.
@@ -334,8 +359,6 @@ the menu based on appetite:
   SMS / AEP public-route exposure. Recommend `BUILD_TARGET=usaf`
   tree-shake.
 - Trademark resolution (CDW "GLIDEPATH" Class 42 registration).
-- Demo seed could enrich Phase 2 SMS data (a few hazards + risk
-  assessments + 1 completed audit) for fuller pilot demo coverage.
 
 ---
 
@@ -343,34 +366,20 @@ the menu based on appetite:
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Tests: 452 pass / 37 files (+99 from baseline 353)
-       tests/aep.test.ts (+23) — AEP pure functions + PDFs
-       tests/obstruction-evaluation.test.ts (+14) — UFC regression +
-         per-approach-type Part 77 + multi-runway dispatch
-       tests/part77-surfaces.test.ts (refactored 11 → 30) — per-type
-         dimensions across all 6 §77.19 variants
-       tests/rwycc.test.ts (+34) — every Contaminant case × depth ×
-         temperature thresholds + FICON text generator
-       tests/whmp.test.ts (+8) — nextWhmpReviewDue + SMS hazard URL encoder
+Tests: 471 pass / 38 files (+19 from prior 452)
+       tests/annual-review-due.test.ts (+14) — 1-year math, UTC truncation, boundary classification, leap-year rollover
+       tests/amtr-roles.test.ts (+5) — NAMT/AFM own-record carve-out, signing-guard regression
 Build: npm run build compiled successfully.
 
-New Phase 3 routes (this session + Phase 3a from prior):
-  /aep                    5.18 kB / 184 kB
-  /aep/agencies           6.61 kB / 185 kB
-  /aep/comms-checks       7.24 kB / 186 kB
-  /aep/drills             7.49 kB / 186 kB
-  /aep/plan               7.31 kB / 186 kB
-  /field-conditions       11.0 kB / 185 kB
-  /wildlife/whmp          10.9 kB / 189 kB
-
-Changed routes (Phase 3c + 3a regression):
-  /obstructions           13.6 kB / 189 kB  (was 11.2 kB before picker)
-  /obstructions/[id]      13.8 kB / 346 kB  (was 13.7 kB before legend)
-  /training               1.84 kB / 102 kB
-  /training/[userId]      14.6 kB / 340 kB
-  /training/compliance    5.99 kB / 183 kB
-  /training/roster        4.66 kB / 173 kB
-  /training/topics        5.70 kB / 183 kB
+Notable First Load JS (changed routes this session):
+  /sms/hazards          4.84 kB / 339 kB   (+0.1 kB from prefill effect)
+  /amtr                 5.35 kB / 166 kB
+  /amtr/[memberId]      9.79 kB / 201 kB   (References tab removed)
+  /obstructions         13.6 kB / 189 kB
+  /obstructions/[id]    13.9 kB / 346 kB   (legend now reads pinned set)
+  /aep                  5.18 kB / 184 kB
+  /wildlife/whmp        10.9 kB / 189 kB
+  /api/annual-review-digest  0 B / 0 B    (server-only route)
 
 Middleware: 74.5 kB (unchanged).
 Shared by all: 91.2 kB (unchanged).
@@ -382,7 +391,7 @@ Shared by all: 91.2 kB (unchanged).
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | **Phase 1 + 2 + 3a + 3b + 3c + 3d + 3e of FAA Part 139 commercial expansion (Phase 3 complete)** — `airport_type` dual-mode flag, SMS module (Phase 2), §139.303 Training module (Phase 3a, daily Vercel cron digest), AEP module (Phase 3b) with versioned plan + agency roster + comms checks + drill program + 3 PDFs + 2 SMS-fed SPIs, Part 77 obstruction surface UI (Phase 3c) with per-approach-type engine + runway editor dropdowns + surface picker + detail-page legend, Field Conditions / TALPA module (Phase 3d) with RwyCC engine across all 13 contaminants + FICON NOTAM text generator + per-third assessment + append-with-supersede, WHMP module (Phase 3e) with annual assessment + hazardous species register + findings → SMS hazard deep-link. AMTR module merged to `main` (off-nav). KDRA demo seed end-to-end. Master verification doc covering Phase 1 → 3e. Not merged-tag yet. **Civilian Part 139 retrofit feature-complete.** |
+| **Unreleased** | — | Phase 1 + 2 + 3a-3e of FAA Part 139 commercial expansion (Phase 3 complete), plus seven post-Phase-3 tech-debt fixes: SMS hazard prefill from WHMP deep-link (with `'whmp'` source_type), `runway_class` nullable for civilian airports, atomic `supersede_aep_plan` RPC, per-row `surface_set` pinning on obstruction evaluations, annual review digest cron for AEP §139.325(d) + WHMP §139.337(c), parameterized `pointToRunwayRelation` half-width, KDRA demo seed enriched with Phase 2 SMS data + AEP comms history. Master verification super-doc refreshed. AMTR member-record polish: JQS row tint removed (side bar only), Qualifications upsert fixed (onConflict on unique constraint), per-record References tab removed (module-level kept), NAMT/AFM self-edit data-entry carve-out (signing guard intact). Not merged-tag yet. |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
@@ -391,45 +400,36 @@ Shared by all: 91.2 kB (unchanged).
 
 ### New
 
-- 9 migrations: `supabase/migrations/2026060700` through `2026061000`
-- `supabase/seed-demo-civilian-phase3.sql` — idempotent KDRA refresh
-- `lib/supabase/aep.ts`, `lib/supabase/field-conditions.ts`,
-  `lib/supabase/whmp.ts` — three new CRUD modules
-- `lib/calculations/rwycc.ts` — RwyCC engine + FICON text generator
-- `lib/aep-pdf.ts` — 3 PDF generators
-- `app/(app)/aep/page.tsx` + 4 sub-routes
-- `app/(app)/field-conditions/page.tsx`
-- `app/(app)/wildlife/whmp/page.tsx`
-- 5 verification docs in `docs/`: `PHASE_3B_VERIFICATION.md`,
-  `PHASE_3C_VERIFICATION.md`, `PHASE_3D_VERIFICATION.md`,
-  `PHASE_3E_VERIFICATION.md`, `VERIFICATION_ALL_PHASES.md` (the
-  cross-phase super-doc)
-- Test files: `tests/aep.test.ts`, `tests/obstruction-evaluation.test.ts`,
-  `tests/rwycc.test.ts`, `tests/whmp.test.ts`
+- `supabase/migrations/2026061100_sms_hazard_source_whmp.sql`
+- `supabase/migrations/2026061101_runway_class_nullable.sql`
+- `supabase/migrations/2026061102_aep_supersede_rpc.sql`
+- `supabase/migrations/2026061200_obstruction_evaluations_surface_set.sql`
+- `supabase/migrations/2026061201_annual_review_digest_log.sql`
+- `app/api/annual-review-digest/route.ts`
+- `lib/annual-review-due.ts`
+- `tests/annual-review-due.test.ts`
 
 ### Modified
 
-- `lib/calculations/obstructions.ts` — `PART77_SURFACES` →
-  `PART77_DIMENSIONS` per-type map, new `evaluateObstructionPart77`,
-  extended `evaluateObstructionAllRunways` signature
-- `lib/modules-config.ts` — 4 new ModuleKeys (`aep`, `field_conditions`,
-  `whmp`, plus `WizardStepKey 'aepagencies'`)
-- `lib/sidebar-config.ts` — new nav items + new "Airport Emergency
-  Plan" section + Operations entries for Field Conditions + WHMP
-- `lib/permissions.ts` — added `AEP_*`, `FIELD_CONDITIONS_*` PERM constants
-- `lib/supabase/types.ts` — Row/Insert/Update for 8 new tables
-- `lib/base-setup-guide.ts` — full 6-section guide for the
-  `aepagencies` wizard step
-- `components/layout/sidebar-nav.tsx` — registered `ShieldAlert`,
-  `Siren`, `TrendingUp`, `MessageSquareWarning`, `GitBranch`,
-  `CloudSnow` in ICON_MAP (incidental Phase 2 SMS bug fix during 3b);
-  added GROUP_ICONS for SMS / Training / AEP sections
-- `app/(app)/base-config/setup/page.tsx` — new `aepagencies` wizard
-  step + `AepAgenciesTab` component (~210 LOC); RunwayEditForm gains
-  civilian-only `faa_approach_type` + `faa_approach_category`
-  dropdowns
-- `app/(app)/more/page.tsx` — AEP collapsible group + Field
-  Conditions + WHMP entries (civilian-only via module gate)
-- `app/(app)/obstructions/page.tsx` — Surface Set picker
-- `app/(app)/obstructions/[id]/page.tsx` — color-keyed legend panel
-- `CHANGELOG.md`, `SESSION_HANDOFF.md`
+- `app/(app)/sms/hazards/page.tsx` — prefill effect + Pre-filled-from pill
+- `app/(app)/base-config/setup/page.tsx` — civilian gating on runway_class
+- `app/(app)/obstructions/page.tsx` — threads surface_set into payload
+- `app/(app)/obstructions/[id]/page.tsx` — SurfaceSetLegend takes pinnedSet
+- `app/(app)/amtr/[memberId]/page.tsx` — References tab removed, NAMT carve-out
+- `lib/supabase/whmp.ts` — encoder URL changed to `/sms/hazards?...`
+- `lib/supabase/sms.ts` — `SmsHazardSourceType` union extended with `'whmp'`
+- `lib/supabase/aep.ts` — `supersedePlan` calls the RPC
+- `lib/supabase/obstructions.ts` — accept optional `surface_set` on create/update
+- `lib/supabase/amtr.ts` — `upsertAmtrRow` optional `onConflict` param
+- `lib/supabase/types.ts` — `runway_class string|null`; `surface_set` on obstruction_evaluations
+- `lib/base-setup-quick-setup.ts` + `lib/base-setup-guide.ts` — civilian runway_class behavior
+- `lib/calculations/geometry.ts` — `pointToRunwayRelation` `opts.primaryHalfWidth`
+- `lib/calculations/obstructions.ts` — drops local `withinPrimary` recompute
+- `lib/amtr/roles.ts` — new `canEnterDataOnRecord` helper
+- `components/amtr/jqs-tab.tsx` — row-bg tint removed
+- `components/amtr/qualifications-tab.tsx` — onConflict + toast on error
+- `vercel.json` — 13:30 UTC cron entry for annual-review-digest
+- `tests/amtr-roles.test.ts` — NAMT carve-out + signing-guard regression
+- `tests/whmp.test.ts` — URL assertion updated
+- `supabase/seed-demo-civilian-phase3.sql` — Phase 2 SMS + AEP comms sections
+- `docs/VERIFICATION_ALL_PHASES.md` — full refresh, +72/-20 lines
