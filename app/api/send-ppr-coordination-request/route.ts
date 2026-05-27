@@ -153,9 +153,11 @@ export async function POST(request: Request) {
       [entry.requester_name, entry.requester_email, entry.requester_phone].filter(Boolean).join(' — ') || 'Internal request',
     )
 
-    // Drive-by Glidepath link — leave it deep-linkable to /ppr only;
-    // we don't expose per-entry deep links yet.
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://glidepathops.com').replace(/\/$/, '')
+    // Deep links to glidepathops.com get quarantined by Defender for
+    // Office 365 (used by most DoD tenants) because the domain isn't on
+    // the recipient's Safe Links allowlist. Strip the CTA button and
+    // direct recipients to log in normally. The sidebar pending-count
+    // badge surfaces the new coord row on next sign-in.
 
     const sent: { agency_id: string; recipient_count: number }[] = []
     const skipped: { agency_id: string; reason: string }[] = []
@@ -169,6 +171,30 @@ export async function POST(request: Request) {
       }
 
       const safeAgency = escapeHtml(agencyName)
+
+      // Build text/plain alternative for better deliverability scoring.
+      // Mirrors the html body without markup.
+      const textValues = colRows
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((c) => ({ name: c.column_name, value: formatPprColumnValue(c as any, (entry.column_values || {})[c.id]) }))
+        .filter((row) => row.value)
+        .map((row) => `${row.name}: ${row.value}`)
+        .join('\n')
+
+      const textBody = [
+        `A Prior Permission Required (PPR) request at ${base.name} has been routed to ${agencyName} for coordination.`,
+        '',
+        `PPR number: ${entry.ppr_number}`,
+        `Requester: ${entry.requester_name || entry.requester_email || 'Internal request'}`,
+        `Arrival date: ${entry.arrival_date}`,
+        textValues,
+        entry.notes ? `\nNotes: ${entry.notes}` : '',
+        '',
+        'Sign in to Glidepath and open the PPR module to review and respond.',
+        '',
+        `You're receiving this because you're listed as a coordinator for ${agencyName} at ${base.name}. Ask AMOPS or your base admin to update coordinators in Base Setup.`,
+      ].filter((line) => line !== '').join('\n')
+
       const { error } = await getResend().emails.send({
         from: fromLabel,
         to: recipients,
@@ -177,23 +203,18 @@ export async function POST(request: Request) {
         subject: `${base.name} PPR coordination requested — ${agencyName}`,
         html: `
           <p>A Prior Permission Required (PPR) request at ${safeBase} has been routed to <strong>${safeAgency}</strong> for coordination.</p>
-          <p style="font-size:16px;background:#f4f4f4;padding:10px 14px;border-radius:6px;">
-            <span style="color:#666;font-size:12px;display:block;">PPR NUMBER</span>
-            <strong style="font-family:monospace;">${safePpr}</strong>
-          </p>
+          <p><strong>PPR number:</strong> <span style="font-family:monospace;">${safePpr}</span></p>
           <p><strong>Requester:</strong> ${safeRequester}</p>
           <p><strong>Arrival date:</strong> ${safeArrival}</p>
           ${valuesHtml ? `<table style="border-collapse:collapse;margin-top:8px;">${valuesHtml}</table>` : ''}
           ${entry.notes ? `<p><strong>Notes:</strong> ${escapeHtml(entry.notes)}</p>` : ''}
-          <p style="margin-top:18px;">
-            <a href="${appUrl}/ppr" style="display:inline-block;padding:10px 18px;background:#0369a1;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Review the PPR</a>
-          </p>
-          <p style="color:#888;font-size:12px;margin-top:18px;">
+          <p>Sign in to Glidepath and open the PPR module to review and respond.</p>
+          <p style="color:#888;font-size:12px;">
             You're receiving this because you're listed as a coordinator for <strong>${safeAgency}</strong> at <strong>${safeBase}</strong>.
             Ask AMOPS or your base admin to update coordinators in Base Setup.
           </p>
-          <p style="color:#888;font-size:12px;">Do not reply to this email — replies are unmonitored.</p>
         `,
+        text: textBody,
       })
 
       if (error) {

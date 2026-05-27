@@ -126,6 +126,9 @@ export async function notifyCoordinatingAgencies(args: {
   }
 
   // 3. Build the per-email content. Subject + accent vary by outcome.
+  // Deep links to glidepathops.com get quarantined by Defender for
+  // Office 365 (DoD tenants). No CTA button — recipients log in to
+  // Glidepath normally to see the updated state.
   const accent = OUTCOME_ACCENT[outcome]
   const outcomeWord = OUTCOME_LABEL[outcome]
   const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
@@ -134,7 +137,6 @@ export async function notifyCoordinatingAgencies(args: {
   const safePpr = escapeHtml(entry.ppr_number)
   const safeArrival = escapeHtml(entry.arrival_date)
   const safeRequester = escapeHtml(entry.requester_name || 'Internal request')
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://glidepathops.com').replace(/\/$/, '')
 
   const reasonBlock = (outcome === 'denied' || outcome === 'canceled') && reason && reason.trim()
     ? `
@@ -162,6 +164,19 @@ export async function notifyCoordinatingAgencies(args: {
 
     const safeAgency = escapeHtml(agencyName)
 
+    const textBody = [
+      `A Prior Permission Required (PPR) request at ${base.name} that ${agencyName} coordinated on has been ${outcomeWord.toLowerCase()}.`,
+      '',
+      `PPR number: ${entry.ppr_number}`,
+      `Requester: ${entry.requester_name || 'Internal request'}`,
+      `Arrival date: ${entry.arrival_date}`,
+      (outcome === 'denied' || outcome === 'canceled') && reason?.trim()
+        ? `\nReason for ${outcome === 'denied' ? 'denial' : 'cancellation'}: ${reason.trim()}`
+        : '',
+      '',
+      `You're receiving this because you're listed as a coordinator for ${agencyName} at ${base.name}. Ask AMOPS or your base admin to update coordinators in Base Setup.`,
+    ].filter((line) => line !== '').join('\n')
+
     try {
       const { error } = await resend.emails.send({
         from: fromLabel,
@@ -171,22 +186,16 @@ export async function notifyCoordinatingAgencies(args: {
         subject: `${base.name} PPR ${outcomeWord} — ${entry.ppr_number} (${agencyName})`,
         html: `
           <p>A Prior Permission Required (PPR) request at ${safeBase} that <strong>${safeAgency}</strong> coordinated on has been <strong style="color:${accent.color};">${outcomeWord.toLowerCase()}</strong>.</p>
-          <p style="font-size:16px;background:#f4f4f4;padding:10px 14px;border-radius:6px;">
-            <span style="color:#666;font-size:12px;display:block;">PPR NUMBER</span>
-            <strong style="font-family:monospace;">${safePpr}</strong>
-          </p>
+          <p><strong>PPR number:</strong> <span style="font-family:monospace;">${safePpr}</span></p>
           <p><strong>Requester:</strong> ${safeRequester}</p>
           <p><strong>Arrival date:</strong> ${safeArrival}</p>
           ${reasonBlock}
-          <p style="margin-top:18px;">
-            <a href="${appUrl}/ppr" style="display:inline-block;padding:10px 18px;background:#0369a1;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Open the PPR</a>
-          </p>
           <p style="color:#888;font-size:12px;margin-top:18px;">
             You're receiving this because you're listed as a coordinator for <strong>${safeAgency}</strong> at <strong>${safeBase}</strong>.
             Ask AMOPS or your base admin to update coordinators in Base Setup.
           </p>
-          <p style="color:#888;font-size:12px;">Do not reply to this email — replies are unmonitored.</p>
         `,
+        text: textBody,
       })
 
       if (error) {
