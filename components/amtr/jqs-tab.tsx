@@ -207,8 +207,11 @@ function SectionGroup(props: {
         const p = progByCat.get(catId)
         const hi = highlightItem === catId
         const required = !!c.required
+        // Required items are flagged by the inset-shadow side bar on the
+        // first cell (below); no row-wide tint — feedback was that the
+        // full-row amber wash made the table noisy. Highlight (URL anchor)
+        // and zebra striping remain.
         const bg = hi ? 'var(--color-accent-glow)'
-          : required ? 'color-mix(in srgb, var(--color-warning) 26%, var(--color-bg-surface))'
           : idx % 2 === 1 ? 'color-mix(in srgb, var(--color-accent) 5%, transparent)' : undefined
         const signCell = (slot: SignSlot) => (
           <td style={{ ...cell, textAlign: 'center' }}>
