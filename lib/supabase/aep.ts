@@ -390,10 +390,15 @@ export async function updatePlan(
 }
 
 /**
- * Supersede the active plan with a new version. Inserts a new plan row,
- * then points the prior active plan's replaced_by_id at the new row.
- * Two writes — not transactional — but the worst case is a transient
- * window where both rows look active (idempotent retry resolves).
+ * Supersede the active plan with a new version. Calls the
+ * supersede_aep_plan SECURITY DEFINER RPC so the INSERT (new row)
+ * and UPDATE (prior row's replaced_by_id pointer) commit
+ * atomically — eliminates the transient two-active-rows window the
+ * old two-write implementation had if the client crashed mid-flow.
+ *
+ * The `base_id` field on `input` is ignored — the RPC derives it
+ * from the prior plan and rejects cross-base writes. Kept on the
+ * type for callsite stability.
  */
 export async function supersedePlan(
   priorPlanId: string,
@@ -411,20 +416,27 @@ export async function supersedePlan(
   const supabase = db()
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
 
-  const created = await createPlan(input)
-  if (!created.ok || !created.plan) return created
-
-  const { error } = await supabase
-    .from('aep_plans')
-    .update({ replaced_by_id: created.plan.id, updated_at: new Date().toISOString() } as never)
-    .eq('id', priorPlanId)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc('supersede_aep_plan', {
+    p_prior_plan_id: priorPlanId,
+    p_version: input.version,
+    p_effective_date: input.effective_date,
+    p_document_url: input.document_url ?? null,
+    p_storage_path: input.storage_path ?? null,
+    p_approved_by_faa_at: input.approved_by_faa_at ?? null,
+    p_faa_acceptance_ref: input.faa_acceptance_ref ?? null,
+    p_notes: input.notes ?? null,
+  })
   if (error) return { ok: false, error: friendlyError(error.message) }
 
+  const plan = (data as { ok?: boolean; plan?: AepPlan } | null)?.plan
+  if (!plan) return { ok: false, error: 'Supersede returned no plan row' }
+
   logActivity('updated', 'aep_plan', priorPlanId,
-    `AEP plan superseded by ${created.plan.version}`,
-    { details: `New plan ${created.plan.version} effective ${created.plan.effective_date}` },
+    `AEP plan superseded by ${plan.version}`,
+    { details: `New plan ${plan.version} effective ${plan.effective_date}` },
     input.base_id)
-  return { ok: true, plan: created.plan }
+  return { ok: true, plan }
 }
 
 /**
