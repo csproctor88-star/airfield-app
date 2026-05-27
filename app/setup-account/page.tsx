@@ -70,12 +70,19 @@ export default function SetupAccountPage() {
         return
       }
 
-      // Update profile status from pending to active
+      // Clear must_change_password so subsequent sign-ins skip the
+      // setup redirect, stamp last_seen_at, and (legacy invite-link
+      // flow) flip status active → active in case the user came in
+      // via the old pending-status path.
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await supabase
           .from('profiles')
-          .update({ status: 'active', last_seen_at: new Date().toISOString() })
+          .update({
+            status: 'active',
+            must_change_password: false,
+            last_seen_at: new Date().toISOString(),
+          } as any)
           .eq('id', user.id)
       }
 

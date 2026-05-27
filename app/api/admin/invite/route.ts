@@ -8,12 +8,33 @@ import {
   isAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
-import { getSiteUrl } from '@/lib/site-url'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
+// Initial temp password assigned by admin invites. The new user is
+// forced through /setup-account on first sign-in to pick their own.
+// Operator-chosen sentinel (not a security boundary — admin approval
+// + must_change_password gate are what actually protect access).
+const TEMP_PASSWORD = 'glidepathpassword'
+
+/**
+ * Admin invite flow.
+ *
+ * Creates the auth.users row directly with email_confirm: true and
+ * a fixed temp password ('glidepathpassword'). The handle_new_user()
+ * trigger fires on INSERT and creates the profile row with status=
+ * 'pending'. We then UPDATE the profile to set status='active' (the
+ * admin already approved by inviting them) and must_change_password=
+ * true (gates first-time access at /setup-account).
+ *
+ * Sends a plain-text-style HTML email with the temp password in the
+ * body. NO deep link to glidepathops.com — Defender for Office 365
+ * quarantines those on .mil tenants. The user signs in normally with
+ * the temp password and the login page redirects them to
+ * /setup-account when it detects must_change_password=true.
+ */
 export async function POST(request: Request) {
   try {
     const admin = getAdminClient()
@@ -24,7 +45,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Authenticate caller via cookie
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/^["']|["']$/g, '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim().replace(/^["']|["']$/g, '')
     const cookieStore = cookies()
@@ -40,7 +60,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch caller's profile
     const { data: callerProfile } = await admin
       .from('profiles')
       .select('id, role, primary_base_id')
@@ -61,15 +80,11 @@ export async function POST(request: Request) {
       installationId: string
     }
 
-    // Validate required fields
     if (!email || !rank || !firstName || !lastName || !installationId) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
     }
 
-    // Base admin restrictions
     if (!isSysAdmin(callerProfile.role)) {
-      // Base admin can only invite with non-system-admin roles
-      // They CAN invite airfield_manager and namo for their own base
       const adminRoles = ['sys_admin', 'base_admin']
       if (adminRoles.includes(role)) {
         return NextResponse.json(
@@ -77,7 +92,6 @@ export async function POST(request: Request) {
           { status: 403 },
         )
       }
-      // Base admin can only invite to their own base
       if (!canBaseAdminManageUser(callerProfile.primary_base_id, installationId)) {
         return NextResponse.json(
           { error: 'Base admins can only invite users to their own installation' },
@@ -86,150 +100,95 @@ export async function POST(request: Request) {
       }
     }
 
-    // generateLink with type:'invite' creates the user AND returns the
-    // hashed_token we need to embed in our Resend email.
-    //
-    // We deliberately do NOT use `properties.action_link` (the Supabase-
-    // hosted /auth/v1/verify URL). With PKCE flow enabled (the default
-    // for new projects), that URL redirects to `?code=...` and the
-    // exchange requires a code_verifier in the user's browser — but
-    // invites are server-generated, so the verifier never exists and
-    // the exchange fails, bouncing the user to /login.
-    //
-    // Instead we build a direct URL to our /auth/confirm route with
-    // the hashed_token + verification_type, which calls
-    // verifyOtp({type, token_hash}) and creates the session without
-    // PKCE. Pattern from Supabase SSR email-auth docs.
-    const siteUrl = getSiteUrl()
     const fullName = `${firstName.trim()} ${lastName.trim()}`
-    const { data: inviteData, error: inviteError } = await admin.auth.admin.generateLink({
-      type: 'invite',
+
+    // Create the user with the temp password and email confirmed.
+    // user_metadata flows into raw_user_meta_data which handle_new_user()
+    // reads to populate the profile row.
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
-      options: {
-        redirectTo: `${siteUrl}/auth/confirm?next=/setup-account`,
-        data: {
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          name: fullName,
-          rank: rank,
-          role: role || 'read_only',
-          primary_base_id: installationId,
-        },
-      },
-    })
-
-    if (inviteError) {
-      return NextResponse.json(
-        { error: inviteError.message },
-        { status: 400 },
-      )
-    }
-
-    const hashedToken = inviteData?.properties?.hashed_token
-    const verificationType = inviteData?.properties?.verification_type
-    if (!hashedToken || !verificationType) {
-      return NextResponse.json(
-        { error: 'Failed to generate invite link' },
-        { status: 500 },
-      )
-    }
-    const actionLink = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent('/setup-account')}`
-
-    // Send ONE branded invite email via Resend. The magic link handles email
-    // verification + redirect to /setup-account on click — no separate
-    // Supabase-default email.
-    const resendKey = process.env.RESEND_API_KEY
-    if (!resendKey) {
-      return NextResponse.json(
-        { error: 'RESEND_API_KEY missing — invite created but email not sent' },
-        { status: 500 },
-      )
-    }
-
-    try {
-      const resend = new Resend(resendKey)
-      await resend.emails.send({
-        from: 'Glidepath <noreply@glidepathops.com>',
-        replyTo: 'info@glidepathops.com',
-        to: email,
-        subject: 'You\'ve Been Invited to Glidepath',
-        html: `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0B1120;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B1120;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:520px;background:#1E293B;border-radius:12px;border:1px solid #334155;overflow:hidden;">
-        <tr><td style="background:linear-gradient(135deg,#0369A1,#22D3EE);padding:24px 32px;text-align:center;">
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">GLIDEPATH</div>
-          <div style="font-size:22px;font-weight:800;color:#FFFFFF;">You're Invited</div>
-        </td></tr>
-        <tr><td style="padding:28px 32px;color:#E2E8F0;font-size:15px;line-height:1.6;">
-          <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
-          <p style="margin:0 0 16px;">You have been invited to join <strong>Glidepath</strong> — the airfield operations management platform.</p>
-          <p style="margin:0 0 20px;">Click the button below to verify your email and set your password:</p>
-          <div style="text-align:center;margin:0 0 20px;">
-            <a href="${escapeHtml(actionLink)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Set Up Your Account</a>
-          </div>
-          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">This link will expire in 24 hours.</p>
-          <div style="font-size:13px;color:#94A3B8;border-top:1px solid #334155;padding-top:14px;margin-top:14px;">
-            <strong>What is Glidepath?</strong>
-            <ul style="margin:8px 0 0;padding-left:20px;">
-              <li>Real-time airfield status and operations management</li>
-              <li>Digital inspections, checks, and discrepancy tracking</li>
-              <li>Works on any device — desktop, tablet, or mobile</li>
-            </ul>
-          </div>
-          <p style="margin:16px 0 0;font-size:13px;color:#64748B;">Questions? Reply to this email or contact <a href="mailto:info@glidepathops.com" style="color:#22D3EE;text-decoration:none;">info@glidepathops.com</a></p>
-        </td></tr>
-        <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
-          <div style="font-size:11px;color:#64748B;">Glidepath Airfield Operations Platform</div>
-          <div style="font-size:11px;color:#475569;margin-top:4px;">Guiding You to Mission Success</div>
-          <div style="font-size:9px;color:#334155;margin-top:8px;line-height:1.4;">This application is not endorsed by, affiliated with, or associated with the Department of Defense (DoD) or any branch of the U.S. Armed Forces. The views and content herein do not reflect the official policy or position of the DoD.</div>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
-      })
-    } catch (emailErr) {
-      console.error('[admin/invite] Resend email failed:', emailErr)
-      return NextResponse.json(
-        { error: 'Invite created but email delivery failed. Contact the user manually.' },
-        { status: 500 },
-      )
-    }
-
-    // Create profile record
-    if (inviteData?.user) {
-      await admin.from('profiles').upsert({
-        id: inviteData.user.id,
-        email: email,
-        name: `${firstName.trim()} ${lastName.trim()}`,
+      password: TEMP_PASSWORD,
+      email_confirm: true,
+      user_metadata: {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        name: fullName,
         rank: rank,
         role: role || 'read_only',
         primary_base_id: installationId,
-        is_active: true,
-        status: 'pending',
-      })
+      },
+    })
 
-      // Add base membership
-      await admin.from('base_members').upsert(
-        {
-          base_id: installationId,
-          user_id: inviteData.user.id,
-          role: role || 'read_only',
-        },
-        { onConflict: 'base_id,user_id' },
-      )
+    if (createError || !created?.user) {
+      const status = /already|exists|registered/i.test(createError?.message || '') ? 409 : 400
+      return NextResponse.json({ error: createError?.message || 'Failed to create user' }, { status })
+    }
+
+    // Admin invite = admin pre-approval. Flip status from the trigger's
+    // default 'pending' to 'active' and set the must_change_password
+    // gate so the login flow forces them through /setup-account.
+    const { error: profileUpdateError } = await admin
+      .from('profiles')
+      .update({ status: 'active', must_change_password: true })
+      .eq('id', created.user.id)
+
+    if (profileUpdateError) {
+      console.error('[admin/invite] Profile update failed:', profileUpdateError)
+      // Don't roll back — the user is created and can still be activated
+      // manually via /users. Surface the issue but return success.
+    }
+
+    // Best-effort email. Plain HTML, no deep links, info@ sender,
+    // text/plain alternative. Mirrors the deliverability-tested PPR
+    // confirmation pattern. The temp password is in the body — these
+    // emails go to .mil + commercial recipients alike; admin-created
+    // credentials in a transactional email to the rightful owner is
+    // the same risk profile as a password reset email.
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey) {
+      const html = `
+        <p>Hello ${escapeHtml(fullName)},</p>
+        <p>You've been invited to Glidepath by your installation's administrator. Your account is ready.</p>
+        <p><strong>Sign-in email:</strong> ${escapeHtml(email)}<br>
+        <strong>Temporary password:</strong> <code>${escapeHtml(TEMP_PASSWORD)}</code></p>
+        <p>On your first sign-in you'll be prompted to choose a new password. Sign in at the Glidepath URL provided by your administrator.</p>
+        <p>If you have questions, contact your installation's Airfield Manager or <a href="mailto:info@glidepathops.com">info@glidepathops.com</a>.</p>
+      `
+      const text = [
+        `Hello ${fullName},`,
+        '',
+        "You've been invited to Glidepath by your installation's administrator. Your account is ready.",
+        '',
+        `Sign-in email: ${email}`,
+        `Temporary password: ${TEMP_PASSWORD}`,
+        '',
+        "On your first sign-in you'll be prompted to choose a new password. Sign in at the Glidepath URL provided by your administrator.",
+        '',
+        "If you have questions, contact your installation's Airfield Manager or info@glidepathops.com.",
+      ].join('\n')
+
+      try {
+        const resend = new Resend(resendKey)
+        const { error: sendError } = await resend.emails.send({
+          from: 'Glidepath <info@glidepathops.com>',
+          replyTo: 'info@glidepathops.com',
+          to: email,
+          subject: "You've been invited to Glidepath",
+          html,
+          text,
+        })
+        if (sendError) {
+          console.error('[admin/invite] Resend error:', sendError)
+        }
+      } catch (e) {
+        console.error('[admin/invite] Email send threw:', e)
+      }
     }
 
     return NextResponse.json({
       success: true,
-      userId: inviteData?.user?.id,
+      userId: created.user.id,
+      tempPassword: TEMP_PASSWORD,
     })
   } catch (err) {
     console.error('[admin/invite] Error:', err)

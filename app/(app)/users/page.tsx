@@ -251,9 +251,17 @@ export default function UserManagementPage() {
     role: string
     installationId: string
   }) => {
-    await inviteUser(data)
+    const result = await inviteUser(data)
     setShowInviteModal(false)
-    toast.success(`Invite sent to ${data.email}`)
+    const tempPw = (result as { tempPassword?: string })?.tempPassword
+    if (tempPw) {
+      toast.success(
+        `Invited ${data.email}. Temp password: ${tempPw} (share if email is quarantined; user will be prompted to change on first sign-in).`,
+        { duration: 15000 },
+      )
+    } else {
+      toast.success(`Invite sent to ${data.email}`)
+    }
     fetchUsers()
   }
 

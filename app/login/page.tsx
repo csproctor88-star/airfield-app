@@ -256,13 +256,14 @@ function LoginContent() {
         return
       }
 
-      // Check if user account is deactivated or pending approval
+      // Check if user account is deactivated, pending approval, or
+      // needs to change their temp password (admin-invite flow).
       if (signInData?.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('status, last_seen_at')
+          .select('status, last_seen_at, must_change_password')
           .eq('id', signInData.user.id)
-          .single()
+          .single<{ status: string | null; last_seen_at: string | null; must_change_password: boolean | null }>()
 
         if (profile?.status === 'deactivated') {
           await supabase.auth.signOut()
@@ -273,6 +274,14 @@ function LoginContent() {
         if (profile?.status === 'pending') {
           await supabase.auth.signOut()
           setError('Your account is pending approval. Your base administrator, NAMO, or Airfield Manager will approve your access.')
+          return
+        }
+
+        // Admin-invited users sign in with the temp password and must
+        // change it before reaching the app. /setup-account collects
+        // the new password and clears the flag.
+        if (profile?.must_change_password) {
+          router.push('/setup-account')
           return
         }
 
