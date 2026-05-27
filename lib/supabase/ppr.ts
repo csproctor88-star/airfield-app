@@ -405,6 +405,134 @@ export async function createPprEntry(input: {
   return entry
 }
 
+/**
+ * Add additional coordinating agencies to an existing PPR. Allowed when
+ * the entry is in `pending_coordination` or `pending_amops_approval` —
+ * the second case reverts the status back to `pending_coordination`
+ * because a new pending coord row resets the "all agencies responded"
+ * gate.
+ *
+ * Skips agencies already on the entry (no duplicate coord rows). Fires
+ * the coord-request email for newly added agencies via the existing
+ * /api/send-ppr-coordination-request route — same fire-and-forget
+ * pattern as `triagePprEntry`.
+ *
+ * Requires `ppr:triage` permission upstream (gated by the UI).
+ */
+export async function addPprCoordinationAgencies(input: {
+  entryId: string
+  baseId: string
+  agencyIds: string[]
+}): Promise<{ ok: boolean; error?: string; addedCount: number; statusReverted: boolean }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured', addedCount: 0, statusReverted: false }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated', addedCount: 0, statusReverted: false }
+
+  if (input.agencyIds.length === 0) {
+    return { ok: true, addedCount: 0, statusReverted: false }
+  }
+
+  const { data: entry } = await supabase
+    .from('ppr_entries')
+    .select('id, status, ppr_number')
+    .eq('id', input.entryId)
+    .single<{ id: string; status: PprStatus; ppr_number: string }>()
+  if (!entry) {
+    return { ok: false, error: 'Entry not found', addedCount: 0, statusReverted: false }
+  }
+
+  const allowed: PprStatus[] = ['pending_coordination', 'pending_amops_approval']
+  if (!allowed.includes(entry.status)) {
+    return {
+      ok: false,
+      error: `Cannot add coordination to a PPR in status "${entry.status}"`,
+      addedCount: 0,
+      statusReverted: false,
+    }
+  }
+
+  // De-dupe against agencies already on this entry — coord rows are
+  // never re-issued; a non-concur or concur from a prior round stands.
+  const { data: existing } = await supabase
+    .from('ppr_coordination')
+    .select('agency_id')
+    .eq('entry_id', input.entryId)
+    .in('agency_id', input.agencyIds)
+  const existingIds = new Set(
+    ((existing || []) as { agency_id: string | null }[])
+      .map((r) => r.agency_id)
+      .filter((id): id is string => Boolean(id)),
+  )
+  const newAgencyIds = input.agencyIds.filter((id) => !existingIds.has(id))
+
+  if (newAgencyIds.length === 0) {
+    return { ok: false, error: 'All selected agencies are already on this PPR', addedCount: 0, statusReverted: false }
+  }
+
+  const { data: agencies } = await supabase
+    .from('ppr_agencies')
+    .select('id, agency_name')
+    .in('id', newAgencyIds)
+
+  const rows = ((agencies || []) as { id: string; agency_name: string }[]).map((a) => ({
+    entry_id: input.entryId,
+    agency_id: a.id,
+    agency_name: a.agency_name,
+    status: 'pending' as const,
+  }))
+
+  if (rows.length === 0) {
+    return { ok: false, error: 'No matching agencies', addedCount: 0, statusReverted: false }
+  }
+
+  const { error: insErr } = await supabase.from('ppr_coordination').insert(rows)
+  if (insErr) {
+    return { ok: false, error: friendlyError(insErr.message), addedCount: 0, statusReverted: false }
+  }
+
+  // Revert to pending_coordination if previously pending_amops_approval —
+  // a new pending row means coordination is not actually complete.
+  let statusReverted = false
+  if (entry.status === 'pending_amops_approval') {
+    const { error: updErr } = await supabase
+      .from('ppr_entries')
+      .update({ status: 'pending_coordination', updated_by: user.id })
+      .eq('id', input.entryId)
+      .eq('status', 'pending_amops_approval') // idempotent guard
+    if (updErr) {
+      console.error('addPprCoordinationAgencies status revert failed:', updErr.message)
+    } else {
+      statusReverted = true
+    }
+  }
+
+  logActivity(
+    'updated',
+    'ppr_entry',
+    input.entryId,
+    statusReverted ? 'Coordination added (status reverted)' : 'Coordination added',
+    {
+      details: `Added ${rows.length} agency(ies)${statusReverted ? '; status reverted to pending_coordination' : ''}`,
+    },
+    input.baseId,
+  )
+
+  // Fire-and-forget coord-request email for the new agencies only.
+  try {
+    await fetch('/api/send-ppr-coordination-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId: input.entryId, agencyIds: newAgencyIds }),
+    })
+  } catch (e) {
+    console.error('addPprCoordinationAgencies email send failed:', e)
+  }
+
+  return { ok: true, addedCount: rows.length, statusReverted }
+}
+
 // ── Status flow ──
 
 /** Fetch coordination rows for a single entry (for the coord modal). */

@@ -23,6 +23,7 @@ import {
   fetchPprRemarks,
   addPprRemark,
   cancelPprEntry,
+  addPprCoordinationAgencies,
   isSummaryColumn,
   formatPprColumnValue,
   type PprColumn,
@@ -533,8 +534,29 @@ export default function PprPage() {
         notes: formNotes.trim() || undefined,
         ...(canEditOi && trimmedOi ? { approver_oi: trimmedOi } : {}),
       }, installationId)
+
+      // Sequential: profile data updates first, then any newly-selected
+      // coordinating agencies. Keeps the toast order intuitive — the
+      // "agencies added" message only appears when agencies were
+      // actually added.
+      let agencyMessage: string | null = null
+      if (updated && formAgencyIds.length > 0) {
+        const result = await addPprCoordinationAgencies({
+          entryId: editingEntry.id,
+          baseId: installationId,
+          agencyIds: formAgencyIds,
+        })
+        if (result.ok && result.addedCount > 0) {
+          agencyMessage = result.statusReverted
+            ? `Added ${result.addedCount} agency(ies); status reverted to pending coordination`
+            : `Added ${result.addedCount} agency(ies) for coordination`
+        } else if (!result.ok) {
+          toast.error(result.error || 'Failed to add coordinating agencies')
+        }
+      }
+
       if (updated) {
-        toast.success('PPR updated')
+        toast.success(agencyMessage || 'PPR updated')
         setShowModal(false)
         loadData()
       }
@@ -1382,6 +1404,85 @@ export default function PprPage() {
                 </label>
               )}
             </div>
+
+            {/* Existing coordination + add more agencies (edit mode only).
+                Shows current coord row state read-only; lets a user with
+                ppr:triage add additional agencies while the PPR is still
+                in a coord-eligible status. */}
+            {editingEntry && (() => {
+              const existingCoords = coordsByEntry[editingEntry.id] || []
+              const existingAgencyIds = new Set(existingCoords.map((c) => c.agency_id).filter((id): id is string => Boolean(id)))
+              const canAddAgencies = canTriage
+                && (editingEntry.status === 'pending_coordination' || editingEntry.status === 'pending_amops_approval')
+              const addableAgencies = agencies.filter((a) => !existingAgencyIds.has(a.id))
+
+              if (existingCoords.length === 0 && !canAddAgencies) return null
+
+              return (
+                <div style={{ marginBottom: 12, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 6 }}>
+                    COORDINATION
+                  </div>
+
+                  {existingCoords.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: canAddAgencies && addableAgencies.length > 0 ? 12 : 0 }}>
+                      {existingCoords.map((c) => {
+                        const label = c.status === 'concur' ? 'Concur'
+                          : c.status === 'non_concur' ? 'Non-concur'
+                          : 'Pending'
+                        const color = c.status === 'concur' ? 'var(--color-status-pass)'
+                          : c.status === 'non_concur' ? 'var(--color-status-fail)'
+                          : 'var(--color-text-3)'
+                        return (
+                          <div key={c.id} style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)',
+                            padding: '4px 0',
+                          }}>
+                            <span>{c.agency_name}</span>
+                            <span style={{ fontWeight: 600, color }}>{label}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {canAddAgencies && addableAgencies.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
+                        Add coordinating agencies:
+                        {editingEntry.status === 'pending_amops_approval' && (
+                          <span style={{ marginLeft: 6, color: 'var(--color-warning)' }}>
+                            (will revert this PPR from Pending Approval back to Coordinating)
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {addableAgencies.map((a) => {
+                          const selected = formAgencyIds.includes(a.id)
+                          return (
+                            <button
+                              key={a.id}
+                              type="button"
+                              onClick={() => setFormAgencyIds(selected ? formAgencyIds.filter((id) => id !== a.id) : [...formAgencyIds, a.id])}
+                              style={chipBtn(selected)}
+                            >
+                              {a.agency_name}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {canAddAgencies && addableAgencies.length === 0 && existingCoords.length > 0 && (
+                    <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                      All configured agencies are already on this PPR.
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Save-mode picker (create only) — three mutually
                 exclusive outcomes. Card-based segmented control so
