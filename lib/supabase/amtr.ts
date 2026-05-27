@@ -263,6 +263,20 @@ export async function removeAmtrRole(id: string): Promise<{ error: string | null
 // AMTR has many simple child tables; a typed generic fetch keeps the
 // module small. Each returns rows scoped to base or member.
 
+/** Find an existing auto-623a entry by source link, used by the multi-
+ * stage Auto623aDialog to evolve a single entry across signers. */
+export async function fetchAmtr623aBySource(
+  baseId: string, sourceTable: string, sourceRowId: string,
+): Promise<Record<string, unknown> | null> {
+  const supabase = db()
+  if (!supabase) return null
+  const { data } = await supabase
+    .from('amtr_623a').select('*')
+    .eq('base_id', baseId).eq('source_table', sourceTable).eq('source_row_id', sourceRowId)
+    .maybeSingle()
+  return (data ?? null) as Record<string, unknown> | null
+}
+
 export async function fetchAmtrByBase<T = Record<string, unknown>>(
   table: string, baseId: string, orderBy = 'sort_order',
 ): Promise<T[]> {

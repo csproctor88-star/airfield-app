@@ -174,12 +174,15 @@ export default function AmtrMemberPage() {
     if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [highlightItem, tab, jqsProg, r1098Prog, ratProg, entries623a, items797, mileProg])
 
-  // Auto-623a prompt: when a non-trainee slot is signed on a signable
-  // surface (JQS / 1098 / 797 / 803 / milestones), pop a dialog to
-  // create a 623a entry capturing the sign-off. Skipped on amtr_623a
-  // itself (would be recursive) and on trainee self-signs (the trainee
-  // shouldn't be the one writing the trainer's narrative).
-  const [auto623a, setAuto623a] = useState<{ source: SignSource; slot: AutoSlot; initials: string } | null>(null)
+  // Auto-623a prompt: every sign on a signable source (JQS / 1098 /
+  // 797 / 803 / milestones) opens a dialog that creates OR evolves a
+  // single 623a entry tied to the source row. Trainee → trainer →
+  // (optional) certifier each get a turn; comments persist across
+  // stages. Skipped on amtr_623a itself (would be recursive).
+  const [auto623a, setAuto623a] = useState<{
+    source: SignSource; sourceTable: string; sourceRowId: string;
+    slot: AutoSlot; initials: string
+  } | null>(null)
 
   // ── signature helper ───────────────────────────────────────
   // Per-block: signing fills one block and locks only that block; the rest
@@ -202,9 +205,10 @@ export default function AmtrMemberPage() {
     if (onSigned) await onSigned()
     loadTab()
     // Auto-623a prompt fires after the parent sign + reload settle.
-    // Trainee self-signs and signs already on amtr_623a don't open it.
-    if (source && table !== 'amtr_623a' && slot !== 'trainee') {
-      setAuto623a({ source, slot: slot as AutoSlot, initials })
+    // Trainee CAN trigger it now (per the multi-stage flow). Signs
+    // already on amtr_623a don't open it.
+    if (source && table !== 'amtr_623a') {
+      setAuto623a({ source, sourceTable: table, sourceRowId: rowId, slot: slot as AutoSlot, initials })
     }
   }
 
@@ -378,6 +382,8 @@ export default function AmtrMemberPage() {
           memberId={memberId}
           member={member}
           source={auto623a.source}
+          sourceTable={auto623a.sourceTable}
+          sourceRowId={auto623a.sourceRowId}
           signedSlot={auto623a.slot}
           signedInitials={auto623a.initials}
           onClose={() => { setAuto623a(null); loadTab() }}
