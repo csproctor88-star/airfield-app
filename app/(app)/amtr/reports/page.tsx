@@ -11,7 +11,6 @@ import { buildMemberRollup, buildUnitKpis, complianceCounts, type MemberRollup, 
 import { generateAmtrRosterPdf, generateAmtrMemberPrintPdf } from '@/lib/amtr-pdf'
 import { StatusPill } from '@/components/amtr/status-pill'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
-import { DateRangeBar, defaultRange, inRange, type DateRange } from '@/components/amtr/reports/date-range-bar'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
@@ -20,9 +19,9 @@ import { ArrowLeft, FileDown } from 'lucide-react'
 type Row = Record<string, unknown>
 
 const SUBTABS = [
-  ['overview', 'Overview'], ['rollup', 'Unit Roll-up'], ['overdue', 'Overdue / Due Soon'],
-  ['recurring', '1098 & RAT'], ['formal', 'Formal Training'], ['activity', '797 Activity'],
-  ['quals', 'Quals & SEI'], ['inspections', 'Inspections'], ['print', 'Member Print'],
+  ['overview', 'Overview'], ['overdue', 'Overdue / Due Soon'],
+  ['recurring', '1098 & RAT'], ['formal', 'Formal Training'],
+  ['inspections', 'Inspections'], ['print', 'Member Print'],
 ] as const
 
 type DueItem = { memberId: string; memberName: string; due: string; delta: number; task: string; source: string; status: DueStatus }
@@ -35,7 +34,6 @@ export default function AmtrReportsPage() {
 
   const [loading, setLoading] = useState(true)
   const [sub, setSub] = useState<string>('overview')
-  const [range, setRange] = useState<DateRange>(defaultRange())
 
   const [members, setMembers] = useState<AmtrMember[]>([])
   const [data, setData] = useState<Record<string, Row[]>>({})
@@ -116,14 +114,6 @@ export default function AmtrReportsPage() {
     return out.sort((a, b) => a.due.localeCompare(b.due))
   }, [data, nameOf, statusOf])
 
-  // ── derived: 797 activity (date-filtered) ──
-  const activity = useMemo(() => {
-    return (data.items797 ?? [])
-      .map((r) => ({ id: String(r.id), memberId: String(r.member_id), memberName: nameOf.get(String(r.member_id)) ?? '—', task: String(r.task ?? ''), trainer: (r.trainer_initials as string) ?? '', date: (r.complete_date as string) || (r.created_at as string) || '' }))
-      .filter((a) => inRange(a.date, range))
-      .sort((a, b) => b.date.localeCompare(a.date))
-  }, [data, nameOf, range])
-
   // ── derived: recurring compliance per task ──
   const compliance = useMemo(() => {
     const build = (catalog: Row[], prog: Row[], dueField: string, doneField: string, ratOnly: boolean) =>
@@ -163,7 +153,6 @@ export default function AmtrReportsPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0, fontSize: 22 }}>Unit Training Reports</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <DateRangeBar value={range} onChange={setRange} />
           {canExport && <Btn variant="primary" onClick={exportRosterPdf} disabled={rollups.length === 0}><FileDown size={15} /> Roster PDF</Btn>}
         </div>
       </div>
@@ -177,13 +166,10 @@ export default function AmtrReportsPage() {
 
       {members.length === 0 ? <EmptyState message="No members to report on yet." /> : (
         <>
-          {sub === 'overview' && <Overview kpiCards={kpiCards} dueItems={dueItems} rollups={rollups} compliance={compliance} activity={activity} onMember={(id) => router.push(`/amtr/${id}`)} onGo={setSub} />}
-          {sub === 'rollup' && <RollupTable rollups={rollups} onMember={(id) => router.push(`/amtr/${id}`)} />}
+          {sub === 'overview' && <Overview kpiCards={kpiCards} dueItems={dueItems} rollups={rollups} compliance={compliance} members={members} latestInsp={latestInsp} onMember={(id) => router.push(`/amtr/${id}`)} onGo={setSub} />}
           {sub === 'overdue' && <OverdueTable items={dueItems} onMember={(id) => router.push(`/amtr/${id}`)} />}
           {sub === 'recurring' && <RecurringTables compliance={compliance} />}
           {sub === 'formal' && <FormalTable members={members} data={data} />}
-          {sub === 'activity' && <ActivityTable activity={activity} onMember={(id) => router.push(`/amtr/${id}`)} />}
-          {sub === 'quals' && <QualsMatrix members={members} data={data} />}
           {sub === 'inspections' && <InspectionsTable members={members} latest={latestInsp} onMember={(id) => router.push(`/amtr/${id}/inspect`)} />}
           {sub === 'print' && <MemberPrint members={members} rollups={rollups} dueItems={dueItems} baseInfo={baseInfo} canExport={canExport} />}
         </>
@@ -209,7 +195,6 @@ function Kpis({ cards }: { cards: { label: string; value: number; color?: string
 type Compliance = { r1098: ComplianceRow[]; rat: ComplianceRow[] }
 type ComplianceRow = { name: string; freq: string; required: number; complete: number; dueSoon: number; overdue: number; pct: number }
 type DueItemT = { memberId: string; memberName: string; due: string; delta: number; task: string; source: string; status: DueStatus }
-type Activity = { id: string; memberId: string; memberName: string; task: string; trainer: string; date: string }[]
 
 function Card({ title, link, onLink, children }: { title: string; link?: string; onLink?: () => void; children: React.ReactNode }) {
   return (
@@ -223,48 +208,100 @@ function Card({ title, link, onLink, children }: { title: string; link?: string;
   )
 }
 
-function Overview({ kpiCards, dueItems, rollups, compliance, activity, onMember, onGo }: {
+// One-page holistic snapshot for the training manager: unit KPIs, the
+// three "what needs attention" cards (people / programs / inspections),
+// a forward-looking "coming due" list, and a compact per-member
+// compliance table that absorbs the (removed) Unit Roll-up tab.
+function Overview({ kpiCards, dueItems, rollups, compliance, members, latestInsp, onMember, onGo }: {
   kpiCards: { label: string; value: number; color?: string }[]
-  dueItems: DueItemT[]; rollups: MemberRollup[]; compliance: Compliance; activity: Activity
+  dueItems: DueItemT[]; rollups: MemberRollup[]; compliance: Compliance
+  members: AmtrMember[]; latestInsp: Map<string, AmtrInspection>
   onMember: (id: string) => void; onGo: (t: string) => void
 }) {
-  const lowest = [...rollups].sort((a, b) => a.jqsPct - b.jqsPct).filter((r) => r.jqsPct < 100).slice(0, 5)
   const worst = [...compliance.r1098, ...compliance.rat].filter((c) => c.overdue > 0).sort((a, b) => b.overdue - a.overdue).slice(0, 5)
   const small: React.CSSProperties = { fontSize: 'var(--fs-sm)' }
+
+  // Members whose last inspection is missing OR older than 30 days.
+  // 30 is a reasonable "monthly inspection cycle" threshold; surfaces
+  // anyone the office has fallen behind on.
+  const today = new Date()
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const inspectionBacklog = members
+    .map((m) => {
+      const insp = latestInsp.get(m.id)
+      const inspDate = insp ? parseDate(insp.inspection_date) : null
+      const stale = !insp || (inspDate && inspDate < thirtyDaysAgo)
+      return { m, insp, stale, inspDate }
+    })
+    .filter((x) => x.stale)
+    .sort((a, b) => {
+      // Never-inspected first, then oldest inspections.
+      if (!a.insp && b.insp) return -1
+      if (a.insp && !b.insp) return 1
+      const ad = a.inspDate?.getTime() ?? 0
+      const bd = b.inspDate?.getTime() ?? 0
+      return ad - bd
+    })
+    .slice(0, 5)
+
+  // Items due in the next 30 days that aren't yet overdue. dueItems
+  // contains overdue+due-soon together; this list is the forward
+  // window only (delta >= 0 && delta <= 30).
+  const upcoming = dueItems
+    .filter((d) => d.delta >= 0 && d.delta <= 30)
+    .sort((a, b) => a.delta - b.delta)
+    .slice(0, 10)
+
   return (
     <>
       <Kpis cards={kpiCards} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginBottom: 14 }}>
         <Card title="Attention Required" link="View all" onLink={() => onGo('overdue')}>
           {dueItems.length === 0 ? <Muted>Everyone current.</Muted> : dueItems.slice(0, 5).map((d, i) => (
             <div key={i} onClick={() => onMember(d.memberId)} style={{ ...small, display: 'flex', gap: 8, padding: '4px 0', cursor: 'pointer', borderTop: i ? '1px solid var(--color-border)' : 'none' }}>
-              <span style={{ color: d.status === 'overdue' ? 'var(--color-danger)' : 'var(--color-warning)', width: 70 }}>{d.due}</span>
+              <span style={{ color: d.status === 'overdue' ? 'var(--color-danger)' : 'var(--color-warning)', width: 70, whiteSpace: 'nowrap' }}>{d.due}</span>
               <span style={{ flex: 1 }}>{d.memberName}</span><span style={{ color: 'var(--color-text-3)' }}>{d.source}</span>
             </div>
           ))}
         </Card>
-        <Card title="Lowest JQS Completion" link="View all" onLink={() => onGo('rollup')}>
-          {lowest.length === 0 ? <Muted>All members complete.</Muted> : lowest.map((r, i) => (
-            <div key={r.memberId} onClick={() => onMember(r.memberId)} style={{ ...small, display: 'flex', gap: 8, padding: '4px 0', cursor: 'pointer', borderTop: i ? '1px solid var(--color-border)' : 'none' }}>
-              <span style={{ flex: 1 }}>{r.name}</span><span style={{ color: 'var(--color-text-3)' }}>{r.jqsPct}%</span>
-            </div>
-          ))}
-        </Card>
-        <Card title="1098 & RAT — Worst Compliance" link="View all" onLink={() => onGo('recurring')}>
+        <Card title="Programs at Risk" link="View all" onLink={() => onGo('recurring')}>
           {worst.length === 0 ? <Muted>No overdue recurring training.</Muted> : worst.map((c, i) => (
             <div key={i} style={{ ...small, display: 'flex', gap: 8, padding: '4px 0', borderTop: i ? '1px solid var(--color-border)' : 'none' }}>
-              <span style={{ flex: 1 }}>{c.name}</span><span style={{ color: 'var(--color-danger)' }}>{c.overdue} over</span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+              <span style={{ color: 'var(--color-danger)', whiteSpace: 'nowrap' }}>{c.overdue} over</span>
             </div>
           ))}
         </Card>
-        <Card title="DAF 797 — Recent Activity" link="View all" onLink={() => onGo('activity')}>
-          {activity.length === 0 ? <Muted>No activity in range.</Muted> : activity.slice(0, 5).map((a, i) => (
-            <div key={a.id} onClick={() => onMember(a.memberId)} style={{ ...small, display: 'flex', gap: 8, padding: '4px 0', cursor: 'pointer', borderTop: i ? '1px solid var(--color-border)' : 'none' }}>
-              <span style={{ color: 'var(--color-text-3)', width: 78 }}>{a.date?.slice(0, 10)}</span>
-              <span style={{ flex: 1 }}>{a.memberName}</span><span style={{ color: 'var(--color-text-3)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.task}</span>
+        <Card title="Inspection Backlog" link="View all" onLink={() => onGo('inspections')}>
+          {inspectionBacklog.length === 0 ? <Muted>All records inspected within 30 days.</Muted> : inspectionBacklog.map((x, i) => (
+            <div key={x.m.id} onClick={() => onMember(x.m.id)} style={{ ...small, display: 'flex', gap: 8, padding: '4px 0', cursor: 'pointer', borderTop: i ? '1px solid var(--color-border)' : 'none' }}>
+              <span style={{ flex: 1 }}>{x.m.full_name}</span>
+              <span style={{ color: !x.insp ? 'var(--color-danger)' : 'var(--color-warning)', whiteSpace: 'nowrap' }}>
+                {x.insp ? `${x.insp.inspection_date?.slice(0, 10)}` : 'never'}
+              </span>
             </div>
           ))}
         </Card>
+      </div>
+
+      <Card title="Coming Due — next 30 days" link="View all" onLink={() => onGo('overdue')}>
+        {upcoming.length === 0 ? <Muted>Nothing comes due in the next 30 days.</Muted> : (
+          <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 130px 80px', gap: '4px 12px', alignItems: 'center', fontSize: 'var(--fs-sm)' }}>
+            {upcoming.map((d, i) => (
+              <div key={i} onClick={() => onMember(d.memberId)} style={{ display: 'contents', cursor: 'pointer' }}>
+                <span style={{ color: 'var(--color-text-3)', whiteSpace: 'nowrap', borderTop: i ? '1px solid var(--color-border)' : 'none', paddingTop: i ? 4 : 0 }}>{d.due}</span>
+                <span style={{ borderTop: i ? '1px solid var(--color-border)' : 'none', paddingTop: i ? 4 : 0 }}>{d.memberName}</span>
+                <span style={{ color: 'var(--color-text-3)', borderTop: i ? '1px solid var(--color-border)' : 'none', paddingTop: i ? 4 : 0 }}>{d.source}</span>
+                <span style={{ color: 'var(--color-warning)', textAlign: 'right', whiteSpace: 'nowrap', borderTop: i ? '1px solid var(--color-border)' : 'none', paddingTop: i ? 4 : 0 }}>{d.delta === 0 ? 'today' : `${d.delta}d`}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <div style={{ marginTop: 14 }}>
+        <RollupTable rollups={rollups} latestInsp={latestInsp} onMember={onMember} />
       </div>
     </>
   )
@@ -274,20 +311,28 @@ function Muted({ children }: { children: React.ReactNode }) {
   return <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>{children}</div>
 }
 
-function RollupTable({ rollups, onMember }: { rollups: MemberRollup[]; onMember: (id: string) => void }) {
+// Per-member compliance roll-up. Lives on the Overview now (the
+// standalone "Unit Roll-up" tab was removed) so the training manager
+// gets the at-a-glance roster + the focused cards above without
+// flipping tabs.
+function RollupTable({ rollups, latestInsp, onMember }: { rollups: MemberRollup[]; latestInsp: Map<string, AmtrInspection>; onMember: (id: string) => void }) {
   return (
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--color-border)', fontWeight: 700 }}>Per-Member Compliance</div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr><th style={thStyle}>Member</th><th style={thStyle}>Grade</th><th style={thStyle}>Status</th><th style={thStyle}>JQS %</th><th style={thStyle}>Formal %</th><th style={thStyle}>Overdue</th><th style={thStyle}>Due Soon</th><th style={thStyle}>Updated</th></tr></thead>
+        <thead><tr><th style={thStyle}>Member</th><th style={thStyle}>Grade</th><th style={thStyle}>Status</th><th style={thStyle}>JQS %</th><th style={thStyle}>Formal %</th><th style={thStyle}>Overdue</th><th style={thStyle}>Due Soon</th><th style={thStyle}>Last Insp</th><th style={thStyle}>Updated</th></tr></thead>
         <tbody>
           {rollups.map((r) => {
             const bg = r.overdueCount > 0 ? 'color-mix(in srgb, var(--color-danger) 8%, transparent)' : r.dueSoonCount > 0 ? 'color-mix(in srgb, var(--color-warning) 10%, transparent)' : undefined
+            const insp = latestInsp.get(r.memberId)
             return (
               <tr key={r.memberId} onClick={() => onMember(r.memberId)} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer', background: bg }}>
                 <td style={{ ...tdStyle, fontWeight: 600 }}>{r.name}</td><td style={tdStyle}>{r.grade ?? '—'}</td><td style={tdStyle}>{r.status}</td>
                 <td style={tdStyle}>{r.jqsPct}%</td><td style={tdStyle}>{r.formalPct}%</td>
                 <td style={{ ...tdStyle, color: r.overdueCount > 0 ? 'var(--color-danger)' : undefined, fontWeight: r.overdueCount > 0 ? 700 : 400 }}>{r.overdueCount}</td>
-                <td style={tdStyle}>{r.dueSoonCount}</td><td style={tdStyle}>{r.lastUpdated?.slice(0, 10) ?? '—'}</td>
+                <td style={tdStyle}>{r.dueSoonCount}</td>
+                <td style={{ ...tdStyle, color: !insp ? 'var(--color-warning)' : undefined }}>{insp?.inspection_date?.slice(0, 10) ?? 'never'}</td>
+                <td style={tdStyle}>{r.lastUpdated?.slice(0, 10) ?? '—'}</td>
               </tr>
             )
           })}
@@ -393,25 +438,6 @@ function FormalTable({ members, data }: { members: AmtrMember[]; data: Record<st
   )
 }
 
-function ActivityTable({ activity, onMember }: { activity: Activity; onMember: (id: string) => void }) {
-  if (activity.length === 0) return <EmptyState message="No 797 activity in the selected date range." />
-  return (
-    <div className="card" style={{ padding: 0, overflow: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr><th style={thStyle}>Date</th><th style={thStyle}>Member</th><th style={thStyle}>Task</th><th style={thStyle}>Trainer</th></tr></thead>
-        <tbody>
-          {activity.map((a) => (
-            <tr key={a.id} onClick={() => onMember(a.memberId)} style={{ borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}>
-              <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{a.date?.slice(0, 10) || '—'}</td>
-              <td style={{ ...tdStyle, fontWeight: 600 }}>{a.memberName}</td><td style={tdStyle}>{a.task}</td><td style={tdStyle}>{a.trainer || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
 function InspectionsTable({ members, latest, onMember }: { members: AmtrMember[]; latest: Map<string, AmtrInspection>; onMember: (id: string) => void }) {
   return (
     <div className="card" style={{ padding: 0, overflow: 'auto' }}>
@@ -430,35 +456,6 @@ function InspectionsTable({ members, latest, onMember }: { members: AmtrMember[]
               </tr>
             )
           })}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function QualsMatrix({ members, data }: { members: AmtrMember[]; data: Record<string, Row[]> }) {
-  const cat = data.qualCat ?? []; const prog = data.qualProg ?? []
-  const cols = cat.map((c) => ({ id: String(c.id), name: String(c.name) }))
-  const filled = (memberId: string, catId: string) => {
-    const p = prog.find((x) => String(x.member_id) === memberId && String(x.catalog_id) === catId)
-    return !!p && (p.attained === true || !!p.complete_date)
-  }
-  if (cols.length === 0) return <EmptyState message="No qualifications configured yet — load them on the Admin page." />
-  // Compact column styling so the full qualification matrix fits without
-  // horizontal scrolling — small wrapped headers + narrow dot columns.
-  const qTh: React.CSSProperties = { fontSize: 10, lineHeight: 1.15, padding: '6px 4px', textTransform: 'uppercase', letterSpacing: '0.02em', color: 'var(--color-text-3)', fontWeight: 700, textAlign: 'center', verticalAlign: 'bottom', whiteSpace: 'normal', width: 56 }
-  const qTd: React.CSSProperties = { padding: '6px 4px', textAlign: 'center', width: 56 }
-  return (
-    <div className="card" style={{ padding: 0, overflow: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <thead><tr><th style={{ ...qTh, textAlign: 'left', width: 'auto' }}>Member</th>{cols.map((c) => <th key={c.id} style={qTh}>{c.name}</th>)}</tr></thead>
-        <tbody>
-          {members.map((m) => (
-            <tr key={m.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-              <td style={{ ...qTd, textAlign: 'left', width: 'auto', fontSize: 'var(--fs-sm)', fontWeight: 600, whiteSpace: 'nowrap' }}>{m.full_name}</td>
-              {cols.map((c) => <td key={c.id} style={{ ...qTd, color: filled(m.id, c.id) ? 'var(--color-success)' : 'var(--color-text-3)' }}>{filled(m.id, c.id) ? '●' : '○'}</td>)}
-            </tr>
-          ))}
         </tbody>
       </table>
     </div>
