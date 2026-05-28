@@ -132,13 +132,17 @@ const tpl = (key: string, label: string, cite: string, lines: string[]): Comment
 })
 
 export const COMMENT_TEMPLATES: CommentTemplate[] = [
-  tpl('monthlyEval', 'Monthly Upgrade / Qual Eval', 'DAFMAN 13-204v2 Para 8.2.1.11.2.3.1', [
+  tpl('monthlyEval', 'Monthly Upgrade / Qual Eval', 'DAFMAN 13-204v2 Para 8.2.1.11.2.3.1 + 8.2.1.11.2.3.5', [
     'Percentage of Training Completed (overall objective): ',
     'Inclusive Dates of Evaluation: ',
     'Current Duty Position: ',
     'Position Start Date: ',
     'STS Tasks Covered During Evaluation Period: ',
     'Training Interruptions (stop-training days + reason): ',
+    'Training Strengths: ',
+    'Training Weaknesses: ',
+    'Attitude: ',
+    'Corrective Action (if required): ',
     'Other Comments: ',
     "Trainee's Comments (if applicable): ",
   ]),
