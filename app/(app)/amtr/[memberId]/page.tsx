@@ -205,10 +205,17 @@ export default function AmtrMemberPage() {
     if (onSigned) await onSigned()
     loadTab()
     // Auto-623a prompt fires after the parent sign + reload settle.
-    // Trainee CAN trigger it now (per the multi-stage flow). Signs
-    // already on amtr_623a don't open it.
+    // Source rules:
+    //   - amtr_623a: never (recursive)
+    //   - 1098: only certifier sign-offs open the dialog. Trainee
+    //     "I did this training" acks on 1098 rows aren't worth a
+    //     separate 623a entry — the certifier sign captures the
+    //     proficiency event.
+    //   - other sources: every non-recursive sign opens it (trainee
+    //     → trainer → certifier multi-stage flow).
     if (source && table !== 'amtr_623a') {
-      setAuto623a({ source, sourceTable: table, sourceRowId: rowId, slot: slot as AutoSlot, initials })
+      const shouldOpen = source.kind === '1098' ? slot === 'certifier' : true
+      if (shouldOpen) setAuto623a({ source, sourceTable: table, sourceRowId: rowId, slot: slot as AutoSlot, initials })
     }
   }
 

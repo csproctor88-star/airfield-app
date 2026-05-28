@@ -41,6 +41,13 @@ export type SignSource = {
    *   - 797: catalog row's `requires_certifier` flag
    *   - 803 / milestone: no certifier concept → false */
   requiresCertifier: boolean
+  /** Optional per-kind data the dialog can use to pre-fill templates.
+   *  Each tab's sign callsite populates what makes sense for its
+   *  catalog row — e.g. 1098 passes type / frequency / score_or_hours
+   *  / last_completed so the Monthly Proficiency template fills in
+   *  without the certifier re-typing values that already live on the
+   *  row. */
+  extra?: Record<string, string | null | undefined>
 }
 
 // Source slots come from the parent table being signed. amtr_623a has
@@ -92,11 +99,37 @@ export function Auto623aDialog(props: {
   const { installationId, memberId, member, source, sourceTable, sourceRowId, signedSlot, signedInitials, onClose } = props
 
   const [formDate, setFormDate] = useState<string>(new Date().toISOString().slice(0, 10))
-  const [entryType, setEntryType] = useState<string>(KIND_LABEL[source.kind] ?? '')
-  // Default comment captures the canonical "what was signed" line per
-  // DAFMAN 13-204v2 sign-off documentation expectations. Trainers add
-  // any reg-required additional content via the template picker below.
-  const [comment, setComment] = useState<string>(`Training item completed: ${source.label}`)
+  // For 1098 certifier sign-offs, pre-select the entry type to match
+  // the proficiency-test template the dialog auto-loads. Other sources
+  // get the generic per-kind label.
+  const initialEntryType = source.kind === '1098' && signedSlot === 'certifier' && source.extra?.type
+    ? `${source.extra.type} (Monthly Proficiency)`
+    : (KIND_LABEL[source.kind] ?? '')
+  const [entryType, setEntryType] = useState<string>(initialEntryType)
+  // Default comment: for 1098 certifier sign-offs, pre-fill the Monthly
+  // Proficiency template with catalog data the certifier shouldn't
+  // have to re-type (test type, frequency, score-or-hours, completion
+  // date). For other sources, use the canonical "Training item
+  // completed: …" line and let the signer pick a template via the
+  // dropdown.
+  const defaultComment = (() => {
+    if (source.kind === '1098' && signedSlot === 'certifier') {
+      const x = source.extra ?? {}
+      const date = (x.last_completed && String(x.last_completed).slice(0, 10)) || new Date().toISOString().slice(0, 10)
+      return [
+        '(Monthly Proficiency Test — IAW DAFMAN 13-204v2 Para 8.2.1.7)',
+        '',
+        `Test Date: ${date}`,
+        `Test Type: ${x.type ?? ''}`.trim(),
+        `Frequency: ${x.frequency ?? ''}`.trim(),
+        `Result / Score-Hours: ${x.score_or_hours ?? ''}`.trim(),
+        `Tasks / Subject Areas Tested: ${source.label}`,
+        'Retraining Plan (if NO-GO): ',
+      ].join('\n')
+    }
+    return `Training item completed: ${source.label}`
+  })()
+  const [comment, setComment] = useState<string>(defaultComment)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [entryTypes, setEntryTypes] = useState<string[]>([...DEFAULT_623A_ENTRY_TYPES])
@@ -118,12 +151,11 @@ export function Auto623aDialog(props: {
         setEntryType(String(data.entry_type ?? KIND_LABEL[source.kind] ?? ''))
         // Preserve any comment already present in the current slot
         // (e.g. reopening their own block). If the slot is empty,
-        // fall back to the "Training item completed: …" prefill so
-        // every signer's comment starts with the canonical sign-off
-        // line; templates appended via the picker layer reg content
-        // on top.
+        // fall back to the kind-specific default prefill (1098
+        // certifier → pre-filled Monthly Proficiency template,
+        // others → "Training item completed: …" line).
         const existing = data[`${slot623a}_comment`]
-        setComment(existing ? String(existing) : `Training item completed: ${source.label}`)
+        setComment(existing ? String(existing) : defaultComment)
       }
       setLoading(false)
     })

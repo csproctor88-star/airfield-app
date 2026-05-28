@@ -443,6 +443,15 @@ export function Form1098Tab(props: {
                       // column on the form — every recurring item
                       // expects a certifier sign-off.
                       requiresCertifier: true,
+                      // Pass catalog/progress data so the dialog can
+                      // pre-fill the Monthly Proficiency template
+                      // (date / type / frequency / score-or-hours).
+                      extra: {
+                        type: c.type ? String(c.type) : '',
+                        frequency: c.frequency ? String(c.frequency) : '',
+                        score_or_hours: c.score_or_hours ? String(c.score_or_hours) : '',
+                        last_completed: p?.last_completed ? String(p.last_completed) : '',
+                      },
                     })
                   }} />
               </td>
