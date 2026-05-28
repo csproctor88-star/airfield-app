@@ -128,12 +128,21 @@ function fill623a(ws: WS | undefined, entries: Row[]) {
   // Editing the source template binary used to corrupt drawing anchors;
   // this approach keeps the template untouched.
   set(ws, 'E1', 'NAMT / Certifier Initials/Comments')
+  // Format: "<comment> / <INITIALS>" — comment leads so the export
+  // reads as the narrative first, signature second. Falls back to
+  // either piece alone when the other is missing.
+  const fmt = (initials: unknown, comment: unknown): string => {
+    const i = str(initials).trim()
+    const c = str(comment).trim()
+    if (i && c) return `${c} / ${i}`
+    return c || i
+  }
   const rows = entries.map((e) => ([
     ['A', dt(e.form_date)], ['B', str(e.entry_type)],
-    ['C', `${str(e.trainee_initials)}${e.trainee_comment ? ` — ${str(e.trainee_comment)}` : ''}`.trim()],
-    ['D', `${str(e.trainer_initials)}${e.trainer_comment ? ` — ${str(e.trainer_comment)}` : ''}`.trim()],
-    ['E', `${str(e.namt_initials)}${e.namt_comment ? ` — ${str(e.namt_comment)}` : ''}`.trim()],
-    ['F', `${str(e.afm_initials)}${e.afm_comment ? ` — ${str(e.afm_comment)}` : ''}`.trim()],
+    ['C', fmt(e.trainee_initials, e.trainee_comment)],
+    ['D', fmt(e.trainer_initials, e.trainer_comment)],
+    ['E', fmt(e.namt_initials, e.namt_comment)],
+    ['F', fmt(e.afm_initials, e.afm_comment)],
   ]) as [string, unknown][])
   writeFlatTable(ws, 2, ['A', 'B', 'C', 'D', 'E', 'F'], rows)
 }

@@ -91,12 +91,25 @@ const MILESTONE_SHEETS: { sheet: string; path: string }[] = [
 // Listed here so they don't show up in the "unmatched sheets" warning.
 const IGNORED_SHEETS = new Set(['proficiencycodekey', 'sheet18'])
 
-/** Split a 623A "INIT — comment" cell into initials + comment. */
+/** Split a 623A cell into initials + comment. Recognizes both:
+ *    - new export format: "<comment> / <INITIALS>"   (current)
+ *    - legacy export format: "<INITIALS> — <comment>" (round-trip
+ *      with workbooks generated before the format flip)
+ *  Falls back to a length-based heuristic when no separator is found.
+ */
 function splitInit(s: string): { init: string; comment: string } {
-  const m = s.split(/\s+[—–-]\s+/)
+  const t = s.trim()
+  if (!t) return { init: '', comment: '' }
+  // New format: trailing 1–8 non-whitespace token after " / " treated
+  // as initials, everything before as comment. Length cap stops us
+  // from misreading a sentence ending in "and/or X" as an initial.
+  const slashMatch = t.match(/^(.+?)\s+\/\s+(\S{1,8})\s*$/)
+  if (slashMatch) return { init: slashMatch[2].trim(), comment: slashMatch[1].trim() }
+  // Legacy format: split on em-/en-/hyphen-dash.
+  const m = t.split(/\s+[—–-]\s+/)
   if (m.length >= 2) return { init: m[0].trim(), comment: m.slice(1).join(' — ').trim() }
   // No separator: short tokens are initials, longer text is a comment.
-  return s.trim().length <= 4 ? { init: s.trim(), comment: '' } : { init: '', comment: s.trim() }
+  return t.length <= 4 ? { init: t, comment: '' } : { init: '', comment: t }
 }
 
 export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedRecord> {
