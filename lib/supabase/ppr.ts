@@ -99,6 +99,15 @@ export type PprStatus =
   | 'denied'
   | 'canceled'
 
+// Statuses that take a PPR out of the day's operational count. A denied or
+// canceled request isn't on the field and shouldn't inflate the "PPRs today"
+// number on the airfield status board or the header chip. Everything else —
+// approved plus any in-progress stage (triage / coordination / awaiting
+// approval) — counts as an active PPR for the day.
+export const PPR_INACTIVE_STATUSES: PprStatus[] = ['denied', 'canceled']
+export const isActivePpr = (status: PprStatus | string): boolean =>
+  !PPR_INACTIVE_STATUSES.includes(status as PprStatus)
+
 export type PprEntry = {
   id: string
   base_id: string

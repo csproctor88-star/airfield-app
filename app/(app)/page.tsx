@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
 import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
 import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
-import { fetchPprEntriesForDate, fetchPprColumns, formatPprColumnValue, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
+import { fetchPprEntriesForDate, fetchPprColumns, formatPprColumnValue, isActivePpr, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
@@ -302,10 +302,11 @@ export default function HomePage() {
   }
 
   // --- Load today's PPRs ---
-  // Filter to approved entries only — the airfield status page is the
-  // operational view of what's actually scheduled to be on the field.
-  // Pending review / coordination / approval and denied entries live
-  // in the PPR module proper, not here.
+  // Show every active PPR for the day — approved plus any in-progress stage
+  // (triage / coordination / awaiting approval). Denied and canceled requests
+  // aren't on the field, so they're filtered out (see isActivePpr). The status
+  // pill renders the actual stage, so an awaiting-approval PPR is visibly
+  // distinct from an approved one.
   //
   // "Today" here means today **in base local time** — operators read
   // this panel for what's landing on their field today, not what's
@@ -325,7 +326,7 @@ export default function HomePage() {
       fetchPprEntriesForDate(installationId, today),
       fetchPprColumns(installationId),
     ])
-    setTodayPprs(entries.filter((e) => e.status === 'approved'))
+    setTodayPprs(entries.filter((e) => isActivePpr(e.status)))
     setPprColumns(cols)
   }, [installationId, baseTimezone])
 

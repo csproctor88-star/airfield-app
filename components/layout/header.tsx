@@ -11,7 +11,7 @@ import {
   PENDING_PHOTOS_CHANGED_EVENT,
   getPendingPhotoStorage,
 } from '@/lib/sync/pending-photos'
-import { fetchPprEntriesForDate } from '@/lib/supabase/ppr'
+import { fetchPprEntriesForDate, isActivePpr } from '@/lib/supabase/ppr'
 import { QueueInspector } from '@/components/sync/queue-inspector'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
 
@@ -139,7 +139,10 @@ export function Header() {
       try {
         const today = new Date().toISOString().slice(0, 10)
         const entries = await fetchPprEntriesForDate(installationId, today)
-        if (!cancelled) setTodayPprCount(entries.length)
+        // Count active PPRs only — denied/canceled requests aren't on the
+        // field, so they don't belong in the "PPRs today" chip (matches the
+        // airfield status board panel).
+        if (!cancelled) setTodayPprCount(entries.filter((e) => isActivePpr(e.status)).length)
       } catch { /* silent — header chip; no toast */ }
     }
     refresh()
