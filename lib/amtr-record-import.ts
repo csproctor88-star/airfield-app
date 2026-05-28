@@ -404,7 +404,14 @@ export async function applyAmtrImport(
 
   // Free-form inserts (797, 623A, 803). Now uses { inserted, error } return.
   if (p.items797.length) {
-    const { inserted, error } = await insertAmtrRows('amtr_797', p.items797.map((it, i) => ({ base_id: installationId, member_id: memberId, task: it.task, start_date: it.start_date || null, complete_date: it.complete_date || null, trainee_initials: it.trainee || null, trainer_initials: it.trainer || null, certifier_initials: it.certifier || null, milestone_window: it.milestone_window || null, requires_certifier: !!it.certifier, sort_order: i })))
+    // requires_certifier defaults to true on every imported row — the
+    // DAF 797 form always has a certifier column, so a missing
+    // certifier signature in the source spreadsheet is a GAP to be
+    // filled post-import, not a signal that the task doesn't need
+    // cert. The admin can flip it off per-row via the existing
+    // "Requires certifier initials" toggle on the 797 tab if a
+    // specific item legitimately doesn't need a certifier.
+    const { inserted, error } = await insertAmtrRows('amtr_797', p.items797.map((it, i) => ({ base_id: installationId, member_id: memberId, task: it.task, start_date: it.start_date || null, complete_date: it.complete_date || null, trainee_initials: it.trainee || null, trainer_initials: it.trainer || null, certifier_initials: it.certifier || null, milestone_window: it.milestone_window || null, requires_certifier: true, sort_order: i })))
     written += inserted
     onErr(`797 (${p.items797.length} rows)`, error)
   }
