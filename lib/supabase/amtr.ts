@@ -500,6 +500,25 @@ export async function amtrSign(
   return { error: null }
 }
 
+/** Bulk transcription stamp: overwrites the slot's initials (no finality
+ * check), records who/when + audit, and sets the form's completion-date
+ * column to `completeDate` (YYYY-MM-DD). Same authority + self-cert guards as
+ * amtr_sign. See migration 2026061501. */
+export async function amtrTranscribe(
+  table: AmtrSignableTable, rowId: string, slot: string, initials: string, completeDate: string,
+): Promise<{ error: string | null }> {
+  const supabase = db()
+  if (!supabase) return { error: 'Supabase not configured' }
+  const { error } = await supabase.rpc('amtr_transcribe', {
+    p_table: table, p_row_id: rowId, p_slot: slot, p_initials: initials, p_complete_date: completeDate,
+  } as never)
+  if (error) {
+    console.error('amtr_transcribe failed:', error.message)
+    return { error: friendlyError(error.message) }
+  }
+  return { error: null }
+}
+
 /** Clear a single signature block (NAMT/AFM only — enforced server-side). */
 export async function amtrReopen(
   table: AmtrSignableTable, rowId: string, slot: string,

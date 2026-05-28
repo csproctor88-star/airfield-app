@@ -1,43 +1,40 @@
 import { describe, it, expect } from 'vitest'
 import {
-  transcribableSlots, jqsRequiresCertifier, selectableCompletedItems, actionableForTranscribe,
+  transcribableSlots, jqsRequiresCertifier, selectableKeys, actionableRows,
+  type TranscribeRow,
 } from '@/lib/amtr/transcribe'
 import type { AmtrRole } from '@/lib/supabase/amtr'
+import type { SignSlot } from '@/lib/amtr/roles'
 
-// ─── AMTR bulk-transcribe eligibility guard ───
-// Locks the rules that decide which JQS items a bulk transcribe will sign.
-// These mirror the per-row Sign guards (authority, self-cert, per-block
-// finality, certifier caret) so the bulk path can't sign something the
-// single-row path would refuse.
+// ─── AMTR bulk-transcribe core guard ───
+// Locks the form-agnostic rules that decide which rows a bulk transcribe will
+// stamp. Authority/self-cert mirror the per-row Sign guards; certifier
+// applicability mirrors the per-row rule. Transcription OVERRIDES existing
+// initials, so (unlike a plain sign) already-signed rows are NOT skipped.
 
-type Row = Record<string, unknown>
+const JQS_SLOTS: SignSlot[] = ['trainee', 'trainer', 'certifier']
 
-const catalog: Row[] = [
-  { id: 'sec1', kind: 'section', title: 'Admin' },
-  { id: 'a', kind: 'item', core_cert: '5', title: 'Completed, no cert required' },
-  { id: 'b', kind: 'item', core_cert: '7^', title: 'Completed, cert required' },
-  { id: 'c', kind: 'item', core_cert: '', title: 'No completed date' },
-  { id: 'd', kind: 'item', core_cert: '^', title: 'Completed, already certifier-signed' },
-  { id: 'e', kind: 'item', core_cert: '5', retired: true, title: 'Retired' },
+const rows: TranscribeRow[] = [
+  { key: 'a', signRowId: 'pa', completed: true, certifierApplies: false }, // completed, no cert
+  { key: 'b', signRowId: 'pb', completed: true, certifierApplies: true }, // completed, cert applies
+  { key: 'c', signRowId: '', completed: false, certifierApplies: false }, // not completed
+  { key: 'd', signRowId: 'pd', completed: true, certifierApplies: true }, // completed, cert applies (already signed in source)
 ]
-const progByCat = new Map<string, Row>([
-  ['a', { id: 'pa', catalog_id: 'a', complete_date: '2024-01-01' }],
-  ['b', { id: 'pb', catalog_id: 'b', complete_date: '2024-02-01' }],
-  // c: no progress row at all
-  ['d', { id: 'pd', catalog_id: 'd', complete_date: '2024-03-01', certifier_signed_by: 'user-1', certifier_initials: 'XX' }],
-  ['e', { id: 'pe', catalog_id: 'e', complete_date: '2024-04-01' }],
-])
-const all = new Set(['a', 'b', 'c', 'd', 'e'])
+const all = new Set(['a', 'b', 'c', 'd'])
 
 describe('transcribableSlots', () => {
-  it('offers all three OJT columns to NAMT on another record', () => {
-    expect(transcribableSlots(['namt'] as AmtrRole[], false)).toEqual(['trainee', 'trainer', 'certifier'])
+  it('intersects the form slots with signing authority (NAMT, other record)', () => {
+    expect(transcribableSlots(['namt'] as AmtrRole[], false, JQS_SLOTS)).toEqual(['trainee', 'trainer', 'certifier'])
   })
-  it('offers only Trainee on your own record (self-cert guard)', () => {
-    expect(transcribableSlots(['namt', 'afm'] as AmtrRole[], true)).toEqual(['trainee'])
+  it('own record collapses to Trainee only (self-cert guard)', () => {
+    expect(transcribableSlots(['namt', 'afm'] as AmtrRole[], true, JQS_SLOTS)).toEqual(['trainee'])
   })
   it('a trainer can only transcribe the Trainer column', () => {
-    expect(transcribableSlots(['trainer'] as AmtrRole[], false)).toEqual(['trainer'])
+    expect(transcribableSlots(['trainer'] as AmtrRole[], false, JQS_SLOTS)).toEqual(['trainer'])
+  })
+  it('803 evaluator: allowed on another record, blocked on your own', () => {
+    expect(transcribableSlots(['namt'] as AmtrRole[], false, ['evaluator'])).toEqual(['evaluator'])
+    expect(transcribableSlots(['namt'] as AmtrRole[], true, ['evaluator'])).toEqual([])
   })
 })
 
@@ -46,34 +43,33 @@ describe('jqsRequiresCertifier', () => {
     expect(jqsRequiresCertifier({ core_cert: '7^' })).toBe(true)
     expect(jqsRequiresCertifier({ core_cert: '^' })).toBe(true)
     expect(jqsRequiresCertifier({ core_cert: '5' })).toBe(false)
-    expect(jqsRequiresCertifier({ core_cert: '' })).toBe(false)
     expect(jqsRequiresCertifier({})).toBe(false)
   })
 })
 
-describe('selectableCompletedItems', () => {
-  it('returns completed, non-section, non-retired items only', () => {
-    // a + b + d have complete dates; c has none; e is retired; sec1 is a section.
-    expect(selectableCompletedItems(catalog, progByCat).sort()).toEqual(['a', 'b', 'd'])
+describe('selectableKeys', () => {
+  it('returns completed rows only', () => {
+    expect(selectableKeys(rows).sort()).toEqual(['a', 'b', 'd'])
   })
 })
 
-describe('actionableForTranscribe', () => {
-  it('trainee: signs all completed selected items not yet trainee-signed', () => {
-    expect(actionableForTranscribe(catalog, progByCat, all, 'trainee').sort()).toEqual(['a', 'b', 'd'])
+describe('actionableRows', () => {
+  it('trainee: all completed selected rows (no completion date → excluded)', () => {
+    expect(actionableRows(rows, all, 'trainee').map((r) => r.key).sort()).toEqual(['a', 'b', 'd'])
   })
-  it('certifier: only caret items, excluding already-certifier-signed', () => {
-    // b is caret + unsigned → in; d is caret but already certifier-signed → out;
-    // a is completed but no caret → out.
-    expect(actionableForTranscribe(catalog, progByCat, all, 'certifier')).toEqual(['b'])
+  it('certifier: completed rows where the certifier column applies', () => {
+    // b + d apply → in (override means d is NOT skipped despite being signed in
+    // source); a has no cert column → out; c not completed → out.
+    expect(actionableRows(rows, all, 'certifier').map((r) => r.key).sort()).toEqual(['b', 'd'])
   })
-  it('respects the selection set', () => {
-    expect(actionableForTranscribe(catalog, progByCat, new Set(['a']), 'trainee')).toEqual(['a'])
-    expect(actionableForTranscribe(catalog, progByCat, new Set(['c']), 'trainee')).toEqual([])
+  it('respects the selection set and signRowId mapping', () => {
+    const picked = actionableRows(rows, new Set(['b']), 'certifier')
+    expect(picked.map((r) => r.signRowId)).toEqual(['pb'])
+    expect(actionableRows(rows, new Set(['c']), 'trainee')).toEqual([])
   })
-  it('skips items already signed in the target slot', () => {
-    const prog = new Map(progByCat)
-    prog.set('a', { id: 'pa', catalog_id: 'a', complete_date: '2024-01-01', trainee_signed_by: 'u' })
-    expect(actionableForTranscribe(catalog, prog, all, 'trainee').sort()).toEqual(['b', 'd'])
+  it('does NOT skip rows already signed (override semantics)', () => {
+    // A completed, already-signed row is still actionable — transcription
+    // overwrites it. Excluding it would defeat the override requirement.
+    expect(actionableRows(rows, new Set(['d']), 'certifier').map((r) => r.key)).toEqual(['d'])
   })
 })

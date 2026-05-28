@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { GripVertical, Trash2 } from 'lucide-react'
+import { GripVertical, Trash2, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, deleteAmtrRow, reorderAmtrRows, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { build797Added, build797Signature, buildSignoff, fireToAllTrainers } from '@/lib/amtr/notifications'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
+import { type TranscribeRow } from '@/lib/amtr/transcribe'
+import { useBulkTranscribe, TranscribeBar } from '@/components/amtr/transcribe-bar'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -15,6 +17,7 @@ type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_797', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_797', rowId: string, slot: SignSlot) => Promise<void>
 const MILESTONE_WINDOWS = ['', '1-30 Days', '30-60 Days', '60-90 Days', '90-120 Days', '120-180 Days']
+const TX_SLOTS: SignSlot[] = ['trainee', 'trainer', 'certifier']
 
 export function Form797Tab(props: {
   items: Row[]; canWrite: boolean; canEnterData: boolean; installationId: string; memberId: string
@@ -28,6 +31,15 @@ export function Form797Tab(props: {
   const [newReqCert, setNewReqCert] = useState(true)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
+  const tx = useBulkTranscribe({ table: 'amtr_797', slots: TX_SLOTS, myRoles, isOwn, onChange })
+  const txRows: TranscribeRow[] = tx.mode
+    ? items.map((it) => ({
+        key: String(it.id),
+        signRowId: String(it.id),
+        completed: !!it.complete_date,
+        certifierApplies: !!it.requires_certifier,
+      }))
+    : []
 
   const addItem = async () => {
     const task = newTitle.trim()
@@ -68,8 +80,14 @@ export function Form797Tab(props: {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <strong>Task Log ({items.length})</strong>
-        {canEnterData && !showAdd && <div style={{ marginLeft: 'auto' }}><Btn variant="primary" onClick={() => setShowAdd(true)}>+ Add task</Btn></div>}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {canWrite && tx.txSlots.length > 0 && (
+            <Btn variant={tx.mode ? 'primary' : 'secondary'} onClick={tx.toggleMode}><ClipboardCheck size={14} /> {tx.mode ? 'Exit transcribe' : 'Transcribe'}</Btn>
+          )}
+          {canEnterData && !showAdd && <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Add task</Btn>}
+        </div>
       </div>
+      {tx.mode && <TranscribeBar tx={tx} rows={txRows} />}
 
       {showAdd && (
         <div className="card" style={{ marginBottom: 12 }}>
@@ -144,10 +162,15 @@ export function Form797Tab(props: {
                       opacity: dragIdx === idx ? 0.4 : 1,
                     }}>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
-                      {canEnterData && (
+                      {tx.mode ? (
+                        <input type="checkbox" checked={tx.selected.has(id)} disabled={!it.complete_date}
+                          onChange={() => tx.toggleSelect(id)}
+                          title={it.complete_date ? 'Select for transcription' : 'No completed date — not selectable'}
+                          style={{ cursor: it.complete_date ? 'pointer' : 'not-allowed' }} />
+                      ) : (canEnterData && (
                         <span draggable onDragStart={() => setDragIdx(idx)} onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
                           title="Drag to reorder" style={{ cursor: 'move', color: 'var(--color-text-3)', display: 'inline-flex' }}><GripVertical size={15} /></span>
-                      )}
+                      ))}
                     </td>
                     <td style={tdStyle}>{String(it.task)}</td>
                     <td style={tdStyle}><input type="date" className="input-dark" style={dateInput} disabled={!canEnterData} defaultValue={it.start_date ? String(it.start_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(it, 'start_date', e.target.value || null)} /></td>

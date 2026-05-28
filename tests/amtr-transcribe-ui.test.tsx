@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { JqsTab } from '@/components/amtr/jqs-tab'
-import { amtrSign } from '@/lib/supabase/amtr'
+import { amtrTranscribe } from '@/lib/supabase/amtr'
 import type { AmtrMember, AmtrRole } from '@/lib/supabase/amtr'
 
 // ─── JQS bulk-transcribe UI flow ───
 // Drives the real JqsTab component through the transcribe path so the wiring
 // (toggle → select-all-completed → column → initials → Apply) is verified end
-// to end, not just the pure helper. amtrSign is the only Supabase call on this
-// path (completed items already have a progress row, so ensureProgress is a
-// no-op); we spy it to confirm the right rows/slot/initials are signed.
+// to end, not just the pure helper. amtrTranscribe is the only Supabase call on
+// this path (completed items already have a progress row); we spy it to confirm
+// the right rows/slot/initials/date are stamped.
 
 vi.mock('@/lib/supabase/amtr', async (importActual) => {
   const actual = await importActual<typeof import('@/lib/supabase/amtr')>()
-  return { ...actual, amtrSign: vi.fn(async () => ({ error: null })) }
+  return { ...actual, amtrTranscribe: vi.fn(async () => ({ error: null })) }
 })
 
 const catalog: Record<string, unknown>[] = [
@@ -53,7 +53,7 @@ function renderTab(overrides: Partial<Parameters<typeof JqsTab>[0]> = {}) {
 
 describe('JQS bulk transcribe UI', () => {
   beforeEach(() => {
-    vi.mocked(amtrSign).mockClear()
+    vi.mocked(amtrTranscribe).mockClear()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
@@ -81,8 +81,9 @@ describe('JQS bulk transcribe UI', () => {
     fireEvent.change(screen.getByPlaceholderText(/initials/i), { target: { value: 'JD' } })
     fireEvent.click(screen.getByRole('button', { name: /^Apply \(1\)$/ }))
 
-    await waitFor(() => expect(amtrSign).toHaveBeenCalledTimes(1))
-    expect(amtrSign).toHaveBeenCalledWith('amtr_jqs_progress', 'p2', 'certifier', 'JD')
+    await waitFor(() => expect(amtrTranscribe).toHaveBeenCalledTimes(1))
+    // Only the caret item (i2 → progress p2); stamps today's date (YYYY-MM-DD).
+    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_jqs_progress', 'p2', 'certifier', 'JD', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
   })
 
   it('on your own record only the Trainee column is offered', () => {

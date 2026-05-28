@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Pencil, BookOpen, Lock, RotateCcw, Archive } from 'lucide-react'
+import { Pencil, BookOpen, Lock, RotateCcw, Archive, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, insertAmtrRows, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { ResourceDialog } from '@/components/amtr/resource-dialog'
 import { buildSignoff, buildTrainingDue, fireToTrainingTeam, type NotificationDraft } from '@/lib/amtr/notifications'
 import { dueStatus, computeNextDue } from '@/lib/amtr/status'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
+import { type TranscribeRow } from '@/lib/amtr/transcribe'
+import { useBulkTranscribe, TranscribeBar } from '@/components/amtr/transcribe-bar'
 import { StatusPill } from '@/components/amtr/status-pill'
 import { SignCell } from '@/components/amtr/signable'
 import { SimpleCatalogEditor } from '@/components/amtr/simple-catalog-editor'
@@ -15,6 +17,7 @@ import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
 const FREQ_OPTIONS = ['', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Biennial', 'Triennial', 'As Required']
+const TX_SLOTS: SignSlot[] = ['trainee', 'certifier']
 
 type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
@@ -58,6 +61,8 @@ export function Form1098Tab(props: {
   // Effective "can enter data" gate — archive overrides everything.
   const canEditThisYear = canEnterData && !isArchived
   const canManageThisYear = canManage && !isArchived
+  // Bulk transcription — archived years are read-only, so no signing there.
+  const tx = useBulkTranscribe({ table: 'amtr_1098_progress', slots: TX_SLOTS, myRoles, isOwn, onChange })
 
   const loadResources = useCallback(async () => {
     const rows = await fetchAmtrByBase<Row>('amtr_1098_resources', installationId)
@@ -242,6 +247,20 @@ export function Form1098Tab(props: {
     </div>
   )
   const activeCatalog = yearCatalog.filter((c) => !c.retired)
+  // Normalized rows for the transcribe bar — a completed (last_completed) 1098
+  // item always has a progress row, so signRowId is known. Every 1098 item
+  // carries a Certifying Official column, so the certifier slot always applies.
+  const txRows: TranscribeRow[] = tx.mode
+    ? activeCatalog.map((c) => {
+        const p = progByCat.get(String(c.id))
+        return {
+          key: String(c.id),
+          signRowId: p ? String(p.id) : '',
+          completed: !!p?.last_completed,
+          certifierApplies: true,
+        }
+      })
+    : []
 
   const ensure = async (catId: string): Promise<string> => {
     const ex = progByCat.get(catId)
@@ -361,9 +380,13 @@ export function Form1098Tab(props: {
         {canManage && isArchived && (
           <Btn variant="secondary" onClick={unarchiveYear} title="Unarchive — restores write access"><Archive size={14} /> Unarchive {year}</Btn>
         )}
+        {canWrite && !isArchived && tx.txSlots.length > 0 && (
+          <Btn variant={tx.mode ? 'primary' : 'secondary'} onClick={tx.toggleMode}><ClipboardCheck size={14} /> {tx.mode ? 'Exit transcribe' : 'Transcribe'}</Btn>
+        )}
         {canManageThisYear && <Btn variant="secondary" onClick={() => setEditMode(true)}><Pencil size={14} /> Edit {year} catalog</Btn>}
       </div>
     </div>
+    {tx.mode && <TranscribeBar tx={tx} rows={txRows} note={<>Stamps the <strong>{tx.slot === 'certifier' ? 'Certifying Official' : 'Trainee'}</strong> column on selected completed items in {year} — overrides any existing initials, sets the Completed date to today, and records your identity + timestamp.</>} />}
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
       {kpiCards.map((k) => (
         <div key={k.label} className="card" onClick={() => toggleFilter(k.filter)}
@@ -404,6 +427,7 @@ export function Form1098Tab(props: {
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 980 }}>
         <thead>
           <tr>
+            {tx.mode && <th style={{ ...thStyle, width: 30 }} />}
             <th style={thStyle}>Task</th><th style={thStyle}>Start</th>
             <th style={{ ...thStyle, whiteSpace: 'normal', width: 90 }}>Last<br />Completed</th>
             <th style={thStyle}>Trainee</th><th style={{ ...thStyle, whiteSpace: 'normal', width: 64 }}>Cert<br />Official</th>
@@ -413,7 +437,7 @@ export function Form1098Tab(props: {
         </thead>
         <tbody>
           {visibleCatalog.length === 0 && (
-            <tr><td colSpan={10} style={{ ...tdStyle, color: 'var(--color-text-3)', textAlign: 'center' }}>No {statusFilter === 'due_soon' ? 'due soon' : statusFilter} tasks.</td></tr>
+            <tr><td colSpan={tx.mode ? 11 : 10} style={{ ...tdStyle, color: 'var(--color-text-3)', textAlign: 'center' }}>No {statusFilter === 'due_soon' ? 'due soon' : statusFilter} tasks.</td></tr>
           )}
           {visibleCatalog.map((c) => {
             const catId = String(c.id)
@@ -459,6 +483,14 @@ export function Form1098Tab(props: {
             const isManualDue = !!p?.next_due_manual
             return (
               <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
+                {tx.mode && (
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <input type="checkbox" checked={tx.selected.has(catId)} disabled={!last}
+                      onChange={() => tx.toggleSelect(catId)}
+                      title={last ? 'Select for transcription' : 'No completed date — not selectable'}
+                      style={{ cursor: last ? 'pointer' : 'not-allowed' }} />
+                  </td>
+                )}
                 <td style={tdStyle}>
                   <button onClick={() => setResourceFor(c)} title="Training resources"
                     style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-text-1)', fontFamily: 'inherit', fontSize: 'inherit', textAlign: 'left', display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
