@@ -246,7 +246,13 @@ function SectionGroup(props: {
                 if (!rowId) return
                 await sign('amtr_jqs_progress', rowId, slot, async () => {
                   if (slot !== 'trainee') await notifySignoff(slot, String(c.number ?? c.title), catId)
-                }, { kind: 'jqs', label: `${String(c.number ?? '')} ${String(c.title ?? '')}`.trim() })
+                }, {
+                  kind: 'jqs',
+                  label: `${String(c.number ?? '')} ${String(c.title ?? '')}`.trim(),
+                  // CFETP convention — items needing certification are
+                  // marked with a caret in the core_cert column.
+                  requiresCertifier: String(c.core_cert ?? '').includes('^'),
+                })
               }}
             />
           </td>

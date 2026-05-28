@@ -120,7 +120,14 @@ export function Form803Tab(props: {
                         canSign={canWrite && canSignSlot(myRoles, 'evaluator', isOwn)}
                         canReopenSlot={reopenAllowed && !!r.evaluator_signed_by}
                         onReopen={() => reopen('amtr_803', id, 'evaluator')}
-                        onSign={() => sign('amtr_803', id, 'evaluator', undefined, { kind: '803', label: String(r.sts_item ?? 'evaluation') })} />
+                        onSign={() => sign('amtr_803', id, 'evaluator', undefined, {
+                          kind: '803',
+                          label: String(r.sts_item ?? 'evaluation'),
+                          // 803 evaluations are signed by the evaluator
+                          // only — no separate certifier step in the
+                          // 623A flow for this surface.
+                          requiresCertifier: false,
+                        })} />
                     </td>
                     <td style={tdStyle}>
                       <input className="input-dark" style={{ ...di, width: 180 }} disabled={!canEnterData} defaultValue={(r.remarks as string) ?? ''} placeholder={r.results === 'UNSAT' ? 'Deficiency + retrain plan' : 'Remarks'} onBlur={(e) => canEnterData && setField(r, 'remarks', e.target.value || null)} />

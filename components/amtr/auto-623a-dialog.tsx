@@ -28,11 +28,19 @@ import { Btn } from '@/components/amtr/ui'
 
 type Row = Record<string, unknown>
 
-/** Where the auto-prompt fired from — used to pre-populate the entry. */
+/** Where the auto-prompt fired from — used to pre-populate the entry
+ *  and to drive whether the 623a awaits a certifier sign-off. */
 export type SignSource = {
   kind: 'jqs' | '1098' | '797' | '803' | 'milestone'
   /** Human-readable label for the source row (e.g. the task title). */
   label: string
+  /** True when this source task requires a certifier signature in
+   *  addition to the trainer's. Derived from the catalog:
+   *   - JQS: catalog row's `core_cert` contains `^` per CFETP convention
+   *   - 1098: always true (certifier is a standing column on the form)
+   *   - 797: catalog row's `requires_certifier` flag
+   *   - 803 / milestone: no certifier concept → false */
+  requiresCertifier: boolean
 }
 
 // Source slots come from the parent table being signed. amtr_623a has
@@ -89,7 +97,6 @@ export function Auto623aDialog(props: {
   // DAFMAN 13-204v2 sign-off documentation expectations. Trainers add
   // any reg-required additional content via the template picker below.
   const [comment, setComment] = useState<string>(`Training item completed: ${source.label}`)
-  const [requiresCert, setRequiresCert] = useState<boolean>(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [entryTypes, setEntryTypes] = useState<string[]>([...DEFAULT_623A_ENTRY_TYPES])
@@ -109,7 +116,6 @@ export function Auto623aDialog(props: {
         setExistingRow(data)
         setFormDate(String(data.form_date ?? new Date().toISOString().slice(0, 10)).slice(0, 10))
         setEntryType(String(data.entry_type ?? KIND_LABEL[source.kind] ?? ''))
-        setRequiresCert(!!data.requires_certifier)
         // Preserve any comment already present in the current slot
         // (e.g. reopening their own block). If the slot is empty,
         // fall back to the "Training item completed: …" prefill so
@@ -145,9 +151,13 @@ export function Auto623aDialog(props: {
 
     let rowId: string | undefined = existingRow?.id as string | undefined
 
+    // requires_certifier is now derived from the source task's catalog
+    // (caret-marked JQS items, 1098 standing column, 797 row flag).
+    // The trainer no longer toggles a checkbox — the reg-encoded
+    // certification requirement is the source of truth.
     if (rowId) {
-      // Existing entry — patch this signer's block + (if trainer) the
-      // requires_certifier flag. Don't touch other columns; the upsert
+      // Existing entry — patch this signer's block + keep the source
+      // link + flag in sync. Don't touch other columns; the upsert
       // would otherwise blank prior signers' comments.
       const patch: Row = {
         id: rowId,
@@ -157,10 +167,10 @@ export function Auto623aDialog(props: {
         entry_type: entryType || null,
         source_table: sourceTable,
         source_row_id: sourceRowId,
+        requires_certifier: source.requiresCertifier,
         [slotInitialsField]: signedInitials || null,
         [slotCommentField]: comment || null,
       }
-      if (signedSlot === 'trainer') patch.requires_certifier = requiresCert
       const { error } = await upsertAmtrRow('amtr_623a', patch)
       if (error) { toast.error(error); setSaving(false); return }
     } else {
@@ -172,7 +182,7 @@ export function Auto623aDialog(props: {
         entry_type: entryType || null,
         source_table: sourceTable,
         source_row_id: sourceRowId,
-        requires_certifier: signedSlot === 'trainer' ? requiresCert : false,
+        requires_certifier: source.requiresCertifier,
         [slotInitialsField]: signedInitials || null,
         [slotCommentField]: comment || null,
       }
@@ -267,15 +277,17 @@ export function Auto623aDialog(props: {
                   </div>
                 </div>
 
-                {signedSlot === 'trainer' && (
-                  <>
-                    <label style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.06em', alignSelf: 'start', marginTop: 6 }}>Cert Required</label>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                      <input type="checkbox" checked={requiresCert} onChange={(e) => setRequiresCert(e.target.checked)} disabled={saving} />
-                      Certifier sign-off needed before this 623A is finalized
-                    </label>
-                  </>
-                )}
+                {/* Certification requirement is read from the source
+                    task's catalog (CFETP caret marker for JQS, the
+                    standing certifier column on DAF 1098, the
+                    requires_certifier flag on DAF 797). Trainer no
+                    longer toggles this — surfacing the current value
+                    read-only so the signer knows whether the entry
+                    awaits a certifier. */}
+                <label style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.06em', alignSelf: 'start' }}>Cert Required</label>
+                <span style={{ fontSize: 'var(--fs-sm)', color: source.requiresCertifier ? 'var(--color-warning)' : 'var(--color-text-3)' }}>
+                  {source.requiresCertifier ? 'Yes — certifier must sign before this 623A is finalized' : 'No — entry finalizes after trainer signs'}
+                </span>
               </div>
 
               <datalist id="auto623-types">{entryTypes.map((t) => <option key={t} value={t} />)}</datalist>

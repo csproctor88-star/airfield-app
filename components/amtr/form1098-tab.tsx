@@ -436,7 +436,14 @@ export function Form1098Tab(props: {
                         const draft: NotificationDraft = buildSignoff(member.full_name, slot as AmtrRole, 'DAF 1098', String(c.task), catId, '1098')
                         await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...draft })
                       }
-                    }, { kind: '1098', label: String(c.task ?? '') })
+                    }, {
+                      kind: '1098',
+                      label: String(c.task ?? ''),
+                      // DAF 1098 always carries a Certifying Official
+                      // column on the form — every recurring item
+                      // expects a certifier sign-off.
+                      requiresCertifier: true,
+                    })
                   }} />
               </td>
             )

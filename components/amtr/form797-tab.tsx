@@ -115,7 +115,12 @@ export function Form797Tab(props: {
                         } else if (member.user_id) {
                           await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...buildSignoff(member.full_name, slot as AmtrRole, 'DAF 797', String(it.task), id, '797') })
                         }
-                      }, { kind: '797', label: String(it.task ?? '') })} />
+                      }, {
+                        kind: '797',
+                        label: String(it.task ?? ''),
+                        // 797 stores per-item cert requirement directly.
+                        requiresCertifier: !!it.requires_certifier,
+                      })} />
                   </td>
                 )
                 return (
