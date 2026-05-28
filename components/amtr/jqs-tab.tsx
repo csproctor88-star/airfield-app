@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import type { AmtrMember, AmtrRole } from '@/lib/supabase/amtr'
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
-import { jqsRequiresCertifier, type TranscribeRow } from '@/lib/amtr/transcribe'
+import { type TranscribeRow } from '@/lib/amtr/transcribe'
 import { useBulkTranscribe, TranscribeBar } from '@/components/amtr/transcribe-bar'
 import { Btn } from '@/components/amtr/ui'
 import type { SignSource } from '@/components/amtr/auto-623a-dialog'
@@ -14,7 +14,8 @@ import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_jqs_progress', rowId: string, slot: SignSlot) => Promise<void>
-const JQS_SLOTS: SignSlot[] = ['trainee', 'trainer', 'certifier']
+// Certifier is intentionally excluded — it isn't transcribed (it's cleared).
+const JQS_SLOTS: SignSlot[] = ['trainee', 'trainer']
 
 // Hierarchical renumber: sections → 1, 2, 3…; items → <section>.<n> by depth.
 function computeJqsNumbers(rows: Row[]): string[] {
@@ -138,7 +139,6 @@ export function JqsTab(props: {
             key: String(c.id),
             signRowId: p ? String(p.id) : '',
             completed: !!p?.complete_date,
-            certifierApplies: jqsRequiresCertifier(c),
           }
         })
     : []
@@ -183,7 +183,7 @@ export function JqsTab(props: {
     </div>
     {tx.mode && (
       <TranscribeBar tx={tx} rows={txRows}
-        note={<>Stamps the <strong>{tx.slot === 'certifier' ? 'Certifier' : tx.slot === 'trainer' ? 'Trainer' : 'Trainee'}</strong> column on selected completed items — overrides any existing initials, sets the Completed date to today, and records your identity + timestamp.{tx.slot === 'certifier' ? ' Tasks the CFETP doesn’t flag for certifier sign-off are skipped.' : ''}</>} />
+        note={<>Stamps the <strong>{tx.slot === 'trainer' ? 'Trainer' : 'Trainee'}</strong> column on selected completed items — overrides existing initials, sets the Completed date to today, and clears the Certifier column (certifier sign-offs aren’t transcribed).</>} />
     )}
     <div className="card" style={{ padding: 0, overflow: 'auto', maxHeight: 'calc(100vh - 240px)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)', minWidth: 820 }}>

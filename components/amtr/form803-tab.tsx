@@ -41,7 +41,6 @@ export function Form803Tab(props: {
         key: String(r.id),
         signRowId: String(r.id),
         completed: !!r.eval_date,
-        certifierApplies: false,
       }))
     : []
   // Selection keys are row ids scoped to one section; clear when switching.

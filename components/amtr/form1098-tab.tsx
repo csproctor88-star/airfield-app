@@ -17,7 +17,8 @@ import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
 const FREQ_OPTIONS = ['', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Biennial', 'Triennial', 'As Required']
-const TX_SLOTS: SignSlot[] = ['trainee', 'certifier']
+// Certifier (Certifying Official) is excluded — it isn't transcribed (cleared).
+const TX_SLOTS: SignSlot[] = ['trainee']
 
 type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_1098_progress', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
@@ -257,7 +258,6 @@ export function Form1098Tab(props: {
           key: String(c.id),
           signRowId: p ? String(p.id) : '',
           completed: !!p?.last_completed,
-          certifierApplies: true,
         }
       })
     : []
@@ -386,7 +386,7 @@ export function Form1098Tab(props: {
         {canManageThisYear && <Btn variant="secondary" onClick={() => setEditMode(true)}><Pencil size={14} /> Edit {year} catalog</Btn>}
       </div>
     </div>
-    {tx.mode && <TranscribeBar tx={tx} rows={txRows} note={<>Stamps the <strong>{tx.slot === 'certifier' ? 'Certifying Official' : 'Trainee'}</strong> column on selected completed items in {year} — overrides any existing initials, sets the Completed date to today, and records your identity + timestamp.</>} />}
+    {tx.mode && <TranscribeBar tx={tx} rows={txRows} note={<>Stamps the <strong>Trainee</strong> column on selected completed items in {year} — overrides existing initials, sets the Completed date to today, and clears the Certifying Official column (not transcribed).</>} />}
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
       {kpiCards.map((k) => (
         <div key={k.label} className="card" onClick={() => toggleFilter(k.filter)}

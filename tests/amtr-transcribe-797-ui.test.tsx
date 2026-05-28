@@ -47,7 +47,7 @@ describe('797 bulk transcribe UI', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('bulk-signs only the rows the chosen column applies to', async () => {
+  it('stamps the completed rows for the chosen column (Trainer)', async () => {
     renderTab()
     fireEvent.click(screen.getByRole('button', { name: /^transcribe$/i }))
 
@@ -56,25 +56,25 @@ describe('797 bulk transcribe UI', () => {
     fireEvent.click(selectAll)
     expect(screen.getByText(/2 selected/i)).toBeTruthy()
 
-    // Trainee column → both completed rows are actionable.
+    // requires_certifier no longer affects the actionable set — certifier
+    // isn't a transcribe column. Both completed rows are actionable.
+    fireEvent.click(screen.getByRole('button', { name: 'Trainer' }))
     expect(screen.getByRole('button', { name: /^Apply \(2\)$/ })).toBeTruthy()
 
-    // Certifier column → only r1 (requires_certifier); r2 is excluded.
-    fireEvent.click(screen.getByRole('button', { name: 'Certifier' }))
-    expect(screen.getByRole('button', { name: /^Apply \(1\)$/ })).toBeTruthy()
-
     fireEvent.change(screen.getByPlaceholderText(/initials/i), { target: { value: 'MS' } })
-    fireEvent.click(screen.getByRole('button', { name: /^Apply \(1\)$/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Apply \(2\)$/ }))
 
-    await waitFor(() => expect(amtrTranscribe).toHaveBeenCalledTimes(1))
-    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_797', 'r1', 'certifier', 'MS', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+    await waitFor(() => expect(amtrTranscribe).toHaveBeenCalledTimes(2))
+    const date = expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_797', 'r1', 'trainer', 'MS', date)
+    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_797', 'r2', 'trainer', 'MS', date)
   })
 
-  it('offers all three 797 columns on another member record', () => {
+  it('offers Trainee + Trainer but not Certifier (certifier is cleared, not transcribed)', () => {
     renderTab()
     fireEvent.click(screen.getByRole('button', { name: /^transcribe$/i }))
     expect(screen.getByRole('button', { name: 'Trainee' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Trainer' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Certifier' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Certifier' })).toBeNull()
   })
 })

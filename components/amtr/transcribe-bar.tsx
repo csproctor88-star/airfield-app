@@ -89,7 +89,7 @@ export type BulkTranscribe = ReturnType<typeof useBulkTranscribe>
  * tab's normalized rows. */
 export function TranscribeBar({ tx, rows, note }: { tx: BulkTranscribe; rows: TranscribeRow[]; note?: ReactNode }) {
   const selectable = selectableKeys(rows)
-  const actionable = actionableRows(rows, tx.selected, tx.slot)
+  const actionable = actionableRows(rows, tx.selected)
   return (
     <div className="card" style={{ padding: '10px 14px', marginBottom: 10, border: '1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)', background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

@@ -57,33 +57,34 @@ describe('JQS bulk transcribe UI', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('toggles the transcribe bar and bulk-signs the chosen column', async () => {
+  it('toggles the bar, offers Trainee/Trainer (never Certifier), and stamps the completed rows', async () => {
     renderTab()
 
     // Bar hidden until toggled.
     expect(screen.queryByRole('button', { name: /select all completed/i })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /^transcribe$/i }))
+    // Certifier is never a transcribe column — it gets cleared, not stamped.
+    expect(screen.getByRole('button', { name: 'Trainee' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Trainer' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Certifier' })).toBeNull()
+
     const selectAll = screen.getByRole('button', { name: /select all completed/i })
     // Two items carry a completed date (i1, i2); i3 does not.
     expect(selectAll.textContent).toContain('(2)')
-
     fireEvent.click(selectAll)
     expect(screen.getByText(/2 selected/i)).toBeTruthy()
 
-    // Default column is Trainee → both completed items are actionable.
+    // Default column Trainee → both completed items actionable, regardless of caret.
     expect(screen.getByRole('button', { name: /^Apply \(2\)$/ })).toBeTruthy()
 
-    // Switch to Certifier → only the caret item (i2) is actionable.
-    fireEvent.click(screen.getByRole('button', { name: 'Certifier' }))
-    expect(screen.getByRole('button', { name: /^Apply \(1\)$/ })).toBeTruthy()
-
     fireEvent.change(screen.getByPlaceholderText(/initials/i), { target: { value: 'JD' } })
-    fireEvent.click(screen.getByRole('button', { name: /^Apply \(1\)$/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Apply \(2\)$/ }))
 
-    await waitFor(() => expect(amtrTranscribe).toHaveBeenCalledTimes(1))
-    // Only the caret item (i2 → progress p2); stamps today's date (YYYY-MM-DD).
-    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_jqs_progress', 'p2', 'certifier', 'JD', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+    await waitFor(() => expect(amtrTranscribe).toHaveBeenCalledTimes(2))
+    const date = expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_jqs_progress', 'p1', 'trainee', 'JD', date)
+    expect(amtrTranscribe).toHaveBeenCalledWith('amtr_jqs_progress', 'p2', 'trainee', 'JD', date)
   })
 
   it('on your own record only the Trainee column is offered', () => {

@@ -17,7 +17,8 @@ type Row = Record<string, unknown>
 type SignFn = (table: 'amtr_797', rowId: string, slot: SignSlot, onSigned?: () => Promise<void>, source?: SignSource) => Promise<void>
 type ReopenFn = (table: 'amtr_797', rowId: string, slot: SignSlot) => Promise<void>
 const MILESTONE_WINDOWS = ['', '1-30 Days', '30-60 Days', '60-90 Days', '90-120 Days', '120-180 Days']
-const TX_SLOTS: SignSlot[] = ['trainee', 'trainer', 'certifier']
+// Certifier is excluded — it isn't transcribed (it's cleared on transcribe).
+const TX_SLOTS: SignSlot[] = ['trainee', 'trainer']
 
 export function Form797Tab(props: {
   items: Row[]; canWrite: boolean; canEnterData: boolean; installationId: string; memberId: string
@@ -37,7 +38,6 @@ export function Form797Tab(props: {
         key: String(it.id),
         signRowId: String(it.id),
         completed: !!it.complete_date,
-        certifierApplies: !!it.requires_certifier,
       }))
     : []
 
@@ -87,7 +87,7 @@ export function Form797Tab(props: {
           {canEnterData && !showAdd && <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Add task</Btn>}
         </div>
       </div>
-      {tx.mode && <TranscribeBar tx={tx} rows={txRows} />}
+      {tx.mode && <TranscribeBar tx={tx} rows={txRows} note={<>Stamps the <strong>{tx.slot === 'trainer' ? 'Trainer' : 'Trainee'}</strong> column on selected completed tasks — overrides existing initials, sets the Completed date to today, and clears the Certifier column (certifier sign-offs aren’t transcribed).</>} />}
 
       {showAdd && (
         <div className="card" style={{ marginBottom: 12 }}>
