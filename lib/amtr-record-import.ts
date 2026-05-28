@@ -146,7 +146,11 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
       const a = cell(j, `A${r}`); const m = a.match(/^\s*(\d+(?:\.\d+)*)/)
       if (!m) continue
       const start = parseAmtrDate(cell(j, `D${r}`)), comp = parseAmtrDate(cell(j, `E${r}`))
-      let tr = cell(j, `F${r}`), trn = cell(j, `G${r}`), cert = cell(j, `H${r}`)
+      // Trim so whitespace-only cells (Excel often emits " " for
+      // blank cert columns) collapse to empty — `" " || null` would
+      // otherwise let truthy whitespace into the DB, where downstream
+      // UI treats it as a populated value and hides the Sign button.
+      let tr = cell(j, `F${r}`).trim(), trn = cell(j, `G${r}`).trim(), cert = cell(j, `H${r}`).trim()
       // Guard against merged-title bleed: a "value" equal to the row title isn't an initial.
       if (tr === a) tr = ''; if (trn === a) trn = ''; if (cert === a) cert = ''
       if (start || comp || tr || trn || cert) out.jqs.push({ number: m[1].replace(/\.$/, ''), start_date: start, complete_date: comp, trainee: tr, trainer: trn, certifier: cert })
@@ -168,7 +172,7 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
     const rows: ParsedRecord['r1098'][string] = []
     for (let r = 4; r <= ws.rowCount; r++) {
       const task = cell(ws, `A${r}`); if (!task) continue
-      rows.push({ task, start_date: parseAmtrDate(cell(ws, `B${r}`)), last_completed: parseAmtrDate(cell(ws, `C${r}`)), certifier: cell(ws, `D${r}`), trainee: cell(ws, `E${r}`) })
+      rows.push({ task, start_date: parseAmtrDate(cell(ws, `B${r}`)), last_completed: parseAmtrDate(cell(ws, `C${r}`)), certifier: cell(ws, `D${r}`).trim(), trainee: cell(ws, `E${r}`).trim() })
     }
     if (rows.length) {
       // If multiple sheets map to the same year (e.g. both "DAF Form
@@ -184,7 +188,10 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
   const f797 = get('DAF Form 797')
   if (f797) for (let r = 4; r <= f797.rowCount; r++) {
     const task = cell(f797, `A${r}`); if (!task) continue
-    out.items797.push({ task, start_date: parseAmtrDate(cell(f797, `B${r}`)), complete_date: parseAmtrDate(cell(f797, `C${r}`)), trainee: cell(f797, `D${r}`), trainer: cell(f797, `E${r}`), certifier: cell(f797, `F${r}`), milestone_window: cell(f797, `G${r}`) })
+    // Trim initials fields so whitespace-only Excel cells become
+    // empty (same fix as JQS parser above — prevents " " from
+    // landing in the DB and masking the Sign button).
+    out.items797.push({ task, start_date: parseAmtrDate(cell(f797, `B${r}`)), complete_date: parseAmtrDate(cell(f797, `C${r}`)), trainee: cell(f797, `D${r}`).trim(), trainer: cell(f797, `E${r}`).trim(), certifier: cell(f797, `F${r}`).trim(), milestone_window: cell(f797, `G${r}`) })
   }
 
   // 623A — canonical AFFSA template name is "DAF Form 623A"; tolerate
@@ -193,7 +200,7 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
   if (f623) for (let r = 2; r <= f623.rowCount; r++) {
     const type = cell(f623, `B${r}`); const date = cell(f623, `A${r}`)
     if (!type && !date) continue
-    out.e623a.push({ form_date: parseAmtrDate(date), entry_type: type, trainee: cell(f623, `C${r}`), trainer: cell(f623, `D${r}`), namt: cell(f623, `E${r}`), afm: cell(f623, `F${r}`) })
+    out.e623a.push({ form_date: parseAmtrDate(date), entry_type: type, trainee: cell(f623, `C${r}`).trim(), trainer: cell(f623, `D${r}`).trim(), namt: cell(f623, `E${r}`).trim(), afm: cell(f623, `F${r}`).trim() })
   }
 
   // RAT
@@ -211,7 +218,7 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
     const rows: ParsedRecord['items803'][string] = []
     for (let r = (header || 3) + 1; r <= ws.rowCount; r++) {
       const item = cell(ws, `A${r}`)
-      const date = parseAmtrDate(cell(ws, `K${r}`)), ugt = cell(ws, `L${r}`), res = cell(ws, `M${r}`), ev = cell(ws, `N${r}`)
+      const date = parseAmtrDate(cell(ws, `K${r}`)), ugt = cell(ws, `L${r}`), res = cell(ws, `M${r}`), ev = cell(ws, `N${r}`).trim()
       if (!item && !date && !res && !ev) continue
       if (/^remarks$/i.test(item)) continue
       rows.push({ sts_item: item, eval_date: date, in_ugt: ugt, results: res, evaluator: ev })
