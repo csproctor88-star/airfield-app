@@ -326,7 +326,7 @@ function SectionGroup(props: {
                 onBlur={(e) => canEnterData && setDate(catId, 'start_date', e.target.value)} />
             </td>
             <td style={cell}>
-              <input type="date" className="input-dark" style={dateInput} disabled={!canEnterData}
+              <input key={`comp-${catId}-${String(p?.complete_date ?? '')}`} type="date" className="input-dark" style={dateInput} disabled={!canEnterData}
                 defaultValue={p?.complete_date ? String(p.complete_date).slice(0, 10) : ''}
                 onBlur={(e) => canEnterData && setDate(catId, 'complete_date', e.target.value)} />
             </td>

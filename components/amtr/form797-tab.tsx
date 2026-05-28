@@ -174,7 +174,7 @@ export function Form797Tab(props: {
                     </td>
                     <td style={tdStyle}>{String(it.task)}</td>
                     <td style={tdStyle}><input type="date" className="input-dark" style={dateInput} disabled={!canEnterData} defaultValue={it.start_date ? String(it.start_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(it, 'start_date', e.target.value || null)} /></td>
-                    <td style={tdStyle}><input type="date" className="input-dark" style={dateInput} disabled={!canEnterData} defaultValue={it.complete_date ? String(it.complete_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(it, 'complete_date', e.target.value || null)} /></td>
+                    <td style={tdStyle}><input key={`comp-${id}-${String(it.complete_date ?? '')}`} type="date" className="input-dark" style={dateInput} disabled={!canEnterData} defaultValue={it.complete_date ? String(it.complete_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(it, 'complete_date', e.target.value || null)} /></td>
                     {signCell('trainee')}{signCell('trainer')}{signCell('certifier')}
                     <td style={tdStyle}>
                       <select className="input-dark" style={{ padding: '3px 6px', fontSize: 'var(--fs-xs)' }} disabled={!canEnterData}

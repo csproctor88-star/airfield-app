@@ -131,7 +131,7 @@ export function Form803Tab(props: {
                     <td style={tdStyle}>
                       <input className="input-dark" style={{ ...di, width: '100%', minWidth: 220 }} disabled={!canEnterData} placeholder="e.g. 7.5.1" defaultValue={(r.sts_item as string) ?? ''} onBlur={(e) => canEnterData && setField(r, 'sts_item', e.target.value || null)} />
                     </td>
-                    <td style={tdStyle}><input type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={r.eval_date ? String(r.eval_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(r, 'eval_date', e.target.value || null)} /></td>
+                    <td style={tdStyle}><input key={`eval-${id}-${String(r.eval_date ?? '')}`} type="date" className="input-dark" style={di} disabled={!canEnterData} defaultValue={r.eval_date ? String(r.eval_date).slice(0, 10) : ''} onBlur={(e) => canEnterData && setField(r, 'eval_date', e.target.value || null)} /></td>
                     <td style={tdStyle}>
                       <select className="input-dark" style={sel} disabled={!canEnterData} defaultValue={(r.in_ugt as string) ?? ''} onChange={(e) => setField(r, 'in_ugt', e.target.value || null)}>
                         <option value="">—</option><option>Yes</option><option>No</option>
