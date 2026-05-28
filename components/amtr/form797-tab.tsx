@@ -124,6 +124,12 @@ export function Form797Tab(props: {
                         kind: '797',
                         label: String(it.task ?? ''),
                         requiresCertifier: itemRequiresCert,
+                        // Pre-fill data for the Task Certification
+                        // template on certifier sign.
+                        extra: {
+                          complete_date: it.complete_date ? String(it.complete_date) : '',
+                          milestone_window: it.milestone_window ? String(it.milestone_window) : '',
+                        },
                       })} />
                   </td>
                 )

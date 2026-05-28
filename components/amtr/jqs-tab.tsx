@@ -258,6 +258,14 @@ function SectionGroup(props: {
                   kind: 'jqs',
                   label: `${String(c.number ?? '')} ${String(c.title ?? '')}`.trim(),
                   requiresCertifier: requiresCert,
+                  // Pass catalog/progress data so the dialog can
+                  // pre-fill the Task Certification template on
+                  // certifier sign without the certifier re-typing
+                  // the task, completion date, or training refs.
+                  extra: {
+                    complete_date: p?.complete_date ? String(p.complete_date) : '',
+                    training_refs: c.training_refs ? String(c.training_refs) : '',
+                  },
                 })
               }}
             />

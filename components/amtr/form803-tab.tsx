@@ -127,6 +127,13 @@ export function Form803Tab(props: {
                           // only — no separate certifier step in the
                           // 623A flow for this surface.
                           requiresCertifier: false,
+                          // Pre-fill data for the DAF 803 evaluation
+                          // one-liner on evaluator sign.
+                          extra: {
+                            eval_date: r.eval_date ? String(r.eval_date) : '',
+                            results: r.results ? String(r.results) : '',
+                            in_ugt: r.in_ugt ? String(r.in_ugt) : '',
+                          },
                         })} />
                     </td>
                     <td style={tdStyle}>

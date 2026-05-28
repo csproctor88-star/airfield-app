@@ -99,23 +99,33 @@ export function Auto623aDialog(props: {
   const { installationId, memberId, member, source, sourceTable, sourceRowId, signedSlot, signedInitials, onClose } = props
 
   const [formDate, setFormDate] = useState<string>(new Date().toISOString().slice(0, 10))
-  // For 1098 certifier sign-offs, pre-select the entry type to match
-  // the proficiency-test template the dialog auto-loads. Other sources
-  // get the generic per-kind label.
-  const initialEntryType = source.kind === '1098' && signedSlot === 'certifier' && source.extra?.type
-    ? `${source.extra.type} (Monthly Proficiency)`
-    : (KIND_LABEL[source.kind] ?? '')
+  // Per-kind entry-type pre-selection so the visible Entry Type field
+  // matches the template that auto-loads in the comment.
+  const initialEntryType = (() => {
+    if (source.kind === '1098' && signedSlot === 'certifier' && source.extra?.type) return `${source.extra.type} (Monthly Proficiency)`
+    if ((source.kind === 'jqs' || source.kind === '797') && signedSlot === 'certifier') return 'Task Certification'
+    if (source.kind === '803') return 'Task Evaluation (DAF 803)'
+    return KIND_LABEL[source.kind] ?? ''
+  })()
   const [entryType, setEntryType] = useState<string>(initialEntryType)
-  // Default comment: for 1098 certifier sign-offs, pre-fill the Monthly
-  // Proficiency template with catalog data the certifier shouldn't
-  // have to re-type (test type, frequency, score-or-hours, completion
-  // date). For other sources, use the canonical "Training item
-  // completed: …" line and let the signer pick a template via the
-  // dropdown.
+  // Default comment pre-fills templates with row-level catalog data
+  // the signer shouldn't have to re-type. Per-kind logic:
+  //   - 1098 certifier  → Monthly Proficiency Test (test type, freq,
+  //                       score-or-hours, completion date)
+  //   - JQS certifier   → Task Certification / Recertification
+  //                       (number+title, cert date, training refs)
+  //   - 797 certifier   → Task Certification / Recertification
+  //                       (task, cert date, milestone window)
+  //   - 803 evaluator   → DAF 803 task evaluation one-liner with
+  //                       STS item, eval date, result, UGT flag
+  //   - everything else → canonical "Training item completed: …" line;
+  //                       signer picks a template via the dropdown
+  //                       to layer reg content on top
   const defaultComment = (() => {
+    const x = source.extra ?? {}
+    const today = new Date().toISOString().slice(0, 10)
     if (source.kind === '1098' && signedSlot === 'certifier') {
-      const x = source.extra ?? {}
-      const date = (x.last_completed && String(x.last_completed).slice(0, 10)) || new Date().toISOString().slice(0, 10)
+      const date = (x.last_completed && String(x.last_completed).slice(0, 10)) || today
       return [
         '(Monthly Proficiency Test — IAW DAFMAN 13-204v2 Para 8.2.1.7)',
         '',
@@ -125,6 +135,42 @@ export function Auto623aDialog(props: {
         `Result / Score-Hours: ${x.score_or_hours ?? ''}`.trim(),
         `Tasks / Subject Areas Tested: ${source.label}`,
         'Retraining Plan (if NO-GO): ',
+      ].join('\n')
+    }
+    if (source.kind === 'jqs' && signedSlot === 'certifier') {
+      const date = (x.complete_date && String(x.complete_date).slice(0, 10)) || today
+      return [
+        '(Task Certification / Recertification — IAW DAFMAN 13-204v2 Para 8.2.1.11.2.3.4)',
+        '',
+        `Task / STS Item: ${source.label}`,
+        'Certification Type: Initial',
+        `Date Certified: ${date}`,
+        x.training_refs ? `Training References: ${x.training_refs}` : 'Training References: ',
+        'Reason for Recertification (if applicable): ',
+      ].join('\n')
+    }
+    if (source.kind === '797' && signedSlot === 'certifier') {
+      const date = (x.complete_date && String(x.complete_date).slice(0, 10)) || today
+      return [
+        '(Task Certification / Recertification — IAW DAFMAN 13-204v2 Para 8.2.1.11.2.3.4)',
+        '',
+        `Task: ${source.label}`,
+        'Certification Type: Initial',
+        `Date Certified: ${date}`,
+        x.milestone_window ? `Milestone Window: ${x.milestone_window}` : 'Milestone Window: ',
+        'Reason for Recertification (if applicable): ',
+      ].join('\n')
+    }
+    if (source.kind === '803') {
+      const date = (x.eval_date && String(x.eval_date).slice(0, 10)) || today
+      return [
+        '(DAF 803 Task Evaluation — IAW DAFMAN 13-204v2 Para 8.2.1.4)',
+        '',
+        `STS Item: ${source.label}`,
+        `Evaluation Date: ${date}`,
+        `Result: ${x.results ?? ''}`.trim(),
+        `In Upgrade Training (UGT): ${x.in_ugt ?? ''}`.trim(),
+        'Remarks (if UNSAT — area of improvement + action plan): ',
       ].join('\n')
     }
     return `Training item completed: ${source.label}`
