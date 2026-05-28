@@ -102,6 +102,33 @@ export const DEFAULT_623A_ENTRY_TYPES = [
   'AFFSA Message Review', 'Records Transcription', 'General Comment',
 ] as const
 
+// 623A monthly-evaluation comment shell for personnel in upgrade and
+// local qualification training. Field list is verbatim from DAFMAN
+// 13-204v2 Para 8.2.1.11.2.3.1: "As a minimum, include the percentage
+// of training completed towards the overall training objective (e.g.,
+// Upgrade and Local Qualification), inclusive dates of evaluation,
+// current duty position, position start date, specific STS tasks
+// covered during the evaluation period and other comments. (T-3)
+// Include all interruptions to training (stop training days, to
+// include reason), trainee's comments, if necessary, and signature
+// blocks for trainee, trainer, NAMT and AFM. (T-3)"
+//
+// The signature blocks are handled by the 623A row's own slot
+// signature mechanism (trainee/trainer/namt/afm initials columns) —
+// they're not part of the inserted comment text.
+export const MONTHLY_UPGRADE_EVAL_TEMPLATE = [
+  '(Monthly evaluation — IAW DAFMAN 13-204v2 Para 8.2.1.11.2.3.1)',
+  '',
+  'Percentage of Training Completed (overall objective): ',
+  'Inclusive Dates of Evaluation: ',
+  'Current Duty Position: ',
+  'Position Start Date: ',
+  'STS Tasks Covered During Evaluation Period: ',
+  'Training Interruptions (stop-training days + reason): ',
+  'Other Comments: ',
+  "Trainee's Comments (if applicable): ",
+].join('\n')
+
 export const MILESTONE_PATHS = [
   { key: 'fiveLevelQtp', label: '5-Level QTP' },
   { key: 'amosAmslPcg', label: 'AMOS/AMSL PCG' },

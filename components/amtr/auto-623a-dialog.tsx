@@ -23,7 +23,8 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, fetchAmtrByBase, fetchAmtr623aBySource, amtrSign, type AmtrMember } from '@/lib/supabase/amtr'
-import { DEFAULT_623A_ENTRY_TYPES } from '@/lib/amtr/reference-data'
+import { DEFAULT_623A_ENTRY_TYPES, MONTHLY_UPGRADE_EVAL_TEMPLATE } from '@/lib/amtr/reference-data'
+import { ClipboardList } from 'lucide-react'
 import { Btn } from '@/components/amtr/ui'
 
 type Row = Record<string, unknown>
@@ -242,7 +243,14 @@ export function Auto623aDialog(props: {
                 <span style={{ color: 'var(--color-text-2)' }}><strong>{signedInitials}</strong></span>
 
                 <label htmlFor="auto623-comment" style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.06em', alignSelf: 'start', marginTop: 6 }}>Your Comment</label>
-                <textarea id="auto623-comment" className="input-dark" rows={4} value={comment} onChange={(e) => setComment(e.target.value)} disabled={saving} style={{ resize: 'vertical' }} placeholder="Optional — left blank if no note is needed" />
+                <div>
+                  <textarea id="auto623-comment" className="input-dark" rows={6} value={comment} onChange={(e) => setComment(e.target.value)} disabled={saving} style={{ resize: 'vertical', width: '100%' }} placeholder="Optional — left blank if no note is needed" />
+                  <button type="button" onClick={() => setComment((cur) => cur.trim() ? `${cur.trim()}\n\n${MONTHLY_UPGRADE_EVAL_TEMPLATE}` : MONTHLY_UPGRADE_EVAL_TEMPLATE)} disabled={saving}
+                    title="Insert the DAFMAN 13-204v2 Para 8.2.1.11.2.3.1 monthly-evaluation shell"
+                    style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 5, border: '1px solid var(--color-border-mid)', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600 }}>
+                    <ClipboardList size={12} /> Insert DAFMAN monthly-eval template
+                  </button>
+                </div>
 
                 {signedSlot === 'trainer' && (
                   <>
