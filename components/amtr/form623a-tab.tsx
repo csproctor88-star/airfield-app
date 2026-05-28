@@ -123,7 +123,13 @@ export function Form623aTab(props: {
                 </div>
 
                 {open && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginTop: 12 }}>
+                  // Bumped the column min-width (240 → 380) so each
+                  // comment textarea is visibly wider when the cards
+                  // expand — typical screens drop from 4 cramped
+                  // columns to 2 generous ones. Combined with the row
+                  // bump on the textarea itself, each block gets
+                  // ~3× the input surface.
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 14, marginTop: 12 }}>
                     {COLS.map((col) => {
                       const mineToEdit = canEnterData || myRoles.includes(col.slot as AmtrRole)
                       const insertTemplate = (templateText: string) => {
@@ -144,7 +150,7 @@ export function Form623aTab(props: {
                       return (
                         <div key={col.slot}>
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{col.label}</div>
-                          <textarea className="input-dark" rows={4} style={{ resize: 'vertical' }} placeholder={col.ph} disabled={!mineToEdit}
+                          <textarea className="input-dark" rows={10} style={{ resize: 'vertical', minHeight: 180, width: '100%', fontFamily: 'inherit', lineHeight: 1.5 }} placeholder={col.ph} disabled={!mineToEdit}
                             data-623a-row={id} data-623a-slot={col.slot}
                             defaultValue={(e[`${col.slot}_comment`] as string) ?? ''} onBlur={(ev) => mineToEdit && setField(id, `${col.slot}_comment`, ev.target.value)} />
                           {mineToEdit && (
