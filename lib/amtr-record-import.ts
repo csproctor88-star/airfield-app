@@ -404,14 +404,16 @@ export async function applyAmtrImport(
 
   // Free-form inserts (797, 623A, 803). Now uses { inserted, error } return.
   if (p.items797.length) {
-    // requires_certifier defaults to true on every imported row — the
-    // DAF 797 form always has a certifier column, so a missing
-    // certifier signature in the source spreadsheet is a GAP to be
-    // filled post-import, not a signal that the task doesn't need
-    // cert. The admin can flip it off per-row via the existing
-    // "Requires certifier initials" toggle on the 797 tab if a
-    // specific item legitimately doesn't need a certifier.
-    const { inserted, error } = await insertAmtrRows('amtr_797', p.items797.map((it, i) => ({ base_id: installationId, member_id: memberId, task: it.task, start_date: it.start_date || null, complete_date: it.complete_date || null, trainee_initials: it.trainee || null, trainer_initials: it.trainer || null, certifier_initials: it.certifier || null, milestone_window: it.milestone_window || null, requires_certifier: true, sort_order: i })))
+    // requires_certifier follows the source: if the import row had
+    // initials in the certifier column, the originating trainer
+    // marked this task as needing cert (so requires_certifier=true,
+    // and the imported initials display as plain text in the cert
+    // column — no locked signature). If the source cert column was
+    // blank, the task didn't need cert and the Sign cell on the 797
+    // tab is suppressed accordingly. Admin can still flip the
+    // per-row toggle on the tab post-import if they need to add
+    // cert to an item the original record didn't track.
+    const { inserted, error } = await insertAmtrRows('amtr_797', p.items797.map((it, i) => ({ base_id: installationId, member_id: memberId, task: it.task, start_date: it.start_date || null, complete_date: it.complete_date || null, trainee_initials: it.trainee || null, trainer_initials: it.trainer || null, certifier_initials: it.certifier || null, milestone_window: it.milestone_window || null, requires_certifier: !!it.certifier, sort_order: i })))
     written += inserted
     onErr(`797 (${p.items797.length} rows)`, error)
   }

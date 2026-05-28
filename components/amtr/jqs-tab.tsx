@@ -234,15 +234,14 @@ function SectionGroup(props: {
         // and zebra striping remain.
         const bg = hi ? 'var(--color-accent-glow)'
           : idx % 2 === 1 ? 'color-mix(in srgb, var(--color-accent) 5%, transparent)' : undefined
-        // CFETP convention: the "Core Tasks" column (core_cert) marks
-        // tasks at a given skill level — values like '5', '7', '5^',
-        // '7^', '^'. ANY non-empty value means the task is core and
-        // requires certifier sign-off; only items with an EMPTY
-        // core_cert are outside the core and don't expose a Sign
-        // affordance. (Prior caret-only check was too narrow — it
-        // suppressed Sign on the ~280 non-caret core items, leaving
-        // post-import certifier gaps un-fillable.)
-        const requiresCert = !!String(c.core_cert ?? '').trim()
+        // CFETP convention: tasks requiring third-party certifier
+        // sign-off are marked with a caret in the Core Tasks column
+        // (e.g. '5^', '7^', '^'). Plain '5' / '7' indicate core tasks
+        // for that skill level but do NOT require a separate
+        // certifier — trainer sign-off is sufficient. The Sign
+        // affordance is suppressed on non-caret rows so the table
+        // doesn't suggest a step the CFETP doesn't require.
+        const requiresCert = String(c.core_cert ?? '').includes('^')
         const signCell = (slot: SignSlot) => (
           <td style={{ ...cell, textAlign: 'center' }}>
             <Initials
