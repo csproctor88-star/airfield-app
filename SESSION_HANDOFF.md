@@ -89,6 +89,26 @@ New test files this session:
 
 ---
 
+## Post-session ops (2026-05-28)
+
+No code — direct SQL on the linked Supabase to clear "Email not
+confirmed" login errors. Set `auth.users.email_confirmed_at = now()`
+for three `.af.mil` accounts whose confirmation emails were almost
+certainly Defender-quarantined: `curtis.hamann.2`, `john.korkian.1`,
+`tracy.lindsay_apple.10` (all profile-status `active` → can log in now).
+
+**Live recurring issue:** a scan found unconfirmed accounts spanning
+2026-04-06 → 2026-05-27 (James Dale, Austin Doll, James Immel,
+Kevin Lukas[pending], + the three above). Spread of dates means
+accounts are STILL being created unconfirmed → the Supabase
+**"Confirm email" toggle is likely back ON** (Authentication → Sign
+In/Up → Email). Per-user confirm SQL is the band-aid:
+`UPDATE auth.users SET email_confirmed_at = now() WHERE email = '…'
+AND email_confirmed_at IS NULL;` The durable fix is flipping that
+toggle off (it was deliberately off last session). Left the
+yahoo/gmail unconfirmed accounts alone — those deliver fine, users
+can self-confirm.
+
 ## Next session
 
 1. **Review + merge `amtr-fixes` to main** (or open a PR). 34 commits, all green. This is the headline carryover.
