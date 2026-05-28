@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Unlock, Pencil, GripVertical, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Unlock, Pencil, GripVertical, Trash2, ClipboardCheck } from 'lucide-react'
 import { toast } from 'sonner'
-import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
+import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows, amtrSign } from '@/lib/supabase/amtr'
 import type { AmtrMember, AmtrRole } from '@/lib/supabase/amtr'
-import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
+import { canSignSlot, canReopen, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
+import { transcribableSlots, selectableCompletedItems, actionableForTranscribe } from '@/lib/amtr/transcribe'
 import { Btn } from '@/components/amtr/ui'
 import type { SignSource } from '@/components/amtr/auto-623a-dialog'
 
@@ -56,6 +57,18 @@ export function JqsTab(props: {
   const [requiredOnly, setRequiredOnly] = useState(false)
   const [showTR, setShowTR] = useState(true)
   const reopenAllowed = canReopen(myRoles)
+
+  // ── Bulk transcription (Phase 1) ──────────────────────────
+  // Select completed items, pick one OJT column, and sign it in bulk with a
+  // single initials value. Columns offered are gated to the caller's signing
+  // authority (own record → Trainee only). Each apply reuses amtr_sign.
+  const [transcribeMode, setTranscribeMode] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [txSlot, setTxSlot] = useState<SignSlot>('trainee')
+  const [txInitials, setTxInitials] = useState('')
+  const [txBusy, setTxBusy] = useState(false)
+  const [txDone, setTxDone] = useState(0)
+  const txSlots = transcribableSlots(myRoles, isOwn)
 
   // ── catalog edit helpers (base-shared; affects every member) ──
   const updateCat = async (id: string, patch: Row) => {
@@ -120,6 +133,51 @@ export function JqsTab(props: {
     onChange()
   }
 
+  // ── transcription handlers ──
+  const toggleTranscribe = () => {
+    if (transcribeMode) { setTranscribeMode(false); setSelected(new Set()); return }
+    setTxSlot((prev) => (txSlots.includes(prev) ? prev : (txSlots[0] ?? 'trainee')))
+    setTranscribeMode(true)
+  }
+  const toggleSelect = (catId: string) =>
+    setSelected((prev) => { const n = new Set(prev); n.has(catId) ? n.delete(catId) : n.add(catId); return n })
+  const selectableIds = transcribeMode ? selectableCompletedItems(catalog, progByCat) : []
+  const actionableIds = transcribeMode ? actionableForTranscribe(catalog, progByCat, selected, txSlot) : []
+  const slotLabel = (s: SignSlot) => AMTR_ROLE_LABELS[s as AmtrRole] ?? s
+
+  const applyTranscribe = async () => {
+    const initials = txInitials.trim()
+    if (!initials) { toast.error('Enter the initials to insert.'); return }
+    const ids = actionableForTranscribe(catalog, progByCat, selected, txSlot)
+    if (ids.length === 0) { toast.error('No completed, unsigned items are selected for this column.'); return }
+    if (!window.confirm(`Sign the ${slotLabel(txSlot)} block for ${ids.length} item${ids.length === 1 ? '' : 's'} with initials "${initials}"?\n\nThis records your identity and a timestamp on each item and locks the block (NAMT/AFM can reopen).`)) return
+    setTxBusy(true); setTxDone(0)
+    let ok = 0
+    const errs: string[] = []
+    const BATCH = 8
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const chunk = ids.slice(i, i + BATCH)
+      const results = await Promise.all(chunk.map(async (catId) => {
+        const rowId = await ensureProgress(catId)
+        if (!rowId) return 'missing progress row'
+        const { error } = await amtrSign('amtr_jqs_progress', rowId, txSlot, initials)
+        return error ?? 'ok'
+      }))
+      for (const r of results) { if (r === 'ok') ok++; else errs.push(String(r)) }
+      setTxDone(Math.min(i + BATCH, ids.length))
+    }
+    setTxBusy(false)
+    if (errs.length) {
+      toast.error(`Signed ${ok} · ${errs.length} error${errs.length === 1 ? '' : 's'}`)
+      // eslint-disable-next-line no-console
+      console.error('[AMTR transcribe errors]', errs)
+    } else {
+      toast.success(`Signed ${ok} ${slotLabel(txSlot)} block${ok === 1 ? '' : 's'}`)
+    }
+    setSelected(new Set())
+    onChange()
+  }
+
   // Build section → items grouping in catalog order.
   const groups: { section: Row | null; items: Row[] }[] = []
   for (const c of catalog) {
@@ -149,10 +207,48 @@ export function JqsTab(props: {
         <Btn variant={requiredOnly ? 'primary' : 'secondary'} onClick={() => setRequiredOnly((v) => !v)}>
           {requiredOnly ? 'Showing required' : 'Required only'}
         </Btn>
+        {canWrite && txSlots.length > 0 && (
+          <Btn variant={transcribeMode ? 'primary' : 'secondary'} onClick={toggleTranscribe}>
+            <ClipboardCheck size={14} /> {transcribeMode ? 'Exit transcribe' : 'Transcribe'}
+          </Btn>
+        )}
         {canManage && <Btn variant="secondary" onClick={() => setEditMode(true)}><Pencil size={14} /> Edit catalog</Btn>}
         <Btn variant="ghost" onClick={toggleAll}>{allCollapsed ? 'Expand all' : 'Collapse all'}</Btn>
       </div>
     </div>
+    {transcribeMode && (
+      <div className="card" style={{ padding: '10px 14px', marginBottom: 10, border: '1px solid color-mix(in srgb, var(--color-accent) 45%, transparent)', background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 800, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 'var(--fs-sm)' }}>
+            <ClipboardCheck size={15} /> Transcribe
+          </span>
+          <Btn variant="secondary" onClick={() => setSelected(new Set(selectableIds))}>Select all completed ({selectableIds.length})</Btn>
+          <Btn variant="ghost" onClick={() => setSelected(new Set())}>Clear</Btn>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>{selected.size} selected</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Column</span>
+          <div style={{ display: 'inline-flex', gap: 4, border: '1px solid var(--color-border-mid)', borderRadius: 8, padding: 3 }}>
+            {txSlots.map((s) => (
+              <button key={s} onClick={() => setTxSlot(s)}
+                style={{ padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: txSlot === s ? 700 : 600,
+                  background: txSlot === s ? 'var(--color-accent)' : 'transparent',
+                  color: txSlot === s ? '#fff' : 'var(--color-text-3)' }}>
+                {slotLabel(s)}
+              </button>
+            ))}
+          </div>
+          <input className="input-dark" placeholder="Initials (e.g. JD)" value={txInitials} maxLength={8}
+            onChange={(e) => setTxInitials(e.target.value)} style={{ width: 150 }} />
+          <Btn variant="primary" onClick={applyTranscribe} disabled={txBusy || actionableIds.length === 0 || !txInitials.trim()}>
+            {txBusy ? `Signing… ${txDone}/${actionableIds.length}` : `Apply (${actionableIds.length})`}
+          </Btn>
+        </div>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 8, lineHeight: 1.5 }}>
+          Signs the <strong>{slotLabel(txSlot)}</strong> block for selected completed items — records your identity + timestamp and locks each block (NAMT/AFM can reopen). Already-signed items{txSlot === 'certifier' ? ', and tasks the CFETP doesn’t flag for certifier sign-off,' : ''} are skipped.
+        </div>
+      </div>
+    )}
     <div className="card" style={{ padding: 0, overflow: 'auto', maxHeight: 'calc(100vh - 240px)' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)', minWidth: 820 }}>
         <thead>
@@ -187,6 +283,7 @@ export function JqsTab(props: {
                 progByCat={progByCat} highlightItem={highlightItem}
                 canWrite={canWrite} canEnterData={canEnterData} myRoles={myRoles} isOwn={isOwn} reopenAllowed={reopenAllowed}
                 setDate={setDate} ensureProgress={ensureProgress} sign={sign} reopen={reopen} notifySignoff={notifySignoff}
+                transcribeMode={transcribeMode} selected={selected} onToggleSelect={toggleSelect}
               />
             )
           })}
@@ -204,8 +301,9 @@ function SectionGroup(props: {
   setDate: (catId: string, field: 'start_date' | 'complete_date', v: string) => void
   ensureProgress: (catId: string) => Promise<string>
   sign: SignFn; reopen: ReopenFn; notifySignoff: (slot: SignSlot, itemRef: string, itemId: string) => Promise<void>
+  transcribeMode: boolean; selected: Set<string>; onToggleSelect: (catId: string) => void
 }) {
-  const { section, items, open, showTR, onToggle, progByCat, highlightItem, canWrite, canEnterData, myRoles, isOwn, reopenAllowed, setDate, ensureProgress, sign, reopen, notifySignoff } = props
+  const { section, items, open, showTR, onToggle, progByCat, highlightItem, canWrite, canEnterData, myRoles, isOwn, reopenAllowed, setDate, ensureProgress, sign, reopen, notifySignoff, transcribeMode, selected, onToggleSelect } = props
   return (
     <>
       {section && (
@@ -273,7 +371,14 @@ function SectionGroup(props: {
         )
         return (
           <tr key={catId} data-amtr-item={catId} style={{ borderBottom: '1px solid var(--color-border)', background: bg }}>
-            <td style={{ ...cell, textAlign: 'center', boxShadow: required ? 'inset 3px 0 0 var(--color-warning)' : undefined }} />
+            <td style={{ ...cell, textAlign: 'center', boxShadow: required ? 'inset 3px 0 0 var(--color-warning)' : undefined }}>
+              {transcribeMode && (
+                <input type="checkbox" checked={selected.has(catId)} disabled={!p?.complete_date}
+                  onChange={() => onToggleSelect(catId)}
+                  title={p?.complete_date ? 'Select for transcription' : 'No completed date — not selectable'}
+                  style={{ cursor: p?.complete_date ? 'pointer' : 'not-allowed' }} />
+              )}
+            </td>
             <td style={{ ...cell, paddingLeft: 8 + Number(c.depth ?? 0) * 12 }}>
               <span style={{ color: 'var(--color-text-3)' }}>{c.number ? `${String(c.number)} ` : ''}</span>{String(c.title)}
             </td>
