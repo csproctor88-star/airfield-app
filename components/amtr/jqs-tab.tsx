@@ -234,11 +234,17 @@ function SectionGroup(props: {
         // and zebra striping remain.
         const bg = hi ? 'var(--color-accent-glow)'
           : idx % 2 === 1 ? 'color-mix(in srgb, var(--color-accent) 5%, transparent)' : undefined
+        // CFETP convention: items needing certification are marked
+        // with a caret in core_cert (e.g. '5^', '7^', '^'). Items
+        // without the caret are trainer-signed only — the certifier
+        // Sign affordance is suppressed for those rows so the table
+        // doesn't suggest a step that the reg doesn't require.
+        const requiresCert = String(c.core_cert ?? '').includes('^')
         const signCell = (slot: SignSlot) => (
           <td style={{ ...cell, textAlign: 'center' }}>
             <Initials
               value={(p?.[`${slot}_initials`] as string) ?? null}
-              canSign={canWrite && canSignSlot(myRoles, slot, isOwn)}
+              canSign={canWrite && canSignSlot(myRoles, slot, isOwn) && (slot !== 'certifier' || requiresCert)}
               canReopenSlot={reopenAllowed && !!p?.[`${slot}_signed_by`]}
               onReopen={() => p?.id && reopen('amtr_jqs_progress', String(p.id), slot)}
               onSign={async () => {
@@ -249,9 +255,7 @@ function SectionGroup(props: {
                 }, {
                   kind: 'jqs',
                   label: `${String(c.number ?? '')} ${String(c.title ?? '')}`.trim(),
-                  // CFETP convention — items needing certification are
-                  // marked with a caret in the core_cert column.
-                  requiresCertifier: String(c.core_cert ?? '').includes('^'),
+                  requiresCertifier: requiresCert,
                 })
               }}
             />

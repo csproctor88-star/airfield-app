@@ -103,10 +103,15 @@ export function Form797Tab(props: {
               {items.map((it, idx) => {
                 const id = String(it.id)
                 const hi = highlightItem === id
+                // Per-item certification requirement is stored on the
+                // 797 row itself; suppress the certifier Sign cell for
+                // rows where it's off so the table doesn't prompt for
+                // a step the trainer didn't flag.
+                const itemRequiresCert = !!it.requires_certifier
                 const signCell = (slot: SignSlot) => (
                   <td style={tdStyle}>
                     <SignCell value={(it[`${slot}_initials`] as string) ?? null}
-                      canSign={canWrite && canSignSlot(myRoles, slot, isOwn)}
+                      canSign={canWrite && canSignSlot(myRoles, slot, isOwn) && (slot !== 'certifier' || itemRequiresCert)}
                       canReopenSlot={reopenAllowed && !!it[`${slot}_signed_by`]}
                       onReopen={() => reopen('amtr_797', id, slot)}
                       onSign={() => sign('amtr_797', id, slot, async () => {
@@ -118,8 +123,7 @@ export function Form797Tab(props: {
                       }, {
                         kind: '797',
                         label: String(it.task ?? ''),
-                        // 797 stores per-item cert requirement directly.
-                        requiresCertifier: !!it.requires_certifier,
+                        requiresCertifier: itemRequiresCert,
                       })} />
                   </td>
                 )
