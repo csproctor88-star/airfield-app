@@ -64,8 +64,14 @@ async function fetchRecordData(installationId: string, memberId: string) {
 // (each an array of [colLetter, value] pairs), appending rows (with the
 // first data row's style) when there are more rows than blanks.
 function writeFlatTable(ws: WS, startRow: number, cols: string[], rows: [string, unknown][][]) {
-  // Clear a generous window of existing data so example rows don't linger.
-  const clearTo = Math.max(startRow + rows.length, startRow + 60)
+  // Clear range covers (a) the existing sheet's rowCount so the
+  // template's baked-in example data — the 623A sheet ships with
+  // ~105 illustrative rows from a sample record — gets wiped even
+  // when the member has fewer entries, AND (b) a 60-row pad past
+  // the new data so growth headroom is also clean. Without (a), a
+  // 30-entry export would leave rows 32-107 populated with the
+  // template's sample data and show up in the exported workbook.
+  const clearTo = Math.max(startRow + rows.length, startRow + 60, ws.rowCount)
   for (let r = startRow; r <= clearTo; r++) for (const c of cols) set(ws, `${c}${r}`, null)
   rows.forEach((cells, i) => {
     const rn = startRow + i
@@ -128,6 +134,17 @@ function fill623a(ws: WS | undefined, entries: Row[]) {
   // Editing the source template binary used to corrupt drawing anchors;
   // this approach keeps the template untouched.
   set(ws, 'E1', 'NAMT / Certifier Initials/Comments')
+  // Defensive sort by form_date ascending — the upstream fetch already
+  // orders by form_date, but a mixed type pool (DATE vs TEXT, NULLs)
+  // could disrupt it. Sorting here on the parsed slice guarantees
+  // chronological output regardless of upstream behavior.
+  const sorted = [...entries].sort((a, b) => {
+    const ad = dt(a.form_date), bd = dt(b.form_date)
+    if (!ad && !bd) return 0
+    if (!ad) return 1  // null dates fall to the bottom
+    if (!bd) return -1
+    return ad.localeCompare(bd)
+  })
   // Format: "<comment> / <INITIALS>" — comment leads so the export
   // reads as the narrative first, signature second. Falls back to
   // either piece alone when the other is missing.
@@ -137,7 +154,7 @@ function fill623a(ws: WS | undefined, entries: Row[]) {
     if (i && c) return `${c} / ${i}`
     return c || i
   }
-  const rows = entries.map((e) => ([
+  const rows = sorted.map((e) => ([
     ['A', dt(e.form_date)], ['B', str(e.entry_type)],
     ['C', fmt(e.trainee_initials, e.trainee_comment)],
     ['D', fmt(e.trainer_initials, e.trainer_comment)],
