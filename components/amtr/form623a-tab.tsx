@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronRight, ChevronDown, ClipboardList, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { buildSignoff } from '@/lib/amtr/notifications'
-import { DEFAULT_623A_ENTRY_TYPES, MONTHLY_UPGRADE_EVAL_TEMPLATE } from '@/lib/amtr/reference-data'
+import { DEFAULT_623A_ENTRY_TYPES, COMMENT_TEMPLATES } from '@/lib/amtr/reference-data'
 import { canSignSlot, canReopen, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn } from '@/components/amtr/ui'
@@ -126,7 +126,7 @@ export function Form623aTab(props: {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginTop: 12 }}>
                     {COLS.map((col) => {
                       const mineToEdit = canEnterData || myRoles.includes(col.slot as AmtrRole)
-                      const insertTemplate = () => {
+                      const insertTemplate = (templateText: string) => {
                         // Textarea is uncontrolled (defaultValue + onBlur).
                         // Locate it via the data attrs we tagged on the
                         // textarea below, set the value directly, and
@@ -136,7 +136,7 @@ export function Form623aTab(props: {
                         const ta = document.querySelector<HTMLTextAreaElement>(sel)
                         if (!ta) return
                         const existing = ta.value.trim()
-                        const next = existing ? `${existing}\n\n${MONTHLY_UPGRADE_EVAL_TEMPLATE}` : MONTHLY_UPGRADE_EVAL_TEMPLATE
+                        const next = existing ? `${existing}\n\n${templateText}` : templateText
                         ta.value = next
                         ta.focus()
                         setField(id, `${col.slot}_comment`, next)
@@ -148,11 +148,20 @@ export function Form623aTab(props: {
                             data-623a-row={id} data-623a-slot={col.slot}
                             defaultValue={(e[`${col.slot}_comment`] as string) ?? ''} onBlur={(ev) => mineToEdit && setField(id, `${col.slot}_comment`, ev.target.value)} />
                           {mineToEdit && (
-                            <button type="button" onClick={insertTemplate}
-                              title="Insert the DAFMAN 13-204v2 Para 8.2.1.11.2.3.1 monthly-evaluation shell"
-                              style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, border: '1px solid var(--color-border-mid)', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600 }}>
-                              <ClipboardList size={11} /> Insert DAFMAN template
-                            </button>
+                            <select className="input-dark" value="" disabled={!mineToEdit}
+                              onChange={(ev) => {
+                                const t = COMMENT_TEMPLATES.find((x) => x.key === ev.target.value)
+                                if (!t) return
+                                insertTemplate(t.text)
+                                ev.target.value = ''
+                              }}
+                              title="Insert a DAFMAN 13-204v2 comment shell"
+                              style={{ marginTop: 4, fontSize: 'var(--fs-xs)', padding: '3px 6px', maxWidth: '100%' }}>
+                              <option value="">Insert DAFMAN template…</option>
+                              {COMMENT_TEMPLATES.map((t) => (
+                                <option key={t.key} value={t.key} title={t.cite}>{t.label}</option>
+                              ))}
+                            </select>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
                             <SignCell value={(e[`${col.slot}_initials`] as string) ?? null}

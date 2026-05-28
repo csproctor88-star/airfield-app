@@ -23,8 +23,7 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, fetchAmtrByBase, fetchAmtr623aBySource, amtrSign, type AmtrMember } from '@/lib/supabase/amtr'
-import { DEFAULT_623A_ENTRY_TYPES, MONTHLY_UPGRADE_EVAL_TEMPLATE } from '@/lib/amtr/reference-data'
-import { ClipboardList } from 'lucide-react'
+import { DEFAULT_623A_ENTRY_TYPES, COMMENT_TEMPLATES } from '@/lib/amtr/reference-data'
 import { Btn } from '@/components/amtr/ui'
 
 type Row = Record<string, unknown>
@@ -86,7 +85,10 @@ export function Auto623aDialog(props: {
 
   const [formDate, setFormDate] = useState<string>(new Date().toISOString().slice(0, 10))
   const [entryType, setEntryType] = useState<string>(KIND_LABEL[source.kind] ?? '')
-  const [comment, setComment] = useState<string>('')
+  // Default comment captures the canonical "what was signed" line per
+  // DAFMAN 13-204v2 sign-off documentation expectations. Trainers add
+  // any reg-required additional content via the template picker below.
+  const [comment, setComment] = useState<string>(`Training item completed: ${source.label}`)
   const [requiresCert, setRequiresCert] = useState<boolean>(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -109,9 +111,13 @@ export function Auto623aDialog(props: {
         setEntryType(String(data.entry_type ?? KIND_LABEL[source.kind] ?? ''))
         setRequiresCert(!!data.requires_certifier)
         // Preserve any comment already present in the current slot
-        // (e.g. trainee reopening their own block).
+        // (e.g. reopening their own block). If the slot is empty,
+        // fall back to the "Training item completed: …" prefill so
+        // every signer's comment starts with the canonical sign-off
+        // line; templates appended via the picker layer reg content
+        // on top.
         const existing = data[`${slot623a}_comment`]
-        setComment(existing ? String(existing) : '')
+        setComment(existing ? String(existing) : `Training item completed: ${source.label}`)
       }
       setLoading(false)
     })
@@ -245,11 +251,20 @@ export function Auto623aDialog(props: {
                 <label htmlFor="auto623-comment" style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.06em', alignSelf: 'start', marginTop: 6 }}>Your Comment</label>
                 <div>
                   <textarea id="auto623-comment" className="input-dark" rows={6} value={comment} onChange={(e) => setComment(e.target.value)} disabled={saving} style={{ resize: 'vertical', width: '100%' }} placeholder="Optional — left blank if no note is needed" />
-                  <button type="button" onClick={() => setComment((cur) => cur.trim() ? `${cur.trim()}\n\n${MONTHLY_UPGRADE_EVAL_TEMPLATE}` : MONTHLY_UPGRADE_EVAL_TEMPLATE)} disabled={saving}
-                    title="Insert the DAFMAN 13-204v2 Para 8.2.1.11.2.3.1 monthly-evaluation shell"
-                    style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 5, border: '1px solid var(--color-border-mid)', background: 'transparent', color: 'var(--color-accent)', cursor: 'pointer', fontSize: 'var(--fs-xs)', fontFamily: 'inherit', fontWeight: 600 }}>
-                    <ClipboardList size={12} /> Insert DAFMAN monthly-eval template
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Insert DAFMAN template:</span>
+                    <select className="input-dark" disabled={saving} value="" onChange={(e) => {
+                      const t = COMMENT_TEMPLATES.find((x) => x.key === e.target.value)
+                      if (!t) return
+                      setComment((cur) => cur.trim() ? `${cur.trim()}\n\n${t.text}` : t.text)
+                      e.target.value = ''
+                    }} style={{ fontSize: 'var(--fs-xs)', padding: '3px 6px', maxWidth: 260 }}>
+                      <option value="">Pick a template…</option>
+                      {COMMENT_TEMPLATES.map((t) => (
+                        <option key={t.key} value={t.key} title={t.cite}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {signedSlot === 'trainer' && (

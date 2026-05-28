@@ -102,32 +102,120 @@ export const DEFAULT_623A_ENTRY_TYPES = [
   'AFFSA Message Review', 'Records Transcription', 'General Comment',
 ] as const
 
-// 623A monthly-evaluation comment shell for personnel in upgrade and
-// local qualification training. Field list is verbatim from DAFMAN
-// 13-204v2 Para 8.2.1.11.2.3.1: "As a minimum, include the percentage
-// of training completed towards the overall training objective (e.g.,
-// Upgrade and Local Qualification), inclusive dates of evaluation,
-// current duty position, position start date, specific STS tasks
-// covered during the evaluation period and other comments. (T-3)
-// Include all interruptions to training (stop training days, to
-// include reason), trainee's comments, if necessary, and signature
-// blocks for trainee, trainer, NAMT and AFM. (T-3)"
+// 623A comment shells. Each one corresponds to a documentation
+// scenario explicitly addressed by DAFMAN 13-204v2 (20 September
+// 2024). Field lists are derived directly from the cited paragraph —
+// where the reg enumerates required content (e.g. 8.2.1.11.2.3.1's
+// monthly evaluation), every required element is present as a labeled
+// blank. Signature blocks the reg also requires are handled by the
+// 623A row's own slot-signature mechanism (trainee/trainer/namt/afm
+// initials columns) — they're not part of the inserted comment text.
 //
-// The signature blocks are handled by the 623A row's own slot
-// signature mechanism (trainee/trainer/namt/afm initials columns) —
-// they're not part of the inserted comment text.
-export const MONTHLY_UPGRADE_EVAL_TEMPLATE = [
-  '(Monthly evaluation — IAW DAFMAN 13-204v2 Para 8.2.1.11.2.3.1)',
-  '',
-  'Percentage of Training Completed (overall objective): ',
-  'Inclusive Dates of Evaluation: ',
-  'Current Duty Position: ',
-  'Position Start Date: ',
-  'STS Tasks Covered During Evaluation Period: ',
-  'Training Interruptions (stop-training days + reason): ',
-  'Other Comments: ',
-  "Trainee's Comments (if applicable): ",
-].join('\n')
+// "Records Transcribed" is included as an operationally common entry
+// type that doesn't have a specific reg paragraph; the citation is
+// flagged so readers know it's a convention rather than a regulatory
+// requirement.
+export type CommentTemplate = {
+  /** Stable key for the dropdown picker. */
+  key: string
+  /** Short label shown in the picker. */
+  label: string
+  /** Plain-text citation that lands at the top of the inserted shell. */
+  cite: string
+  /** The shell — one labeled blank per required field per the reg. */
+  text: string
+}
+
+const tpl = (key: string, label: string, cite: string, lines: string[]): CommentTemplate => ({
+  key, label, cite,
+  text: [`(${label} — IAW ${cite})`, '', ...lines].join('\n'),
+})
+
+export const COMMENT_TEMPLATES: CommentTemplate[] = [
+  tpl('monthlyEval', 'Monthly Upgrade / Qual Eval', 'DAFMAN 13-204v2 Para 8.2.1.11.2.3.1', [
+    'Percentage of Training Completed (overall objective): ',
+    'Inclusive Dates of Evaluation: ',
+    'Current Duty Position: ',
+    'Position Start Date: ',
+    'STS Tasks Covered During Evaluation Period: ',
+    'Training Interruptions (stop-training days + reason): ',
+    'Other Comments: ',
+    "Trainee's Comments (if applicable): ",
+  ]),
+  tpl('editEntered', 'EDIT — Entered', 'DAFMAN 13-204v2 Para 2.6.2.15', [
+    'Date Entered EDIT (Experiencing Difficulty In Training): ',
+    'Specific Difficulty Observed: ',
+    'Tasks / STS Items Affected: ',
+    'Corrective Actions Taken: ',
+    'Action Plan / Recovery Goals: ',
+    'Next Weekly Evaluation Date: ',
+  ]),
+  tpl('editCleared', 'EDIT — Cleared', 'DAFMAN 13-204v2 Para 2.6.2.15.2', [
+    'Date Cleared from EDIT: ',
+    'Standards Met / Performance Restored: ',
+    'Summary of Trainee Performance During EDIT: ',
+  ]),
+  tpl('stopTraining', 'Stop Training', 'DAFMAN 13-204v2 (Stop Training definition + Para 8.2.1.11.2.3.1)', [
+    'Stop-Training Start Date: ',
+    'Reason (knowledge / simulator / OJT / inability to meet standards / unforeseen event): ',
+    'Affected Tasks or Training Items: ',
+    'Anticipated Resume Date: ',
+  ]),
+  tpl('initialEval', 'Initial Evaluation', 'DAFMAN 13-204v2 Para 8.2.1.3.7', [
+    'Evaluation Date: ',
+    'Previously Certified Tasks Reviewed: ',
+    'Performance STS Items Re-evaluated: ',
+    'Results (SAT / UNSAT per item): ',
+    'Areas Needing Improvement (UNSAT items): ',
+    'Action Plan for Completion Prior to Next Evaluation: ',
+  ]),
+  tpl('apprenticeEval', 'Apprentice Course Graduate Eval', 'DAFMAN 13-204v2 Para 8.2.1.4', [
+    'Evaluation Date: ',
+    '3-Level STS Items Evaluated (performance proficiency codes): ',
+    'Results (SAT / UNSAT per item): ',
+    'Areas Needing Improvement (UNSAT items): ',
+    'Action Plan for Completion Prior to Next Evaluation: ',
+  ]),
+  tpl('monthlyProf', 'Monthly Proficiency Test', 'DAFMAN 13-204v2 Para 8.2.1.7', [
+    'Test Date: ',
+    'Test Type (Practical / Written): ',
+    'Result (GO / NO-GO or % score; standard 80% corrected to 100%): ',
+    'Tasks / Subject Areas Tested: ',
+    'Retraining Plan (if NO-GO): ',
+  ]),
+  tpl('recordsInspection', 'Monthly Training Records Inspection', 'DAFMAN 13-204v2 Para 2.6.2.8', [
+    'Inspection Date: ',
+    'Inspector: ',
+    'Areas Reviewed (accuracy, completeness, standardization): ',
+    'Findings: ',
+    'Corrective Actions: ',
+  ]),
+  tpl('recordsTranscribed', 'Records Transcribed', 'Operational convention (no specific DAFMAN paragraph)', [
+    'Source of Records: ',
+    'Transcription Date: ',
+    'Items Transcribed (forms / tasks / dates): ',
+    'Verified By: ',
+  ]),
+  tpl('taskCert', 'Task Certification / Recertification', 'DAFMAN 13-204v2 Para 8.2.1.11.2.3.4', [
+    'Task / STS Item: ',
+    'Certification Type (Initial / Recertification): ',
+    'Date: ',
+    'Reason for Recertification (if applicable): ',
+  ]),
+  tpl('pcgQtp', 'PCG / QTP Completion', 'DAFMAN 13-204v2 Para 8.2.1.5.5', [
+    'PCG / QTP Completed: ',
+    'Completion Date: ',
+    'Start Date: ',
+    'Total Duration: ',
+  ]),
+  tpl('upgradeRec', 'Skill-Level Upgrade Recommendation', 'DAFMAN 13-204v2 Para 2.6.2.13.3', [
+    'Skill Level Recommended: ',
+    'Effective Date: ',
+    'Prerequisite Training Completed (5-Level QTP / 7-Level QTP / PCG): ',
+    'Supervisor Approval: ',
+    'AFM Approval: ',
+  ]),
+]
 
 export const MILESTONE_PATHS = [
   { key: 'fiveLevelQtp', label: '5-Level QTP' },
