@@ -401,6 +401,81 @@ export async function setAmtrCatalogVersion(baseId: string, version: string): Pr
   await supabase.from('amtr_catalog_version').upsert({ base_id: baseId, version, updated_at: new Date().toISOString() } as never, { onConflict: 'base_id' })
 }
 
+// ── Supporting files (amtr-files bucket) ───────────────────
+// Path convention matches the bucket's path-scoped RLS
+// (2026052005_amtr_storage.sql): {member_id}/{timestamp}-{filename}.
+// The first path segment is the member UUID, joined server-side to
+// resolve base_id for the access check.
+
+export type AmtrFileRow = {
+  id: string; member_id: string; name: string; uploaded_at: string | null
+  size: string | null; status: string; storage_path: string | null
+  mime_type: string | null; created_at: string
+}
+
+const AMTR_FILES_BUCKET = 'amtr-files'
+
+/** Upload a supporting file for a member + record its metadata. */
+export async function uploadAmtrFile(
+  baseId: string, memberId: string, file: File,
+): Promise<{ data: AmtrFileRow | null; error: string | null }> {
+  const supabase = db()
+  if (!supabase) return { data: null, error: 'Supabase not configured' }
+  // Sanitize the filename for the storage key but keep the original
+  // for display. Prefix with a timestamp so re-uploading the same
+  // name doesn't collide.
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '_')
+  const storagePath = `${memberId}/${Date.now()}-${safeName}`
+  const { error: upErr } = await supabase.storage.from(AMTR_FILES_BUCKET).upload(storagePath, file, {
+    contentType: file.type || undefined, upsert: false,
+  })
+  if (upErr) {
+    console.error('amtr file upload failed:', upErr.message)
+    return { data: null, error: friendlyError(upErr.message) }
+  }
+  const row = {
+    base_id: baseId, member_id: memberId, name: file.name,
+    uploaded_at: new Date().toISOString().slice(0, 10),
+    size: humanFileSize(file.size), status: 'Verified',
+    storage_path: storagePath, mime_type: file.type || null,
+  }
+  const { data, error } = await supabase.from('amtr_files').insert(row as never).select().single()
+  if (error) {
+    // Roll back the orphaned object so a failed row insert doesn't
+    // leave a dangling file in the bucket.
+    await supabase.storage.from(AMTR_FILES_BUCKET).remove([storagePath])
+    console.error('amtr file row insert failed:', error.message)
+    return { data: null, error: friendlyError(error.message) }
+  }
+  return { data: data as AmtrFileRow, error: null }
+}
+
+/** Signed URL for viewing/downloading a stored file (bucket is private). */
+export async function getAmtrFileUrl(storagePath: string): Promise<string | null> {
+  const supabase = db()
+  if (!supabase) return null
+  const { data } = await supabase.storage.from(AMTR_FILES_BUCKET).createSignedUrl(storagePath, 60 * 5)
+  return data?.signedUrl ?? null
+}
+
+/** Delete a file row + its stored object. */
+export async function deleteAmtrFile(id: string, storagePath: string | null): Promise<{ error: string | null }> {
+  const supabase = db()
+  if (!supabase) return { error: 'Supabase not configured' }
+  if (storagePath) await supabase.storage.from(AMTR_FILES_BUCKET).remove([storagePath])
+  const { error } = await supabase.from('amtr_files').delete().eq('id', id)
+  return { error: error ? friendlyError(error.message) : null }
+}
+
+/** Bytes → human-readable (e.g. "2.4 MB"). */
+function humanFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB']
+  let v = bytes / 1024, i = 0
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++ }
+  return `${v.toFixed(1)} ${units[i]}`
+}
+
 export async function deleteAmtrRow(table: string, id: string): Promise<{ error: string | null }> {
   const supabase = db()
   if (!supabase) return { error: 'Supabase not configured' }

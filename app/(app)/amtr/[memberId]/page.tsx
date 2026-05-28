@@ -29,6 +29,7 @@ import { FormalTab } from '@/components/amtr/formal-tab'
 import { HistoryTab } from '@/components/amtr/history-tab'
 import { MemberOverview } from '@/components/amtr/member-overview'
 import { Auto623aDialog, type SignSource, type AutoSlot } from '@/components/amtr/auto-623a-dialog'
+import { FilesTab } from '@/components/amtr/files-tab'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { toast } from 'sonner'
@@ -480,7 +481,7 @@ export default function AmtrMemberPage() {
       )}
 
       {tab === 'files' && (
-        <SimpleListTab tab="files" memberId={memberId} installationId={installationId!} canWrite={canWrite && dataEntryAllowed} />
+        <FilesTab memberId={memberId} installationId={installationId!} canWrite={canWrite && dataEntryAllowed} />
       )}
       </div>
     </div>
@@ -527,71 +528,6 @@ function CoverTab({ member, canWrite, onSaved }: { member: AmtrMember; canWrite:
       {canWrite && (
         <div style={{ gridColumn: '1 / -1' }}>
           <Btn variant="primary" onClick={save} disabled={saving}>Save Cover</Btn>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Simple list tab (files) ──
-function SimpleListTab(props: { tab: string; memberId: string; installationId: string; canWrite: boolean }) {
-  const { tab, memberId, installationId, canWrite } = props
-  const CONFIG: Record<string, { table: string; label: string; nameField: string }> = {
-    qualifications: { table: 'amtr_quals', label: 'Qualification / SEI', nameField: 'name' },
-    files: { table: 'amtr_files', label: 'File', nameField: 'name' },
-    '803': { table: 'amtr_803', label: '803 task (STS item)', nameField: 'sts_item' },
-    formal: { table: 'amtr_formal_progress', label: 'Formal course', nameField: 'catalog_id' },
-    milestones: { table: 'amtr_milestone_progress', label: 'Milestone', nameField: 'catalog_id' },
-  }
-  const cfg = CONFIG[tab]
-  const [rows, setRows] = useState<Row[]>([])
-  const load = useCallback(async () => {
-    setRows(await fetchAmtrByMember(cfg.table, memberId))
-  }, [cfg.table, memberId])
-  useEffect(() => { load() }, [load])
-
-  const isFreeAdd = tab === 'qualifications' || tab === 'files' || tab === '803'
-  const add = async () => {
-    const value = window.prompt(`${cfg.label}:`)?.trim()
-    if (!value) return
-    const row: Row = { base_id: installationId, member_id: memberId }
-    if (tab === 'qualifications') { row.name = value; row.value = 'No' }
-    else if (tab === 'files') { row.name = value; row.status = 'Pending'; row.uploaded_at = new Date().toISOString().slice(0, 10) }
-    else if (tab === '803') { row.section = 'fiveLevel'; row.sts_item = value }
-    const { error } = await upsertAmtrRow(cfg.table, row)
-    if (error) { toast.error(error); return }
-    load()
-  }
-
-  return (
-    <div>
-      {(tab === 'formal' || tab === 'milestones') && (
-        <div style={{ marginBottom: 12, color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-          {cfg.label}s are driven by the base catalog (managed under Roles &amp; Catalogs); per-member completion shows below.
-        </div>
-      )}
-      {canWrite && isFreeAdd && <div style={{ marginBottom: 12 }}><Btn variant="primary" onClick={add}>+ Add {cfg.label}</Btn></div>}
-      {rows.length === 0 ? <EmptyState message={`No ${cfg.label.toLowerCase()} rows yet.`} /> : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={String(r.id)} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '8px 12px' }}>
-                    {String(r[cfg.nameField] ?? r.name ?? r.sts_item ?? r.catalog_id ?? '—')}
-                  </td>
-                  <td style={{ padding: '8px 12px', color: 'var(--color-text-3)' }}>
-                    {String(r.value ?? r.status ?? r.results ?? (r.completed ? 'Complete' : ''))}
-                  </td>
-                  {canWrite && (
-                    <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                      <Btn variant="ghost" onClick={async () => { await deleteAmtrRow(cfg.table, String(r.id)); load() }}>Remove</Btn>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>
