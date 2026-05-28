@@ -91,25 +91,114 @@ const MILESTONE_SHEETS: { sheet: string; path: string }[] = [
 // Listed here so they don't show up in the "unmatched sheets" warning.
 const IGNORED_SHEETS = new Set(['proficiencycodekey', 'sheet18'])
 
-/** Split a 623A cell into initials + comment. Recognizes both:
- *    - new export format: "<comment> / <INITIALS>"   (current)
- *    - legacy export format: "<INITIALS> — <comment>" (round-trip
- *      with workbooks generated before the format flip)
- *  Falls back to a length-based heuristic when no separator is found.
+/** True for the boilerplate rows the AFFSA 803 sheets repeat between blocks
+ * (section title, instructions, the "JQS Task Item(s) Evaluated" header, and
+ * "Remarks"). These carry no evaluation data and must not import as rows. */
+const isBoiler803 = (a: string): boolean => {
+  const t = a.trim()
+  if (!t) return false
+  return /^remarks$/i.test(t)
+    || /^jqs task item/i.test(t)
+    || /^803\b/.test(t)
+    || /^\*\*note/i.test(t)
+    || /report of task evaluations/i.test(t)
+    || /^all .*(sts items|performance)/i.test(t)
+}
+
+/** A token looks like signature initials: 1–6 letters, optionally with dots
+ * or slashes (e.g. "TS", "T.S.", "JG"). Anything containing spaces, digits, or
+ * longer prose is NOT initials. Used to keep narrative remarks out of the
+ * signature blocks on the 623A page. */
+export const looksLikeInitials = (s: string) => /^[A-Za-z][A-Za-z./]{0,5}$/.test(s.trim())
+
+/** Split a 623A "Initials/Comments" cell into initials + comment.
+ *
+ * The real AFFSA record stores free-form narrative in these columns (the
+ * trainee column is often a literal "None", the trainer column a multi-
+ * sentence training note), so the parser must NOT treat narrative as a
+ * signature. We only pull out initials when the cell is shaped like one of:
+ *    - app export format:    "<comment> / <INITIALS>"   (current)
+ *    - legacy export format: "<INITIALS> — <comment>"   (older round-trips)
+ *    - a bare initials token by itself
+ * and the initials portion actually passes `looksLikeInitials`. Otherwise the
+ * whole cell becomes the comment and initials stay empty — this is the fix
+ * for narrative remarks (e.g. "...transcribed to line items 6 - 28...") whose
+ * internal dash used to be split, dumping a sentence into `*_initials`.
  */
-function splitInit(s: string): { init: string; comment: string } {
+export function splitInit(s: string): { init: string; comment: string } {
   const t = s.trim()
   if (!t) return { init: '', comment: '' }
-  // New format: trailing 1–8 non-whitespace token after " / " treated
-  // as initials, everything before as comment. Length cap stops us
-  // from misreading a sentence ending in "and/or X" as an initial.
-  const slashMatch = t.match(/^(.+?)\s+\/\s+(\S{1,8})\s*$/)
-  if (slashMatch) return { init: slashMatch[2].trim(), comment: slashMatch[1].trim() }
-  // Legacy format: split on em-/en-/hyphen-dash.
-  const m = t.split(/\s+[—–-]\s+/)
-  if (m.length >= 2) return { init: m[0].trim(), comment: m.slice(1).join(' — ').trim() }
-  // No separator: short tokens are initials, longer text is a comment.
-  return t.length <= 4 ? { init: t, comment: '' } : { init: '', comment: t }
+  // AFFSA placeholders for an empty slot — not a signature, not a comment.
+  if (/^(none|n\/?a|n-?a|-{1,2})$/i.test(t)) return { init: '', comment: '' }
+  // App export: "<comment> / <INITIALS>" — trailing short token after " / ".
+  const slash = t.match(/^([\s\S]+?)\s+\/\s+(\S{1,8})$/)
+  if (slash && looksLikeInitials(slash[2])) return { init: slash[2].trim(), comment: slash[1].trim() }
+  // Legacy export: "<INITIALS> — <comment>" — ONLY when the leading token is
+  // initials-shaped. A long leading segment means narrative with an internal
+  // dash, which must stay wholly in the comment.
+  const dash = t.match(/^(\S{1,8})\s+[—–-]\s+([\s\S]+)$/)
+  if (dash && looksLikeInitials(dash[1])) return { init: dash[1].trim(), comment: dash[2].trim() }
+  // Bare cell: an initials-shaped token is a signature; prose is a comment.
+  return looksLikeInitials(t) ? { init: t, comment: '' } : { init: '', comment: t }
+}
+
+// ── Fuzzy task-title matching (1098) ─────────────────────────
+// The AFFSA training record's 1098 task titles drift from the AMTR catalog:
+// extra parentheticals ("(ACTIVE/PASSIVE MEASURES)"), reg prefixes ("HAF - …",
+// "AFI 13-207, …"), or minor spelling. Exact-normalized match is tried first;
+// this fuzzy fallback matches on token overlap + character-bigram similarity,
+// conservatively — a wrong auto-match would mis-record training, so leaving an
+// item unmatched (operator handles it) is preferred to a low-confidence guess.
+
+const STOP_WORDS = new Set(['AND', 'OR', 'THE', 'OF', 'TO', 'A', 'AN', 'FOR', 'IN', 'ON', 'WITH', 'AT', 'BY'])
+const taskTokens = (s: string) => norm(s).split(' ').filter((w) => w.length >= 2 && !STOP_WORDS.has(w))
+
+function diceBigram(a: string, b: string): number {
+  const grams = (s: string) => {
+    const t = s.replace(/\s+/g, '')
+    const m = new Map<string, number>()
+    for (let i = 0; i < t.length - 1; i++) { const g = t.slice(i, i + 2); m.set(g, (m.get(g) ?? 0) + 1) }
+    return m
+  }
+  const A = grams(a), B = grams(b)
+  let inter = 0, sa = 0, sb = 0
+  A.forEach((v) => { sa += v })
+  B.forEach((v) => { sb += v })
+  A.forEach((c, g) => { if (B.has(g)) inter += Math.min(c, B.get(g) ?? 0) })
+  return sa + sb === 0 ? 0 : (2 * inter) / (sa + sb)
+}
+
+/** Similarity in [0,1] between two task titles. 1 = normalized-identical. */
+export function taskSimilarity(a: string, b: string): number {
+  const na = norm(a), nb = norm(b)
+  if (!na || !nb) return 0
+  if (na === nb) return 1
+  const sa = new Set(taskTokens(a)), sb = new Set(taskTokens(b))
+  let inter = 0
+  sa.forEach((t) => { if (sb.has(t)) inter++ })
+  const union = sa.size + sb.size - inter
+  const jaccard = union ? inter / union : 0
+  const overlap = Math.min(sa.size, sb.size) ? inter / Math.min(sa.size, sb.size) : 0
+  let score = Math.max(jaccard, diceBigram(na, nb))
+  // Subset case: one title's meaningful words are nearly contained in the
+  // other (catalog "Bird/Wildlife Control" ⊂ record "BIRD/WILDLIFE CONTROL
+  // (ACTIVE/PASSIVE MEASURES)"). Treat as a strong match.
+  if (overlap >= 0.85 && inter >= 2) score = Math.max(score, 0.85)
+  return score
+}
+
+/** Best fuzzy catalog match for a task title, or undefined when no candidate
+ * clears the confidence bar (≥ 0.6, with an ambiguity guard for near-ties). */
+export function matchTaskFuzzy<T>(task: string, candidates: { task: string; row: T }[]): T | undefined {
+  let best: T | undefined, bestScore = 0, second = 0
+  for (const c of candidates) {
+    const s = taskSimilarity(task, c.task)
+    if (s > bestScore) { second = bestScore; bestScore = s; best = c.row }
+    else if (s > second) { second = s }
+  }
+  if (bestScore < 0.6) return undefined
+  if (bestScore < 0.85 && bestScore - second < 0.05) return undefined
+  return best
 }
 
 export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedRecord> {
@@ -223,17 +312,28 @@ export async function parseAmtrRecordWorkbook(buf: ArrayBuffer): Promise<ParsedR
     out.rat.push({ course, completed: parseAmtrDate(cell(rat, `C${r}`)) })
   }
 
-  // 803 (five sections)
+  // 803 (five sections). The AFFSA 803 sheets merge each evaluation block
+  // vertically — the STS item spans A{n}:J{n+k} and the Date/UGT/Results/
+  // Evaluator cells merge down the same rows. ExcelJS returns the MASTER
+  // value for every slave row, so iterating row-by-row used to emit one
+  // duplicate per merged row (the "imported 803 entries duplicated Nx" bug).
+  // Skip merge-slave rows so each block yields exactly one entry. Repeated
+  // section-title / header / Remarks rows (the sheets stack several blocks)
+  // are skipped too, otherwise they import as junk evaluations.
   for (const [section, sheet] of Object.entries(SECTION_SHEET)) {
     const ws = get(sheet); if (!ws) continue
     let header = 0
     for (let r = 1; r <= 8; r++) if (/JQS Task Item/i.test(cell(ws, `A${r}`))) { header = r; break }
     const rows: ParsedRecord['items803'][string] = []
     for (let r = (header || 3) + 1; r <= ws.rowCount; r++) {
+      const aCell = ws.getCell(`A${r}`)
+      // Slave row of a vertical/block merge — its value is a duplicate of the
+      // master row above. Only the master (top-left) row carries the entry.
+      if (aCell.isMerged && aCell.master.address !== `A${r}`) continue
       const item = cell(ws, `A${r}`)
+      if (isBoiler803(item)) continue
       const date = parseAmtrDate(cell(ws, `K${r}`)), ugt = cell(ws, `L${r}`), res = cell(ws, `M${r}`), ev = cell(ws, `N${r}`).trim()
       if (!item && !date && !res && !ev) continue
-      if (/^remarks$/i.test(item)) continue
       rows.push({ sts_item: item, eval_date: date, in_ugt: ugt, results: res, evaluator: ev })
     }
     if (rows.length) out.items803[section] = rows
@@ -385,8 +485,11 @@ export async function applyAmtrImport(
   for (const [year, rows] of Object.entries(p.r1098)) {
     await ensure1098YearCatalog(year)
     const yearIndex = c1098ByYearTask().get(year) ?? new Map<string, Row>()
+    // Candidate list for the fuzzy fallback (record titles rarely match the
+    // catalog verbatim — see matchTaskFuzzy).
+    const candidates = Array.from(yearIndex.values()).map((r) => ({ task: String(r.task ?? ''), row: r }))
     for (const row of rows) {
-      const c = yearIndex.get(norm(row.task))
+      const c = yearIndex.get(norm(row.task)) ?? matchTaskFuzzy(row.task, candidates)
       if (!c) { unmatched.push(`1098 ${year}: ${row.task}`); continue }
       const next = computeNextDue(row.last_completed, String(c.frequency ?? 'Annual'))
       const { error } = await upsertAmtrRow(
