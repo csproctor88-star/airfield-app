@@ -11,7 +11,7 @@ import {
   syncAmtrRosterFromBase, fetchAmtrCatalogVersion,
   type AmtrRoleAssignment, type AmtrRole, type AmtrMember,
 } from '@/lib/supabase/amtr'
-import { seedBaseCatalogs, syncStandardCatalogs, runSyncCatalogs, SEED_COUNTS, CATALOG_VERSION, type SyncCfg } from '@/lib/amtr/seed-data'
+import { seedBaseCatalogs, syncStandardCatalogs, runSyncCatalogs, computeSyncDiff, SEED_COUNTS, CATALOG_VERSION, type SyncCfg, type SyncDiff } from '@/lib/amtr/seed-data'
 import { AMTR_ROLE_LABELS } from '@/lib/amtr/roles'
 import { InspectionChecklistEditor } from '@/components/amtr/inspection-checklist-editor'
 import { MilestoneCatalogEditor } from '@/components/amtr/milestone-catalog-editor'
@@ -40,7 +40,7 @@ export default function AmtrRolesPage() {
   const [syncing, setSyncing] = useState(false)
   const [catalogVersion, setCatalogVersion] = useState<string | null>(null)
   const hafFileRef = useRef<HTMLInputElement>(null)
-  const [uploadPreview, setUploadPreview] = useState<{ cfgs: SyncCfg[]; summary: Record<string, number> } | null>(null)
+  const [uploadPreview, setUploadPreview] = useState<{ cfgs: SyncCfg[]; summary: Record<string, number>; diff: SyncDiff | null } | null>(null)
   const [uploadApplying, setUploadApplying] = useState(false)
   const [resourceFor, setResourceFor] = useState<Row | null>(null)
   const [assignments, setAssignments] = useState<AmtrRoleAssignment[]>([])
@@ -113,13 +113,17 @@ export default function AmtrRolesPage() {
   }
   const onHafFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = ''
-    if (!file) return
+    if (!file || !installationId) return
     try {
       const buf = await file.arrayBuffer()
       const { parseStandardCatalogsWorkbook } = await import('@/lib/amtr-catalog-import')
       const { cfgs, summary } = await parseStandardCatalogsWorkbook(buf)
       if (cfgs.length === 0) { toast.error('No standard catalog content found in that workbook'); return }
-      setUploadPreview({ cfgs, summary })
+      // Dry-run diff so the admin sees what'll change before clicking
+      // Update. Computed once, cached on the preview so the modal
+      // doesn't re-query on re-render.
+      const diff = await computeSyncDiff(installationId, cfgs)
+      setUploadPreview({ cfgs, summary, diff })
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Could not read the workbook') }
   }
   const applyHafUpload = async () => {
@@ -250,22 +254,58 @@ export default function AmtrRolesPage() {
       )}
 
       {uploadPreview && (
-        <div onClick={() => !uploadApplying && setUploadPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 460, maxWidth: '100%', padding: 0 }}>
+        <div onClick={() => !uploadApplying && setUploadPreview(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, overflow: 'auto' }}>
+          <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 640, maxWidth: '100%', padding: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
               <Upload size={16} style={{ color: 'var(--color-accent)' }} />
               <strong>Update standard catalogs from workbook</strong>
               <button onClick={() => setUploadPreview(null)} disabled={uploadApplying} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
             </div>
             <div style={{ padding: 16 }}>
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 10 }}>Catalog content found in the workbook:</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '4px 16px', fontSize: 'var(--fs-sm)' }}>
-                {Object.entries(uploadPreview.summary).map(([k, n]) => (
-                  <div key={k} style={{ display: 'contents' }}><span style={{ color: 'var(--color-text-2)' }}>{k}</span><span style={{ textAlign: 'right', fontWeight: 600 }}>{n}</span></div>
-                ))}
-              </div>
+              {uploadPreview.diff ? (
+                <>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>Net changes:</span>
+                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-success)' }}>+{uploadPreview.diff.totals.added} new</span>
+                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-accent)' }}>~{uploadPreview.diff.totals.updated} modified</span>
+                    <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-warning)' }}>−{uploadPreview.diff.totals.retired} retired</span>
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {uploadPreview.diff.perTable.map((t) => {
+                      const hasChanges = t.added + t.updated + t.retired > 0
+                      return (
+                        <div key={t.table} style={{ padding: '10px 12px', borderRadius: 8, background: hasChanges ? 'var(--color-bg-inset)' : 'transparent', border: '1px solid var(--color-border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: hasChanges ? 6 : 0 }}>
+                            <strong style={{ fontSize: 'var(--fs-sm)' }}>{({
+                              amtr_jqs_catalog: 'JQS-CFETP', amtr_1098_catalog: 'DAF 1098', amtr_803_catalog: 'DAF 803',
+                              amtr_qual_catalog: 'Qualifications', amtr_rat_catalog: 'Ready Airman Training', amtr_milestone_catalog: 'Milestones',
+                            } as Record<string, string>)[t.table] ?? t.table}</strong>
+                            {!hasChanges && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>no changes</span>}
+                            {t.added > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-success)' }}>+{t.added} new</span>}
+                            {t.updated > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-accent)' }}>~{t.updated} modified</span>}
+                            {t.retired > 0 && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)' }}>−{t.retired} retired</span>}
+                          </div>
+                          {hasChanges && (
+                            <div style={{ display: 'grid', gap: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                              {t.addedSamples.length > 0 && <div><span style={{ color: 'var(--color-success)', fontWeight: 700 }}>NEW:</span> {t.addedSamples.join(' · ')}{t.added > t.addedSamples.length ? ` …(+${t.added - t.addedSamples.length})` : ''}</div>}
+                              {t.updatedSamples.length > 0 && <div><span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>MOD:</span> {t.updatedSamples.join(' · ')}{t.updated > t.updatedSamples.length ? ` …(+${t.updated - t.updatedSamples.length})` : ''}</div>}
+                              {t.retiredSamples.length > 0 && <div><span style={{ color: 'var(--color-warning)', fontWeight: 700 }}>RETIRE:</span> {t.retiredSamples.join(' · ')}{t.retired > t.retiredSamples.length ? ` …(+${t.retired - t.retiredSamples.length})` : ''}</div>}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '4px 16px', fontSize: 'var(--fs-sm)' }}>
+                  {Object.entries(uploadPreview.summary).map(([k, n]) => (
+                    <div key={k} style={{ display: 'contents' }}><span style={{ color: 'var(--color-text-2)' }}>{k}</span><span style={{ textAlign: 'right', fontWeight: 600 }}>{n}</span></div>
+                  ))}
+                </div>
+              )}
               <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', background: 'var(--color-bg-inset)' }}>
-                Items match by name/number: existing records are kept, new items added, removed standard items retired (not deleted). Custom additions and catalogs not in this workbook (formal, 623A types, inspection checklist) are untouched.
+                Items match by name / number. Existing records are kept, new items added, removed standard items retired (not deleted) so member progress survives. Admin-edited `required` and `training_refs` flags on JQS are preserved across uploads. Custom additions and catalogs not in this workbook (formal, 623A types, inspection checklist) are untouched.
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '12px 16px', borderTop: '1px solid var(--color-border)' }}>

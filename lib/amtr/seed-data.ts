@@ -122,7 +122,13 @@ export type SyncCfg = { table: string; rows: SyncRow[]; key: (r: SyncRow) => str
 // Natural key + synced fields per standard catalog (shared by the bundled sync
 // and the uploaded-workbook sync so matching is identical).
 export const CATALOG_SYNC_META: Record<string, { key: (r: SyncRow) => string; fields: string[] }> = {
-  amtr_jqs_catalog: { key: (r) => `${r.kind}|${r.number ?? r.title}`, fields: ['kind', 'number', 'title', 'depth', 'required', 'training_refs', 'core_cert', 'deploy_sei', 'prof3', 'prof5', 'prof7', 'prof9', 'sort_order'] },
+  // `required` and `training_refs` are deliberately omitted from the
+  // JQS sync field list — the AFFSA workbook doesn't carry them, so
+  // including them would force every upload to overwrite NAMT-edited
+  // values back to their parsed defaults (false / null). Leaving
+  // them off means new items insert with their DB defaults but
+  // subsequent uploads don't touch them, preserving admin edits.
+  amtr_jqs_catalog: { key: (r) => `${r.kind}|${r.number ?? r.title}`, fields: ['kind', 'number', 'title', 'depth', 'core_cert', 'deploy_sei', 'prof3', 'prof5', 'prof7', 'prof9', 'sort_order'] },
   amtr_1098_catalog: { key: (r) => String(r.task), fields: ['task', 'type', 'frequency', 'score_or_hours', 'sort_order'] },
   amtr_formal_catalog: { key: (r) => `${r.section}|${r.course}`, fields: ['section', 'course', 'sort_order'] },
   amtr_rat_catalog: { key: (r) => String(r.course), fields: ['course', 'category', 'method', 'frequency', 'sort_order'] },
@@ -152,6 +158,63 @@ export function buildSyncCfg(table: string, rows: SyncRow[]): SyncCfg {
 }
 
 export type SyncResult = { table: string; added: number; updated: number; retired: number; error: string | null }
+
+/** Per-table diff produced by computeSyncDiff — fed to the admin
+ *  preview modal so they see EXACTLY what will change before clicking
+ *  Update. Samples are up to 5 representative item labels per bucket. */
+export type SyncDiffTable = {
+  table: string
+  added: number
+  updated: number
+  retired: number
+  addedSamples: string[]
+  updatedSamples: string[]
+  retiredSamples: string[]
+}
+export type SyncDiff = { perTable: SyncDiffTable[]; totals: { added: number; updated: number; retired: number } }
+
+/** Dry-run computation of what runSyncCatalogs would do with these
+ *  cfgs against the base's current catalogs. Reads only. */
+export async function computeSyncDiff(baseId: string, cfgs: SyncCfg[]): Promise<SyncDiff> {
+  const currentYearStr = String(new Date().getUTCFullYear())
+  const perTable: SyncDiffTable[] = []
+  for (const cfg of cfgs) {
+    let existing = await fetchAmtrByBase<SyncRow>(cfg.table, baseId)
+    if (cfg.table === 'amtr_1098_catalog') {
+      existing = existing.filter((r) => String(r.year_label) === currentYearStr)
+    }
+    const exByKey = new Map(existing.map((r) => [cfg.key(r), r]))
+    const newKeys = new Set(cfg.rows.map(cfg.key))
+    let added = 0, updated = 0, retired = 0
+    const addedSamples: string[] = [], updatedSamples: string[] = [], retiredSamples: string[] = []
+    const labelOf = (r: SyncRow): string => String(r.title ?? r.task ?? r.course ?? r.topic ?? r.name ?? r.sts_item ?? r.label ?? cfg.key(r))
+    for (const b of cfg.rows) {
+      const ex = exByKey.get(cfg.key(b))
+      if (!ex) {
+        added++
+        if (addedSamples.length < 5) addedSamples.push(labelOf(b))
+      } else {
+        const changed = ex.retired === true || ex.managed !== true || cfg.fields.some((f) => String(ex[f] ?? '') !== String(b[f] ?? ''))
+        if (changed) {
+          updated++
+          if (updatedSamples.length < 5) updatedSamples.push(labelOf(b))
+        }
+      }
+    }
+    for (const ex of existing) {
+      if (ex.managed === true && ex.retired !== true && !newKeys.has(cfg.key(ex))) {
+        retired++
+        if (retiredSamples.length < 5) retiredSamples.push(labelOf(ex))
+      }
+    }
+    perTable.push({ table: cfg.table, added, updated, retired, addedSamples, updatedSamples, retiredSamples })
+  }
+  const totals = perTable.reduce(
+    (acc, t) => ({ added: acc.added + t.added, updated: acc.updated + t.updated, retired: acc.retired + t.retired }),
+    { added: 0, updated: 0, retired: 0 },
+  )
+  return { perTable, totals }
+}
 
 /**
  * Merge a set of standard-catalog configs into a base BY NATURAL KEY: update
