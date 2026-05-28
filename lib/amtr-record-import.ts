@@ -416,6 +416,10 @@ export async function applyAmtrImport(
   ])
   const byName = (cat: Row[], field: string) => { const m = new Map<string, Row>(); for (const c of cat) m.set(norm(String(c[field] ?? '')), c); return m }
   const qualByName = byName(qualCat, 'name')
+  // Fuzzy fallback for the Qualifications page (QTP/PCGs + skill levels/SEIs):
+  // the source record's titles rarely match the catalog verbatim, so dates
+  // should carry over on a close match. Same matcher as the 1098 import.
+  const qualCandidates = qualCat.map((c) => ({ task: String(c.name ?? ''), row: c }))
   const ratByName = byName(ratCat, 'course')
   const jqsByNum = new Map<string, Row>()
   for (const c of jqsCat) { if (c.kind === 'section') continue; const n = String(c.number ?? '').replace(/[.\s]+$/, '').trim(); if (n) jqsByNum.set(n, c) }
@@ -457,9 +461,11 @@ export async function applyAmtrImport(
     c1098Mut = await fetchAmtrByBase<Row>('amtr_1098_catalog', installationId)
   }
 
-  // Qualifications — QTP (complete date) and skill/SEI (attained).
+  // Qualifications — QTP (complete date) and skill/SEI (attained). Exact
+  // normalized match first, then a fuzzy fallback so dates carry over even
+  // when the source title differs from the catalog wording.
   for (const item of p.qtp) {
-    const c = qualByName.get(norm(item.name))
+    const c = qualByName.get(norm(item.name)) ?? matchTaskFuzzy(item.name, qualCandidates)
     if (!c) { unmatched.push(`Qual: ${item.name}`); continue }
     const { error } = await upsertAmtrRow(
       'amtr_qual_progress',
@@ -469,7 +475,7 @@ export async function applyAmtrImport(
     if (error) onErr(`Qual ${item.name}`, error); else written++
   }
   for (const item of p.quals) {
-    const c = qualByName.get(norm(item.name))
+    const c = qualByName.get(norm(item.name)) ?? matchTaskFuzzy(item.name, qualCandidates)
     if (!c) { unmatched.push(`Qual: ${item.name}`); continue }
     const { error } = await upsertAmtrRow(
       'amtr_qual_progress',
