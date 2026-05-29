@@ -1261,7 +1261,7 @@ export default function InfrastructureMapPage() {
     })
     const facilityLabel = matchedFacility ? `${matchedFacility.facility_number} — ${matchedFacility.description}` : undefined
 
-    const { data: disc } = await createDiscrepancy({
+    const { data: disc, error: discErr } = await createDiscrepancy({
       title: `INOP: ${featureDisplayName}`,
       description: descParts.join('\n'),
       location_text: feature.layer || 'Airfield',
@@ -1290,6 +1290,10 @@ export default function InfrastructureMapPage() {
 
     if (disc) {
       toast.success(`Outage reported — Discrepancy ${disc.display_id} created`)
+    } else if (discErr) {
+      // The feature IS marked inoperative, but auto-creating the tracked work
+      // order failed — don't pretend everything succeeded.
+      toast.warning(`Outage recorded, but the work order could not be created (${discErr}). Please create the discrepancy manually.`)
     } else {
       toast.success('Outage reported')
     }

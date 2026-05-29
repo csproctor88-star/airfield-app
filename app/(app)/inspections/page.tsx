@@ -2128,7 +2128,9 @@ export default function InspectionsPage() {
                   if (half.rcrReported && half.rcrValue) parts.push(`RCR/${half.rcrValue}`)
                   if (half.bwcValue) parts.push(`BWC/${half.bwcValue.toUpperCase()}`)
                   const details = `AFLD3${oiStr} advises ${parts.join(', ')}`
-                  logActivity('updated', 'airfield_status', installationId || crypto.randomUUID(), undefined, { details }, installationId)
+                  // Only log when we can attribute the entry to a real base — a
+                  // throwaway random entity_id with no base_id pollutes the audit trail.
+                  if (installationId) logActivity('updated', 'airfield_status', installationId, undefined, { details }, installationId)
 
                   toast.success(hasChanges ? 'Conditions updated & pushed to airfield status' : 'Conditions reported (no change from current status)')
                 }}

@@ -1,5 +1,6 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
+import { friendlyError } from '@/lib/utils'
 
 function db() {
   return createClient()
@@ -354,9 +355,11 @@ export async function createParkingSpot(input: {
 export async function updateParkingSpot(
   id: string,
   updates: Partial<Omit<ParkingSpot, 'id' | 'plan_id' | 'base_id' | 'created_at'>>
-): Promise<ParkingSpot | null> {
+): Promise<{ data: ParkingSpot | null; error: string | null }> {
   const supabase = db()
-  if (!supabase) return null
+  // Unconfigured / demo mode: no persistence layer — treat as a silent no-op,
+  // NOT an error, so the UI doesn't falsely report a save failure.
+  if (!supabase) return { data: null, error: null }
 
   const { data, error } = await supabase
     .from('parking_spots')
@@ -365,8 +368,11 @@ export async function updateParkingSpot(
     .select()
     .single()
 
-  if (error || !data) return null
-  return data as ParkingSpot
+  if (error) {
+    console.error('Failed to update parking spot:', error.message)
+    return { data: null, error: friendlyError(error.message) }
+  }
+  return { data: data as ParkingSpot, error: null }
 }
 
 export async function deleteParkingSpot(id: string): Promise<boolean> {
@@ -383,9 +389,10 @@ export async function deleteParkingSpot(id: string): Promise<boolean> {
 
 export async function bulkUpdateSpotPositions(
   updates: { id: string; longitude: number; latitude: number; heading_deg: number }[]
-): Promise<boolean> {
+): Promise<{ ok: boolean; error: string | null }> {
   const supabase = db()
-  if (!supabase) return false
+  // Unconfigured / demo mode: treat as a no-op success (no persistence layer).
+  if (!supabase) return { ok: true, error: null }
 
   const now = new Date().toISOString()
 
@@ -397,7 +404,12 @@ export async function bulkUpdateSpotPositions(
   )
 
   const results = await Promise.all(promises)
-  return results.every((r: any) => !r.error)
+  const failed = results.find((r: { error: { message: string } | null }) => r.error)
+  if (failed?.error) {
+    console.error('Failed to bulk-update parking spot positions:', failed.error.message)
+    return { ok: false, error: friendlyError(failed.error.message) }
+  }
+  return { ok: true, error: null }
 }
 
 // ── Obstacles CRUD ──
@@ -447,9 +459,10 @@ export async function createParkingObstacle(input: {
 export async function updateParkingObstacle(
   id: string,
   updates: Partial<Omit<ParkingObstacle, 'id' | 'base_id' | 'created_by' | 'created_at'>>
-): Promise<ParkingObstacle | null> {
+): Promise<{ data: ParkingObstacle | null; error: string | null }> {
   const supabase = db()
-  if (!supabase) return null
+  // Unconfigured / demo mode: silent no-op, not an error.
+  if (!supabase) return { data: null, error: null }
 
   const { data, error } = await supabase
     .from('parking_obstacles')
@@ -458,8 +471,11 @@ export async function updateParkingObstacle(
     .select()
     .single()
 
-  if (error || !data) return null
-  return data as ParkingObstacle
+  if (error) {
+    console.error('Failed to update parking obstacle:', error.message)
+    return { data: null, error: friendlyError(error.message) }
+  }
+  return { data: data as ParkingObstacle, error: null }
 }
 
 export async function deleteParkingObstacle(id: string): Promise<boolean> {

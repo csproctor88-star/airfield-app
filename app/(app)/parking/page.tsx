@@ -1842,12 +1842,25 @@ export default function ParkingPage() {
             return { ...s, longitude: nLng, latitude: nLat }
           }))
           groupDragStartRef.current = new Map()
-          await bulkUpdateSpotPositions(updates)
+          const { ok, error } = await bulkUpdateSpotPositions(updates)
+          if (!ok) {
+            toast.error(`Couldn't save new positions: ${error ?? 'unknown error'}. Reverting.`)
+            // Snap every moved spot back to its pre-drag position.
+            setSpots(prev => prev.map(s => {
+              const start = groupSnapshot.get(s.id)
+              return start ? { ...s, longitude: start.lng, latitude: start.lat } : s
+            }))
+          }
           return
         }
         groupDragStartRef.current = new Map()
+        const prevSpot = spotsRef.current.find(s => s.id === sid)
         setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: lng, latitude: lat } : s))
-        await updateParkingSpot(sid, { longitude: lng, latitude: lat })
+        const { error: spotErr } = await updateParkingSpot(sid, { longitude: lng, latitude: lat })
+        if (spotErr && prevSpot) {
+          toast.error(`Couldn't save new position: ${spotErr}. Reverting.`)
+          setSpots(prev => prev.map(s => s.id === sid ? { ...s, longitude: prevSpot.longitude, latitude: prevSpot.latitude } : s))
+        }
         return
       }
 
@@ -1867,7 +1880,11 @@ export default function ParkingPage() {
             updates.line_coords = obs.line_coords.map(c => [c[0] + dLng, c[1] + dLat] as [number, number])
           }
           setObstacles(prev => prev.map(o => o.id === oid ? { ...o, ...updates } : o))
-          await updateParkingObstacle(oid, updates)
+          const { error: obsErr } = await updateParkingObstacle(oid, updates)
+          if (obsErr) {
+            toast.error(`Couldn't save new position: ${obsErr}. Reverting.`)
+            setObstacles(prev => prev.map(o => o.id === oid ? obs : o))
+          }
         }
         return
       }
@@ -2018,11 +2035,17 @@ export default function ParkingPage() {
       if (bearing === undefined) return
       e.preventDefault()
       const dist = e.shiftKey ? 5 : 1 // feet
+      const prevSpot = editingSpot
       const pt = offsetPoint({ lat: editingSpot.latitude, lon: editingSpot.longitude }, bearing, dist)
       const updated = { ...editingSpot, longitude: pt.lon, latitude: pt.lat }
       setEditingSpot(updated)
       setSpots(prev => prev.map(s => s.id === updated.id ? { ...s, longitude: pt.lon, latitude: pt.lat } : s))
-      await updateParkingSpot(updated.id, { longitude: pt.lon, latitude: pt.lat })
+      const { error: nudgeErr } = await updateParkingSpot(updated.id, { longitude: pt.lon, latitude: pt.lat })
+      if (nudgeErr) {
+        toast.error(`Couldn't save new position: ${nudgeErr}. Reverting.`)
+        setEditingSpot(prevSpot)
+        setSpots(prev => prev.map(s => s.id === prevSpot.id ? { ...s, longitude: prevSpot.longitude, latitude: prevSpot.latitude } : s))
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
@@ -2775,7 +2798,8 @@ export default function ParkingPage() {
   }
 
   const handleUpdateSpot = async (spotId: string, updates: Partial<ParkingSpot>) => {
-    const updated = await updateParkingSpot(spotId, updates)
+    const { data: updated, error } = await updateParkingSpot(spotId, updates)
+    if (error) { toast.error(error); return }
     if (updated) {
       setSpots(prev => prev.map(s => s.id === spotId ? updated : s))
       if (editingSpot?.id === spotId) setEditingSpot(updated)
@@ -2825,7 +2849,8 @@ export default function ParkingPage() {
   }
 
   const handleUpdateObstacle = async (obsId: string, updates: Partial<ParkingObstacle>) => {
-    const updated = await updateParkingObstacle(obsId, updates)
+    const { data: updated, error } = await updateParkingObstacle(obsId, updates)
+    if (error) { toast.error(error); return }
     if (updated) {
       setObstacles(prev => prev.map(o => o.id === obsId ? updated : o))
       if (editingObstacle?.id === obsId) setEditingObstacle(updated)
@@ -2949,8 +2974,10 @@ export default function ParkingPage() {
       toast.error('A line needs at least 2 points')
       return
     }
-    const updated = await updateParkingObstacle(drawingLineObsId, { line_coords: drawingLinePoints })
-    if (updated) {
+    const { data: updated, error } = await updateParkingObstacle(drawingLineObsId, { line_coords: drawingLinePoints })
+    if (error) {
+      toast.error(error)
+    } else if (updated) {
       setObstacles(prev => prev.map(o => o.id === drawingLineObsId ? updated : o))
       toast.success('Line obstacle saved')
     }
