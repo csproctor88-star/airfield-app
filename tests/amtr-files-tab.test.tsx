@@ -18,8 +18,12 @@ vi.mock('@/lib/supabase/amtr', async (importActual) => {
   }
 })
 
-function renderTab(canWrite = true) {
-  return render(<FilesTab memberId="member-1" installationId="base-1" canWrite={canWrite} />)
+async function renderTab(canWrite = true) {
+  const result = render(<FilesTab memberId="member-1" installationId="base-1" canWrite={canWrite} />)
+  // Flush the on-mount fetch so its setState resolves inside act() — otherwise
+  // the async update lands after the test body and emits a React act() warning.
+  await waitFor(() => expect(fetchAmtrByMember).toHaveBeenCalled())
+  return result
 }
 
 describe('AMTR Files tab — add-file dialog', () => {
@@ -29,7 +33,7 @@ describe('AMTR Files tab — add-file dialog', () => {
   })
 
   it('opens a dialog with Title, Date, and Attach controls', async () => {
-    renderTab()
+    await renderTab()
     fireEvent.click(screen.getByRole('button', { name: /add file/i }))
     expect(screen.getByText('Add supporting file')).toBeTruthy()
     expect(screen.getByPlaceholderText(/1098/)).toBeTruthy() // Document title
@@ -37,7 +41,7 @@ describe('AMTR Files tab — add-file dialog', () => {
   })
 
   it('keeps Upload disabled until title, date, and a file are all present', async () => {
-    const { container } = renderTab()
+    const { container } = await renderTab()
     fireEvent.click(screen.getByRole('button', { name: /add file/i }))
 
     const uploadBtn = screen.getByRole('button', { name: /^Upload$/ }) as HTMLButtonElement
@@ -60,7 +64,7 @@ describe('AMTR Files tab — add-file dialog', () => {
   })
 
   it('passes the file plus document title and date to uploadAmtrFile', async () => {
-    const { container } = renderTab()
+    const { container } = await renderTab()
     fireEvent.click(screen.getByRole('button', { name: /add file/i }))
 
     fireEvent.change(screen.getByPlaceholderText(/1098/), { target: { value: 'Bird/Wildlife 1098' } })
@@ -78,7 +82,7 @@ describe('AMTR Files tab — add-file dialog', () => {
   })
 
   it('auto-fills the title from the filename when left blank', async () => {
-    const { container } = renderTab()
+    const { container } = await renderTab()
     fireEvent.click(screen.getByRole('button', { name: /add file/i }))
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
@@ -89,8 +93,8 @@ describe('AMTR Files tab — add-file dialog', () => {
     expect(titleInput.value).toBe('AFFSA Training Record')
   })
 
-  it('hides Add file when the user cannot write', () => {
-    renderTab(false)
+  it('hides Add file when the user cannot write', async () => {
+    await renderTab(false)
     expect(screen.queryByRole('button', { name: /add file/i })).toBeNull()
   })
 })
