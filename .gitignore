@@ -36,6 +36,9 @@ next-env.d.ts
 # Supabase CLI temp files
 supabase/.temp/
 
+# Firecrawl CLI cache (dropped when running firecrawl from the repo root)
+.firecrawl/
+
 # Prompt/instruction files
 CLAUDE_CODE_PROMPT*.md
 

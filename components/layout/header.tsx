@@ -131,13 +131,22 @@ export function Header() {
   // approve elsewhere in the app flows back to the count without a
   // tight polling loop.
   const installationId = currentInstallation?.id || null
+  const baseTimezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || 'UTC'
   const [todayPprCount, setTodayPprCount] = useState(0)
   useEffect(() => {
     if (!installationId) { setTodayPprCount(0); return }
     let cancelled = false
     const refresh = async () => {
       try {
-        const today = new Date().toISOString().slice(0, 10)
+        // "Today" in base-local time, matching the airfield status board's PPR
+        // panel (Intl en-CA → YYYY-MM-DD). A bare UTC date can disagree with
+        // the board near UTC midnight and show a different count.
+        let today: string
+        try {
+          today = new Intl.DateTimeFormat('en-CA', { timeZone: baseTimezone }).format(new Date())
+        } catch {
+          today = new Date().toISOString().slice(0, 10)
+        }
         const entries = await fetchPprEntriesForDate(installationId, today)
         // Count active PPRs only — denied/canceled requests aren't on the
         // field, so they don't belong in the "PPRs today" chip (matches the
@@ -155,7 +164,7 @@ export function Header() {
       window.removeEventListener('glidepath:write-committed', onWriteCommitted)
       window.removeEventListener('focus', onFocus)
     }
-  }, [installationId])
+  }, [installationId, baseTimezone])
 
   // Visibility still driven from the user's role via the permission
   // matrix — matches the Phase C seed (`installations:switch` is on
