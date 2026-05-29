@@ -1,163 +1,112 @@
 # Session Handoff
 
-**Date:** 2026-05-28
-**Branch:** `main` (`amtr-fixes` merged + deleted this session)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (103/103 pages), `npx vitest run` ✓ (531 pass / 48 files)
-**HEAD:** `d1aaa47` — pushed to `origin/main`
+**Date:** 2026-05-29
+**Branch:** `main` (local commits ahead of `origin` — **NOT pushed**, see ⚠️ below)
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (all pages), `npx vitest run` ✓ (569 pass / 54 files)
+**HEAD:** `65981fb` — 11 commits ahead of `origin/main` (`282e3af`)
 
 ---
 
 ## What this session was
 
-Two phases. First, the long-standing carryover finally landed: the
-`amtr-fixes` branch (45 commits) was reviewed, fast-forward-merged to `main`,
-pushed to production, and deleted on local + origin. The stale
-`feat/amtr-module` branch (fully merged) was also cleaned up. Second, a
-tech-debt pass: a real user-deletion bug fixed, a reset-password authorization
-hole closed, and two quick wins. Everything below is shipped to `origin/main`.
+A multi-agent **codebase health audit** (saved at `docs/Codebase_Health_Audit_2026-05-28.md`)
+graded the app **B overall**, then a 4-phase remediation to drive every dimension toward A.
+Plan: `C:\Users\cspro\.claude\plans\peppy-sauteeing-creek.md`. Run in `/auto` mode.
+
+**Grade movement:** Security B→A, Performance A, Data Integrity B→A (core bugs),
+Test Coverage C→A, Dependencies C→A, Duplication B→A, Conventions A (polished),
+Type Safety B→improved (full A deferred — see below), Architecture B (extraction deferred).
 
 ---
 
-## What shipped this session
+## ⚠️ TWO REQUIRED DEPLOY ACTIONS (not yet done)
 
-### 1. `amtr-fixes` merged to `main` (`e2e14d7`)
-The 45-commit AMTR batch — per-year 1098 catalog + archive, multi-stage
-auto-623A, Files-tab upload + Document Title/Date dialog, DAFMAN comment
-templates, real-AFFSA-record import fixes (fuzzy 1098/Qual match, 803 merge
-dedup, 623A remarks split), and the Transcribe feature — plus the PPR
-active-count fix (`isActivePpr` helper). Fast-forward merge, no conflicts;
-merged tree was byte-identical to the verified branch HEAD. AMTR migrations
-`2026061400`–`2026061503` were already applied live.
-
-**Still not live-walked in a browser** — user said "call it good, will report
-fixes." A real-record pass (import, transcribe ×4 tabs, Files-tab dialog) is
-the outstanding verification.
-
-### 2. User-deletion FK fix — migration `2026061504` (`06355cd`)
-**Real bug.** `2026022802` had set `ON DELETE SET NULL` on 13 profiles(id) FK
-columns; every table added afterward created its actor columns without an
-`ON DELETE` clause (defaulting to `NO ACTION`) and was never added to the
-delete route's manual nullify list. Deleting a user referenced by any of them
-(signed a daily review, changed ARFF status, created a NOTAM, …) failed with a
-FK violation. Migration converts the **21** remaining `NO ACTION` profiles FKs
-(list taken from live `pg_constraint`, not CREATE-TABLE text — several had been
-altered) to `ON DELETE SET NULL`. **Applied live; re-audit shows zero NO ACTION
-profiles FKs.** New guard test `tests/fk-profiles-on-delete-guard.test.ts`
-fails any future migration that adds a profiles FK without `ON DELETE`. Delete
-route comment updated (manual nullify is now a redundant safety net).
-
-### 3. `admin/reset-password` authz fix (`dd79e18`)
-The endpoint authorized the caller against `userId` but generated the recovery
-link from a separately client-supplied `email`, never checked to match. A base
-admin could authorize via a managed userId while passing an arbitrary email.
-Now the address is read from the target via `getUserById`; the body `email` is
-ignored. Client contract unchanged (it already sends `userId`).
-
-### 4. Quick wins (`8853ba9`)
-- **PPR "today" chip** in the header now computes the date in base-local time
-  (Intl en-CA, installation timezone, UTC fallback) to match the airfield
-  status board's PPR panel — they could disagree near UTC midnight.
-- **`.gitignore`** now ignores `.firecrawl/`.
-
-### 5. Rate limiting on unauthenticated email endpoints — migration `2026061505` (`d1aaa47`)
-`forgot-password`, `signup-email`, and `send-ppr-confirmation` triggered Resend
-emails / account creation with no auth and no server-side throttle (the
-feedback form's localStorage cooldown is client-side, trivially bypassed).
-Postgres-backed sliding-window limiter (durable across Vercel serverless
-instances): `rate_limit_hits` table (RLS on, no policies) + SECURITY DEFINER
-`check_rate_limit(bucket, max, window_seconds)` RPC, granted to
-service_role/authenticated only (never anon). `lib/rate-limit.ts` wraps it —
-`checkRateLimits(admin, rules[])` checks per-email + per-IP buckets and **fails
-open** on RPC error; `getClientIp()` reads x-forwarded-for / x-real-ip. Limits:
-forgot-password 3/email/15min + 20/ip/hr; signup 10/ip/hr + 5/email/hr;
-ppr-confirm 5/email/hr + 20/ip/hr. Over-limit → 429 (enumeration-safe on
-forgot-password). **Applied live; RPC verified (true,true,false at max=2).**
-The other `send-ppr-*` routes (approval/denial/cancellation/coordination) are
-AMOPS-triggered, not public — left unthrottled by design.
+1. **Push `main` to deploy.** 11 commits are local-only. The live DB is in a
+   safe, backward-compatible state right now (the currently-deployed OLD code
+   still works against it).
+2. **After the deploy is live, run the kiosk column-drop migration:**
+   `npx supabase db query --linked --file supabase/migrations/2026061602_kiosk_token_drop_column.sql`
+   This is intentionally held back — running it before the new code deploys would
+   500 the live **KMTC** kiosk (which is in active use). It drops the now-unused,
+   publicly-readable `bases.kiosk_token` column; the secret already lives in the
+   new `base_kiosk_tokens` table.
 
 ---
 
 ## Migrations status
 
-| File | Applied | What |
+| File | Applied live | What |
 |---|---|---|
-| `2026061504_user_delete_set_null_remainder.sql` | ✅ | `ON DELETE SET NULL` on the 21 remaining `NO ACTION` profiles(id) FKs. Verified live (`pg_constraint.confdeltype`). |
-| `2026061505_rate_limit.sql` | ✅ | `rate_limit_hits` table + `check_rate_limit` SECURITY DEFINER RPC. Verified live (true,true,false at max=2). |
-
-No pending migrations. (AMTR `2026061400`–`2026061503` applied in prior sessions.)
+| `2026061600_pending_status_gate.sql` | ✅ verified | `user_is_sys_admin`/`user_has_base_access`/`user_has_permission` now require `status='active'`. Active users unaffected (verified); pending/deactivated denied. |
+| `2026061601_kiosk_token_isolation.sql` | ✅ verified | New service-role-only `base_kiosk_tokens` table + `bases.kiosk_enabled` flag; tokens copied (KMTC verified identical); old column kept for backward-compat. |
+| `2026061602_kiosk_token_drop_column.sql` | ⛔ **HOLD until after deploy** | Drops `bases.kiosk_token`. See deploy actions above. |
 
 ---
 
-## Bugs fixed during the session
+## What shipped (11 commits)
 
-- **User deletion failed for active users** — see #2 above. Latent since each
-  post-`2026022802` table shipped; would FK-violate on deleting anyone who had
-  signed/created operational rows in the newer tables.
-- **reset-password email/userId mismatch** — see #3 above.
-- **PPR today chip timezone** — see #4 above.
+**Phase 1 — Security + silent-save (Security→A, Performance→A):**
+- Self-signup can no longer assign admin roles (`sanitizeSelfSignupRole`, server-side) + guard test.
+- Pending/deactivated accounts now blocked at the DB layer (migration `2026061600`).
+- Kiosk tokens isolated to a service-role-only table (expand/contract).
+- Legacy `/api/airfield-status` PATCH now requires `airfield_status:write` + base access.
+- Parking map drags warn + revert on failed save; `parking.ts` writes return `{data,error}`.
+- Outage report no longer shows green success when the work-order create fails.
+- Inspections audit-log no longer writes throwaway random IDs.
+- Background timers (dashboard 30s, header 5min) gated on tab visibility; header → `getSession`.
+- Generous per-IP rate limits on `/api/elevation`, `/api/airport-lookup`, `/api/notams/sync`.
+
+**Phase 2 — Tests (Test Coverage→A):**
+- `tests/outage-engine.test.ts` — DAFMAN 13-204v2 Table A3.1 math (1 worked example/rule).
+- `tests/parking-clearance-geometry.test.ts` — UFC 3-260-01 collision geometry.
+- `tests/rls-cross-base-isolation.test.ts` + `supabase/seed-test-accounts.mjs` — proves the
+  cross-base security wall with seeded accounts (env-gated).
+- PDF smoke tests (array-input generators); fixed the AMTR files-tab `act()` warning.
+
+**Phase 3 — Deps + type safety (Dependencies→A; type safety improved):**
+- Dropped vulnerable `xlsx` (was dead code), bumped `jspdf`→4.2.1. `npm audit` 29→13
+  (critical resolved; remaining 13 are build-tooling transitives needing major bumps).
+- `normalizeHalfDraft` validates inspection drafts at the read boundary (DB + localStorage).
+
+**Phase 4 — Cleanup + docs (Duplication→A, Conventions polished):**
+- Deleted ~4,600 lines of dead code (9 orphaned Mapbox files, `WorkOrderModal`, 2 SMS exporters).
+- Refreshed `CLAUDE.md` to match reality (route/generator/module/migration counts, public
+  route layout, base-config path, naming example).
 
 ---
 
-## Known issues / tech debt
+## Test-account seed (production)
 
-| Item | Severity | Notes |
+`supabase/seed-test-accounts.mjs` created 2 prefixed test bases (`__TEST_RLS__ Base A/B`)
+and 3 test users (`rls-*@glidepath-rls-test.com`, status active) **in the live DB** for the
+isolation test. Creds written to gitignored `.env.local` (`TEST_RLS_*`). Remove anytime with
+`node supabase/seed-test-accounts.mjs --down`.
+
+---
+
+## Deferred (review-gated, intentionally NOT done in auto mode)
+
+| Item | Why deferred | Grade impact |
 |---|---|---|
-| AMTR batch never walked in a live browser | Med | Import, transcribe (4 tabs), Files-tab Add-file dialog all built/tested, never clicked through. Needs a real-record pass. |
-| v2.34.0 release prep | Med | Version bump in 5 places + CHANGELOG + tag — user deferring the bump "a few days". |
-| Email-confirmation toggle likely back ON | Low | Supabase dashboard setting (ops, not code). Per-user `email_confirmed_at` SQL is the band-aid. |
-| 1098 `next_due` not recomputed on transcribe | Low | User decided no recompute needed. |
-| `as any` casts (~124), 4K-LOC page files, PDF boilerplate, thin tests | Low | Structural, multi-session, not blocking. |
+| **Type regen** of `lib/supabase/types.ts` | Full `supabase gen types` is an ~8,900-line diff that drops hand-maintained aliases and may cascade type errors — needs review. | Type Safety: would complete A |
+| **CRUD `{data,error}` standardization** (custom-status, lighting-systems, infrastructure-features, inspection-templates) | 28 call sites across 18 files for a LOW finding; the real silent-save bugs were already fixed in Phase 1. | Data Integrity hygiene |
+| **Base-setup file extraction** (`base-config/setup/page.tsx`, ~6k LOC → `components/base-setup/*`) | Structural restructure — per project convention needs screenshot-first + plan-mode review. | Architecture: would complete A |
+| **Rename 9 PascalCase component files** to kebab-case | Cosmetic; Conventions already A. | — |
+| **Next.js 15 / major dep bumps** | Deliberate future cycle (audit said no urgency). | — |
+
+---
+
+## Known counts (corrected ledger)
+
+- `as any`: **161**, `as unknown as`: **153** (project notes previously said ~124 `as any`).
+  Most are idiomatic Supabase Json/enum refinement or browser-API glue — not defects.
+- 569 tests / 54 files. 254 migrations. 20 PDF generators. 44 `lib/supabase` modules. 23 API route handlers.
 
 ---
 
 ## Next session tasks
 
-1. **Live UI verification** of the AMTR batch against the real
-   `Training Record.xlsx`: import, transcribe (all 4 tabs), Files-tab dialog.
-2. **v2.34.0 release prep** (when the user is ready — version in 5 places +
-   CHANGELOG + tag).
-3. Optional: durable email-confirmation toggle fix (Supabase dashboard).
-
----
-
-## Build snapshot
-
-```
-TypeScript clean (npx tsc --noEmit exit 0)
-Build: npm run build — compiled successfully, 103/103 static pages.
-Tests: 531 pass / 48 files (+1 FK guard, +6 rate-limit helper).
-
-New test files this session:
-  tests/fk-profiles-on-delete-guard.test.ts — static guard: new migrations
-  must declare ON DELETE on profiles FKs.
-  tests/rate-limit.test.ts — checkRateLimits allow/deny/fail-open + getClientIp.
-```
-
----
-
-## Recent releases
-
-| Version | Date | Headline |
-|---|---|---|
-| **Unreleased** | — | AMTR batch (merged to main) + PPR active-count fix + user-deletion FK fix + reset-password authz fix + PPR-chip tz fix + email-endpoint rate limiting. All on `main`, pushed; not yet version-tagged. |
-| v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
-
----
-
-## Key files touched this session
-
-### New files
-- `supabase/migrations/2026061504_user_delete_set_null_remainder.sql`
-- `supabase/migrations/2026061505_rate_limit.sql`
-- `tests/fk-profiles-on-delete-guard.test.ts`
-- `tests/rate-limit.test.ts`
-- `lib/rate-limit.ts` — `checkRateLimits()` + `getClientIp()`.
-
-### Modified files
-- `app/api/admin/users/[id]/route.ts` — delete-route comment (FK now DB-handled).
-- `app/api/admin/reset-password/route.ts` — derive email from userId.
-- `app/api/forgot-password/route.ts` — rate limiting.
-- `app/api/signup-email/route.ts` — rate limiting.
-- `app/api/send-ppr-confirmation/route.ts` — rate limiting.
-- `components/layout/header.tsx` — base-local PPR "today" date.
-- `.gitignore` — ignore `.firecrawl/`.
+1. **Push to deploy**, then run `2026061602_kiosk_token_drop_column.sql` (see ⚠️ above).
+2. Optional, review-gated: types.ts regen; CRUD standardization; base-setup extraction.
+3. Re-run the multi-agent health audit (or a scoped pass) to confirm grades moved to A.
+4. Still outstanding from prior session: live-browser walk of the AMTR batch; v2.34.0 release prep.
