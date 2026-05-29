@@ -1,7 +1,7 @@
 # Session Handoff
 
 **Date:** 2026-05-29
-**Branch:** `main` (local commits ahead of `origin` — **NOT pushed**, see ⚠️ below)
+**Branch:** `main` (pushed to `origin`; production deploy live; kiosk contract migration applied)
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (all pages), `npx vitest run` ✓ (569 pass / 54 files)
 **HEAD:** `65981fb` — 11 commits ahead of `origin/main` (`282e3af`)
 
@@ -19,17 +19,13 @@ Type Safety B→improved (full A deferred — see below), Architecture B (extrac
 
 ---
 
-## ⚠️ TWO REQUIRED DEPLOY ACTIONS (not yet done)
+## ✅ DEPLOY ACTIONS — COMPLETE (2026-05-29)
 
-1. **Push `main` to deploy.** 11 commits are local-only. The live DB is in a
-   safe, backward-compatible state right now (the currently-deployed OLD code
-   still works against it).
-2. **After the deploy is live, run the kiosk column-drop migration:**
-   `npx supabase db query --linked --file supabase/migrations/2026061602_kiosk_token_drop_column.sql`
-   This is intentionally held back — running it before the new code deploys would
-   500 the live **KMTC** kiosk (which is in active use). It drops the now-unused,
-   publicly-readable `bases.kiosk_token` column; the secret already lives in the
-   new `base_kiosk_tokens` table.
+1. ~~Push `main` to deploy.~~ **Done** — pushed; Vercel production deploy live.
+2. ~~Run the kiosk column-drop migration after deploy.~~ **Done** —
+   `2026061602` applied post-deploy. Verified: `bases.kiosk_token` dropped,
+   both tokens (incl. KMTC, still active) preserved in `base_kiosk_tokens`,
+   `kiosk_enabled` flag intact. The kiosk cross-base exposure is fully closed.
 
 ---
 
@@ -39,7 +35,7 @@ Type Safety B→improved (full A deferred — see below), Architecture B (extrac
 |---|---|---|
 | `2026061600_pending_status_gate.sql` | ✅ verified | `user_is_sys_admin`/`user_has_base_access`/`user_has_permission` now require `status='active'`. Active users unaffected (verified); pending/deactivated denied. |
 | `2026061601_kiosk_token_isolation.sql` | ✅ verified | New service-role-only `base_kiosk_tokens` table + `bases.kiosk_enabled` flag; tokens copied (KMTC verified identical); old column kept for backward-compat. |
-| `2026061602_kiosk_token_drop_column.sql` | ⛔ **HOLD until after deploy** | Drops `bases.kiosk_token`. See deploy actions above. |
+| `2026061602_kiosk_token_drop_column.sql` | ✅ applied (post-deploy) | Dropped `bases.kiosk_token`. Verified column gone, tokens preserved in `base_kiosk_tokens`. |
 
 ---
 
