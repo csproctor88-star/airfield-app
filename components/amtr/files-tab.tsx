@@ -5,14 +5,18 @@
 // documents (PDF / image / Excel / Word). Files live in the private
 // `amtr-files` storage bucket (path-scoped RLS); metadata in
 // amtr_files. View opens a short-lived signed URL.
+//
+// "Add file" opens a dialog that captures a Document Title and the
+// Document's own Date (distinct from the upload date) before the
+// file is attached and uploaded — one document per add.
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import { FileText, FileSpreadsheet, FileImage, File as FileIcon, Upload, Trash2, ExternalLink, ShieldAlert } from 'lucide-react'
+import { FileText, FileSpreadsheet, FileImage, File as FileIcon, Upload, Trash2, ExternalLink, ShieldAlert, Paperclip, X } from 'lucide-react'
 import {
-  fetchAmtrByMember, uploadAmtrFile, deleteAmtrFile, getAmtrFileUrl, type AmtrFileRow,
+  fetchAmtrByMember, uploadAmtrFile, deleteAmtrFile, getAmtrFileUrl, humanFileSize, type AmtrFileRow,
 } from '@/lib/supabase/amtr'
-import { Btn } from '@/components/amtr/ui'
+import { Btn, Field } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
 
 // Browser file picker filter + a client-side guard. Mirrors the
@@ -34,8 +38,7 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
   const { memberId, installationId, canWrite } = props
   const [rows, setRows] = useState<AmtrFileRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [showDialog, setShowDialog] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -43,24 +46,6 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
     setLoading(false)
   }, [memberId])
   useEffect(() => { load() }, [load])
-
-  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? [])
-    e.target.value = ''
-    if (files.length === 0) return
-    setUploading(true)
-    let ok = 0
-    for (const file of files) {
-      const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-      if (!ALLOWED_EXT.has(ext)) { toast.error(`${file.name}: unsupported type (PDF, JPG, PNG, Excel, Word only)`); continue }
-      if (file.size > MAX_BYTES) { toast.error(`${file.name}: exceeds 25 MB`); continue }
-      const { error } = await uploadAmtrFile(installationId, memberId, file)
-      if (error) { toast.error(`${file.name}: ${error}`); continue }
-      ok++
-    }
-    setUploading(false)
-    if (ok > 0) { toast.success(`Uploaded ${ok} file${ok === 1 ? '' : 's'}`); load() }
-  }
 
   const open = async (r: AmtrFileRow) => {
     if (!r.storage_path) { toast.error('No file attached to this entry'); return }
@@ -70,7 +55,7 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
   }
 
   const remove = async (r: AmtrFileRow) => {
-    if (!window.confirm(`Delete "${r.name}"? This removes the file and its record.`)) return
+    if (!window.confirm(`Delete "${r.document_title || r.name}"? This removes the file and its record.`)) return
     const { error } = await deleteAmtrFile(r.id, r.storage_path)
     if (error) { toast.error(error); return }
     toast.success('File deleted'); load()
@@ -82,10 +67,9 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
         <h2 style={{ margin: 0, fontSize: 18 }}>Supporting Files</h2>
         {canWrite && (
           <div style={{ marginLeft: 'auto' }}>
-            <Btn variant="primary" onClick={() => fileRef.current?.click()} disabled={uploading}>
-              <Upload size={15} /> {uploading ? 'Uploading…' : 'Upload file'}
+            <Btn variant="primary" onClick={() => setShowDialog(true)}>
+              <Upload size={15} /> Add file
             </Btn>
-            <input ref={fileRef} type="file" accept={ACCEPT} multiple style={{ display: 'none' }} onChange={onPick} />
           </div>
         )}
       </div>
@@ -118,7 +102,7 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                <th style={th}>File</th><th style={th}>Uploaded</th><th style={th}>Size</th><th style={th} />
+                <th style={th}>Document</th><th style={th}>Doc Date</th><th style={th}>Uploaded</th><th style={th}>Size</th><th style={th} />
               </tr>
             </thead>
             <tbody>
@@ -126,12 +110,18 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
                 <tr key={r.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                   <td style={td}>
                     <button onClick={() => open(r)} disabled={!r.storage_path}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: r.storage_path ? 'pointer' : 'default', color: r.storage_path ? 'var(--color-text-1)' : 'var(--color-text-3)', fontFamily: 'inherit', fontSize: 'inherit', textAlign: 'left' }}>
-                      {iconFor(r.name, r.mime_type)}
-                      <span>{r.name}</span>
-                      {r.storage_path && <ExternalLink size={12} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />}
+                      style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 8, background: 'none', border: 'none', padding: 0, cursor: r.storage_path ? 'pointer' : 'default', color: r.storage_path ? 'var(--color-text-1)' : 'var(--color-text-3)', fontFamily: 'inherit', fontSize: 'inherit', textAlign: 'left' }}>
+                      <span style={{ marginTop: 1, flexShrink: 0 }}>{iconFor(r.name, r.mime_type)}</span>
+                      <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {r.document_title || r.name}
+                          {r.storage_path && <ExternalLink size={12} style={{ color: 'var(--color-accent)', flexShrink: 0 }} />}
+                        </span>
+                        {r.document_title && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{r.name}</span>}
+                      </span>
                     </button>
                   </td>
+                  <td style={{ ...td, color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>{r.document_date ?? '—'}</td>
                   <td style={{ ...td, color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>{r.uploaded_at?.slice(0, 10) ?? '—'}</td>
                   <td style={{ ...td, color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>{r.size ?? '—'}</td>
                   <td style={{ ...td, textAlign: 'right' }}>
@@ -148,6 +138,98 @@ export function FilesTab(props: { memberId: string; installationId: string; canW
           </table>
         </div>
       )}
+
+      {showDialog && (
+        <AddFileDialog
+          installationId={installationId}
+          memberId={memberId}
+          onClose={() => setShowDialog(false)}
+          onUploaded={load}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Add-file dialog: Document Title + Date + single attach ──────────
+// Title and Date are both required; Upload stays disabled until a valid
+// file is attached and both fields are filled. Controlled inputs (no
+// defaultValue) so submit always reflects what's on screen.
+function AddFileDialog({ installationId, memberId, onClose, onUploaded }: {
+  installationId: string; memberId: string; onClose: () => void; onUploaded: () => void
+}) {
+  const [title, setTitle] = useState('')
+  const [docDate, setDocDate] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
+    if (!ALLOWED_EXT.has(ext)) { toast.error(`${f.name}: unsupported type (PDF, JPG, PNG, Excel, Word only)`); return }
+    if (f.size > MAX_BYTES) { toast.error(`${f.name}: exceeds 25 MB`); return }
+    setFile(f)
+    // Convenience: seed the title from the filename (minus extension)
+    // only when the operator hasn't typed one yet.
+    setTitle((t) => t.trim() ? t : f.name.replace(/\.[^.]+$/, ''))
+  }
+
+  const submit = async () => {
+    if (!file || !title.trim() || !docDate || busy) return
+    setBusy(true)
+    const { error } = await uploadAmtrFile(installationId, memberId, file, { documentTitle: title.trim(), documentDate: docDate })
+    setBusy(false)
+    if (error) { toast.error(error); return }
+    toast.success('File uploaded')
+    onUploaded()
+    onClose()
+  }
+
+  const canSubmit = !!file && !!title.trim() && !!docDate && !busy
+  const close = () => { if (!busy) onClose() }
+
+  return (
+    <div onClick={close} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: 480, maxWidth: '100%', padding: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+          <Upload size={16} style={{ color: 'var(--color-accent)' }} />
+          <strong style={{ fontSize: 15 }}>Add supporting file</strong>
+          <button onClick={close} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}><X size={18} /></button>
+        </div>
+        <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+          <Field label="Document title *">
+            <input className="input-dark" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Bird/Wildlife Control 1098 (2025)" autoFocus />
+          </Field>
+          <Field label="Document date *">
+            <input type="date" className="input-dark" value={docDate} onChange={(e) => setDocDate(e.target.value)} />
+          </Field>
+          <Field label="File *">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <Btn variant="secondary" onClick={() => fileRef.current?.click()}>
+                <Paperclip size={14} /> {file ? 'Change file' : 'Attach file'}
+              </Btn>
+              {file ? (
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  {iconFor(file.name, file.type || null)} {file.name} · {humanFileSize(file.size)}
+                </span>
+              ) : (
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No file selected</span>
+              )}
+              <input ref={fileRef} type="file" accept={ACCEPT} style={{ display: 'none' }} onChange={pick} />
+            </div>
+          </Field>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>PDF, JPG, PNG, Excel, Word — up to 25 MB.</div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--color-border)' }}>
+          <Btn variant="ghost" onClick={close} disabled={busy}>Cancel</Btn>
+          <Btn variant="primary" onClick={submit} disabled={!canSubmit}>
+            <Upload size={14} /> {busy ? 'Uploading…' : 'Upload'}
+          </Btn>
+        </div>
+      </div>
     </div>
   )
 }

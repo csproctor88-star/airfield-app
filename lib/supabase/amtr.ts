@@ -410,14 +410,18 @@ export async function setAmtrCatalogVersion(baseId: string, version: string): Pr
 export type AmtrFileRow = {
   id: string; member_id: string; name: string; uploaded_at: string | null
   size: string | null; status: string; storage_path: string | null
-  mime_type: string | null; created_at: string
+  mime_type: string | null; document_title: string | null
+  document_date: string | null; created_at: string
 }
 
 const AMTR_FILES_BUCKET = 'amtr-files'
 
-/** Upload a supporting file for a member + record its metadata. */
+/** Upload a supporting file for a member + record its metadata.
+ *  `meta` carries the operator-entered document title and the date the
+ *  document itself carries (distinct from the upload date). */
 export async function uploadAmtrFile(
   baseId: string, memberId: string, file: File,
+  meta: { documentTitle: string; documentDate: string },
 ): Promise<{ data: AmtrFileRow | null; error: string | null }> {
   const supabase = db()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -438,6 +442,7 @@ export async function uploadAmtrFile(
     uploaded_at: new Date().toISOString().slice(0, 10),
     size: humanFileSize(file.size), status: 'Verified',
     storage_path: storagePath, mime_type: file.type || null,
+    document_title: meta.documentTitle, document_date: meta.documentDate,
   }
   const { data, error } = await supabase.from('amtr_files').insert(row as never).select().single()
   if (error) {
@@ -468,7 +473,7 @@ export async function deleteAmtrFile(id: string, storagePath: string | null): Pr
 }
 
 /** Bytes → human-readable (e.g. "2.4 MB"). */
-function humanFileSize(bytes: number): string {
+export function humanFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   const units = ['KB', 'MB', 'GB']
   let v = bytes / 1024, i = 0
