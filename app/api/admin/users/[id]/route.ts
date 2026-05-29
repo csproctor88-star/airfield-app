@@ -194,9 +194,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 })
     }
 
-    // Unlink all foreign key references so historical data is preserved.
-    // After running migration 2026022802, these columns allow NULL and have ON DELETE SET NULL,
-    // so Postgres handles it automatically. These explicit updates are a safety net.
+    // Unlink foreign key references so historical data is preserved.
+    // Migrations 2026022802 + 2026061504 set ON DELETE SET NULL on every
+    // profiles(id) FK column, so Postgres now nulls them automatically on the
+    // profile delete below — the live schema has zero NO ACTION profiles FKs
+    // (guarded by tests/fk-profiles-on-delete-guard.test.ts). These explicit
+    // updates are a redundant safety net; they don't need to be exhaustive.
     const nullify = (table: string, column: string) =>
       admin.from(table).update({ [column]: null } as Record<string, unknown>).eq(column, targetId).then(() => {})
 
