@@ -76,18 +76,28 @@ patterns (`createClient()` null-check, `friendlyError()`).
 
 ## 4. Module → PDF strategy map
 
-Every module also gets **one Excel workbook**. The optional raw-data JSON sidecar covers
-**all base-scoped tables** (comprehensive). PDF strategy per module:
+Every **included** module also gets **one Excel workbook**. The optional raw-data JSON
+sidecar covers **all base-scoped tables** (comprehensive). PDF strategy per module:
 
 | Strategy | Modules | Output |
 |---|---|---|
-| **Per-record PDF** | Waivers (AF 505), ACSI | `documents/Waivers/AF505-####.pdf`, `documents/ACSI/<year>.pdf` |
-| **Monthly-grouped PDF** | Inspections, Airfield Checks | `documents/Inspections/YYYY-MM.pdf` (all that month inside) |
-| **Single aggregate PDF** (grouped by status/date) | Discrepancies, Obstructions, Events Log, Daily Reviews, Wildlife, PPR, Personnel/Contractors, SCN, SMS, AEP, Training | `documents/<Module>.pdf` |
+| **Per-record PDF** | Waivers (AF 505), ACSI, Civilian §139.303 Training (civilian mode only) | `documents/Waivers/AF505-####.pdf`, `documents/ACSI/<year>.pdf`, `documents/Training/<record>.pdf` |
+| **Monthly-grouped PDF** | Discrepancies, Inspections, Airfield Checks, Obstructions, Events Log, Daily Reviews, Wildlife, PPR, Personnel/Contractors, SCN, SMS, AEP | `documents/<Module>/YYYY-MM.pdf` (all that month inside; grouped by status within the month where applicable, e.g. Discrepancies → open / in-progress / completed) |
+| **Excluded (own export)** | AMTR Training Record | Not produced here — the AMTR module's existing Excel records-export covers it; the cover sheet directs the user there. |
+
+- **Monthly bucketing** is by each module's natural date (e.g. Discrepancies by
+  `created_at`, Inspections by inspection date, Events by event date). Empty months
+  produce no file.
+- **AMTR is excluded from the generated documents** (no PDF, no Excel, not in the master
+  workbook). The `00-START-HERE.pdf` cover notes: "AMTR training records: export via the
+  AMTR module." (AMTR tables still appear in the optional raw-data JSON sidecar, which is
+  the comprehensive "everything" grab — so all-time exports lose nothing.)
+- Civilian §139.303 Training PDFs appear **only when the base is civilian**
+  (`appliesTo: faa_part139`); on military bases that module is absent.
 
 **Generator reuse vs. new:** existing generators cover acsi, waiver, discrepancy, check,
-obstruction, events-log, ppr, personnel, scn, sms, aep, training, amtr. A few aggregate
-outputs (e.g. Wildlife-Log, Daily-Reviews, monthly Inspections roll-up) may need a
+obstruction, events-log, ppr, personnel, scn, sms, aep, training-part139. A few monthly
+roll-ups (e.g. Wildlife-Log, Daily-Reviews, monthly Inspections/Checks) may need a
 lightweight new generator built on `lib/pdf-utils.ts` + autotable — built in Phase 2.
 
 ---
@@ -99,7 +109,12 @@ glidepath-records-KBCV-2026-01-01_to_2026-03-31.zip   (or ...-all-time.zip)
 ├── 00-START-HERE.pdf      audit cover: range, per-module counts + date basis,
 │                          SHA-256 of every file, generated-by + when, gap notes
 ├── README.txt             plain-text equivalent
-├── documents/             per-record / monthly / aggregate PDFs (see §4)
+├── documents/             per-record + monthly-grouped PDFs (see §4)
+│     Waivers/AF505-####.pdf · ACSI/<year>.pdf · Training/<record>.pdf   (per record)
+│     Discrepancies/YYYY-MM.pdf · Inspections/YYYY-MM.pdf · Checks/YYYY-MM.pdf
+│     Obstructions/YYYY-MM.pdf · Events-Log/YYYY-MM.pdf · Daily-Reviews/YYYY-MM.pdf
+│     Wildlife/YYYY-MM.pdf · PPR/YYYY-MM.pdf · Personnel/YYYY-MM.pdf
+│     SCN/YYYY-MM.pdf · SMS/YYYY-MM.pdf · AEP/YYYY-MM.pdf      (monthly; AMTR excluded)
 ├── spreadsheets/          00-Master-Workbook.xlsx + one <Module>.xlsx each
 ├── photos/<Module>/<record>/<date>_<label>.jpg + photos-index.csv  (provenance)
 ├── viewer/                index.html app.js styles.css data.js  (read-only, file://)
@@ -206,6 +221,8 @@ omitted but noted on the cover.
 3. No RDS tagging / retention metadata in-app.
 4. No bundled reg PDFs (and `reference/` folder dropped entirely).
 5. No restore tooling; raw JSON sidecar is optional and for "load elsewhere," not restore.
-6. PDF strategy: per-record (Waivers, ACSI) · monthly (Inspections, Checks) · aggregate
-   (everything else). Excel for every module.
+6. PDF strategy: per-record (Waivers, ACSI, Civilian §139.303 Training) · monthly
+   (Discrepancies, Inspections, Checks, Obstructions, Events Log, Daily Reviews,
+   Wildlife, PPR, Personnel, SCN, SMS, AEP). **AMTR excluded** (own export). Excel for
+   every included module.
 7. Client-side generation; ~250 MB soft ceiling with a narrow-the-scope hint.
