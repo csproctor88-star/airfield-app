@@ -36,6 +36,7 @@ Type Safety B→improved (full A deferred — see below), Architecture B (extrac
 | `2026061600_pending_status_gate.sql` | ✅ verified | `user_is_sys_admin`/`user_has_base_access`/`user_has_permission` now require `status='active'`. Active users unaffected (verified); pending/deactivated denied. |
 | `2026061601_kiosk_token_isolation.sql` | ✅ verified | New service-role-only `base_kiosk_tokens` table + `bases.kiosk_enabled` flag; tokens copied (KMTC verified identical); old column kept for backward-compat. |
 | `2026061602_kiosk_token_drop_column.sql` | ✅ applied (post-deploy) | Dropped `bases.kiosk_token`. Verified column gone, tokens preserved in `base_kiosk_tokens`. |
+| `2026061700_security_linter_hardening.sql` | ✅ applied + verified | Resolves Supabase DB-linter SECURITY findings: RLS on `training_digest_log` + `annual_review_digest_log` (2 ERRORs); pinned `search_path` on 7 SECURITY INVOKER fns; revoked `anon` EXECUTE on the privileged SECURITY DEFINER RPCs + `anon`/`authenticated` on triggers + `check_rate_limit`. Left public-form RPCs and RLS-helper fns (`user_has_*`) intact by design. |
 
 ---
 
