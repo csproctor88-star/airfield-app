@@ -39,13 +39,7 @@ export function loadTypeDraft(type: 'airfield' | 'lighting', baseId?: string | n
     const raw = localStorage.getItem(getTypeDraftKey(type, baseId ?? undefined))
     if (!raw) return null
     const parsed = JSON.parse(raw) as SingleInspectionDraft
-    // Backward-compat
-    if (parsed.half.rscCondition === undefined) parsed.half.rscCondition = null
-    if (parsed.half.rcrReported === undefined) parsed.half.rcrReported = false
-    if (parsed.half.rcrValue === undefined) parsed.half.rcrValue = null
-    if (parsed.half.rcrConditionType === undefined) parsed.half.rcrConditionType = null
-    if (!parsed.half.discrepancies) parsed.half.discrepancies = {}
-    return parsed
+    return { ...parsed, half: normalizeHalfDraft(parsed.half) }
   } catch {
     return null
   }
@@ -118,6 +112,29 @@ function createEmptyHalf(): InspectionHalfDraft {
     dbRowId: null,
     discrepancies: {},
   }
+}
+
+/**
+ * Normalize an untrusted draft blob — from localStorage OR a DB `Json` column —
+ * into a complete InspectionHalfDraft. Missing, old, or wrong-typed fields fall
+ * back to empty-draft defaults, so resuming an out-of-date or partial draft can
+ * never render blank or throw. This is the single backward-compat boundary for
+ * both storage paths (the DB load path previously trusted the blob shape blind).
+ */
+export function normalizeHalfDraft(raw: unknown): InspectionHalfDraft {
+  const base = createEmptyHalf()
+  if (!raw || typeof raw !== 'object') return base
+  const merged = { ...base, ...(raw as Partial<InspectionHalfDraft>) }
+  // Guard the container fields so a wrong-typed / old blob can't break rendering.
+  const isRec = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v)
+  if (!isRec(merged.responses)) merged.responses = base.responses
+  if (!isRec(merged.comments)) merged.comments = base.comments
+  if (!isRec(merged.enabledConditionals)) merged.enabledConditionals = base.enabledConditionals
+  if (!isRec(merged.personnelNames)) merged.personnelNames = base.personnelNames
+  if (!isRec(merged.discrepancies)) merged.discrepancies = base.discrepancies
+  if (!Array.isArray(merged.selectedPersonnel)) merged.selectedPersonnel = base.selectedPersonnel
+  if (typeof merged.rcrReported !== 'boolean') merged.rcrReported = base.rcrReported
+  return merged
 }
 
 export function createNewDraft(): DailyInspectionDraft {

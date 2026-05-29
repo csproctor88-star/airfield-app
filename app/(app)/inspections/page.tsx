@@ -46,6 +46,7 @@ import {
   createSingleDraft,
   halfDraftToItems,
   itemsToDraftHalf,
+  normalizeHalfDraft,
   type SingleInspectionDraft,
   type InspectionHalfDraft,
 } from '@/lib/inspection-draft'
@@ -391,7 +392,7 @@ export default function InspectionsPage() {
               id: stored?.id || crypto.randomUUID(),
               createdAt: stored?.createdAt || new Date().toISOString(),
               type,
-              half: { ...(dbRow.draft_data as unknown as InspectionHalfDraft), dbRowId: dbRow.id },
+              half: { ...normalizeHalfDraft(dbRow.draft_data), dbRowId: dbRow.id },
             }
             if (type === 'airfield') {
               setAirfieldDraft(newDraft)
