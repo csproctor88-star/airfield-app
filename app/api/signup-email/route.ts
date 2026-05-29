@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAdminClient } from '@/lib/admin/role-checks'
+import { getAdminClient, sanitizeSelfSignupRole } from '@/lib/admin/role-checks'
 import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 // Self-signup flow.
@@ -78,6 +78,16 @@ export async function POST(request: Request) {
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`
 
+    // SECURITY: never trust the client-supplied role. The signup form hides
+    // privileged roles, but this endpoint is unauthenticated — a crafted
+    // request could otherwise smuggle role='sys_admin' onto a new account,
+    // which the handle_new_user() trigger would write verbatim. Coerce any
+    // privileged or unrecognized role down to 'read_only' here.
+    const { role: safeRole, coerced } = sanitizeSelfSignupRole(role)
+    if (coerced && role && role !== 'read_only') {
+      console.warn(`[signup-email] Rejected self-assigned role "${role}" for ${email} — coerced to read_only`)
+    }
+
     // createUser with email_confirm: true bypasses the verification
     // flow entirely. The handle_new_user() trigger still fires on
     // INSERT, populating profiles with status='pending'.
@@ -92,7 +102,7 @@ export async function POST(request: Request) {
         rank: rank || undefined,
         unit: unit?.trim() || undefined,
         office_symbol: officeSymbol?.trim() || undefined,
-        role: role || 'read_only',
+        role: safeRole,
         primary_base_id: primaryBaseId,
       },
     })

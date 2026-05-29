@@ -55,6 +55,36 @@ export function canBaseAdminManageUser(
 const ADMIN_ONLY_ROLES = ['sys_admin', 'base_admin']
 
 /**
+ * Privileged roles a user may NOT assign to themselves via the public
+ * self-signup form. Mirrors SELF_SERVICE_EXCLUDED_ROLES in app/login/page.tsx,
+ * but enforced server-side — the form only HIDES these, so a crafted request
+ * could otherwise smuggle an admin role onto a new account.
+ */
+export const SELF_SIGNUP_EXCLUDED_ROLES: UserRole[] = ['sys_admin', 'base_admin']
+
+const ALL_USER_ROLES: UserRole[] = [
+  'airfield_manager', 'namo', 'amops', 'ces', 'safety', 'atc', 'read_only',
+  'base_admin', 'sys_admin', 'ppr', 'airfield_status', 'majcom_rfm',
+  'accountable_executive', 'sms_manager', 'aep_coordinator', 'ops_supervisor', 'arff_chief',
+]
+
+/**
+ * Coerce a client-supplied self-signup role to a safe value.
+ * Unknown strings and privileged (admin) roles both collapse to 'read_only'.
+ * Returns the coerced role plus whether coercion happened (for logging).
+ */
+export function sanitizeSelfSignupRole(role: unknown): { role: UserRole; coerced: boolean } {
+  if (
+    typeof role !== 'string' ||
+    !ALL_USER_ROLES.includes(role as UserRole) ||
+    SELF_SIGNUP_EXCLUDED_ROLES.includes(role as UserRole)
+  ) {
+    return { role: 'read_only', coerced: true }
+  }
+  return { role: role as UserRole, coerced: false }
+}
+
+/**
  * Strip fields that base admins are not allowed to change.
  * Base admins cannot change primary_base_id or assign admin roles.
  * They CAN assign non-admin roles (airfield_manager, namo, amops, etc.)
