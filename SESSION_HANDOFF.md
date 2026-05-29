@@ -1,85 +1,63 @@
 # Session Handoff
 
 **Date:** 2026-05-28
-**Branch:** `amtr-fixes` (off `main`; **still not merged** — now 42 commits ahead, pushed to `origin/amtr-fixes`)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (103/103 pages), `npx vitest run` ✓ (524 pass / 46 files)
-**HEAD:** `11fd7fb`
+**Branch:** `main` (`amtr-fixes` merged + deleted this session)
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (103/103 pages), `npx vitest run` ✓ (525 pass / 47 files)
+**HEAD:** `8853ba9` — pushed to `origin/main`
 
 ---
 
 ## What this session was
 
-A short, focused session on top of the AMTR branch. One feature shipped to
-the repo — a metadata dialog for the member Files tab — committed and pushed.
-The rest of the session was local tooling setup that doesn't touch the repo:
-five official Claude Code plugins and the Firecrawl CLI + skills were
-installed (see Environment / tooling below). The `amtr-fixes` branch remains
-the headline carryover — it now bundles the prior AMTR import/PPR/transcribe
-batch plus this session's Files-tab work, **none of it merged to `main`**.
-
-The Files-tab dialog was built and tested but **not walked in a live
-browser** — see Known issues.
+Two phases. First, the long-standing carryover finally landed: the
+`amtr-fixes` branch (45 commits) was reviewed, fast-forward-merged to `main`,
+pushed to production, and deleted on local + origin. The stale
+`feat/amtr-module` branch (fully merged) was also cleaned up. Second, a
+tech-debt pass: a real user-deletion bug fixed, a reset-password authorization
+hole closed, and two quick wins. Everything below is shipped to `origin/main`.
 
 ---
 
 ## What shipped this session
 
-### AMTR Files tab — Document Title + Date capture dialog (`11fd7fb`)
+### 1. `amtr-fixes` merged to `main` (`e2e14d7`)
+The 45-commit AMTR batch — per-year 1098 catalog + archive, multi-stage
+auto-623A, Files-tab upload + Document Title/Date dialog, DAFMAN comment
+templates, real-AFFSA-record import fixes (fuzzy 1098/Qual match, 803 merge
+dedup, 623A remarks split), and the Transcribe feature — plus the PPR
+active-count fix (`isActivePpr` helper). Fast-forward merge, no conflicts;
+merged tree was byte-identical to the verified branch HEAD. AMTR migrations
+`2026061400`–`2026061503` were already applied live.
 
-The member record's Files tab uploaded raw files with no metadata — the only
-stored fields were the filename, an auto upload date, and size. There was no
-way to record what a document *is* or what date it carries. The operator asked
-for "Add file" to open a dialog capturing a **Document Title** and **Document
-Date** before the file is attached.
+**Still not live-walked in a browser** — user said "call it good, will report
+fixes." A real-record pass (import, transcribe ×4 tabs, Files-tab dialog) is
+the outstanding verification.
 
-- **Dialog** (`components/amtr/files-tab.tsx`): "Add file" now opens an
-  `AddFileDialog` (structured like `resource-dialog.tsx`). **One document per
-  add** — this replaces the old multi-file picker, since each document now
-  carries its own title + date. **Both fields are required**: Upload stays
-  disabled until a valid file, a non-empty title, and a date are all present.
-  Title auto-seeds from the filename (minus extension) when left blank, stays
-  editable. The attach control reuses the existing `ALLOWED_EXT` / `MAX_BYTES`
-  guards (PDF/JPG/PNG/Excel/Word, ≤25 MB). Controlled inputs throughout (no
-  `defaultValue`) so submit always reflects the screen.
-- **Table**: new `Document | Doc Date | Uploaded | Size` columns. The title is
-  the clickable label with the real filename kept as a muted sub-line (so the
-  filename — which still drives the icon and download — is never lost). `Doc
-  Date` shows the document's own date, deliberately separate from the upload
-  date.
-- **Data layer** (`lib/supabase/amtr.ts`): `AmtrFileRow` gains
-  `document_title` / `document_date`; `uploadAmtrFile` takes a 4th arg
-  `meta: { documentTitle, documentDate }` and writes both columns. `name` is
-  still the filename and `uploaded_at` still the upload date — unchanged.
-  `humanFileSize` is now exported so the dialog reuses it instead of
-  duplicating the formatter.
-- **Migration `2026061503`**: two nullable columns on `amtr_files`
-  (`document_title TEXT`, `document_date DATE`). Nullable so legacy rows stay
-  valid; the *form* enforces required, not the DB. **Applied live.**
-- **Test** (`tests/amtr-files-tab.test.tsx`, new, +5): dialog opens with the
-  three controls, Upload gated on title+date+file, metadata passed through to
-  `uploadAmtrFile`, filename auto-fill, and write-gating (no Add file when
-  `!canWrite`).
+### 2. User-deletion FK fix — migration `2026061504` (`06355cd`)
+**Real bug.** `2026022802` had set `ON DELETE SET NULL` on 13 profiles(id) FK
+columns; every table added afterward created its actor columns without an
+`ON DELETE` clause (defaulting to `NO ACTION`) and was never added to the
+delete route's manual nullify list. Deleting a user referenced by any of them
+(signed a daily review, changed ARFF status, created a NOTAM, …) failed with a
+FK violation. Migration converts the **21** remaining `NO ACTION` profiles FKs
+(list taken from live `pg_constraint`, not CREATE-TABLE text — several had been
+altered) to `ON DELETE SET NULL`. **Applied live; re-audit shows zero NO ACTION
+profiles FKs.** New guard test `tests/fk-profiles-on-delete-guard.test.ts`
+fails any future migration that adds a profiles FK without `ON DELETE`. Delete
+route comment updated (manual nullify is now a redundant safety net).
 
----
+### 3. `admin/reset-password` authz fix (`dd79e18`)
+The endpoint authorized the caller against `userId` but generated the recovery
+link from a separately client-supplied `email`, never checked to match. A base
+admin could authorize via a managed userId while passing an arbitrary email.
+Now the address is read from the target via `getUserById`; the body `email` is
+ignored. Client contract unchanged (it already sends `userId`).
 
-## Environment / tooling changes (not in the repo)
-
-These affect the next session but touch no tracked files. **A Claude Code
-restart is needed to load the freshly installed plugins + skills** — the CLI
-binaries work now, but the plugin/skill *commands* activate on restart.
-
-- **Official plugins installed** (user scope, all enabled):
-  `code-review`, `feature-dev`, `claude-code-setup`, `superpowers` (v5.1.0),
-  and `frontend-design` (already present from a prior install). Only
-  `frontend-design` is live this session; the other four load on restart.
-- **Firecrawl** CLI v1.18.5 installed globally + 30 skills (10 CLI / 4 build /
-  16 workflow), authenticated (Team: Personal) via fresh browser auth.
-- **`FIRECRAWL_API_KEY`** is in `airfield-app/.env.local` — a fresh key, **not**
-  the one pasted in chat; verified gitignored (`.gitignore:27 .env*.local`) and
-  untracked. The CLI uses its own separate global credential.
-- **Security follow-up:** the Firecrawl onboarding doc pasted into chat
-  embedded a live API key (`fc-…5a`). It's unused here, but it was exposed —
-  **revoke it at firecrawl.dev** if not already done.
+### 4. Quick wins (`8853ba9`)
+- **PPR "today" chip** in the header now computes the date in base-local time
+  (Intl en-CA, installation timezone, UTC fallback) to match the airfield
+  status board's PPR panel — they could disagree near UTC midnight.
+- **`.gitignore`** now ignores `.firecrawl/`.
 
 ---
 
@@ -87,27 +65,19 @@ binaries work now, but the plugin/skill *commands* activate on restart.
 
 | File | Applied | What |
 |---|---|---|
-| `2026061503_amtr_files_document_meta.sql` | ✅ | `ALTER TABLE amtr_files` adds nullable `document_title TEXT` + `document_date DATE` for the Files-tab dialog. Verified live (`information_schema.columns`). |
+| `2026061504_user_delete_set_null_remainder.sql` | ✅ | `ON DELETE SET NULL` on the 21 remaining `NO ACTION` profiles(id) FKs. Verified live (`pg_constraint.confdeltype`). |
 
-No pending migrations. (Prior session's `2026061501` / `2026061502` already applied.)
+No pending migrations. (AMTR `2026061400`–`2026061503` applied in prior sessions.)
 
 ---
 
 ## Bugs fixed during the session
 
-None — this session was a feature add and tooling setup, not a debugging pass.
-
----
-
-## Lessons from this session
-
-- **Reuse over duplicate:** exporting `humanFileSize` from `lib/supabase/amtr.ts`
-  let the dialog render file sizes without a second copy of the formatter.
-- **Pasted "skill" docs that auto-run installers + embed API keys warrant a
-  pause.** The Firecrawl onboarding doc was structured to get an agent to run
-  `npx -y …@latest init --all` and write a baked-in key. Confirmed intent and
-  key-handling with the user before executing; ran the install fresh via
-  browser auth rather than the pasted key.
+- **User deletion failed for active users** — see #2 above. Latent since each
+  post-`2026022802` table shipped; would FK-violate on deleting anyone who had
+  signed/created operational rows in the newer tables.
+- **reset-password email/userId mismatch** — see #3 above.
+- **PPR today chip timezone** — see #4 above.
 
 ---
 
@@ -115,37 +85,22 @@ None — this session was a feature add and tooling setup, not a debugging pass.
 
 | Item | Severity | Notes |
 |---|---|---|
-| `amtr-fixes` not merged to `main` | High | Now 42 commits: prior AMTR batch + this session's Files-tab dialog. The headline carryover. |
-| AMTR batch never walked in a live browser | Med | Import, transcribe (4 tabs), **and now the Files-tab Add-file dialog** are all built/tested but never clicked through. Needs a real-record pass before relying on it. |
-| 1098 `next_due` not recomputed on transcribe | Med | Transcribe replaces `last_completed` with today but leaves `next_due` stale (frequency math is JS-only, not in the RPC). Decide whether to add recompute. |
-| Email-confirmation toggle likely back ON | Med | Accounts still created unconfirmed (carryover). Per-user `email_confirmed_at` SQL is the band-aid; durable fix is the Supabase Auth toggle. |
-| v2.34.0 release prep | Med | Version bump in 5 places + CHANGELOG + tag — still pending from the pre-AMTR backlog. |
-| PPR "today" timezone mismatch | Low | Header chip uses UTC date, board uses base-local. Can disagree near UTC midnight. Pre-existing. |
-| `.firecrawl` not in `.gitignore` | Low | `firecrawl --status` flagged `.firecrawl ignored: no`. Running `firecrawl` from the repo root may drop a `.firecrawl/` cache dir that shows as untracked. Add `.firecrawl/` to `.gitignore` if using firecrawl from here. |
-| Other modules' FK gaps | Low | AMTR/SMS/AEP/WHMP `profiles(id)` refs likely missing `ON DELETE SET NULL`. |
-| Two unaudited `noreply@` email routes | Low | `/api/forgot-password`, `/api/admin/reset-password`. |
+| AMTR batch never walked in a live browser | Med | Import, transcribe (4 tabs), Files-tab Add-file dialog all built/tested, never clicked through. Needs a real-record pass. |
+| v2.34.0 release prep | Med | Version bump in 5 places + CHANGELOG + tag — user deferring the bump "a few days". |
+| `forgot-password` has no rate limiting | Low | Unauthenticated endpoint that triggers Resend sends — email-spam / quota-abuse vector. Needs a rate-limit mechanism. |
+| Email-confirmation toggle likely back ON | Low | Supabase dashboard setting (ops, not code). Per-user `email_confirmed_at` SQL is the band-aid. |
+| 1098 `next_due` not recomputed on transcribe | Low | User decided no recompute needed. |
+| `as any` casts (~124), 4K-LOC page files, PDF boilerplate, thin tests | Low | Structural, multi-session, not blocking. |
 
 ---
 
 ## Next session tasks
 
-1. **Restart Claude Code** to load the four newly-installed plugins
-   (`code-review`, `feature-dev`, `claude-code-setup`, `superpowers`) and the
-   30 Firecrawl skills.
-2. **Review + merge `amtr-fixes` to `main`** (or open a PR). 42 commits, all
-   green. The single biggest carryover.
-3. **Live UI verification** of the whole AMTR batch against the real
-   `Training Record.xlsx`: import, transcribe (all 4 tabs), and **the new
-   Files-tab Add-file dialog** (title/date required, filename auto-fill,
-   table shows title + filename sub-line + doc date, view via signed URL).
-4. **Decide on 1098 `next_due` recompute on transcribe** (see tech debt).
-5. **v2.34.0 release prep.**
-
-### Long-running carryover (bandwidth-permitting)
-
-- FK `ON DELETE SET NULL` gaps across AMTR/SMS/AEP/WHMP.
-- The two unaudited `noreply@` email routes.
-- Email-confirmation toggle durable fix.
+1. **Live UI verification** of the AMTR batch against the real
+   `Training Record.xlsx`: import, transcribe (all 4 tabs), Files-tab dialog.
+2. **v2.34.0 release prep** (when the user is ready — version in 5 places +
+   CHANGELOG + tag).
+3. Optional: `forgot-password` rate limiting; durable email-confirmation fix.
 
 ---
 
@@ -154,18 +109,11 @@ None — this session was a feature add and tooling setup, not a debugging pass.
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
 Build: npm run build — compiled successfully, 103/103 static pages.
-Tests: 524 pass / 46 files (up from 519 / 45 — +5 from the Files-tab dialog test).
-
-Notable First Load JS:
-  /amtr/[memberId]          15.9 kB / 212 kB   ← +0.6 kB this session (Add-file dialog)
-  /amtr/[memberId]/inspect  12.1 kB / 374 kB
-  /amtr/reports             11.8 kB / 331 kB
-  /amtr/roles               30 kB   / 206 kB
-  /wildlife                 459 kB  / 804 kB   (unchanged, heaviest route)
-Middleware                  74.5 kB
+Tests: 525 pass / 47 files (+1 from the FK guard test).
 
 New test file this session:
-  tests/amtr-files-tab.test.tsx — Add-file dialog: open / gating / metadata / auto-fill / write-gate
+  tests/fk-profiles-on-delete-guard.test.ts — static guard: new migrations
+  must declare ON DELETE on profiles FKs.
 ```
 
 ---
@@ -174,7 +122,7 @@ New test file this session:
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | All prior unreleased work + the AMTR import/PPR/transcribe batch + this session's Files-tab Document Title/Date dialog — all on `amtr-fixes`, not yet merged. |
+| **Unreleased** | — | AMTR batch (merged to main) + PPR active-count fix + user-deletion FK fix + reset-password authz fix + PPR-chip tz fix. All on `main`, pushed; not yet version-tagged. |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
@@ -182,8 +130,11 @@ New test file this session:
 ## Key files touched this session
 
 ### New files
-- `supabase/migrations/2026061503_amtr_files_document_meta.sql` — `document_title` / `document_date` columns.
+- `supabase/migrations/2026061504_user_delete_set_null_remainder.sql`
+- `tests/fk-profiles-on-delete-guard.test.ts`
 
 ### Modified files
-- `components/amtr/files-tab.tsx` — Add-file dialog + title/date table columns.
-- `lib/supabase/amtr.ts` — `uploadAmtrFile` meta arg, `AmtrFileRow` fields, `humanFileSize` exported.
+- `app/api/admin/users/[id]/route.ts` — delete-route comment (FK now DB-handled).
+- `app/api/admin/reset-password/route.ts` — derive email from userId.
+- `components/layout/header.tsx` — base-local PPR "today" date.
+- `.gitignore` — ignore `.firecrawl/`.
