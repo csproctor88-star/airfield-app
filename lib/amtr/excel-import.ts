@@ -1,14 +1,12 @@
 // ─────────────────────────────────────────────────────────────
-// AMTR Excel/JSON import helpers (SheetJS — already a dependency).
+// AMTR date + JSON import helpers.
 //
 // parseAmtrDate handles the date formats the prototype's workbooks
-// use (Excel serials, ISO, M/D/YY, D-MMM-YY). parseRosterWorkbook
-// maps a member roster sheet to AmtrMember create inputs. Full
-// multi-sheet (JQS / 623A / 797 / 1098) import is a follow-up; the
-// JSON round-trip (exportAmtrJson / parseAmtrJson) is complete.
+// use (Excel serials, ISO, M/D/YY, D-MMM-YY). The live Excel import
+// path uses ExcelJS (lib/amtr-record-excel.ts); the old SheetJS-based
+// roster parser was removed along with the vulnerable `xlsx` dependency.
+// The JSON round-trip (exportAmtrJson / parseAmtrJson) is complete.
 // ─────────────────────────────────────────────────────────────
-
-import * as XLSX from 'xlsx'
 
 const MONTHS: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
@@ -49,48 +47,6 @@ export function parseAmtrDate(value: unknown): string {
 function isoOf(year: number, monthIdx: number, day: number): string {
   const d = new Date(Date.UTC(year, monthIdx, day))
   return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
-}
-
-export type RosterImportRow = {
-  full_name: string
-  grade?: string
-  dafsc?: string
-  unit?: string
-  status?: string
-  tsc?: string
-  duty_position?: string
-  supervisor?: string
-  date_assigned?: string
-}
-
-/** Read the first sheet of a workbook as a member roster. */
-export function parseRosterWorkbook(buf: ArrayBuffer): RosterImportRow[] {
-  const wb = XLSX.read(buf, { type: 'array' })
-  const sheetName = wb.SheetNames[0]
-  if (!sheetName) return []
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[sheetName], { defval: '' })
-  const pick = (r: Record<string, unknown>, keys: string[]): string => {
-    for (const k of Object.keys(r)) {
-      if (keys.some((want) => k.toLowerCase().includes(want))) {
-        const v = r[k]
-        if (v != null && String(v).trim()) return String(v).trim()
-      }
-    }
-    return ''
-  }
-  return rows
-    .map((r) => ({
-      full_name: pick(r, ['name', 'member']),
-      grade: pick(r, ['grade', 'rank']),
-      dafsc: pick(r, ['dafsc', 'afsc']),
-      unit: pick(r, ['unit']),
-      status: pick(r, ['status']),
-      tsc: pick(r, ['tsc']),
-      duty_position: pick(r, ['duty', 'position']),
-      supervisor: pick(r, ['supervisor', 'trainer']),
-      date_assigned: parseAmtrDate(r[Object.keys(r).find((k) => k.toLowerCase().includes('assign')) ?? '']),
-    }))
-    .filter((r) => r.full_name)
 }
 
 /** Serialize a full AMTR snapshot to a JSON blob string (export). */

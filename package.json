@@ -19,7 +19,7 @@
     "date-fns": "^3.6.0",
     "exceljs": "^4.4.0",
     "html2canvas": "^1.4.1",
-    "jspdf": "^4.1.0",
+    "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.563.0",
     "mapbox-gl": "^3.18.1",
@@ -30,7 +30,6 @@
     "react-zoom-pan-pinch": "^3.7.0",
     "resend": "^6.9.3",
     "sonner": "^1.7.4",
-    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
