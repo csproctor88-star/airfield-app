@@ -218,49 +218,6 @@ export function buildSmsManualPdf(input: SmsManualInput): { doc: ReturnType<type
 }
 
 // ────────────────────────────────────────────────────────────────
-// SPI 12-month Performance Report
-// ────────────────────────────────────────────────────────────────
-
-export function buildSpiReportPdf(input: {
-  baseName?: string | null
-  baseIcao?: string | null
-  spis: SmsSpi[]
-  measurementsBySpi: Map<string, SmsSpiMeasurement[]>
-}): { doc: ReturnType<typeof createPdf>['doc']; filename: string } {
-  const ctx = createPdf({ orientation: 'landscape' })
-  const { doc, margin, contentWidth } = ctx
-
-  let y = drawBaseHeader(ctx, 12, { baseName: input.baseName, baseIcao: input.baseIcao, sectionLabel: 'SMS — SPI PERFORMANCE REPORT' })
-  y = drawReportTitle(ctx, y, { title: 'SPI Performance — Trailing 12 Months', subtitle: `Compiled ${formatZuluDate(new Date().toISOString().slice(0, 10))}` })
-
-  for (const spi of input.spis) {
-    const series = input.measurementsBySpi.get(spi.id) ?? []
-    if (series.length === 0) continue
-    y = subHeading(doc, margin, y, `${spi.code} — ${spi.title}`)
-    autoTable(doc, {
-      startY: y,
-      head: [['Period Start', 'Period End', 'Value', 'Status', 'Computed By']],
-      body: series.map((m) => [
-        formatZuluDate(m.period_start),
-        formatZuluDate(m.period_end),
-        m.value.toString() + (spi.unit === 'percent' ? '%' : ''),
-        m.status,
-        m.computed_by,
-      ]),
-      ...tableStyles(ctx),
-    })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 5
-    y = ensurePage(doc, ctx, y, 30)
-  }
-
-  drawFooter(ctx)
-
-  const filename = `sms-spi-report-${(input.baseIcao ?? 'base').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`
-  return { doc, filename }
-}
-
-// ────────────────────────────────────────────────────────────────
 // Hazard Register CSV export
 // ────────────────────────────────────────────────────────────────
 
@@ -271,16 +228,6 @@ export function hazardRegisterToCsv(hazards: SmsHazard[]): string {
     'identified_at', 'closed_at', 'closure_rationale',
   ]
   const rows = hazards.map((h) => headers.map((k) => csvEscape((h as unknown as Record<string, unknown>)[k])))
-  return [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
-}
-
-export function mocLogToCsv(mocs: SmsMoc[]): string {
-  const headers = [
-    'moc_code', 'title', 'change_category', 'status',
-    'change_description', 'risk_analysis_summary',
-    'proposed_at', 'effective_date', 'approved_at', 'rejection_reason',
-  ]
-  const rows = mocs.map((m) => headers.map((k) => csvEscape((m as unknown as Record<string, unknown>)[k])))
   return [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n')
 }
 

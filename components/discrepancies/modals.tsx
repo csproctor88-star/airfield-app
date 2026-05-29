@@ -700,53 +700,6 @@ export function StatusUpdateModal({
   )
 }
 
-// ─── Work Order Modal ───────────────────────────────────────────────
-
-export function WorkOrderModal({
-  discrepancy, onClose, onSaved,
-}: {
-  discrepancy: DiscrepancyRow
-  onClose: () => void
-  onSaved: (updated: DiscrepancyRow) => void
-}) {
-  const [saving, setSaving] = useState(false)
-  const [workOrder, setWorkOrder] = useState(discrepancy.work_order_number || '')
-
-  const handleSave = async () => {
-    setSaving(true)
-    const { updateDiscrepancy } = await import('@/lib/supabase/discrepancies')
-    const { data, error } = await updateDiscrepancy(discrepancy.id, {
-      work_order_number: workOrder || null,
-    })
-    setSaving(false)
-    if (error) {
-      const { toast } = await import('sonner')
-      toast.error(error)
-      return
-    }
-    if (data) onSaved(data)
-    onClose()
-  }
-
-  return (
-    <ModalOverlay title="Work Order" onClose={onClose}>
-      <div style={{ marginBottom: 12 }}>
-        <FieldLabel>Work Order Number</FieldLabel>
-        <input className="input-dark" placeholder="e.g., WO-2026-0042"
-          value={workOrder} onChange={(e) => setWorkOrder(e.target.value)} />
-      </div>
-
-      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
-        {discrepancy.work_order_number
-          ? `Current: ${discrepancy.work_order_number}`
-          : 'No work order assigned yet.'}
-      </div>
-
-      <SaveButton saving={saving} onClick={handleSave} label={workOrder ? 'Save Work Order' : 'Clear Work Order'} />
-    </ModalOverlay>
-  )
-}
-
 // ─── Photo Viewer Modal ─────────────────────────────────────────────
 
 import { ZoomableImage } from '@/components/ui/zoomable-image'
