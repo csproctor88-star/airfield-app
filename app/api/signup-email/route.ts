@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAdminClient } from '@/lib/admin/role-checks'
+import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 // Self-signup flow.
 //
@@ -61,6 +62,18 @@ export async function POST(request: Request) {
         { error: 'email, password, firstName, lastName, and primaryBaseId are required' },
         { status: 400 },
       )
+    }
+
+    // Throttle account-creation spam — this endpoint is unauthenticated and
+    // creates an auth user per call. Per-IP is the primary dimension; the
+    // per-email cap mostly just absorbs retries on the same address.
+    const ip = getClientIp(request)
+    const allowed = await checkRateLimits(admin, [
+      { bucket: `signup:ip:${ip}`, max: 10, windowSeconds: 3600 },
+      { bucket: `signup:email:${email.toLowerCase()}`, max: 5, windowSeconds: 3600 },
+    ])
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
     }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`

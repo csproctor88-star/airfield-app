@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { getAdminClient } from '@/lib/admin/role-checks'
 import { getSiteUrl } from '@/lib/site-url'
+import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -34,6 +35,18 @@ export async function POST(request: Request) {
       console.error('[forgot-password] Admin client unavailable — SUPABASE_SERVICE_ROLE_KEY missing')
       // Don't leak server-config details to the caller; degrade silently.
       return NextResponse.json({ success: true })
+    }
+
+    // Throttle abuse: this endpoint mints recovery emails with no auth. A 429
+    // here leaks nothing about whether the email is registered (it's about
+    // request volume), so it stays enumeration-safe.
+    const ip = getClientIp(request)
+    const allowed = await checkRateLimits(admin, [
+      { bucket: `forgot-password:email:${email.toLowerCase()}`, max: 3, windowSeconds: 900 },
+      { bucket: `forgot-password:ip:${ip}`, max: 20, windowSeconds: 3600 },
+    ])
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
     }
 
     const siteUrl = getSiteUrl()

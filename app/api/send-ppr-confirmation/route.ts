@@ -3,6 +3,7 @@ export const maxDuration = 15
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -69,6 +70,20 @@ export async function POST(request: Request) {
     // This route is reachable by anon (no auth required for public submit),
     // but it's still a server-only path. Treat the lookup as read-only.
     const sb = createClient(url, serviceKey || anonKey!)
+
+    // Throttle abuse — this fires a branded email to an arbitrary
+    // requesterEmail after a public submit, with no auth. Generous limits so
+    // a legitimate single submit is never blocked. Fails open if the limiter
+    // errors, so a confirmation email is never lost to a limiter hiccup.
+    const ip = getClientIp(request)
+    const allowed = await checkRateLimits(sb, [
+      { bucket: `ppr-confirm:email:${requesterEmail.toLowerCase()}`, max: 5, windowSeconds: 3600 },
+      { bucket: `ppr-confirm:ip:${ip}`, max: 20, windowSeconds: 3600 },
+    ])
+    if (!allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
+    }
+
     const { data: base } = await sb
       .from('bases')
       .select('name, amops_email')
