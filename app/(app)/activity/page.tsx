@@ -10,6 +10,7 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
+import { moduleLabel } from '@/lib/activity-labels'
 import { fetchRecentReviews, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
 import { usePermissions } from '@/lib/permissions'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
@@ -79,30 +80,7 @@ function formatAction(action: string, entityType: string, displayId?: string, me
     if (inferred) return inferred
   }
 
-  const typeLabel: Record<string, string> = {
-    discrepancy: 'Discrepancy',
-    check: 'Check',
-    airfield_check: 'Check',
-    inspection: 'Inspection',
-    obstruction_evaluation: 'Obstruction Eval',
-    navaid_status: 'NAVAID',
-    airfield_status: 'Runway',
-    weather_info: 'Weather Info',
-    arff_status: 'ARFF',
-    contractor: 'Personnel',
-    qrc: 'QRC',
-    wildlife_sighting: 'Wildlife Sighting',
-    wildlife_strike: 'Wildlife Strike',
-    manual: 'Logged Entry',
-    parking_plan: 'Parking Plan',
-    ppr_entry: 'PPR',
-    acsi_inspection: 'ACSI Inspection',
-    waiver: 'Waiver',
-    waiver_review: 'Waiver Review',
-    scn: 'SCN',
-    scn_backup: 'Monthly Back-up SCN',
-  }
-  const entity = typeLabel[entityType] || entityType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const entity = moduleLabel(entityType)
   const id = displayId ? ` ${displayId}` : ''
   const actionLabel: Record<string, string> = {
     created: 'Created',

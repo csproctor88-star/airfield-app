@@ -7,6 +7,7 @@ import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
 import { UserStatusBadge } from './status-badge'
 import { formatRelativeTime, formatZuluDate } from '@/lib/utils'
+import { UserEngagementPanel } from './user-engagement-panel'
 import type { UserCardData } from './user-card'
 import type { Installation, UserRole } from '@/lib/supabase/types'
 
@@ -43,6 +44,8 @@ export function UserDetailModal({
   const [email, setEmail] = useState(user.email || '')
   const [edipi, setEdipi] = useState(user.edipi || '')
   const [operatingInitials, setOperatingInitials] = useState(user.operating_initials || '')
+  const [unit, setUnit] = useState(user.unit || '')
+  const [officeSymbol, setOfficeSymbol] = useState(user.office_symbol || '')
   const [role, setRole] = useState(user.role)
   const [baseId, setBaseId] = useState(user.primary_base_id || '')
   const [saving, setSaving] = useState(false)
@@ -242,6 +245,8 @@ export function UserDetailModal({
         last_name: lastName,
         edipi: edipi.trim() || null,
         operating_initials: operatingInitials.trim().toUpperCase() || null,
+        unit: unit.trim() || null,
+        office_symbol: officeSymbol.trim() || null,
       }
       // Only thread the email through if an admin actually changed it.
       // Sending the same value would still trigger the auth admin call
@@ -381,6 +386,34 @@ export function UserDetailModal({
                 className="input-dark"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                disabled={anyLoading}
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          {/* Unit & Office Symbol */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div>
+              <span className="section-label">Unit</span>
+              <input
+                type="text"
+                className="input-dark"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="e.g. 115th OSS"
+                disabled={anyLoading}
+                style={{ width: '100%', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <span className="section-label">Office Symbol</span>
+              <input
+                type="text"
+                className="input-dark"
+                value={officeSymbol}
+                onChange={(e) => setOfficeSymbol(e.target.value)}
+                placeholder="e.g. OSAA"
                 disabled={anyLoading}
                 style={{ width: '100%', boxSizing: 'border-box' }}
               />
@@ -752,6 +785,17 @@ export function UserDetailModal({
               </div>
             </div>
           </div>
+
+          {/* Activity & Engagement — admins only */}
+          {(isSysAdmin || isBaseAdmin) && (
+            <div style={{ paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
+              <UserEngagementPanel
+                userId={user.id}
+                lastSeenAt={user.last_seen_at}
+                createdAt={user.created_at}
+              />
+            </div>
+          )}
         </div>
 
         {/* Messages */}

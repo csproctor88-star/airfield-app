@@ -271,6 +271,25 @@ export function formatCoordsDMS(lat: number, lon: number): string {
   return `${fmt(lat, 'N', 'S')} ${fmt(lon, 'E', 'W')}`
 }
 
+/**
+ * Normalize a user-typed name to "safe per-word" title case for account
+ * creation (self-signup + admin invite). Trims, collapses internal
+ * whitespace, then capitalizes the first letter of each part split on
+ * space / hyphen / apostrophe and lowercases the rest:
+ *   "mcDONALD-o'brien" → "Mcdonald-O'Brien"
+ * Deliberately no Mc/Mac heuristics — they mis-case legitimate names
+ * (Macey, Machado). Empty / whitespace-only input returns "".
+ */
+export function toTitleCaseName(raw: string): string {
+  const collapsed = (raw ?? '').trim().replace(/\s+/g, ' ')
+  if (!collapsed) return ''
+  // Capitalize the letter that begins the string or follows a separator
+  // (space, hyphen, apostrophe), lowercase everything else.
+  return collapsed
+    .toLowerCase()
+    .replace(/(^|[\s'-])([a-z])/g, (_m, sep: string, ch: string) => sep + ch.toUpperCase())
+}
+
 export function isMapboxConfigured(): boolean {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   return !!(token && token !== 'your-mapbox-token-here')

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getAdminClient, sanitizeSelfSignupRole } from '@/lib/admin/role-checks'
 import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
+import { toTitleCaseName } from '@/lib/utils'
 
 // Self-signup flow.
 //
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
       rank,
       unit,
       officeSymbol,
+      civilianAirport,
       role,
       primaryBaseId,
     } = body as {
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
       rank?: string
       unit?: string
       officeSymbol?: string
+      civilianAirport?: boolean
       role: string
       primaryBaseId: string
     }
@@ -63,6 +66,22 @@ export async function POST(request: Request) {
         { status: 400 },
       )
     }
+
+    // Server-side mirror of the form's mandatory-field rules (the client
+    // gate isn't a security boundary — this endpoint is unauthenticated).
+    if (!rank || !role) {
+      return NextResponse.json({ error: 'rank and role are required' }, { status: 400 })
+    }
+    if (!civilianAirport && (!unit?.trim() || !officeSymbol?.trim())) {
+      return NextResponse.json(
+        { error: 'Unit and Office Symbol are required at military airfields' },
+        { status: 400 },
+      )
+    }
+
+    // Normalize names to safe per-word title case (matches the client).
+    const normFirst = toTitleCaseName(firstName)
+    const normLast = toTitleCaseName(lastName)
 
     // Throttle account-creation spam — this endpoint is unauthenticated and
     // creates an auth user per call. Per-IP is the primary dimension; the
@@ -76,7 +95,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    const fullName = `${normFirst} ${normLast}`
 
     // SECURITY: never trust the client-supplied role. The signup form hides
     // privileged roles, but this endpoint is unauthenticated — a crafted
@@ -96,8 +115,8 @@ export async function POST(request: Request) {
       password,
       email_confirm: true,
       user_metadata: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        first_name: normFirst,
+        last_name: normLast,
         name: fullName,
         rank: rank || undefined,
         unit: unit?.trim() || undefined,

@@ -4,16 +4,11 @@ import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { createInstallation } from '@/lib/supabase/installations'
-import { USER_ROLES } from '@/lib/constants'
+import { USER_ROLES, RANK_OPTIONS } from '@/lib/constants'
 import { BASE_DIRECTORY, type BaseDirectoryEntry } from '@/lib/base-directory'
+import { toTitleCaseName } from '@/lib/utils'
 import type { UserRole } from '@/lib/supabase/types'
 import { ChevronDown, ArrowLeft } from 'lucide-react'
-
-// Military ranks: A1C through Lt Col
-const RANK_OPTIONS = [
-  'A1C', 'SrA', 'SSgt', 'TSgt', 'MSgt', 'SMSgt', 'CMSgt',
-  '2d Lt', '1st Lt', 'Capt', 'Maj', 'Lt Col',
-] as const
 
 export default function LoginPage() {
   return <Suspense><LoginContent /></Suspense>
@@ -28,7 +23,11 @@ function LoginContent() {
   const [rank, setRank] = useState('')
   const [unit, setUnit] = useState('')
   const [officeSymbol, setOfficeSymbol] = useState('')
-  const [role, setRole] = useState<UserRole>('read_only')
+  // Civilian airport context: Unit / Office Symbol don't apply (no military
+  // unit). At a military airfield they're required for everyone — including
+  // GS / contractor civilians — so the agency can be verified.
+  const [civilianAirport, setCivilianAirport] = useState(false)
+  const [role, setRole] = useState<UserRole | ''>('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -197,6 +196,28 @@ function LoginContent() {
           setLoading(false)
           return
         }
+        if (!rank) {
+          setError('Rank is required')
+          setLoading(false)
+          return
+        }
+        if (!role) {
+          setError('Please select a role')
+          setLoading(false)
+          return
+        }
+        // Unit + Office Symbol are required at military airfields (for
+        // everyone, civilians included) so the agency can be verified.
+        // The "Civilian airport" checkbox is the deliberate escape.
+        if (!civilianAirport && (!unit.trim() || !officeSymbol.trim())) {
+          setError('Unit and Office Symbol are required (or check "Civilian airport" if not applicable)')
+          setLoading(false)
+          return
+        }
+
+        // Normalize typed names to safe per-word title case before submit.
+        const normFirst = toTitleCaseName(firstName)
+        const normLast = toTitleCaseName(lastName)
 
         // Determine installation name and ICAO, then find-or-create in DB
         const installationName = addingNewInstallation
@@ -225,11 +246,12 @@ function LoginContent() {
           body: JSON.stringify({
             email,
             password,
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            rank: rank || undefined,
-            unit: unit.trim() || undefined,
-            officeSymbol: officeSymbol.trim() || undefined,
+            firstName: normFirst,
+            lastName: normLast,
+            rank,
+            unit: civilianAirport ? undefined : (unit.trim() || undefined),
+            officeSymbol: civilianAirport ? undefined : (officeSymbol.trim() || undefined),
+            civilianAirport,
             role,
             primaryBaseId: inst.id,
           }),
@@ -369,16 +391,17 @@ function LoginContent() {
               <>
                 {/* Rank */}
                 <div style={{ marginBottom: 12 }}>
-                  <span className="section-label">Rank</span>
+                  <span className="section-label">Rank *</span>
                   <select
                     className="input-dark"
                     value={rank}
                     onChange={(e) => setRank(e.target.value)}
+                    required
                     style={{ width: '100%' }}
                   >
                     <option value="">Select rank...</option>
                     {RANK_OPTIONS.map(r => (
-                      <option key={r} value={r}>{r}</option>
+                      <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
                 </div>
@@ -413,33 +436,46 @@ function LoginContent() {
                   </div>
                 </div>
 
-                {/* Unit & Office Symbol — both optional, USAF identity context */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                {/* Unit & Office Symbol — required at military airfields for
+                    everyone (civilians included) to verify the agency. The
+                    "Civilian airport" checkbox marks them not applicable. */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                   <div>
-                    <span className="section-label">Unit</span>
+                    <span className="section-label">Unit{civilianAirport ? '' : ' *'}</span>
                     <input
                       type="text"
                       className="input-dark"
-                      placeholder="e.g. 115th OSS"
+                      placeholder={civilianAirport ? 'N/A' : 'e.g. 115th OSS'}
                       value={unit}
                       onChange={(e) => setUnit(e.target.value)}
                       autoComplete="organization"
-                      style={{ width: '100%', boxSizing: 'border-box' }}
+                      disabled={civilianAirport}
+                      style={{ width: '100%', boxSizing: 'border-box', opacity: civilianAirport ? 0.5 : 1 }}
                     />
                   </div>
                   <div>
-                    <span className="section-label">Office Symbol</span>
+                    <span className="section-label">Office Symbol{civilianAirport ? '' : ' *'}</span>
                     <input
                       type="text"
                       className="input-dark"
-                      placeholder="e.g. OSAA"
+                      placeholder={civilianAirport ? 'N/A' : 'e.g. OSAA'}
                       value={officeSymbol}
                       onChange={(e) => setOfficeSymbol(e.target.value)}
                       autoComplete="off"
-                      style={{ width: '100%', boxSizing: 'border-box' }}
+                      disabled={civilianAirport}
+                      style={{ width: '100%', boxSizing: 'border-box', opacity: civilianAirport ? 0.5 : 1 }}
                     />
                   </div>
                 </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 12, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={civilianAirport}
+                    onChange={(e) => setCivilianAirport(e.target.checked)}
+                    style={{ accentColor: 'var(--color-cyan)' }}
+                  />
+                  Civilian airport — no military unit / office symbol
+                </label>
 
                 {/* Installation (searchable dropdown or add new) */}
                 <div style={{ marginBottom: 12 }} ref={installationRef}>
@@ -553,13 +589,15 @@ function LoginContent() {
 
                 {/* Role */}
                 <div style={{ marginBottom: 12 }}>
-                  <span className="section-label">Role</span>
+                  <span className="section-label">Role *</span>
                   <select
                     className="input-dark"
                     value={role}
                     onChange={(e) => setRole(e.target.value as UserRole)}
+                    required
                     style={{ width: '100%' }}
                   >
+                    <option value="">Select role...</option>
                     {roleOptions.map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}

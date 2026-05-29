@@ -5,6 +5,9 @@ export interface InviteUserPayload {
   rank: string
   firstName: string
   lastName: string
+  unit?: string
+  officeSymbol?: string
+  civilianAirport?: boolean
   role: string
   installationId: string
 }

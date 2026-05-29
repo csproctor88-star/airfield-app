@@ -10,6 +10,7 @@ import { WelcomeGate } from '@/components/welcome-gate'
 import { TourLauncher } from '@/components/tour/tour-launcher'
 import { WriteQueueProvider } from '@/components/sync/write-queue-provider'
 import { OfflineCacheProvider } from '@/components/sync/offline-cache-provider'
+import { PageViewTracker } from '@/components/page-view-tracker'
 import { DashboardProvider } from '@/lib/dashboard-context'
 import { InstallationProvider } from '@/lib/installation-context'
 import { SidebarProvider } from '@/lib/sidebar-context'
@@ -42,6 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <TourLauncher />
               <WriteQueueProvider />
               <OfflineCacheProvider />
+              <PageViewTracker />
               <main className="app-content">
                 {children}
               </main>

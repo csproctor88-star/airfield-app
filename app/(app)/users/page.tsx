@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { Plus, LineChart } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PERM } from '@/lib/permissions'
 import { getPermissionsFor } from '@/lib/permissions-server'
 import { InstallationSelector } from '@/components/admin/installation-selector'
 import { UserFilters } from '@/components/admin/user-filters'
+import { UserStatsHeader } from '@/components/admin/user-stats-header'
 import { UserList } from '@/components/admin/user-list'
 import { UserDetailModal } from '@/components/admin/user-detail-modal'
 import { InviteUserModal } from '@/components/admin/invite-user-modal'
@@ -72,6 +73,8 @@ async function loadUsers(
         primary_base_id: (u.primary_base_id as string) || null,
         edipi: (u.edipi as string) || null,
         operating_initials: (u.operating_initials as string) || null,
+        unit: (u.unit as string) || null,
+        office_symbol: (u.office_symbol as string) || null,
         created_at: u.created_at as string,
         bases: u.primary_base_id ? baseLookup.get(u.primary_base_id as string) || null : null,
       }
@@ -238,6 +241,20 @@ export default function UserManagementPage() {
     })
   }, [users, searchTerm, roleFilter, statusFilter])
 
+  // Population counts for the stats header — derived from the full loaded
+  // set (pre-search-filter) so the totals don't shift as you type.
+  const statusCounts = useMemo(() => {
+    let pending = 0
+    let active = 0
+    let deactivated = 0
+    for (const u of users) {
+      if (u.status === 'pending') pending++
+      else if (u.status === 'deactivated') deactivated++
+      else active++
+    }
+    return { total: users.length, pending, active, deactivated }
+  }, [users])
+
   // Show installation column when viewing "All Installations"
   const showInstallation = isSysAdmin && !selectedBaseId
 
@@ -248,6 +265,9 @@ export default function UserManagementPage() {
     rank: string
     firstName: string
     lastName: string
+    unit: string
+    officeSymbol: string
+    civilianAirport: boolean
     role: string
     installationId: string
   }) => {
@@ -341,27 +361,53 @@ export default function UserManagementPage() {
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
           User Management
         </div>
-        <button
-          type="button"
-          onClick={() => setShowInviteModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '8px 14px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#06B6D4',
-            color: '#fff',
-            fontSize: 'var(--fs-base)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          <Plus size={14} />
-          Invite User
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {(isSysAdmin || isBaseAdmin) && (
+            <button
+              type="button"
+              onClick={() => router.push('/users/analytics')}
+              title="User activity & engagement"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px solid var(--color-border-mid)',
+                background: 'transparent',
+                color: 'var(--color-cyan)',
+                fontSize: 'var(--fs-base)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <LineChart size={14} />
+              Activity
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '8px 14px',
+              borderRadius: 8,
+              border: 'none',
+              background: '#06B6D4',
+              color: '#fff',
+              fontSize: 'var(--fs-base)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <Plus size={14} />
+            Invite User
+          </button>
+        </div>
       </div>
 
       {/* Installation Selector */}
@@ -372,6 +418,15 @@ export default function UserManagementPage() {
           isSysAdmin={isSysAdmin}
           userInstallation={callerInstallation}
           onChange={setSelectedBaseId}
+        />
+      </div>
+
+      {/* Stats header — counts + status quick-filter */}
+      <div style={{ marginBottom: 12 }}>
+        <UserStatsHeader
+          counts={statusCounts}
+          statusFilter={statusFilter}
+          onSelectStatus={setStatusFilter}
         />
       </div>
 

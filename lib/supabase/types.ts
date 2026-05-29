@@ -3268,6 +3268,7 @@ export type Database = {
           last_seen_at: string | null
           last_seen_release_version: string | null
           name: string
+          office_symbol: string | null
           operating_initials: string | null
           organization: string | null
           phone: string | null
@@ -3277,6 +3278,7 @@ export type Database = {
           shop: string | null
           sidebar_config: Json | null
           status: string
+          unit: string | null
           updated_at: string
         }
         Insert: {
@@ -3291,6 +3293,7 @@ export type Database = {
           last_seen_at?: string | null
           last_seen_release_version?: string | null
           name: string
+          office_symbol?: string | null
           operating_initials?: string | null
           organization?: string | null
           phone?: string | null
@@ -3300,6 +3303,7 @@ export type Database = {
           shop?: string | null
           sidebar_config?: Json | null
           status?: string
+          unit?: string | null
           updated_at?: string
         }
         Update: {
@@ -3314,6 +3318,7 @@ export type Database = {
           last_seen_at?: string | null
           last_seen_release_version?: string | null
           name?: string
+          office_symbol?: string | null
           operating_initials?: string | null
           organization?: string | null
           phone?: string | null
@@ -3323,6 +3328,7 @@ export type Database = {
           shop?: string | null
           sidebar_config?: Json | null
           status?: string
+          unit?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3334,6 +3340,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_view_daily: {
+        Row: {
+          base_id: string
+          count: number
+          id: string
+          last_viewed_at: string
+          route: string
+          user_id: string
+          view_date: string
+        }
+        Insert: {
+          base_id: string
+          count?: number
+          id?: string
+          last_viewed_at?: string
+          route: string
+          user_id: string
+          view_date?: string
+        }
+        Update: {
+          base_id?: string
+          count?: number
+          id?: string
+          last_viewed_at?: string
+          route?: string
+          user_id?: string
+          view_date?: string
+        }
+        Relationships: []
       }
       qrc_executions: {
         Row: {

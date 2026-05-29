@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { X } from 'lucide-react'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { BASE_DIRECTORY } from '@/lib/base-directory'
+import { toTitleCaseName } from '@/lib/utils'
 import type { Installation, UserRole } from '@/lib/supabase/types'
 
 interface InviteUserModalProps {
@@ -16,6 +17,9 @@ interface InviteUserModalProps {
     rank: string
     firstName: string
     lastName: string
+    unit: string
+    officeSymbol: string
+    civilianAirport: boolean
     role: string
     installationId: string
   }) => Promise<void>
@@ -34,7 +38,10 @@ export function InviteUserModal({
   const [rank, setRank] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [role, setRole] = useState<string>('read_only')
+  const [unit, setUnit] = useState('')
+  const [officeSymbol, setOfficeSymbol] = useState('')
+  const [civilianAirport, setCivilianAirport] = useState(false)
+  const [role, setRole] = useState<string>('')
   const [installationId, setInstallationId] = useState(
     isSysAdmin ? (defaultInstallationId || '') : (callerBaseId || ''),
   )
@@ -63,8 +70,15 @@ export function InviteUserModal({
     e.preventDefault()
     setError(null)
 
-    if (!email || !rank || !firstName || !lastName || !installationId) {
+    if (!email || !rank || !firstName || !lastName || !role || !installationId) {
       setError('All fields are required')
+      return
+    }
+
+    // Unit + Office Symbol required at military airfields (everyone,
+    // civilians included). "Civilian airport" is the not-applicable escape.
+    if (!civilianAirport && (!unit.trim() || !officeSymbol.trim())) {
+      setError('Unit and Office Symbol are required (or check "Civilian airport" if not applicable)')
       return
     }
 
@@ -86,7 +100,17 @@ export function InviteUserModal({
         const created = await createInstallation(dirEntry.name, dirEntry.icao)
         resolvedInstId = created.id
       }
-      await onInvite({ email, rank, firstName, lastName, role, installationId: resolvedInstId })
+      await onInvite({
+        email,
+        rank,
+        firstName: toTitleCaseName(firstName),
+        lastName: toTitleCaseName(lastName),
+        unit: civilianAirport ? '' : unit.trim(),
+        officeSymbol: civilianAirport ? '' : officeSymbol.trim(),
+        civilianAirport,
+        role,
+        installationId: resolvedInstId,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send invite')
     } finally {
@@ -143,7 +167,7 @@ export function InviteUserModal({
 
           {/* Rank */}
           <div style={{ marginBottom: 12 }}>
-            <span className="section-label">Rank</span>
+            <span className="section-label">Rank *</span>
             <select
               className="input-dark"
               value={rank}
@@ -186,15 +210,56 @@ export function InviteUserModal({
             </div>
           </div>
 
+          {/* Unit & Office Symbol — required at military airfields for
+              everyone (civilians included) to verify the agency. The
+              "Civilian airport" checkbox marks them not applicable. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div>
+              <span className="section-label">Unit{civilianAirport ? '' : ' *'}</span>
+              <input
+                type="text"
+                className="input-dark"
+                placeholder={civilianAirport ? 'N/A' : 'e.g. 115th OSS'}
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                disabled={civilianAirport}
+                style={{ width: '100%', boxSizing: 'border-box', opacity: civilianAirport ? 0.5 : 1 }}
+              />
+            </div>
+            <div>
+              <span className="section-label">Office Symbol{civilianAirport ? '' : ' *'}</span>
+              <input
+                type="text"
+                className="input-dark"
+                placeholder={civilianAirport ? 'N/A' : 'e.g. OSAA'}
+                value={officeSymbol}
+                onChange={(e) => setOfficeSymbol(e.target.value)}
+                disabled={civilianAirport}
+                style={{ width: '100%', boxSizing: 'border-box', opacity: civilianAirport ? 0.5 : 1 }}
+              />
+            </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 12, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+            <input
+              type="checkbox"
+              checked={civilianAirport}
+              onChange={(e) => setCivilianAirport(e.target.checked)}
+              style={{ accentColor: 'var(--color-cyan)' }}
+            />
+            Civilian airport — no military unit / office symbol
+          </label>
+
           {/* Role */}
           <div style={{ marginBottom: 12 }}>
-            <span className="section-label">Role</span>
+            <span className="section-label">Role *</span>
             <select
               className="input-dark"
               value={role}
               onChange={(e) => setRole(e.target.value)}
+              required
               style={{ width: '100%' }}
             >
+              <option value="">Select role...</option>
               {roleOptions.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}

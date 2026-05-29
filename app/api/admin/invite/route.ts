@@ -8,6 +8,7 @@ import {
   isAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
+import { toTitleCaseName } from '@/lib/utils'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -71,17 +72,26 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, rank, firstName, lastName, role, installationId } = body as {
+    const { email, rank, firstName, lastName, unit, officeSymbol, civilianAirport, role, installationId } = body as {
       email: string
       rank: string
       firstName: string
       lastName: string
+      unit?: string
+      officeSymbol?: string
+      civilianAirport?: boolean
       role: string
       installationId: string
     }
 
     if (!email || !rank || !firstName || !lastName || !installationId) {
       return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
+    }
+    if (!civilianAirport && (!unit?.trim() || !officeSymbol?.trim())) {
+      return NextResponse.json(
+        { error: 'Unit and Office Symbol are required at military airfields' },
+        { status: 400 },
+      )
     }
 
     if (!isSysAdmin(callerProfile.role)) {
@@ -100,7 +110,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`
+    const normFirst = toTitleCaseName(firstName)
+    const normLast = toTitleCaseName(lastName)
+    const fullName = `${normFirst} ${normLast}`
 
     // Create the user with the temp password and email confirmed.
     // user_metadata flows into raw_user_meta_data which handle_new_user()
@@ -110,10 +122,12 @@ export async function POST(request: Request) {
       password: TEMP_PASSWORD,
       email_confirm: true,
       user_metadata: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        first_name: normFirst,
+        last_name: normLast,
         name: fullName,
         rank: rank,
+        unit: unit?.trim() || undefined,
+        office_symbol: officeSymbol?.trim() || undefined,
         role: role || 'read_only',
         primary_base_id: installationId,
       },
