@@ -48,10 +48,13 @@ Glidepath — Progressive Web App for USAF Airfield Management. Replaces paper l
 | `/activity` | ✅ | `app/(app)/activity/page.tsx` — Events Log |
 | `/help` | ✅ | `app/(app)/help/page.tsx` — Help & Training (in-app guidance for using the platform; the `/training` slug is held by the §139.303 Training module on civilian bases) |
 | `/regulations` · `/aircraft` · `/library` | ✅ | reference data (70 regs, 200+ aircraft) |
-| `/settings/base-setup` | ✅ | `app/(app)/settings/base-setup/page.tsx` — 15-step wizard (~4k LOC) |
+| `/base-config/setup` | ✅ | `app/(app)/base-config/setup/page.tsx` — 15-step wizard (~6k LOC; `/settings/base-setup` is a redirect shim) |
+| `/sms` · `/aep` | ✅ | `app/(app)/sms/page.tsx` (Safety Management System) · `app/(app)/aep/page.tsx` (Airport Emergency Plan) — civilian Part 139 |
+| `/training` · `/amtr` | ✅ | `app/(app)/training/page.tsx` (§139.303 Training, civilian) · `app/(app)/amtr/page.tsx` (Airfield Management Training Record) |
+| `/field-conditions` · `/recent-activity` | ✅ | `app/(app)/field-conditions/page.tsx` · `app/(app)/recent-activity/page.tsx` |
 | `/users` · `/settings/users` | ✅ | `app/(app)/users/page.tsx` (top-level) · `app/(app)/settings/users/page.tsx` (settings nav entry) |
 | `/more` | ✅ | `app/(app)/more/page.tsx` — mobile module menu |
-| `/api/*` | ✅ | 12 routes: admin (invite, reset-password, users), elevation, airport-lookup, notams/sync, send-pdf-email, signup-email, user-emails, infrastructure-import, installations, airfield-status |
+| `/api/*` | ✅ | 23 route handlers: admin (invite, reset-password, users, kiosk-token), elevation, airport-lookup, notams/sync, send-pdf-email, signup-email, forgot-password, send-ppr-*, user-emails, infrastructure-import, installations, airfield-status, … |
 
 Status: ✅ stable
 
@@ -61,21 +64,21 @@ Status: ✅ stable
 airfield-app/
 ├── app/
 │   ├── (app)/              # Authenticated routes (sidebar/tabs)
-│   ├── (public)/           # /login, /signup, /reset-password
-│   ├── feedback/[baseId]/  # Public QR-accessible feedback form
-│   └── api/                # 12 route handlers
-├── components/             # acsi/ admin/ discrepancies/ infrastructure/ layout/ obstructions/ ui/ waivers/ wildlife/
+│   ├── login/, reset-password/, setup-account/, auth/   # public auth routes (ungrouped, at app root — no (public) group)
+│   ├── feedback/[baseId]/, [icao]/, ppr-request/, kiosk/[icao]/   # public QR / kiosk routes
+│   └── api/                # 23 route handlers
+├── components/             # acsi/ admin/ amtr/ base-setup/ discrepancies/ infrastructure/ layout/ obstructions/ tour/ ui/ waivers/ wildlife/
 ├── lib/
-│   ├── supabase/           # ~30 entity CRUD modules + types.ts
+│   ├── supabase/           # ~44 entity CRUD modules + types.ts
 │   ├── reports/            # analytics-data.ts + report builders
 │   ├── calculations/       # geometry.ts, parking-clearance.ts, obstructions.ts
-│   ├── *-pdf.ts            # 12 generators: acsi, check, discrepancy, feedback, obstruction, parking, personnel, ppr, qrc, training, waiver, email-pdf
-│   └── installation-context.tsx, constants.ts, utils.ts, outage-rules.ts, …
+│   ├── *-pdf.ts            # 20 generators: acsi, aep, amtr, amtr-inspection, check, discrepancy, email, events-log, feedback, obstruction, parking, personnel, ppr, qrc, qrc-monthly-review, scn, sms, training, training-part139, waiver
+│   └── installation-context.tsx, constants.ts, utils.ts, outage-rules.ts, rate-limit.ts, …
 ├── hooks/                  # use-google-map-ruler.ts, use-expiring-notams.ts, …
 ├── public/
 │   ├── wildlife_images/    # bird/ mammal/ reptile/ bat/ — local photo cache
 │   ├── training/, aircraft_silhouettes/, wildlife_image_manifest.json
-├── supabase/migrations/    # 174 migrations, YYYYMMDDXX_<name>.sql
+├── supabase/migrations/    # 254 migrations, YYYYMMDDXX_<name>.sql
 ├── scripts/                # scrape_wildlife_images.py, scrape_aircraft_images.py (Python)
 ├── docs/                   # Capabilities, Leadership Briefing, manual/ (23 files), session handoffs
 └── middleware.ts           # Supabase SSR auth gate
@@ -85,7 +88,7 @@ airfield-app/
 
 **Code style** — ESLint flat config (`eslint.config.mjs`) extends `next/core-web-vitals`. `no-explicit-any` and `no-unused-vars` set to warn (allow `^_` prefix). No Prettier — ESLint defaults govern. Strict TypeScript (`strict: true`, module `esnext`). Path alias `@/*` → repo root; always import via `@/lib/…`, never relative for cross-directory.
 
-**Naming** — React components PascalCase (`EmailPdfModal.tsx`). Hooks use `use-` prefix, kebab-case (`use-google-map-ruler.ts`). Library files kebab-case (`installation-context.tsx`, `qrc-pdf.ts`). Database identifiers snake_case, plural tables (`airfield_checks`, `parking_spots`).
+**Naming** — React component *names* are PascalCase (`EmailPdfModal`); their *files* are kebab-case (`email-pdf-modal.tsx`), like all other source files. Hooks use `use-` prefix, kebab-case (`use-google-map-ruler.ts`). Library files kebab-case (`installation-context.tsx`, `qrc-pdf.ts`). Database identifiers snake_case, plural tables (`airfield_checks`, `parking_spots`). (A handful of legacy component files — e.g. `components/base-setup/*`, `PDFLibrary.tsx` — remain PascalCase-named; new files should be kebab-case.)
 
 **Database** — All operational tables include `base_id UUID REFERENCES bases(id)` and Row-Level Security. RLS is permission-matrix based (migrations `2026042200`–`2026042208`). The only helpers that exist now: `user_has_base_access(uid, base_id)`, `user_has_permission(uid, '<resource>:<action>')`, `user_is_sys_admin(uid)`. **Do not call `user_can_write` / `user_is_admin` / `user_is_base_admin_at` — they were dropped in `2026042208`.** New write policies: `user_has_base_access(auth.uid(), base_id) AND user_has_permission(auth.uid(), '<resource>:write')`. SECURITY DEFINER RPCs cover narrow / column-scoped writes (CES update, Safety, public PPR submit, public feedback submit). Migrations dated `YYYYMMDDXX_<name>.sql`. Don't write to `activity_log` from CRUD modules — discrepancies/checks/inspections write to their own status/event tables. PDF generators always return `{ doc, filename }`.
 
