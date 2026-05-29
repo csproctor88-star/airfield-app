@@ -179,7 +179,12 @@ export function Header() {
       const supabase = createClient()
       if (!supabase) return
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        // getSession() reads from local storage — no auth-server roundtrip.
+        // RLS protects the profile read/write below, so we don't need a
+        // server-validated user object here (same rationale as the sidebar
+        // badge counts). Avoids hitting the auth server every 5 min × every tab.
+        const { data: { session } } = await supabase.auth.getSession()
+        const user = session?.user
         if (!user) return
 
         // Update last_seen_at (skipped on initial mount so the login
@@ -204,8 +209,13 @@ export function Header() {
       } catch { /* ignore */ }
     }
     loadProfile(false)
-    // Update presence every 5 min
-    const interval = setInterval(() => loadProfile(true), 5 * 60 * 1000)
+    // Update presence every 5 min — but only while the tab is actually visible,
+    // so backgrounded tabs don't write presence around the clock.
+    const interval = setInterval(() => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        loadProfile(true)
+      }
+    }, 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
 

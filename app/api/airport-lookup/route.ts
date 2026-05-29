@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAdminClient } from '@/lib/admin/role-checks'
+import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 /**
  * Airport data lookup via OurAirports open data + FAA NFDC supplement.
@@ -293,6 +295,15 @@ export async function GET(req: NextRequest) {
   const icao = req.nextUrl.searchParams.get('icao')?.toUpperCase()
   if (!icao || icao.length < 3 || icao.length > 4) {
     return NextResponse.json({ error: 'Valid ICAO code required (3-4 characters)' }, { status: 400 })
+  }
+
+  // Generous per-IP throttle — this endpoint fans out to several upstream FAA /
+  // OurAirports fetches per call. Fails open if the limiter is unavailable.
+  const admin = getAdminClient()
+  if (admin) {
+    const ip = getClientIp(req)
+    const ok = await checkRateLimits(admin, [{ bucket: `airport-lookup:ip:${ip}`, max: 120, windowSeconds: 3600 }])
+    if (!ok) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
   }
 
   try {

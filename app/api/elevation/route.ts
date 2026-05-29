@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAdminClient } from '@/lib/admin/role-checks'
+import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
   const lat = req.nextUrl.searchParams.get('lat')
@@ -11,6 +13,16 @@ export async function GET(req: NextRequest) {
   const apiKey = process.env.GOOGLE_ELEVATION_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'Elevation API not configured' }, { status: 503 })
+  }
+
+  // Each upstream call is billed to us by Google. Generous per-IP cap that
+  // never blocks normal interactive use but stops a scripted account from
+  // running up the bill. Fails open if the limiter is unavailable.
+  const admin = getAdminClient()
+  if (admin) {
+    const ip = getClientIp(req)
+    const ok = await checkRateLimits(admin, [{ bucket: `elevation:ip:${ip}`, max: 2000, windowSeconds: 3600 }])
+    if (!ok) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
   }
 
   try {

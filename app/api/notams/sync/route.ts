@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAdminClient } from '@/lib/admin/role-checks'
+import { checkRateLimits, getClientIp } from '@/lib/rate-limit'
 
 // FAA public NOTAM Search backend — no API key required
 const FAA_NOTAM_SEARCH_URL = 'https://notams.aim.faa.gov/notamSearch/search'
@@ -77,6 +79,15 @@ export async function GET(request: NextRequest) {
       { error: 'Invalid or missing ICAO code. Provide ?icao=KSEM (3-4 letter code).' },
       { status: 400 }
     )
+  }
+
+  // Generous per-IP throttle so one account can't hammer the FAA endpoint and
+  // get the app's traffic blocked upstream. Fails open if the limiter is down.
+  const admin = getAdminClient()
+  if (admin) {
+    const ip = getClientIp(request)
+    const ok = await checkRateLimits(admin, [{ bucket: `notams-sync:ip:${ip}`, max: 120, windowSeconds: 3600 }])
+    if (!ok) return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 })
   }
 
   try {
