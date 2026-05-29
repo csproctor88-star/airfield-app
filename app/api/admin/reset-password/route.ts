@@ -52,20 +52,32 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, userId } = body as { email: string; userId: string }
+    const { userId } = body as { userId?: string }
 
-    if (!email || !userId) {
-      return NextResponse.json({ error: 'email and userId are required' }, { status: 400 })
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
+
+    // Authorization is keyed on userId, and the address we send the reset link
+    // to is derived from that same user via the auth admin API — never taken
+    // from the request body. Trusting a client-supplied email would let a base
+    // admin authorize against a userId they manage while passing an arbitrary
+    // email, triggering a branded reset email to any address.
+    const { data: targetAuth, error: targetAuthError } = await admin.auth.admin.getUserById(userId)
+    const targetEmail = targetAuth?.user?.email
+    if (targetAuthError || !targetEmail) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Target profile drives the base-access check and the email greeting.
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('primary_base_id, name')
+      .eq('id', userId)
+      .single()
 
     // If base admin, verify target user is at their base
     if (!isSysAdmin(callerProfile.role)) {
-      const { data: targetProfile } = await admin
-        .from('profiles')
-        .select('primary_base_id')
-        .eq('id', userId)
-        .single()
-
       if (!canBaseAdminManageUser(callerProfile.primary_base_id, targetProfile?.primary_base_id ?? null)) {
         return NextResponse.json(
           { error: 'You can only reset passwords for users at your installation' },
@@ -78,22 +90,21 @@ export async function POST(request: Request) {
     const siteUrl = getSiteUrl()
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'recovery',
-      email,
+      email: targetEmail,
       options: { redirectTo: `${siteUrl}/auth/confirm?next=/reset-password` },
     })
 
     if (linkError) {
       // Fallback to default Supabase email if generateLink fails
-      const { error: resetError } = await admin.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await admin.auth.resetPasswordForEmail(targetEmail, {
         redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
       })
       if (resetError) return NextResponse.json({ error: resetError.message }, { status: 400 })
       return NextResponse.json({ success: true })
     }
 
-    // Get user name for the email
-    const { data: targetUser } = await admin.from('profiles').select('name, rank').eq('id', userId).single()
-    const userName = targetUser?.name || email
+    // Name for the email greeting (profile fetched above)
+    const userName = targetProfile?.name || targetEmail
     // Build a direct verify-OTP URL pointing at our /auth/confirm route
     // (NOT properties.action_link). The hosted Supabase verify URL fails
     // for server-generated links under PKCE — see comment in
@@ -112,7 +123,7 @@ export async function POST(request: Request) {
         await resend.emails.send({
           from: 'Glidepath <noreply@glidepathops.com>',
           replyTo: 'info@glidepathops.com',
-          to: email,
+          to: targetEmail,
           subject: 'Glidepath — Password Reset',
           html: `<!DOCTYPE html>
 <html>
@@ -152,7 +163,7 @@ export async function POST(request: Request) {
     }
 
     // Fallback: use Supabase default email
-    await admin.auth.resetPasswordForEmail(email, {
+    await admin.auth.resetPasswordForEmail(targetEmail, {
       redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
     })
     return NextResponse.json({ success: true })
