@@ -10,8 +10,9 @@ import { getSupabaseConfig } from '@/lib/utils'
 // URL pattern: /kiosk/<ICAO>?token=<per-base-random-token>
 // On hit:
 //   1. Look up the base by ICAO.
-//   2. Constant-time compare the query `token` against bases.kiosk_token.
-//      Bases with NULL kiosk_token are opt-out and reject outright.
+//   2. Constant-time compare the query `token` against the base's row in
+//      base_kiosk_tokens (a service-role-only table). Bases with no token row
+//      are opt-out and reject outright.
 //   3. Sign in as the per-base kiosk account (email = kiosk-<icao>@glidepathops.com,
 //      password = process.env.KIOSK_PASSWORD).
 //   4. If the account doesn't exist yet, auto-provision it (the
@@ -21,8 +22,9 @@ import { getSupabaseConfig } from '@/lib/utils'
 //
 // Two secrets defend this route:
 //   • KIOSK_PASSWORD (server-only env var) — never leaves the server.
-//   • bases.kiosk_token (per-base) — lives in the URL. Treat the full
-//     URL like a share link; anyone with it can view that base's board.
+//   • the per-base kiosk token (base_kiosk_tokens, service-role only) — lives
+//     in the URL. Treat the full URL like a share link; anyone with it can
+//     view that base's board.
 
 const EMAIL_DOMAIN = 'glidepathops.com'
 
@@ -68,7 +70,7 @@ export async function GET(
   // Look up the base. ICAO comparison is case-insensitive.
   const { data: base } = await admin
     .from('bases')
-    .select('id, name, icao, kiosk_token')
+    .select('id, name, icao')
     .ilike('icao', icao)
     .maybeSingle()
 
@@ -76,7 +78,14 @@ export async function GET(
     return redirectToLogin(request, 'kiosk_base_not_found')
   }
 
-  const expectedToken = (base as { kiosk_token?: string | null }).kiosk_token
+  // The token lives in the service-role-only base_kiosk_tokens table.
+  const { data: tokenRow } = await admin
+    .from('base_kiosk_tokens')
+    .select('token')
+    .eq('base_id', base.id)
+    .maybeSingle()
+
+  const expectedToken = (tokenRow as { token?: string | null } | null)?.token
   if (!expectedToken) {
     // Base has explicitly opted out of kiosk URLs (or hasn't set one yet).
     return redirectToLogin(request, 'kiosk_disabled')

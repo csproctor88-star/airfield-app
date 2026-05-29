@@ -84,17 +84,27 @@ export async function POST(request: Request) {
     }
 
     const token = newToken()
+    // Store the secret in the service-role-only table, and flip the non-secret
+    // kiosk_enabled flag on bases (drives the UI's "active" state).
     const { error } = await auth.admin
-      .from('bases')
-      .update({ kiosk_token: token } as never)
-      .eq('id', baseId)
+      .from('base_kiosk_tokens')
+      .upsert({ base_id: baseId, token, updated_at: new Date().toISOString() } as never, { onConflict: 'base_id' })
 
     if (error) {
-      console.error('[kiosk-token] UPDATE failed:', error)
-      const hint = /column.*kiosk_token.*does not exist/i.test(error.message)
-        ? 'Database migration 2026042301_kiosk_token not applied yet — run `npx supabase db push`.'
+      console.error('[kiosk-token] upsert failed:', error)
+      const hint = /relation.*base_kiosk_tokens.*does not exist/i.test(error.message)
+        ? 'Database migration 2026061601_kiosk_token_isolation not applied yet.'
         : error.message
       return NextResponse.json({ error: hint }, { status: 500 })
+    }
+
+    const { error: flagError } = await auth.admin
+      .from('bases')
+      .update({ kiosk_enabled: true } as never)
+      .eq('id', baseId)
+    if (flagError) {
+      console.error('[kiosk-token] kiosk_enabled flag update failed:', flagError)
+      // Token was stored; the flag is cosmetic, so don't fail the request.
     }
 
     return NextResponse.json({ token })
@@ -120,13 +130,21 @@ export async function DELETE(request: Request) {
     }
 
     const { error } = await auth.admin
-      .from('bases')
-      .update({ kiosk_token: null } as never)
-      .eq('id', baseId)
+      .from('base_kiosk_tokens')
+      .delete()
+      .eq('base_id', baseId)
 
     if (error) {
       console.error('[kiosk-token] DELETE failed:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const { error: flagError } = await auth.admin
+      .from('bases')
+      .update({ kiosk_enabled: false } as never)
+      .eq('id', baseId)
+    if (flagError) {
+      console.error('[kiosk-token] kiosk_enabled flag clear failed:', flagError)
     }
 
     return NextResponse.json({ success: true })

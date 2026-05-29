@@ -121,7 +121,9 @@ export default function BaseSetupPage() {
 
   const canEdit = has(PERM.BASE_SETUP_WRITE)
   const baseIcao = (currentInstallation as unknown as { icao?: string | null } | null)?.icao ?? null
-  const kioskTokenSet = !!((currentInstallation as unknown as { kiosk_token?: string | null } | null)?.kiosk_token)
+  // The secret token now lives in the service-role-only base_kiosk_tokens table;
+  // bases.kiosk_enabled is the non-secret "is a kiosk URL configured?" flag.
+  const kioskTokenSet = !!((currentInstallation as unknown as { kiosk_enabled?: boolean } | null)?.kiosk_enabled)
 
   const markSaved = useCallback((stepKey: WizardStepKey) => {
     setSavedAt(prev => ({ ...prev, [stepKey]: Date.now() }))

@@ -7,7 +7,8 @@ import { NextRequest } from 'next/server'
 // per-case to control what the mocked Supabase admin / ssr clients return.
 const { state } = vi.hoisted(() => ({
   state: {
-    baseRow: null as null | { id: string; name: string; icao: string; kiosk_token: string | null },
+    baseRow: null as null | { id: string; name: string; icao: string },
+    kioskToken: null as string | null,
     signIn: [] as Array<{ error: { message: string } | null }>,
     createUser: {
       data: null as null | { user: { id: string } },
@@ -25,6 +26,7 @@ const { state } = vi.hoisted(() => ({
 
 function resetState() {
   state.baseRow = null
+  state.kioskToken = null
   state.signIn = []
   state.createUser = { data: null, error: null }
   state.calls.baseIlike = []
@@ -45,6 +47,20 @@ vi.mock('@/lib/admin/role-checks', () => ({
               state.calls.baseIlike.push(val)
               return { maybeSingle: async () => ({ data: state.baseRow, error: null }) }
             },
+          }),
+          // kiosk_enabled flag flips on generate/disable — not exercised here.
+          update: () => ({ eq: async () => ({ error: null }) }),
+        }
+      }
+      if (table === 'base_kiosk_tokens') {
+        return {
+          select: () => ({
+            eq: (_col: string, _val: string) => ({
+              maybeSingle: async () => ({
+                data: state.kioskToken ? { token: state.kioskToken } : null,
+                error: null,
+              }),
+            }),
           }),
         }
       }
@@ -173,20 +189,23 @@ describe('kiosk route — /kiosk/<icao>', () => {
     })
 
     it('rejects when the base has a null kiosk_token (disabled)', async () => {
-      state.baseRow = { id: 'base-1', name: 'Test', icao: 'KSMF', kiosk_token: null }
+      state.baseRow = { id: 'base-1', name: 'Test', icao: 'KSMF' }
+      state.kioskToken = null
       const { errorCode } = await callKiosk('KSMF', '?token=abc')
       expect(errorCode).toBe('kiosk_disabled')
     })
 
     it('rejects when the token does not match', async () => {
-      state.baseRow = { id: 'base-1', name: 'Test', icao: 'KSMF', kiosk_token: 'correct-token' }
+      state.baseRow = { id: 'base-1', name: 'Test', icao: 'KSMF' }
+      state.kioskToken = 'correct-token'
       const { errorCode } = await callKiosk('KSMF', '?token=wrong-token')
       expect(errorCode).toBe('kiosk_token_mismatch')
     })
 
     it('rejects when the provided token is a length-mismatched prefix', async () => {
       // Constant-time compare short-circuits on length before timingSafeEqual.
-      state.baseRow = { id: 'base-1', name: 'Test', icao: 'KSMF', kiosk_token: 'correct-token' }
+      state.baseRow = { id: 'base-1', name: 'Test', icao: 'KSMF' }
+      state.kioskToken = 'correct-token'
       const { errorCode } = await callKiosk('KSMF', '?token=correct')
       expect(errorCode).toBe('kiosk_token_mismatch')
     })
@@ -194,7 +213,8 @@ describe('kiosk route — /kiosk/<icao>', () => {
 
   describe('happy path — account already exists', () => {
     it('signs in directly and redirects to /', async () => {
-      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC', kiosk_token: 'good-token' }
+      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC' }
+      state.kioskToken = 'good-token'
       state.signIn = [{ error: null }]
       const { status, location } = await callKiosk('KMTC', '?token=good-token')
       expect(status).toBe(307)
@@ -212,7 +232,8 @@ describe('kiosk route — /kiosk/<icao>', () => {
 
   describe('auto-provision path — account does not exist', () => {
     it('creates the user, flips status to active, then signs in', async () => {
-      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC', kiosk_token: 'good-token' }
+      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC' }
+      state.kioskToken = 'good-token'
       state.signIn = [
         { error: { message: 'Invalid login credentials' } },
         { error: null },
@@ -242,7 +263,8 @@ describe('kiosk route — /kiosk/<icao>', () => {
     })
 
     it('fails cleanly when createUser returns an error (e.g. rotated password)', async () => {
-      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC', kiosk_token: 'good-token' }
+      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC' }
+      state.kioskToken = 'good-token'
       state.signIn = [{ error: { message: 'Invalid login credentials' } }]
       state.createUser = { data: null, error: { message: 'User already registered' } }
 
@@ -254,7 +276,8 @@ describe('kiosk route — /kiosk/<icao>', () => {
     })
 
     it('fails cleanly when the retry sign-in still errors after provisioning', async () => {
-      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC', kiosk_token: 'good-token' }
+      state.baseRow = { id: 'base-1', name: 'Selfridge', icao: 'KMTC' }
+      state.kioskToken = 'good-token'
       state.signIn = [
         { error: { message: 'Invalid login credentials' } },
         { error: { message: 'Invalid login credentials' } },
