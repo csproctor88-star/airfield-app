@@ -2,8 +2,8 @@
 
 **Date:** 2026-05-28
 **Branch:** `main` (`amtr-fixes` merged + deleted this session)
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (103/103 pages), `npx vitest run` ✓ (525 pass / 47 files)
-**HEAD:** `8853ba9` — pushed to `origin/main`
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (103/103 pages), `npx vitest run` ✓ (531 pass / 48 files)
+**HEAD:** `d1aaa47` — pushed to `origin/main`
 
 ---
 
@@ -59,6 +59,22 @@ ignored. Client contract unchanged (it already sends `userId`).
   status board's PPR panel — they could disagree near UTC midnight.
 - **`.gitignore`** now ignores `.firecrawl/`.
 
+### 5. Rate limiting on unauthenticated email endpoints — migration `2026061505` (`d1aaa47`)
+`forgot-password`, `signup-email`, and `send-ppr-confirmation` triggered Resend
+emails / account creation with no auth and no server-side throttle (the
+feedback form's localStorage cooldown is client-side, trivially bypassed).
+Postgres-backed sliding-window limiter (durable across Vercel serverless
+instances): `rate_limit_hits` table (RLS on, no policies) + SECURITY DEFINER
+`check_rate_limit(bucket, max, window_seconds)` RPC, granted to
+service_role/authenticated only (never anon). `lib/rate-limit.ts` wraps it —
+`checkRateLimits(admin, rules[])` checks per-email + per-IP buckets and **fails
+open** on RPC error; `getClientIp()` reads x-forwarded-for / x-real-ip. Limits:
+forgot-password 3/email/15min + 20/ip/hr; signup 10/ip/hr + 5/email/hr;
+ppr-confirm 5/email/hr + 20/ip/hr. Over-limit → 429 (enumeration-safe on
+forgot-password). **Applied live; RPC verified (true,true,false at max=2).**
+The other `send-ppr-*` routes (approval/denial/cancellation/coordination) are
+AMOPS-triggered, not public — left unthrottled by design.
+
 ---
 
 ## Migrations status
@@ -66,6 +82,7 @@ ignored. Client contract unchanged (it already sends `userId`).
 | File | Applied | What |
 |---|---|---|
 | `2026061504_user_delete_set_null_remainder.sql` | ✅ | `ON DELETE SET NULL` on the 21 remaining `NO ACTION` profiles(id) FKs. Verified live (`pg_constraint.confdeltype`). |
+| `2026061505_rate_limit.sql` | ✅ | `rate_limit_hits` table + `check_rate_limit` SECURITY DEFINER RPC. Verified live (true,true,false at max=2). |
 
 No pending migrations. (AMTR `2026061400`–`2026061503` applied in prior sessions.)
 
@@ -87,7 +104,6 @@ No pending migrations. (AMTR `2026061400`–`2026061503` applied in prior sessio
 |---|---|---|
 | AMTR batch never walked in a live browser | Med | Import, transcribe (4 tabs), Files-tab Add-file dialog all built/tested, never clicked through. Needs a real-record pass. |
 | v2.34.0 release prep | Med | Version bump in 5 places + CHANGELOG + tag — user deferring the bump "a few days". |
-| `forgot-password` has no rate limiting | Low | Unauthenticated endpoint that triggers Resend sends — email-spam / quota-abuse vector. Needs a rate-limit mechanism. |
 | Email-confirmation toggle likely back ON | Low | Supabase dashboard setting (ops, not code). Per-user `email_confirmed_at` SQL is the band-aid. |
 | 1098 `next_due` not recomputed on transcribe | Low | User decided no recompute needed. |
 | `as any` casts (~124), 4K-LOC page files, PDF boilerplate, thin tests | Low | Structural, multi-session, not blocking. |
@@ -100,7 +116,7 @@ No pending migrations. (AMTR `2026061400`–`2026061503` applied in prior sessio
    `Training Record.xlsx`: import, transcribe (all 4 tabs), Files-tab dialog.
 2. **v2.34.0 release prep** (when the user is ready — version in 5 places +
    CHANGELOG + tag).
-3. Optional: `forgot-password` rate limiting; durable email-confirmation fix.
+3. Optional: durable email-confirmation toggle fix (Supabase dashboard).
 
 ---
 
@@ -109,11 +125,12 @@ No pending migrations. (AMTR `2026061400`–`2026061503` applied in prior sessio
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
 Build: npm run build — compiled successfully, 103/103 static pages.
-Tests: 525 pass / 47 files (+1 from the FK guard test).
+Tests: 531 pass / 48 files (+1 FK guard, +6 rate-limit helper).
 
-New test file this session:
+New test files this session:
   tests/fk-profiles-on-delete-guard.test.ts — static guard: new migrations
   must declare ON DELETE on profiles FKs.
+  tests/rate-limit.test.ts — checkRateLimits allow/deny/fail-open + getClientIp.
 ```
 
 ---
@@ -122,7 +139,7 @@ New test file this session:
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | AMTR batch (merged to main) + PPR active-count fix + user-deletion FK fix + reset-password authz fix + PPR-chip tz fix. All on `main`, pushed; not yet version-tagged. |
+| **Unreleased** | — | AMTR batch (merged to main) + PPR active-count fix + user-deletion FK fix + reset-password authz fix + PPR-chip tz fix + email-endpoint rate limiting. All on `main`, pushed; not yet version-tagged. |
 | v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
 
 ---
@@ -131,10 +148,16 @@ New test file this session:
 
 ### New files
 - `supabase/migrations/2026061504_user_delete_set_null_remainder.sql`
+- `supabase/migrations/2026061505_rate_limit.sql`
 - `tests/fk-profiles-on-delete-guard.test.ts`
+- `tests/rate-limit.test.ts`
+- `lib/rate-limit.ts` — `checkRateLimits()` + `getClientIp()`.
 
 ### Modified files
 - `app/api/admin/users/[id]/route.ts` — delete-route comment (FK now DB-handled).
 - `app/api/admin/reset-password/route.ts` — derive email from userId.
+- `app/api/forgot-password/route.ts` — rate limiting.
+- `app/api/signup-email/route.ts` — rate limiting.
+- `app/api/send-ppr-confirmation/route.ts` — rate limiting.
 - `components/layout/header.tsx` — base-local PPR "today" date.
 - `.gitignore` — ignore `.firecrawl/`.
