@@ -1,14 +1,16 @@
 // Records Export — Excel layer (Phase 3).
 //
-// Reuses each module's TableModuleSpec (columns + toRow) to emit one workbook
-// per tabular module plus a master workbook with one sheet per module/kind.
-// Driven entirely by the same specs the PDF table modules use, so the two
-// exports never drift. Per-record / matrix modules (Waivers, ACSI, Training,
-// PPR, SCN, Events Log) are PDF-only — Excel covers the tabular record series.
+// One workbook per tabular module + a master workbook with one sheet per
+// module/kind. Unlike the PDF tables (which render a compact, human-readable
+// column subset), the Excel sheets serialize EVERY scalar field on each record
+// so the spreadsheet is the comprehensive data copy. Period filtering reuses
+// each module's natural-date accessor (the same getDate the PDF specs use), so
+// the two exports always cover the same rows. Per-record / matrix modules
+// (Waivers, ACSI, Training, PPR, SCN, Events Log) are PDF-only.
 import { createStyledWorkbook, addStyledSheet, type ColumnDef } from '@/lib/excel-export'
 import { isInRange, type ExportPeriod } from './export-period'
 import { EXPORT_MODULES } from './export-modules'
-import type { TableModuleSpec } from './export-pdf'
+import { humanize, type TableModuleSpec } from './export-table-specs'
 import type { ExportFile } from './export-file'
 import type { ModuleRecords } from './export-data'
 import {
@@ -39,7 +41,7 @@ const folderOf = (key: string): string => EXPORT_MODULES.find((m) => m.key === k
 /** Short prefix used to disambiguate multi-kind sheets in the master workbook. */
 const SHORT: Record<string, string> = { sms: 'SMS', aep: 'AEP' }
 
-/** Excel sheet names: ≤31 chars, no \ / ? * [ ] : */
+/** Excel sheet names: <=31 chars, no \ / ? * [ ] : */
 function sanitizeSheetName(s: string): string {
   return s.replace(/[\\/?*[\]:]/g, '-').slice(0, 31) || 'Sheet'
 }
@@ -53,6 +55,79 @@ function uniqueName(base: string, used: Set<string>): string {
   }
   used.add(name)
   return name
+}
+
+/** Column header from a field key: split snake_case + camelCase, then humanize
+ *  (uppercases known acronyms, Title-Cases the rest). 'timeOfDay' -> 'Time Of
+ *  Day', 'work_order_number' -> 'Work Order Number', 'bwc' -> 'BWC'. */
+function fieldHeader(key: string): string {
+  return humanize(key.replace(/([a-z0-9])([A-Z])/g, '$1 $2'))
+}
+
+/**
+ * Format one field value for a spreadsheet cell. Returns null for values that
+ * shouldn't get a column (nested objects/object-arrays) so the column is
+ * dropped. Scalars, string/number arrays, and person-shaped objects render.
+ */
+function formatCell(v: unknown): string | null {
+  if (v == null) return ''
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+  if (typeof v === 'number') return String(v)
+  if (typeof v === 'string') return v
+  if (Array.isArray(v)) {
+    if (v.length === 0) return ''
+    if (v.every((x) => typeof x === 'string' || typeof x === 'number')) return v.join('; ')
+    return null // array of objects — not a scalar column
+  }
+  if (typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    if (typeof o.name === 'string') {
+      // person-shaped ref (e.g. discrepancy reporter): "Rank Name"
+      return [o.rank, o.name].filter((x) => typeof x === 'string' && x).join(' ') || o.name
+    }
+    return null // generic nested object — skip
+  }
+  return null
+}
+
+interface SheetData { columns: ColumnDef[]; data: Record<string, string>[] }
+
+/**
+ * Serialize records into a sheet with every scalar field as a column. Filters by
+ * the module's natural date first; drops columns that are empty across all rows.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowsToSheet(rows: any[], getDate: (r: any) => string | null | undefined, period: ExportPeriod): SheetData {
+  const filtered = rows.filter((r) => isInRange(getDate(r), period))
+  if (filtered.length === 0) return { columns: [], data: [] }
+
+  // Field keys in first-seen order across all rows.
+  const keys: string[] = []
+  const seen = new Set<string>()
+  for (const r of filtered) {
+    for (const k of Object.keys(r)) {
+      if (!seen.has(k)) { seen.add(k); keys.push(k) }
+    }
+  }
+
+  // Render every cell; a key formatting to null for ALL rows is not a column.
+  const rendered = filtered.map((r) => {
+    const o: Record<string, string | null> = {}
+    for (const k of keys) o[k] = formatCell(r[k])
+    return o
+  })
+  const keptKeys = keys.filter((k) => rendered.some((row) => row[k] != null && row[k] !== ''))
+
+  const columns: ColumnDef[] = keptKeys.map((k) => {
+    const header = fieldHeader(k)
+    return { header, key: k, width: Math.min(48, Math.max(12, header.length + 4)) }
+  })
+  const data = rendered.map((row) => {
+    const o: Record<string, string> = {}
+    for (const k of keptKeys) o[k] = row[k] ?? ''
+    return o
+  })
+  return { columns, data }
 }
 
 function jobsFor(records: ModuleRecords): SheetJob[] {
@@ -74,23 +149,6 @@ function jobsFor(records: ModuleRecords): SheetJob[] {
     { moduleKey: 'aep', sheetName: 'Drills', spec: AEP_DRILLS_SPEC, rows: records.aep.drills },
     { moduleKey: 'aep', sheetName: 'Comms Checks', spec: AEP_COMMS_CHECKS_SPEC, rows: records.aep.commsChecks },
   ]
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function specToSheet(spec: TableModuleSpec<any>, rows: any[], period: ExportPeriod): { columns: ColumnDef[]; data: Record<string, string>[] } {
-  const columns: ColumnDef[] = spec.columns.map((h, i) => ({
-    header: h,
-    key: `c${i}`,
-    width: Math.min(45, Math.max(12, h.length + 6)),
-  }))
-  const filtered = rows.filter((r) => isInRange(spec.getDate(r), period))
-  const data = filtered.map((r) => {
-    const cells = spec.toRow(r)
-    const obj: Record<string, string> = {}
-    cells.forEach((c, i) => { obj[`c${i}`] = c })
-    return obj
-  })
-  return { columns, data }
 }
 
 export interface ExcelBuildResult {
@@ -129,7 +187,7 @@ export async function buildExcelFiles(
     const multi = modJobs.length > 1
 
     for (const j of modJobs) {
-      const { columns, data } = specToSheet(j.spec, j.rows, opts.period)
+      const { columns, data } = rowsToSheet(j.rows, j.spec.getDate, opts.period)
       if (data.length === 0) continue
       addStyledSheet(wb, uniqueName(sanitizeSheetName(j.sheetName), names), columns, data)
       sheets++

@@ -186,17 +186,37 @@ export const PERSONNEL_SPEC: TableModuleSpec<ContractorLike> = {
 // export flattens both into one normalized row with a Kind column. Strike-only
 // fields (Aircraft, Damage) are null for sightings and render as "—".
 // export-data.ts owns the mapping from the raw rows to this shape.
+// The PDF table renders a compact subset (the first row of fields); the Excel
+// workbook serializes every field below so the spreadsheet carries the full
+// record. export-data.ts owns the mapping from the raw sighting/strike rows.
 export interface WildlifeExportRow {
   /** Natural date: observed_at for sightings, strike_date for strikes. */
   date: string
+  displayId: string
   species: string | null
+  scientific: string | null
   category: string | null
+  size: string | null
   count: number
   kind: 'Sighting' | 'Strike'
   location: string | null
+  zone: string | null
+  latitude: number | null
+  longitude: number | null
+  timeOfDay: string | null
+  skyCondition: string | null
+  precipitation: string | null
+  bwc: string | null
+  /** Sighting-only: dispersal action + method + effectiveness. */
+  actionTaken: string | null
+  dispersalMethod: string | null
+  dispersalEffective: boolean | null
+  /** Strike-only: aircraft + phase of flight. */
   observer: string
   aircraft: string | null
+  phaseOfFlight: string | null
   damage: string | null
+  notes: string | null
 }
 
 export const WILDLIFE_SPEC: TableModuleSpec<WildlifeExportRow> = {

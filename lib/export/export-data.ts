@@ -247,28 +247,58 @@ const SCN_FETCH_TO = '2999-12-31'
 function sightingToExportRow(s: WildlifeSightingRow): WildlifeExportRow {
   return {
     date: s.observed_at,
+    displayId: s.display_id,
     species: s.species_common,
+    scientific: s.species_scientific,
     category: s.species_group,
+    size: s.size_category,
     count: s.count_observed,
     kind: 'Sighting',
     location: s.location_text ?? s.airfield_zone,
+    zone: s.airfield_zone,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    timeOfDay: s.time_of_day,
+    skyCondition: s.sky_condition,
+    precipitation: s.precipitation,
+    bwc: s.bwc_at_time,
+    actionTaken: s.action_taken,
+    dispersalMethod: s.dispersal_method,
+    dispersalEffective: s.dispersal_effective,
     observer: s.observed_by,
     aircraft: null,
+    phaseOfFlight: null,
     damage: null,
+    notes: s.notes,
   }
 }
 
 function strikeToExportRow(s: WildlifeStrikeRow): WildlifeExportRow {
   return {
     date: s.strike_date,
+    displayId: s.display_id,
     species: s.species_common,
+    scientific: s.species_scientific,
     category: s.species_group,
+    size: s.size_category,
     count: s.number_struck,
     kind: 'Strike',
     location: s.location_text,
+    zone: null,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    timeOfDay: s.time_of_day,
+    skyCondition: s.sky_condition,
+    precipitation: s.precipitation,
+    bwc: s.bwc_at_time,
+    actionTaken: null,
+    dispersalMethod: null,
+    dispersalEffective: null,
     observer: s.reported_by,
     aircraft: s.aircraft_type,
+    phaseOfFlight: s.phase_of_flight,
     damage: s.damage_level ? s.damage_level.charAt(0).toUpperCase() + s.damage_level.slice(1) : null,
+    notes: s.notes,
   }
 }
 

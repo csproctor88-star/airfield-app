@@ -6,10 +6,42 @@ import {
   type DailyReviewExportRow,
 } from '@/lib/export/export-table-specs'
 
+// Factory: fills the full WildlifeExportRow field set with neutral defaults so a
+// test only specifies the fields it cares about (the PDF spec reads a subset).
+function wl(partial: Partial<WildlifeExportRow>): WildlifeExportRow {
+  return {
+    date: '2026-05-02T13:00:00Z',
+    displayId: 'WS-0001',
+    species: null,
+    scientific: null,
+    category: null,
+    size: null,
+    count: 1,
+    kind: 'Sighting',
+    location: null,
+    zone: null,
+    latitude: null,
+    longitude: null,
+    timeOfDay: null,
+    skyCondition: null,
+    precipitation: null,
+    bwc: null,
+    actionTaken: null,
+    dispersalMethod: null,
+    dispersalEffective: null,
+    observer: '',
+    aircraft: null,
+    phaseOfFlight: null,
+    damage: null,
+    notes: null,
+    ...partial,
+  }
+}
+
 describe('export-table-specs — Wildlife + Daily Reviews (2b-ii)', () => {
   describe('WILDLIFE_SPEC', () => {
     it('maps a sighting row with strike-only cells dashed', () => {
-      const row: WildlifeExportRow = {
+      const row = wl({
         date: '2026-05-02T13:00:00Z',
         species: 'Red-tailed Hawk',
         category: 'Bird',
@@ -19,7 +51,7 @@ describe('export-table-specs — Wildlife + Daily Reviews (2b-ii)', () => {
         observer: 'A1C Diaz',
         aircraft: null,
         damage: null,
-      }
+      })
       expect(WILDLIFE_SPEC.toRow(row)).toEqual([
         '2026-05-02',
         'Red-tailed Hawk',
@@ -34,7 +66,7 @@ describe('export-table-specs — Wildlife + Daily Reviews (2b-ii)', () => {
     })
 
     it('maps a strike row including aircraft + damage', () => {
-      const row: WildlifeExportRow = {
+      const row = wl({
         date: '2026-05-04T09:30:00Z',
         species: 'Canada Goose',
         category: 'Bird',
@@ -44,7 +76,7 @@ describe('export-table-specs — Wildlife + Daily Reviews (2b-ii)', () => {
         observer: 'Tower',
         aircraft: 'C-130',
         damage: 'Minor',
-      }
+      })
       expect(WILDLIFE_SPEC.toRow(row)).toEqual([
         '2026-05-04',
         'Canada Goose',
@@ -59,7 +91,7 @@ describe('export-table-specs — Wildlife + Daily Reviews (2b-ii)', () => {
     })
 
     it('dashes a strike with unknown species/category', () => {
-      const row: WildlifeExportRow = {
+      const row = wl({
         date: '2026-05-05T00:00:00Z',
         species: null,
         category: null,
@@ -69,7 +101,7 @@ describe('export-table-specs — Wildlife + Daily Reviews (2b-ii)', () => {
         observer: 'AMOPS',
         aircraft: null,
         damage: 'None',
-      }
+      })
       expect(WILDLIFE_SPEC.toRow(row)).toEqual([
         '2026-05-05',
         '—',
