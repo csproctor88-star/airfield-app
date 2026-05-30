@@ -208,7 +208,10 @@ No `base_backups` table. (A future `export_log` audit table is a deferred option
 | ✅ 1 | Permission migration · `export-modules.ts` (registry) + `export-period.ts` (date-basis + all-time/range + month bucketing) · `/settings/exports` shell | **Done 2026-05-29** — migration applied live; 607 tests pass; build green; page gated. Plan: `docs/superpowers/plans/2026-05-29-records-export-phase-1.md` |
 | 2 | PDF doc layer (3 strategies) | Visual review of sample PDFs |
 | ↳ 2a | **Done 2026-05-29** — PDF framework (`ExportFile`, generic records-table generator, pure `buildTableModuleFiles` orchestrator w/ aggregate + monthly + error boundary), proven on Discrepancies. 617 tests. Plan: `docs/superpowers/plans/2026-05-29-records-export-phase-2a.md` | Build green; framework unit-tested |
-| ↳ 2b | Fan out remaining table modules (Inspections, Checks, Obstructions, Events Log, Daily Reviews, Wildlife, PPR, Personnel, SCN, SMS, AEP) as `TableModuleSpec`s + reuse existing array generators where richer | per-module specs |
+| ↳ 2b | **Done 2026-05-29** — four uniform table modules (Inspections, Checks, Obstructions, Personnel) as `TableModuleSpec`s in `export-table-specs.ts` + fetch wiring. 621 tests. Plan: `docs/superpowers/plans/2026-05-29-records-export-phase-2b.md` | Build green; per-spec tests |
+| ↳ 2b-ii | Wildlife (sightings+strikes, needs spec sub-name) + Daily Reviews (needs a fetch-all) | per-module specs |
+| ↳ 2b-iii | Reuse rich generators: Events Log (`generateEventsLogPdf`), PPR (`generatePprPdf`), SCN (`generateScnMonthlyPdf`) | adapters |
+| ↳ 2d | Civilian multi-kind: SMS (~5 record kinds), AEP (~4) | per-kind specs |
 | ↳ 2c | Per-record modules (Waivers, ACSI, Civilian Training) | sample PDFs |
 | 3 | Excel layer (per-module + master) | Workbooks open clean |
 | 4 | Packager: ZIP + `00-START-HERE.pdf` cover + SHA-256 manifest + README + progress + size guard. **End of "A" — usable export ships.** | Download/unzip real demo export; verify hashes |
