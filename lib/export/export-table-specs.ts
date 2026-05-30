@@ -3,6 +3,7 @@
 // row into stringified cells. Consumed by buildTableModuleFiles (export-pdf.ts).
 import { EXPORT_MODULES } from './export-modules'
 import type { TableModuleSpec } from './export-pdf'
+import { humanize } from './export-format'
 
 function mod(key: string) {
   const m = EXPORT_MODULES.find((x) => x.key === key)
@@ -17,26 +18,6 @@ const yesNo = (v: boolean | null | undefined): string => (v ? 'Yes' : 'No')
 const zuluDateTime = (v: string | null | undefined): string =>
   v ? `${v.slice(0, 10)} ${v.slice(11, 16)}Z` : '—'
 
-// Domain acronyms that should render fully uppercase in humanized labels.
-const ACRONYMS = new Set([
-  'fod', 'rsc', 'rcr', 'bash', 'navaid', 'ppr', 'notam', 'notams', 'arff', 'scn',
-  'aep', 'sms', 'moc', 'bwc', 'ife', 'qrc', 'pcas', 'acsi', 'afm', 'amops', 'namo',
-  'ces', 'usda', 'na', 'id', 'wo', 'af', 'rwy', 'twy', 'pa', 'npa', 'vfr', 'ifr',
-])
-
-/**
- * Humanize an enum / snake_case value for display: split on spaces + underscores,
- * uppercase known acronyms, Title Case the rest. 'fod' -> 'FOD',
- * 'work_completed_awaiting_verification' -> 'Work Completed Awaiting Verification'.
- */
-export function humanize(v: string | null | undefined): string {
-  if (v == null || v === '') return '—'
-  return v
-    .split(/[\s_]+/)
-    .filter(Boolean)
-    .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
-    .join(' ')
-}
 
 // ── Discrepancies (moved from export-pdf.ts) ─────────────────
 interface DiscrepancyLike {

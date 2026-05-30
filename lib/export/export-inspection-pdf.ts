@@ -20,7 +20,7 @@ import {
   tableStyles,
 } from '@/lib/pdf-utils'
 import { sanitizePdfText } from '@/lib/pdf-config'
-import { humanize } from './export-table-specs'
+import { humanize } from './export-format'
 import { EXPORT_MODULES } from './export-modules'
 import { isInRange, groupByMonth } from './export-period'
 import { pdfToExportFile, type ExportFile } from './export-file'

@@ -10,7 +10,8 @@
 import { createStyledWorkbook, addStyledSheet, type ColumnDef } from '@/lib/excel-export'
 import { isInRange, type ExportPeriod } from './export-period'
 import { EXPORT_MODULES } from './export-modules'
-import { humanize, type TableModuleSpec } from './export-table-specs'
+import { humanize } from './export-format'
+import type { TableModuleSpec } from './export-pdf'
 import type { ExportFile } from './export-file'
 import type { ModuleRecords } from './export-data'
 import {
