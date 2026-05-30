@@ -43,6 +43,8 @@ export interface BuildExportOptions {
   /** Base IANA timezone — used by the PPR generator for local time columns. */
   timezone?: string | null
   include: { pdf: boolean; excel: boolean; json: boolean }
+  /** Embed photos inline in per-record PDFs (ACSI + Waivers). Browser-only. */
+  embedPhotos?: boolean
 }
 
 export interface BuiltExport {
@@ -123,7 +125,7 @@ export async function buildExportFiles(
     baseName: opts.base.name,
     baseIcao: opts.base.icao,
   }
-  const recordCtx = { period: opts.period, baseName: opts.base.name, baseIcao: opts.base.icao }
+  const recordCtx = { period: opts.period, baseName: opts.base.name, baseIcao: opts.base.icao, includePhotos: opts.embedPhotos }
   const sel = new Set(opts.selectedKeys)
   const counts = recordCounts(records)
   const payload = jsonPayload(records)
@@ -186,7 +188,7 @@ export async function buildExportFiles(
     }
 
     // ── Per-record modules ──
-    if (sel.has('waivers')) add('waivers', buildWaiverFiles(records.waivers, recordCtx))
+    if (sel.has('waivers')) add('waivers', await buildWaiverFiles(records.waivers, recordCtx))
     if (sel.has('acsi')) add('acsi', await buildAcsiFiles(records.acsi, recordCtx))
     if (sel.has('training_part139')) add('training_part139', buildTrainingFiles(records.training, recordCtx))
   }

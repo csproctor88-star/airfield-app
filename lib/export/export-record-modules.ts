@@ -8,15 +8,19 @@
 //
 // Period filters which records are included (per the design spec: per-record
 // modules always emit one PDF per record; the period only scopes the set).
-// Photos are intentionally omitted in 2c (Waivers pass []; ACSI uses
-// skipPhotos) — embedded images land in the dedicated photo phase. Each builder
-// degrades a single bad record to a skip (logged) rather than aborting.
+// Photos: when ctx.includePhotos is set, ACSI embeds via skipPhotos:false and
+// Waivers embed their image attachments. Both photo paths are browser-only
+// (network fetch) and degrade to text-only in headless / no-client contexts, so
+// the builders stay safe to unit-test. Each builder degrades a single bad record
+// to a skip (logged) rather than aborting.
 import { EXPORT_MODULES, type ExportModule } from './export-modules'
 import { isInRange, type ExportPeriod } from './export-period'
 import { pdfToExportFile, type ExportFile } from './export-file'
 import { generateWaiverPdf } from '@/lib/waiver-pdf'
 import { generateAcsiPdf } from '@/lib/acsi-pdf'
 import { generateTrainingTranscriptPdf, type TrainingTranscriptInput } from '@/lib/training-part139-pdf'
+import { createClient } from '@/lib/supabase/client'
+import { compressImageForPdf } from '@/lib/utils'
 import type {
   WaiverRow,
   WaiverCriteriaRow,
@@ -30,6 +34,8 @@ export interface RecordBuildContext {
   period: ExportPeriod
   baseName?: string | null
   baseIcao?: string | null
+  /** Embed photos inline (ACSI + Waiver images). Browser-only; ignored headless. */
+  includePhotos?: boolean
 }
 
 function mod(key: string): ExportModule {
@@ -53,20 +59,57 @@ export interface WaiverRecordBundle {
   attachmentsByWaiver: Record<string, WaiverAttachmentRow[]>
 }
 
-export function buildWaiverFiles(bundle: WaiverRecordBundle, ctx: RecordBuildContext): ExportFile[] {
+/**
+ * Build inline photo data URLs for a waiver's image attachments. Browser-only:
+ * resolves each 'photo'-type attachment from the waiver-attachments bucket to a
+ * signed URL, fetches it, and compresses it for the PDF. Returns [] in headless
+ * / no-client contexts (so the export stays text-only there) and skips any
+ * single attachment that fails — never throws.
+ */
+async function buildWaiverPhotoDataUrls(
+  attachments: WaiverAttachmentRow[],
+): Promise<{ name: string; dataUrl: string }[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+  const photos = attachments.filter((a) => a.file_type === 'photo')
+  const out: { name: string; dataUrl: string }[] = []
+  for (const a of photos) {
+    try {
+      const { data } = await supabase.storage.from('waiver-attachments').createSignedUrl(a.file_path, 3600)
+      if (!data?.signedUrl) continue
+      const res = await fetch(data.signedUrl)
+      if (!res.ok) continue
+      const blob = await res.blob()
+      const rawDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+      out.push({ name: a.caption || a.file_name, dataUrl: await compressImageForPdf(rawDataUrl) })
+    } catch {
+      // Skip a failed attachment; the standalone photos/ tree still carries it.
+    }
+  }
+  return out
+}
+
+export async function buildWaiverFiles(bundle: WaiverRecordBundle, ctx: RecordBuildContext): Promise<ExportFile[]> {
   const m = mod('waivers')
   const out: ExportFile[] = []
   // Natural date = created_at (matches the registry dateColumn).
   const filtered = bundle.waivers.filter((w) => isInRange(w.created_at, ctx.period))
   for (const w of filtered) {
     try {
+      const attachments = bundle.attachmentsByWaiver[w.id] ?? []
+      const photoDataUrls = ctx.includePhotos ? await buildWaiverPhotoDataUrls(attachments) : []
       const { doc } = generateWaiverPdf({
         waiver: w,
         criteria: bundle.criteriaByWaiver[w.id] ?? [],
         reviews: bundle.reviewsByWaiver[w.id] ?? [],
         coordination: bundle.coordinationByWaiver[w.id] ?? [],
-        attachments: bundle.attachmentsByWaiver[w.id] ?? [],
-        photoDataUrls: [], // 2c is photo-free; images land in the photo phase
+        attachments,
+        photoDataUrls,
         baseName: ctx.baseName,
         baseIcao: ctx.baseIcao,
       })
@@ -88,12 +131,14 @@ export async function buildAcsiFiles(
   const filtered = inspections.filter((i) => isInRange(i.created_at, ctx.period))
   for (const insp of filtered) {
     try {
-      // skipPhotos keeps this text-only + headless-safe; photos land later.
+      // generateAcsiPdf self-fetches from the photos table when skipPhotos is
+      // false; it's browser-guarded (no client → no fetch), so this is safe
+      // headless and only embeds images when includePhotos is set in the browser.
       const { doc } = await generateAcsiPdf(insp, {
         baseName: ctx.baseName,
         baseIcao: ctx.baseIcao,
         baseId: ctx.baseId,
-        skipPhotos: true,
+        skipPhotos: !ctx.includePhotos,
       })
       out.push(pdfToExportFile(doc, `documents/${m.folder}/${slug(insp.display_id, insp.id)}.pdf`))
     } catch (err) {

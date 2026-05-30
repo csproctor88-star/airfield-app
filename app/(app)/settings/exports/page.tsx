@@ -92,6 +92,9 @@ export default function ExportsPage() {
         base,
         timezone: inst?.timezone ?? null,
         include: { pdf: include.pdf, excel: include.excel, json: include.json },
+        // Embed photos inline in ACSI + Waiver PDFs when both PDFs and Photos
+        // are selected (the same toggle that builds the standalone photos/ tree).
+        embedPhotos: include.pdf && include.photos,
       })
 
       // Photos: browser-only download (network). Plan from the fetched rows,

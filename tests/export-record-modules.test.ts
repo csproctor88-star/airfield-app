@@ -35,30 +35,30 @@ const emptyBundle = (waivers: WaiverRow[]): WaiverRecordBundle => ({
 })
 
 describe('buildWaiverFiles', () => {
-  it('emits one PDF per waiver, named by waiver_number', () => {
+  it('emits one PDF per waiver, named by waiver_number', async () => {
     const bundle = emptyBundle([waiver('1', 'AF505-2026-014', '2026-01-10T00:00:00Z')])
-    const files = buildWaiverFiles(bundle, ctx)
+    const files = await buildWaiverFiles(bundle, ctx)
     expect(files.map((f) => f.path)).toEqual(['documents/Waivers/AF505-2026-014.pdf'])
     expect(files[0].bytes.length).toBeGreaterThan(0)
   })
 
-  it('filters by created_at range', () => {
+  it('filters by created_at range', async () => {
     const bundle = emptyBundle([
       waiver('1', 'W-JAN', '2026-01-10T00:00:00Z'),
       waiver('2', 'W-FEB', '2026-02-10T00:00:00Z'),
     ])
-    const files = buildWaiverFiles(bundle, { ...ctx, period: { kind: 'range', from: '2026-02-01', to: '2026-02-28' } })
+    const files = await buildWaiverFiles(bundle, { ...ctx, period: { kind: 'range', from: '2026-02-01', to: '2026-02-28' } })
     expect(files.map((f) => f.path)).toEqual(['documents/Waivers/W-FEB.pdf'])
   })
 
-  it('returns [] when nothing matches', () => {
+  it('returns [] when nothing matches', async () => {
     const bundle = emptyBundle([waiver('1', 'W-1', '2026-01-10T00:00:00Z')])
-    expect(buildWaiverFiles(bundle, { ...ctx, period: { kind: 'range', from: '2030-01-01', to: '2030-12-31' } })).toEqual([])
+    expect(await buildWaiverFiles(bundle, { ...ctx, period: { kind: 'range', from: '2030-01-01', to: '2030-12-31' } })).toEqual([])
   })
 
-  it('sanitizes unsafe characters in the filename', () => {
+  it('sanitizes unsafe characters in the filename', async () => {
     const bundle = emptyBundle([waiver('1', 'AF 505/2026 #14', '2026-01-10T00:00:00Z')])
-    const files = buildWaiverFiles(bundle, ctx)
+    const files = await buildWaiverFiles(bundle, ctx)
     expect(files[0].path).toBe('documents/Waivers/AF-505-2026-14.pdf')
   })
 })
