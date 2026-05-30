@@ -52,13 +52,20 @@ export function resolveQuickPeriod(kind: QuickPeriod, now: Date): { from: string
 
     case 'this_fy': {
       // Federal FY runs Oct 1 (month index 9) through Sep 30.
+      // `to` is today (a partial FY), not the FY end — unlike this_month/quarter
+      // which end on the last day of the period.
       const fyStartYear = m >= 9 ? y : y - 1
       return { from: ymd(fyStartYear, 9, 1), to: today }
     }
   }
 }
 
-/** True if a record's date falls within the period (all_time always true). */
+/**
+ * True if a record's date falls within the period (all_time always true).
+ * `dateIso` must be a full ISO date/timestamp (≥10 chars, 'YYYY-MM-DD…'); only
+ * the date portion is compared. A null/empty date is out of any range window
+ * but included in an all_time export.
+ */
 export function isInRange(dateIso: string | null | undefined, period: ExportPeriod): boolean {
   if (period.kind === 'all_time') return true
   if (!dateIso) return false

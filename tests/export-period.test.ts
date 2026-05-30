@@ -37,6 +37,11 @@ describe('resolveQuickPeriod', () => {
     expect(resolveQuickPeriod('this_fy', new Date('2025-11-05T00:00:00Z')))
       .toEqual({ from: '2025-10-01', to: '2025-11-05' })
   })
+
+  it('this_fy → on Oct 1 itself, FY starts that same day', () => {
+    expect(resolveQuickPeriod('this_fy', new Date('2025-10-01T00:00:00Z')))
+      .toEqual({ from: '2025-10-01', to: '2025-10-01' })
+  })
 })
 
 describe('isInRange', () => {
