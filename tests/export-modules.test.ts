@@ -8,7 +8,7 @@ describe('EXPORT_MODULES registry', () => {
   })
 
   it('uses only valid pdf strategies', () => {
-    const valid = new Set(['per_record', 'monthly', 'excluded'])
+    const valid = new Set(['per_record', 'table', 'excluded'])
     for (const m of EXPORT_MODULES) {
       expect(valid.has(m.pdfStrategy)).toBe(true)
     }
@@ -27,9 +27,9 @@ describe('EXPORT_MODULES registry', () => {
     }
   })
 
-  it('sets Discrepancies and Events Log as monthly PDFs', () => {
+  it('sets Discrepancies and Events Log as table PDFs', () => {
     for (const key of ['discrepancies', 'events_log']) {
-      expect(EXPORT_MODULES.find((x) => x.key === key)?.pdfStrategy, key).toBe('monthly')
+      expect(EXPORT_MODULES.find((x) => x.key === key)?.pdfStrategy, key).toBe('table')
     }
   })
 
