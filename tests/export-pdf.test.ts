@@ -16,9 +16,9 @@ describe('periodSubtitle', () => {
   it('labels all-time', () => {
     expect(periodSubtitle({ kind: 'all_time' })).toBe('All time')
   })
-  it('labels a range', () => {
+  it('labels a range with "to" (not an arrow — the core PDF font cannot render →)', () => {
     expect(periodSubtitle({ kind: 'range', from: '2026-01-01', to: '2026-03-31' }))
-      .toBe('2026-01-01 → 2026-03-31')
+      .toBe('2026-01-01 to 2026-03-31')
   })
 })
 
