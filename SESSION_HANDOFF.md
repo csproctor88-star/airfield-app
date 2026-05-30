@@ -1,75 +1,104 @@
 # Session Handoff
 
-**Date:** 2026-05-29
-**Branch:** `main` — pushed to `origin` (`737048f`); production deploy triggered; migration applied.
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully; `/users/analytics` added as a new static route), `npx vitest run` ✓ (584 pass / 56 files).
-**HEAD:** `737048f`
+**Date:** 2026-05-30
+**Branch:** `main` — **pushed.** `origin/main` == local (0 ahead); every commit
+below is deployed (Vercel deploys on push).
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
+(696 pass / 71 files).
+**HEAD:** `30d728e`
 
 ---
 
 ## What shipped this session
 
-One feature commit (`737048f`) covering three connected asks, all centered on
-`/users` and account creation: tighten signup data quality, surface Unit/Office
-Symbol to admins, and rebuild the user-management page with real activity
-monitoring. Built and reviewed in gated batches (A: data quality + profile, B:
-redesign, C: monitoring). The work followed an approved plan
-(`C:\Users\cspro\.claude\plans\clever-munching-peacock.md`).
+One theme: **Records Export, finished end to end.** Last session left the feature
+at Phase 2b with the Generate button disabled. This session built Phases 2c → 7,
+wired and shipped the Generate button, then iterated on real-data feedback from
+the user testing it on the deploy. The feature is now complete, on `origin/main`,
+and deploy-verified (formatting, inspection forms, photo tree, and the offline
+viewer all confirmed working by the user). It is documented under CHANGELOG
+`[Unreleased]` — **no version bump** (deliberate: 2.34.0 stays a later
+whole-backlog release decision).
 
-### Signup & invite data quality (`737048f`)
-- New `toTitleCaseName()` in `lib/utils.ts` — "safe per-word" title-casing
-  (capitalizes after space/hyphen/apostrophe, no Mc/Mac heuristics that would
-  mis-case Macey/Machado). Applied at submit on both forms **and** server-side
-  in `signup-email` + `admin/invite` routes (defense-in-depth — signup-email is
-  unauthenticated). Unit-tested (`tests/title-case-name.test.ts`).
-- Rank / Role / Unit / Office Symbol are now mandatory at self-signup and admin
-  invite. Role no longer silently defaults to `read_only` — it must be chosen.
-- **Civilian escape is airport-context, not rank.** First pass gated Unit/Office
-  optionality on civilian *ranks* (Mr./GS/CTR); the user corrected that a GS or
-  contractor embedded in a military unit still has a unit/office and we want it
-  to verify their agency. Reworked to a **"Civilian airport" checkbox**:
-  unchecked (military airfield) → Unit/Office required for everyone; checked →
-  fields disabled, optional, submit empty. Enforced client- and server-side.
-- The admin invite route previously **dropped** `unit`/`office_symbol` (only
-  forwarded rank/name/role/base into `user_metadata`); now forwards them so the
-  `handle_new_user()` trigger persists them.
+Two process failures this session, both mine, both recovered within the next
+commit: I pushed a broken production build **twice** (`de82a1a`, and earlier
+`7ee8b68`) because a green `vitest` run hid a failing `tsc`/`next build` — dynamic
+imports and an import cycle only surface in the build. Fixed by `fcbaff8` and
+`88a04f0`. Durable lesson captured (see Lessons + the new feedback memory).
 
-### Unit / Office Symbol in the admin profile (`737048f`)
-- `UserCardData` + the `loadUsers()` mapping now carry `unit`/`office_symbol`;
-  the Edit Profile modal shows and saves both (base admins included — the PATCH
-  route accepts arbitrary fields and `sanitizeBaseAdminUpdate` is allow-by-default).
-- Hand-added `unit`/`office_symbol` to the `profiles` type in `types.ts` (it was
-  stale — full regen stays deferred).
+### Coverage fan-out — every module gets a builder (`904c7e0`, `283c8cd`, `559c4cf`, `245e5dc`)
 
-### User Management redesign (`737048f`)
-- New `components/admin/user-stats-header.tsx` — one bordered chip-cluster
-  (Total / Pending / Active / Deactivated) that doubles as a status quick-filter;
-  Pending stays outlined-amber whenever the queue > 0.
-- Reworked `user-card.tsx` — role-rail kept, plus initials avatar, role+status
-  chips, and a `Unit · Office · seen <when>` meta line (falls back to the
-  installation when Unit/Office is absent).
-- `user-list.tsx` now groups **Pending → Active → Deactivated** with labeled
-  count headers; defensive "Other" group so no status silently drops a user.
+Completed the Phase 2 strategy map. `904c7e0` Wildlife (combined sightings+strikes
+into one table with a Kind column) + Daily Reviews (rich per-slot signer row).
+`283c8cd` reuses the app's bespoke generators for Events Log / PPR / SCN — and to
+do that *honestly* it extracted the Events Log row formatters (`formatAction` /
+`buildDetailsString`) out of the 1000-line activity page into shared
+`lib/activity-format.ts`, so the export and the on-screen log can't drift.
+`559c4cf` added civilian multi-kind SMS (5 kinds) + AEP (4) via a new `subName`
+on `TableModuleSpec` that routes `documents/<folder>/<kind>.pdf`, gated on
+`airport_type==='faa_part139'`. `245e5dc` per-record Waivers / ACSI / Training
+(per-trainee transcript), reusing the single-record generators.
 
-### Activity monitoring (`737048f`, migration `2026061800`)
-- `page_view_daily` aggregated daily-rollup table + `record_page_view`
-  SECURITY DEFINER RPC. Capture is net-new — `activity_log` only records writes,
-  not reads/page views. RLS: admin-only SELECT (sys admin, or `users:view` at the
-  base); writes only via the RPC (stamps `auth.uid()`, no-ops without base access).
-- `components/page-view-tracker.tsx` mounted in the `(app)` shell — debounced
-  (1.2s), visibility-gated, dedup'd; one write per settled navigation, no polling
-  (per the project's auth-quota lessons). `lib/page-view-route.ts` normalizes
-  paths to patterns (`/discrepancies/[id]`); unit-tested.
-- `components/admin/user-engagement-panel.tsx` in the detail modal (admin-gated):
-  last active, app version, account age, action counts (7d/30d/all), top modules,
-  pages visited.
-- `app/(app)/users/analytics/page.tsx` — sys-admin analytics dashboard
-  (DAU/WAU/MAU, adoption by module + installation, version spread, stale
-  accounts, pending/new counts). Sys admins see all installations; other admins
-  are scoped to their base. Reached via an **Activity** button in the `/users`
-  header. Aggregation in `lib/admin/engagement.ts` (10k-event cap, disclosed in UI).
-- Extracted the `activity_log` entity-type → label map to `lib/activity-labels.ts`
-  (Events Log page now imports it — single source).
+### Excel + packager — the Generate button goes live (`0542768`)
+
+Phase 3 (Excel: per-module workbooks + a master, driven by the same
+`TableModuleSpec`s as the PDF tables so they never drift) and Phase 4 (the
+packager: `export-manifest.ts` SHA-256 of every file, `export-cover-pdf.ts`
+`00-START-HERE.pdf` audit cover, `export-packager.ts` JSZip assembly,
+`run-export.ts` engine). This is the commit that made the feature usable: the
+Generate button fetches → builds → packages → downloads a ZIP entirely
+client-side. `jszip` pinned as a direct dep (was transitive via exceljs). Two
+headless gotchas solved here: jszip `blob` output trips jsdom (use `uint8array`,
+wrap in Blob only at download), and jszip rejects cross-realm `Uint8Array`s
+(re-wrap bytes in the local realm before adding).
+
+### Real-data refinements (`0e88062`, `29f6926`, `7ee8b68` + `88a04f0`, `b8c609a`)
+
+The user ran the first real export and sent back fixes. `0e88062`: the date-range
+header rendered as garbage (`!'`) because the core PDF font can't draw `→` —
+switched to "to" and now sanitize all titles/subtitles; also added acronym-aware
+`humanize()` so columns read `FOD` / `Work Completed Awaiting Verification`
+instead of raw enums. `29f6926`: Inspections now export as the actual **report
+form** (one per inspection, checklist grouped by section), not a one-line roster.
+`7ee8b68`: Excel workbooks carry every field (the PDFs stay compact); Wildlife
+expanded to its full field set. `b8c609a`: the inspection form was reading the
+wrong field names — the live `InspectionItem` shape is `{section, item,
+response:'pass'|'fail'|'na', notes}`, not `status/category/text` — so it had been
+rendering `—` for every result; fixed the field reads **and** added the colored
+PASS/FAIL/N-A the user asked for (green/red/gray, matching the in-app report).
+
+### Discoverability (`e9851f9`)
+
+The `/settings/exports` route existed but had no UI entry point — not linked from
+Settings, not in the sidebar registry — so it was reachable only by URL. Added a
+RECORDS EXPORT section to the Settings page (gated on `exports:read`).
+
+### Photos — Phase 5 (`de82a1a` + `fcbaff8`, `b3c53c4`)
+
+Two halves. `de82a1a` the standalone tree: `export-photos.ts` plans every
+in-window photo into `photos/<Module>/<record>/<date>_<file>.jpg` + a
+`photos-index.csv` provenance manifest; browser-only `downloadPhotos` retries 3×
+per photo and logs persistent failures to the manifest/README rather than
+aborting the export. `b3c53c4` the embed: when PDF + Photos are both selected,
+ACSI and Waiver PDFs carry their images inline (ACSI flips `skipPhotos`; Waivers
+async-build data URLs from the `waiver-attachments` bucket). Both photo paths are
+browser-only and degrade to text-only headless, so tests stay green.
+
+### Offline viewer — Phase 6 (`c0d8c05` → `4dfa032`)
+
+`c0d8c05` shipped a `viewer/` folder with a searchable/sortable browse table per
+module, reusing the same `TableModuleSpec`s (no drift). `4dfa032` then collapsed
+it to a **single self-contained `viewer/index.html`** (CSS + data + app all
+inlined) — the original four-file version with sibling `app.js`/`data.js` loads
+rendered blank on iPhone, because iOS Files/Safari preview blocks local
+sibling-file loading. One file opens by double-tap on a phone, off a USB stick,
+anywhere offline. User confirmed it works.
+
+### Phase 7 — wrap (`30d728e`)
+
+Documentation only. The JSON sidecar already shipped in Phase 4 (Raw-data
+toggle), so Phase 7 just documented the whole feature under CHANGELOG
+`[Unreleased]`. No version bump per the user's call.
 
 ---
 
@@ -77,9 +106,9 @@ redesign, C: monitoring). The work followed an approved plan
 
 | File | Applied | What |
 |---|---|---|
-| `2026061800_page_view_daily.sql` | ✅ verified | New `page_view_daily` rollup + `record_page_view` SECURITY DEFINER RPC. Verified live: table/RPC/policy exist, RLS on, `search_path=public` pinned, `anon` EXECUTE = false, `authenticated` EXECUTE = true. Additive — inert until the deploy ships the calling code. |
+| `2026061900_exports_permission_keys.sql` | ✅ verified (prior session) | Registers `exports:read` / `exports:write`; grants both to sys_admin, base_admin, airfield_manager, namo. The only Records Export migration — everything else this session is client-side. |
 
-No pending migrations.
+No pending migrations. No new migrations this session.
 
 ---
 
@@ -87,24 +116,29 @@ No pending migrations.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Unit/Office Symbol entered at admin invite never landed on the profile | `app/api/admin/invite/route.ts` only forwarded rank/name/role/base into `user_metadata`; the trigger had nothing to read | `737048f` |
-| Civilian (GS/CTR) signups could skip Unit/Office even when serving a military unit | first pass gated optionality on civilian *rank* instead of airport context | `737048f` |
+| Prod build broke; tests passed | `export-excel` imported `humanize` from `export-table-specs`, forming a module-eval import cycle the Next bundler rejected (tsc/vitest tolerated it) | `88a04f0` |
+| Prod build broke; tests passed | Phase 5 referenced `@/lib/supabase/photos` (`getPublicUrl`) that didn't exist + test fixture missing new fields; dynamic import hid it from vitest | `fcbaff8` |
+| Date-range header showed `!'` | Core PDF (Helvetica) font can't render the `→` glyph | `0e88062` |
+| Inspection Result column all `—`, all items grouped "General" | Generator read `item.status`/`category`/`text`; live shape is `{section, item, response}` | `b8c609a` |
+| Viewer blank on iPhone | Four-file viewer used relative sibling loads; iOS preview blocks local sibling-file loading | `4dfa032` |
 
 ---
 
 ## Lessons from this session
 
-- **The civilian Unit/Office escape is an airport-context decision, not a person
-  decision.** Civilians/contractors embedded in a military unit have (and must
-  supply) a unit + office symbol so their agency can be verified; only a genuine
-  civilian airport lacks one. Gate on a "Civilian airport" flag, never on rank.
-  Saved as a feedback memory.
-- **Page-view capture is a privacy surface.** It's now admin-visible per-user
-  usage tracking. Reads are locked to admins, writes go through a definer RPC,
-  but it still warrants a line in the in-app privacy/help copy before wide use.
-- `types.ts` remains stale and hand-maintained — added `profiles.unit/office_symbol`
-  and the whole `page_view_daily` table by hand. Full `supabase gen types` regen
-  is still the deferred ~8,900-line option.
+- **Gate every commit on `npm run build` RC=0 — never on the vitest run alone.**
+  vitest (esbuild) tolerates dynamic-import-of-missing-module, import cycles, and
+  type errors that `tsc`/`next build` reject. Two broken prod pushes this session
+  proved it. Saved as `feedback_gate_commits_on_build.md`.
+- **Single-file `file://` artifacts for mobile.** Anything meant to open offline
+  on a phone must inline its assets into one HTML file — iOS blocks local
+  sibling-file loading, so multi-file viewers render blank.
+- **Reuse honestly = extract the shared SoT.** Reusing the Events Log generator
+  meant lifting its formatters into a shared module, not duplicating ~150 lines.
+  Same instinct produced `export-format.ts` (`humanize`) as a zero-import leaf.
+- **First real-data run is the real test.** The headless unit tests were green,
+  but the user's first export surfaced the arrow-glyph, raw-enum, inspection-form,
+  and inspection-field-name issues — none visible without real records + eyes.
 
 ---
 
@@ -112,34 +146,36 @@ No pending migrations.
 
 | Item | Severity | Notes |
 |---|---|---|
-| Page-view tracking privacy copy | Med | New per-user usage tracking has no user-facing disclosure yet. Add a line to privacy/help before relying on it publicly. |
-| Redesign + analytics not visually verified | Med | User can't view the local dev server on mobile; `/users` redesign, `/users/analytics`, and the new signup flow are only build-verified. Review on the Vercel deploy. |
-| `types.ts` regen deferred | Med | Now also hand-maintains `page_view_daily` + `profiles.unit/office_symbol`. Full `supabase gen types` is an ~8,900-line diff that drops hand aliases. Review-gated. |
-| Base-setup file extraction deferred | Med | `base-config/setup/page.tsx` ~6k LOC. Structural — screenshot-first/plan-mode. Architecture → A. |
-| AMTR batch never walked in a live browser | Med | Carried — import, transcribe (4 tabs), Files-tab dialog built/tested, never clicked through. |
-| v2.34.0 release prep | Med | Carried — version in 5 places + CHANGELOG + tag. User deferring. |
-| CRUD `{data,error}` standardization deferred | Low | `custom-status`, `lighting-systems`, `infrastructure-features`, `inspection-templates` still discard errors (~28 sites). |
-| `npm audit` 13 transitives | Low | Build-tooling semver-major bumps; deferred. |
-| Test-account fixtures live in prod | Info | `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. Remove with `node supabase/seed-test-accounts.mjs --down`. |
+| Records Export photo embed unverified on deploy | Low | The standalone photos/ tree is user-confirmed; the inline ACSI/Waiver embed is browser-only + unit-tested headless, never run against real photos in a browser. Worth one export with PDF+Photos on a base that has ACSI/waiver images. |
+| Viewer "Documents (PDF)" links on mobile | Low | Sidebar links to `../documents/<folder>` open fine on desktop; on a phone, navigating into sibling folders is hit-or-miss depending on the unzip. Browse tables (the value) are fully inlined; links are a convenience. |
+| v2.34.0 release prep | Med | Carried — version still 2.33.0 across 5 places + release-notes.ts. A bump releases the whole staged backlog (FAA expansion, user-mgmt, AMTR, Records Export), so it's a deliberate whole-backlog cut, not a Records Export step. |
+| Redesign + analytics not visually verified | Med | Carried — `/users` redesign, `/users/analytics`, signup flow only build-verified. |
+| Page-view tracking privacy copy | Med | Carried — per-user usage tracking has no user-facing disclosure yet. |
+| `types.ts` regen deferred | Med | Carried — hand-maintained additions; full `supabase gen types` is a large diff. |
+| Base-setup file extraction deferred | Med | Carried — `base-config/setup/page.tsx` ~6k LOC. |
+| AMTR batch never walked in a live browser | Med | Carried. |
+| `npm audit` transitives | Low | Carried — build-tooling semver-major bumps. |
+| Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
 
 ---
 
 ## Next session tasks
 
-No required next step — this session's work is committed, pushed, and the
-migration is live. Pick up whichever the user wants:
+**Records Export is complete and shipped.** There is no required next step on it.
+Pick up wherever the user wants. Sensible candidates, none urgent:
 
-1. **Review the deploy** — once Vercel finishes, eyeball signup (mandatory fields
-   + Civilian-airport checkbox), the redesigned `/users` list, and
-   `/users/analytics`. This is the only verification still owed (no localhost-on-
-   mobile for the user).
-2. **Privacy/help copy** for the new usage tracking (one line; flagged above).
-3. **v2.34.0 release prep** — version in 5 places + CHANGELOG + tag.
+1. **Verify the photo embed on the deploy** — one export with PDF + Photos both
+   checked on a base that has ACSI or waiver photos; confirm those PDFs show an
+   inline Photos section. (The standalone tree is already confirmed.)
+2. **Cut v2.34.0** when ready to release the staged backlog — bump the version in
+   the 5 places + `lib/release-notes.ts`, date the CHANGELOG section, add an
+   in-app release note. This releases everything since 2.33.0, not just exports.
 
 ### Long-running carryover (bandwidth-permitting)
-- Live-browser walk of the AMTR batch against the real `Training Record.xlsx`.
-- Optionally mark the accepted Supabase linter warnings (public RPCs, RLS
-  helpers) as acknowledged so they stop drawing attention.
+- Visual review of the `/users` redesign + `/users/analytics` on the deploy.
+- Privacy/help copy for page-view tracking.
+- Live-browser walk of the AMTR batch.
+- `types.ts` regen; `base-config/setup` extraction.
 
 ---
 
@@ -147,15 +183,16 @@ migration is live. Pick up whichever the user wants:
 
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
-Build: npm run build — compiled successfully. New route /users/analytics.
-Tests: 584 pass / 56 files (+15 this session: title-case-name, page-view-route-normalize).
+Build: npm run build — compiled successfully.
+Tests: 696 pass / 71 files (+75 this session across the export lib:
+  export-photos, export-viewer, export-record-modules, export-inspection-pdf,
+  export-civilian-specs, export-packager, run-export, + table-spec additions).
 
-Notable First Load JS (changed/heavy routes):
-  /users                  190 kB   (19.1 kB route — redesign + stats header + engagement panel)
-  /login                  168 kB   (12.2 kB route — signup mandatory fields + civilian-airport)
-  /users/analytics        156 kB   (4.92 kB route — new sys-admin dashboard)
-First Load JS shared       91.2 kB
-Middleware                 74.5 kB
+Notable First Load JS:
+  /settings/exports        173 kB   (8.08 kB route — heavy libs are dynamic-
+                                     imported: jspdf, exceljs, jszip)
+First Load JS shared        91.5 kB
+Middleware                  74.5 kB
 ```
 
 ---
@@ -164,24 +201,25 @@ Middleware                 74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | Two unreleased deltas on `main`: (1) codebase health-audit remediation (signup-escalation fix, kiosk-token isolation, silent-save fixes, test coverage, dead-code cleanup, DB-linter hardening); (2) this session — signup data quality (auto-cap + mandatory fields + civilian-airport escape), Unit/Office in admin profile, `/users` redesign, and user activity monitoring (page-view capture + per-user engagement panel + sys-admin analytics dashboard). Not version-tagged. |
-| v2.33.0 | 2026-05-02 | prior released baseline (see CHANGELOG) |
+| **Unreleased** | — | Records Export feature complete (PDF/Excel/Photos/offline viewer/JSON, SHA-256 audit cover) on top of the prior unreleased deltas (FAA expansion, user-mgmt + activity monitoring, AMTR batch). Not version-tagged; documented in CHANGELOG `[Unreleased]`. |
+| v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads+writes (prior released baseline) |
 
 ---
 
 ## Key files touched this session
 
 ### New files
-- `supabase/migrations/2026061800_page_view_daily.sql`
-- `lib/page-view-route.ts`, `lib/supabase/page-views.ts`, `lib/activity-labels.ts`, `lib/admin/engagement.ts`
-- `components/page-view-tracker.tsx`, `components/admin/user-stats-header.tsx`, `components/admin/user-engagement-panel.tsx`
-- `app/(app)/users/analytics/page.tsx`
-- `tests/title-case-name.test.ts`, `tests/page-view-route-normalize.test.ts`
+- `lib/export/export-photos.ts`, `export-viewer.ts`, `export-format.ts`,
+  `export-manifest.ts`, `export-cover-pdf.ts`, `export-packager.ts`,
+  `run-export.ts`, `export-excel.ts`, `export-record-modules.ts`,
+  `export-rich-modules.ts`, `export-inspection-pdf.ts`, `export-civilian-specs.ts`
+- `lib/activity-format.ts` (extracted Events Log formatters)
+- `lib/supabase/photos.ts` (`getPublicUrl` leaf helper)
 
 ### Modified files
-- `lib/utils.ts` (toTitleCaseName), `lib/supabase/types.ts` (profiles unit/office + page_view_daily)
-- `app/login/page.tsx`, `app/api/signup-email/route.ts` — signup validation + auto-cap + civilian-airport
-- `components/admin/invite-user-modal.tsx`, `lib/admin/user-management.ts`, `app/api/admin/invite/route.ts` — invite parity
-- `app/(app)/users/page.tsx`, `components/admin/user-card.tsx`, `components/admin/user-list.tsx`, `components/admin/user-detail-modal.tsx` — redesign + Unit/Office + engagement panel
-- `app/(app)/layout.tsx` — mount PageViewTracker
-- `app/(app)/activity/page.tsx` — use shared activity-labels
+- `lib/export/export-data.ts`, `export-table-specs.ts`, `export-pdf.ts`
+- `app/(app)/settings/exports/page.tsx` (Generate wired), `settings/page.tsx`
+  (RECORDS EXPORT entry point)
+- `lib/acsi-pdf.ts`, `waiver-pdf.ts`, `pdf-utils.ts` (photo/sanitize hooks)
+- `lib/supabase/waivers.ts`, `sms.ts`, `daily-reviews.ts` (export fetchers)
+- `package.json` (`jszip` direct dep), `CHANGELOG.md`
