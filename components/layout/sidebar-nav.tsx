@@ -130,6 +130,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/notams':            'notams:view',
   '/reports':           'reports:view',
   '/settings':          'settings:view',
+  '/settings/exports':  'exports:read',
   '/library':           'library:view',
   '/users':             'users:view',
   // '/help' intentionally omitted — Help & Training page is visible to all
