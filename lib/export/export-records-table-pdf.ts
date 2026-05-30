@@ -23,10 +23,12 @@ export interface RecordsTablePdfOptions {
   columns: string[]
   /** Pre-stringified rows; each inner array aligns with `columns` */
   rows: string[][]
+  /** Page orientation; defaults to 'landscape' (wide record tables). */
+  orientation?: 'portrait' | 'landscape'
 }
 
 export function generateRecordsTablePdf(opts: RecordsTablePdfOptions): jsPDF {
-  const ctx = createPdf({ orientation: 'landscape' })
+  const ctx = createPdf({ orientation: opts.orientation ?? 'landscape' })
   const { doc, margin } = ctx
   let y = margin
 

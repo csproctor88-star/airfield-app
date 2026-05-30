@@ -21,6 +21,8 @@ export interface TableModuleSpec<T> {
   columns: string[]
   getDate: (row: T) => string | null | undefined
   toRow: (row: T) => string[]
+  /** Page orientation for this module's table; defaults to landscape. */
+  orientation?: 'portrait' | 'landscape'
 }
 
 /** Human label for the aggregate PDF subtitle. */
@@ -32,8 +34,29 @@ export function periodSubtitle(period: ExportPeriod): string {
 /**
  * Build the PDF ExportFile(s) for one table module. Returns [] when no records
  * fall in the period (the caller records the gap on the cover sheet).
+ *
+ * Module-level error boundary: if a module's `getDate`/`toRow` throws (e.g. a
+ * malformed row in a later module's spec), this logs and returns [] so one bad
+ * module can't abort a multi-module export. The Phase 4 packager still records
+ * skipped/empty modules as gaps on the cover sheet.
  */
 export function buildTableModuleFiles<T>(
+  records: T[],
+  spec: TableModuleSpec<T>,
+  ctx: PdfBuildContext,
+): ExportFile[] {
+  try {
+    return buildTableModuleFilesUnsafe(records, spec, ctx)
+  } catch (err) {
+    console.error(
+      `Records Export: module "${spec.module.key}" failed to render and was skipped.`,
+      err,
+    )
+    return []
+  }
+}
+
+function buildTableModuleFilesUnsafe<T>(
   records: T[],
   spec: TableModuleSpec<T>,
   ctx: PdfBuildContext,
@@ -53,6 +76,7 @@ export function buildTableModuleFiles<T>(
         baseIcao: ctx.baseIcao,
         columns: spec.columns,
         rows: monthRows.map(spec.toRow),
+        orientation: spec.orientation,
       })
       out.push(pdfToExportFile(doc, `documents/${folder}/${month}.pdf`))
     }
@@ -66,6 +90,7 @@ export function buildTableModuleFiles<T>(
     baseIcao: ctx.baseIcao,
     columns: spec.columns,
     rows: filtered.map(spec.toRow),
+    orientation: spec.orientation,
   })
   return [pdfToExportFile(doc, `documents/${folder}.pdf`)]
 }

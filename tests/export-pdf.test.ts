@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { buildTableModuleFiles, periodSubtitle, DISCREPANCIES_SPEC } from '@/lib/export/export-pdf'
 
 type Row = { display_id: string; status: string; type: string; title: string; location_text: string; assigned_shop: string | null; work_order_number: string | null; created_at: string; reporter?: { name: string | null; rank: string | null } | null }
@@ -54,5 +54,18 @@ describe('buildTableModuleFiles — monthly', () => {
       'documents/Discrepancies/2026-01.pdf',
       'documents/Discrepancies/2026-02.pdf',
     ])
+  })
+})
+
+describe('buildTableModuleFiles — error boundary', () => {
+  it('returns [] instead of throwing when a spec mapper throws', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const badSpec = { ...DISCREPANCIES_SPEC, toRow: () => { throw new Error('boom') } }
+    const files = buildTableModuleFiles(rows, badSpec, {
+      ...ctxBase, period: { kind: 'all_time' }, outputMode: 'aggregate',
+    })
+    expect(files).toEqual([])
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
   })
 })
