@@ -17,6 +17,27 @@ const yesNo = (v: boolean | null | undefined): string => (v ? 'Yes' : 'No')
 const zuluDateTime = (v: string | null | undefined): string =>
   v ? `${v.slice(0, 10)} ${v.slice(11, 16)}Z` : '—'
 
+// Domain acronyms that should render fully uppercase in humanized labels.
+const ACRONYMS = new Set([
+  'fod', 'rsc', 'rcr', 'bash', 'navaid', 'ppr', 'notam', 'notams', 'arff', 'scn',
+  'aep', 'sms', 'moc', 'bwc', 'ife', 'qrc', 'pcas', 'acsi', 'afm', 'amops', 'namo',
+  'ces', 'usda', 'na', 'id', 'wo', 'af', 'rwy', 'twy', 'pa', 'npa', 'vfr', 'ifr',
+])
+
+/**
+ * Humanize an enum / snake_case value for display: split on spaces + underscores,
+ * uppercase known acronyms, Title Case the rest. 'fod' -> 'FOD',
+ * 'work_completed_awaiting_verification' -> 'Work Completed Awaiting Verification'.
+ */
+export function humanize(v: string | null | undefined): string {
+  if (v == null || v === '') return '—'
+  return v
+    .split(/[\s_]+/)
+    .filter(Boolean)
+    .map((w) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+    .join(' ')
+}
+
 // ── Discrepancies (moved from export-pdf.ts) ─────────────────
 interface DiscrepancyLike {
   display_id: string
@@ -42,8 +63,8 @@ export const DISCREPANCIES_SPEC: TableModuleSpec<DiscrepancyLike> = {
   toRow: (r) => [
     r.display_id,
     dateOnly(r.created_at),
-    r.status,
-    r.type,
+    humanize(r.status),
+    humanize(r.type),
     r.title,
     r.location_text,
     dash(r.assigned_shop),
@@ -98,11 +119,11 @@ export const CHECKS_SPEC: TableModuleSpec<CheckLike> = {
   getDate: (r) => r.created_at,
   toRow: (r) => [
     r.display_id,
-    r.check_type,
+    humanize(r.check_type),
     r.areas.join(', '),
     dash(r.completed_by),
     dateOnly(r.completed_at),
-    r.status,
+    humanize(r.status),
     String(r.photo_count),
   ],
 }
@@ -126,9 +147,9 @@ export const OBSTRUCTIONS_SPEC: TableModuleSpec<ObstructionLike> = {
     dash(r.display_id),
     dash(r.description),
     `${r.object_height_agl} ft`,
-    r.runway_class,
+    humanize(r.runway_class),
     yesNo(r.has_violation),
-    dash(r.controlling_surface),
+    r.controlling_surface ? humanize(r.controlling_surface) : '—',
     dateOnly(r.created_at),
   ],
 }
@@ -153,7 +174,7 @@ export const PERSONNEL_SPEC: TableModuleSpec<ContractorLike> = {
     r.company_name,
     dash(r.callsign),
     r.work_description,
-    r.status,
+    humanize(r.status),
     dateOnly(r.start_date),
     dateOnly(r.end_date),
     dateOnly(r.af_form_483_expiration),
@@ -185,7 +206,7 @@ export const WILDLIFE_SPEC: TableModuleSpec<WildlifeExportRow> = {
   toRow: (r) => [
     dateOnly(r.date),
     dash(r.species),
-    dash(r.category),
+    r.category ? humanize(r.category) : '—',
     String(r.count),
     r.kind,
     dash(r.location),

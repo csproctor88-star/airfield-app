@@ -34,10 +34,11 @@ export interface TableModuleSpec<T> {
   subName?: string
 }
 
-/** Human label for the aggregate PDF subtitle. */
+/** Human label for the aggregate PDF subtitle. Uses the word "to" rather than
+ *  an arrow glyph — the core PDF font can't render → (it showed as "!'"). */
 export function periodSubtitle(period: ExportPeriod): string {
   if (period.kind === 'all_time') return 'All time'
-  return `${period.from ?? '…'} → ${period.to ?? '…'}`
+  return `${period.from ?? '...'} to ${period.to ?? '...'}`
 }
 
 /**

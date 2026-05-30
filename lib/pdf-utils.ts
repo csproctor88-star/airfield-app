@@ -113,12 +113,14 @@ export function drawReportTitle(
   const { doc, margin } = ctx
   doc.setFontSize(16)
   doc.setTextColor(0)
-  doc.text(opts.title, margin, y)
+  doc.text(sanitizePdfText(opts.title), margin, y)
   y += 7
   if (opts.subtitle) {
     doc.setFontSize(11)
     doc.setTextColor(60)
-    doc.text(opts.subtitle, margin, y)
+    // Sanitize so non-Latin1 glyphs (e.g. a → in a date range) don't render as
+    // garbage in the core PDF font.
+    doc.text(sanitizePdfText(opts.subtitle), margin, y)
     y += 8
   } else {
     y += 1
