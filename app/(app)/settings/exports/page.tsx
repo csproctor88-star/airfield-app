@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Download, FileText, Sheet, Image as ImageIcon, MonitorPlay, Database } from 'lucide-react'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { useInstallation } from '@/lib/installation-context'
+import { isCivilian } from '@/lib/airport-mode'
 import { EXPORT_MODULES, type ExportModule } from '@/lib/export/export-modules'
 import { resolveQuickPeriod, type ExportPeriod, type QuickPeriod } from '@/lib/export/export-period'
 
@@ -21,17 +22,16 @@ export default function ExportsPage() {
   const { currentInstallation } = useInstallation()
 
   // Civilian airports expose SMS/AEP/§139.303 Training; military hide them.
-  const isCivilian =
-    (currentInstallation as { airport_type?: string } | null)?.airport_type === 'faa_part139'
+  const civilian = isCivilian(currentInstallation)
   const modules = useMemo(
     () =>
       EXPORT_MODULES.filter((m) => {
         if (m.pdfStrategy === 'excluded') return false
-        if (m.appliesTo === 'civilian') return isCivilian
-        if (m.appliesTo === 'military') return !isCivilian
+        if (m.appliesTo === 'civilian') return civilian
+        if (m.appliesTo === 'military') return !civilian
         return true
       }),
-    [isCivilian],
+    [civilian],
   )
 
   const [periodKind, setPeriodKind] = useState<'all_time' | 'range'>('range')
@@ -41,6 +41,14 @@ export default function ExportsPage() {
     pdf: true, excel: true, photos: true, viewer: true, json: false,
   })
   const [selected, setSelected] = useState<Set<string>>(() => new Set(modules.map((m) => m.key)))
+
+  // Re-seed the selection when the visible module set changes (e.g. an
+  // installation switch flips civilian/military), so stale module keys don't
+  // linger in `selected`. `modules` is memoised on `civilian`, so this only
+  // fires on an actual airport-type change, not on every render.
+  useEffect(() => {
+    setSelected(new Set(modules.map((m) => m.key)))
+  }, [modules])
 
   // Phase 1 builds the period object but does not yet generate. Referenced so
   // the type stays exercised; Phase 4 wires it into the engine.
