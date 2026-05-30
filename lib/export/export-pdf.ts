@@ -23,6 +23,15 @@ export interface TableModuleSpec<T> {
   toRow: (row: T) => string[]
   /** Page orientation for this module's table; defaults to landscape. */
   orientation?: 'portrait' | 'landscape'
+  /**
+   * Sub-name for multi-kind modules (SMS, AEP) that emit several record
+   * tables under one folder. When set, files land at
+   * `documents/<folder>/<subName>.pdf` (aggregate) or
+   * `documents/<folder>/<subName>/<month>.pdf` (monthly) instead of the
+   * single-table `documents/<folder>.pdf`. The subtitle also gets the
+   * sub-name prefixed so each table reads as "<subName> — <period>".
+   */
+  subName?: string
 }
 
 /** Human label for the aggregate PDF subtitle. */
@@ -64,13 +73,17 @@ function buildTableModuleFilesUnsafe<T>(
   const filtered = records.filter((r) => isInRange(spec.getDate(r), ctx.period))
   if (filtered.length === 0) return []
   const folder = spec.module.folder
+  const sub = spec.subName
+  // Title gets the kind suffix so a multi-kind module's tables are
+  // distinguishable; single-kind modules keep the bare module label.
+  const title = sub ? `${spec.module.label} — ${sub}` : spec.module.label
 
   if (ctx.outputMode === 'monthly') {
     const out: ExportFile[] = []
     const monthMap = groupByMonth(filtered, spec.getDate)
     for (const [month, monthRows] of Array.from(monthMap.entries())) {
       const doc = generateRecordsTablePdf({
-        title: spec.module.label,
+        title,
         subtitle: month,
         baseName: ctx.baseName,
         baseIcao: ctx.baseIcao,
@@ -78,13 +91,16 @@ function buildTableModuleFilesUnsafe<T>(
         rows: monthRows.map(spec.toRow),
         orientation: spec.orientation,
       })
-      out.push(pdfToExportFile(doc, `documents/${folder}/${month}.pdf`))
+      const path = sub
+        ? `documents/${folder}/${sub}/${month}.pdf`
+        : `documents/${folder}/${month}.pdf`
+      out.push(pdfToExportFile(doc, path))
     }
     return out
   }
 
   const doc = generateRecordsTablePdf({
-    title: spec.module.label,
+    title,
     subtitle: periodSubtitle(ctx.period),
     baseName: ctx.baseName,
     baseIcao: ctx.baseIcao,
@@ -92,5 +108,6 @@ function buildTableModuleFilesUnsafe<T>(
     rows: filtered.map(spec.toRow),
     orientation: spec.orientation,
   })
-  return [pdfToExportFile(doc, `documents/${folder}.pdf`)]
+  const path = sub ? `documents/${folder}/${sub}.pdf` : `documents/${folder}.pdf`
+  return [pdfToExportFile(doc, path)]
 }

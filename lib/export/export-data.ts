@@ -36,6 +36,28 @@ import {
 } from '@/lib/supabase/ppr'
 import { fetchChecksInRange, type ScnCheckWithResults } from '@/lib/supabase/scn'
 import { fetchScnAgencies } from '@/lib/supabase/scn-agencies'
+import {
+  fetchHazards,
+  fetchAllMitigations,
+  fetchAudits,
+  fetchMocs,
+  fetchSafetyReports,
+  type SmsHazard,
+  type SmsMitigation,
+  type SmsAudit,
+  type SmsMoc,
+  type SmsSafetyReport,
+} from '@/lib/supabase/sms'
+import {
+  fetchPlanHistory,
+  fetchResponseAgencies,
+  fetchDrills,
+  fetchChecksInRange as fetchAepChecksInRange,
+  type AepPlan,
+  type AepResponseAgency,
+  type AepDrill,
+  type AepCommsCheckWithResults,
+} from '@/lib/supabase/aep'
 import type { WildlifeExportRow, DailyReviewExportRow } from './export-table-specs'
 
 export interface ModuleRecords {
@@ -58,6 +80,53 @@ export interface ModuleRecords {
   scn: {
     checks: ScnCheckWithResults[]
     agencies: string[]
+  }
+  /** SMS — civilian only; empty arrays on military bases. */
+  sms: {
+    hazards: SmsHazard[]
+    mitigations: SmsMitigation[]
+    audits: SmsAudit[]
+    mocs: SmsMoc[]
+    safetyReports: SmsSafetyReport[]
+  }
+  /** AEP — civilian only; empty arrays on military bases. */
+  aep: {
+    plans: AepPlan[]
+    agencies: AepResponseAgency[]
+    drills: AepDrill[]
+    commsChecks: AepCommsCheckWithResults[]
+  }
+}
+
+const EMPTY_SMS: ModuleRecords['sms'] = {
+  hazards: [], mitigations: [], audits: [], mocs: [], safetyReports: [],
+}
+const EMPTY_AEP: ModuleRecords['aep'] = {
+  plans: [], agencies: [], drills: [], commsChecks: [],
+}
+
+/** Fetch the civilian (SMS + AEP) record kinds for a base. */
+async function fetchCivilianRecords(baseId: string): Promise<{
+  sms: ModuleRecords['sms']
+  aep: ModuleRecords['aep']
+}> {
+  const [
+    hazards, mitigations, audits, mocs, safetyReports,
+    plans, agencies, drills, commsChecks,
+  ] = await Promise.all([
+    fetchHazards(baseId),
+    fetchAllMitigations(baseId),
+    fetchAudits(baseId),
+    fetchMocs(baseId),
+    fetchSafetyReports(baseId),
+    fetchPlanHistory(baseId),
+    fetchResponseAgencies(baseId),
+    fetchDrills({ base_id: baseId }),
+    fetchAepChecksInRange(baseId, SCN_FETCH_FROM, SCN_FETCH_TO),
+  ])
+  return {
+    sms: { hazards, mitigations, audits, mocs, safetyReports },
+    aep: { plans, agencies, drills, commsChecks },
   }
 }
 
@@ -132,8 +201,15 @@ function reviewToExportRow(row: DailyReviewRow, signers: Map<string, SignerInfo>
   }
 }
 
-/** Fetch all records for the modules 2b supports, for a base. */
-export async function fetchExportRecords(baseId: string | null): Promise<ModuleRecords> {
+/**
+ * Fetch all records for the export modules, for a base. SMS/AEP (civilian Part
+ * 139 only) are fetched only when `airportType === 'faa_part139'` — on military
+ * bases they stay empty without paying for nine wasted queries.
+ */
+export async function fetchExportRecords(
+  baseId: string | null,
+  airportType?: string | null,
+): Promise<ModuleRecords> {
   const [
     discrepancies,
     inspections,
@@ -199,6 +275,11 @@ export async function fetchExportRecords(baseId: string | null): Promise<ModuleR
     ;(coordsByEntry[c.entry_id] ??= []).push(c)
   }
 
+  // Civilian-only modules: fetch only for FAA Part 139 bases.
+  const civilian = baseId && airportType === 'faa_part139'
+    ? await fetchCivilianRecords(baseId)
+    : { sms: EMPTY_SMS, aep: EMPTY_AEP }
+
   return {
     discrepancies,
     inspections,
@@ -217,5 +298,7 @@ export async function fetchExportRecords(baseId: string | null): Promise<ModuleR
       checks: scnChecks,
       agencies: scnAgencies.map((a) => a.agency_name),
     },
+    sms: civilian.sms,
+    aep: civilian.aep,
   }
 }

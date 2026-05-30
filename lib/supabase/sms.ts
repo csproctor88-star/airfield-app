@@ -628,6 +628,18 @@ export async function fetchOpenMitigations(baseId: string): Promise<SmsMitigatio
   return ((data || []) as unknown as SmsMitigation[])
 }
 
+/** All mitigations for a base (any status) — used by the records export. */
+export async function fetchAllMitigations(baseId: string): Promise<SmsMitigation[]> {
+  const supabase = db()
+  if (!supabase) return []
+  const { data } = await supabase
+    .from('sms_mitigations')
+    .select('*')
+    .eq('base_id', baseId)
+    .order('created_at', { ascending: false })
+  return ((data || []) as unknown as SmsMitigation[])
+}
+
 export async function createMitigation(input: {
   hazard_id: string
   base_id: string
