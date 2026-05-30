@@ -189,7 +189,7 @@ No `base_backups` table. (A future `export_log` audit table is a deferred option
 
 | Phase | Deliverable | Gate |
 |---|---|---|
-| 1 | Permission migration · `export-scope.ts` (registry + date-basis + all-time/range) · `/settings/exports` shell | Build green; scope unit tests; page gated |
+| ✅ 1 | Permission migration · `export-modules.ts` (registry) + `export-period.ts` (date-basis + all-time/range + month bucketing) · `/settings/exports` shell | **Done 2026-05-29** — migration applied live; 607 tests pass; build green; page gated. Plan: `docs/superpowers/plans/2026-05-29-records-export-phase-1.md` |
 | 2 | PDF doc layer (3 strategies) | Visual review of sample PDFs |
 | 3 | Excel layer (per-module + master) | Workbooks open clean |
 | 4 | Packager: ZIP + `00-START-HERE.pdf` cover + SHA-256 manifest + README + progress + size guard. **End of "A" — usable export ships.** | Download/unzip real demo export; verify hashes |
