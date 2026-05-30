@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   resolveQuickPeriod,
   isInRange,
+  monthBucket,
+  groupByMonth,
   type ExportPeriod,
 } from '@/lib/export/export-period'
 
@@ -61,5 +63,33 @@ describe('isInRange', () => {
 
   it('includes a null date in an all_time export', () => {
     expect(isInRange(null, { kind: 'all_time' })).toBe(true)
+  })
+})
+
+describe('monthBucket', () => {
+  it('extracts YYYY-MM from an ISO timestamp', () => {
+    expect(monthBucket('2026-02-14T09:30:00Z')).toBe('2026-02')
+  })
+  it('extracts YYYY-MM from a date-only string', () => {
+    expect(monthBucket('2026-12-01')).toBe('2026-12')
+  })
+})
+
+describe('groupByMonth', () => {
+  it('buckets records by their date field and skips null dates', () => {
+    const rows = [
+      { id: 1, created_at: '2026-01-05T00:00:00Z' },
+      { id: 2, created_at: '2026-01-20T00:00:00Z' },
+      { id: 3, created_at: '2026-02-02T00:00:00Z' },
+      { id: 4, created_at: null },
+    ]
+    const groups = groupByMonth(rows, (r) => r.created_at)
+    expect([...groups.keys()].sort()).toEqual(['2026-01', '2026-02'])
+    expect(groups.get('2026-01')!.map((r) => r.id)).toEqual([1, 2])
+    expect(groups.get('2026-02')!.map((r) => r.id)).toEqual([3])
+  })
+
+  it('returns an empty map for no records', () => {
+    expect(groupByMonth([], (r: { created_at: string }) => r.created_at).size).toBe(0)
   })
 })

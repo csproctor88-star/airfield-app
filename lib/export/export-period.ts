@@ -67,3 +67,29 @@ export function isInRange(dateIso: string | null | undefined, period: ExportPeri
   if (period.to && day > period.to) return false
   return true
 }
+
+/** 'YYYY-MM' bucket key for a record date. */
+export function monthBucket(dateIso: string): string {
+  return dateIso.slice(0, 7)
+}
+
+/**
+ * Group records into 'YYYY-MM' buckets by a date accessor. Records whose
+ * accessor returns null/undefined/empty are skipped (they cannot be bucketed).
+ * Insertion order within each bucket is preserved.
+ */
+export function groupByMonth<T>(
+  records: T[],
+  getDate: (record: T) => string | null | undefined,
+): Map<string, T[]> {
+  const out = new Map<string, T[]>()
+  for (const record of records) {
+    const date = getDate(record)
+    if (!date) continue
+    const key = monthBucket(date)
+    const bucket = out.get(key)
+    if (bucket) bucket.push(record)
+    else out.set(key, [record])
+  }
+  return out
+}
