@@ -1,6 +1,7 @@
 // Records Export — per-module record fetch. Thin wrappers over existing CRUD
 // so the PDF/Excel layers receive typed rows. Relies on Supabase RLS + the
 // explicit base_id filter, like the rest of the app.
+import { createClient } from '@/lib/supabase/client'
 import { fetchDiscrepancies, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { fetchInspections, type InspectionRow } from '@/lib/supabase/inspections'
 import { fetchChecks, type CheckRow } from '@/lib/supabase/checks'
@@ -77,6 +78,7 @@ import { fetchInstallationMembers } from '@/lib/supabase/installations'
 import type { TrainingTranscriptInput } from '@/lib/training-part139-pdf'
 import type { WildlifeExportRow, DailyReviewExportRow } from './export-table-specs'
 import type { WaiverRecordBundle } from './export-record-modules'
+import type { PhotoRow, DisplayIdResolver } from './export-photos'
 
 export interface ModuleRecords {
   discrepancies: DiscrepancyRow[]
@@ -120,6 +122,10 @@ export interface ModuleRecords {
   acsi: AcsiInspection[]
   /** Training — one per-trainee transcript each (civilian only; empty on military). */
   training: TrainingTranscriptInput[]
+  /** Photos — raw rows for the base + a UUID→display-id resolver per module.
+   *  The browser-only download happens in the page (network), not here. */
+  photos: PhotoRow[]
+  photoResolver: DisplayIdResolver
 }
 
 const EMPTY_WAIVERS: WaiverRecordBundle = {
@@ -409,6 +415,21 @@ export async function fetchExportRecords(
     ...strikesResult.data.map(strikeToExportRow),
   ]
 
+  // Photos: one row query for the base + a UUID→display-id resolver built from
+  // the raw rows already in scope (no extra queries). The actual download is
+  // browser-only and runs in the page.
+  const photos = await fetchPhotoRows(baseId)
+  const photoResolver: DisplayIdResolver = {
+    discrepancies: idMap(discrepancies),
+    checks: idMap(checksResult.data),
+    inspections: idMap(inspections),
+    acsi: idMap(acsi),
+    wildlife: {
+      ...idMap(sightingsResult.data),
+      ...idMap(strikesResult.data),
+    },
+  }
+
   const coordsByEntry: Record<string, PprCoordination[]> = {}
   for (const c of pprCoords) {
     ;(coordsByEntry[c.entry_id] ??= []).push(c)
@@ -442,5 +463,31 @@ export async function fetchExportRecords(
     waivers,
     acsi,
     training: civilian.training,
+    photos,
+    photoResolver,
   }
+}
+
+/** Build a UUID→display_id map from rows that carry both fields. */
+function idMap<T extends { id: string; display_id?: string | null }>(rows: T[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const r of rows) {
+    if (r.id && r.display_id) out[r.id] = r.display_id
+  }
+  return out
+}
+
+/** Fetch all photo rows for a base (one query). Empty on demo / no base. */
+async function fetchPhotoRows(baseId: string | null): Promise<PhotoRow[]> {
+  const supabase = createClient()
+  if (!supabase || !baseId) return []
+  const { data, error } = await supabase
+    .from('photos')
+    .select('id, storage_path, file_name, captured_at, latitude, longitude, uploaded_by, discrepancy_id, check_id, inspection_id, acsi_inspection_id, wildlife_sighting_id, wildlife_strike_id')
+    .eq('base_id', baseId)
+  if (error) {
+    console.error('Records Export: photos fetch failed:', error.message)
+    return []
+  }
+  return (data ?? []) as PhotoRow[]
 }

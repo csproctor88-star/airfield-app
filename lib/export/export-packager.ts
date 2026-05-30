@@ -27,6 +27,8 @@ export interface PackageExportInput {
   gaps: string[]
   generatedAt: string
   generatedBy?: string | null
+  /** Photos that failed to download (recorded in the manifest + cover). */
+  photoFailures?: { path: string; reason: string }[]
 }
 
 export interface PackagedExport {
@@ -64,6 +66,7 @@ export async function packageExport(input: PackageExportInput): Promise<Packaged
     outputMode: input.outputMode,
     modules: input.modules,
     gaps: input.gaps,
+    photoFailures: input.photoFailures,
   })
 
   const cover = buildCoverFile(manifest)

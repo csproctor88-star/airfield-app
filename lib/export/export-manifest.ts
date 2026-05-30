@@ -31,6 +31,8 @@ export interface ExportManifest {
   modules: ManifestModuleStat[]
   /** Selected modules that produced zero files (empty in the window). */
   gaps: string[]
+  /** Photos that could not be downloaded after retries (path + reason). */
+  photoFailures: { path: string; reason: string }[]
   files: ManifestFileEntry[]
 }
 
@@ -65,6 +67,7 @@ export interface BuildManifestInput {
   outputMode: string
   modules: ManifestModuleStat[]
   gaps: string[]
+  photoFailures?: { path: string; reason: string }[]
 }
 
 export async function buildManifest(input: BuildManifestInput): Promise<ExportManifest> {
@@ -77,6 +80,7 @@ export async function buildManifest(input: BuildManifestInput): Promise<ExportMa
     outputMode: input.outputMode,
     modules: input.modules,
     gaps: input.gaps,
+    photoFailures: input.photoFailures ?? [],
     files: await hashFiles(input.files),
   }
 }
@@ -115,6 +119,18 @@ export function manifestToReadme(m: ExportManifest): string {
     lines.push(`  ${mod.label.padEnd(26)} ${String(mod.records).padStart(5)} records → ${mod.files} file(s)${gap}`)
   }
   lines.push('')
+  if (m.photoFailures && m.photoFailures.length > 0) {
+    lines.push('PHOTOS UNAVAILABLE')
+    lines.push('------------------')
+    lines.push(`${m.photoFailures.length} photo(s) could not be downloaded and are absent from`)
+    lines.push('this export. Their intended path + reason are listed below; the')
+    lines.push('photos-index.csv still references them for provenance.')
+    lines.push('')
+    for (const f of m.photoFailures) {
+      lines.push(`  ${f.path}  —  ${f.reason}`)
+    }
+    lines.push('')
+  }
   lines.push('INTEGRITY (SHA-256)')
   lines.push('-------------------')
   lines.push('Re-hash any file and compare to verify it has not been altered.')

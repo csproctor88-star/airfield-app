@@ -38,12 +38,13 @@ export default function ExportsPage() {
   const [periodKind, setPeriodKind] = useState<'all_time' | 'range'>('range')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  // Photos + interactive viewer arrive in later phases; default off + disabled.
+  // Interactive viewer arrives in a later phase; default off + disabled.
   const [include, setInclude] = useState<Record<IncludeKey, boolean>>({
-    pdf: true, excel: true, photos: false, viewer: false, json: false,
+    pdf: true, excel: true, photos: true, viewer: false, json: false,
   })
   const [selected, setSelected] = useState<Set<string>>(() => new Set(modules.map((m) => m.key)))
   const [generating, setGenerating] = useState(false)
+  const [photoProgress, setPhotoProgress] = useState<{ done: number; total: number } | null>(null)
 
   // Re-seed the selection when the visible module set changes (e.g. an
   // installation switch flips civilian/military), so stale module keys don't
@@ -65,8 +66,8 @@ export default function ExportsPage() {
       toast.error('Select at least one module')
       return
     }
-    if (!include.pdf && !include.excel && !include.json) {
-      toast.error('Select at least one output: PDF, Excel, or JSON')
+    if (!include.pdf && !include.excel && !include.json && !include.photos) {
+      toast.error('Select at least one output: PDF, Excel, photos, or JSON')
       return
     }
 
@@ -76,6 +77,7 @@ export default function ExportsPage() {
       const base = { name: inst?.name ?? null, icao: inst?.icao ?? null }
       const airportType = civilian ? 'faa_part139' : 'usaf'
 
+      const selectedKeys = Array.from(selected)
       const [{ fetchExportRecords }, { buildExportFiles }, { packageExport, downloadPackagedExport }] = await Promise.all([
         import('@/lib/export/export-data'),
         import('@/lib/export/run-export'),
@@ -84,7 +86,7 @@ export default function ExportsPage() {
 
       const records = await fetchExportRecords(installationId ?? null, airportType, base)
       const built = await buildExportFiles(records, {
-        selectedKeys: Array.from(selected),
+        selectedKeys,
         period,
         outputMode: 'aggregate',
         base,
@@ -92,22 +94,46 @@ export default function ExportsPage() {
         include: { pdf: include.pdf, excel: include.excel, json: include.json },
       })
 
-      if (built.files.length === 0) {
+      // Photos: browser-only download (network). Plan from the fetched rows,
+      // fetch each with retry, append to the file list; failures are recorded
+      // on the manifest, never abort the export.
+      const allFiles = [...built.files]
+      let photoFailures: { path: string; reason: string }[] = []
+      if (include.photos) {
+        const [{ planPhotos, downloadPhotos }, { getPublicUrl }] = await Promise.all([
+          import('@/lib/export/export-photos'),
+          import('@/lib/supabase/photos'),
+        ])
+        const planned = planPhotos(records.photos, { selectedKeys, period, resolver: records.photoResolver })
+        if (planned.length > 0) {
+          const result = await downloadPhotos(planned, {
+            urlFor: getPublicUrl,
+            onProgress: (d, t) => setPhotoProgress({ done: d, total: t }),
+          })
+          allFiles.push(...result.files)
+          photoFailures = result.failures.map((f) => ({ path: f.path, reason: f.reason }))
+        }
+        setPhotoProgress(null)
+      }
+
+      if (allFiles.length === 0) {
         toast.message('No records matched the selected period — nothing to export')
         return
       }
 
       const pkg = await packageExport({
-        files: built.files,
+        files: allFiles,
         base,
         period,
         outputMode: 'aggregate',
         modules: built.modules,
         gaps: built.gaps,
+        photoFailures,
         generatedAt: new Date().toISOString(),
       })
       downloadPackagedExport(pkg)
-      toast.success(`Export ready — ${pkg.manifest.files.length} file(s) in ${pkg.filename}`)
+      const failNote = photoFailures.length > 0 ? ` (${photoFailures.length} photo(s) unavailable)` : ''
+      toast.success(`Export ready — ${pkg.manifest.files.length} file(s) in ${pkg.filename}${failNote}`)
     } catch (e) {
       console.error('Records export failed:', e)
       toast.error('Export failed — see console for details')
@@ -149,7 +175,7 @@ export default function ExportsPage() {
   const includeRows: { key: IncludeKey; label: string; icon: typeof FileText; disabled?: boolean }[] = [
     { key: 'pdf', label: 'PDF documents', icon: FileText },
     { key: 'excel', label: 'Excel workbooks', icon: Sheet },
-    { key: 'photos', label: 'Photos (soon)', icon: ImageIcon, disabled: true },
+    { key: 'photos', label: 'Photos', icon: ImageIcon },
     { key: 'viewer', label: 'Interactive viewer (soon)', icon: MonitorPlay, disabled: true },
     { key: 'json', label: 'Raw data (JSON)', icon: Database },
   ]
@@ -223,7 +249,9 @@ export default function ExportsPage() {
         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: generating ? 0.6 : 1 }}
       >
         {generating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-        {generating ? 'Generating…' : 'Generate Export'}
+        {generating
+          ? (photoProgress ? `Photos ${photoProgress.done}/${photoProgress.total}…` : 'Generating…')
+          : 'Generate Export'}
       </button>
       <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 10 }}>
         Generation runs entirely in your browser — record data never leaves this device. The ZIP
