@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   generateInspectionReportsPdf,
   buildInspectionFiles,
+  resultInfo,
   type InspectionReportLike,
 } from '@/lib/export/export-inspection-pdf'
 
@@ -35,15 +36,29 @@ describe('generateInspectionReportsPdf', () => {
     expect(doc.getNumberOfPages()).toBe(2)
   })
 
-  it('renders an inspection with checklist items without throwing', () => {
+  it('renders an inspection with real-shape checklist items without throwing', () => {
     const items = [
-      { category: 'Pavement', text: 'Cracks/spalling', status: 'sat', notes: '' },
-      { category: 'Pavement', text: 'FOD', status: 'sat', notes: '' },
-      { category: 'Lighting', text: 'Edge lights', status: 'unsat', notes: '3 out RWY 19' },
-      { category: 'Lighting', text: 'PAPI', status: 'na', na_reason: 'Not installed' },
+      { section: 'Pavement', item: 'Cracks/spalling', response: 'pass' as const, notes: '' },
+      { section: 'Pavement', item: 'FOD', response: 'pass' as const, notes: '' },
+      { section: 'Lighting', item: 'Edge lights', response: 'fail' as const, notes: '3 out RWY 19' },
+      { section: 'Lighting', item: 'PAPI', response: 'na' as const, notes: 'Not installed' },
     ]
     const doc = generateInspectionReportsPdf([insp('AC-9', '2026-05-04T00:00:00Z', items)], { baseName: 'T', baseIcao: 'K' })!
     expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('resultInfo', () => {
+  it('maps response to colored PASS / FAIL / N/A (matching the in-app report)', () => {
+    expect(resultInfo({ response: 'pass' })).toEqual({ label: 'PASS', color: [0, 130, 0] })
+    expect(resultInfo({ response: 'fail' })).toEqual({ label: 'FAIL', color: [200, 0, 0] })
+    expect(resultInfo({ response: 'na' })).toEqual({ label: 'N/A', color: [120, 120, 120] })
+  })
+
+  it('accepts legacy sat/unsat aliases and dashes the unknown/empty', () => {
+    expect(resultInfo({ status: 'sat' }).label).toBe('PASS')
+    expect(resultInfo({ status: 'unsat' }).label).toBe('FAIL')
+    expect(resultInfo({ response: null }).label).toBe('—')
   })
 })
 

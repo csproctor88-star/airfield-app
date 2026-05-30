@@ -5,10 +5,11 @@
 // Inspections.pdf — not a one-line-per-inspection roster. This is the record an
 // auditor expects. Photos are deferred to the dedicated photo phase.
 //
-// Item/status conventions mirror the in-app generator (lib/pdf-export.ts):
-//   text  = item.text || item.item || item.question || item.id
-//   cat   = item.category_label || item.category || 'General'
-//   status= 'sat' | 'unsat' | 'na'  ->  SAT / UNSAT / N/A
+// Item conventions mirror the in-app generator (lib/pdf-export.ts) and the live
+// InspectionItem shape ({ section, item, response: 'pass'|'fail'|'na', notes }):
+//   text    = item.item
+//   section = item.section || 'Uncategorized'
+//   response= 'pass' | 'fail' | 'na'  ->  PASS (green) / FAIL (red) / N/A (gray)
 import autoTable from 'jspdf-autotable'
 import type { jsPDF } from 'jspdf'
 import {
@@ -26,17 +27,17 @@ import { isInRange, groupByMonth } from './export-period'
 import { pdfToExportFile, type ExportFile } from './export-file'
 import type { PdfBuildContext } from './export-pdf'
 
-/** Minimal item shape we render (a subset of InspectionItem). */
+/** Item shape we render — the live InspectionItem (a few legacy aliases kept as
+ *  fallbacks so older/variant rows still render text + result). */
 export interface InspectionItemLike {
-  category?: string
-  category_label?: string
-  text?: string
+  section?: string
   item?: string
-  question?: string
-  id?: string
+  response?: 'pass' | 'fail' | 'na' | string | null
+  notes?: string | null
+  // legacy/variant aliases (fallback only)
+  category?: string
+  text?: string
   status?: string
-  notes?: string
-  na_reason?: string
 }
 
 /** Minimal inspection shape we render (a subset of InspectionRow). */
@@ -52,19 +53,26 @@ export interface InspectionReportLike {
   created_at: string
 }
 
-const RESULT_LABEL: Record<string, string> = { sat: 'SAT', unsat: 'UNSAT', na: 'N/A' }
+type Rgb = [number, number, number]
+const RESULT_GREEN: Rgb = [0, 130, 0]
+const RESULT_RED: Rgb = [200, 0, 0]
+const RESULT_GRAY: Rgb = [120, 120, 120]
 
-function resultLabel(status: string | undefined): string {
-  const s = (status || '').toLowerCase()
-  return RESULT_LABEL[s] ?? (status ? status.toUpperCase() : '—')
+/** Map a response value to its label + text color, matching lib/pdf-export.ts. */
+export function resultInfo(it: InspectionItemLike): { label: string; color: Rgb } {
+  const r = (it.response ?? it.status ?? '').toString().toLowerCase()
+  if (r === 'pass' || r === 'sat') return { label: 'PASS', color: RESULT_GREEN }
+  if (r === 'fail' || r === 'unsat') return { label: 'FAIL', color: RESULT_RED }
+  if (r === 'na') return { label: 'N/A', color: RESULT_GRAY }
+  return { label: '—', color: RESULT_GRAY }
 }
 
 function itemText(it: InspectionItemLike): string {
-  return it.text || it.item || it.question || it.id || ''
+  return it.item || it.text || ''
 }
 
-function itemCategory(it: InspectionItemLike): string {
-  return it.category_label || it.category || 'General'
+function itemSection(it: InspectionItemLike): string {
+  return it.section || it.category || 'Uncategorized'
 }
 
 /**
@@ -106,32 +114,32 @@ export function generateInspectionReportsPdf(
       return
     }
 
-    // Build a category-grouped body: a banner row per category, then its items.
-    type BodyRow = { kind: 'cat'; text: string } | { kind: 'item'; cells: string[] }
-    const ordered: BodyRow[] = []
-    let lastCat = ''
+    // Build a section-grouped body: a banner row per section, then its items.
+    // The Result cell carries its own colored text (green PASS / red FAIL /
+    // gray N/A) via a per-cell style, matching the in-app inspection report.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type Cell = any
+    const body: Cell[][] = []
+    let lastSection = ''
     for (const it of items) {
-      const cat = itemCategory(it)
-      if (cat !== lastCat) {
-        lastCat = cat
-        ordered.push({ kind: 'cat', text: humanize(cat) })
+      const section = itemSection(it)
+      if (section !== lastSection) {
+        lastSection = section
+        body.push([{ content: humanize(section), colSpan: 3, styles: { fontStyle: 'bold' as const, fillColor: [241, 245, 249] as Rgb, textColor: 20 } }])
       }
-      const note = it.notes || ((it.status || '').toLowerCase() === 'na' ? it.na_reason : '') || ''
-      ordered.push({
-        kind: 'item',
-        cells: [sanitizePdfText(itemText(it)), resultLabel(it.status), sanitizePdfText(note)],
-      })
+      const { label, color } = resultInfo(it)
+      body.push([
+        sanitizePdfText(itemText(it)),
+        { content: label, styles: { textColor: color, fontStyle: 'bold' as const, halign: 'center' as const } },
+        sanitizePdfText(it.notes || ''),
+      ])
     }
 
     autoTable(doc, {
       ...tableStyles(ctx),
       startY: y,
       head: [['Item', 'Result', 'Notes']],
-      body: ordered.map((r) =>
-        r.kind === 'cat'
-          ? [{ content: r.text, colSpan: 3, styles: { fontStyle: 'bold' as const, fillColor: [241, 245, 249] as [number, number, number], textColor: 20 } }]
-          : r.cells,
-      ),
+      body,
       columnStyles: {
         0: { cellWidth: 110 },
         1: { cellWidth: 22, halign: 'center' },
