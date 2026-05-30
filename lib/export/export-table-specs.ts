@@ -87,6 +87,8 @@ interface CheckLike {
   created_at: string
 }
 
+// Note: fetchChecks pre-filters to status='completed', so draft checks never
+// appear in exports regardless of the selected period.
 export const CHECKS_SPEC: TableModuleSpec<CheckLike> = {
   module: mod('checks'),
   columns: ['ID', 'Type', 'Areas', 'Completed By', 'Completed', 'Status', 'Photos'],

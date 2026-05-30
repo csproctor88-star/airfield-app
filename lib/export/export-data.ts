@@ -24,6 +24,12 @@ export async function fetchExportRecords(baseId: string | null): Promise<ModuleR
     fetchObstructionEvaluations(baseId),
     fetchContractors(baseId),
   ])
+  // fetchChecks is the only fetcher that surfaces an error (the others catch
+  // internally and return []). Don't swallow it — log so a failed checks fetch
+  // isn't indistinguishable from "no completed checks".
+  if (checksResult.error) {
+    console.error('Records Export: checks fetch failed:', checksResult.error)
+  }
   return {
     discrepancies,
     inspections,
