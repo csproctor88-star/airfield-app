@@ -130,15 +130,14 @@ export function buildViewerData(
   return { base: opts.base, period, generatedAt: opts.generatedAt, modules, documents }
 }
 
-/** Build the viewer/ ExportFiles. The dataset is inlined into data.js. */
+/**
+ * Build the viewer as a SINGLE self-contained file: viewer/index.html with the
+ * CSS, data, and app JS all inlined. One file = no sibling-file loading, which
+ * is what mobile browsers (notably iOS Files/Safari preview) block — so this
+ * opens by double-tap on a phone, off a USB stick, anywhere, offline.
+ */
 export function buildViewerFiles(data: ViewerDataset): ExportFile[] {
-  const enc = (s: string) => new TextEncoder().encode(s)
-  return [
-    { path: 'viewer/index.html', bytes: enc(VIEWER_HTML) },
-    { path: 'viewer/styles.css', bytes: enc(VIEWER_CSS) },
-    { path: 'viewer/app.js', bytes: enc(VIEWER_JS) },
-    { path: 'viewer/data.js', bytes: enc(viewerDataJs(data)) },
-  ]
+  return [{ path: 'viewer/index.html', bytes: new TextEncoder().encode(viewerHtml(data)) }]
 }
 
 /** Inline the dataset safely: escape `<` so a record value can't close the script tag. */
@@ -147,13 +146,16 @@ export function viewerDataJs(data: ViewerDataset): string {
   return `window.__GLIDEPATH_EXPORT__ = ${json};\n`
 }
 
-const VIEWER_HTML = `<!doctype html>
+/** Assemble the single inlined index.html (styles + data + app, no external refs). */
+export function viewerHtml(data: ViewerDataset): string {
+  return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Glidepath Records Export</title>
-<link rel="stylesheet" href="styles.css" />
+<style>
+${VIEWER_CSS}</style>
 </head>
 <body>
 <header>
@@ -168,11 +170,14 @@ const VIEWER_HTML = `<!doctype html>
     <div id="tableWrap"></div>
   </main>
 </div>
-<script src="data.js"></script>
-<script src="app.js"></script>
+<script>
+${viewerDataJs(data)}</script>
+<script>
+${VIEWER_JS}</script>
 </body>
 </html>
 `
+}
 
 const VIEWER_CSS = `* { box-sizing: border-box; }
 body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #1e293b; background: #f8fafc; }
@@ -197,6 +202,13 @@ th { background: #1e293b; color: #fff; position: sticky; top: 0; cursor: pointer
 tr:nth-child(even) td { background: #f8fafc; }
 #empty { color: #64748b; padding: 20px 4px; }
 .rowcount { color: #64748b; font-size: 12px; margin-bottom: 8px; }
+@media (max-width: 640px) {
+  #layout { display: block; }
+  #nav { width: auto; border-right: none; border-bottom: 1px solid #e2e8f0; max-height: 38vh; }
+  #nav button, #nav a { font-size: 15px; padding: 11px 10px; }
+  #main { padding: 12px; }
+  th, td { padding: 8px 9px; }
+}
 @media print {
   header #printBtn, #nav, #toolbar { display: none; }
   #layout { display: block; }

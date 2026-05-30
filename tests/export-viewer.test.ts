@@ -84,17 +84,32 @@ describe('viewerDataJs', () => {
 })
 
 describe('buildViewerFiles', () => {
-  it('emits the four self-contained viewer files with non-empty bytes', () => {
-    const data = buildViewerData(emptyRecords(), { selectedKeys: [], period: allTime, base, generatedAt: '' })
+  it('emits a SINGLE self-contained index.html with everything inlined', () => {
+    const records = emptyRecords()
+    records.discrepancies = [discrepancy('DSC-1', '2026-05-01T00:00:00Z', 'Crack near 04')]
+    const data = buildViewerData(records, { selectedKeys: ['discrepancies'], period: allTime, base, generatedAt: '2026-05-30T00:00:00Z' })
     const files = buildViewerFiles(data)
-    expect(files.map((f) => f.path).sort()).toEqual([
-      'viewer/app.js', 'viewer/data.js', 'viewer/index.html', 'viewer/styles.css',
-    ])
-    for (const f of files) expect(f.bytes.length).toBeGreaterThan(0)
-    // index.html references the sibling files via relative paths (file:// safe).
-    const html = new TextDecoder().decode(files.find((f) => f.path === 'viewer/index.html')!.bytes)
-    expect(html).toContain('src="data.js"')
-    expect(html).toContain('src="app.js"')
-    expect(html).toContain('href="styles.css"')
+    // One file only — no sibling app.js/styles.css/data.js (mobile-safe).
+    expect(files.map((f) => f.path)).toEqual(['viewer/index.html'])
+    const html = new TextDecoder().decode(files[0].bytes)
+    expect(html.length).toBeGreaterThan(0)
+    // No external references — CSS + data + app are inlined.
+    expect(html).not.toContain('src="data.js"')
+    expect(html).not.toContain('href="styles.css"')
+    expect(html).toContain('<style>')
+    expect(html).toContain('window.__GLIDEPATH_EXPORT__')
+    // The record data is embedded.
+    expect(html).toContain('DSC-1')
+    expect(html).toContain('Crack near 04')
+  })
+
+  it('escapes "<" in inlined data so a record value cannot break out of the script', () => {
+    const records = emptyRecords()
+    records.discrepancies = [discrepancy('DSC-2', '2026-05-01T00:00:00Z', '</script><script>alert(1)')]
+    const html = new TextDecoder().decode(
+      buildViewerFiles(buildViewerData(records, { selectedKeys: ['discrepancies'], period: allTime, base, generatedAt: '' }))[0].bytes,
+    )
+    // The malicious closing tag must be escaped, not present as a real tag.
+    expect(html).toContain('\\u003c/script>')
   })
 })
