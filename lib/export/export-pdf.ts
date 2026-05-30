@@ -44,7 +44,8 @@ export function buildTableModuleFiles<T>(
 
   if (ctx.outputMode === 'monthly') {
     const out: ExportFile[] = []
-    for (const [month, monthRows] of groupByMonth(filtered, spec.getDate)) {
+    const monthMap = groupByMonth(filtered, spec.getDate)
+    for (const [month, monthRows] of Array.from(monthMap.entries())) {
       const doc = generateRecordsTablePdf({
         title: spec.module.label,
         subtitle: month,
