@@ -144,6 +144,10 @@ export const PERM = {
   BASE_SETUP_WRITE:                     'base_setup:write',
   SETTINGS_VIEW:                        'settings:view',
   INSTALLATIONS_SWITCH:                 'installations:switch',
+
+  // Records Export
+  EXPORTS_READ:                         'exports:read',
+  EXPORTS_WRITE:                        'exports:write',
 } as const
 
 export type PermissionKey = typeof PERM[keyof typeof PERM]
