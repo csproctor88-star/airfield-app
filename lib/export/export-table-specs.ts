@@ -13,6 +13,9 @@ function mod(key: string) {
 const dash = (v: string | null | undefined): string => (v == null || v === '' ? '—' : v)
 const dateOnly = (v: string | null | undefined): string => (v ? v.slice(0, 10) : '—')
 const yesNo = (v: boolean | null | undefined): string => (v ? 'Yes' : 'No')
+// Compact UTC stamp "YYYY-MM-DD HH:MMZ" from an ISO string (stored as toISOString(), i.e. UTC).
+const zuluDateTime = (v: string | null | undefined): string =>
+  v ? `${v.slice(0, 10)} ${v.slice(11, 16)}Z` : '—'
 
 // ── Discrepancies (moved from export-pdf.ts) ─────────────────
 interface DiscrepancyLike {
@@ -154,5 +157,70 @@ export const PERSONNEL_SPEC: TableModuleSpec<ContractorLike> = {
     dateOnly(r.start_date),
     dateOnly(r.end_date),
     dateOnly(r.af_form_483_expiration),
+  ],
+}
+
+// ── Wildlife (sightings + strikes, one combined table) ───────
+// Sightings and strikes live in separate tables with different columns; the
+// export flattens both into one normalized row with a Kind column. Strike-only
+// fields (Aircraft, Damage) are null for sightings and render as "—".
+// export-data.ts owns the mapping from the raw rows to this shape.
+export interface WildlifeExportRow {
+  /** Natural date: observed_at for sightings, strike_date for strikes. */
+  date: string
+  species: string | null
+  category: string | null
+  count: number
+  kind: 'Sighting' | 'Strike'
+  location: string | null
+  observer: string
+  aircraft: string | null
+  damage: string | null
+}
+
+export const WILDLIFE_SPEC: TableModuleSpec<WildlifeExportRow> = {
+  module: mod('wildlife'),
+  columns: ['Date', 'Species', 'Category', 'Count', 'Kind', 'Location', 'Observer', 'Aircraft', 'Damage'],
+  getDate: (r) => r.date,
+  toRow: (r) => [
+    dateOnly(r.date),
+    dash(r.species),
+    dash(r.category),
+    String(r.count),
+    r.kind,
+    dash(r.location),
+    dash(r.observer),
+    dash(r.aircraft),
+    dash(r.damage),
+  ],
+}
+
+// ── Daily Reviews (rich per-slot sign-off row) ───────────────
+// One row per review_date; each slot cell is the resolved signer name (or "—"
+// if unsigned). export-data.ts resolves signer profile IDs to names before
+// building this shape.
+export interface DailyReviewExportRow {
+  review_date: string
+  day_amsl: string | null
+  swing_amsl: string | null
+  mid_amsl: string | null
+  namo: string | null
+  afm: string | null
+  /** ISO timestamp once every required slot is signed; null while pending. */
+  certified_at: string | null
+}
+
+export const DAILY_REVIEWS_SPEC: TableModuleSpec<DailyReviewExportRow> = {
+  module: mod('daily_reviews'),
+  columns: ['Date', 'Day AMSL', 'Swing AMSL', 'Mid AMSL', 'NAMO', 'AFM', 'Certified'],
+  getDate: (r) => r.review_date,
+  toRow: (r) => [
+    dateOnly(r.review_date),
+    dash(r.day_amsl),
+    dash(r.swing_amsl),
+    dash(r.mid_amsl),
+    dash(r.namo),
+    dash(r.afm),
+    zuluDateTime(r.certified_at),
   ],
 }

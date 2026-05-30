@@ -304,6 +304,24 @@ export async function fetchRecentReviews(baseId: string, days = 14): Promise<Dai
   return (data || []) as DailyReviewRow[]
 }
 
+/** Fetch-all for the records export: every daily review for a base, newest first. */
+export async function fetchDailyReviewsForBase(baseId: string | null): Promise<DailyReviewRow[]> {
+  const supabase = createClient()
+  if (!supabase || !baseId) return []
+
+  const { data, error } = await supabase
+    .from('daily_reviews')
+    .select('*')
+    .eq('base_id', baseId)
+    .order('review_date', { ascending: false })
+
+  if (error) {
+    console.error('fetchDailyReviewsForBase:', error.message)
+    return []
+  }
+  return (data || []) as DailyReviewRow[]
+}
+
 export async function signDailyReview(input: {
   baseId: string
   date: string
