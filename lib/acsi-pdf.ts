@@ -10,6 +10,13 @@ interface AcsiPdfOptions {
   baseName?: string | null
   baseIcao?: string | null
   baseId?: string | null
+  /**
+   * Skip the per-discrepancy photo fetch + embed. Used by the Records Export,
+   * which renders ACSI text-only (checklist + findings); embedded images are
+   * added by the export's dedicated photo phase. Defaults to false (in-app
+   * exports keep their photos).
+   */
+  skipPhotos?: boolean
 }
 
 /** Fetch an image URL, downscale for PDF thumbnails, and return as JPEG data URL */
@@ -144,7 +151,7 @@ export async function generateAcsiPdf(
     }
   }
 
-  if (supabase && collectedPhotoIds.size > 0) {
+  if (!opts.skipPhotos && supabase && collectedPhotoIds.size > 0) {
     try {
       const { data: photoRows } = await supabase
         .from('photos')
@@ -160,7 +167,7 @@ export async function generateAcsiPdf(
 
   // Also index ACSI photos in case any disc points at photos without having
   // ids populated (defensive — shouldn't matter once the pdf reads photo_ids).
-  if (inspection.id) {
+  if (!opts.skipPhotos && inspection.id) {
     try {
       const acsiPhotos = await fetchAcsiPhotos(inspection.id)
       for (const p of acsiPhotos) {
@@ -303,9 +310,11 @@ export async function generateAcsiPdf(
         if (disc.risk_control_measure) lines.push(`Risk Control Measure: ${disc.risk_control_measure}`)
         discTextMap[detailKey] = lines
 
-        const photoIds: string[] = Array.isArray((disc as { photo_ids?: string[] }).photo_ids)
-          ? ((disc as { photo_ids?: string[] }).photo_ids as string[])
-          : []
+        const photoIds: string[] = opts.skipPhotos
+          ? []
+          : Array.isArray((disc as { photo_ids?: string[] }).photo_ids)
+            ? ((disc as { photo_ids?: string[] }).photo_ids as string[])
+            : []
         const photoDataUrls: (string | null)[] = []
         for (const pid of photoIds) {
           const url = photoUrlById[pid]

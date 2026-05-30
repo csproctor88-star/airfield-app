@@ -58,7 +58,25 @@ import {
   type AepDrill,
   type AepCommsCheckWithResults,
 } from '@/lib/supabase/aep'
+import {
+  fetchWaivers,
+  fetchAllWaiverCriteria,
+  fetchAllWaiverReviews,
+  fetchAllWaiverCoordination,
+  fetchAllWaiverAttachments,
+  type WaiverRow,
+} from '@/lib/supabase/waivers'
+import { fetchAcsiInspections } from '@/lib/supabase/acsi-inspections'
+import type { AcsiInspection } from '@/lib/supabase/types'
+import {
+  fetchTrainingTopics,
+  fetchTrainingRecords,
+  fetchTrainingCertificates,
+} from '@/lib/supabase/training-part139'
+import { fetchInstallationMembers } from '@/lib/supabase/installations'
+import type { TrainingTranscriptInput } from '@/lib/training-part139-pdf'
 import type { WildlifeExportRow, DailyReviewExportRow } from './export-table-specs'
+import type { WaiverRecordBundle } from './export-record-modules'
 
 export interface ModuleRecords {
   discrepancies: DiscrepancyRow[]
@@ -96,6 +114,84 @@ export interface ModuleRecords {
     drills: AepDrill[]
     commsChecks: AepCommsCheckWithResults[]
   }
+  /** Waivers — per-record bundle (record + its criteria/reviews/coord/attachments). */
+  waivers: WaiverRecordBundle
+  /** ACSI inspections — one per-record PDF each. */
+  acsi: AcsiInspection[]
+  /** Training — one per-trainee transcript each (civilian only; empty on military). */
+  training: TrainingTranscriptInput[]
+}
+
+const EMPTY_WAIVERS: WaiverRecordBundle = {
+  waivers: [],
+  criteriaByWaiver: {},
+  reviewsByWaiver: {},
+  coordinationByWaiver: {},
+  attachmentsByWaiver: {},
+}
+
+/** Group a flat list of waiver sub-rows by their waiver_id. */
+function groupByWaiver<T extends { waiver_id: string }>(rows: T[]): Record<string, T[]> {
+  const out: Record<string, T[]> = {}
+  for (const r of rows) (out[r.waiver_id] ??= []).push(r)
+  return out
+}
+
+/** Fetch every waiver + its sub-data for a base, batched (no N+1). */
+async function fetchWaiverBundle(baseId: string): Promise<WaiverRecordBundle> {
+  const [waivers, criteria, reviews, coordination, attachments] = await Promise.all([
+    fetchWaivers(baseId),
+    fetchAllWaiverCriteria(baseId),
+    fetchAllWaiverReviews(baseId),
+    fetchAllWaiverCoordination(baseId),
+    fetchAllWaiverAttachments(baseId),
+  ])
+  return {
+    waivers: waivers as WaiverRow[],
+    criteriaByWaiver: groupByWaiver(criteria),
+    reviewsByWaiver: groupByWaiver(reviews),
+    coordinationByWaiver: groupByWaiver(coordination),
+    attachmentsByWaiver: groupByWaiver(attachments),
+  }
+}
+
+/**
+ * Assemble one §139.303 transcript per trainee: the base's active topics, plus
+ * each member's own records + certificates. Civilian-only. One records fetch +
+ * one certs fetch for the whole base (grouped in JS), so no per-user N+1.
+ */
+async function fetchTrainingTranscripts(
+  baseId: string,
+  base: { name: string | null; icao: string | null },
+): Promise<TrainingTranscriptInput[]> {
+  const [members, topics, allRecords, allCerts] = await Promise.all([
+    fetchInstallationMembers(baseId),
+    fetchTrainingTopics(baseId),
+    fetchTrainingRecords({ base_id: baseId }),
+    fetchTrainingCertificates({ base_id: baseId }),
+  ])
+
+  const recordsByUser = groupBy(allRecords, (r) => r.user_id)
+  const certsByUser = groupBy(allCerts, (c) => c.user_id)
+
+  return members.map((m) => ({
+    base,
+    user: {
+      name: m.name,
+      rank: m.rank,
+      email: m.email || null,
+      role: (m as { role?: string }).role ?? 'viewer',
+    },
+    topics,
+    records: recordsByUser[m.user_id] ?? [],
+    certificates: certsByUser[m.user_id] ?? [],
+  }))
+}
+
+function groupBy<T>(rows: T[], key: (row: T) => string): Record<string, T[]> {
+  const out: Record<string, T[]> = {}
+  for (const r of rows) (out[key(r)] ??= []).push(r)
+  return out
 }
 
 const EMPTY_SMS: ModuleRecords['sms'] = {
@@ -105,14 +201,19 @@ const EMPTY_AEP: ModuleRecords['aep'] = {
   plans: [], agencies: [], drills: [], commsChecks: [],
 }
 
-/** Fetch the civilian (SMS + AEP) record kinds for a base. */
-async function fetchCivilianRecords(baseId: string): Promise<{
+/** Fetch the civilian (SMS + AEP + Training) record kinds for a base. */
+async function fetchCivilianRecords(
+  baseId: string,
+  base: { name: string | null; icao: string | null },
+): Promise<{
   sms: ModuleRecords['sms']
   aep: ModuleRecords['aep']
+  training: TrainingTranscriptInput[]
 }> {
   const [
     hazards, mitigations, audits, mocs, safetyReports,
     plans, agencies, drills, commsChecks,
+    training,
   ] = await Promise.all([
     fetchHazards(baseId),
     fetchAllMitigations(baseId),
@@ -123,10 +224,12 @@ async function fetchCivilianRecords(baseId: string): Promise<{
     fetchResponseAgencies(baseId),
     fetchDrills({ base_id: baseId }),
     fetchAepChecksInRange(baseId, SCN_FETCH_FROM, SCN_FETCH_TO),
+    fetchTrainingTranscripts(baseId, base),
   ])
   return {
     sms: { hazards, mitigations, audits, mocs, safetyReports },
     aep: { plans, agencies, drills, commsChecks },
+    training,
   }
 }
 
@@ -209,7 +312,9 @@ function reviewToExportRow(row: DailyReviewRow, signers: Map<string, SignerInfo>
 export async function fetchExportRecords(
   baseId: string | null,
   airportType?: string | null,
+  base?: { name: string | null; icao: string | null },
 ): Promise<ModuleRecords> {
+  const baseInfo = base ?? { name: null, icao: null }
   const [
     discrepancies,
     inspections,
@@ -223,6 +328,8 @@ export async function fetchExportRecords(
     pprColumns,
     pprEntries,
     scnChecks,
+    waivers,
+    acsi,
   ] = await Promise.all([
     fetchDiscrepancies(baseId),
     fetchInspections(baseId),
@@ -236,6 +343,8 @@ export async function fetchExportRecords(
     baseId ? fetchPprColumns(baseId) : Promise.resolve([] as PprColumn[]),
     baseId ? fetchPprEntries(baseId) : Promise.resolve([] as PprEntry[]),
     baseId ? fetchChecksInRange(baseId, SCN_FETCH_FROM, SCN_FETCH_TO) : Promise.resolve([] as ScnCheckWithResults[]),
+    baseId ? fetchWaiverBundle(baseId) : Promise.resolve(EMPTY_WAIVERS),
+    fetchAcsiInspections(baseId),
   ])
   // fetchChecks / fetchSightings / fetchStrikes / activity surface an error (the
   // others catch internally and return []). Don't swallow them — log so a failed
@@ -277,8 +386,8 @@ export async function fetchExportRecords(
 
   // Civilian-only modules: fetch only for FAA Part 139 bases.
   const civilian = baseId && airportType === 'faa_part139'
-    ? await fetchCivilianRecords(baseId)
-    : { sms: EMPTY_SMS, aep: EMPTY_AEP }
+    ? await fetchCivilianRecords(baseId, baseInfo)
+    : { sms: EMPTY_SMS, aep: EMPTY_AEP, training: [] as TrainingTranscriptInput[] }
 
   return {
     discrepancies,
@@ -300,5 +409,8 @@ export async function fetchExportRecords(
     },
     sms: civilian.sms,
     aep: civilian.aep,
+    waivers,
+    acsi,
+    training: civilian.training,
   }
 }

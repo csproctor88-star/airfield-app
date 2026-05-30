@@ -425,6 +425,44 @@ export async function fetchAllWaiverReviews(baseId: string): Promise<WaiverRevie
   return data as WaiverReviewRow[]
 }
 
+/** All coordination rows for a base — used by the records export (avoids N+1). */
+export async function fetchAllWaiverCoordination(baseId: string): Promise<WaiverCoordinationRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('waiver_coordination')
+    .select('*, waivers!inner(base_id)')
+    .eq('waivers.base_id', baseId)
+    .order('office', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch all waiver coordination:', error.message)
+    return []
+  }
+
+  return data as WaiverCoordinationRow[]
+}
+
+/** All attachment rows for a base — used by the records export (avoids N+1). */
+export async function fetchAllWaiverAttachments(baseId: string): Promise<WaiverAttachmentRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+
+  const { data, error } = await supabase
+    .from('waiver_attachments')
+    .select('*, waivers!inner(base_id)')
+    .eq('waivers.base_id', baseId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch all waiver attachments:', error.message)
+    return []
+  }
+
+  return data as WaiverAttachmentRow[]
+}
+
 // ─── Attachments ─────────────────────────────────────────────
 
 export async function fetchWaiverAttachments(waiverId: string): Promise<WaiverAttachmentRow[]> {
