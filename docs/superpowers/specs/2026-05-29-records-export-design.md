@@ -76,18 +76,24 @@ patterns (`createClient()` null-check, `friendlyError()`).
 
 ## 4. Module → PDF strategy map
 
-Every **included** module also gets **one Excel workbook**. The optional raw-data JSON
-sidecar covers **all base-scoped tables** (comprehensive). PDF strategy per module:
+Each module has a **base PDF strategy** (`per_record` / `table` / `excluded`). The
+**period/output mode** (all-time · date-range · monthly split — §6) is chosen by the user
+per export and only affects `table` modules. Every **included** module also gets **one
+Excel workbook**. The optional raw-data JSON sidecar covers **all base-scoped tables**.
 
 | Strategy | Modules | Output |
 |---|---|---|
-| **Per-record PDF** | Waivers (AF 505), ACSI, Civilian §139.303 Training (civilian mode only) | `documents/Waivers/AF505-####.pdf`, `documents/ACSI/<year>.pdf`, `documents/Training/<record>.pdf` |
-| **Monthly-grouped PDF** | Discrepancies, Inspections, Airfield Checks, Obstructions, Events Log, Daily Reviews, Wildlife, PPR, Personnel/Contractors, SCN, SMS, AEP | `documents/<Module>/YYYY-MM.pdf` (all that month inside; grouped by status within the month where applicable, e.g. Discrepancies → open / in-progress / completed) |
+| **Per-record PDF** | Waivers (AF 505), ACSI, Civilian §139.303 Training (civilian mode only) | One PDF per record: `documents/Waivers/AF505-####.pdf`, `documents/ACSI/<year>.pdf`, `documents/Training/<record>.pdf`. Period only filters which records are included. |
+| **Table (records list)** | Discrepancies, Inspections, Airfield Checks, Obstructions, Events Log, Daily Reviews, Wildlife, PPR, Personnel/Contractors, SCN, SMS, AEP | Rendered as a records table. **All-time / date-range** → one aggregate PDF `documents/<Module>.pdf`. **Monthly split** → one PDF per month `documents/<Module>/YYYY-MM.pdf`. Grouped by status within the table where applicable (e.g. Discrepancies → open / in-progress / completed). |
 | **Excluded (own export)** | AMTR Training Record | Not produced here — the AMTR module's existing Excel records-export covers it; the cover sheet directs the user there. |
 
-- **Monthly bucketing** is by each module's natural date (e.g. Discrepancies by
-  `created_at`, Inspections by inspection date, Events by event date). Empty months
-  produce no file.
+The same generic "records table" generator serves both aggregate and monthly: aggregate =
+one call over all filtered rows; monthly = `groupByMonth` then one call per bucket.
+
+- **Date filtering & monthly bucketing** use each module's natural date (e.g.
+  Discrepancies by `created_at`, Daily Reviews by `review_date`, Events by `created_at`).
+  In monthly mode, empty months produce no file; in aggregate mode, an empty module
+  produces no file (and is listed as a gap on the cover sheet).
 - **AMTR is excluded from the generated documents** (no PDF, no Excel, not in the master
   workbook). The `00-START-HERE.pdf` cover notes: "AMTR training records: export via the
   AMTR module." (AMTR tables still appear in the optional raw-data JSON sidecar, which is
@@ -95,10 +101,12 @@ sidecar covers **all base-scoped tables** (comprehensive). PDF strategy per modu
 - Civilian §139.303 Training PDFs appear **only when the base is civilian**
   (`appliesTo: faa_part139`); on military bases that module is absent.
 
-**Generator reuse vs. new:** existing generators cover acsi, waiver, discrepancy, check,
-obstruction, events-log, ppr, personnel, scn, sms, aep, training-part139. A few monthly
-roll-ups (e.g. Wildlife-Log, Daily-Reviews, monthly Inspections/Checks) may need a
-lightweight new generator built on `lib/pdf-utils.ts` + autotable — built in Phase 2.
+**Generator reuse vs. new:** per-record reuses existing generators (`generateWaiverPdf`,
+`generateAcsiPdf`). Some table modules already have aggregate generators that take an
+array (`generateEventsLogPdf(rows[])`, `generatePprPdf(entries[])`, `generatePersonnelPdf`,
+`generateScnMonthlyPdf`) — reuse them for the aggregate mode. The rest are served by ONE
+generic "records table" generator (`lib/pdf-utils.ts` + autotable) driven by a per-module
+column config — far cheaper than bespoke per-module generators.
 
 ---
 
@@ -109,12 +117,13 @@ glidepath-records-KBCV-2026-01-01_to_2026-03-31.zip   (or ...-all-time.zip)
 ├── 00-START-HERE.pdf      audit cover: range, per-module counts + date basis,
 │                          SHA-256 of every file, generated-by + when, gap notes
 ├── README.txt             plain-text equivalent
-├── documents/             per-record + monthly-grouped PDFs (see §4)
+├── documents/             per-record + table PDFs (see §4); AMTR excluded
 │     Waivers/AF505-####.pdf · ACSI/<year>.pdf · Training/<record>.pdf   (per record)
-│     Discrepancies/YYYY-MM.pdf · Inspections/YYYY-MM.pdf · Checks/YYYY-MM.pdf
-│     Obstructions/YYYY-MM.pdf · Events-Log/YYYY-MM.pdf · Daily-Reviews/YYYY-MM.pdf
-│     Wildlife/YYYY-MM.pdf · PPR/YYYY-MM.pdf · Personnel/YYYY-MM.pdf
-│     SCN/YYYY-MM.pdf · SMS/YYYY-MM.pdf · AEP/YYYY-MM.pdf      (monthly; AMTR excluded)
+│     all-time / range → one aggregate PDF per module:
+│       Discrepancies.pdf · Inspections.pdf · Checks.pdf · Obstructions.pdf
+│       Events-Log.pdf · Daily-Reviews.pdf · Wildlife.pdf · PPR.pdf
+│       Personnel.pdf · SCN.pdf · SMS.pdf · AEP.pdf
+│     monthly split → one PDF per month per module: <Module>/YYYY-MM.pdf
 ├── spreadsheets/          00-Master-Workbook.xlsx + one <Module>.xlsx each
 ├── photos/<Module>/<record>/<date>_<label>.jpg + photos-index.csv  (provenance)
 ├── viewer/                index.html app.js styles.css data.js  (read-only, file://)
@@ -131,8 +140,15 @@ glidepath-records-KBCV-2026-01-01_to_2026-03-31.zip   (or ...-all-time.zip)
 
 `/settings/exports`, gated by `exports:read`. Single screen, three steps + progress modal.
 
-1. **Period** — `( ) All time` or `(•) Date range [from]→[to]` with quick chips
-   (This month / Last month / This quarter / This FY).
+1. **Period / output mode** — three choices (user picks one):
+   - `( ) All time` — one aggregate PDF per table module (all records)
+   - `( ) Date range [from]→[to]` — aggregate, filtered (quick chips: This month /
+     Last month / This quarter / This FY)
+   - `( ) Monthly split` — one PDF per month per table module (optionally bounded by a
+     range)
+   The mode only affects **table modules**; **per-record** modules (Waivers, ACSI,
+   Civilian Training) always emit one PDF per record regardless, with the period used
+   only to filter which records are included.
 2. **Include** — PDF documents · Excel workbooks · Photos · Interactive viewer ·
    Raw data (JSON, off by default).
 3. **Modules** — All, or pick a subset.
