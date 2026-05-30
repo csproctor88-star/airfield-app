@@ -7,7 +7,6 @@
 import { buildTableModuleFiles, type PdfBuildContext, type OutputMode } from './export-pdf'
 import {
   DISCREPANCIES_SPEC,
-  INSPECTIONS_SPEC,
   CHECKS_SPEC,
   OBSTRUCTIONS_SPEC,
   PERSONNEL_SPEC,
@@ -15,6 +14,7 @@ import {
   DAILY_REVIEWS_SPEC,
 } from './export-table-specs'
 import { buildEventsLogFiles, buildPprFiles, buildScnFiles } from './export-rich-modules'
+import { buildInspectionFiles } from './export-inspection-pdf'
 import {
   SMS_HAZARDS_SPEC,
   SMS_MITIGATIONS_SPEC,
@@ -139,7 +139,6 @@ export async function buildExportFiles(
     // ── Uniform table modules ──
     const tableJobs: Array<[string, unknown[], Parameters<typeof buildTableModuleFiles>[1]]> = [
       ['discrepancies', records.discrepancies, DISCREPANCIES_SPEC as never],
-      ['inspections', records.inspections, INSPECTIONS_SPEC as never],
       ['checks', records.checks, CHECKS_SPEC as never],
       ['obstructions', records.obstructions, OBSTRUCTIONS_SPEC as never],
       ['personnel', records.personnel, PERSONNEL_SPEC as never],
@@ -148,6 +147,11 @@ export async function buildExportFiles(
     ]
     for (const [key, rows, spec] of tableJobs) {
       if (sel.has(key)) add(key, buildTableModuleFiles(rows as never[], spec, pdfCtx))
+    }
+
+    // Inspections render as full report forms (one per inspection), not a table.
+    if (sel.has('inspections')) {
+      add('inspections', buildInspectionFiles(records.inspections, pdfCtx))
     }
 
     // ── Rich-generator modules ──
