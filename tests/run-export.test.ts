@@ -20,6 +20,8 @@ function emptyRecords(): ModuleRecords {
     waivers: { waivers: [], criteriaByWaiver: {}, reviewsByWaiver: {}, coordinationByWaiver: {}, attachmentsByWaiver: {} },
     acsi: [],
     training: [],
+    photos: [],
+    photoResolver: {},
   }
 }
 
