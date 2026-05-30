@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { buildTableModuleFiles, periodSubtitle, DISCREPANCIES_SPEC } from '@/lib/export/export-pdf'
+import { buildTableModuleFiles, periodSubtitle } from '@/lib/export/export-pdf'
+import { DISCREPANCIES_SPEC } from '@/lib/export/export-table-specs'
 
 type Row = { display_id: string; status: string; type: string; title: string; location_text: string; assigned_shop: string | null; work_order_number: string | null; created_at: string; reporter?: { name: string | null; rank: string | null } | null }
 
