@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Download, FileText, Sheet, Image as ImageIcon, MonitorPlay, Database } from 'lucide-react'
+import { toast } from 'sonner'
+import { Download, FileText, Sheet, Image as ImageIcon, MonitorPlay, Database, Loader2 } from 'lucide-react'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { useInstallation } from '@/lib/installation-context'
 import { isCivilian } from '@/lib/airport-mode'
@@ -19,7 +20,7 @@ const QUICK: { key: QuickPeriod; label: string }[] = [
 
 export default function ExportsPage() {
   const { has, loaded } = usePermissions()
-  const { currentInstallation } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
 
   // Civilian airports expose SMS/AEP/§139.303 Training; military hide them.
   const civilian = isCivilian(currentInstallation)
@@ -37,10 +38,12 @@ export default function ExportsPage() {
   const [periodKind, setPeriodKind] = useState<'all_time' | 'range'>('range')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  // Photos + interactive viewer arrive in later phases; default off + disabled.
   const [include, setInclude] = useState<Record<IncludeKey, boolean>>({
-    pdf: true, excel: true, photos: true, viewer: true, json: false,
+    pdf: true, excel: true, photos: false, viewer: false, json: false,
   })
   const [selected, setSelected] = useState<Set<string>>(() => new Set(modules.map((m) => m.key)))
+  const [generating, setGenerating] = useState(false)
 
   // Re-seed the selection when the visible module set changes (e.g. an
   // installation switch flips civilian/military), so stale module keys don't
@@ -50,11 +53,68 @@ export default function ExportsPage() {
     setSelected(new Set(modules.map((m) => m.key)))
   }, [modules])
 
-  // Phase 1 builds the period object but does not yet generate. Referenced so
-  // the type stays exercised; Phase 4 wires it into the engine.
   const period: ExportPeriod =
     periodKind === 'all_time' ? { kind: 'all_time' } : { kind: 'range', from, to }
-  void period
+
+  async function handleGenerate() {
+    if (periodKind === 'range' && (!from || !to)) {
+      toast.error('Pick a from and to date, or choose All time')
+      return
+    }
+    if (selected.size === 0) {
+      toast.error('Select at least one module')
+      return
+    }
+    if (!include.pdf && !include.excel && !include.json) {
+      toast.error('Select at least one output: PDF, Excel, or JSON')
+      return
+    }
+
+    setGenerating(true)
+    try {
+      const inst = currentInstallation as { name?: string | null; icao?: string | null; timezone?: string | null } | null
+      const base = { name: inst?.name ?? null, icao: inst?.icao ?? null }
+      const airportType = civilian ? 'faa_part139' : 'usaf'
+
+      const [{ fetchExportRecords }, { buildExportFiles }, { packageExport, downloadPackagedExport }] = await Promise.all([
+        import('@/lib/export/export-data'),
+        import('@/lib/export/run-export'),
+        import('@/lib/export/export-packager'),
+      ])
+
+      const records = await fetchExportRecords(installationId ?? null, airportType, base)
+      const built = await buildExportFiles(records, {
+        selectedKeys: Array.from(selected),
+        period,
+        outputMode: 'aggregate',
+        base,
+        timezone: inst?.timezone ?? null,
+        include: { pdf: include.pdf, excel: include.excel, json: include.json },
+      })
+
+      if (built.files.length === 0) {
+        toast.message('No records matched the selected period — nothing to export')
+        return
+      }
+
+      const pkg = await packageExport({
+        files: built.files,
+        base,
+        period,
+        outputMode: 'aggregate',
+        modules: built.modules,
+        gaps: built.gaps,
+        generatedAt: new Date().toISOString(),
+      })
+      downloadPackagedExport(pkg)
+      toast.success(`Export ready — ${pkg.manifest.files.length} file(s) in ${pkg.filename}`)
+    } catch (e) {
+      console.error('Records export failed:', e)
+      toast.error('Export failed — see console for details')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   function applyQuick(kind: QuickPeriod) {
     const { from: f, to: t } = resolveQuickPeriod(kind, new Date())
@@ -86,11 +146,11 @@ export default function ExportsPage() {
     )
   }
 
-  const includeRows: { key: IncludeKey; label: string; icon: typeof FileText }[] = [
+  const includeRows: { key: IncludeKey; label: string; icon: typeof FileText; disabled?: boolean }[] = [
     { key: 'pdf', label: 'PDF documents', icon: FileText },
     { key: 'excel', label: 'Excel workbooks', icon: Sheet },
-    { key: 'photos', label: 'Photos', icon: ImageIcon },
-    { key: 'viewer', label: 'Interactive viewer', icon: MonitorPlay },
+    { key: 'photos', label: 'Photos (soon)', icon: ImageIcon, disabled: true },
+    { key: 'viewer', label: 'Interactive viewer (soon)', icon: MonitorPlay, disabled: true },
     { key: 'json', label: 'Raw data (JSON)', icon: Database },
   ]
 
@@ -127,11 +187,15 @@ export default function ExportsPage() {
       {/* 2. Include */}
       <div className="section-label">2 · INCLUDE</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, margin: '8px 0 20px' }}>
-        {includeRows.map(({ key, label, icon: Icon }) => (
-          <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {includeRows.map(({ key, label, icon: Icon, disabled }) => (
+          <label
+            key={key}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
+          >
             <input
               type="checkbox"
               checked={include[key]}
+              disabled={disabled}
               onChange={(e) => setInclude((p) => ({ ...p, [key]: e.target.checked }))}
             />
             <Icon size={14} color="var(--color-text-3)" />
@@ -154,12 +218,17 @@ export default function ExportsPage() {
       <button
         type="button"
         className="btn-primary"
-        disabled
-        title="Generation is wired up in a later phase"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: 0.5 }}
+        disabled={generating}
+        onClick={handleGenerate}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: generating ? 0.6 : 1 }}
       >
-        <Download size={16} /> Generate Export
+        {generating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+        {generating ? 'Generating…' : 'Generate Export'}
       </button>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 10 }}>
+        Generation runs entirely in your browser — record data never leaves this device. The ZIP
+        includes a START-HERE cover and a SHA-256 manifest of every file.
+      </p>
     </div>
   )
 }
