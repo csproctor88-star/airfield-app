@@ -38,9 +38,8 @@ export default function ExportsPage() {
   const [periodKind, setPeriodKind] = useState<'all_time' | 'range'>('range')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
-  // Interactive viewer arrives in a later phase; default off + disabled.
   const [include, setInclude] = useState<Record<IncludeKey, boolean>>({
-    pdf: true, excel: true, photos: true, viewer: false, json: false,
+    pdf: true, excel: true, photos: true, viewer: true, json: false,
   })
   const [selected, setSelected] = useState<Set<string>>(() => new Set(modules.map((m) => m.key)))
   const [generating, setGenerating] = useState(false)
@@ -84,6 +83,7 @@ export default function ExportsPage() {
         import('@/lib/export/export-packager'),
       ])
 
+      const generatedAt = new Date().toISOString()
       const records = await fetchExportRecords(installationId ?? null, airportType, base)
       const built = await buildExportFiles(records, {
         selectedKeys,
@@ -91,10 +91,11 @@ export default function ExportsPage() {
         outputMode: 'aggregate',
         base,
         timezone: inst?.timezone ?? null,
-        include: { pdf: include.pdf, excel: include.excel, json: include.json },
+        include: { pdf: include.pdf, excel: include.excel, json: include.json, viewer: include.viewer },
         // Embed photos inline in ACSI + Waiver PDFs when both PDFs and Photos
         // are selected (the same toggle that builds the standalone photos/ tree).
         embedPhotos: include.pdf && include.photos,
+        generatedAt,
       })
 
       // Photos: browser-only download (network). Plan from the fetched rows,
@@ -179,7 +180,7 @@ export default function ExportsPage() {
     { key: 'pdf', label: 'PDF documents', icon: FileText },
     { key: 'excel', label: 'Excel workbooks', icon: Sheet },
     { key: 'photos', label: 'Photos', icon: ImageIcon },
-    { key: 'viewer', label: 'Interactive viewer (soon)', icon: MonitorPlay, disabled: true },
+    { key: 'viewer', label: 'Interactive viewer', icon: MonitorPlay },
     { key: 'json', label: 'Raw data (JSON)', icon: Database },
   ]
 

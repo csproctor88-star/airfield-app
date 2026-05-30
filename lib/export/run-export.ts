@@ -28,6 +28,7 @@ import {
 } from './export-civilian-specs'
 import { buildWaiverFiles, buildAcsiFiles, buildTrainingFiles } from './export-record-modules'
 import { buildExcelFiles } from './export-excel'
+import { buildViewerData, buildViewerFiles } from './export-viewer'
 import { EXPORT_MODULES } from './export-modules'
 import { type ExportPeriod } from './export-period'
 import type { ModuleRecords } from './export-data'
@@ -42,9 +43,11 @@ export interface BuildExportOptions {
   base: { name: string | null; icao: string | null }
   /** Base IANA timezone — used by the PPR generator for local time columns. */
   timezone?: string | null
-  include: { pdf: boolean; excel: boolean; json: boolean }
+  include: { pdf: boolean; excel: boolean; json: boolean; viewer?: boolean }
   /** Embed photos inline in per-record PDFs (ACSI + Waivers). Browser-only. */
   embedPhotos?: boolean
+  /** ISO timestamp shown in the offline viewer header. */
+  generatedAt?: string
 }
 
 export interface BuiltExport {
@@ -221,6 +224,18 @@ export async function buildExportFiles(
   // The master workbook spans modules, so it ships at the top level rather than
   // being attributed to any single module's count.
   if (masterWorkbook) files.push(masterWorkbook)
+
+  // The offline viewer is a top-level folder (also unattributed). It reuses the
+  // same table specs, so it never drifts from the documents.
+  if (opts.include.viewer) {
+    const dataset = buildViewerData(records, {
+      selectedKeys: opts.selectedKeys,
+      period: opts.period,
+      base: opts.base,
+      generatedAt: opts.generatedAt ?? '',
+    })
+    files.push(...buildViewerFiles(dataset))
+  }
 
   return { files, modules, gaps }
 }
