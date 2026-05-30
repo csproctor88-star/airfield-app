@@ -24,6 +24,7 @@ import ContactSupport from '@/components/ui/contact-support'
 
 export default function SettingsPage() {
   const { userRole } = useInstallation()
+  const { has } = usePermissions()
   const isCes = userRole === 'ces'
 
   return (
@@ -35,6 +36,11 @@ export default function SettingsPage() {
       <CollapsibleSection label="INSTALLATION" icon={MapPin}>
         <InstallationSectionContent />
       </CollapsibleSection>
+      {has(PERM.EXPORTS_READ) && (
+        <CollapsibleSection label="RECORDS EXPORT" icon={Download}>
+          <RecordsExportSectionContent />
+        </CollapsibleSection>
+      )}
       {!isCes && (
         <>
           <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
@@ -52,6 +58,38 @@ export default function SettingsPage() {
         <AboutSectionContent />
       </CollapsibleSection>
       <SignOutSection />
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Section: Records Export (link to /settings/exports)
+// ═══════════════════════════════════════════════════════════════
+
+function RecordsExportSectionContent() {
+  const router = useRouter()
+  return (
+    <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+        Produce filable, reviewable records (PDF, Excel) you can use and store outside Glidepath —
+        for Air Force records disposition and the &quot;leaving Glidepath&quot; case. Generation runs
+        in your browser; record data never leaves this device.
+      </div>
+      <button
+        type="button"
+        onClick={() => router.push('/settings/exports')}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          alignSelf: 'flex-start',
+          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          border: 'none', borderRadius: 'var(--radius-base)', padding: '10px 16px',
+          color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        <Download size={14} />
+        Open Records Export
+      </button>
     </div>
   )
 }
