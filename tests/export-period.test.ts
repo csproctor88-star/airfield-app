@@ -84,7 +84,7 @@ describe('groupByMonth', () => {
       { id: 4, created_at: null },
     ]
     const groups = groupByMonth(rows, (r) => r.created_at)
-    expect([...groups.keys()].sort()).toEqual(['2026-01', '2026-02'])
+    expect(Array.from(groups.keys()).sort()).toEqual(['2026-01', '2026-02'])
     expect(groups.get('2026-01')!.map((r) => r.id)).toEqual([1, 2])
     expect(groups.get('2026-02')!.map((r) => r.id)).toEqual([3])
   })
