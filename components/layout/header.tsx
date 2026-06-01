@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/lib/theme-context'
+import { useDesign } from '@/lib/design-context'
 import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { useDashboard } from '@/lib/dashboard-context'
@@ -111,6 +112,8 @@ function useQueueCounts(): {
 
 export function Header() {
   const { resolvedTheme } = useTheme()
+  const { design } = useDesign()
+  const v2 = design === 'v2'
   const { isOpen, toggle } = useSidebar()
   const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
   const { advisories } = useDashboard()
@@ -319,7 +322,7 @@ export function Header() {
             >
               {baseName && (
                 <span style={{
-                  fontSize: 'clamp(15px, 1.6vw, 19px)', fontWeight: 700,
+                  fontSize: v2 ? 'clamp(14px, 1.4vw, 17px)' : 'clamp(15px, 1.6vw, 19px)', fontWeight: 700,
                   color: 'var(--color-text-1)', letterSpacing: '-0.005em',
                   lineHeight: 1.1, whiteSpace: 'nowrap',
                 }}>
@@ -388,7 +391,7 @@ export function Header() {
               fontFamily: 'var(--font-family-mono)',
             }}>
               <span style={{
-                fontSize: 'var(--fs-md)', fontWeight: 700,
+                fontSize: v2 ? 'var(--fs-sm)' : 'var(--fs-md)', fontWeight: 700,
                 color: 'var(--color-text-1)', letterSpacing: '0.04em', lineHeight: 1,
               }}>
                 {hh}:{mm}:{ss}<span style={{ color: 'var(--color-accent)', marginLeft: 4 }}>Z</span>
@@ -492,7 +495,7 @@ export function Header() {
                   QUEUED, NEEDS REVIEW, PHOTOS WAITING) above are
                   what the user needs to react to. */}
             </div>
-            {userName && <div style={{ color: 'var(--color-text-1)', fontWeight: 700 }}>{userName}</div>}
+            {userName && <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontSize: v2 ? 'var(--fs-xs)' : undefined }}>{userName}</div>}
           </div>
         </div>
         )

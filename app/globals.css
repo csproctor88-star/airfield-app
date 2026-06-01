@@ -1375,10 +1375,12 @@ html, body {
   --color-bg-elevated: #1C2536;
   --color-bg-inset: #0C111B;
   --color-bg-nav: #0C111B;
-  /* On-brand header (replaces the off-theme grey gradient). */
-  --color-bg-header-start: #131A27;
-  --color-bg-header-end: #0E141F;
-  --color-header-border: rgba(148, 163, 184, 0.14);
+  /* Header reads as a distinct, slightly lighter grey-slate bar (a neutral
+     take on the original grey) so the header region is clearly delineated
+     from the darker content surfaces below. */
+  --color-bg-header-start: #2E3744;
+  --color-bg-header-end: #262E39;
+  --color-header-border: rgba(148, 163, 184, 0.22);
   /* Neutral slate borders instead of pervasive cyan. */
   --color-border: rgba(148, 163, 184, 0.14);
   --color-border-mid: rgba(148, 163, 184, 0.20);
