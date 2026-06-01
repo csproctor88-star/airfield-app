@@ -41,6 +41,11 @@ export default function SettingsPage() {
           <RecordsExportSectionContent />
         </CollapsibleSection>
       )}
+      {has(PERM.LIBRARY_VIEW) && (
+        <CollapsibleSection label="PDF LIBRARY" icon={BookOpen}>
+          <PdfLibrarySectionContent />
+        </CollapsibleSection>
+      )}
       {!isCes && (
         <>
           <CollapsibleSection label="DATA & STORAGE" icon={HardDrive}>
@@ -89,6 +94,37 @@ function RecordsExportSectionContent() {
       >
         <Download size={14} />
         Open Records Export
+      </button>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Section: PDF Library (link to /library — sys-admin only via library:view)
+// ═══════════════════════════════════════════════════════════════
+
+function PdfLibrarySectionContent() {
+  const router = useRouter()
+  return (
+    <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-2)', lineHeight: 1.5 }}>
+        Browse and manage the generated PDF library. This is a system-administration tool and
+        isn&apos;t shown in the main navigation.
+      </div>
+      <button
+        type="button"
+        onClick={() => router.push('/library')}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          alignSelf: 'flex-start',
+          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          border: 'none', borderRadius: 'var(--radius-base)', padding: '10px 16px',
+          color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        <BookOpen size={14} />
+        Open PDF Library
       </button>
     </div>
   )

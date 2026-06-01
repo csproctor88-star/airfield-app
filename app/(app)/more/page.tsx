@@ -10,7 +10,7 @@ import {
   ClipboardCheck, ClipboardList, Bird, FileSignature, HardHat,
   AlertTriangle, MapPin, Lightbulb, PlaneLanding, Plane, Library,
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
-  BookOpen, Users, Settings as SettingsIcon,
+  BookOpen, Users, Award, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
   type LucideIcon,
@@ -28,30 +28,40 @@ type ModuleItem = { name: string; icon: LucideIcon; color: string; href: string;
 const pinnedItems: ModuleItem[] = [
   { name: 'Airfield Status', icon: RadioTower, color: 'var(--color-accent)', href: '/' },
   { name: 'Dashboard', icon: BarChart3, color: 'var(--color-accent)', href: '/dashboard' },
+  { name: 'Events Log', icon: ScrollText, color: 'var(--color-success)', href: '/activity' },
 ]
 
-// Operations
+// Daily Operations
+// (Secondary Crash Net is intentionally off-nav — reached from the Dashboard
+// SCN quick-tile during daily checks.)
 const opsItems: ModuleItem[] = [
-  { name: 'Events Log', icon: ScrollText, color: 'var(--color-success)', href: '/activity' },
   { name: 'QRC', icon: Zap, color: 'var(--color-warning)', href: '/qrc' },
-  { name: 'Secondary Crash Net', icon: Radio, color: 'var(--color-warning)', href: '/scn' },
   { name: 'Shift Checklist', icon: CheckSquare, color: 'var(--color-accent)', href: '/shift-checklist' },
   { name: 'Airfield Checks', icon: ClipboardCheck, color: 'var(--color-cyan)', href: '/checks' },
   { name: 'All Inspections', icon: ClipboardList, color: 'var(--color-cyan)', href: '/inspections/all' },
   { name: 'Wildlife / BASH', icon: Bird, color: 'var(--color-success)', href: '/wildlife' },
+  // Civilian-only — module-config appliesTo: ['faa_part139'] hides on USAF bases.
+  { name: 'Wildlife / WHMP', icon: ClipboardCheck, color: 'var(--color-success)', href: '/wildlife/whmp' },
   { name: 'PPR Log', icon: FileSignature, color: 'var(--color-accent)', href: '/ppr' },
   { name: 'Personnel on Airfield', icon: HardHat, color: 'var(--color-amber)', href: '/contractors' },
-  // Civilian-only — module-config appliesTo: ['faa_part139'] hides on USAF bases.
+  // Civilian-only.
   { name: 'Field Conditions / TALPA', icon: CloudSnow, color: 'var(--color-cyan)', href: '/field-conditions' },
-  { name: 'Wildlife / WHMP', icon: ClipboardCheck, color: 'var(--color-success)', href: '/wildlife/whmp' },
+  { name: 'NOTAMs', icon: RadioTower, color: 'var(--color-cyan)', href: '/notams' },
 ]
 
 // Airfield Management
 const mgmtItems: ModuleItem[] = [
   { name: 'Discrepancies', icon: AlertTriangle, color: 'var(--color-warning)', href: '/discrepancies' },
-  { name: 'Obstruction Eval Tool', icon: MapPin, color: 'var(--color-orange)', href: '/obstructions' },
   { name: 'Visual NAVAIDs', icon: Lightbulb, color: 'var(--color-warning)', href: '/infrastructure' },
+  { name: 'Waivers', icon: Shield, color: 'var(--color-purple)', href: '/waivers' },
+  { name: 'Daily Reviews', icon: CalendarCheck, color: 'var(--color-purple)', href: '/daily-reviews' },
   { name: 'Aircraft Parking', icon: PlaneLanding, color: 'var(--color-accent)', href: '/parking' },
+  { name: 'Obstruction Eval Tool', icon: MapPin, color: 'var(--color-orange)', href: '/obstructions' },
+  // USAF-only (isModuleEnabled hides on civilian bases); HREF_PERMISSION below
+  // gates it to amtr:view holders so read-only members don't see it.
+  { name: 'Training Records', icon: Award, color: 'var(--color-purple)', href: '/amtr' },
+  // Gated to ces:view (CES role + sys_admin) via HREF_PERMISSION below.
+  { name: 'CES Work Orders', icon: Wrench, color: 'var(--color-cyan)', href: '/ces' },
 ]
 
 // Safety Management System (civilian Part 139 only — filtered out by
@@ -90,20 +100,18 @@ const aepItems: ModuleItem[] = [
 const refItems: ModuleItem[] = [
   { name: 'Aircraft Database', icon: Plane, color: 'var(--color-accent)', href: '/aircraft' },
   { name: 'Reference Library', icon: Library, color: 'var(--color-cyan)', href: '/regulations' },
-  { name: 'NOTAMs', icon: RadioTower, color: 'var(--color-cyan)', href: '/notams' },
-  { name: 'Help & Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/help' },
+  { name: 'Reports & Analytics', icon: TrendingUp, color: 'var(--color-cyan)', href: '/reports' },
+  { name: 'Glidepath Training', icon: GraduationCap, color: 'var(--color-accent)', href: '/help' },
 ]
 
 // Admin
+// (PDF Library is intentionally not here — it lives on the Settings page,
+// sys-admin only.)
 const adminItems: ModuleItem[] = [
-  { name: 'Base Configuration', icon: SlidersHorizontal, color: 'var(--color-cyan)', href: '/base-config' },
   { name: 'Activity Log', icon: Clock, color: 'var(--color-success)', href: '/recent-activity' },
-  { name: 'Daily Reviews', icon: CalendarCheck, color: 'var(--color-purple)', href: '/daily-reviews' },
-  { name: 'Waivers', icon: FileText, color: 'var(--color-purple)', href: '/waivers' },
-  { name: 'Reports & Analytics', icon: TrendingUp, color: 'var(--color-cyan)', href: '/reports' },
-  { name: 'PDF Library', icon: BookOpen, color: 'var(--color-purple)', href: '/library', adminOnly: true },
-  { name: 'User Management', icon: Users, color: 'var(--color-text-3)', href: '/users', adminOnly: true },
   { name: 'Customer Feedback', icon: MessageSquare, color: 'var(--color-accent)', href: '/feedback' },
+  { name: 'User Management', icon: Users, color: 'var(--color-text-3)', href: '/users', adminOnly: true },
+  { name: 'Base Configuration', icon: SlidersHorizontal, color: 'var(--color-cyan)', href: '/base-config' },
 ]
 
 // Settings
@@ -299,9 +307,10 @@ function SignOutButton() {
 // stays in sync with the sidebar's HREF_TO_VIEW_PERM.
 const HREF_PERMISSION: Partial<Record<string, string>> = {
   '/base-config':    PERM.BASE_SETUP_WRITE,
-  '/library':        PERM.LIBRARY_VIEW,
   '/users':          PERM.USERS_VIEW,
   '/feedback':       PERM.FEEDBACK_VIEW,
+  '/amtr':           PERM.AMTR_VIEW,
+  '/ces':            PERM.CES_VIEW,
 }
 
 export default function MorePage() {
@@ -336,12 +345,11 @@ export default function MorePage() {
   // Identify them by the ces:view permission, which only the CES role
   // preset grants.
   if (permsLoaded && has(PERM.CES_VIEW) && !has(PERM.INSPECTIONS_VIEW)) {
-    const cesItems = [...mgmtItems, ...settingsItems]
-      .filter(m => {
-        const perm = HREF_PERMISSION[m.href]
-        if (perm && !has(perm)) return false
-        return true
-      })
+    // CES role's simplified page: only their working set (CES Work Orders,
+    // Discrepancies, Visual NAVAIDs) plus Settings — not the full Airfield
+    // Management list that now lives in mgmtItems.
+    const cesHrefs = new Set(['/ces', '/discrepancies', '/infrastructure'])
+    const cesItems = [...mgmtItems.filter(m => cesHrefs.has(m.href)), ...settingsItems]
       .filter(m => isModuleEnabled(m.href, enabledModules, airportType))
     return (
       <div className="page-container">
@@ -387,8 +395,8 @@ export default function MorePage() {
           ))}
         </div>
 
-        {/* Operations */}
-        <CollapsibleGroup label="Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen badgeFor={badgeFor} />
+        {/* Daily Operations */}
+        <CollapsibleGroup label="Daily Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen badgeFor={badgeFor} />
 
         {/* Airfield Management */}
         <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} badgeFor={badgeFor} />

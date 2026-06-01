@@ -206,6 +206,26 @@ export function SidebarNav() {
     init()
   }, [])
 
+  // Initialise each section's open/closed state from its `collapsed` flag once
+  // the config loads. Sections without the flag default to open; `collapsed:
+  // true` sections (everything but Daily Operations) start closed. Only fills
+  // in labels not already set, so the active-route effect below and user
+  // toggles are preserved.
+  useEffect(() => {
+    if (!loaded) return
+    setOpenGroups(prev => {
+      let changed = false
+      const next = { ...prev }
+      for (const section of config.sections) {
+        if (next[section.label] === undefined) {
+          next[section.label] = !section.collapsed
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [loaded, config])
+
   // Auto-expand group if a child route is active
   useEffect(() => {
     for (const section of config.sections) {

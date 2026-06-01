@@ -66,9 +66,10 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Response Agencies',  href: '/aep/agencies',     iconName: 'Users' },
   { name: 'AEP Comms Checks',   href: '/aep/comms-checks', iconName: 'Radio' },
   { name: 'AEP Drills',         href: '/aep/drills',       iconName: 'Siren' },
-  // 'Training Records' (/amtr) is intentionally omitted from navigation while
-  // in limited testing — the route stays live and is reachable by direct URL,
-  // gated by the `amtr:view` permission. Re-add here to surface it in the sidebar.
+  // Training Records (AMTR) — USAF-only (modules-config `appliesTo: ['usaf']`
+  // hides it on civilian bases) and gated by `amtr:view`, which is held only by
+  // Airfield Manager / NAMO / Base Admin / AMOPS / sys_admin.
+  { name: 'Training Records', href: '/amtr', iconName: 'Award' },
   { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
   { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin' },
@@ -80,9 +81,10 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'NOTAMs', href: '/notams', iconName: 'FileText' },
   { name: 'Reports & Analytics', href: '/reports', iconName: 'BarChart3' },
   { name: 'Settings', href: '/settings', iconName: 'Settings' },
-  { name: 'PDF Library', href: '/library', iconName: 'BookMarked' },
+  // PDF Library (/library) is intentionally NOT a nav item — it lives only on
+  // the Settings page, gated sys-admin-only by `library:view`.
   { name: 'User Management', href: '/users', iconName: 'Users' },
-  { name: 'Help & Training', href: '/help', iconName: 'GraduationCap' },
+  { name: 'Glidepath Training', href: '/help', iconName: 'GraduationCap' },
   { name: 'Base Configuration', href: '/base-config', iconName: 'SlidersHorizontal' },
 ]
 
@@ -90,36 +92,53 @@ export const NAV_ITEM_MAP = new Map(ALL_NAV_ITEMS.map(i => [i.href, i]))
 
 // ── Default config ──
 
+// Only Daily Operations is open by default; every other section starts
+// collapsed (`collapsed: true`, honored by the sidebar's initial open-state).
+// This keeps the resting view short — the section of your current page still
+// auto-opens, and pending-item badges show on collapsed headers.
+//
+// Civilian-only items (/wildlife/whmp, /field-conditions) and the civilian
+// sections (SMS, Training & Compliance, AEP) are filtered out on USAF bases by
+// the airport_type gate, so they're invisible there but available on Part 139
+// bases. USAF-only modules (e.g. /amtr) are likewise hidden on civilian bases.
 export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
-  pinned: ['/', '/dashboard'],
+  pinned: ['/', '/dashboard', '/activity'],
   sections: [
     {
-      label: 'Operations',
-      items: ['/activity', '/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions'],
+      label: 'Daily Operations',
+      items: ['/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions', '/notams'],
     },
     {
       label: 'Airfield Management',
-      items: ['/discrepancies', '/ces', '/obstructions', '/infrastructure', '/parking'],
+      collapsed: true,
+      // /ces stays here but renders only for ces:view holders (CES role +
+      // sys_admin); base-admins / Airfield Managers don't hold the key.
+      items: ['/discrepancies', '/infrastructure', '/waivers', '/daily-reviews', '/parking', '/obstructions', '/amtr', '/ces'],
     },
     {
       label: 'Safety Management System',
+      collapsed: true,
       items: ['/sms', '/sms/hazards', '/sms/spis', '/sms/reports', '/sms/audits', '/sms/moc'],
     },
     {
       label: 'Training & Compliance',
+      collapsed: true,
       items: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
     },
     {
       label: 'Airport Emergency Plan',
+      collapsed: true,
       items: ['/aep', '/aep/plan', '/aep/agencies', '/aep/comms-checks', '/aep/drills'],
     },
     {
       label: 'Reference',
-      items: ['/aircraft', '/regulations', '/notams', '/help'],
+      collapsed: true,
+      items: ['/aircraft', '/regulations', '/reports', '/help'],
     },
     {
       label: 'Admin',
-      items: ['/base-config', '/recent-activity', '/daily-reviews', '/waivers', '/reports', '/library', '/users', '/feedback'],
+      collapsed: true,
+      items: ['/recent-activity', '/feedback', '/users', '/base-config'],
     },
   ],
 }
