@@ -690,8 +690,8 @@ function ThemeSectionContent() {
   ]
 
   const designOptions: { value: 'v1' | 'v2'; label: string; sub: string }[] = [
-    { value: 'v1', label: 'Classic', sub: 'Current look' },
-    { value: 'v2', label: 'Refreshed', sub: 'New type & contrast (preview)' },
+    { value: 'v1', label: 'Classic', sub: 'Previous look' },
+    { value: 'v2', label: 'Refreshed', sub: 'New default' },
   ]
 
   return (
@@ -762,7 +762,7 @@ function ThemeSectionContent() {
           ))}
         </div>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 8 }}>
-          Preview of the readability &amp; hierarchy refresh. Best seen on Airfield Status and the Dashboard. Toggle anytime.
+          Refreshed is the default look (improved readability &amp; hierarchy). Switch to Classic anytime if you prefer the previous styling.
         </div>
       </div>
     </>

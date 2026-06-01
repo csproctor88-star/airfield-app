@@ -54,10 +54,11 @@ const themeScript = `
       : t;
     document.documentElement.setAttribute('data-theme', r);
     var d = localStorage.getItem('glidepath_design');
-    if (d === 'v2') document.documentElement.setAttribute('data-design', 'v2');
+    var v2 = d !== 'v1';  // Refreshed is the default; only explicit 'v1' opts out.
+    if (v2) document.documentElement.setAttribute('data-design', 'v2');
     var bg = r === 'light'
-      ? (d === 'v2' ? '#EFEADF' : '#F8FAFC')
-      : (d === 'v2' ? '#0A0E16' : '#0B1120');
+      ? (v2 ? '#EFEADF' : '#F8FAFC')
+      : (v2 ? '#0A0E16' : '#0B1120');
     document.documentElement.style.background = bg;
     document.body.style.background = bg;
   } catch(e) {}

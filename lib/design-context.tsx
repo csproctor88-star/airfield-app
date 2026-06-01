@@ -32,9 +32,10 @@ function applyDesign(d: DesignVersion) {
 }
 
 export function DesignProvider({ children }: { children: React.ReactNode }) {
+  // v2 ("Refreshed") is the default — only an explicit 'v1' choice opts out.
   const [design, setDesignState] = useState<DesignVersion>(() => {
-    if (typeof window === 'undefined') return 'v1'
-    return localStorage.getItem(STORAGE_KEY) === 'v2' ? 'v2' : 'v1'
+    if (typeof window === 'undefined') return 'v2'
+    return localStorage.getItem(STORAGE_KEY) === 'v1' ? 'v1' : 'v2'
   })
 
   const setDesign = useCallback((d: DesignVersion) => {
@@ -44,7 +45,7 @@ export function DesignProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) === 'v2' ? 'v2' : 'v1'
+    const saved = localStorage.getItem(STORAGE_KEY) === 'v1' ? 'v1' : 'v2'
     setDesignState(saved)
     applyDesign(saved)
   }, [])
