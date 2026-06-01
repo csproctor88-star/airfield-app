@@ -486,7 +486,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
                 onClick={() => { setSearchOpen(o => !o); setTimeout(() => searchInputRef.current?.focus(), 50) }}
                 style={{
                   ...ctrlBtnStyle,
-                  ...(searchOpen ? { background: 'rgba(56,189,248,0.15)', borderColor: 'rgba(56,189,248,0.3)', color: 'var(--color-accent)' } : {}),
+                  ...(searchOpen ? { background: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', borderColor: 'color-mix(in srgb, var(--color-accent) 30%, transparent)', color: 'var(--color-accent)' } : {}),
                 }}
                 title="Search (Ctrl+F)"
               >
@@ -584,7 +584,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
                   }}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 12px',
-                    background: i === matchIdx ? 'rgba(56,189,248,0.08)' : 'none',
+                    background: i === matchIdx ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'none',
                     border: 'none', borderBottom: '1px solid var(--color-bg-elevated)', color: 'var(--color-text-1)',
                     fontSize: 'var(--fs-base)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                     width: '100%', boxSizing: 'border-box' as const,
@@ -592,7 +592,7 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
                 >
                   <span style={{
                     flexShrink: 0, fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                    color: 'var(--color-accent)', background: 'rgba(56,189,248,0.12)', padding: '2px 6px',
+                    color: 'var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)', padding: '2px 6px',
                     borderRadius: 4, marginTop: 1,
                   }}>
                     p.{m.page}
@@ -627,13 +627,13 @@ export default function RegulationPDFViewer({ regId, title, url, onClose, source
             background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
             borderRadius: 10, color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', lineHeight: 1.6,
           }}>
-            <strong style={{ color: '#EF4444' }}>File Unavailable</strong>
+            <strong style={{ color: 'var(--color-danger)' }}>File Unavailable</strong>
             <p style={{ margin: '8px 0 0' }}>{error}</p>
           </div>
           {url && (
             <a href={url} target="_blank" rel="noopener noreferrer" style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'linear-gradient(135deg, #0369A1, #0EA5E9)',
+              background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
               color: '#fff', fontSize: 'var(--fs-base)', fontWeight: 700,
               padding: '8px 16px', borderRadius: 6, textDecoration: 'none',
             }}>
