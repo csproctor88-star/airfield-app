@@ -1,111 +1,95 @@
 # Session Handoff
 
 **Date:** 2026-06-01
-**Branch:** `main` — **pushed.** `origin/main` == local (0 ahead); every commit
-below is deployed (Vercel deploys on push).
+**Branch:** `main` — **pushed.** `origin/main` == local (0 ahead); v2.34.0 is
+deployed (Vercel deploys on push).
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
-(723 pass / 74 files).
-**HEAD:** `7b85b70`
+(728 pass / 75 files).
+**HEAD:** `7453a3bc`
 
 ---
 
 ## What shipped this session
 
-One dominant theme: **a UI/UX overhaul.** A navigation reorganization, then an
-**opt-in "Refreshed" (v2) design** — a readability/hierarchy refresh the user
-asked for after "everything looks the same" — followed by a full **Phase 2
-hardcoded-color sweep** so the new look adapts correctly in light + dark. Around
-that: AMTR is now navigable + roster-scoped, Base Config modules gate by airport
-type, a User Management "Active 24h" KPI, and a new PPR feature (notify
-coordinating agencies when a PPR changes). The session closed by updating the
-v2.34 release-notes builder for next-session review.
+One theme: **cut and shipped v2.34.0.** The bulk of the work was bringing the
+in-app **Help & Training** guide to parity with the module set the release
+announces — seven new module guides + airport-type gating + verified
+screenshots. Along the way a real gap surfaced (AMTR was hidden on 35 of 41
+USAF bases) and got a data backfill, the AMTR guide gained an off-network Excel
+import procedure, and the session closed by bumping the version, rebuilding the
+What's New modal as scannable grouped sections, dating the CHANGELOG, and
+pushing everything to production.
 
-**The v2 design is now the ONLY design — Classic was removed entirely** (`a1192bf`
-made v2 the default, then `14ae4e0` + `7b85b70` deleted the Classic path per
-user request). `lib/design-context.tsx` and the Settings "App Design" toggle are
-gone; `data-design="v2"` is set statically on `<html>` (so the `globals.css`
-`[data-design="v2"]` blocks always apply), the flash script always paints the v2
-background, and the `design==='v2'` conditionals in header / dashboard /
-airfield-status were collapsed to their v2 values. Any old `glidepath_design`
-localStorage value is now inert. The `globals.css` base (`:root`) v1 tokens
-remain as the layer v2 overrides — a future cleanup could merge them, but
-they're unreachable.
+### Training-guide coverage + airport-type gating (`acd60f66` spec → `52ac12cd`, `9f639e62`, `d172fdbd`, `a35b84fa`, `e40d7782`, `8b779d4b` plan)
 
-### Navigation reorg + AMTR + module gating (`fc56fb7`, `eda4f7d`, `2251700`, `8f83d39`)
+The `/help` guide (`MODULES` in `lib/training/modules.ts`) had guides for the 27
+established modules but none for what v2.34 announces. Added seven full
+`ModuleRef` guides — **AMTR, Records Export, SMS, §139.303 Training, AEP, Field
+Conditions, WHMP** — with content sourced by reading each module's actual
+implementation (no fabricated reg text; every citation already existed in code).
+Added `appliesTo?: AirportType[]` to `ModuleRef` + a `moduleRefAppliesToAirport`
+helper mirroring `lib/modules-config.ts`; the help page (`app/(app)/help/page.tsx`)
+now filters the grid, the count pill, the reviewed denominator, and the Module
+Reference PDF by `currentInstallation.airport_type`. Existing ACSI/SCN gated
+USAF-only too. `tests/training-modules-gating.test.ts` locks the gating so a
+future edit can't leak a civilian guide onto USAF bases. Built via
+brainstorm→spec→plan→subagent-driven execution with two-stage (spec + quality)
+review per unit.
 
-`fc56fb7` gates the Base Configuration module list by `airport_type` — USAF
-bases no longer see Part 139-only modules (SMS/AEP/§139.303/Field
-Conditions/WHMP) and civilian bases don't see USAF-only ones (SCN/AMTR/ACSI).
-New `modulesForAirport()` + an `airportType` arg on `getModulesByCategory`;
-presets and counts scope to the visible set. `eda4f7d` scopes AMTR roster
-auto-population to airfield-management roles only (`AMTR_ROSTER_ROLES` =
-airfield_manager/namo/amops/base_admin) via a guard-tested leaf
-`lib/amtr/roster-roles.ts` — read-only/CES/etc. base members are no longer
-auto-rostered. `2251700` reorganizes the sidebar **and** mobile More onto one
-structure: four sections (Daily Operations open, Airfield Management / Reference
-/ Admin collapsed by default), Events Log pinned, **Training Records (AMTR)
-surfaced** (was off-nav), "Help & Training" → "Glidepath Training", SCN dropped
-from nav, PDF Library moved to a sys-admin-only Settings entry. The sidebar now
-honors each section's `collapsed` flag for initial open state (it previously
-ignored it). CES Work Orders stays in the config but `ces:view` was narrowed to
-the CES role + sys_admin (migration `2026061901`, applied live) so AFMs/admins
-don't see it. `8f83d39` adds an "Active 24h" KPI to User Management — counts
-users seen in the last 24h from `profiles.last_seen_at` (already loaded; no
-query), clickable to filter the roster.
+### Screenshots wired into all 7 guides (`07e0e8ce`, `a6f08469`, `148abf35`)
 
-### v2 "Refreshed" design pilot + iteration (`a9f1f33` → `496914a`)
+17 screenshots copied into `public/training/` and captioned. Captions were
+verified **against the actual images**, not the planning doc — which caught a
+fabricated `amtr_1` caption (claimed table columns JQS% / Formal% / Last
+Inspection that aren't in the image) and a "five-column grid" imprecision, both
+corrected. User recaptured the §139.303 Training set (cleaner Topics / Roster /
+Compliance / member-Records shots, banner-free) → swapped in, added a 4th. Records
+Export shot added once the user supplied it. Records Export is the only guide
+that briefly shipped text-only.
 
-`a9f1f33` shipped the pilot: `lib/design-context.tsx`, a `[data-design="v2"]`
-token layer in `globals.css` (IBM Plex Sans + IBM Plex Mono via `next/font`, a
-wider type scale, brighter dark text, neutral slate borders replacing the
-pervasive cyan, on-brand header), five `components/ui` primitives (heading,
-page-header, section-header, card, stat), and the Settings toggle. Then the user
-reviewed on the deploy and iterated: `d4b79ed` fixed a washed-out PPR Approved
-pill (dark-theme hex green-on-green in light mode → theme tokens); `d8cb4db`
-made v2 light a **warm cream/parchment** ladder (not cool "dirty white");
-`39da1b3` gave v2 light a **muted indicator/accent palette** (the dark brights
-looked neon on cream); `8756e7e` smaller v2 page titles, smaller NAVAID outage
-notes, card elevation shadow; `a75aee2` fixed Dashboard PageHeader actions
-clipping on mobile (now wrap) + firmer cream card borders; `496914a` made the v2
-dark header a distinct lighter grey-slate bar (it had blended in) + smaller
-header text. All v2-specific structure is gated so Classic is unchanged.
+### AMTR hidden on 35/41 USAF bases — `enabled_modules` backfill (`8cc2d329`, migration `2026062000`)
 
-### Phase 2 hardcoded-color sweep (`710cbc5`, `8bea6d4`, `e33be63`, `f449516`, `60ef230`, `b200e0e`)
+User reported AMTR missing from the sidebar. Root cause: AMTR was added to the
+module catalog after most bases' `enabled_modules` arrays were already set, and
+`lib/installation-context.tsx` only falls back to "all modules" when
+`enabled_modules` is `null` — a non-null array missing `amtr` silently hides it
+(`isModuleEnabled` → false). Query confirmed 35 of 41 USAF bases affected (only
+Air Force Academy + a few had it). Wrote an additive, idempotent backfill
+(`array_append` guarded by containment), applied it to the linked DB, and
+verified **41/41** USAF bases now carry `amtr`. Migration file committed as the
+record.
 
-The token overrides only reach colors that *use* tokens; ~785 hardcoded hex +
-~585 `rgba()` literals didn't adapt (the PPR-pill bug was one). Swept in verified
-batches (each gated on tsc+build+tests), parallelized with subagents under
-strict rules + diff review: `710cbc5` NAVAID/runway status tints (STATUS_HEX
-alpha-blends → `color-mix` over theme tokens); `8bea6d4` ~124 cyan
-`rgba(56,189,248,X)` → neutral border tokens (border ctx) / `color-mix` accent
-(bg ctx) across 30 files; `e33be63` ~72 vivid status/accent hex → tokens in
-pure-UI files; `f449516` ~49 UI-chrome hex on map-heavy pages; `60ef230` slate
-text → text tokens; `b200e0e` the RegulationPDFViewer leftover. **Map/canvas/
-jsPDF colors and surface-overlay palettes that must match map polygons were
-deliberately left literal** — CSS vars break Google Maps / canvas, and I can't
-visually test maps locally. The agents correctly refused to touch `markerColor`,
-`ctx.*`, and `var(--color-x,#hex)` fallbacks.
+### AMTR off-network Excel import procedure + multi-workflow (`62983725`)
 
-### PPR — notify coordinated agencies of changes (`875e067` spec, `d6c494c` feat)
+Added a dedicated **"Importing an existing AFFSA Excel training record (must be
+done off the AFNET)"** numbered procedure to the AMTR guide: copy each sheet
+into a fresh workbook one at a time, exclude the Formal Training sheet, strip all
+PII/CUI (SSNs etc.), email to a non-AFNET account, upload over commercial
+internet (AFNET blocks non-AFNET uploads); manual transcription still works on
+the AFNET. Plus a reinforcing FAQ. To carry two procedures, `ModuleRef.workflow`
+now accepts `WorkflowDef | WorkflowDef[]` and the detail renderer maps over them
+— the 14 single-workflow guides are unchanged.
 
-New informational notification: editing a PPR after agencies have coordinated
-prompts AMOPS (prompt-on-save) to send them the latest — *not* a
-re-coordination, no status change. Pure `computePprChanges()`
-(`lib/ppr-changes.ts`, TDD) diffs arrival date / custom columns / notes (via
-`formatPprColumnValue`, excludes `approver_oi`) into before→after changes. The
-dialog shows the change summary + a recipient checklist (coordinated agencies
-pre-checked from `coordsByEntry`, pending selectable). Sends via new
-`app/api/send-ppr-update/route.ts` → the extended `notifyCoordinatingAgencies`
-(`outcome:'updated'` + `changes` + `currentDetails` + `agencyIds` filter); the
-email body builder was extracted to the pure, tested `buildAgencyEmail()`.
-Design spec at `docs/superpowers/specs/2026-06-01-ppr-update-notify-design.md`.
+### Stale banner removed + v2.34 builder refreshed (`9e887d3d`, `2bc1be9a`)
 
-### v2.34 release-notes builder updated (`5dcb39f1`)
+`9e887d3d` removed a leftover "Phase 3a build in progress" banner from the
+`/training` (§139.303) landing — the module is shipped, so the banner read as
+unfinished. `2bc1be9a` updated `docs/release-2.34-notes-builder.html`: added a
+Help & Training candidate item, a §139.303 banner-fix item, and de-staled the
+design item/section (it still said "opt-in preview / Classic stays default" —
+Classic was removed, v2 is the only look).
 
-`docs/release-2.34-notes-builder.html` (interactive toggle/edit/star/copy tool)
-updated with this session's work: new Navigation & Layout and opt-in
-Refreshed-design sections, plus Active-24h, PPR notify-on-change, and AMTR
-roster-scoping items. For next-session review.
+### v2.34.0 release (`7453a3bc`)
+
+Version → **2.34.0** in six spots (`package.json`, `package-lock.json` root,
+login footer, Settings → About, README — README also refreshed to 728 tests /
+259 migrations). Dated the CHANGELOG `[2.34.0] — 2026-06-01` with the user's
+curated grouped notes (replaced the incomplete `[Unreleased]` block, which only
+covered Records Export + the FAA phases). Reworked the in-app **What's New**:
+added a `ReleaseSection` shape (`{ title, items }[]`) and a grouped renderer in
+`components/whats-new-modal.tsx`, so the 2.34 entry shows 10 scannable section
+headers instead of a flat 31-bullet wall (the user's explicit ask). `highlights`
+is now optional; older entries still render their flat list.
 
 ---
 
@@ -113,7 +97,7 @@ roster-scoping items. For next-session review.
 
 | File | Applied | What |
 |---|---|---|
-| `2026061901_ces_view_ces_role_only.sql` | ✅ applied live this session | Narrows `ces:view` to `ces` + `sys_admin` only (removes the two civilian roles) so non-CES users don't see CES Work Orders after the nav reorg. Verified via `db query`. |
+| `2026062000_backfill_amtr_enabled_modules.sql` | ✅ applied live this session | Adds `amtr` to USAF bases' `enabled_modules` where missing (35 bases). Additive + idempotent; civilian bases untouched. Verified 41/41 USAF bases now carry `amtr`. |
 
 No pending migrations. All earlier `202606xx` migrations were applied in prior
 sessions.
@@ -124,29 +108,31 @@ sessions.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| PPR Approved pill washed-out green-on-green in light mode | status badges used hardcoded dark-theme hex (`#22c55e`) that doesn't adapt | `d4b79ed` |
-| Dashboard "Last Check" readout clipped on a real phone | `PageHeader` actions didn't wrap; the title word can't shrink | `a75aee2` |
-| Phase 2 sweep file silently not committed | `git add -- 'components/**/*.tsx'` pathspec matches only subdirectories, not files directly in `components/` (RegulationPDFViewer.tsx) | `b200e0e` |
+| AMTR module missing from sidebar / More on most USAF bases | `enabled_modules` arrays predate AMTR; the context only falls back to "all modules" on `null`, not on a non-null array missing the newer key | `8cc2d329` |
+| Guide screenshot caption claimed table columns not present in the image | subagent captioned from the planning doc, not the PNG (`amtr_1`) | `a6f08469` |
+| `regulations` guide's "related modules" silently rendered nothing | `relatedModules: ['training']` pointed at a non-existent id (predates the new `training-part139`) | `9f639e62` |
+| "X of Y reviewed" could read e.g. "8 of 6" | `reviewedCount` came from a localStorage Set spanning all airport types; `totalCount` is now the gated set | `a35b84fa` |
 
 ---
 
 ## Lessons from this session
 
-- **`components/**/*.tsx` as a git pathspec misses top-level files.** Git
-  pathspec `**` is not gitignore-style globbing; `components/**/*.tsx` only
-  matched subdirectories, silently dropping `components/RegulationPDFViewer.tsx`
-  from three commits. Use `git add -A` or explicit paths, and `git status` after
-  batch commits.
-- **Map/canvas/PDF colors must stay literal in a token sweep.** Google Maps
-  options, `ctx.*`, jsPDF, and `markerColor` props can't resolve CSS vars, and
-  the breakage is visual-only (build/tests pass). Scope sweeps to DOM inline
-  styles; leave anything that feeds a non-DOM color API. Map markers *should*
-  stay theme-independent anyway.
-- **Token overrides + hardcoded sweep are two separate jobs.** Changing token
-  *values* fixes ~80%; the hardcoded hex/rgba tail (785+585) needs its own
-  per-occurrence pass with border-vs-bg + map/PDF judgment.
-- Subagents parallelize a mechanical sweep well **with** strict rules + a diff
-  review gate; they reliably flagged map/canvas/fallback edge cases.
+- **New `defaultEnabled` modules don't reach existing bases.** A base with a
+  non-null `enabled_modules` array never picks up a module added later — only a
+  `null` array falls back to "all". Every new module in the catalog needs a
+  one-time backfill (or a fallback-semantics fix) or it's invisible on every
+  pre-existing base. Saved as a project memory.
+- **Caption-first is non-negotiable** — verifying 15 wired captions against the
+  real PNGs caught one fabricated caption that read plausibly. Always open the
+  image. (Already memory `feedback_caption_screenshots_first`.)
+- **The What's New builder persists selections in browser localStorage, which
+  overrides the HTML file's text for *existing* items on load.** New items added
+  to the file's `SECTIONS` show up; text edits to existing items don't reach a
+  user who has saved state. Edit in the builder UI or Reset, not just the file.
+- **The Bash tool's cwd doesn't reliably persist between calls.** A `git add`
+  with a relative path missed, and `npx tsc` ran from the wrong dir and printed
+  a misleading "TSC_OK" (no tsconfig → compiled nothing). Prefix git/tsc/build
+  commands with `cd "C:/Users/cspro/airfield-app" && …`.
 
 ---
 
@@ -154,15 +140,18 @@ sessions.
 
 | Item | Severity | Notes |
 |---|---|---|
-| globals.css base (v1) tokens now dead | Low | Classic is removed but the `:root` v1 token values still exist as the layer the always-on `[data-design="v2"]` blocks override. Harmless but redundant — a future pass could merge v2 into `:root` and drop the `[data-design]` wrapper. |
-| v2 color sweep: extended-palette hex still literal | Low | A handful of hex outside the token set (`#a855f7`, `#ec4899`, `#eab308`, `#6366f1`, `#f472b6`, `#f43f5e`, `#d946ef`) weren't converted — they have no matching token. Add tokens or leave. |
-| usr-analytics privacy disclosure | Med | Carried — per-user usage tracking still has no user-facing disclosure line; hold the release-note bullet until it ships. |
-| v2.34 release prep | Med | Carried — version still 2.33.0 (5 places + `lib/release-notes.ts`). Release builder is updated and ready for review. |
-| PPR notify-on-change unverified on deploy | Low | New feature; build+unit-tested, never run against real coordinated agencies + real email. Worth one edit on a coordinated PPR. |
+| `scn` missing on 26 USAF bases | Med | Same frozen-`enabled_modules` cause as AMTR. User chose amtr-only backfill this session; SCN backfill not done. Mirror `2026062000` if wanted. |
+| New `defaultEnabled` modules don't reach existing bases | Med | Systemic — see Lessons. Next module add needs a backfill, or fix the `enabled_modules` null-only fallback in `lib/installation-context.tsx`. |
+| `/help/[module-id]` detail route not airport-type-gated | Low | Renders any guide id regardless of airport type; no in-app path links to a cross-mode guide today. Defensive follow-up: `notFound()` (or a notice) when `appliesTo` excludes the current type. |
+| Records Export guide bullet is USAF-flavored on civilian bases | Low | Records Export shows on both modes; the "AMTR is exported from its own module" bullet references a USAF-only module on civilian bases. Cosmetic. |
+| v2.34 not yet walked on the deploy | Med | What's New grouped modal (desktop + mobile), AMTR visibility on USAF bases post-backfill, and the 7 new guides + screenshots all need a real-browser pass on the Vercel deploy. |
+| usr-analytics privacy disclosure | Med | Carried — per-user usage tracking still has no user-facing disclosure line. |
 | `types.ts` regen deferred | Med | Carried — hand-maintained additions; full `supabase gen types` is a large diff. |
 | Base-setup file extraction deferred | Med | Carried — `base-config/setup/page.tsx` ~6k LOC. |
 | AMTR batch never walked in a live browser | Med | Carried. |
-| Records Export photo embed unverified on deploy | Low | Carried — inline ACSI/Waiver photo embed never run against real photos in a browser. |
+| Records Export photo embed unverified on deploy | Low | Carried. |
+| globals.css base (v1) tokens now dead | Low | Carried — `:root` v1 tokens remain as the layer the always-on `[data-design="v2"]` overrides. |
+| extended-palette hex still literal | Low | Carried — a handful of hex outside the token set weren't converted. |
 | `npm audit` transitives | Low | Carried. |
 | Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
 
@@ -170,23 +159,21 @@ sessions.
 
 ## Next session tasks
 
-No required next step — everything this session is shipped and green. The user's
-stated intent is to **review the v2.34 release builder and prepare the 2.34
-release.** Sensible candidates:
+No required next step — v2.34.0 is shipped and deployed. Sensible candidates:
 
-1. **Cut v2.34** — review `docs/release-2.34-notes-builder.html`, finalize the
-   release-notes content, then bump the version in the 5 places +
-   `lib/release-notes.ts`, date the CHANGELOG, add an in-app release note. This
-   releases the whole staged backlog since 2.33.0 (FAA expansion, user-mgmt,
-   AMTR, Records Export, nav reorg, the v2 design, PPR coordination + notify).
-2. **Verify on the deploy** — the v2 look is now the only design for everyone
-   (dark + light, mobile); there's no Classic fallback, so confirm it reads well
-   across the whole app and flag any screen that regresses. Also check the new
-   PPR notify-on-change prompt on a coordinated PPR.
+1. **Walk v2.34 on the Vercel deploy** — confirm the What's New modal reads as
+   grouped, scannable sections (desktop + mobile), AMTR is now visible on USAF
+   bases (post-backfill), and the seven new Help & Training guides + screenshots
+   render correctly with the airport-type gating.
+2. **SCN backfill** (optional) — 26 USAF bases are missing `scn` for the same
+   reason AMTR was; a migration mirroring `2026062000` would surface it.
+3. **Fix the systemic `enabled_modules` gap** (optional) — so future modules
+   reach existing bases without a per-module backfill.
 
 ### Long-running carryover (bandwidth-permitting)
-- Privacy/help copy for page-view tracking (`usr-analytics`).
-- Extended-palette hex → tokens (or add tokens).
+- `/help/[module-id]` detail-route airport gating; the civilian-flavored Records
+  Export bullet.
+- usr-analytics privacy/help copy.
 - `types.ts` regen; `base-config/setup` extraction; live-browser walk of AMTR.
 
 ---
@@ -196,13 +183,12 @@ release.** Sensible candidates:
 ```
 TypeScript clean (npx tsc --noEmit exit 0)
 Build: npm run build — compiled successfully.
-Tests: 723 pass / 74 files (+13 this session: ppr-changes, ppr-agency-notify,
-  amtr-roster-roles, + modules-config airport-gating additions).
+Tests: 728 pass / 75 files (+5 this session: training-modules-gating).
 
 Notable First Load JS (routes touched this session):
-  /ppr                      191 kB   (21.3 kB route — + notify dialog)
-  /users                    190 kB   (19.3 kB route — + Active 24h KPI)
-  /settings/exports         174 kB   (8.08 kB route)
+  /help                     215 kB   (5.06 kB route — airport-type gating)
+  /help/[module-id]         197 kB   (6.2 kB route — multi-workflow renderer)
+  /settings/exports         174 kB
 First Load JS shared        91.5 kB
 Middleware                  74.5 kB
 ```
@@ -213,7 +199,7 @@ Middleware                  74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | Nav reorg + v2 "Refreshed" design (readability/hierarchy, cream light, Plex type) is now the only look (Classic removed) + full hardcoded-color sweep; AMTR navigable + roster-scoped; airport-type module gating; User Mgmt Active-24h KPI; PPR notify-coordinated-agencies-on-change. On top of the prior unreleased deltas (FAA expansion, user-mgmt + activity, AMTR batch, Records Export). Not version-tagged; CHANGELOG `[Unreleased]`. |
+| **v2.34.0** | 2026-06-01 | Help & Training covers every module + airport-type gating; AMTR visible fleet-wide (enabled_modules backfill); FAA Part 139 civilian mode; PPR coordination + notify; Records Export; refreshed design now the only look; grouped scannable What's New |
 | v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes |
 
 ---
@@ -221,24 +207,21 @@ Middleware                  74.5 kB
 ## Key files touched this session
 
 ### New files
-- `lib/design-context.tsx`, `lib/amtr/roster-roles.ts`, `lib/ppr-changes.ts`
-- `components/ui/heading.tsx`, `page-header.tsx`, `section-header.tsx`,
-  `card.tsx`, `stat.tsx`
-- `app/api/send-ppr-update/route.ts`
-- `supabase/migrations/2026061901_ces_view_ces_role_only.sql`
-- `docs/superpowers/specs/2026-06-01-ppr-update-notify-design.md`
-- tests: `ppr-changes`, `ppr-agency-notify`, `amtr-roster-roles`
+- `tests/training-modules-gating.test.ts`
+- `supabase/migrations/2026062000_backfill_amtr_enabled_modules.sql`
+- `public/training/` — `amtr_1..3`, `records-export_1`, `sms_1..3`, `aep_1..3`,
+  `training-part139_1..4`, `field-conditions_1..2`, `whmp_1..2` (.png)
+- `docs/superpowers/specs/2026-06-01-training-guide-coverage-design.md`,
+  `docs/superpowers/plans/2026-06-01-training-guide-coverage.md`
 
 ### Modified files
-- `app/globals.css` (v2 token layer + light cream/muted palette + sweep)
-- `app/layout.tsx`, `app/(app)/layout.tsx` (fonts, design provider, flash script)
-- `lib/sidebar-config.ts`, `components/layout/sidebar-nav.tsx`,
-  `app/(app)/more/page.tsx` (nav reorg + collapse)
-- `lib/modules-config.ts`, `app/(app)/base-config/{page,modules/page}.tsx`
-  (airport-type gating)
-- `lib/supabase/amtr.ts`, `app/(app)/amtr/page.tsx` (roster scoping)
-- `lib/ppr-agency-notify.ts`, `app/(app)/ppr/page.tsx` (notify-on-change)
-- `components/layout/header.tsx`, `app/(app)/page.tsx`,
-  `app/(app)/dashboard/page.tsx`, `app/(app)/settings/page.tsx`,
-  `components/admin/user-stats-header.tsx`, `app/(app)/users/page.tsx`
-- ~50 files across the Phase 2 color sweep (status/accent/cyan hex → tokens)
+- `lib/training/modules.ts` (7 new guides, `appliesTo` + helper, multi-workflow,
+  AMTR import procedure + FAQ)
+- `app/(app)/help/page.tsx` (airport-type gating), `app/(app)/help/[module-id]/page.tsx`
+  (multi-workflow renderer)
+- `lib/release-notes.ts` (`ReleaseSection` + 2.34 entry),
+  `components/whats-new-modal.tsx` (grouped renderer)
+- `app/(app)/training/page.tsx` (banner removal)
+- `CHANGELOG.md`, `README.md`, `package.json`, `app/login/page.tsx`,
+  `app/(app)/settings/page.tsx` (version bump + notes)
+- `docs/release-2.34-notes-builder.html` (candidate refresh)
