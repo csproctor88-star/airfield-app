@@ -1410,4 +1410,47 @@ html, body {
   --color-detail-box-bg: #F3EEE1;
   --color-detail-box-label: #4A4434;
   --color-detail-box-value: #5C5646;
+
+  /* Muted, deeper "field-guide" indicator + accent palette for cream.
+     The default dark-theme brights look neon/unpolished on a light warm
+     surface; these are desaturated and deepened while keeping green / amber /
+     red / blue clearly distinct for operational meaning. (Token-driven colors
+     shift app-wide; remaining hardcoded brights are swept in Phase 2.) */
+  --color-accent: #2C6FAA;
+  --color-accent-secondary: #245F92;
+  --color-accent-dark: #1C4E78;
+  --color-accent-glow: rgba(44, 111, 170, 0.10);
+  --color-cyan: #1A7A88;
+  --color-cyan-btn-bg: #1A7A88;
+  --color-cyan-btn-text: #FFFFFF;
+  --color-success: #2F7A50;
+  --color-green: #2F7A50;
+  --color-warning: #9C6610;
+  --color-amber: #9C6610;
+  --color-orange: #B8501F;
+  --color-danger: #B23535;
+  --color-red: #B23535;
+  --color-blue: #2C5FB0;
+  --color-purple: #6A40A8;
+  --color-violet: #5A37A0;
+
+  --color-status-pass: #2F7A50;
+  --color-status-fail: #B23535;
+  --color-status-open: #2F7A50;
+  --color-status-closed: #B23535;
+  --color-status-pending: #9C6610;
+  --color-status-inwork: #2C5FB0;
+  --color-status-na: #6E6657;
+
+  --color-health-green: #2F7A50;
+  --color-health-yellow: #9C6610;
+  --color-health-red: #B23535;
+  --color-health-black: #6E6657;
+
+  --color-bwc-low: #2F7A50;
+  --color-bwc-mod: #8F7415;
+  --color-bwc-sev: #B8501F;
+  --color-bwc-prohib: #B23535;
+
+  --color-logo-end: #2C6FAA;
 }
