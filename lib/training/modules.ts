@@ -1202,8 +1202,8 @@ export const MODULES: ModuleRef[] = [
       ],
     },
     screenshots: [
-      { src: '/training/amtr_1.png', caption: 'Training Records roster — six KPI tiles (17 Members, 61% Compliance, 44 Recurring Items, 27 Complete, 3 Due Soon, 7 Overdue), a Notifications panel with four upcoming-due alerts, a Coming Due list, and the Per-Member Compliance table showing each member\'s Grade, DAFSC, Status, JQS %, Formal %, Overdue, Due Soon, Last Inspection, and Updated date.' },
-      { src: '/training/amtr_2.png', caption: '1C7X1 Catalog open to Section 3 — Contingency/Expeditionary Operations — with the five-column JQS grid: Core/Cert, Dep/SEI, Start and Complete date pickers, TR and TRN sign buttons, Cert column, and Proficiency Code columns 3/5/7/9. Technical references are listed in the section header row.' },
+      { src: '/training/amtr_1.png', caption: 'Training Records roster landing — six KPI tiles (17 Members, 61% Compliance, 44 Recurring Items, 27 Complete, 3 Due Soon, 7 Overdue), a Notifications panel of upcoming-due-date alerts, and the Assigned Members table with Member, Grade, DAFSC, Status, and Currency columns (Current / overdue / due-soon badges).' },
+      { src: '/training/amtr_2.png', caption: 'The 1C7X1 Catalog (78 sections · 413 tasks) open to Section 3, Contingency/Expeditionary Operations — the JQS grid groups Tasks/Knowledge & Technical References, Core Tasks (Core/Cert, Dep/SEI), OJT Task Certification Documentation (Start / Complete / TR / TRN / Cert, with Sign buttons where a date is pending), and Proficiency Codes (3/5/7/9).' },
       { src: '/training/amtr_3.png', caption: 'Unit Training Reports › 1098 & RAT tab showing DAF Form 1098 Recurring Training — a table of annual tasks (Airfield Driving, Bird/Wildlife Control, Snow and Ice Control, etc.) with Frequency, REQ count, Complete, Due Soon, Overdue, and a color-coded Compliance progress bar for each task.' },
     ],
     faq: [],
@@ -1242,6 +1242,9 @@ export const MODULES: ModuleRef[] = [
         'Click Generate Export; the app builds the files in-browser, hashes them into the manifest, and downloads one ZIP.',
       ],
     },
+    screenshots: [
+      { src: '/training/records-export_1.png', caption: 'The Records Export builder — Period (All time, or a date range with This month / Last month / This quarter / This FY quick-picks), the five Include toggles (PDF documents, Excel workbooks, Photos, Interactive viewer, Raw data JSON), per-module checkboxes, and a Generate Export button. The footer notes generation runs entirely in the browser and the ZIP carries a START-HERE cover plus a SHA-256 manifest of every file.' },
+    ],
     faq: [],
     relatedModules: ['settings', 'daily-reviews', 'activity'],
     readMinutes: 5,
