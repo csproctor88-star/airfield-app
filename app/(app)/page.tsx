@@ -2704,15 +2704,23 @@ export default function HomePage() {
           padding: '6px 8px', color: 'var(--color-text-1)',
           whiteSpace: 'nowrap', textAlign: 'center',
         }
-        // Compact status pill \u2014 single source of styling for the four
-        // statuses that can show on a "today's" board.
+        // Compact status pill \u2014 single source of styling for the statuses that
+        // can show on a "today's" board. Theme-aware tokens (not hardcoded
+        // dark-theme hex) so the text stays high-contrast in light mode \u2014 fixes
+        // the washed-out green-on-green Approved pill on the light surface.
+        const mkPill = (label: string, token: string) => ({
+          label,
+          bg: `color-mix(in srgb, ${token} 12%, transparent)`,
+          fg: token,
+          border: `color-mix(in srgb, ${token} 45%, transparent)`,
+        })
         const statusMeta: Record<string, { label: string; bg: string; fg: string; border: string }> = {
-          approved:               { label: 'Approved',  bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
-          pending_amops_approval: { label: 'Pending',   bg: 'rgba(245,158,11,0.10)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
-          pending_coordination:   { label: 'Coord',     bg: 'rgba(56,189,248,0.10)', fg: '#38bdf8', border: 'rgba(56,189,248,0.4)' },
-          pending_amops_triage:   { label: 'Review',    bg: 'rgba(167,139,250,0.10)',fg: '#a78bfa', border: 'rgba(167,139,250,0.4)' },
-          denied:                 { label: 'Denied',    bg: 'rgba(239,68,68,0.10)',  fg: '#ef4444', border: 'rgba(239,68,68,0.4)' },
-          canceled:               { label: 'Canceled',  bg: 'rgba(148,163,184,0.10)',fg: '#94a3b8', border: 'rgba(148,163,184,0.4)' },
+          approved:               mkPill('Approved', 'var(--color-success)'),
+          pending_amops_approval: mkPill('Pending',  'var(--color-warning)'),
+          pending_coordination:   mkPill('Coord',    'var(--color-accent)'),
+          pending_amops_triage:   mkPill('Review',   'var(--color-purple)'),
+          denied:                 mkPill('Denied',   'var(--color-danger)'),
+          canceled:               mkPill('Canceled', 'var(--color-status-na)'),
         }
         return (
           <div style={{ marginTop: 12 }}>
