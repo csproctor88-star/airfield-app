@@ -7,9 +7,9 @@ import type { CSSProperties, ReactNode } from 'react'
 export type HeadingLevel = 'display' | 'h1' | 'h2' | 'h3'
 
 const MAP: Record<HeadingLevel, { fs: string; weight: number; lh: string; ls: string }> = {
-  display: { fs: 'var(--fs-5xl)', weight: 700, lh: 'var(--lh-tight)', ls: '-0.02em' },
-  h1: { fs: 'var(--fs-4xl)', weight: 700, lh: 'var(--lh-tight)', ls: '-0.015em' },
-  h2: { fs: 'var(--fs-2xl)', weight: 600, lh: 'var(--lh-snug)', ls: '-0.01em' },
+  display: { fs: 'var(--fs-4xl)', weight: 700, lh: 'var(--lh-tight)', ls: '-0.02em' },
+  h1: { fs: 'var(--fs-3xl)', weight: 700, lh: 'var(--lh-tight)', ls: '-0.015em' },
+  h2: { fs: 'var(--fs-xl)', weight: 600, lh: 'var(--lh-snug)', ls: '-0.01em' },
   h3: { fs: 'var(--fs-lg)', weight: 600, lh: 'var(--lh-snug)', ls: '0' },
 }
 

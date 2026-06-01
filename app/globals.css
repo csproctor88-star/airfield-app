@@ -1355,9 +1355,16 @@ html, body {
 }
 
 /* Calm the structural chrome: 1px neutral card borders (was 2px cyan),
-   so status colors and elevation carry the hierarchy instead. */
+   plus a soft elevation shadow so cards and content areas read as distinct
+   raised planes — borders + lift carry the grouping instead of cyan hairlines. */
 [data-design="v2"] .card {
   border-width: 1px;
+}
+[data-design="v2"][data-theme="light"] .card {
+  box-shadow: 0 1px 2px rgba(60, 48, 28, 0.07), 0 2px 6px rgba(60, 48, 28, 0.05);
+}
+[data-design="v2"][data-theme="dark"] .card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }
 
 /* ── v2 DARK: neutral, deeper, brighter text, on-brand header ── */
@@ -1373,9 +1380,9 @@ html, body {
   --color-bg-header-end: #0E141F;
   --color-header-border: rgba(148, 163, 184, 0.14);
   /* Neutral slate borders instead of pervasive cyan. */
-  --color-border: rgba(148, 163, 184, 0.10);
-  --color-border-mid: rgba(148, 163, 184, 0.16);
-  --color-border-active: rgba(148, 163, 184, 0.30);
+  --color-border: rgba(148, 163, 184, 0.14);
+  --color-border-mid: rgba(148, 163, 184, 0.20);
+  --color-border-active: rgba(148, 163, 184, 0.32);
   /* Brighter secondary/tertiary text for dark-mode readability. */
   --color-text-1: #F6F9FC;
   --color-text-2: #DEE6F0;
