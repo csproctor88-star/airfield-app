@@ -28,7 +28,7 @@ the PPR ETA source column are stored per-base so the feature works fleet-wide.
 | PPR ETA source | A specific PPR time column (per-base), value **converted to base-local time** |
 | Discrepancy scope | All currently-open discrepancies **plus** any created within the range (dedup) |
 | Settings UI | Editable inline on the export card (admin-gated) |
-| Output | Three separate `.xlsx` downloads (not a zip, not one multi-sheet workbook) |
+| Output | One `.xlsx` workbook with three sheets (Events Log / PPR Log / Discrepancies). *(Revised 2026-06-01: originally three separate files; browsers block the rapid multiple programmatic downloads, so consolidated to a single workbook.)* |
 
 ## Architecture
 

@@ -105,7 +105,7 @@ export function C2imeraExportCard() {
         tz,
       })
       toast.success(
-        `Exported 3 files — Events ${counts.events}, PPR ${counts.ppr}, Discrepancies ${counts.discrepancies}`,
+        `Exported C2IMERA workbook — Events ${counts.events}, PPR ${counts.ppr}, Discrepancies ${counts.discrepancies}`,
       )
     } catch (e) {
       console.error('C2IMERA export failed:', e)
@@ -134,8 +134,8 @@ export function C2imeraExportCard() {
     >
       <div className="section-label">EXPORT FOR C2IMERA</div>
       <p style={{ color: 'var(--color-text-3)', margin: '6px 0 16px' }}>
-        Downloads three separate Excel files — Events Log, PPR Log, and Airfield Discrepancies —
-        formatted for direct import into C2IMERA. Generation runs entirely in your browser.
+        Downloads one Excel workbook with three sheets — Events Log, PPR Log, and Airfield
+        Discrepancies — formatted for direct import into C2IMERA. Generation runs entirely in your browser.
       </p>
 
       {/* Date range */}

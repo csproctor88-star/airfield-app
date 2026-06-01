@@ -192,17 +192,13 @@ export async function exportC2imera(opts: C2imeraExportOpts): Promise<{ events: 
   const { createStyledWorkbook, addStyledSheet, saveWorkbook } = await import('@/lib/excel-export')
   const suffix = from === to ? from.replace(/-/g, '') : `${from.replace(/-/g, '')}-${to.replace(/-/g, '')}`
 
-  const files: { name: string; sheet: string; data: C2imeraSheet }[] = [
-    { name: `C2IMERA_EventsLog_${suffix}.xlsx`, sheet: 'Events Log', data: events },
-    { name: `C2IMERA_PPRLog_${suffix}.xlsx`, sheet: 'PPR Log', data: ppr },
-    { name: `C2IMERA_Discrepancies_${suffix}.xlsx`, sheet: 'Discrepancies', data: discrepancies },
-  ]
-
-  for (const f of files) {
-    const wb = await createStyledWorkbook()
-    addStyledSheet(wb, f.sheet, f.data.columns, f.data.rows)
-    await saveWorkbook(wb, f.name)
-  }
+  // One workbook, three sheets — a single download (browsers block the rapid
+  // multiple programmatic downloads that exporting three files would need).
+  const wb = await createStyledWorkbook()
+  addStyledSheet(wb, 'Events Log', events.columns, events.rows)
+  addStyledSheet(wb, 'PPR Log', ppr.columns, ppr.rows)
+  addStyledSheet(wb, 'Discrepancies', discrepancies.columns, discrepancies.rows)
+  await saveWorkbook(wb, `C2IMERA_Export_${suffix}.xlsx`)
 
   return { events: events.rows.length, ppr: ppr.rows.length, discrepancies: discrepancies.rows.length }
 }
