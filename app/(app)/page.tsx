@@ -44,16 +44,12 @@ function weatherIcon(conditions: string) {
   return Sun
 }
 
-// --- NAVAID color map (theme-aware for text, raw hex for alpha interpolation) ---
+// --- NAVAID status color map (theme-aware tokens; tints/borders use
+//     color-mix over these so they mute correctly in light/cream mode) ---
 const STATUS_COLORS: Record<string, string> = {
   green: 'var(--color-success)',
   yellow: 'var(--color-warning)',
   red: 'var(--color-danger)',
-}
-const STATUS_HEX: Record<string, string> = {
-  green: '#34D399',
-  yellow: '#FBBF24',
-  red: '#EF4444',
 }
 
 // --- Empty NAVAID default (NAVAIDs are fetched per-base from DB) ---
@@ -1200,7 +1196,7 @@ export default function HomePage() {
                       flex: 1, padding: '12px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center',
                       border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
-                      background: selected ? `${STATUS_HEX[s]}20` : 'var(--color-bg-inset)',
+                      background: selected ? `color-mix(in srgb, ${STATUS_COLORS[s]} 13%, transparent)` : 'var(--color-bg-inset)',
                       color: selected ? color : 'var(--color-text-3)',
                     }}
                   >{label}</button>
@@ -1298,7 +1294,7 @@ export default function HomePage() {
                       flex: 1, padding: '12px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center',
                       border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
-                      background: selected ? `${STATUS_HEX[s]}20` : 'var(--color-bg-inset)',
+                      background: selected ? `color-mix(in srgb, ${STATUS_COLORS[s]} 13%, transparent)` : 'var(--color-bg-inset)',
                       color: selected ? color : 'var(--color-text-3)',
                     }}
                   >{label}</button>
@@ -1625,7 +1621,7 @@ export default function HomePage() {
                           style={{
                             width: 36, height: 28, borderRadius: 'var(--radius-sm)',
                             border: `2px solid ${STATUS_COLORS[item.status]}`,
-                            background: `${STATUS_HEX[item.status]}20`,
+                            background: `color-mix(in srgb, ${STATUS_COLORS[item.status]} 13%, transparent)`,
                             cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
                             color: STATUS_COLORS[item.status], textTransform: 'uppercase', padding: 0,
                           }}
@@ -1642,7 +1638,7 @@ export default function HomePage() {
                           style={{
                             width: '100%', boxSizing: 'border-box',
                             background: 'var(--color-bg-inset)',
-                            border: `1px solid ${STATUS_HEX[item.status]}40`,
+                            border: `1px solid color-mix(in srgb, ${STATUS_COLORS[item.status]} 25%, transparent)`,
                             borderRadius: 'var(--radius-sm)', padding: '6px 10px', fontSize: 'var(--fs-lg)',
                             color: 'var(--color-text-1)', outline: 'none', resize: 'none', overflow: 'hidden',
                             fontFamily: 'inherit', fieldSizing: 'content' as unknown as undefined, minHeight: 32,
@@ -2118,7 +2114,7 @@ export default function HomePage() {
                     style={{
                       width: 28, height: 28, borderRadius: 'var(--radius-sm)',
                       border: `1.5px solid ${STATUS_COLORS[n.status]}`,
-                      background: `${STATUS_HEX[n.status]}22`,
+                      background: `color-mix(in srgb, ${STATUS_COLORS[n.status]} 13%, transparent)`,
                       cursor: canWriteAirfieldStatus ? 'pointer' : 'default', fontSize: 'var(--fs-base)', fontWeight: 800,
                       color: STATUS_COLORS[n.status], textTransform: 'uppercase', padding: 0,
                       letterSpacing: 0, lineHeight: 1,
@@ -2138,7 +2134,7 @@ export default function HomePage() {
                     style={{
                       width: '100%', boxSizing: 'border-box',
                       background: 'var(--color-bg-inset)',
-                      border: `1px solid ${STATUS_HEX[n.status]}40`,
+                      border: `1px solid color-mix(in srgb, ${STATUS_COLORS[n.status]} 25%, transparent)`,
                       borderRadius: 'var(--radius-sm)', padding: '6px 10px',
                       fontSize: design === 'v2' ? 'var(--fs-xs)' : 'var(--fs-lg)',
                       color: 'var(--color-text-1)', outline: 'none',
