@@ -328,7 +328,7 @@ export function Header() {
               )}
               {baseIcao && (
                 <span style={{
-                  fontFamily: 'monospace', fontSize: 'var(--fs-xs)', fontWeight: 700,
+                  fontFamily: 'var(--font-family-mono)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                   color: 'var(--color-accent)',
                   padding: '1px 7px', borderRadius: 'var(--radius-sm)',
                   background: 'rgba(56,189,248,0.10)',
@@ -385,7 +385,7 @@ export function Header() {
             </div>
             <div style={{
               display: 'flex', alignItems: 'baseline', gap: 8,
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-family-mono)',
             }}>
               <span style={{
                 fontSize: 'var(--fs-md)', fontWeight: 700,

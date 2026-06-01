@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { useTheme, type ThemePreference } from '@/lib/theme-context'
+import { useDesign } from '@/lib/design-context'
 import { USER_ROLES } from '@/lib/constants'
 import { createInstallation } from '@/lib/supabase/installations'
 import { BASE_DIRECTORY } from '@/lib/base-directory'
@@ -680,6 +681,7 @@ function ProfileSectionContent() {
 
 function ThemeSectionContent() {
   const { theme, setTheme } = useTheme()
+  const { design, setDesign } = useDesign()
 
   const options: { value: ThemePreference; label: string; icon: React.ComponentType<{ size: number }> }[] = [
     { value: 'light', label: 'Day', icon: Sun },
@@ -687,8 +689,14 @@ function ThemeSectionContent() {
     { value: 'auto', label: 'Auto', icon: Monitor },
   ]
 
+  const designOptions: { value: 'v1' | 'v2'; label: string; sub: string }[] = [
+    { value: 'v1', label: 'Classic', sub: 'Current look' },
+    { value: 'v2', label: 'Refreshed', sub: 'New type & contrast (preview)' },
+  ]
+
   return (
-      <div className="card" style={{ padding: 14 }}>
+    <>
+      <div className="card" style={{ padding: 14, marginBottom: 8 }}>
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>THEME</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {options.map(({ value, label, icon: Icon }) => (
@@ -722,6 +730,42 @@ function ThemeSectionContent() {
           {theme === 'auto' ? 'Follows your device settings' : theme === 'light' ? 'Light theme active' : 'Dark theme active'}
         </div>
       </div>
+
+      <div className="card" style={{ padding: 14 }}>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 8 }}>APP DESIGN</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {designOptions.map(({ value, label, sub }) => (
+            <button
+              key={value}
+              onClick={() => setDesign(value)}
+              style={{
+                flex: 1,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                padding: '12px 8px',
+                borderRadius: 'var(--radius-lg)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                border: design === value
+                  ? '2px solid var(--color-accent)'
+                  : '1px solid var(--color-border)',
+                background: design === value
+                  ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)'
+                  : 'transparent',
+                color: design === value ? 'var(--color-accent)' : 'var(--color-text-2)',
+                fontWeight: design === value ? 700 : 500,
+                fontSize: 'var(--fs-base)',
+              }}
+            >
+              {label}
+              <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', fontWeight: 500 }}>{sub}</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 8 }}>
+          Preview of the readability &amp; hierarchy refresh. Best seen on Airfield Status and the Dashboard. Toggle anytime.
+        </div>
+      </div>
+    </>
   )
 }
 

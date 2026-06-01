@@ -9,6 +9,7 @@ import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusI
 import { fetchPprEntriesForDate, fetchPprColumns, formatPprColumnValue, isActivePpr, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
+import { useDesign } from '@/lib/design-context'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { logActivity, logManualEntry } from '@/lib/supabase/activity'
@@ -83,6 +84,7 @@ export default function HomePage() {
   const router = useRouter()
   const { advisories, addAdvisory, updateAdvisory, removeAdvisory, activeRunway, setActiveRunway, runwayStatus, setRunwayStatus, runwayStatuses, setRunwayActiveEnd, setRunwayStatusForRunway, arffCat, setArffCat, arffStatuses, setArffStatusForAircraft, rscCondition, setRscCondition, rcrValue, rcrCondition, bwcValue, setBwcValue, constructionRemarks, setConstructionRemarks, miscRemarks, setMiscRemarks, afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed, refreshStatus } = useDashboard()
   const { installationId, runways, arffAircraft, currentInstallation } = useInstallation()
+  const { design } = useDesign()
   const { has } = usePermissions()
   // Full airfield-status write — runway / ARFF / advisory / remarks / labels.
   // Held by AFM, NAMO, amops, base_admin, sys_admin.
@@ -1717,16 +1719,30 @@ export default function HomePage() {
           padding: '10px 12px',
         }
 
-        const sectionHeaderStyle = {
-          fontSize: 'var(--fs-sm)',
-          fontWeight: 700,
-          color: 'var(--color-text-2)',
-          textTransform: 'uppercase' as const,
-          letterSpacing: '0.08em',
-          marginBottom: 6,
-          paddingBottom: 4,
-          borderBottom: '1px solid rgba(56,189,248,0.20)',
-        }
+        // v2: quiet "eyebrow" section labels — lighter weight, muted color, more
+        // tracking and breathing room, no cyan underline. Reduces the
+        // "everything bold + blue hairline" sameness. v1 keeps the original.
+        const sectionHeaderStyle = design === 'v2'
+          ? {
+              fontSize: 'var(--fs-xs)',
+              fontWeight: 600,
+              color: 'var(--color-text-3)',
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.1em',
+              marginBottom: 8,
+              paddingBottom: 0,
+              borderBottom: 'none',
+            }
+          : {
+              fontSize: 'var(--fs-sm)',
+              fontWeight: 700,
+              color: 'var(--color-text-2)',
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.08em',
+              marginBottom: 6,
+              paddingBottom: 4,
+              borderBottom: '1px solid rgba(56,189,248,0.20)',
+            }
 
         return (<>
       {/* ── Status Sections — side-by-side on desktop, stacked on mobile ── */}

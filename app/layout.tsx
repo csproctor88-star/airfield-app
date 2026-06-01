@@ -1,7 +1,24 @@
 import type { Metadata, Viewport } from 'next'
+import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/lib/theme-context'
+import { DesignProvider } from '@/lib/design-context'
 import './globals.css'
+
+// v2 design typography pairing — loaded as CSS variables and only applied
+// when `[data-design="v2"]` is set (see globals.css). v1 keeps Outfit.
+const plexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex-sans',
+  display: 'swap',
+})
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Glidepath',
@@ -36,6 +53,8 @@ const themeScript = `
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : t;
     document.documentElement.setAttribute('data-theme', r);
+    var d = localStorage.getItem('glidepath_design');
+    if (d === 'v2') document.documentElement.setAttribute('data-design', 'v2');
     var bg = r === 'light' ? '#F8FAFC' : '#0B1120';
     document.documentElement.style.background = bg;
     document.body.style.background = bg;
@@ -49,13 +68,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" spellCheck suppressHydrationWarning style={{ background: '#0B1120' }}>
+    <html lang="en" spellCheck suppressHydrationWarning className={`${plexSans.variable} ${plexMono.variable}`} style={{ background: '#0B1120' }}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans" style={{ minHeight: '100dvh', background: '#0B1120' }}>
         <ThemeProvider>
+          <DesignProvider>
           {children}
+          </DesignProvider>
           <Toaster
             position="top-center"
             richColors

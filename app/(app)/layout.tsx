@@ -23,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div
       className="app-shell"
       style={{
-        fontFamily: "'Outfit', -apple-system, sans-serif",
+        fontFamily: 'var(--font-family-base)',
         background: 'var(--color-bg)',
         color: 'var(--color-text-1)',
         minHeight: '100dvh',
