@@ -87,7 +87,7 @@ function RecordsExportSectionContent() {
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           alignSelf: 'flex-start',
-          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
           border: 'none', borderRadius: 'var(--radius-base)', padding: '10px 16px',
           color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
           fontFamily: 'inherit',
@@ -118,7 +118,7 @@ function PdfLibrarySectionContent() {
         style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           alignSelf: 'flex-start',
-          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
           border: 'none', borderRadius: 'var(--radius-base)', padding: '10px 16px',
           color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
           fontFamily: 'inherit',
@@ -998,7 +998,7 @@ function InstallationSectionContent() {
                 style={{
                   flex: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                  background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
                   border: 'none', borderRadius: 'var(--radius-base)', padding: '10px 16px',
                   color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700, cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -1283,7 +1283,7 @@ function RegulationsSectionContent() {
               <div style={{
                 height: '100%', borderRadius: 'var(--radius-xs)',
                 background: cacheProgress.errors > 0
-                  ? 'linear-gradient(90deg, var(--color-accent-secondary), #F97316)'
+                  ? 'linear-gradient(90deg, var(--color-accent-secondary), var(--color-orange))'
                   : 'var(--color-accent-secondary)',
                 width: `${Math.round((cacheProgress.done / cacheProgress.total) * 100)}%`,
                 transition: 'width 0.3s',
@@ -1318,7 +1318,7 @@ function RegulationsSectionContent() {
                 flex: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 background: (cachedCount === totalCount && totalCount > 0)
-                  ? 'transparent' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                  ? 'transparent' : 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
                 border: (cachedCount === totalCount && totalCount > 0)
                   ? '1px solid rgba(52,211,153,0.3)' : 'none',
                 borderRadius: 'var(--radius-base)', padding: '10px 16px', cursor: 'pointer',
@@ -1528,7 +1528,7 @@ function StorageSectionContent() {
               disabled={precaching}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                background: precaching ? 'var(--color-bg-inset)' : 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                background: precaching ? 'var(--color-bg-inset)' : 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
                 border: precaching ? '1px solid var(--color-border)' : 'none',
                 borderRadius: 'var(--radius-base)', padding: '10px 16px', cursor: precaching ? 'wait' : 'pointer',
                 color: precaching ? 'var(--color-text-3)' : '#fff',

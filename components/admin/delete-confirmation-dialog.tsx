@@ -99,7 +99,7 @@ export function DeleteConfirmationDialog({
               padding: '10px',
               borderRadius: 8,
               border: 'none',
-              background: isMatch && !loading ? '#DC2626' : 'rgba(220,38,38,0.3)',
+              background: isMatch && !loading ? 'var(--color-danger)' : 'rgba(220,38,38,0.3)',
               color: '#fff',
               fontSize: 'var(--fs-md)',
               fontWeight: 600,

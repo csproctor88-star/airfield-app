@@ -1143,7 +1143,7 @@ export default function AirfieldChecksPage() {
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginBottom: 4 }}>Condition Code</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {BASH_CONDITION_CODES.map((code) => {
-                    const colors: Record<string, string> = { LOW: 'var(--color-success)', MODERATE: 'var(--color-warning)', SEVERE: 'var(--color-danger)', PROHIBITED: '#DC2626' }
+                    const colors: Record<string, string> = { LOW: 'var(--color-success)', MODERATE: 'var(--color-warning)', SEVERE: 'var(--color-danger)', PROHIBITED: 'var(--color-danger)' }
                     const bgColors: Record<string, string> = { LOW: 'rgba(34,197,94,0.13)', MODERATE: 'rgba(234,179,8,0.13)', SEVERE: 'rgba(239,68,68,0.13)', PROHIBITED: 'rgba(220,38,38,0.18)' }
                     const active = bashCondition === code
                     return (
@@ -1452,9 +1452,9 @@ export default function AirfieldChecksPage() {
               borderRadius: 'var(--radius-md)', background: 'rgba(16,185,129,0.08)',
               border: '1px solid rgba(16,185,129,0.3)',
             }}>
-              <CheckCircle2 size={20} color="#10B981" />
+              <CheckCircle2 size={20} color="var(--color-success)" />
               <div>
-                <div style={{ fontWeight: 700, color: '#10B981' }}>
+                <div style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                   Wildlife {bashFormType === 'sighting' ? 'sighting' : 'strike'} logged
                 </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
@@ -1472,9 +1472,9 @@ export default function AirfieldChecksPage() {
                   style={{
                     flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', fontWeight: 700,
                     fontSize: 'var(--fs-md)', fontFamily: 'inherit', cursor: 'pointer',
-                    border: bashFormType === 'sighting' ? '2px solid #10B981' : '2px solid var(--color-text-4)',
+                    border: bashFormType === 'sighting' ? '2px solid var(--color-success)' : '2px solid var(--color-text-4)',
                     background: bashFormType === 'sighting' ? 'rgba(16,185,129,0.08)' : 'var(--color-bg-surface)',
-                    color: bashFormType === 'sighting' ? '#10B981' : 'var(--color-text-2)',
+                    color: bashFormType === 'sighting' ? 'var(--color-success)' : 'var(--color-text-2)',
                   }}
                 >
                   Wildlife Sighting

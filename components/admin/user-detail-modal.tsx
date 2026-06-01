@@ -808,7 +808,7 @@ export function UserDetailModal({
               padding: '8px 12px',
               marginTop: 12,
               fontSize: 'var(--fs-base)',
-              color: '#22C55E',
+              color: 'var(--color-green)',
             }}
           >
             {successMsg}
@@ -869,17 +869,17 @@ export function UserDetailModal({
               <button type="button" onClick={() => onSendEmail('approved')} style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
                 border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.1)',
-                color: '#22C55E', cursor: 'pointer', fontFamily: 'inherit',
+                color: 'var(--color-green)', cursor: 'pointer', fontFamily: 'inherit',
               }}>Approve</button>
               <button type="button" onClick={() => onSendEmail('info_needed')} style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
                 border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.1)',
-                color: '#F59E0B', cursor: 'pointer', fontFamily: 'inherit',
+                color: 'var(--color-amber)', cursor: 'pointer', fontFamily: 'inherit',
               }}>Request Info</button>
               <button type="button" onClick={() => onSendEmail('rejected')} style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 'var(--fs-sm)', fontWeight: 600,
                 border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)',
-                color: '#EF4444', cursor: 'pointer', fontFamily: 'inherit',
+                color: 'var(--color-danger)', cursor: 'pointer', fontFamily: 'inherit',
               }}>Reject</button>
             </div>
           )}
@@ -925,7 +925,7 @@ export function UserDetailModal({
                 width: '100%',
                 padding: '10px',
                 borderRadius: 8,
-                border: '1px solid #22C55E',
+                border: '1px solid var(--color-green)',
                 background: 'transparent',
                 color: '#4ADE80',
                 fontSize: 'var(--fs-base)',
@@ -955,7 +955,7 @@ export function UserDetailModal({
                 width: '100%',
                 padding: '10px',
                 borderRadius: 8,
-                border: '1px solid #EF4444',
+                border: '1px solid var(--color-danger)',
                 background: 'transparent',
                 color: '#F87171',
                 fontSize: 'var(--fs-base)',
@@ -985,7 +985,7 @@ export function UserDetailModal({
                 padding: '10px',
                 borderRadius: 8,
                 border: 'none',
-                background: anyLoading ? 'rgba(220,38,38,0.3)' : '#DC2626',
+                background: anyLoading ? 'rgba(220,38,38,0.3)' : 'var(--color-danger)',
                 color: '#fff',
                 fontSize: 'var(--fs-base)',
                 fontWeight: 600,

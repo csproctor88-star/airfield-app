@@ -541,7 +541,7 @@ export default function UserManagementPage() {
         const u = emailDialog.user
         const userName = `${u.rank ? u.rank + ' ' : ''}${u.first_name} ${u.last_name}`
         const titleMap = { approved: 'Approve Account', info_needed: 'Request Additional Info', rejected: 'Reject Account' }
-        const colorMap = { approved: '#22C55E', info_needed: '#F59E0B', rejected: '#EF4444' }
+        const colorMap = { approved: 'var(--color-green)', info_needed: 'var(--color-amber)', rejected: 'var(--color-danger)' }
         const btnMap = { approved: 'Send Approval Email', info_needed: 'Send Info Request', rejected: 'Send Rejection Email' }
         const t = emailDialog.template
         return (
@@ -616,7 +616,7 @@ export default function UserManagementPage() {
                     flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                     cursor: emailSending ? 'wait' : 'pointer',
                     border: `1px solid ${colorMap[t]}`,
-                    background: `${colorMap[t]}20`,
+                    background: `color-mix(in srgb, ${colorMap[t]} 12%, transparent)`,
                     color: colorMap[t],
                     opacity: emailSending || (t === 'info_needed' && !emailMessage.trim()) ? 0.5 : 1,
                     fontFamily: 'inherit',

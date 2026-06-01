@@ -463,7 +463,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
             disabled={submitting}
             style={{
               padding: '12px 0', borderRadius: 8, border: 'none',
-              background: submitting ? '#334155' : 'linear-gradient(135deg, #0369A1, #22D3EE)',
+              background: submitting ? '#334155' : 'linear-gradient(135deg, var(--color-accent-dark), var(--color-cyan))',
               color: '#FFF', fontSize: 16, fontWeight: 700,
               cursor: submitting ? 'wait' : 'pointer', fontFamily: 'inherit',
             }}

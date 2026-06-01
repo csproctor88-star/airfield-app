@@ -42,13 +42,13 @@ type AuditPanelProps = {
 // ── Layer color lookup (simplified from page LAYERS config) ──
 
 const TYPE_COLORS: Record<string, string> = {
-  location_sign: '#FBBF24', directional_sign: '#FBBF24', informational_sign: '#60A5FA',
-  mandatory_sign: '#EF4444', taxiway_light: '#3B82F6', taxiway_end_light: '#2563EB',
-  approach_light: '#F472B6', runway_edge_light: '#FBBF24', runway_threshold: '#22C55E',
-  threshold_light: '#22C55E', papi: '#F97316', reil: '#A78BFA', runway_distance_marker: '#FBBF24',
-  pre_threshold_light: '#F59E0B', terminating_bar_light: '#EF4444', centerline_bar_light: '#F8FAFC',
-  thousand_ft_bar_light: '#F8FAFC', sequenced_flasher: '#F8FAFC', obstruction_light: '#EF4444',
-  windcone: '#FB923C', stadium_light: '#E2E8F0', rotating_beacon: '#22D3EE',
+  location_sign: 'var(--color-warning)', directional_sign: 'var(--color-warning)', informational_sign: '#60A5FA',
+  mandatory_sign: 'var(--color-danger)', taxiway_light: 'var(--color-blue)', taxiway_end_light: 'var(--color-blue)',
+  approach_light: '#F472B6', runway_edge_light: 'var(--color-warning)', runway_threshold: 'var(--color-green)',
+  threshold_light: 'var(--color-green)', papi: 'var(--color-orange)', reil: 'var(--color-purple)', runway_distance_marker: 'var(--color-warning)',
+  pre_threshold_light: 'var(--color-amber)', terminating_bar_light: 'var(--color-danger)', centerline_bar_light: '#F8FAFC',
+  thousand_ft_bar_light: '#F8FAFC', sequenced_flasher: '#F8FAFC', obstruction_light: 'var(--color-danger)',
+  windcone: '#FB923C', stadium_light: '#E2E8F0', rotating_beacon: 'var(--color-cyan)',
 }
 
 const SIGN_TYPES = new Set(['location_sign', 'directional_sign', 'informational_sign', 'mandatory_sign'])

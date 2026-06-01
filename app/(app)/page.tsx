@@ -1989,10 +1989,10 @@ export default function HomePage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
               {([
-                { key: 'optimum', label: 'Optimum', color: 'var(--color-success)', hex: '#34D399' },
-                { key: 'reduced', label: 'Reduced', color: 'var(--color-warning)', hex: '#FBBF24' },
-                { key: 'critical', label: 'Critical', color: 'var(--color-orange)', hex: '#f97316' },
-                { key: 'inadequate', label: 'Inadequate', color: 'var(--color-danger)', hex: '#EF4444' },
+                { key: 'optimum', label: 'Optimum', color: 'var(--color-success)', hex: 'var(--color-success)' },
+                { key: 'reduced', label: 'Reduced', color: 'var(--color-warning)', hex: 'var(--color-warning)' },
+                { key: 'critical', label: 'Critical', color: 'var(--color-orange)', hex: 'var(--color-orange)' },
+                { key: 'inadequate', label: 'Inadequate', color: 'var(--color-danger)', hex: 'var(--color-danger)' },
               ] as const).map(({ key, label, color, hex }) => {
                 const selected = arffDialog.selectedStatus === key
                 return (
@@ -2003,7 +2003,7 @@ export default function HomePage() {
                       padding: '12px 4px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                       cursor: 'pointer', textAlign: 'center',
                       border: selected ? `2px solid ${color}` : '1px solid var(--color-border-mid)',
-                      background: selected ? `${hex}20` : 'var(--color-bg-inset)',
+                      background: selected ? `color-mix(in srgb, ${hex} 12%, transparent)` : 'var(--color-bg-inset)',
                       color: selected ? color : 'var(--color-text-3)',
                     }}
                   >{label}</button>

@@ -295,15 +295,15 @@ export function SimpleDiscrepancyPanel({
             display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
             fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 700,
             width: '100%', padding: '10px 12px', borderRadius: 8,
-            border: logAsDisc ? '2px solid #D97706' : '2px solid var(--color-text-4)',
+            border: logAsDisc ? '2px solid var(--color-amber)' : '2px solid var(--color-text-4)',
             background: logAsDisc ? 'rgba(217, 119, 6, 0.08)' : 'transparent',
-            color: logAsDisc ? '#D97706' : 'var(--color-text-2)',
+            color: logAsDisc ? 'var(--color-amber)' : 'var(--color-text-2)',
           }}
         >
           <span style={{
             width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-            border: logAsDisc ? '2px solid #D97706' : '2px solid var(--color-text-3)',
-            background: logAsDisc ? '#D97706' : 'transparent',
+            border: logAsDisc ? '2px solid var(--color-amber)' : '2px solid var(--color-text-3)',
+            background: logAsDisc ? 'var(--color-amber)' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 14, fontWeight: 800, color: '#FFFFFF',
           }}>
@@ -322,7 +322,7 @@ export function SimpleDiscrepancyPanel({
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
             <div style={{
-              fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+              fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-amber)',
               textTransform: 'uppercase', letterSpacing: '0.05em',
             }}>
               Discrepancy Details

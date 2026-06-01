@@ -2423,7 +2423,7 @@ export default function InspectionsPage() {
               disabled={saving}
               style={{
                 flex: 1, padding: '14px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                background: 'linear-gradient(135deg, #3B82F6, #6366F1)',
+                background: 'linear-gradient(135deg, var(--color-blue), #6366F1)',
                 color: '#FFF', fontSize: 'var(--fs-xl)', fontWeight: 700,
                 cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit',
                 opacity: saving ? 0.7 : 1,
@@ -2929,7 +2929,7 @@ export default function InspectionsPage() {
                     {report.rcrValue && (
                       <span style={{
                         fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-xs)',
-                        color: '#8B5CF6',
+                        color: 'var(--color-violet)',
                         background: 'rgba(139,92,246,0.1)',
                       }}>
                         RCR: {report.rcrValue}{report.rcrCondition ? ` (${report.rcrCondition})` : ''}

@@ -49,11 +49,11 @@ type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'p
 
 // Color tokens used by the status chip + KPI pills.
 const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; border: string }> = {
-  pending_amops_triage:    { label: 'Awaiting Review',    bg: 'rgba(220,38,38,0.12)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
+  pending_amops_triage:    { label: 'Awaiting Review',    bg: 'rgba(220,38,38,0.12)',  fg: 'var(--color-danger)', border: 'rgba(220,38,38,0.4)' },
   pending_coordination:    { label: 'In Coordination',    bg: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', fg: 'var(--color-accent)', border: 'color-mix(in srgb, var(--color-accent) 40%, transparent)' },
-  pending_amops_approval:  { label: 'Awaiting Approval',  bg: 'rgba(245,158,11,0.12)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
-  approved:                { label: 'Approved',           bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
-  denied:                  { label: 'Denied',             bg: 'rgba(220,38,38,0.10)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
+  pending_amops_approval:  { label: 'Awaiting Approval',  bg: 'rgba(245,158,11,0.12)', fg: 'var(--color-amber)', border: 'rgba(245,158,11,0.4)' },
+  approved:                { label: 'Approved',           bg: 'rgba(34,197,94,0.10)',  fg: 'var(--color-green)', border: 'rgba(34,197,94,0.4)' },
+  denied:                  { label: 'Denied',             bg: 'rgba(220,38,38,0.10)',  fg: 'var(--color-danger)', border: 'rgba(220,38,38,0.4)' },
   canceled:                { label: 'Canceled',           bg: 'rgba(148,163,184,0.10)', fg: '#94a3b8', border: 'rgba(148,163,184,0.4)' },
 }
 
@@ -797,13 +797,13 @@ export default function PprPage() {
     const hasPendingCoord = coords.some((c) => c.status === 'pending')
     const acts: { label: string; color: string; onClick: () => void }[] = []
     if (canTriage && entry.status === 'pending_amops_triage') {
-      acts.push({ label: 'Review', color: '#ef4444', onClick: () => openTriage(entry) })
+      acts.push({ label: 'Review', color: 'var(--color-danger)', onClick: () => openTriage(entry) })
     }
     if (canCoordinate && entry.status === 'pending_coordination' && hasPendingCoord) {
       acts.push({ label: 'Coordinate', color: 'var(--color-accent)', onClick: () => openCoordinate(entry) })
     }
     if (canApprove && entry.status === 'pending_amops_approval') {
-      acts.push({ label: 'Decide', color: '#f59e0b', onClick: () => openDecide(entry) })
+      acts.push({ label: 'Decide', color: 'var(--color-amber)', onClick: () => openDecide(entry) })
     }
     if (canWrite) {
       acts.push({ label: 'Edit', color: 'var(--color-accent)', onClick: () => handleEdit(entry) })
@@ -906,7 +906,7 @@ export default function PprPage() {
                 label="Awaiting Review"
                 icon={<Inbox size={14} />}
                 colorBg="rgba(220,38,38,0.12)"
-                colorFg="#ef4444"
+                colorFg="var(--color-danger)"
                 colorBorder="rgba(220,38,38,0.4)"
                 active={statusFilter === 'pending_amops_triage'}
                 onClick={() => {
@@ -921,7 +921,7 @@ export default function PprPage() {
                 label="Awaiting Approval"
                 icon={<Clock size={14} />}
                 colorBg="rgba(245,158,11,0.12)"
-                colorFg="#f59e0b"
+                colorFg="var(--color-amber)"
                 colorBorder="rgba(245,158,11,0.4)"
                 active={statusFilter === 'pending_amops_approval'}
                 onClick={() => {
@@ -1739,7 +1739,7 @@ export default function PprPage() {
                       <strong style={{ color: 'var(--color-text-1)' }}>{row.agency_name}</strong>
                       <span style={{
                         fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase',
-                        color: row.status === 'concur' ? '#22c55e' : row.status === 'non_concur' ? '#ef4444' : 'var(--color-text-3)',
+                        color: row.status === 'concur' ? 'var(--color-green)' : row.status === 'non_concur' ? 'var(--color-danger)' : 'var(--color-text-3)',
                       }}>
                         {row.status === 'pending' ? 'PENDING' : row.status === 'concur' ? 'CONCUR' : 'NON-CONCUR'}
                       </span>
@@ -1829,7 +1829,7 @@ export default function PprPage() {
                   <div key={row.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '4px 8px', background: 'var(--color-bg-inset)', borderRadius: 4 }}>
                     <span style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>{row.agency_name}</span>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: row.status === 'concur' ? '#22c55e' : row.status === 'non_concur' ? '#ef4444' : 'var(--color-text-3)' }}>
+                      <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: row.status === 'concur' ? 'var(--color-green)' : row.status === 'non_concur' ? 'var(--color-danger)' : 'var(--color-text-3)' }}>
                         {row.status === 'concur' ? 'CONCUR' : row.status === 'non_concur' ? 'NON-CONCUR' : 'PENDING'}
                       </span>
                       {row.comment && (

@@ -58,7 +58,7 @@ export default function AllInspectionsPage() {
     {
       label: 'Daily Airfield Inspection',
       Icon: PlaneTakeoff,
-      color: '#10B981',
+      color: 'var(--color-success)',
       description: 'DAFMAN 13-204v2 daily airfield & lighting inspections',
       href: '/inspections?action=begin',
       actionLabel: 'Start Daily Inspection',
@@ -67,7 +67,7 @@ export default function AllInspectionsPage() {
     {
       label: 'Airfield Compliance and Safety Inspection',
       Icon: ShieldCheck,
-      color: '#8B5CF6',
+      color: 'var(--color-violet)',
       description: 'DAFMAN 13-204v2, Para 5.4.3 annual compliance inspection',
       href: null,
       actionLabel: acsiDraft ? 'Continue ACSI Draft' : 'Start ACSI',
@@ -77,7 +77,7 @@ export default function AllInspectionsPage() {
     {
       label: 'Pre/Post Construction',
       Icon: HardHat,
-      color: '#F59E0B',
+      color: 'var(--color-amber)',
       description: 'Construction zone safety coordination inspections',
       href: '/inspections/construction/new',
       actionLabel: 'Start Pre/Post Construction Inspection',
@@ -86,7 +86,7 @@ export default function AllInspectionsPage() {
     {
       label: 'Monthly Joint Inspection',
       Icon: Handshake,
-      color: '#3B82F6',
+      color: 'var(--color-blue)',
       description: 'Monthly joint airfield inspection with CE & Safety',
       href: '/inspections/joint-monthly/new',
       actionLabel: 'Start Joint Monthly Inspection',

@@ -362,10 +362,10 @@ export function EditDiscrepancyModal({
 
 // Workflow step indicator
 const WORKFLOW_STEPS = [
-  { value: 'submitted_to_afm', short: 'AFM', color: '#3B82F6' },
-  { value: 'submitted_to_ces', short: 'CES', color: '#F97316' },
+  { value: 'submitted_to_afm', short: 'AFM', color: 'var(--color-blue)' },
+  { value: 'submitted_to_ces', short: 'CES', color: 'var(--color-orange)' },
   { value: 'awaiting_action_by_ces', short: 'In Work', color: 'var(--color-amber)' },
-  { value: 'waiting_for_project', short: 'Project', color: '#A78BFA' },
+  { value: 'waiting_for_project', short: 'Project', color: 'var(--color-purple)' },
   { value: 'work_completed_awaiting_verification', short: 'Verify', color: 'var(--color-green)' },
 ] as const
 
