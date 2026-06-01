@@ -9,6 +9,7 @@ import { isCivilian } from '@/lib/airport-mode'
 import { EXPORT_MODULES, type ExportModule } from '@/lib/export/export-modules'
 import { resolveQuickPeriod, type ExportPeriod, type QuickPeriod } from '@/lib/export/export-period'
 import { C2imeraExportCard } from '@/components/exports/c2imera-export-card'
+import { QrcExportCard } from '@/components/exports/qrc-export-card'
 
 type IncludeKey = 'pdf' | 'excel' | 'photos' | 'viewer' | 'json'
 
@@ -265,6 +266,9 @@ export default function ExportsPage() {
 
       {/* C2IMERA export — military bases only (USAF/ANG C2 system) */}
       {!civilian && <C2imeraExportCard />}
+
+      {/* QRC export — one workbook, a sheet per QRC */}
+      <QrcExportCard />
     </div>
   )
 }
