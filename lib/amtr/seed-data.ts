@@ -139,7 +139,10 @@ export const CATALOG_SYNC_META: Record<string, { key: (r: SyncRow) => string; fi
   amtr_milestone_catalog: { key: (r) => `${r.path}|${r.topic}`, fields: ['path', 'phase_label', 'sts_items', 'topic', 'sort_order'] },
   amtr_inspection_checklist: { key: (r) => `${r.kind}|${r.item_number ?? r.label}`, fields: ['kind', 'label', 'item_number', 'auto_key', 'sort_order'] },
   amtr_623a_entry_types: { key: (r) => String(r.label), fields: ['label', 'sort_order'] },
-  amtr_623a_comment_templates: { key: (r) => String(r.key), fields: ['label', 'cite', 'body', 'sort_order'] },
+  // `key` MUST be in fields: sync builds INSERT payloads from `fields` only, so
+  // omitting the natural-key column writes NULL key (NOT NULL violation). On
+  // update it matches itself (no-op).
+  amtr_623a_comment_templates: { key: (r) => String(r.key), fields: ['key', 'label', 'cite', 'body', 'sort_order'] },
   amtr_803_catalog: { key: (r) => `${r.section}|${r.sts_item}`, fields: ['section', 'sts_item', 'sort_order'] },
   amtr_qual_catalog: { key: (r) => `${r.category}|${r.name}`, fields: ['category', 'name', 'sort_order'] },
 }

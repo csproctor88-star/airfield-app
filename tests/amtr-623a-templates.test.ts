@@ -4,6 +4,7 @@ import {
   bundled623aCommentTemplates,
   COMMENT_TEMPLATES,
 } from '@/lib/amtr/reference-data'
+import { CATALOG_SYNC_META } from '@/lib/amtr/seed-data'
 
 // ─── Editable 623A comment templates ───
 // Templates are stored per-base as { key, label, cite, body }; the inserted
@@ -20,6 +21,15 @@ describe('composeTemplateText', () => {
 
   it('strips only leading/trailing blank lines from the body (keeps trailing spaces on content lines)', () => {
     expect(composeTemplateText('L', 'C', '\n\nField: \n\n')).toBe('(L — IAW C)\n\nField: ')
+  })
+})
+
+describe('comment-templates catalog sync config', () => {
+  // runSyncCatalogs builds INSERT payloads from `fields` only — the natural-key
+  // column ('key') MUST be in fields or imports/syncs insert a NULL key and hit
+  // the NOT NULL constraint. Guards against re-dropping it.
+  it("includes 'key' in the synced fields", () => {
+    expect(CATALOG_SYNC_META.amtr_623a_comment_templates.fields).toContain('key')
   })
 })
 
