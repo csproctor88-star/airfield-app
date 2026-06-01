@@ -14,9 +14,11 @@ import {
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  ALL_TOGGLEABLE_MODULES,
+  modulesForAirport,
+  moduleAppliesToAirport,
   isWizardStepEnabled,
   isStepDone,
+  type ModuleKey,
   type WizardStepKey,
 } from '@/lib/modules-config'
 import { fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
@@ -168,8 +170,12 @@ export default function BaseConfigHubPage() {
     return () => { cancelled = true }
   }, [installationId])
 
+  // Scope module / wizard-step counts to the base's airport type so USAF
+  // bases don't count Part 139-only modules (and vice-versa) in the totals.
+  const airportType = currentInstallation?.airport_type ?? null
+
   const wizardSummary = useMemo(() => {
-    const visible = WIZARD_STEP_KEYS.filter(k => isWizardStepEnabled(k, enabledModules))
+    const visible = WIZARD_STEP_KEYS.filter(k => isWizardStepEnabled(k, enabledModules, airportType))
     const done = visible.filter(k => isStepDone(k, setupProgress)).length
     const total = visible.length
     return {
@@ -177,10 +183,12 @@ export default function BaseConfigHubPage() {
       complete: total > 0 && done === total,
       percent: total > 0 ? Math.round((done / total) * 100) : 0,
     }
-  }, [enabledModules, setupProgress])
+  }, [enabledModules, setupProgress, airportType])
 
-  const enabledModuleCount = (enabledModules ?? []).length
-  const totalToggleable = ALL_TOGGLEABLE_MODULES.length
+  const totalToggleable = modulesForAirport(airportType).length
+  const enabledModuleCount = (enabledModules ?? []).filter(
+    k => moduleAppliesToAirport(k as ModuleKey, airportType),
+  ).length
 
   const cards: CardSpec[] = [
     {

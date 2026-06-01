@@ -360,9 +360,11 @@ const MODULE_BY_KEY: ReadonlyMap<ModuleKey, ModuleDef> = new Map(MODULES.map(m =
 /**
  * Returns true when a module is permitted for an airport_type. A
  * module without `appliesTo` applies to both modes (default). Used
- * by isModuleEnabled to filter civilian-only / USAF-only modules.
+ * by isModuleEnabled to filter civilian-only / USAF-only modules,
+ * and by the Base Configuration module selector to hide modules that
+ * don't apply to the base's airport type.
  */
-function moduleAppliesToAirport(key: ModuleKey, airportType: AirportType | null | undefined): boolean {
+export function moduleAppliesToAirport(key: ModuleKey, airportType: AirportType | null | undefined): boolean {
   const mod = MODULE_BY_KEY.get(key)
   if (!mod?.appliesTo) return true
   if (!airportType) return true // unknown mode → fail open
@@ -435,14 +437,31 @@ export const TYPICAL_BASE_PRESET: ModuleKey[] = MODULES
 
 export const ALL_TOGGLEABLE_MODULES: ModuleKey[] = MODULES.map(m => m.key)
 
-export function getModulesByCategory(): Record<ModuleCategory, ModuleDef[]> {
+/**
+ * The modules that apply to a given airport_type — USAF-only modules
+ * (SCN, AMTR, ACSI) are dropped on civilian bases and civilian-only
+ * Part 139 modules (SMS, AEP, §139.303 Training, Field Conditions, WHMP)
+ * are dropped on USAF bases. Passing null/undefined returns all modules
+ * (fail open). Use to scope the Base Configuration module selector and
+ * its presets so each base only sees relevant modules.
+ */
+export function modulesForAirport(airportType?: AirportType | null): ModuleDef[] {
+  return MODULES.filter(m => moduleAppliesToAirport(m.key, airportType))
+}
+
+export function getModulesByCategory(
+  airportType?: AirportType | null,
+): Record<ModuleCategory, ModuleDef[]> {
   const out: Record<ModuleCategory, ModuleDef[]> = {
     'core-ops': [],
     emergency: [],
     compliance: [],
     optional: [],
   }
-  for (const mod of MODULES) out[mod.category].push(mod)
+  for (const mod of MODULES) {
+    if (!moduleAppliesToAirport(mod.key, airportType)) continue
+    out[mod.category].push(mod)
+  }
   return out
 }
 

@@ -4,6 +4,9 @@ import {
   isWizardStepEnabled,
   isStepDone,
   isModuleSetupComplete,
+  getModulesByCategory,
+  modulesForAirport,
+  moduleAppliesToAirport,
   TYPICAL_BASE_PRESET,
   type SetupProgress,
 } from '@/lib/modules-config'
@@ -160,5 +163,78 @@ describe('TYPICAL_BASE_PRESET', () => {
     expect(TYPICAL_BASE_PRESET).toContain('checks')
     expect(TYPICAL_BASE_PRESET).toContain('discrepancies')
     expect(TYPICAL_BASE_PRESET).toContain('scn')
+  })
+})
+
+// USAF-only modules (hidden on civilian bases) and the Part 139-only
+// modules (hidden on USAF bases). These lists gate the Base Configuration
+// module selector — widening either silently re-clutters the other mode's UI.
+const USAF_ONLY: string[] = ['acsi', 'scn', 'amtr']
+const PART139_ONLY: string[] = ['sms', 'training_part139', 'aep', 'field_conditions', 'whmp']
+const SHARED_SAMPLE: string[] = ['checks', 'discrepancies', 'qrc', 'wildlife']
+
+describe('moduleAppliesToAirport', () => {
+  it('USAF-only modules apply to usaf, not faa_part139', () => {
+    for (const k of USAF_ONLY) {
+      expect(moduleAppliesToAirport(k as never, 'usaf')).toBe(true)
+      expect(moduleAppliesToAirport(k as never, 'faa_part139')).toBe(false)
+    }
+  })
+
+  it('Part 139-only modules apply to faa_part139, not usaf', () => {
+    for (const k of PART139_ONLY) {
+      expect(moduleAppliesToAirport(k as never, 'faa_part139')).toBe(true)
+      expect(moduleAppliesToAirport(k as never, 'usaf')).toBe(false)
+    }
+  })
+
+  it('shared modules apply to both modes', () => {
+    for (const k of SHARED_SAMPLE) {
+      expect(moduleAppliesToAirport(k as never, 'usaf')).toBe(true)
+      expect(moduleAppliesToAirport(k as never, 'faa_part139')).toBe(true)
+    }
+  })
+
+  it('fails open when airport type is unknown', () => {
+    expect(moduleAppliesToAirport('sms' as never, null)).toBe(true)
+    expect(moduleAppliesToAirport('scn' as never, undefined)).toBe(true)
+  })
+})
+
+describe('modulesForAirport', () => {
+  it('hides Part 139-only modules on USAF bases', () => {
+    const keys = modulesForAirport('usaf').map(m => m.key)
+    for (const k of PART139_ONLY) expect(keys).not.toContain(k)
+    for (const k of USAF_ONLY) expect(keys).toContain(k)
+  })
+
+  it('hides USAF-only modules on civilian bases', () => {
+    const keys = modulesForAirport('faa_part139').map(m => m.key)
+    for (const k of USAF_ONLY) expect(keys).not.toContain(k)
+    for (const k of PART139_ONLY) expect(keys).toContain(k)
+  })
+
+  it('returns every module when airport type is unknown (fail open)', () => {
+    const keys = modulesForAirport(null).map(m => m.key)
+    for (const k of [...USAF_ONLY, ...PART139_ONLY]) expect(keys).toContain(k)
+  })
+})
+
+describe('getModulesByCategory airport gating', () => {
+  it('drops Part 139-only modules from a USAF catalog', () => {
+    const flat = Object.values(getModulesByCategory('usaf')).flat().map(m => m.key)
+    for (const k of PART139_ONLY) expect(flat).not.toContain(k)
+    expect(flat).toContain('amtr')
+  })
+
+  it('drops USAF-only modules from a civilian catalog', () => {
+    const flat = Object.values(getModulesByCategory('faa_part139')).flat().map(m => m.key)
+    for (const k of USAF_ONLY) expect(flat).not.toContain(k)
+    expect(flat).toContain('sms')
+  })
+
+  it('returns all modules with no airport type (backward compatible)', () => {
+    const flat = Object.values(getModulesByCategory()).flat().map(m => m.key)
+    for (const k of [...USAF_ONLY, ...PART139_ONLY]) expect(flat).toContain(k)
   })
 })

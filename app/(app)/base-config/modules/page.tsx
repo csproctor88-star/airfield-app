@@ -11,10 +11,9 @@ import { createClient } from '@/lib/supabase/client'
 import type { UserRole } from '@/lib/supabase/types'
 import {
   MODULES,
-  TYPICAL_BASE_PRESET,
-  ALL_TOGGLEABLE_MODULES,
   CATEGORY_LABELS,
   getModulesByCategory,
+  modulesForAirport,
   type ModuleKey,
   type ModuleCategory,
 } from '@/lib/modules-config'
@@ -58,7 +57,17 @@ export default function ModuleSelectorPage() {
       })
   }, [installationId])
 
-  const grouped = useMemo(() => getModulesByCategory(), [])
+  // Gate the catalog by the base's airport type — USAF bases don't see
+  // Part 139-only modules (SMS, AEP, §139.303 Training, Field Conditions,
+  // WHMP) and civilian bases don't see USAF-only modules (SCN, AMTR, ACSI).
+  const airportType = currentInstallation?.airport_type ?? null
+  const grouped = useMemo(() => getModulesByCategory(airportType), [airportType])
+  const visibleModules = useMemo(() => modulesForAirport(airportType), [airportType])
+  const recommendedPreset = useMemo(
+    () => visibleModules.filter(m => m.defaultEnabled).map(m => m.key),
+    [visibleModules],
+  )
+  const allVisiblePreset = useMemo(() => visibleModules.map(m => m.key), [visibleModules])
 
   const lockInfo = useMemo(() => {
     const map = new Map<ModuleKey, string[]>()
@@ -136,6 +145,7 @@ export default function ModuleSelectorPage() {
   }
 
   const selectedCount = selected.size
+  const visibleSelectedCount = visibleModules.filter(m => selected.has(m.key)).length
   const changedFromCurrent =
     selectedCount !== enabledModules.length ||
     enabledModules.some(k => !selected.has(k as ModuleKey))
@@ -162,7 +172,7 @@ export default function ModuleSelectorPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         <button
           type="button"
-          onClick={() => applyPreset(TYPICAL_BASE_PRESET)}
+          onClick={() => applyPreset(recommendedPreset)}
           style={{
             padding: '10px 16px', borderRadius: 'var(--radius-base)',
             border: '1px solid var(--color-cyan)', background: 'rgba(34,211,238,0.12)',
@@ -174,7 +184,7 @@ export default function ModuleSelectorPage() {
         </button>
         <button
           type="button"
-          onClick={() => applyPreset(ALL_TOGGLEABLE_MODULES)}
+          onClick={() => applyPreset(allVisiblePreset)}
           style={{
             padding: '10px 16px', borderRadius: 'var(--radius-base)',
             border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
@@ -198,7 +208,7 @@ export default function ModuleSelectorPage() {
         </button>
         <div style={{ flex: 1 }} />
         <div style={{ alignSelf: 'center', color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
-          {selectedCount} of {MODULES.length} selected
+          {visibleSelectedCount} of {visibleModules.length} selected
         </div>
       </div>
 
