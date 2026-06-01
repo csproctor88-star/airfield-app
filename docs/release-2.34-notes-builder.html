@@ -318,6 +318,12 @@ const SECTIONS = [
     {id:'help-refresh', aud:'usaf', def:false, tags:['usaf'],
       text:"In-app Glidepath training guide moved to Help & Training with 64 updated screenshots and refreshed copy across all 27 module guides.",
       ref:"1932c32, 7012092, baed8bd"},
+    {id:'help-coverage', aud:'usaf', def:true, tags:['usaf','civ'],
+      text:"In-app Help & Training now covers every module — new step-by-step guides, with screenshots, for Training Records (AMTR), Records Export, and the FAA Part 139 modules (Safety Management System, §139.303 Training, Airport Emergency Plan, Field Conditions / TALPA, and the Wildlife Hazard Management Plan). The guide list automatically shows only the modules that apply to your airport type.",
+      ref:"this session · lib/training/modules.ts + /help airport-type gating"},
+    {id:'help-139-banner', aud:'civ', def:false, tags:['civ','fix'],
+      text:"Removed a leftover \"build in progress\" banner from the §139.303 Training page so the module no longer reads as unfinished.",
+      ref:"this session"},
     {id:'ios-pwa', aud:'usaf', def:false, tags:['usaf','fix'],
       text:"iOS app polish — correct safe-area handling on the header and bottom navigation, and the native photo picker.",
       ref:"0833999, 9a03565"},
@@ -335,10 +341,10 @@ const SECTIONS = [
       ref:"fc56fb7"},
   ]},
 
-  { id:'design', title:'New "Refreshed" App Design (opt-in preview)', tag:'USAF + Civilian · opt-in', items:[
-    {id:'design-v2', aud:'usaf', def:false, head:true, tags:['usaf'],
-      text:"A new Refreshed look you can opt into (Settings → Appearance) — a readability and hierarchy overhaul: a distinctive type pairing with a monospace face for operational data (Zulu time, ICAO, counts), clearer headings, calmer neutral chrome so the green/amber/red status colors stand out, brighter dark-mode text, and a warm cream light theme instead of stark white. Classic stays the default; flip to Refreshed to try it. (Consider holding the announcement until it's promoted to default.)",
-      ref:"a9f1f33 + Phase 2 sweep · data-design=v2"},
+  { id:'design', title:'Refreshed App Design', tag:'USAF + Civilian', items:[
+    {id:'design-v2', aud:'usaf', def:true, head:true, tags:['usaf','civ'],
+      text:"Glidepath has a refreshed look across the whole app — a readability and hierarchy overhaul with a distinctive type pairing and a monospace face for operational data (Zulu time, ICAO, counts), clearer headings, calmer neutral chrome so the green/amber/red status colors stand out, brighter dark-mode text, and a warm cream light theme in place of stark white. It is now the standard design in light and dark; the old look has been retired.",
+      ref:"a9f1f33 + Phase 2 sweep · now default (Classic removed)"},
   ]},
 
   { id:'security', title:'Security & Reliability (mostly under-the-hood)', tag:'Internal — usually not announced', items:[
