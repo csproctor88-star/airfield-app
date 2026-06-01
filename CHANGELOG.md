@@ -2,84 +2,60 @@
 
 All notable changes to Glidepath.
 
-## [Unreleased]
+## [2.34.0] — 2026-06-01
 
-### Added — Records Export (`/settings/exports`)
-- **One-click records export** for Air Force records disposition + the "leaving Glidepath" survivability case. Produces a single organized ZIP — `glidepath-records-<ICAO>-<range|all-time>.zip` — generated entirely in the browser (record data never leaves the device). Permission-gated on `exports:read` (sys_admin / base_admin / airfield_manager / NAMO); surfaced via a RECORDS EXPORT section on the Settings page. Migration `2026061900` registers `exports:read` / `exports:write`.
-- **Three output modes** picked per export — All time, Date range (with This month / Last month / This quarter / This FY quick-picks), and the period only scopes which records are included.
-- **Five output kinds**, each toggleable: PDF documents, Excel workbooks, Photos, Interactive viewer, Raw data (JSON).
-- **PDF documents** (`documents/`) cover every module via its strategy: uniform record tables (Discrepancies, Checks, Obstructions, Personnel, Wildlife combined sightings+strikes, Daily Reviews); rich bespoke generators (Events Log AF 3616-style, PPR cards + coordination, SCN per-month matrix); civilian multi-kind (SMS ×5, AEP ×4); per-record (Waivers, ACSI, §139.303 Training transcripts). Inspections render as full report forms — one per inspection, checklist grouped by section with colored PASS / FAIL / N/A results. AMTR is excluded (its own export covers it).
-- **Excel workbooks** (`spreadsheets/`) — one per tabular module plus a master workbook; each carries the module's full field set (the PDFs show a compact view).
-- **Photos** (`photos/<Module>/<record>/<date>_<file>.jpg`) — windowed download into an organized tree with a `photos-index.csv` provenance manifest; each photo retries 3× and persistent failures are logged on the cover/README, never aborting the export. When PDF + Photos are both selected, ACSI and Waiver PDFs also embed their images inline.
-- **Interactive offline viewer** — a single self-contained `viewer/index.html` (CSS + data + app all inlined) that opens from `file://` with no server, internet, or login: searchable, sortable browse tables per module, a Documents group linking the PDF folders, a print view, and a mobile layout. Travels on a USB stick; opens on a phone.
-- **Audit cover + integrity** — `00-START-HERE.pdf` and `00-README.txt` with per-module record/file counts, gap notes, photo-failure list, and a SHA-256 of every file; `manifest.json` ships the same data so a recipient can re-hash and verify nothing was altered.
-- **Tests** — `export-period`, `export-modules`, `export-file`, `export-records-table-pdf`, `export-pdf`, `export-table-specs` (+ wildlife/daily), `export-rich-modules`, `export-civilian-specs`, `export-record-modules`, `export-inspection-pdf`, `export-packager`, `run-export`, `export-photos`, `export-viewer` — pure planning/format logic unit-tested; browser-only generation (jspdf/exceljs/jszip, photo fetch, viewer open) verified on the deploy.
+_Glidepath 2.34 is live!_
 
-### Added — FAA Part 139 Phase 3e: Wildlife Hazard Management Plan module
-- **`/wildlife/whmp` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — Annual Wildlife Hazard Management Plan per 14 CFR §139.337. One row per (base, assessment_year); in-year revisions supersede via `replaced_by_id` chain (mirrors `aep_plans` + `sms_policies`). Reuses existing `wildlife:read` / `wildlife:write` permission keys.
-- **Active assessment card** — green-bordered card with FAA acceptance metadata, AE annual sign-off chip (with annual review countdown — green > 60d, amber ≤ 60d, red overdue per §139.337(c)), uploaded WHMP PDF link, hazardous-species rows (left-rule colored by hazard level — low/medium/high/severe), mitigation summary, and findings list.
-- **"+ New Year" modal** — single-screen form with Year + Performed Date + External performer + FAA acceptance + PDF upload + repeatable hazardous-species inline editors (species + hazard level dropdown + attractants + mitigations) + Mitigation Summary + repeatable Findings inline editors (narrative + category + recommended action) + Notes.
-- **"Amend / Supersede"** — pre-fills the modal from the active year; saves a new row and back-fills `replaced_by_id` on the prior. Prior years collapsible history at the bottom of the page.
-- **"Promote to SMS Hazard" deep-link** — each finding has a button that opens `/sms/hazards/new` with `prefill_title`, `prefill_description`, `prefill_source=whmp`, `prefill_source_ref_id` query params. After creating the SMS hazard, operator returns to WHMP and clicks "Mark Linked" to back-fill `sms_hazard_id` on the finding (manual paste of the hazard code).
-- **AE annual review** — `recordWhmpAnnualReview` stamps `last_reviewed_at` + `reviewed_by_user_id`; if `ae_signed_at` is null also stamps the initial sign-off (mirrors `aep.recordAnnualReview`).
-- **Schema** — `wildlife_hazard_assessments` with JSONB hazardous_species + findings (typed at the application layer); matrix-helper RLS reusing `wildlife:*` keys (4 policies on the table + 1 storage policy on `whmp/<base>/...` path prefix). Migration `2026061000`.
-- **Sidebar**: "Wildlife / WHMP" added to the Operations section right after "Wildlife / BASH" so it's contextual to the data feed that narrates the assessment.
-- **Tests** (`tests/whmp.test.ts`, +8 cases): `nextWhmpReviewDue` thresholds (never / current / due_soon / overdue / >60d boundary) reusing `daysBetween` from `aep.ts`; `buildSmsHazardPromoteUrl` query-param encoding for title / description / source / source-ref / special-character / URLSearchParams round-trip.
+### AMTR — Airfield Management Training Record
+- Airfield Management Training Record (AMTR) — a fully digital AF 1098, 623A, JQS, and DAF 803 training record with tracking, sign-off, and reporting, replacing the standalone AFFSA training-record workbook.
+- Auto-623A documentation — completing a 1098 task drafts the matching AF 623A entry automatically, through a multi-stage trainee → trainer → certifier sign-off flow.
+- Twelve DAFMAN comment templates — one-click standardized 623A narrative entries keep documentation language consistent and compliant.
+- Per-year 1098 catalog with archive — open and lock training years explicitly; prior years are preserved read-only with a clear archived treatment.
+- Import and export round-trip with the standard HAF/AFFSA Excel training record — transcribe an existing record into Glidepath and export back to the official format.
+- Transcribe — bulk-capture handwritten initials and dates from an imported record straight into the live form, across every form tab.
+- Files tab — attach supporting documents to a training record with title and date metadata and a PII/CUI handling notice.
+- Monthly training-record self-inspections built into AMTR. Automatically detects discrepancies using the AFFSA monthly records inspection checklist (missing signatures, overdue training, missing initials, etc.).
+- Shared, editable catalogs — Qualifications, Skill Levels, SEIs, the standard DAF 803 task list, and 623A entry types, with one-click populate and version-aware HAF updates.
+- For instructions on importing records, visit the AMTR Training Module under Glidepath Training.
 
-**Phase 3 complete.** Phase 3a (§139.303 Training) → 3b (AEP) → 3c (Part 77 obstruction UI) → 3d (Field Conditions / TALPA) → 3e (WHMP) all shipped. Civilian Part 139 retrofit set is now feature-complete for Class III/IV airports.
+### Records Export
+- One-click Glidepath Records Export (Settings → Records Export) packages all of your airfield's records into a single organized ZIP for Air Force records disposition or migration — generated entirely in your browser, so record data never leaves the device.
 
-### Added — FAA Part 139 Phase 3d: Field Conditions / TALPA module
-- **`/field-conditions` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — TALPA Field Condition Reports per 14 CFR §139.313 and AC 150/5200-30D. Per-runway "current" card with the per-third RwyCC tuple (touchdown / midpoint / rollout), contaminant + depth + coverage detail rows, treatments, and the materialized FICON NOTAM body in a monospace box with one-click copy.
-- **RwyCC engine** (`lib/calculations/rwycc.ts`) — `deriveRwycc(contaminant, depth?, temperatureC?)` implements AC 30D Table 4-1 across all 13 single-contaminant cases (dry / wet / frost / slush / dry snow / wet snow / compacted snow / ice / ice patches / wet ice / slippery when wet / water on compacted snow / slush on ice). Compacted snow upgrades to RwyCC 4 below -15°C, drops to 2 above -3°C. Operator override per AC 30D §4.2 supported at the data layer (requires reason).
-- **FICON NOTAM text generator** (`buildFiconNotamText`) — emits the AC 30D §6 body the operator pastes into the FAA NOTAM Manager web tool: `RWY <id> <CC>/<CC>/<CC> <cov>/<cov>/<cov> PCT <contaminants>[ <depth>IN][ TRTD W/<treatments>]`. Depth uses the deepest third's value; contaminant tokens listed in TD→RO order with duplicates collapsed; treatments emitted as `TRTD W/PLOW W/SAND` etc.
-- **Append-only supersede chain** — `field_condition_reports.superseded_by_id` chain preserves history; "Issue Update" creates a new (superseding) row rather than mutating the prior. Active = `superseded_by_id IS NULL AND valid_until > NOW()`. Partial index `idx_fcr_base_runway_active` keeps the active-lookup fast.
-- **Per-third assessment table** — `field_condition_thirds` stores contaminant + depth + coverage% + rwycc + rwycc_derived + rwycc_manual_override + override_reason for each third (touchdown / midpoint / rollout); UNIQUE on (report, third). Engine derives the value at save time; operator override stamps `rwycc_manual_override=true` with a required reason.
-- **New Report modal** — single-screen form (not a wizard) with runway picker + temp/validity, per-third assessment rows (contaminant dropdown + depth + coverage + live derived RwyCC chip + override dropdown), treatment chip cluster (6 options), notes, and a live FICON preview at the bottom. Saves with auto-copy of the FICON text to clipboard.
-- **Permissions** — `field_conditions:{read,write}` keys + role grants on AE (read), ops_supervisor / arff_chief / amops / airfield_manager / base_admin / sys_admin (full), sms_manager (read for future hazard correlation).
-- **Matrix-helper RLS** on both new tables with EXISTS parent-gate on `field_condition_thirds` (mirrors `aep_comms_check_results` pattern).
-- **Tests** (`tests/rwycc.test.ts`, +34 cases): every contaminant + depth + temperature threshold per Table 4-1; FICON text generator covering uniform / mixed-contaminant / treatment-suffix / depth-formatting (drop trailing zeros) / out-of-order-sorting / "none" treatment skip; display helper smoke.
-- **Sidebar**: "Field Conditions" added to the Operations section between Personnel on Airfield and the next group. `CloudSnow` lucide icon registered in `sidebar-nav.tsx` ICON_MAP.
+### FAA Part 139 — Civilian Commercial Airport Mode
+- Glidepath now runs civilian FAA Part 139 commercial airports as well as USAF airfields — airport type is chosen at base setup, and civilian bases automatically see Part 139 modules and FAA terminology.
+- Safety Management System (SMS) module — 14 CFR §139.401 / AC 150/5200-37A hazard register, risk matrix, and safety performance indicators with automated monthly measurement.
+- §139.303 Training module — 13 seeded topics, per-user records with automatic expiry and renewal chains, AAAE/ACE certificates, a compliance matrix, and a 30-day expiry email digest.
+- Airport Emergency Plan (AEP) module — versioned plan with FAA acceptance tracking, response-agency roster, monthly communications checks, and triennial/annual drill program logging.
+- Part 77 obstruction surfaces — FAA §77.19 imaginary-surface evaluation across all six approach types alongside the existing UFC 3-260-01 engine, with FAA Form 7460-1 waiver guidance.
+- Field Conditions / TALPA — per-runway RwyCC assessment per AC 150/5200-30D with an automatic FICON NOTAM generator, ready to paste into FAA NOTAM Manager.
+- Wildlife Hazard Management Plan (WHMP) — annual §139.337 assessment with an AE sign-off countdown, hazardous-species register, and one-click promotion of findings into the SMS hazard register.
 
-### Added — FAA Part 139 Phase 3c: Part 77 obstruction surface UI
-- **Per-approach-type Part 77 engine** — `PART77_SURFACES` extracted into `PART77_DIMENSIONS`, a `Record<FaaApproachType, Part77SurfaceSet>` with all 6 §77.19 dimension variants (utility/non-utility × visual/non-precision/precision plus a ¾-mi visibility split). `getPart77Surfaces(approachType)` returns the right per-type set; old `PART77_SURFACES` re-exported as a backward-compat alias for the default `non_utility_non_precision_low` set.
-- **`evaluateObstructionPart77()`** — new evaluator with 5-surface Part 77 path (primary / approach / transitional / horizontal / conical — no UFC-only outer-horizontal / clear-zone / APZ I-II). Recomputes `withinPrimary` from Part 77 halfWidth (geometry helper hardcodes UFC's 1,000 ft). Encodes precision approach's two-segment slope (50:1 first 10 kft + 40:1 next 40 kft) via `secondSegmentSlope` + `segmentLength`. Emits FAA-flavored waiver guidance (Form 7460-1, FAA Regional Office coordination, AEP cross-link, SMS hazard register).
-- **`evaluateObstructionAllRunways()`** extended with `surfaceSet` arg + per-runway `approachType` via `RunwayEvalInput`. Dispatches to UFC or Part 77 evaluator per runway. Existing USAF callers compile unchanged (defaults preserve behavior).
-- **`base_runways.faa_approach_type`** (6-value CHECK enum per §77.19) + **`base_runways.faa_approach_category`** (A–E aircraft landing speed per §1.1, informational only). Migration `2026060800`.
-- **Runway editor** (`/base-config/setup` → Runways) gains two civilian-only dropdowns (gated on `isCivilian()`). Inserts between basic-info row and End 1 fields.
-- **Obstruction evaluation form** (`/obstructions`) gains a Surface Set picker (UFC 3-260-01 / FAA Part 77) defaulting to `getSurfaceSet(base)`. Warning chips for: any runway without a configured approach type (defaults to non_utility_non_precision_low), or USAF base with Part 77 selected (what-if mode).
-- **Obstruction detail page** (`/obstructions/[id]`) gains a collapsible "Surface Set Reference" legend listing every surface in the active set with color swatch + name + description + §77.19 / UFC reference.
-- **Spec correction**: the original Phase 1 `PART77_SURFACES.primary.halfWidth = 500` was actually the §77.19 precision-instrument width (1,000 ft total), not the non-precision default the comment claimed. The new per-type map encodes spec-correct numbers across all 6 categories.
-- **Tests**: `tests/part77-surfaces.test.ts` expanded from 11 to 30 cases (per-type primary widths, approach slopes / lengths / outer widths, horizontal radii, conical + transitional constants, dispatcher behavior, precision two-segment encoding). NEW `tests/obstruction-evaluation.test.ts` (14 cases) pinning UFC regression + Part 77 per-type behavior + multi-runway mixed-approach-type dispatch on a synthetic east-west runway fixture.
+### PPR Coordination
+- PPR multi-agency coordination — coordinating agencies are notified by email automatically on approve, deny, and cancel, and can be added to a request after it is created.
+- Keep coordinating agencies current on PPR changes — editing a PPR after agencies have coordinated prompts you to send them the updated details (what changed, plus the full current request), so they always have the latest. Informational only; it doesn't reset coordination.
 
-### Added — FAA Part 139 Phase 3b: Airport Emergency Plan module
-- **`/aep` module** (civilian Part 139 only via `appliesTo: ['faa_part139']`) — AE dashboard with four status cards (plan currency, full-scale drill due, this month's comms check, response-agency count), four sub-pages, and one-click PDF exports.
-- **`/aep/plan`** — versioned plan document with FAA acceptance metadata, AE annual sign-off, supersede chain (`replaced_by_id`), and history table. Plan PDFs upload to `aep-plans/<base>/<plan>/...` in the photos bucket via a separate INSERT policy gated on `aep:write`.
-- **`/aep/agencies`** — response-agency roster grouped by role (ARFF / mutual-aid fire / EMS / police / hospital / ATC / FAA RO / NTSB / FBI / public works / utility / other). Primary + backup contact (name / phone / radio) + notes per agency. Within-role reorder + soft-delete (history-preserving inactive toggle).
-- **`/aep/comms-checks`** — monthly response-agency comms verification per AC 150/5200-31C §2.3. Forks `app/(app)/scn/page.tsx` with monthly cadence + additional `not_reached` status + 12-month history grouping. Each completion writes an `aep_comms` Events Log entry.
-- **`/aep/drills`** — drill program log per §139.325(h) (triennial full-scale) and §139.325(j) (annual tabletop/functional). Schedule modal with date + type + scenario + agency multi-select; complete modal with per-participant attendance + after-action notes + findings + AAR PDF upload to `aep-drills/<base>/<drill>/...`.
-- **`aepagencies` wizard step** at base-setup slot 11 (shares the slot with `scnagencies`; mutually exclusive via `appliesTo`). Quick-entry form with name + role + primary phone; deep-link to `/aep/agencies` for richer editing.
-- **SMS SPI feed** — `_sms_seed_default_spis` extended with `SPI-005 (AEP Full-Scale Drill Overdue)` and `SPI-006 (AEP Comms Checks last 90 days)`. `_sms_compute_spi_measurements` handles both new computation keys. Existing pg_cron at 02:30 UTC picks them up automatically — no new infrastructure needed. Backfill DO-block seeds the SPIs on every civilian base.
-- **PDF generators** (`lib/aep-pdf.ts`) — plan document, year-scoped drill log with per-drill detail blocks, monthly comms-check agency × date matrix with status-tinted cells.
-- **Pure-function tests** (`tests/aep.test.ts`, +23 cases) — `daysBetween` calendar-day truncation; `nextFullScaleDue` covering never / current / due_soon / overdue / 36-month boundary; `nextAnnualReviewDue` thresholds; `summarizeCommsCheck` Events Log format; PDF smoke (empty + populated) for all three generators.
-- 7 migrations: `2026060700_aep_plans`, `..._aep_response_agencies`, `..._aep_drills`, `..._aep_comms_checks`, `..._aep_rls` (matrix-helper policies on all 5 tables, with EXISTS parent-gate on `aep_comms_check_results`), `..._aep_storage_rls`, `..._aep_sms_spi_feed`.
+### .mil Email Deliverability
+- Email deliverability hardened for .mil inboxes — invite, signup, password-reset, and PPR emails were reworked to clear Microsoft Defender filtering, using plain links and PDF attachments instead of tracked deep-link buttons.
 
-### Added — FAA Part 139 Phase 3a: §139.303 Training module
-- **`/training` module** (civilian Part 139 only) — §139.303 training records per 14 CFR Part 139: 13 seeded topics (movement-area familiarization, NOTAM issuance, ARFF coord, public protection, wildlife, fueling supervision, AEP, ground vehicle, self-inspection, security ID, hazmat, sign/marking/lighting, snow & ice control), per-user records with stored expiry (set by `_training_set_expiry` trigger at INSERT from the topic's current `recurrent_frequency_months`), explicit renewal chains, AAAE-CM / ACE-Ops / ACE-Comm / ACE-Sec / ACE-WHC certificates.
-- **`/training/topics`** lists the 13 system topics + base-custom; **`/training/roster`** shows per-user status bulk-fetched; **`/training/[userId]`** is the per-user detail with Records / Certificates / History tabs + Log Training modal with evidence upload + Renewal chain link; **`/training/compliance`** is the users × topics matrix with sticky-left member column and sticky-top topic header, CSV export, drill modal.
-- **30-day expiry digest cron** — Vercel cron daily at 13:00 UTC hits `/api/training-expiry-digest`, dedupes via `training_digest_log`, sends Resend email to `bases.default_pdf_email`. Requires `CRON_SECRET` env var.
-- **Per-user PDF transcript** (`lib/training-part139-pdf.ts`) with status-tinted cells + chain history per topic + AAAE-ACE certificates table.
-- 7 migrations: `2026053000`–`2026053006` covering topics, records (+ trigger), renewals, certificates, RLS, role grants, storage RLS, and the per-day dedup table.
+### Parking Plans
+- Parking plan PDF capture rebuilt — reliable satellite-imagery export with a WYSIWYG capture frame, multi-apron support, rotation, and a heading slider.
+- Edit a parking plan's name and description after creation, and toggle aircraft labels on the diagram.
 
-### Changed — Help/Training rename
-- The previous `/training` route (in-app Glidepath help with 27 module deep-dives) moved to `/help` so the §139.303 Training module could take the `/training` slug. `loadSidebarConfig` has a one-time href rewrite shim to migrate saved user sidebar configs inline on next load.
+### QRC — Quick Reaction Checklists
+- Build Quick Reaction Checklists from scratch with a full step-type editor ("QRC Templates" is now simply "QRCs").
+- Per-user QRC reviews — monthly or quarterly per base, with a consolidated compliance PDF.
 
-### Fixed — Sidebar icon registry
-- `sidebar-nav.tsx` was referencing `ShieldAlert` / `TrendingUp` / `MessageSquareWarning` / `GitBranch` from Phase 2 SMS without registering them in `ICON_MAP` — all silently fell back to the `Home` icon. Added them plus `Siren` for AEP Drills, and the missing GROUP_ICONS for the SMS / Training / AEP sections.
+### Across the App
+- Events Log is no longer capped at 500 entries — infinite scroll, server-side search, and a full PDF export across the whole log.
+- Per-base satellite provider toggle for OCONUS bases where Google imagery is thin.
+- In-app Help & Training now covers every module — new step-by-step guides, with screenshots, for Training Records (AMTR), Records Export, and the FAA Part 139 modules (Safety Management System, §139.303 Training, Airport Emergency Plan, Field Conditions / TALPA, and the Wildlife Hazard Management Plan). The guide list automatically shows only the modules that apply to your airport type.
 
-### Planned
-- Per-page Help / launcher for opt-in module tours (Stage 3 — registry already supports `scope: 'page'`)
-- Screenshot capture for the rebuilt Glidepath Training modules (placeholders in place)
-- IAW Compliance citation audit in `lib/base-setup-guide.ts` (working file `docs/base-setup-guide-review.md`)
+### Navigation & Layout
+- Cleaner navigation — the sidebar and mobile menu are reorganized into four focused sections (Daily Operations, Airfield Management, Reference, Admin) with the secondary sections collapsed by default, so the resting view is short and scannable.
+- Training Records (AMTR) is now in the navigation — previously reachable only by direct link, it's surfaced for Airfield Managers, NAMO, AMOPS, and Base Admins.
+
+### Refreshed App Design
+- A new Refreshed look. Readability and hierarchy overhaul: a distinctive type pairing with a monospace face for operational data (Zulu time, ICAO, counts), clearer headings, calmer neutral chrome so the green/amber/red status colors stand out, brighter dark-mode text, and a warm cream light theme instead of stark white.
 
 ---
 

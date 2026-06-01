@@ -128,16 +128,41 @@ export function WhatsNewModal({ notes, onDismiss }: WhatsNewModalProps) {
               }}>
                 {n.headline}
               </div>
-              <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {n.highlights.map((h, i) => (
-                  <li
-                    key={i}
-                    style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.55 }}
-                  >
-                    {h}
-                  </li>
-                ))}
-              </ul>
+              {n.sections ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {n.sections.map((sec, si) => (
+                    <div key={si}>
+                      <div style={{
+                        fontSize: 'var(--fs-2xs)', fontWeight: 800, color: 'var(--color-cyan)',
+                        textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                      }}>
+                        {sec.title}
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {sec.items.map((it, ii) => (
+                          <li
+                            key={ii}
+                            style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.55 }}
+                          >
+                            {it}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(n.highlights ?? []).map((h, i) => (
+                    <li
+                      key={i}
+                      style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.55 }}
+                    >
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>

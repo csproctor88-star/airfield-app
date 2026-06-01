@@ -8,14 +8,108 @@
  *  Each `highlights` bullet is plain prose — no Markdown. Keep bullets
  *  to one sentence so the modal stays scannable on mobile.
  */
+export type ReleaseSection = { title: string; items: string[] }
+
 export type ReleaseNote = {
   version: string       // "2.32.0" — compared lexicographically against profiles.last_seen_release_version
   date: string          // "2026-04-21" (Zulu)
   headline: string      // one-line tagline
-  highlights: string[]  // 3–8 bullets
+  // Provide ONE of the following. `highlights` is the legacy flat list (older
+  // entries); `sections` groups bullets under headers so a large release reads
+  // as scannable groups in the What's New modal instead of one long list.
+  highlights?: string[]
+  sections?: ReleaseSection[]
 }
 
 export const RELEASE_NOTES: ReleaseNote[] = [
+  {
+    version: '2.34.0',
+    date: '2026-06-01',
+    headline: 'Glidepath 2.34 is live!',
+    sections: [
+      {
+        title: 'AMTR — Airfield Management Training Record',
+        items: [
+          'A fully digital AF 1098, 623A, JQS, and DAF 803 training record with tracking, sign-off, and reporting, replacing the standalone AFFSA training-record workbook.',
+          'Auto-623A documentation — completing a 1098 task drafts the matching AF 623A entry automatically, through a multi-stage trainee → trainer → certifier sign-off flow.',
+          'Twelve DAFMAN comment templates — one-click standardized 623A narrative entries keep documentation language consistent and compliant.',
+          'Per-year 1098 catalog with archive — open and lock training years explicitly; prior years are preserved read-only with a clear archived treatment.',
+          'Import and export round-trip with the standard HAF/AFFSA Excel training record — transcribe an existing record into Glidepath and export back to the official format.',
+          'Transcribe — bulk-capture handwritten initials and dates from an imported record straight into the live form, across every form tab.',
+          'Files tab — attach supporting documents to a training record with title and date metadata and a PII/CUI handling notice.',
+          'Monthly training-record self-inspections — automatically detect discrepancies using the AFFSA monthly records inspection checklist (missing signatures, overdue training, missing initials, etc.).',
+          'Shared, editable catalogs — Qualifications, Skill Levels, SEIs, the standard DAF 803 task list, and 623A entry types, with one-click populate and version-aware HAF updates.',
+          'For instructions on importing records, visit the AMTR guide under Glidepath Training.',
+        ],
+      },
+      {
+        title: 'Records Export',
+        items: [
+          'One-click Records Export (Settings → Records Export) packages all of your airfield\'s records into a single organized ZIP for Air Force records disposition or migration — generated entirely in your browser, so record data never leaves the device.',
+        ],
+      },
+      {
+        title: 'FAA Part 139 — Civilian Commercial Airport Mode',
+        items: [
+          'Glidepath now runs civilian FAA Part 139 commercial airports as well as USAF airfields — airport type is chosen at base setup, and civilian bases automatically see Part 139 modules and FAA terminology.',
+          'Safety Management System (SMS) — 14 CFR §139.401 / AC 150/5200-37A hazard register, risk matrix, and safety performance indicators with automated monthly measurement.',
+          '§139.303 Training — 13 seeded topics, per-user records with automatic expiry and renewal chains, AAAE/ACE certificates, a compliance matrix, and a 30-day expiry email digest.',
+          'Airport Emergency Plan (AEP) — versioned plan with FAA acceptance tracking, response-agency roster, monthly communications checks, and triennial/annual drill program logging.',
+          'Part 77 obstruction surfaces — FAA §77.19 imaginary-surface evaluation across all six approach types alongside the existing UFC 3-260-01 engine, with FAA Form 7460-1 waiver guidance.',
+          'Field Conditions / TALPA — per-runway RwyCC assessment per AC 150/5200-30D with an automatic FICON NOTAM generator, ready to paste into FAA NOTAM Manager.',
+          'Wildlife Hazard Management Plan (WHMP) — annual §139.337 assessment with an AE sign-off countdown, hazardous-species register, and one-click promotion of findings into the SMS hazard register.',
+        ],
+      },
+      {
+        title: 'PPR Coordination',
+        items: [
+          'Multi-agency coordination — coordinating agencies are notified by email automatically on approve, deny, and cancel, and can be added to a request after it is created.',
+          'Keep coordinating agencies current on changes — editing a PPR after agencies have coordinated prompts you to send them the updated details (what changed, plus the full current request). Informational only; it doesn\'t reset coordination.',
+        ],
+      },
+      {
+        title: '.mil Email Deliverability',
+        items: [
+          'Email deliverability hardened for .mil inboxes — invite, signup, password-reset, and PPR emails were reworked to clear Microsoft Defender filtering, using plain links and PDF attachments instead of tracked deep-link buttons.',
+        ],
+      },
+      {
+        title: 'Parking Plans',
+        items: [
+          'Parking plan PDF capture rebuilt — reliable satellite-imagery export with a WYSIWYG capture frame, multi-apron support, rotation, and a heading slider.',
+          'Edit a parking plan\'s name and description after creation, and toggle aircraft labels on the diagram.',
+        ],
+      },
+      {
+        title: 'QRC — Quick Reaction Checklists',
+        items: [
+          'Build Quick Reaction Checklists from scratch with a full step-type editor ("QRC Templates" is now simply "QRCs").',
+          'Per-user QRC reviews — monthly or quarterly per base, with a consolidated compliance PDF.',
+        ],
+      },
+      {
+        title: 'Across the App',
+        items: [
+          'Events Log is no longer capped at 500 entries — infinite scroll, server-side search, and a full PDF export across the whole log.',
+          'Per-base satellite provider toggle for OCONUS bases where Google imagery is thin.',
+          'In-app Help & Training now covers every module — new step-by-step guides, with screenshots, for Training Records (AMTR), Records Export, and the FAA Part 139 modules. The guide list automatically shows only the modules that apply to your airport type.',
+        ],
+      },
+      {
+        title: 'Navigation & Layout',
+        items: [
+          'Cleaner navigation — the sidebar and mobile menu are reorganized into four focused sections (Daily Operations, Airfield Management, Reference, Admin) with the secondary sections collapsed by default, so the resting view is short and scannable.',
+          'Training Records (AMTR) is now in the navigation — previously reachable only by direct link, it\'s surfaced for Airfield Managers, NAMO, AMOPS, and Base Admins.',
+        ],
+      },
+      {
+        title: 'Refreshed App Design',
+        items: [
+          'A new Refreshed look — a readability and hierarchy overhaul: a distinctive type pairing with a monospace face for operational data (Zulu time, ICAO, counts), clearer headings, calmer neutral chrome so the green/amber/red status colors stand out, brighter dark-mode text, and a warm cream light theme instead of stark white.',
+        ],
+      },
+    ],
+  },
   {
     version: '2.33.0',
     date: '2026-05-02',
