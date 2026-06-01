@@ -32,6 +32,7 @@ import {
   type PprRemark,
   type PprStatus,
 } from '@/lib/supabase/ppr'
+import { computePprChanges, type PprChange } from '@/lib/ppr-changes'
 import { fetchPprAgencies, type PprAgency } from '@/lib/supabase/ppr-agencies'
 import { fetchAgencyCoordinatorCounts } from '@/lib/supabase/ppr-agency-members'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -96,6 +97,15 @@ export default function PprPage() {
   // Create/Edit modal
   const [showModal, setShowModal] = useState(false)
   const [editingEntry, setEditingEntry] = useState<PprEntry | null>(null)
+  // "Notify coordinated agencies of this change" dialog (informational, after edit).
+  const [updateNotify, setUpdateNotify] = useState<{
+    entryId: string
+    pprNumber: string
+    changes: PprChange[]
+    agencies: { agencyId: string; agencyName: string; status: PprCoordination['status'] }[]
+    selected: Set<string>
+  } | null>(null)
+  const [sendingUpdate, setSendingUpdate] = useState(false)
   const [formDate, setFormDate] = useState(today)
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [formNotes, setFormNotes] = useState('')
@@ -540,6 +550,32 @@ export default function PprPage() {
   }
 
   // Save (create or update)
+  const handleSendUpdate = async () => {
+    if (!updateNotify) return
+    const agencyIds = Array.from(updateNotify.selected)
+    if (agencyIds.length === 0) { setUpdateNotify(null); return }
+    setSendingUpdate(true)
+    try {
+      const res = await fetch('/api/send-ppr-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: updateNotify.entryId, agencyIds, changes: updateNotify.changes }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data.error || 'Failed to send update'); return }
+      const sent = data.agencies?.sent ?? 0
+      const skipped = data.agencies?.skipped ?? 0
+      toast.success(skipped > 0
+        ? `Update sent to ${sent} agency(ies); ${skipped} had no coordinators on file`
+        : `Update sent to ${sent} agency(ies)`)
+      setUpdateNotify(null)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to send update')
+    } finally {
+      setSendingUpdate(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!installationId) return
 
@@ -579,6 +615,32 @@ export default function PprPage() {
       if (updated) {
         toast.success(agencyMessage || 'PPR updated')
         setShowModal(false)
+
+        // Offer to notify already-coordinated agencies of the change
+        // (informational — not a re-coordination). Skipped when new agencies
+        // were just added: that path is its own coordination flow.
+        if (formAgencyIds.length === 0) {
+          const changes = computePprChanges(
+            { arrival_date: editingEntry.arrival_date, column_values: editingEntry.column_values || {}, notes: editingEntry.notes },
+            { arrival_date: formDate, column_values: formValues, notes: formNotes.trim() || null },
+            columns,
+            { tz: baseTimezone },
+          )
+          const agencies = (coordsByEntry[editingEntry.id] || [])
+            .filter((c) => c.agency_id)
+            .map((c) => ({ agencyId: c.agency_id as string, agencyName: c.agency_name, status: c.status }))
+          const coordinated = agencies.filter((a) => a.status === 'concur' || a.status === 'non_concur')
+          if (changes.length > 0 && coordinated.length > 0) {
+            setUpdateNotify({
+              entryId: editingEntry.id,
+              pprNumber: editingEntry.ppr_number,
+              changes,
+              agencies,
+              selected: new Set(coordinated.map((a) => a.agencyId)),
+            })
+          }
+        }
+
         loadData()
       }
     } else {
@@ -2155,6 +2217,63 @@ export default function PprPage() {
         filename={emailPdfData?.filename || 'ppr-log.pdf'}
         defaultEmail={defaultPdfEmail}
       />
+
+      {updateNotify && (
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget && !sendingUpdate) setUpdateNotify(null) }}>
+          <div style={{ ...modalCardStyle, width: 560 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
+              Notify Coordinated Agencies
+            </div>
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 16, lineHeight: 1.5 }}>
+              PPR <span style={{ fontFamily: 'var(--font-family-mono)', fontWeight: 700, color: 'var(--color-text-2)' }}>{updateNotify.pprNumber}</span> changed.
+              Send the coordinating agencies the latest details — for their awareness, no re-coordination needed.
+            </div>
+
+            <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-3)', marginBottom: 6 }}>What changed</div>
+            <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', marginBottom: 16, background: 'var(--color-bg-inset)' }}>
+              {updateNotify.changes.map((c, i) => (
+                <div key={i} style={{ fontSize: 'var(--fs-sm)', padding: '2px 0', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{c.label}:</span>
+                  <span style={{ color: 'var(--color-text-3)' }}>{c.from || '(blank)'}</span>
+                  <span style={{ color: 'var(--color-text-4)' }}>&rarr;</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>{c.to || '(blank)'}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-text-3)', marginBottom: 6 }}>Recipients</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+              {updateNotify.agencies.map((a) => {
+                const checked = updateNotify.selected.has(a.agencyId)
+                const statusLabel = a.status === 'concur' ? 'Concurred' : a.status === 'non_concur' ? 'Non-concur' : 'Pending'
+                return (
+                  <label key={a.agencyId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: checked ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'var(--color-bg)' }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => setUpdateNotify((prev) => {
+                        if (!prev) return prev
+                        const next = new Set(prev.selected)
+                        if (next.has(a.agencyId)) next.delete(a.agencyId); else next.add(a.agencyId)
+                        return { ...prev, selected: next }
+                      })}
+                    />
+                    <span style={{ flex: 1, fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>{a.agencyName}</span>
+                    <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: a.status === 'pending' ? 'var(--color-text-4)' : 'var(--color-text-3)' }}>{statusLabel}</span>
+                  </label>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setUpdateNotify(null)} disabled={sendingUpdate} style={cancelBtnStyle}>Skip</button>
+              <button onClick={handleSendUpdate} disabled={sendingUpdate || updateNotify.selected.size === 0} style={primaryBtnStyle(!sendingUpdate && updateNotify.selected.size > 0)}>
+                {sendingUpdate ? 'Sending…' : `Send Update (${updateNotify.selected.size})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
