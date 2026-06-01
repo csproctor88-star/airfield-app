@@ -25,7 +25,11 @@ export function PageHeader({
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: 8,
+        // Wrap the actions below the title on narrow screens instead of
+        // clipping them — the title word can't shrink, so a long actions
+        // readout (e.g. "Last Check … @ 0241Z") would truncate on mobile.
+        flexWrap: 'wrap',
         marginBottom: 18,
         ...style,
       }}

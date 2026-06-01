@@ -1399,10 +1399,12 @@ html, body {
   --color-bg-elevated: #FFFDF8;   /* warm near-white for elevation pop */
   --color-bg-inset: #E8E1D2;      /* warm input well */
   --color-bg-nav: rgba(248, 244, 235, 0.97);
-  /* Warm-tan hairlines so borders sit in the cream, not cool over it. */
-  --color-border: rgba(74, 60, 35, 0.12);
-  --color-border-mid: rgba(74, 60, 35, 0.16);
-  --color-border-active: rgba(74, 60, 35, 0.26);
+  /* Warm-tan hairlines so borders sit in the cream, not cool over it.
+     Stronger than dark mode needs — cards on cream want a clearer edge
+     (full card-border treatment is a Phase 2 item). */
+  --color-border: rgba(74, 60, 35, 0.18);
+  --color-border-mid: rgba(74, 60, 35, 0.24);
+  --color-border-active: rgba(74, 60, 35, 0.34);
   --color-search-bg: #FCFAF3;
   --color-search-border: #DCD3C0;
   --color-detail-box-bg: #F3EEE1;
