@@ -8,6 +8,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { isCivilian } from '@/lib/airport-mode'
 import { EXPORT_MODULES, type ExportModule } from '@/lib/export/export-modules'
 import { resolveQuickPeriod, type ExportPeriod, type QuickPeriod } from '@/lib/export/export-period'
+import { C2imeraExportCard } from '@/components/exports/c2imera-export-card'
 
 type IncludeKey = 'pdf' | 'excel' | 'photos' | 'viewer' | 'json'
 
@@ -261,6 +262,9 @@ export default function ExportsPage() {
         Generation runs entirely in your browser — record data never leaves this device. The ZIP
         includes a START-HERE cover and a SHA-256 manifest of every file.
       </p>
+
+      {/* C2IMERA export — military bases only (USAF/ANG C2 system) */}
+      {!civilian && <C2imeraExportCard />}
     </div>
   )
 }

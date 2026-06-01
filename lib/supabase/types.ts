@@ -955,6 +955,8 @@ export type Database = {
           aoc_number: string | null
           airport_type: 'usaf' | 'faa_part139'
           arff_config: Json
+          c2imera_ppr_eta_column_id: string | null
+          c2imera_unit: string
           ce_shops: string[]
           checklist_reset_time: string
           contractor_templates: Json | null
@@ -990,6 +992,8 @@ export type Database = {
           aoc_number?: string | null
           airport_type?: 'usaf' | 'faa_part139'
           arff_config?: Json
+          c2imera_ppr_eta_column_id?: string | null
+          c2imera_unit?: string
           ce_shops?: string[]
           checklist_reset_time?: string
           contractor_templates?: Json | null
@@ -1025,6 +1029,8 @@ export type Database = {
           aoc_number?: string | null
           airport_type?: 'usaf' | 'faa_part139'
           arff_config?: Json
+          c2imera_ppr_eta_column_id?: string | null
+          c2imera_unit?: string
           ce_shops?: string[]
           checklist_reset_time?: string
           contractor_templates?: Json | null

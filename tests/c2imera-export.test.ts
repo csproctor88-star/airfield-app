@@ -1,0 +1,283 @@
+import { describe, it, expect } from 'vitest'
+import {
+  buildEventsLogSheet,
+  buildPprLogSheet,
+  buildDiscrepanciesSheet,
+  filterDiscrepanciesForC2imera,
+} from '@/lib/export/c2imera-export'
+import { formatC2imeraDateTime } from '@/lib/utils'
+import type { ActivityEntry, EntityDetails } from '@/lib/supabase/activity-queries'
+import type { PprEntry } from '@/lib/supabase/ppr'
+import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
+
+// ─── C2IMERA export ───
+// These exports feed a USAF/ANG C2IMERA import, so the column order, headers,
+// and value formats below are load-bearing. Locks them against drift.
+
+const UNIT = '127 OSS/OSAB'
+const TZ = 'America/Detroit' // Selfridge ANG Base — UTC-4 in June (EDT)
+
+function activityEntry(over: Partial<ActivityEntry>): ActivityEntry {
+  return {
+    id: 'a1',
+    action: 'created',
+    entity_type: 'discrepancy',
+    entity_id: 'e1',
+    entity_display_id: 'D-2026-AB12',
+    metadata: null,
+    created_at: '2026-06-01T14:30:00.000Z',
+    user_name: 'Doe',
+    user_rank: 'MSgt',
+    user_role: null,
+    user_edipi: null,
+    user_operating_initials: 'JD',
+    ...over,
+  }
+}
+
+function pprEntry(over: Partial<PprEntry>): PprEntry {
+  return {
+    id: 'p1',
+    base_id: 'b1',
+    ppr_number: 'JUN-001-JD',
+    arrival_date: '2026-06-01',
+    column_values: {},
+    notes: null,
+    approver_oi: null,
+    created_by: null,
+    updated_by: null,
+    created_at: '2026-05-30T00:00:00.000Z',
+    updated_at: '2026-05-30T00:00:00.000Z',
+    status: 'approved',
+    requester_name: 'Jane Pilot',
+    requester_email: null,
+    requester_phone: '555-1234',
+    triaged_by: null,
+    triaged_at: null,
+    approval_user_id: null,
+    approval_at: null,
+    denial_reason: null,
+    cancellation_reason: null,
+    public_submission: false,
+    ...over,
+  }
+}
+
+function discrepancy(over: Partial<DiscrepancyRow>): DiscrepancyRow {
+  return {
+    id: 'd1',
+    display_id: 'D-2026-AB12',
+    base_id: 'b1',
+    type: 'lighting',
+    status: 'open',
+    current_status: 'submitted_to_afm',
+    title: 'PAPI out',
+    description: 'desc',
+    location_text: 'RWY 01 approach',
+    latitude: 42.6131,
+    longitude: -82.8369,
+    assigned_shop: 'Airfield Lighting',
+    assigned_to: null,
+    reported_by: 'u1',
+    reporter: { name: 'Doe', rank: 'MSgt', operating_initials: 'JD' },
+    work_order_number: 'WO-555',
+    estimated_completion_date: '2026-06-15',
+    created_at: '2026-05-22T12:00:00.000Z',
+    updated_at: '2026-05-22T12:00:00.000Z',
+    ...over,
+  } as DiscrepancyRow
+}
+
+describe('formatC2imeraDateTime', () => {
+  it('formats a timestamp as "DD MMM YY // HHMMZ"', () => {
+    expect(formatC2imeraDateTime('2026-06-01T14:30:00.000Z')).toBe('01 JUN 26 // 1430Z')
+  })
+
+  it('zero-pads the day and uses the UTC (Zulu) calendar', () => {
+    // 04:05Z on the 9th — single-digit day padded, month uppercase
+    expect(formatC2imeraDateTime('2026-01-09T04:05:00.000Z')).toBe('09 JAN 26 // 0405Z')
+  })
+
+  it('accepts a Date instance', () => {
+    expect(formatC2imeraDateTime(new Date('2026-12-25T23:59:00.000Z'))).toBe('25 DEC 26 // 2359Z')
+  })
+})
+
+describe('buildEventsLogSheet', () => {
+  it('emits the C2IMERA columns in order with the exact headers', () => {
+    const { columns } = buildEventsLogSheet([], new Map(), UNIT)
+    expect(columns.map((c) => c.header)).toEqual([
+      'Classification',
+      'Real World or Exercise',
+      'Time (L)',
+      'Unit',
+      'Remarks',
+      'Event',
+    ])
+  })
+
+  it('fills the constant columns and maps time/unit/event', () => {
+    const { columns, rows } = buildEventsLogSheet(
+      [activityEntry({ action: 'created', entity_type: 'discrepancy', entity_display_id: 'D-2026-AB12' })],
+      new Map<string, EntityDetails>(),
+      UNIT,
+    )
+    const keyed = (r: Record<string, unknown>) =>
+      Object.fromEntries(columns.map((c) => [c.header, r[c.key]]))
+    const row = keyed(rows[0])
+    expect(row['Classification']).toBe('Unclassified')
+    expect(row['Real World or Exercise']).toBe('RW')
+    expect(row['Time (L)']).toBe('01 JUN 26 // 1430Z')
+    expect(row['Unit']).toBe('127 OSS/OSAB')
+    expect(row['Event']).toBe('Created Discrepancy D-2026-AB12')
+  })
+
+  it('uses buildDetailsString for Remarks (entity-detail enrichment)', () => {
+    const details = new Map<string, EntityDetails>([['e1', { title: 'PAPI out' } as EntityDetails]])
+    const { columns, rows } = buildEventsLogSheet(
+      [activityEntry({ entity_id: 'e1', metadata: null })],
+      details,
+      UNIT,
+    )
+    const remarksKey = columns.find((c) => c.header === 'Remarks')!.key
+    expect(rows[0][remarksKey]).toBe('PAPI OUT')
+  })
+})
+
+describe('buildPprLogSheet', () => {
+  const ETA_COL = 'eta-col-id'
+
+  it('emits the C2IMERA PPR columns in order', () => {
+    const { columns } = buildPprLogSheet([], ETA_COL, TZ)
+    expect(columns.map((c) => c.header)).toEqual([
+      'Date',
+      'POC (Name and Number)',
+      'Status',
+      'ETA (L)',
+      'PPR Number',
+    ])
+  })
+
+  it('joins POC name and number, humanizes status, and converts ETA Zulu→local', () => {
+    const { columns, rows } = buildPprLogSheet(
+      [pprEntry({ status: 'pending_amops_triage', column_values: { [ETA_COL]: '1430' } })],
+      ETA_COL,
+      TZ,
+    )
+    const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
+    expect(row['Date']).toBe('2026-06-01')
+    expect(row['POC (Name and Number)']).toBe('Jane Pilot — 555-1234')
+    expect(row['Status']).toBe('Pending AMOPS Triage')
+    // 1430Z in EDT (UTC-4) = 1030 local
+    expect(row['ETA (L)']).toBe('1030')
+    expect(row['PPR Number']).toBe('JUN-001-JD')
+  })
+
+  it('handles a POC with only a name, and a missing ETA value', () => {
+    const { columns, rows } = buildPprLogSheet(
+      [pprEntry({ requester_phone: null, column_values: {} })],
+      ETA_COL,
+      TZ,
+    )
+    const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
+    expect(row['POC (Name and Number)']).toBe('Jane Pilot')
+    expect(row['ETA (L)']).toBe('')
+  })
+
+  it('leaves ETA blank when no ETA column is configured', () => {
+    const { columns, rows } = buildPprLogSheet([pprEntry({ column_values: { x: '1200' } })], null, TZ)
+    const etaKey = columns.find((c) => c.header === 'ETA (L)')!.key
+    expect(rows[0][etaKey]).toBe('')
+  })
+})
+
+describe('buildDiscrepanciesSheet', () => {
+  const NOW = Date.parse('2026-06-01T12:00:00.000Z')
+
+  it('emits the 13 C2IMERA discrepancy columns in order', () => {
+    const { columns } = buildDiscrepanciesSheet([], UNIT, NOW)
+    expect(columns.map((c) => c.header)).toEqual([
+      'Display ID',
+      'Title',
+      'Status',
+      'Current Status',
+      'Coordinate',
+      'Location',
+      'Assigned Shop',
+      'W/O #',
+      'Days Open',
+      'ECD',
+      'Date Created',
+      'Created By',
+      'Unit',
+    ])
+  })
+
+  it('maps fields, joins coordinate, humanizes statuses, and computes Days Open', () => {
+    const { columns, rows } = buildDiscrepanciesSheet([discrepancy({})], UNIT, NOW)
+    const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
+    expect(row['Display ID']).toBe('D-2026-AB12')
+    expect(row['Title']).toBe('PAPI out')
+    expect(row['Status']).toBe('Open')
+    expect(row['Current Status']).toBe('Submitted To AFM')
+    expect(row['Coordinate']).toBe('42.6131, -82.8369')
+    expect(row['Location']).toBe('RWY 01 approach')
+    expect(row['Assigned Shop']).toBe('Airfield Lighting')
+    expect(row['W/O #']).toBe('WO-555')
+    // created 2026-05-22T12:00Z, now 2026-06-01T12:00Z = 10 days
+    expect(row['Days Open']).toBe(10)
+    expect(row['Created By']).toBe('MSgt Doe')
+    expect(row['Unit']).toBe('127 OSS/OSAB')
+  })
+
+  it('blanks coordinate when either lat or lng is null', () => {
+    const { columns, rows } = buildDiscrepanciesSheet([discrepancy({ longitude: null })], UNIT, NOW)
+    const coordKey = columns.find((c) => c.header === 'Coordinate')!.key
+    expect(rows[0][coordKey]).toBe('')
+  })
+
+  it('blanks W/O # and ECD when absent', () => {
+    const { columns, rows } = buildDiscrepanciesSheet(
+      [discrepancy({ work_order_number: null, estimated_completion_date: null })],
+      UNIT,
+      NOW,
+    )
+    const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
+    expect(row['W/O #']).toBe('')
+    expect(row['ECD']).toBe('')
+  })
+})
+
+describe('filterDiscrepanciesForC2imera', () => {
+  it('includes open discrepancies regardless of creation date', () => {
+    const old = discrepancy({ id: 'old', status: 'open', created_at: '2025-01-01T00:00:00.000Z' })
+    const out = filterDiscrepanciesForC2imera([old], '2026-06-01', '2026-06-01')
+    expect(out.map((d) => d.id)).toEqual(['old'])
+  })
+
+  it('includes closed discrepancies created within the range', () => {
+    const closedInRange = discrepancy({
+      id: 'closed',
+      status: 'completed',
+      created_at: '2026-06-01T08:00:00.000Z',
+    })
+    const out = filterDiscrepanciesForC2imera([closedInRange], '2026-06-01', '2026-06-01')
+    expect(out.map((d) => d.id)).toEqual(['closed'])
+  })
+
+  it('excludes closed discrepancies created outside the range', () => {
+    const closedOld = discrepancy({
+      id: 'closedOld',
+      status: 'completed',
+      created_at: '2026-05-01T08:00:00.000Z',
+    })
+    const out = filterDiscrepanciesForC2imera([closedOld], '2026-06-01', '2026-06-01')
+    expect(out).toEqual([])
+  })
+
+  it('dedups by id (open AND in-range yields one row)', () => {
+    const both = discrepancy({ id: 'both', status: 'open', created_at: '2026-06-01T08:00:00.000Z' })
+    const out = filterDiscrepanciesForC2imera([both], '2026-06-01', '2026-06-01')
+    expect(out.map((d) => d.id)).toEqual(['both'])
+  })
+})
