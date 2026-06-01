@@ -14,7 +14,6 @@ import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort
 import { CHECK_TYPE_CONFIG } from '@/lib/constants'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import { useDashboard } from '@/lib/dashboard-context'
-import { useDesign } from '@/lib/design-context'
 import { PageHeader } from '@/components/ui/page-header'
 import {
   ShieldAlert, AlertTriangle, HardHat, ListChecks, Zap, Radio,
@@ -27,7 +26,6 @@ import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-st
 export default function AMDashboardPage() {
   const router = useRouter()
   const { installationId, currentInstallation, defaultPdfEmail, defaultOooMessage, updateDefaultOooMessage, defaultClosedMessage, updateDefaultClosedMessage, enabledModules, setupProgress } = useInstallation()
-  const { design } = useDesign()
   const airportType = currentInstallation?.airport_type ?? null
   const { afmOutOfOffice, afmOooMessage, setAfmOutOfOffice, afmClosed, afmClosedMessage, setAfmClosed } = useDashboard()
   const { has } = usePermissions()
@@ -122,50 +120,25 @@ export default function AMDashboardPage() {
   return (
     <div className="page-container" data-tour="dashboard-header">
       {/* ===== Dashboard Header ===== */}
-      {design === 'v2' ? (
-        <PageHeader
-          eyebrow="Operations"
-          title="Dashboard"
-          actions={
-            <div style={{ textAlign: 'right' }}>
-              <div style={{
-                fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
-                textTransform: 'uppercase', letterSpacing: '0.08em',
-              }}>Last Check</div>
-              <div style={{
-                fontSize: 'var(--fs-sm)', fontWeight: 600,
-                fontFamily: 'var(--font-family-mono)', letterSpacing: '0.02em',
-                color: lastCheckType && lastCheckTime ? 'var(--color-accent)' : 'var(--color-text-3)',
-              }}>
-                {lastCheckType && lastCheckTime ? `${lastCheckType} @ ${lastCheckTime}` : '—'}
-              </div>
-            </div>
-          }
-        />
-      ) : (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 12, flexWrap: 'wrap',
-          marginBottom: 10, paddingBottom: 6,
-          borderBottom: '1px solid var(--color-border-active)',
-        }}>
-          <span style={{
-            fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-          }}>Dashboard</span>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{
-              fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
-              textTransform: 'uppercase', letterSpacing: '0.06em',
-            }}>Last Check</span>
-            <span style={{
-              fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'var(--font-family-mono)',
-              letterSpacing: '0.04em',
+      <PageHeader
+        eyebrow="Operations"
+        title="Dashboard"
+        actions={
+          <div style={{ textAlign: 'right' }}>
+            <div style={{
+              fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>Last Check</div>
+            <div style={{
+              fontSize: 'var(--fs-sm)', fontWeight: 600,
+              fontFamily: 'var(--font-family-mono)', letterSpacing: '0.02em',
               color: lastCheckType && lastCheckTime ? 'var(--color-accent)' : 'var(--color-text-3)',
-            }}>{lastCheckType && lastCheckTime ? `${lastCheckType} @ ${lastCheckTime}` : '—'}</span>
+            }}>
+              {lastCheckType && lastCheckTime ? `${lastCheckType} @ ${lastCheckTime}` : '—'}
+            </div>
           </div>
-        </div>
-      )}
+        }
+      />
 
       {/* ===== Inspection Status Strip ===== */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', justifyContent: 'center' }}>

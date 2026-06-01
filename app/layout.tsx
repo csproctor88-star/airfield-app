@@ -2,11 +2,10 @@ import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/lib/theme-context'
-import { DesignProvider } from '@/lib/design-context'
 import './globals.css'
 
-// v2 design typography pairing — loaded as CSS variables and only applied
-// when `[data-design="v2"]` is set (see globals.css). v1 keeps Outfit.
+// App typography pairing — IBM Plex Sans (UI) + IBM Plex Mono (operational
+// data), applied via `[data-design="v2"]` which is set statically on <html>.
 const plexSans = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -40,11 +39,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
-  themeColor: '#0B1120',
+  themeColor: '#0A0E16',
 }
 
 // Inline script that runs synchronously before React hydrates
-// to prevent flash of wrong theme.
+// to prevent flash of wrong theme. (data-design="v2" is static on <html>.)
 const themeScript = `
 (function(){
   try {
@@ -53,12 +52,7 @@ const themeScript = `
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : t;
     document.documentElement.setAttribute('data-theme', r);
-    var d = localStorage.getItem('glidepath_design');
-    var v2 = d !== 'v1';  // Refreshed is the default; only explicit 'v1' opts out.
-    if (v2) document.documentElement.setAttribute('data-design', 'v2');
-    var bg = r === 'light'
-      ? (v2 ? '#EFEADF' : '#F8FAFC')
-      : (v2 ? '#0A0E16' : '#0B1120');
+    var bg = r === 'light' ? '#EFEADF' : '#0A0E16';
     document.documentElement.style.background = bg;
     document.body.style.background = bg;
   } catch(e) {}
@@ -71,15 +65,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" spellCheck suppressHydrationWarning className={`${plexSans.variable} ${plexMono.variable}`} style={{ background: '#0B1120' }}>
+    <html lang="en" spellCheck suppressHydrationWarning data-design="v2" className={`${plexSans.variable} ${plexMono.variable}`} style={{ background: '#0A0E16' }}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="font-sans" style={{ minHeight: '100dvh', background: '#0B1120' }}>
+      <body className="font-sans" style={{ minHeight: '100dvh', background: '#0A0E16' }}>
         <ThemeProvider>
-          <DesignProvider>
           {children}
-          </DesignProvider>
           <Toaster
             position="top-center"
             richColors
