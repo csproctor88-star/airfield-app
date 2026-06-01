@@ -9,7 +9,7 @@
 // orchestrator (exportC2imera) does the IO: fetch → build → download three files.
 
 import type { ColumnDef } from '@/lib/excel-export'
-import { formatC2imeraDateTime, formatZuluDate } from '@/lib/utils'
+import { formatC2imeraDate, formatC2imeraDateTime, formatZuluDate } from '@/lib/utils'
 import { humanize } from '@/lib/export/export-format'
 import { formatAction, buildDetailsString } from '@/lib/activity-format'
 import type { ActivityEntry, EntityDetails } from '@/lib/supabase/activity-queries'
@@ -46,10 +46,18 @@ export function buildEventsLogSheet(
     rwExercise: 'RW',
     time: formatC2imeraDateTime(a.created_at),
     unit,
-    remarks: buildDetailsString(a, detailsMap),
+    remarks: buildRemarks(a, detailsMap),
     event: formatAction(a.action, a.entity_type, a.entity_display_id ?? undefined, a.metadata),
   }))
   return { columns, rows }
+}
+
+// Remarks = the Events Log "Details" string, blank → "N/A", with the entry's
+// operating initials appended as " (OI)".
+function buildRemarks(a: ActivityEntry, detailsMap: Map<string, EntityDetails>): string {
+  const base = buildDetailsString(a, detailsMap) || 'N/A'
+  const oi = (a.user_operating_initials || '').trim()
+  return oi ? `${base} (${oi})` : base
 }
 
 // ── PPR Log ─────────────────────────────────────────────────────────
@@ -61,7 +69,7 @@ export function buildPprLogSheet(entries: PprEntry[]): C2imeraSheet {
     { header: 'PPR Number', key: 'pprNumber', width: 18 },
   ]
   const rows = entries.map((e) => ({
-    date: e.arrival_date,
+    date: e.arrival_date ? formatC2imeraDate(e.arrival_date) : '',
     poc: joinPoc(e.requester_name, e.requester_phone),
     status: humanize(e.status),
     pprNumber: e.ppr_number,

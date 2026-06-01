@@ -202,6 +202,10 @@ deterministic. Gate the commit on `npx tsc --noEmit` **and** `npm run build` RC=
   place, dormant — no destructive migration).
 - **Discrepancies ECD uses the C2IMERA datetime** — `DD MMM YY // HHMM` (ECD is
   date-only, so the time renders `0000`), replacing the prior `formatZuluDate`.
+- **PPR "Date" uses `DD MMM YY`** — `formatC2imeraDate(arrival_date)` (new
+  date-only helper), not the raw `YYYY-MM-DD`.
+- **Events "Remarks"** — blank Details renders `N/A`, and the entry's operating
+  initials are appended as ` (OI)` (e.g. `PAPI OUT (JD)`, `N/A (JD)`).
 
 ## Open items to resolve during planning (not blocking design)
 

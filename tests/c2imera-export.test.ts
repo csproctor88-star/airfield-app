@@ -131,15 +131,23 @@ describe('buildEventsLogSheet', () => {
     expect(row['Event']).toBe('Created Discrepancy D-2026-AB12')
   })
 
-  it('uses buildDetailsString for Remarks (entity-detail enrichment)', () => {
+  const remarksOf = (entry: ActivityEntry, details = new Map<string, EntityDetails>()) => {
+    const { columns, rows } = buildEventsLogSheet([entry], details, UNIT)
+    const key = columns.find((c) => c.header === 'Remarks')!.key
+    return rows[0][key]
+  }
+
+  it('uses buildDetailsString for Remarks and appends the OI as " (OI)"', () => {
     const details = new Map<string, EntityDetails>([['e1', { title: 'PAPI out' } as EntityDetails]])
-    const { columns, rows } = buildEventsLogSheet(
-      [activityEntry({ entity_id: 'e1', metadata: null })],
-      details,
-      UNIT,
-    )
-    const remarksKey = columns.find((c) => c.header === 'Remarks')!.key
-    expect(rows[0][remarksKey]).toBe('PAPI OUT')
+    expect(remarksOf(activityEntry({ entity_id: 'e1', metadata: null, user_operating_initials: 'JD' }), details)).toBe('PAPI OUT (JD)')
+  })
+
+  it('uses "N/A" when Remarks are blank, then appends the OI', () => {
+    expect(remarksOf(activityEntry({ entity_id: null, metadata: null, user_operating_initials: 'JD' }))).toBe('N/A (JD)')
+  })
+
+  it('omits the OI suffix when there are no operating initials', () => {
+    expect(remarksOf(activityEntry({ entity_id: null, metadata: null, user_operating_initials: null }))).toBe('N/A')
   })
 })
 
@@ -157,7 +165,7 @@ describe('buildPprLogSheet', () => {
   it('joins POC name and number and humanizes status', () => {
     const { columns, rows } = buildPprLogSheet([pprEntry({ status: 'pending_amops_triage' })])
     const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
-    expect(row['Date']).toBe('2026-06-01')
+    expect(row['Date']).toBe('01 JUN 26')
     expect(row['POC (Name and Number)']).toBe('Jane Pilot — 555-1234')
     expect(row['Status']).toBe('Pending AMOPS Triage')
     expect(row['PPR Number']).toBe('JUN-001-JD')
