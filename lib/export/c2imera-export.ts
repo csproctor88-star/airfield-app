@@ -9,7 +9,7 @@
 // orchestrator (exportC2imera) does the IO: fetch → build → download three files.
 
 import type { ColumnDef } from '@/lib/excel-export'
-import { formatC2imeraDateTime, formatLocalTime, formatZuluDate } from '@/lib/utils'
+import { formatC2imeraDateTime, formatZuluDate } from '@/lib/utils'
 import { humanize } from '@/lib/export/export-format'
 import { formatAction, buildDetailsString } from '@/lib/activity-format'
 import type { ActivityEntry, EntityDetails } from '@/lib/supabase/activity-queries'
@@ -53,30 +53,19 @@ export function buildEventsLogSheet(
 }
 
 // ── PPR Log ─────────────────────────────────────────────────────────
-// ETA comes from the per-base configured PPR time column and is converted from
-// the stored Zulu wall-clock to base-local (the header is "ETA (L)").
-export function buildPprLogSheet(
-  entries: PprEntry[],
-  etaColumnId: string | null,
-  tz: string,
-): C2imeraSheet {
+export function buildPprLogSheet(entries: PprEntry[]): C2imeraSheet {
   const columns: ColumnDef[] = [
     { header: 'Date', key: 'date', width: 14 },
     { header: 'POC (Name and Number)', key: 'poc', width: 32 },
     { header: 'Status', key: 'status', width: 22 },
-    { header: 'ETA (L)', key: 'eta', width: 12 },
     { header: 'PPR Number', key: 'pprNumber', width: 18 },
   ]
-  const rows = entries.map((e) => {
-    const rawEta = etaColumnId ? e.column_values?.[etaColumnId] : ''
-    return {
-      date: e.arrival_date,
-      poc: joinPoc(e.requester_name, e.requester_phone),
-      status: humanize(e.status),
-      eta: rawEta ? formatLocalTime(rawEta, tz) : '',
-      pprNumber: e.ppr_number,
-    }
-  })
+  const rows = entries.map((e) => ({
+    date: e.arrival_date,
+    poc: joinPoc(e.requester_name, e.requester_phone),
+    status: humanize(e.status),
+    pprNumber: e.ppr_number,
+  }))
   return { columns, rows }
 }
 
@@ -118,7 +107,7 @@ export function buildDiscrepanciesSheet(
     assignedShop: d.assigned_shop || '',
     workOrder: d.work_order_number || '',
     daysOpen: Math.max(0, Math.floor((now - new Date(d.created_at).getTime()) / MS_PER_DAY)),
-    ecd: d.estimated_completion_date ? formatZuluDate(d.estimated_completion_date) : '',
+    ecd: d.estimated_completion_date ? formatC2imeraDateTime(d.estimated_completion_date) : '',
     dateCreated: formatZuluDate(d.created_at),
     createdBy: d.reporter ? `${d.reporter.rank || ''} ${d.reporter.name}`.trim() : '',
     unit,
@@ -155,13 +144,11 @@ export interface C2imeraExportOpts {
   from: string // YYYY-MM-DD (inclusive)
   to: string // YYYY-MM-DD (inclusive)
   unit: string
-  etaColumnId: string | null
-  tz: string
 }
 
-/** Fetch the three logs for the range, build three workbooks, download each. */
+/** Fetch the three logs for the range, build one 3-sheet workbook, download it. */
 export async function exportC2imera(opts: C2imeraExportOpts): Promise<{ events: number; ppr: number; discrepancies: number }> {
-  const { baseId, from, to, unit, etaColumnId, tz } = opts
+  const { baseId, from, to, unit } = opts
 
   const [{ fetchActivityLogForExport, fetchEntityDetails }, { fetchPprEntries }, { fetchDiscrepancies }] =
     await Promise.all([
@@ -183,7 +170,7 @@ export async function exportC2imera(opts: C2imeraExportOpts): Promise<{ events: 
   const detailsMap = await fetchEntityDetails(activity.data)
 
   const events = buildEventsLogSheet(activity.data, detailsMap, unit)
-  const ppr = buildPprLogSheet(pprEntries, etaColumnId, tz)
+  const ppr = buildPprLogSheet(pprEntries)
   const discrepancies = buildDiscrepanciesSheet(
     filterDiscrepanciesForC2imera(allDiscrepancies, from, to),
     unit,

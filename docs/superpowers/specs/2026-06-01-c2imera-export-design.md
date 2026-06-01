@@ -191,6 +191,18 @@ deterministic. Gate the commit on `npx tsc --noEmit` **and** `npm run build` RC=
 - `app/(app)/settings/exports/page.tsx` — render the card
 - `lib/supabase/types.ts` — add `c2imera_unit`, `c2imera_ppr_eta_column_id` to `bases` Row
 
+## Revisions (post-ship, 2026-06-01)
+
+- **Single workbook, not three files** — see Output decision above.
+- **Events "Time (L)" drops the trailing "Z"** — `formatC2imeraDateTime` now
+  returns `DD MMM YY // HHMM` (no `Z`).
+- **PPR Log drops the ETA (L) column** — `buildPprLogSheet(entries)` now emits
+  Date / POC / Status / PPR Number only. The per-base ETA-column setting + card
+  selector were removed (the `bases.c2imera_ppr_eta_column_id` column is left in
+  place, dormant — no destructive migration).
+- **Discrepancies ECD uses the C2IMERA datetime** — `DD MMM YY // HHMM` (ECD is
+  date-only, so the time renders `0000`), replacing the prior `formatZuluDate`.
+
 ## Open items to resolve during planning (not blocking design)
 
 - Confirm the exact existing PPR status + discrepancy current-status **label maps** to reuse

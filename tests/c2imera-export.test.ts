@@ -15,7 +15,6 @@ import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
 // and value formats below are load-bearing. Locks them against drift.
 
 const UNIT = '127 OSS/OSAB'
-const TZ = 'America/Detroit' // Selfridge ANG Base — UTC-4 in June (EDT)
 
 function activityEntry(over: Partial<ActivityEntry>): ActivityEntry {
   return {
@@ -89,17 +88,17 @@ function discrepancy(over: Partial<DiscrepancyRow>): DiscrepancyRow {
 }
 
 describe('formatC2imeraDateTime', () => {
-  it('formats a timestamp as "DD MMM YY // HHMMZ"', () => {
-    expect(formatC2imeraDateTime('2026-06-01T14:30:00.000Z')).toBe('01 JUN 26 // 1430Z')
+  it('formats a timestamp as "DD MMM YY // HHMM" (no trailing Z)', () => {
+    expect(formatC2imeraDateTime('2026-06-01T14:30:00.000Z')).toBe('01 JUN 26 // 1430')
   })
 
   it('zero-pads the day and uses the UTC (Zulu) calendar', () => {
     // 04:05Z on the 9th — single-digit day padded, month uppercase
-    expect(formatC2imeraDateTime('2026-01-09T04:05:00.000Z')).toBe('09 JAN 26 // 0405Z')
+    expect(formatC2imeraDateTime('2026-01-09T04:05:00.000Z')).toBe('09 JAN 26 // 0405')
   })
 
   it('accepts a Date instance', () => {
-    expect(formatC2imeraDateTime(new Date('2026-12-25T23:59:00.000Z'))).toBe('25 DEC 26 // 2359Z')
+    expect(formatC2imeraDateTime(new Date('2026-12-25T23:59:00.000Z'))).toBe('25 DEC 26 // 2359')
   })
 })
 
@@ -127,7 +126,7 @@ describe('buildEventsLogSheet', () => {
     const row = keyed(rows[0])
     expect(row['Classification']).toBe('Unclassified')
     expect(row['Real World or Exercise']).toBe('RW')
-    expect(row['Time (L)']).toBe('01 JUN 26 // 1430Z')
+    expect(row['Time (L)']).toBe('01 JUN 26 // 1430')
     expect(row['Unit']).toBe('127 OSS/OSAB')
     expect(row['Event']).toBe('Created Discrepancy D-2026-AB12')
   })
@@ -145,49 +144,29 @@ describe('buildEventsLogSheet', () => {
 })
 
 describe('buildPprLogSheet', () => {
-  const ETA_COL = 'eta-col-id'
-
-  it('emits the C2IMERA PPR columns in order', () => {
-    const { columns } = buildPprLogSheet([], ETA_COL, TZ)
+  it('emits the C2IMERA PPR columns in order (no ETA)', () => {
+    const { columns } = buildPprLogSheet([])
     expect(columns.map((c) => c.header)).toEqual([
       'Date',
       'POC (Name and Number)',
       'Status',
-      'ETA (L)',
       'PPR Number',
     ])
   })
 
-  it('joins POC name and number, humanizes status, and converts ETA Zulu→local', () => {
-    const { columns, rows } = buildPprLogSheet(
-      [pprEntry({ status: 'pending_amops_triage', column_values: { [ETA_COL]: '1430' } })],
-      ETA_COL,
-      TZ,
-    )
+  it('joins POC name and number and humanizes status', () => {
+    const { columns, rows } = buildPprLogSheet([pprEntry({ status: 'pending_amops_triage' })])
     const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
     expect(row['Date']).toBe('2026-06-01')
     expect(row['POC (Name and Number)']).toBe('Jane Pilot — 555-1234')
     expect(row['Status']).toBe('Pending AMOPS Triage')
-    // 1430Z in EDT (UTC-4) = 1030 local
-    expect(row['ETA (L)']).toBe('1030')
     expect(row['PPR Number']).toBe('JUN-001-JD')
   })
 
-  it('handles a POC with only a name, and a missing ETA value', () => {
-    const { columns, rows } = buildPprLogSheet(
-      [pprEntry({ requester_phone: null, column_values: {} })],
-      ETA_COL,
-      TZ,
-    )
-    const row = Object.fromEntries(columns.map((c) => [c.header, rows[0][c.key]]))
-    expect(row['POC (Name and Number)']).toBe('Jane Pilot')
-    expect(row['ETA (L)']).toBe('')
-  })
-
-  it('leaves ETA blank when no ETA column is configured', () => {
-    const { columns, rows } = buildPprLogSheet([pprEntry({ column_values: { x: '1200' } })], null, TZ)
-    const etaKey = columns.find((c) => c.header === 'ETA (L)')!.key
-    expect(rows[0][etaKey]).toBe('')
+  it('handles a POC with only a name', () => {
+    const { columns, rows } = buildPprLogSheet([pprEntry({ requester_phone: null })])
+    const poc = columns.find((c) => c.header === 'POC (Name and Number)')!.key
+    expect(rows[0][poc]).toBe('Jane Pilot')
   })
 })
 
@@ -226,6 +205,8 @@ describe('buildDiscrepanciesSheet', () => {
     expect(row['W/O #']).toBe('WO-555')
     // created 2026-05-22T12:00Z, now 2026-06-01T12:00Z = 10 days
     expect(row['Days Open']).toBe(10)
+    // ECD is a date-only field → midnight Zulu time component
+    expect(row['ECD']).toBe('15 JUN 26 // 0000')
     expect(row['Created By']).toBe('MSgt Doe')
     expect(row['Unit']).toBe('127 OSS/OSAB')
   })

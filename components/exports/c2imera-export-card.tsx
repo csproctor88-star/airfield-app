@@ -7,7 +7,6 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
-import { fetchPprColumns, type PprColumn } from '@/lib/supabase/ppr'
 
 const DEFAULT_UNIT = '127 OSS/OSAB'
 
@@ -24,7 +23,7 @@ export function C2imeraExportCard() {
   const { has } = usePermissions()
   const { installationId, currentInstallation } = useInstallation()
   const inst = currentInstallation as
-    | { timezone?: string | null; c2imera_unit?: string | null; c2imera_ppr_eta_column_id?: string | null }
+    | { timezone?: string | null; c2imera_unit?: string | null }
     | null
   const tz = inst?.timezone ?? 'UTC'
   const canEdit = has(PERM.BASE_SETUP_WRITE)
@@ -33,31 +32,16 @@ export function C2imeraExportCard() {
   const [from, setFrom] = useState(today)
   const [to, setTo] = useState(today)
   const [unit, setUnit] = useState(inst?.c2imera_unit || DEFAULT_UNIT)
-  const [etaColumnId, setEtaColumnId] = useState<string>(inst?.c2imera_ppr_eta_column_id || '')
-  const [timeColumns, setTimeColumns] = useState<PprColumn[]>([])
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Re-seed editable fields when the installation switches.
   useEffect(() => {
     setUnit(inst?.c2imera_unit || DEFAULT_UNIT)
-    setEtaColumnId(inst?.c2imera_ppr_eta_column_id || '')
     const t = todayInTz(inst?.timezone ?? 'UTC')
     setFrom(t)
     setTo(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [installationId])
-
-  // Load the base's PPR time columns for the ETA-source dropdown.
-  useEffect(() => {
-    if (!installationId) return
-    let live = true
-    fetchPprColumns(installationId).then((cols) => {
-      if (live) setTimeColumns(cols.filter((c) => c.column_type === 'time'))
-    })
-    return () => {
-      live = false
-    }
   }, [installationId])
 
   async function handleSaveSettings() {
@@ -68,7 +52,7 @@ export function C2imeraExportCard() {
     try {
       const { error } = await supabase
         .from('bases')
-        .update({ c2imera_unit: unit.trim() || DEFAULT_UNIT, c2imera_ppr_eta_column_id: etaColumnId || null })
+        .update({ c2imera_unit: unit.trim() || DEFAULT_UNIT })
         .eq('id', installationId)
       if (error) {
         toast.error(friendlyError(error.message))
@@ -101,8 +85,6 @@ export function C2imeraExportCard() {
         from,
         to,
         unit: unit.trim() || DEFAULT_UNIT,
-        etaColumnId: etaColumnId || null,
-        tz,
       })
       toast.success(
         `Exported C2IMERA workbook — Events ${counts.events}, PPR ${counts.ppr}, Discrepancies ${counts.discrepancies}`,
@@ -186,22 +168,6 @@ export function C2imeraExportCard() {
               aria-label="Reporting unit"
               style={{ ...inputStyle, minWidth: 180 }}
             />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={labelStyle}>PPR ETA column</span>
-            <select
-              value={etaColumnId}
-              onChange={(e) => setEtaColumnId(e.target.value)}
-              aria-label="PPR ETA column"
-              style={{ ...inputStyle, minWidth: 180 }}
-            >
-              <option value="">— None (blank ETA) —</option>
-              {timeColumns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.column_name}
-                </option>
-              ))}
-            </select>
           </div>
           <button
             type="button"

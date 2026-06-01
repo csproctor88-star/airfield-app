@@ -27,17 +27,17 @@ export function formatZuluDateShort(date: Date | string): string {
 }
 
 /**
- * Format a timestamp as "DD MMM YY // HHMMZ" (e.g. "01 JUN 26 // 1430Z") —
- * the date+time shape C2IMERA expects in its Time column on import. Day is
- * zero-padded, month is the uppercase 3-letter abbreviation, year is 2-digit,
- * and the time is Zulu (UTC). All components are UTC.
+ * Format a timestamp as "DD MMM YY // HHMM" (e.g. "01 JUN 26 // 1430") — the
+ * date+time shape C2IMERA expects on import. Day is zero-padded, month is the
+ * uppercase 3-letter abbreviation, year is 2-digit, and the time is Zulu (UTC,
+ * no trailing "Z"). All components are UTC.
  */
 export function formatC2imeraDateTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
   const day = String(d.getUTCDate()).padStart(2, '0')
   const month = d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short' }).toUpperCase()
   const year = String(d.getUTCFullYear()).slice(-2)
-  return `${day} ${month} ${year} // ${formatZuluTime(d)}Z`
+  return `${day} ${month} ${year} // ${formatZuluTime(d)}`
 }
 
 // ── Base-local time formatting ──────────────────────────────────────
