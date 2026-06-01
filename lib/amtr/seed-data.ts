@@ -11,14 +11,14 @@ import formalCourses from './data/formal-courses.json'
 import ratCourses from './data/rat-courses.json'
 import milestones from './data/milestones.json'
 import { DEFAULT_INSPECTION_CHECKLIST } from './inspection-checklist'
-import { DEFAULT_623A_ENTRY_TYPES } from './reference-data'
+import { DEFAULT_623A_ENTRY_TYPES, bundled623aCommentTemplates } from './reference-data'
 import std803 from './data/std-803.json'
 import {
   insertAmtrRows, countAmtrRows, fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, setAmtrCatalogVersion,
 } from '@/lib/supabase/amtr'
 
 // Bump when the bundled standard catalogs are updated to a new HAF release.
-export const CATALOG_VERSION = '2026.05 (1C7X1)'
+export const CATALOG_VERSION = '2026.06 (1C7X1)'
 
 const STD_803 = std803 as Record<string, unknown>[]
 
@@ -27,6 +27,8 @@ const INSPECTION_CHECKLIST = DEFAULT_INSPECTION_CHECKLIST.map((r, i) => ({
 })) as Record<string, unknown>[]
 
 const ENTRY_TYPES_623A = DEFAULT_623A_ENTRY_TYPES.map((label, i) => ({ label, sort_order: i })) as Record<string, unknown>[]
+
+const COMMENT_TEMPLATES_623A = bundled623aCommentTemplates() as unknown as Record<string, unknown>[]
 
 // Standard qualification training packages, skill levels, and SEIs.
 const QUAL_CATALOG = ([
@@ -63,6 +65,7 @@ export const SEED_COUNTS = {
   inspection: DEFAULT_INSPECTION_CHECKLIST.length,
   std803: STD_803.length,
   quals: QUAL_CATALOG.length,
+  commentTemplates: COMMENT_TEMPLATES_623A.length,
 }
 
 const withBase = (baseId: string, rows: Record<string, unknown>[]) =>
@@ -84,6 +87,7 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
     { table: 'amtr_milestone_catalog', rows: MILESTONES as unknown as Record<string, unknown>[] },
     { table: 'amtr_inspection_checklist', rows: INSPECTION_CHECKLIST },
     { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A },
+    { table: 'amtr_623a_comment_templates', rows: COMMENT_TEMPLATES_623A },
     { table: 'amtr_803_catalog', rows: STD_803 },
     { table: 'amtr_qual_catalog', rows: QUAL_CATALOG },
   ]
@@ -135,6 +139,7 @@ export const CATALOG_SYNC_META: Record<string, { key: (r: SyncRow) => string; fi
   amtr_milestone_catalog: { key: (r) => `${r.path}|${r.topic}`, fields: ['path', 'phase_label', 'sts_items', 'topic', 'sort_order'] },
   amtr_inspection_checklist: { key: (r) => `${r.kind}|${r.item_number ?? r.label}`, fields: ['kind', 'label', 'item_number', 'auto_key', 'sort_order'] },
   amtr_623a_entry_types: { key: (r) => String(r.label), fields: ['label', 'sort_order'] },
+  amtr_623a_comment_templates: { key: (r) => String(r.key), fields: ['label', 'cite', 'body', 'sort_order'] },
   amtr_803_catalog: { key: (r) => `${r.section}|${r.sts_item}`, fields: ['section', 'sts_item', 'sort_order'] },
   amtr_qual_catalog: { key: (r) => `${r.category}|${r.name}`, fields: ['category', 'name', 'sort_order'] },
 }
@@ -147,6 +152,7 @@ const BUNDLED: Record<string, SyncRow[]> = {
   amtr_milestone_catalog: MILESTONES as unknown as SyncRow[],
   amtr_inspection_checklist: INSPECTION_CHECKLIST,
   amtr_623a_entry_types: ENTRY_TYPES_623A,
+  amtr_623a_comment_templates: COMMENT_TEMPLATES_623A as unknown as SyncRow[],
   amtr_803_catalog: STD_803,
   amtr_qual_catalog: QUAL_CATALOG,
 }

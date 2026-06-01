@@ -23,7 +23,8 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, fetchAmtrByBase, fetchAmtr623aBySource, amtrSign, type AmtrMember } from '@/lib/supabase/amtr'
-import { DEFAULT_623A_ENTRY_TYPES, COMMENT_TEMPLATES } from '@/lib/amtr/reference-data'
+import { DEFAULT_623A_ENTRY_TYPES } from '@/lib/amtr/reference-data'
+import { useAmtr623aTemplates } from '@/hooks/use-amtr-623a-templates'
 import { Btn } from '@/components/amtr/ui'
 
 type Row = Record<string, unknown>
@@ -97,6 +98,7 @@ export function Auto623aDialog(props: {
   onClose: () => void
 }) {
   const { installationId, memberId, member, source, sourceTable, sourceRowId, signedSlot, signedInitials, onClose } = props
+  const commentTemplates = useAmtr623aTemplates(installationId)
 
   const [formDate, setFormDate] = useState<string>(new Date().toISOString().slice(0, 10))
   // Per-kind entry-type pre-selection so the visible Entry Type field
@@ -342,13 +344,13 @@ export function Auto623aDialog(props: {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Insert DAFMAN template:</span>
                     <select className="input-dark" disabled={saving} value="" onChange={(e) => {
-                      const t = COMMENT_TEMPLATES.find((x) => x.key === e.target.value)
+                      const t = commentTemplates.find((x) => x.key === e.target.value)
                       if (!t) return
                       setComment((cur) => cur.trim() ? `${cur.trim()}\n\n${t.text}` : t.text)
                       e.target.value = ''
                     }} style={{ fontSize: 'var(--fs-xs)', padding: '3px 6px', maxWidth: 260 }}>
                       <option value="">Pick a template…</option>
-                      {COMMENT_TEMPLATES.map((t) => (
+                      {commentTemplates.map((t) => (
                         <option key={t.key} value={t.key} title={t.cite}>{t.label}</option>
                       ))}
                     </select>

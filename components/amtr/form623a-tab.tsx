@@ -5,7 +5,8 @@ import { ChevronRight, ChevronDown, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, fetchAmtrByBase, createAmtrNotification, type AmtrMember, type AmtrRole } from '@/lib/supabase/amtr'
 import { buildSignoff } from '@/lib/amtr/notifications'
-import { DEFAULT_623A_ENTRY_TYPES, COMMENT_TEMPLATES } from '@/lib/amtr/reference-data'
+import { DEFAULT_623A_ENTRY_TYPES } from '@/lib/amtr/reference-data'
+import { useAmtr623aTemplates } from '@/hooks/use-amtr-623a-templates'
 import { canSignSlot, canReopen, AMTR_ROLE_LABELS, type SignSlot } from '@/lib/amtr/roles'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn } from '@/components/amtr/ui'
@@ -30,6 +31,7 @@ export function Form623aTab(props: {
   highlightItem: string | null; sign: SignFn; reopen: ReopenFn; onChange: () => void
 }) {
   const { entries, canWrite, canEnterData, installationId, memberId, member, myRoles, effRole, isOwn, highlightItem, sign, reopen, onChange } = props
+  const commentTemplates = useAmtr623aTemplates(installationId)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(highlightItem ? [highlightItem] : []))
@@ -156,7 +158,7 @@ export function Form623aTab(props: {
                           {mineToEdit && (
                             <select className="input-dark" value="" disabled={!mineToEdit}
                               onChange={(ev) => {
-                                const t = COMMENT_TEMPLATES.find((x) => x.key === ev.target.value)
+                                const t = commentTemplates.find((x) => x.key === ev.target.value)
                                 if (!t) return
                                 insertTemplate(t.text)
                                 ev.target.value = ''
@@ -164,7 +166,7 @@ export function Form623aTab(props: {
                               title="Insert a DAFMAN 13-204v2 comment shell"
                               style={{ marginTop: 4, fontSize: 'var(--fs-xs)', padding: '3px 6px', maxWidth: '100%' }}>
                               <option value="">Insert DAFMAN template…</option>
-                              {COMMENT_TEMPLATES.map((t) => (
+                              {commentTemplates.map((t) => (
                                 <option key={t.key} value={t.key} title={t.cite}>{t.label}</option>
                               ))}
                             </select>

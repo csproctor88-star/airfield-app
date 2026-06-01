@@ -221,6 +221,42 @@ export const COMMENT_TEMPLATES: CommentTemplate[] = [
   ]),
 ]
 
+// ── Editable comment templates (per-base catalog) ──
+// Templates are stored as { key, label, cite, body }; the inserted shell
+// recomposes the "(Label — IAW Cite)" header on top of the body, so editing the
+// citation in the admin catalog updates what lands in the 623A comment.
+
+/** Compose the inserted shell from its parts (header + blank line + body). */
+export function composeTemplateText(label: string, cite: string, body: string): string {
+  const trimmed = (body || '').replace(/^\n+/, '').replace(/\n+$/, '')
+  return `(${label} — IAW ${cite})\n\n${trimmed}`
+}
+
+export type CommentTemplateRow = {
+  key: string
+  label: string
+  cite: string
+  body: string
+  sort_order: number
+}
+
+/**
+ * The shipped COMMENT_TEMPLATES as catalog rows for seeding the per-base
+ * `amtr_623a_comment_templates` table. `body` is the labeled-blank lines with
+ * the auto-header stripped; composeTemplateText(label, cite, body) reproduces
+ * the original `text` verbatim.
+ */
+export function bundled623aCommentTemplates(): CommentTemplateRow[] {
+  return COMMENT_TEMPLATES.map((t, i) => ({
+    key: t.key,
+    label: t.label,
+    cite: t.cite,
+    // tpl() builds text as "(label — IAW cite)\n\n" + lines; drop those 2 lines.
+    body: t.text.split('\n').slice(2).join('\n'),
+    sort_order: i,
+  }))
+}
+
 export const MILESTONE_PATHS = [
   { key: 'fiveLevelQtp', label: '5-Level QTP' },
   { key: 'amosAmslPcg', label: 'AMOS/AMSL PCG' },
