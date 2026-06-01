@@ -45,6 +45,8 @@ export const ROLE_LABELS: Record<TrainingRole, string> = {
  * overview / keyFeatures / howToAccess / screenshots) so this shape is
  * a superset, not a breaking change.
  */
+export type WorkflowDef = { title: string; steps: string[] }
+
 export type ModuleRef = {
   id: string                // url slug for /help/[module-id]
   name: string
@@ -64,7 +66,7 @@ export type ModuleRef = {
   overview: string          // 2-3 paragraphs (use \n\n between paragraphs)
   keyFeatures: string[]
   howToAccess: string
-  workflow?: { title: string; steps: string[] }
+  workflow?: WorkflowDef | WorkflowDef[]   // one stepper, or several rendered in order
   screenshots?: { src: string; caption: string }[]
   faq?: { q: string; a: string }[]
   relatedModules?: string[] // ids
@@ -1190,23 +1192,41 @@ export const MODULES: ModuleRef[] = [
     ],
     howToAccess:
       'Sidebar › Airfield Management › Training Records. USAF airfields only; gated by amtr:view (Airfield Manager, NAMO, AMOPS, Base Admin, and system administrators). A member with no app permission can still view their own record after sign-in.',
-    workflow: {
-      title: 'Documenting a completed 1098 task',
-      steps: [
-        'On the member\'s 1098 tab, record the completed task — name, completion date, and any hours or score.',
-        'Sign the 1098 row as the trainer; the Auto-623A dialog opens with the task source and a comment block (insert a DAFMAN template if you want standard language).',
-        'Fill the comment and choose whether a certifier is required — signing locks the trainer block.',
-        'If a certifier is required, they reopen the row, see the trainer comment read-only, add their own, and sign the certifier block.',
-        'Optionally open the auto-generated entry on the 623A tab and add the AFM endorsement (the AFM block is always signed manually).',
-        'Check the roster — compliance KPIs and the member record reflect the new entry.',
-      ],
-    },
+    workflow: [
+      {
+        title: 'Importing an existing AFFSA Excel training record (must be done off the AFNET)',
+        steps: [
+          'Build a clean upload copy of the official AFFSA Training Record: create a new, blank workbook and copy the tabs into it one sheet at a time. Copy each sheet individually — do not just rename or re-save the original file.',
+          'Exclude the "Formal Training" sheet — leave it out of the upload copy entirely.',
+          'Important — remove all PII/CUI before uploading: strip Social Security Numbers and anything else that makes the workbook CUI. Glidepath does not store that data, and the file you upload must not contain it.',
+          'Because the AFNET does not allow uploads to non-AFNET websites, you cannot import from a government computer. Email the cleaned workbook to a non-AFNET (commercial/personal) email account.',
+          'On a personal device over commercial internet, open the member\'s record in Glidepath and use Import to upload the workbook. Glidepath maps each sheet into the matching form (Cover, Qualifications, JQS, 1098, 797, 623A, 803, RAT, Milestones).',
+          'After importing, transcribe the entries into the live record. Only the Excel upload needs this off-network path — manual transcription into the record works on the AFNET, so you can keep building the record on a government machine.',
+        ],
+      },
+      {
+        title: 'Documenting a completed 1098 task',
+        steps: [
+          'On the member\'s 1098 tab, record the completed task — name, completion date, and any hours or score.',
+          'Sign the 1098 row as the trainer; the Auto-623A dialog opens with the task source and a comment block (insert a DAFMAN template if you want standard language).',
+          'Fill the comment and choose whether a certifier is required — signing locks the trainer block.',
+          'If a certifier is required, they reopen the row, see the trainer comment read-only, add their own, and sign the certifier block.',
+          'Optionally open the auto-generated entry on the 623A tab and add the AFM endorsement (the AFM block is always signed manually).',
+          'Check the roster — compliance KPIs and the member record reflect the new entry.',
+        ],
+      },
+    ],
     screenshots: [
       { src: '/training/amtr_1.png', caption: 'Training Records roster landing — six KPI tiles (17 Members, 61% Compliance, 44 Recurring Items, 27 Complete, 3 Due Soon, 7 Overdue), a Notifications panel of upcoming-due-date alerts, and the Assigned Members table with Member, Grade, DAFSC, Status, and Currency columns (Current / overdue / due-soon badges).' },
       { src: '/training/amtr_2.png', caption: 'The 1C7X1 Catalog (78 sections · 413 tasks) open to Section 3, Contingency/Expeditionary Operations — the JQS grid groups Tasks/Knowledge & Technical References, Core Tasks (Core/Cert, Dep/SEI), OJT Task Certification Documentation (Start / Complete / TR / TRN / Cert, with Sign buttons where a date is pending), and Proficiency Codes (3/5/7/9).' },
       { src: '/training/amtr_3.png', caption: 'Unit Training Reports › 1098 & RAT tab showing DAF Form 1098 Recurring Training — a table of annual tasks (Airfield Driving, Bird/Wildlife Control, Snow and Ice Control, etc.) with Frequency, REQ count, Complete, Due Soon, Overdue, and a color-coded Compliance progress bar for each task.' },
     ],
-    faq: [],
+    faq: [
+      {
+        q: 'Can I upload my existing Excel training record from a government (AFNET) computer?',
+        a: 'No — the AFNET blocks uploads to non-AFNET websites, so the Excel import cannot be done from a government machine. Build a clean upload copy (each AFFSA sheet copied into a new workbook, the "Formal Training" sheet excluded, and all PII/CUI such as Social Security Numbers removed), email it to a non-AFNET account, and import it on a personal device over commercial internet. Manual transcription into the record still works on the AFNET — only the Excel upload needs the off-network path.',
+      },
+    ],
     relatedModules: ['users', 'regulations', 'activity'],
     readMinutes: 8,
   },

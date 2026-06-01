@@ -30,6 +30,8 @@ function ModuleView({ m }: { m: ModuleRef }) {
   const related = (m.relatedModules ?? [])
     .map(id => MODULES.find(x => x.id === id))
     .filter((x): x is ModuleRef => Boolean(x))
+  // workflow may be a single stepper or several rendered in order
+  const workflows = m.workflow ? (Array.isArray(m.workflow) ? m.workflow : [m.workflow]) : []
 
   return (
     <div className="page-container" style={{ maxWidth: 1180 }}>
@@ -352,9 +354,9 @@ function ModuleView({ m }: { m: ModuleRef }) {
         )}
       </Section>
 
-      {/* WORKFLOW — numbered stepper with connecting line */}
-      {m.workflow && (
-        <Section icon={ListOrdered} title={m.workflow.title} color={m.color}>
+      {/* WORKFLOWS — one numbered stepper per procedure */}
+      {workflows.map((wf, wi) => (
+        <Section key={wi} icon={ListOrdered} title={wf.title} color={m.color}>
           <ol style={{ margin: 0, padding: 0, listStyle: 'none', position: 'relative' }}>
             {/* Vertical connecting line */}
             <div style={{
@@ -366,14 +368,14 @@ function ModuleView({ m }: { m: ModuleRef }) {
               background: `color-mix(in srgb, ${m.color} 22%, transparent)`,
               borderRadius: 1,
             }} />
-            {m.workflow.steps.map((s, i) => (
+            {wf.steps.map((s, i) => (
               <li
                 key={i}
                 style={{
                   position: 'relative',
                   display: 'flex',
                   gap: 14,
-                  paddingBottom: i < m.workflow!.steps.length - 1 ? 12 : 0,
+                  paddingBottom: i < wf.steps.length - 1 ? 12 : 0,
                 }}
               >
                 <div style={{
@@ -408,7 +410,7 @@ function ModuleView({ m }: { m: ModuleRef }) {
             ))}
           </ol>
         </Section>
-      )}
+      ))}
 
       {/* FAQ — accordion or empty hint */}
       <Section icon={HelpCircle} title="Frequently asked" color={m.color}>
