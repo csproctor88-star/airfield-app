@@ -41,8 +41,9 @@ export default function AmtrRosterPage() {
   const load = useCallback(async () => {
     if (!installationId) return
     setLoading(true)
-    // Auto-populate the roster from the base's assigned users (skips anyone
-    // already on the roster or explicitly removed). Requires write access.
+    // Auto-populate the roster from the base's airfield-management personnel
+    // (Airfield Manager / NAMO / Base Admin / AMOPS — skips other roles, anyone
+    // already on the roster, or explicitly removed). Requires write access.
     if (canWrite) await syncAmtrRosterFromBase(installationId)
     let uid: string | null = null
     const supabase = createClient()
@@ -163,7 +164,7 @@ export default function AmtrRosterPage() {
       </div>
 
       {loading ? <LoadingState message="Loading roster…" />
-        : filtered.length === 0 ? <EmptyState message={rosterFilter || search ? 'No members match the current filter.' : 'No members yet — the roster populates automatically from the base\'s assigned users.'} icon="🎓" />
+        : filtered.length === 0 ? <EmptyState message={rosterFilter || search ? 'No members match the current filter.' : 'No members yet — the roster populates automatically from the base\'s airfield-management personnel.'} icon="🎓" />
         : (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

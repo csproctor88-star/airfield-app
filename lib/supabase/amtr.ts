@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { isAmtrRosterRole } from '@/lib/amtr/roster-roles'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // The amtr_* tables are created by migrations 2026052000–05 but are not in
@@ -164,7 +165,7 @@ export async function deleteAmtrMember(id: string): Promise<{ error: string | nu
 }
 
 // ── Roster auto-population from the base's assigned users ───
-type ProfileRow = { id: string; rank?: string | null; first_name?: string | null; last_name?: string | null; name?: string | null; email?: string | null }
+type ProfileRow = { id: string; role?: string | null; rank?: string | null; first_name?: string | null; last_name?: string | null; name?: string | null; email?: string | null }
 
 /** User IDs excluded from the training roster (don't require a record). */
 export async function fetchAmtrMemberExclusions(baseId: string): Promise<string[]> {
@@ -193,8 +194,11 @@ export async function removeAmtrMemberFromRoster(baseId: string, userId: string)
   return { error: error ? friendlyError(error.message) : null }
 }
 
-/** Create training-record members for every base user not already on the roster
- * and not excluded. Returns how many were created. Requires amtr:write. */
+/** Create training-record members for every eligible base user not already on
+ * the roster and not excluded. Eligibility is scoped to airfield-management
+ * personnel (see {@link AMTR_ROSTER_ROLES}) — read-only / CES / PPR / safety /
+ * ATC / kiosk members are skipped (they can still be added manually).
+ * Returns how many were created. Requires amtr:write. */
 export async function syncAmtrRosterFromBase(baseId: string): Promise<{ created: number; error: string | null }> {
   const supabase = db()
   if (!supabase) return { created: 0, error: null }
@@ -202,17 +206,23 @@ export async function syncAmtrRosterFromBase(baseId: string): Promise<{ created:
   const baseUserIds = ((bm ?? []) as { user_id: string }[]).map((r) => r.user_id).filter(Boolean)
   if (baseUserIds.length === 0) return { created: 0, error: null }
 
+  // Resolve each base user's Glidepath role (profiles.role) and keep only the
+  // airfield-management roles. Profiles are fetched here (rather than only for
+  // the missing set) because we need the role to decide eligibility.
+  const { data: profs } = await supabase.from('profiles').select('*').in('id', baseUserIds)
+  const profById = new Map(((profs ?? []) as ProfileRow[]).map((p) => [p.id, p]))
+  const eligibleIds = baseUserIds.filter((id) => isAmtrRosterRole(profById.get(id)?.role))
+  if (eligibleIds.length === 0) return { created: 0, error: null }
+
   const [{ data: mem }, exclusions] = await Promise.all([
     supabase.from('amtr_members').select('user_id').eq('base_id', baseId),
     fetchAmtrMemberExclusions(baseId),
   ])
   const have = new Set(((mem ?? []) as { user_id: string | null }[]).map((r) => r.user_id).filter(Boolean) as string[])
   const excluded = new Set(exclusions)
-  const missing = baseUserIds.filter((id) => !have.has(id) && !excluded.has(id))
+  const missing = eligibleIds.filter((id) => !have.has(id) && !excluded.has(id))
   if (missing.length === 0) return { created: 0, error: null }
 
-  const { data: profs } = await supabase.from('profiles').select('*').in('id', missing)
-  const profById = new Map(((profs ?? []) as ProfileRow[]).map((p) => [p.id, p]))
   const rows = missing.map((id) => {
     const p = profById.get(id)
     const last = (p?.last_name || '').trim(); const first = (p?.first_name || '').trim(); const rank = (p?.rank || '').trim()
