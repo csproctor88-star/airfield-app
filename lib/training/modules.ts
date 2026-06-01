@@ -968,7 +968,7 @@ export const MODULES: ModuleRef[] = [
       { src: '/training/regulations_2.png', caption: 'In-app PDF viewer with the regulation full text rendered (DAFMAN 13-204 Vol. 2 shown) — Back / New Tab / External actions plus PDF page controls. Opens any reference without leaving Glidepath.' },
     ],
     faq: [],
-    relatedModules: ['training'],
+    relatedModules: ['aircraft'],
     readMinutes: 4,
   },
   {
