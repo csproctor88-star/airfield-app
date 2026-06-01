@@ -57,22 +57,6 @@ export default function TrainingPage() {
           body="Users × topics grid for an at-a-glance audit-ready picture. Export CSV or PDF roster for FAA inspections."
         />
       </div>
-
-      <div style={{
-        marginTop: 24,
-        padding: 14,
-        borderRadius: 'var(--radius-md)',
-        background: 'color-mix(in srgb, var(--color-cyan) 6%, transparent)',
-        border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
-        color: 'var(--color-text-2)',
-        fontSize: 'var(--fs-sm)',
-        lineHeight: 1.5,
-      }}>
-        <strong style={{ color: 'var(--color-text-1)' }}>Phase 3a build in progress.</strong>{' '}
-        Topic catalog, roster, and compliance matrix arrive in subsequent
-        Cluster commits. Schema + permissions are live in this branch
-        already.
-      </div>
     </div>
   )
 }
