@@ -55,7 +55,9 @@ const themeScript = `
     document.documentElement.setAttribute('data-theme', r);
     var d = localStorage.getItem('glidepath_design');
     if (d === 'v2') document.documentElement.setAttribute('data-design', 'v2');
-    var bg = r === 'light' ? '#F8FAFC' : '#0B1120';
+    var bg = r === 'light'
+      ? (d === 'v2' ? '#EFEADF' : '#F8FAFC')
+      : (d === 'v2' ? '#0A0E16' : '#0B1120');
     document.documentElement.style.background = bg;
     document.body.style.background = bg;
   } catch(e) {}

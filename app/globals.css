@@ -1389,21 +1389,23 @@ html, body {
   --color-scrollbar: rgba(148, 163, 184, 0.18);
 }
 
-/* ── v2 LIGHT: soft warm off-white, real elevation ladder
-   ("less completely white") ── */
+/* ── v2 LIGHT: warm cream / parchment — a soft creamy ladder with a warm
+   undertone, not a cool "dirty white". Cool-navy text on warm cream reads
+   like ink on paper. ── */
 [data-design="v2"][data-theme="light"] {
-  --color-bg: #E8E9EC;
-  --color-bg-surface: #F8F8F6;
-  --color-bg-surface-solid: #FBFBF9;
-  --color-bg-elevated: #FFFFFF;
-  --color-bg-inset: #E3E5E8;
-  --color-bg-nav: rgba(244, 244, 242, 0.97);
-  --color-border: rgba(15, 23, 42, 0.10);
-  --color-border-mid: rgba(15, 23, 42, 0.13);
-  --color-border-active: rgba(15, 23, 42, 0.22);
-  --color-search-bg: #FBFBF9;
-  --color-search-border: #D6D8DC;
-  --color-detail-box-bg: #EFF0F2;
-  --color-detail-box-label: #334155;
-  --color-detail-box-value: #475569;
+  --color-bg: #EFEADF;            /* soft cream canvas */
+  --color-bg-surface: #FBF7EE;    /* creamy card */
+  --color-bg-surface-solid: #FCFAF3;
+  --color-bg-elevated: #FFFDF8;   /* warm near-white for elevation pop */
+  --color-bg-inset: #E8E1D2;      /* warm input well */
+  --color-bg-nav: rgba(248, 244, 235, 0.97);
+  /* Warm-tan hairlines so borders sit in the cream, not cool over it. */
+  --color-border: rgba(74, 60, 35, 0.12);
+  --color-border-mid: rgba(74, 60, 35, 0.16);
+  --color-border-active: rgba(74, 60, 35, 0.26);
+  --color-search-bg: #FCFAF3;
+  --color-search-border: #DCD3C0;
+  --color-detail-box-bg: #F3EEE1;
+  --color-detail-box-label: #4A4434;
+  --color-detail-box-value: #5C5646;
 }
