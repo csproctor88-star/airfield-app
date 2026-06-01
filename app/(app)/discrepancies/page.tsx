@@ -823,7 +823,7 @@ export default function DiscrepanciesPage() {
                             style={{
                               padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                               cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                              border: active ? '1.5px solid #F97316' : '1px solid var(--color-border)',
+                              border: active ? '1.5px solid var(--color-orange)' : '1px solid var(--color-border)',
                               background: active ? 'rgba(249,115,22,0.12)' : 'var(--color-bg-inset)',
                               color: active ? 'var(--color-orange)' : 'var(--color-text-2)',
                               display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -852,7 +852,7 @@ export default function DiscrepanciesPage() {
                           style={{
                             padding: '3px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                             cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                            border: shopFilter === '__unassigned' ? '1.5px solid #EF4444' : '1px solid var(--color-border)',
+                            border: shopFilter === '__unassigned' ? '1.5px solid var(--color-danger)' : '1px solid var(--color-border)',
                             background: shopFilter === '__unassigned' ? 'rgba(239,68,68,0.12)' : 'var(--color-bg-inset)',
                             color: shopFilter === '__unassigned' ? 'var(--color-danger)' : 'var(--color-text-3)',
                           }}

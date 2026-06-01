@@ -452,7 +452,7 @@ export default function CheckDetailPage() {
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Agencies Notified</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {(data.agencies_notified as string[]).map((agency, i) => (
-                    <Badge key={i} label={agency} color="#38BDF8" />
+                    <Badge key={i} label={agency} color="var(--color-accent)" />
                   ))}
                 </div>
               </div>
@@ -624,7 +624,7 @@ export default function CheckDetailPage() {
                     marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '4px 10px', borderRadius: 'var(--radius-sm)',
                     background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
-                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+                    fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-amber)',
                     textTransform: 'uppercase', letterSpacing: '0.04em',
                   }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -862,7 +862,7 @@ export default function CheckDetailPage() {
       {canDeleteChecks && (
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12, marginTop: 8, display: 'flex', gap: 8 }}>
           <ActionButton
-            color="#EF4444"
+            color="var(--color-danger)"
             onClick={async () => {
               if (usingDemo) {
                 toast.success('Check deleted (demo mode)')

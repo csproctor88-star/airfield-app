@@ -783,7 +783,7 @@ export default function DiscrepancyDetailPage() {
               <span className="section-label">Linked NOTAM</span>
               <span style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-purple)' }}>{linkedNotam.notam_number}</span>
             </div>
-            <Badge label="VIEW →" color="#22D3EE" />
+            <Badge label="VIEW →" color="var(--color-cyan)" />
           </div>
         </Link>
       )}

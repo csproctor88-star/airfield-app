@@ -1046,7 +1046,7 @@ export default function WaiverDetailPage() {
             <ActionButton color="var(--color-blue)" onClick={() => handleStatusChange('pending')} disabled={actionLoading}>
               Submit for Review
             </ActionButton>
-            <ActionButton color="#EF4444" onClick={handleDelete} disabled={actionLoading}>
+            <ActionButton color="var(--color-danger)" onClick={handleDelete} disabled={actionLoading}>
               Delete Draft
             </ActionButton>
           </>
@@ -1054,20 +1054,20 @@ export default function WaiverDetailPage() {
 
         {w.status === 'pending' && isManager && (
           <>
-            <ActionButton color="#10B981" onClick={() => setActiveModal('approve')} disabled={actionLoading}>
+            <ActionButton color="var(--color-success)" onClick={() => setActiveModal('approve')} disabled={actionLoading}>
               Approve
             </ActionButton>
             <ActionButton color="#9CA3AF" onClick={() => handleStatusChange('draft')} disabled={actionLoading}>
               Send Back to Draft
             </ActionButton>
-            <ActionButton color="#EF4444" onClick={() => handleStatusChange('cancelled')} disabled={actionLoading}>
+            <ActionButton color="var(--color-danger)" onClick={() => handleStatusChange('cancelled')} disabled={actionLoading}>
               Cancel
             </ActionButton>
           </>
         )}
 
         {w.status === 'approved' && isManager && allowedTransitions.includes('active') && (
-          <ActionButton color="#8B5CF6" onClick={() => handleStatusChange('active')} disabled={actionLoading}>
+          <ActionButton color="var(--color-violet)" onClick={() => handleStatusChange('active')} disabled={actionLoading}>
             Activate Waiver
           </ActionButton>
         )}
@@ -1075,17 +1075,17 @@ export default function WaiverDetailPage() {
         {w.status === 'active' && isManager && (
           <>
             {allowedTransitions.includes('completed') && (
-              <ActionButton color="#22C55E" onClick={() => openStatusChangeModal('completed')} disabled={actionLoading}>
+              <ActionButton color="var(--color-green)" onClick={() => openStatusChangeModal('completed')} disabled={actionLoading}>
                 Mark Closed
               </ActionButton>
             )}
             {allowedTransitions.includes('expired') && (
-              <ActionButton color="#F59E0B" onClick={() => openStatusChangeModal('expired')} disabled={actionLoading}>
+              <ActionButton color="var(--color-amber)" onClick={() => openStatusChangeModal('expired')} disabled={actionLoading}>
                 Mark Expired
               </ActionButton>
             )}
             {allowedTransitions.includes('cancelled') && (
-              <ActionButton color="#EF4444" onClick={() => handleStatusChange('cancelled')} disabled={actionLoading}>
+              <ActionButton color="var(--color-danger)" onClick={() => handleStatusChange('cancelled')} disabled={actionLoading}>
                 Cancel
               </ActionButton>
             )}
@@ -1095,12 +1095,12 @@ export default function WaiverDetailPage() {
         {w.status === 'completed' && isManager && (
           <>
             {allowedTransitions.includes('active') && (
-              <ActionButton color="#8B5CF6" onClick={() => openStatusChangeModal('active')} disabled={actionLoading}>
+              <ActionButton color="var(--color-violet)" onClick={() => openStatusChangeModal('active')} disabled={actionLoading}>
                 Reactivate
               </ActionButton>
             )}
             {allowedTransitions.includes('expired') && (
-              <ActionButton color="#F59E0B" onClick={() => openStatusChangeModal('expired')} disabled={actionLoading}>
+              <ActionButton color="var(--color-amber)" onClick={() => openStatusChangeModal('expired')} disabled={actionLoading}>
                 Mark Expired
               </ActionButton>
             )}
@@ -1110,12 +1110,12 @@ export default function WaiverDetailPage() {
         {w.status === 'expired' && isManager && (
           <>
             {allowedTransitions.includes('active') && (
-              <ActionButton color="#8B5CF6" onClick={() => openStatusChangeModal('active')} disabled={actionLoading}>
+              <ActionButton color="var(--color-violet)" onClick={() => openStatusChangeModal('active')} disabled={actionLoading}>
                 Reactivate
               </ActionButton>
             )}
             {allowedTransitions.includes('completed') && (
-              <ActionButton color="#22C55E" onClick={() => openStatusChangeModal('completed')} disabled={actionLoading}>
+              <ActionButton color="var(--color-green)" onClick={() => openStatusChangeModal('completed')} disabled={actionLoading}>
                 Mark Closed
               </ActionButton>
             )}
@@ -1135,7 +1135,7 @@ export default function WaiverDetailPage() {
           <ActionButton color="var(--color-blue)" onClick={() => router.push(`/waivers/${params.id}/edit`)} disabled={actionLoading}>
             Edit Waiver
           </ActionButton>
-          <ActionButton color="#EF4444" onClick={handleDelete} disabled={actionLoading}>
+          <ActionButton color="var(--color-danger)" onClick={handleDelete} disabled={actionLoading}>
             Delete Waiver
           </ActionButton>
         </div>

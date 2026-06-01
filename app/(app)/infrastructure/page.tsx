@@ -3523,7 +3523,7 @@ export default function InfrastructureMapPage() {
                     padding: '6px 14px', borderRadius: 6,
                     border: '1px solid var(--color-border-active)',
                     background: 'color-mix(in srgb, var(--color-accent) 20%, transparent)',
-                    color: '#38BDF8',
+                    color: 'var(--color-accent)',
                     fontSize: 12, fontWeight: 600, cursor: assigningSelected ? 'wait' : 'pointer',
                     whiteSpace: 'nowrap',
                     opacity: assigningSelected ? 0.6 : 1,

@@ -3915,7 +3915,7 @@ export default function ParkingPage() {
                         padding: isMobile ? '10px 12px 10px 20px' : '4px 8px 4px 20px', cursor: 'pointer',
                         background: isEditing ? 'var(--color-bg)' : 'transparent',
                         borderBottom: '1px solid var(--color-border)',
-                        borderLeft: '3px solid #F97316',
+                        borderLeft: '3px solid var(--color-orange)',
                       }}
                     >
                       <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -4004,7 +4004,7 @@ export default function ParkingPage() {
                   disabled={!selectedPlanId || !!drawingTaxilaneId}
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: 'color-mix(in srgb, var(--color-blue) 7%, transparent)', border: '1px dashed #3B82F6',
+                    background: 'color-mix(in srgb, var(--color-blue) 7%, transparent)', border: '1px dashed var(--color-blue)',
                     color: 'var(--color-status-inwork)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
@@ -4016,7 +4016,7 @@ export default function ParkingPage() {
                   disabled={!selectedPlanId || !!drawingTaxilaneId}
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: 'color-mix(in srgb, var(--color-violet) 7%, transparent)', border: '1px dashed #8B5CF6',
+                    background: 'color-mix(in srgb, var(--color-violet) 7%, transparent)', border: '1px dashed var(--color-violet)',
                     color: 'var(--color-purple)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}
@@ -4028,7 +4028,7 @@ export default function ParkingPage() {
                   disabled={!selectedPlanId || !!drawingBoundaryId}
                   style={{
                     padding: '4px 10px', borderRadius: 4, fontSize: 'var(--fs-xs)',
-                    background: 'color-mix(in srgb, var(--color-success) 7%, transparent)', border: '1px dashed #10B981',
+                    background: 'color-mix(in srgb, var(--color-success) 7%, transparent)', border: '1px dashed var(--color-success)',
                     color: 'var(--color-success)', cursor: selectedPlanId ? 'pointer' : 'not-allowed',
                     opacity: selectedPlanId ? 1 : 0.5,
                   }}

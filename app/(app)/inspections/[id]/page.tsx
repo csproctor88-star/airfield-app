@@ -760,7 +760,7 @@ export default function InspectionDetailPage() {
                                 marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
                                 padding: '3px 8px', borderRadius: 5,
                                 background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
-                                fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+                                fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-amber)',
                                 textTransform: 'uppercase', letterSpacing: '0.04em',
                               }}>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1346,7 +1346,7 @@ export default function InspectionDetailPage() {
                               marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5,
                               padding: '3px 8px', borderRadius: 5,
                               background: 'rgba(217, 119, 6, 0.1)', border: '1px solid rgba(217, 119, 6, 0.3)',
-                              fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#D97706',
+                              fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-amber)',
                               textTransform: 'uppercase', letterSpacing: '0.04em',
                             }}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

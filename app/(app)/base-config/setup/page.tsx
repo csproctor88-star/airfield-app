@@ -627,7 +627,7 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button onClick={handleSave} disabled={saving} style={{
           flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-base)', border: 'none',
-          background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+          background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
           color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
           cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1,
         }}>{saving ? 'Saving...' : 'Save Changes'}</button>
@@ -1134,7 +1134,7 @@ function RunwayTab({
           disabled={elevSaving}
           style={{
             padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700,
             cursor: elevSaving ? 'wait' : 'pointer', fontFamily: 'inherit',
             opacity: elevSaving ? 0.5 : 1,
@@ -1375,7 +1375,7 @@ function RunwayTab({
               style={{
                 flex: 1,
                 padding: '10px 16px', borderRadius: 'var(--radius-base)', border: 'none',
-                background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
                 color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
                 cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
                 opacity: saving || !newRunway.runway_id.trim() ? 0.5 : 1,
@@ -1677,7 +1677,7 @@ function RunwayTab({
               <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
                 Drag the pins to align with the visible runway thresholds on the satellite imagery.
                 <span style={{ color: 'var(--color-cyan)', fontWeight: 600 }}> Cyan</span> = {adjustingRunway.end1_designator},
-                <span style={{ color: '#F97316', fontWeight: 600 }}> Orange</span> = {adjustingRunway.end2_designator}
+                <span style={{ color: 'var(--color-orange)', fontWeight: 600 }}> Orange</span> = {adjustingRunway.end2_designator}
               </div>
             </div>
 
@@ -1695,7 +1695,7 @@ function RunwayTab({
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#F97316', marginBottom: 2 }}>
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-orange)', marginBottom: 2 }}>
                   {adjustingRunway.end2_designator}
                 </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', fontFamily: 'monospace' }}>
@@ -1723,7 +1723,7 @@ function RunwayTab({
                 style={{
                   flex: 2, padding: '10px 16px', borderRadius: 'var(--radius-base)',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+                  background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
                   color: '#fff', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit',
                   opacity: saving ? 0.6 : 1,
@@ -1928,7 +1928,7 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
           disabled={!newItem.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newItem.trim() ? 0.5 : 1,
@@ -2070,7 +2070,7 @@ function SimpleListTab({
           disabled={!newItem.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newItem.trim() ? 0.5 : 1,
@@ -2274,7 +2274,7 @@ function ScnAgenciesTab({ installationId, markSaved }: { installationId: string 
           disabled={!newName.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newName.trim() ? 0.5 : 1,
@@ -2467,7 +2467,7 @@ function AepAgenciesTab({ installationId, markSaved }: { installationId: string 
           disabled={!newName.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newName.trim() ? 0.5 : 1,
@@ -2601,7 +2601,7 @@ function ShopsTab({ shops, typeShopMap: initialTypeShopMap, installationId, mark
           disabled={!newShop.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newShop.trim() ? 0.5 : 1,
@@ -2828,7 +2828,7 @@ function FacilitiesTab({ installationId, markSaved }: { installationId: string |
           disabled={!newNumber.trim() || !newDesc.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             opacity: !newNumber.trim() || !newDesc.trim() ? 0.5 : 1,
@@ -2945,7 +2945,7 @@ function TemplatesTab({ installationId, markSaved }: { installationId: string | 
             style={{
               padding: '10px 16px', borderRadius: 'var(--radius-base)',
               border: 'none',
-              background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+              background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
               color: '#fff',
               fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
               cursor: cloning ? 'wait' : 'pointer',
@@ -3677,7 +3677,7 @@ function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { i
             >
               <span style={{
                 fontSize: 'var(--fs-xs)', fontWeight: 800,
-                color: '#fff', background: t.is_active ? '#D97706' : 'var(--color-text-4)',
+                color: '#fff', background: t.is_active ? 'var(--color-amber)' : 'var(--color-text-4)',
                 padding: '2px 6px', borderRadius: 'var(--radius-xs)', minWidth: 32, textAlign: 'center',
               }}>{t.qrc_number}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -3790,7 +3790,7 @@ function SeedPickerDialog({
                     background: seedSelected.has(q.qrc_number) ? 'var(--color-cyan)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{seedSelected.has(q.qrc_number) && <span style={{ color: '#fff', fontSize: 10, fontWeight: 800 }}>&#10003;</span>}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: '#D97706', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 800, color: '#fff', background: 'var(--color-amber)', padding: '1px 5px', borderRadius: 'var(--radius-xs)' }}>{q.qrc_number}</span>
                   <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{q.title}</span>
                 </button>
               ))}
@@ -4165,7 +4165,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
                         {templatesList.length === 0 && <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>No templates found for this system type.</p>}
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                           <button onClick={handleClone} disabled={saving || templatesList.length === 0}
-                            style={{ padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1 }}>
+                            style={{ padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-sm)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.5 : 1 }}>
                             {saving ? 'Cloning...' : 'Clone Components'}
                           </button>
                           <button onClick={() => { setCloning(null); setTemplatesList([]) }}
@@ -4216,7 +4216,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button onClick={handleAddSystem} disabled={saving || !newSystemType || !newName.trim()}
-                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving || !newSystemType || !newName.trim() ? 0.5 : 1 }}>
+                style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving || !newSystemType || !newName.trim() ? 0.5 : 1 }}>
                 {saving ? 'Creating...' : 'Create System'}
               </button>
               <button onClick={() => { setAdding(false); setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false) }}
@@ -4832,7 +4832,7 @@ function StatusBoardsTab({ installationId, markSaved }: { installationId: string
           disabled={!newBoardName.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: newBoardName.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+            background: newBoardName.trim() ? 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))' : 'var(--color-border)',
             color: newBoardName.trim() ? '#fff' : 'var(--color-text-3)',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
           }}
@@ -4872,7 +4872,7 @@ function ChipCluster({ chips }: { chips: ChipDef[] }) {
             border: 'none',
             borderLeft: i === 0 ? 'none' : '1px solid var(--color-border)',
             background: chip.on ? 'rgba(34,197,94,0.14)' : 'transparent',
-            color: chip.on ? '#22c55e' : 'var(--color-text-4)',
+            color: chip.on ? 'var(--color-green)' : 'var(--color-text-4)',
             fontSize: 'var(--fs-xs)',
             fontWeight: 700,
             cursor: 'pointer',
@@ -5386,7 +5386,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
           disabled={!newColName.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: newColName.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+            background: newColName.trim() ? 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))' : 'var(--color-border)',
             color: newColName.trim() ? '#fff' : 'var(--color-text-3)',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
           }}
@@ -5666,7 +5666,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
             disabled={!newAgencyName.trim()}
             style={{
               padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-              background: newAgencyName.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+              background: newAgencyName.trim() ? 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))' : 'var(--color-border)',
               color: newAgencyName.trim() ? '#fff' : 'var(--color-text-3)',
               cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
             }}
@@ -5701,7 +5701,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
             disabled={!amopsEmailDirty || amopsEmailSaving}
             style={{
               padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-              background: amopsEmailDirty ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+              background: amopsEmailDirty ? 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))' : 'var(--color-border)',
               color: amopsEmailDirty ? '#fff' : 'var(--color-text-3)',
               cursor: amopsEmailDirty && !amopsEmailSaving ? 'pointer' : 'not-allowed',
               fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
@@ -5723,7 +5723,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
           onClick={generatePublicQr}
           style={{
             padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
@@ -5941,7 +5941,7 @@ function FeedbackConfigTab({ installationId, markSaved }: { installationId: stri
         {config.enabled && (
           <button onClick={generateQr} style={{
             padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: 'none',
-            background: 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}>Generate QR Code</button>
         )}
@@ -6032,7 +6032,7 @@ function FeedbackConfigTab({ installationId, markSaved }: { installationId: stri
         </select>
         <button onClick={addField} disabled={!newFieldLabel.trim()} style={{
           padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
-          background: newFieldLabel.trim() ? 'linear-gradient(135deg, #0369A1, var(--color-accent-secondary))' : 'var(--color-border)',
+          background: newFieldLabel.trim() ? 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))' : 'var(--color-border)',
           color: newFieldLabel.trim() ? '#fff' : 'var(--color-text-3)', cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
         }}>Add</button>
       </div>
