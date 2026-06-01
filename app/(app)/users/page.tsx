@@ -87,6 +87,15 @@ async function loadUsers(
   }
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** True when the user's last_seen_at heartbeat is within the last 24 hours. */
+function isActiveWithin24h(lastSeenAt: string | null, nowMs: number): boolean {
+  if (!lastSeenAt) return false
+  const t = new Date(lastSeenAt).getTime()
+  return !Number.isNaN(t) && nowMs - t <= DAY_MS
+}
+
 export default function UserManagementPage() {
   const router = useRouter()
   const [initialized, setInitialized] = useState(false)
@@ -104,6 +113,8 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  // Recency filter: show only users seen in the last 24h (the "Active 24h" KPI).
+  const [recentFilter, setRecentFilter] = useState(false)
 
   // Modals
   const [selectedUser, setSelectedUser] = useState<UserCardData | null>(null)
@@ -227,6 +238,7 @@ export default function UserManagementPage() {
 
   // Client-side filter
   const filteredUsers = useMemo(() => {
+    const now = Date.now()
     return users.filter((user) => {
       const searchLower = searchTerm.toLowerCase()
       const matchesSearch =
@@ -237,9 +249,16 @@ export default function UserManagementPage() {
         (user.rank || '').toLowerCase().includes(searchLower)
       const matchesRole = !roleFilter || user.role === roleFilter
       const matchesStatus = !statusFilter || user.status === statusFilter
-      return matchesSearch && matchesRole && matchesStatus
+      const matchesRecent = !recentFilter || isActiveWithin24h(user.last_seen_at, now)
+      return matchesSearch && matchesRole && matchesStatus && matchesRecent
     })
-  }, [users, searchTerm, roleFilter, statusFilter])
+  }, [users, searchTerm, roleFilter, statusFilter, recentFilter])
+
+  // Count of users active in the last 24h, scoped to the loaded (per-base) set.
+  const recentCount = useMemo(() => {
+    const now = Date.now()
+    return users.reduce((n, u) => n + (isActiveWithin24h(u.last_seen_at, now) ? 1 : 0), 0)
+  }, [users])
 
   // Population counts for the stats header — derived from the full loaded
   // set (pre-search-filter) so the totals don't shift as you type.
@@ -427,6 +446,9 @@ export default function UserManagementPage() {
           counts={statusCounts}
           statusFilter={statusFilter}
           onSelectStatus={setStatusFilter}
+          recentCount={recentCount}
+          recentSelected={recentFilter}
+          onToggleRecent={() => setRecentFilter((v) => !v)}
         />
       </div>
 

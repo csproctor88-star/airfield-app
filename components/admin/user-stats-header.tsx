@@ -1,6 +1,6 @@
 'use client'
 
-import { Users, Clock, CheckCircle2, UserX } from 'lucide-react'
+import { Users, Clock, CheckCircle2, UserX, Activity } from 'lucide-react'
 
 export interface UserStatusCounts {
   total: number
@@ -15,27 +15,66 @@ interface UserStatsHeaderProps {
   statusFilter: string
   /** Toggle a status filter; passing '' clears it (Total segment). */
   onSelectStatus: (status: string) => void
+  /** Count of users seen in the last 24h. Omit to hide the recency segment. */
+  recentCount?: number
+  /** Whether the "Active 24h" recency filter is engaged. */
+  recentSelected?: boolean
+  /** Toggle the recency filter (independent of the status filter). */
+  onToggleRecent?: () => void
 }
 
 /**
- * A single bordered chip-cluster summarizing the user population. Each
- * segment doubles as a status filter — clicking toggles `statusFilter`
- * on the page. Reads as one widget (per the chip-cluster convention),
- * not four loose pills. Pending uses the outlined-amber recipe (tinted
- * bg + amber border + amber text) and is emphasized whenever > 0.
+ * A single bordered chip-cluster summarizing the user population. The four
+ * status segments double as a status filter (clicking toggles `statusFilter`).
+ * An optional fifth segment — "Active 24h" — is a different dimension (last
+ * seen within 24h) wired to its own toggle, so admins can see and filter to
+ * who's actually using the app today. Reads as one widget (per the chip-cluster
+ * convention). Pending uses the outlined-amber recipe and is emphasized > 0.
  */
-export function UserStatsHeader({ counts, statusFilter, onSelectStatus }: UserStatsHeaderProps) {
-  const segments = [
+export function UserStatsHeader({
+  counts,
+  statusFilter,
+  onSelectStatus,
+  recentCount,
+  recentSelected,
+  onToggleRecent,
+}: UserStatsHeaderProps) {
+  const statusSegments = [
     { key: '', label: 'Total', value: counts.total, color: 'var(--color-text-2)', Icon: Users },
     { key: 'pending', label: 'Pending', value: counts.pending, color: 'var(--color-warning)', Icon: Clock },
     { key: 'active', label: 'Active', value: counts.active, color: 'var(--color-success)', Icon: CheckCircle2 },
     { key: 'deactivated', label: 'Deactivated', value: counts.deactivated, color: 'var(--color-text-3)', Icon: UserX },
-  ] as const
+  ].map((seg) => {
+    const selected = statusFilter === seg.key
+    return {
+      ...seg,
+      selected,
+      // Pending always draws attention when there's a queue, even unselected.
+      emphasize: selected || (seg.key === 'pending' && counts.pending > 0),
+      onClick: () => onSelectStatus(selected ? '' : seg.key),
+    }
+  })
+
+  const recentSegment =
+    recentCount !== undefined
+      ? [{
+          key: '__recent',
+          label: 'Active 24h',
+          value: recentCount,
+          color: 'var(--color-success)',
+          Icon: Activity,
+          selected: !!recentSelected,
+          emphasize: !!recentSelected,
+          onClick: () => onToggleRecent?.(),
+        }]
+      : []
+
+  const segments = [...statusSegments, ...recentSegment]
 
   return (
     <div
       role="group"
-      aria-label="User counts and status filter"
+      aria-label="User counts and filters"
       style={{
         display: 'flex',
         alignItems: 'stretch',
@@ -46,14 +85,13 @@ export function UserStatsHeader({ counts, statusFilter, onSelectStatus }: UserSt
       }}
     >
       {segments.map((seg, i) => {
-        const selected = statusFilter === seg.key
-        // Pending always draws attention when there's a queue, even unselected.
-        const emphasize = selected || (seg.key === 'pending' && counts.pending > 0)
+        const selected = seg.selected
+        const emphasize = seg.emphasize
         return (
           <button
             key={seg.key || 'total'}
             type="button"
-            onClick={() => onSelectStatus(selected ? '' : seg.key)}
+            onClick={seg.onClick}
             style={{
               flex: 1,
               minWidth: 0,
