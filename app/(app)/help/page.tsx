@@ -67,7 +67,7 @@ export default function TrainingPage() {
   const [reviewedFilter, setReviewedFilter] = useState<ReviewedFilter>('all')
   const [generating, setGenerating] = useState(false)
 
-  const { isReviewed, reviewed } = useReviewedModules()
+  const { isReviewed } = useReviewedModules()
 
   const { currentInstallation } = useInstallation()
   const airportType = currentInstallation?.airport_type ?? null
@@ -92,7 +92,13 @@ export default function TrainingPage() {
     })
   }, [airportModules, selectedRoles, searching, trimmedQuery, reviewedFilter, isReviewed])
 
-  const reviewedCount = reviewed.size
+  // Count only reviewed guides within the current airport-type set, so the
+  // denominator can't be exceeded (a guide reviewed under the other mode and
+  // now gated out would otherwise show "8 of 6").
+  const reviewedCount = useMemo(
+    () => airportModules.filter(m => isReviewed(m.id)).length,
+    [airportModules, isReviewed],
+  )
   const totalCount = airportModules.length
 
   async function handleDownloadModulePdf() {
