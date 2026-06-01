@@ -4,10 +4,11 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Rocket, Search, X, Download, ExternalLink, Compass, Sparkles, CheckCircle2, Circle } from 'lucide-react'
 import { toast } from 'sonner'
-import { MODULES, type TrainingRole } from '@/lib/training/modules'
+import { MODULES, moduleRefAppliesToAirport, type TrainingRole } from '@/lib/training/modules'
 import { RoleChipFilter } from '@/components/training/role-chip-filter'
 import { ModuleCard } from '@/components/training/module-card'
 import { useReviewedModules } from '@/lib/training/use-reviewed'
+import { useInstallation } from '@/lib/installation-context'
 
 // Lean Quick Start cluster — 7 steps that hold for any role on day 1.
 // Phase 2 will refresh content + screenshots after the modules sweep.
@@ -68,11 +69,18 @@ export default function TrainingPage() {
 
   const { isReviewed, reviewed } = useReviewedModules()
 
+  const { currentInstallation } = useInstallation()
+  const airportType = currentInstallation?.airport_type ?? null
+  const airportModules = useMemo(
+    () => MODULES.filter(m => moduleRefAppliesToAirport(m, airportType)),
+    [airportType],
+  )
+
   const trimmedQuery = searchQuery.trim().toLowerCase()
   const searching = trimmedQuery.length >= 2
 
   const filteredModules = useMemo(() => {
-    return MODULES.filter(m => {
+    return airportModules.filter(m => {
       if (selectedRoles.length > 0 && !m.roles.some(r => selectedRoles.includes(r))) return false
       if (searching) {
         const hay = `${m.name} ${m.tagline} ${m.overview} ${m.keyFeatures.join(' ')}`.toLowerCase()
@@ -82,16 +90,16 @@ export default function TrainingPage() {
       if (reviewedFilter === 'unreviewed' && isReviewed(m.id)) return false
       return true
     })
-  }, [selectedRoles, searching, trimmedQuery, reviewedFilter, isReviewed])
+  }, [airportModules, selectedRoles, searching, trimmedQuery, reviewedFilter, isReviewed])
 
   const reviewedCount = reviewed.size
-  const totalCount = MODULES.length
+  const totalCount = airportModules.length
 
   async function handleDownloadModulePdf() {
     setGenerating(true)
     try {
       const { generateModuleReferencePdf } = await import('@/lib/training-pdf')
-      const data = MODULES.map(m => ({
+      const data = airportModules.map(m => ({
         name: m.name,
         tagline: m.tagline,
         overview: m.overview,
@@ -147,7 +155,7 @@ export default function TrainingPage() {
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         <TabButton active={activeTab === 'modules'} onClick={() => setActiveTab('modules')}>
           <Compass size={14} /> Modules
-          <span style={countPillStyle(activeTab === 'modules')}>{MODULES.length}</span>
+          <span style={countPillStyle(activeTab === 'modules')}>{airportModules.length}</span>
         </TabButton>
         <TabButton active={activeTab === 'quickstart'} onClick={() => setActiveTab('quickstart')}>
           <Sparkles size={14} /> Quick Start
