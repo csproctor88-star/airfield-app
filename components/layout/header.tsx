@@ -334,8 +334,8 @@ export function Header() {
                   fontFamily: 'var(--font-family-mono)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                   color: 'var(--color-accent)',
                   padding: '1px 7px', borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(56,189,248,0.10)',
-                  border: '1px solid rgba(56,189,248,0.35)',
+                  background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--color-accent) 35%, transparent)',
                   letterSpacing: '0.06em',
                 }}>{baseIcao.toUpperCase()}</span>
               )}
@@ -356,7 +356,7 @@ export function Header() {
                     onClick={() => { switchInstallation(inst.id); setShowInstSwitcher(false) }}
                     style={{
                       display: 'block', width: '100%', padding: '6px 10px',
-                      background: inst.id === currentInstallation?.id ? 'rgba(56,189,248,0.08)' : 'transparent',
+                      background: inst.id === currentInstallation?.id ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
                       border: 'none', borderBottom: '1px solid var(--color-border)',
                       cursor: 'pointer', textAlign: 'left',
                       color: inst.id === currentInstallation?.id ? 'var(--color-accent)' : 'var(--color-text-2)',

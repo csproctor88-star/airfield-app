@@ -3521,8 +3521,8 @@ export default function InfrastructureMapPage() {
                   disabled={assigningSelected}
                   style={{
                     padding: '6px 14px', borderRadius: 6,
-                    border: '1px solid rgba(56,189,248,0.3)',
-                    background: 'rgba(56,189,248,0.2)',
+                    border: '1px solid var(--color-border-active)',
+                    background: 'color-mix(in srgb, var(--color-accent) 20%, transparent)',
                     color: '#38BDF8',
                     fontSize: 12, fontWeight: 600, cursor: assigningSelected ? 'wait' : 'pointer',
                     whiteSpace: 'nowrap',
@@ -3543,8 +3543,8 @@ export default function InfrastructureMapPage() {
                   width: '100%',
                   padding: '7px 0',
                   borderRadius: 6,
-                  border: '1px solid rgba(56,189,248,0.3)',
-                  background: selectedIds.size >= 2 ? 'rgba(56,189,248,0.15)' : 'transparent',
+                  border: '1px solid var(--color-border-active)',
+                  background: selectedIds.size >= 2 ? 'color-mix(in srgb, var(--color-accent) 15%, transparent)' : 'transparent',
                   color: selectedIds.size >= 2 ? 'var(--color-accent)' : 'var(--color-text-3)',
                   fontSize: 12,
                   fontWeight: 600,

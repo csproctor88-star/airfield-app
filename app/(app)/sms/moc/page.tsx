@@ -272,7 +272,7 @@ export default function SmsMocPage() {
 function MocStatusPill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
     proposed:         { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Proposed' },
-    risk_analysis:    { bg: 'rgba(56,189,248,0.15)', text: 'rgb(3,105,161)', label: 'Risk Analysis' },
+    risk_analysis:    { bg: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', text: 'rgb(3,105,161)', label: 'Risk Analysis' },
     pending_approval: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'Pending Approval' },
     approved:         { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(21,128,61)', label: 'Approved' },
     rejected:         { bg: 'rgba(239,68,68,0.15)',  text: 'rgb(185,28,28)', label: 'Rejected' },

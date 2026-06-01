@@ -1985,7 +1985,7 @@ export default function InspectionsPage() {
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           gap: 8, paddingBottom: 8, marginBottom: 12,
-          borderBottom: '1px solid rgba(56,189,248,0.20)',
+          borderBottom: '1px solid var(--color-border-active)',
         }}>
           <div>
             <div style={{
@@ -2273,7 +2273,7 @@ export default function InspectionsPage() {
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 paddingBottom: 6, marginBottom: 8,
-                borderBottom: '1px solid rgba(56,189,248,0.20)',
+                borderBottom: '1px solid var(--color-border-active)',
               }}>
                 <div style={{
                   fontSize: 'var(--fs-xs)', fontWeight: 700,
@@ -2617,7 +2617,7 @@ export default function InspectionsPage() {
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
         gap: 8, paddingBottom: 8, marginBottom: 12,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         <div style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700,

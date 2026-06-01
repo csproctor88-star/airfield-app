@@ -38,7 +38,7 @@ export function ConstructionChecklist({ state, onChange, readOnly = false }: Pro
             color: 'var(--color-text-3)',
             textTransform: 'uppercase', letterSpacing: '0.08em',
             paddingBottom: 6, marginBottom: 10,
-            borderBottom: '1px solid rgba(56,189,248,0.20)',
+            borderBottom: '1px solid var(--color-border-active)',
           }}>
             {section.title}
           </div>

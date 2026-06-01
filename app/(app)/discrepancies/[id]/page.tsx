@@ -438,7 +438,7 @@ export default function DiscrepancyDetailPage() {
                     padding: '8px 12px',
                     borderRadius: 'var(--radius-sm)',
                     background: 'var(--color-bg-inset)',
-                    borderLeft: '2px solid rgba(56,189,248,0.35)',
+                    borderLeft: '2px solid color-mix(in srgb, var(--color-accent) 35%, transparent)',
                     display: 'flex', flexDirection: 'column', justifyContent: 'center',
                     minHeight: 0,
                   }}>

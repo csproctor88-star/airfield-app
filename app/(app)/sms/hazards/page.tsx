@@ -336,7 +336,7 @@ function StatusPill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
     open:         { bg: 'rgba(239,68,68,0.15)',  text: 'rgb(185,28,28)', label: 'Open' },
     under_review: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'Review' },
-    controlled:   { bg: 'rgba(56,189,248,0.15)', text: 'rgb(3,105,161)', label: 'Controlled' },
+    controlled:   { bg: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', text: 'rgb(3,105,161)', label: 'Controlled' },
     closed:       { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(21,128,61)', label: 'Closed' },
     duplicate:    { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Duplicate' },
   }

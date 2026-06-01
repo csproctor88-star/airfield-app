@@ -148,7 +148,7 @@ export function PprFieldInput({
                   border: selected
                     ? '2px solid var(--color-accent)'
                     : '1px solid var(--color-border)',
-                  background: selected ? 'rgba(56,189,248,0.08)' : (inputBackground ?? 'var(--color-bg)'),
+                  background: selected ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : (inputBackground ?? 'var(--color-bg)'),
                   color: selected ? 'var(--color-accent)' : (inputColor ?? 'var(--color-text-3)'),
                 }}
               >

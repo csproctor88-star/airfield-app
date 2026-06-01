@@ -102,7 +102,7 @@ export default function AllInspectionsPage() {
         <div data-tour="inspections-header" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 8, paddingBottom: 8, marginBottom: 12,
-          borderBottom: '1px solid rgba(56,189,248,0.20)',
+          borderBottom: '1px solid var(--color-border-active)',
         }}>
           <div style={{
             fontSize: 'var(--fs-sm)', fontWeight: 700,

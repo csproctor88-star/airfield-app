@@ -415,7 +415,7 @@ function ProfileSectionContent() {
         <div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 4 }}>ROLE</div>
           <span style={{
-            background: 'rgba(56,189,248,0.1)',
+            background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
             color: 'var(--color-accent)',
             padding: '3px 8px',
             borderRadius: 'var(--radius-xs)',
@@ -714,7 +714,7 @@ function ThemeSectionContent() {
                   ? '2px solid var(--color-accent)'
                   : '1px solid var(--color-border)',
                 background: theme === value
-                  ? 'rgba(56,189,248,0.08)'
+                  ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)'
                   : 'transparent',
                 color: theme === value ? 'var(--color-accent)' : 'var(--color-text-2)',
                 fontWeight: theme === value ? 700 : 500,
@@ -888,7 +888,7 @@ function InstallationSectionContent() {
                 position: 'absolute', top: '100%', left: 0, right: 0,
                 zIndex: 'var(--z-dropdown)', marginTop: 4,
                 background: 'var(--color-bg-elevated)',
-                border: '1px solid rgba(56,189,248,0.15)',
+                border: '1px solid var(--color-border-mid)',
                 borderRadius: 'var(--radius-base)',
                 maxHeight: 200, overflowY: 'auto',
               }}>
@@ -915,9 +915,9 @@ function InstallationSectionContent() {
                       onClick={() => handleSelect(entry)}
                       style={{
                         display: 'block', width: '100%', padding: '10px 14px',
-                        background: entry.name === currentInstallation?.name ? 'rgba(56,189,248,0.08)' : 'transparent',
+                        background: entry.name === currentInstallation?.name ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
                         border: 'none',
-                        borderBottom: '1px solid rgba(56,189,248,0.04)',
+                        borderBottom: '1px solid var(--color-border)',
                         cursor: 'pointer', textAlign: 'left',
                         color: entry.name === currentInstallation?.name ? 'var(--color-accent)' : 'var(--color-text-1)',
                         fontSize: 'var(--fs-md)', fontFamily: 'inherit',
@@ -940,7 +940,7 @@ function InstallationSectionContent() {
                     display: 'block', width: '100%', padding: '10px 14px',
                     background: 'transparent',
                     border: 'none',
-                    borderTop: '1px solid rgba(56,189,248,0.1)',
+                    borderTop: '1px solid var(--color-border-mid)',
                     cursor: 'pointer', textAlign: 'left',
                     color: 'var(--color-accent)',
                     fontSize: 'var(--fs-md)', fontFamily: 'inherit',
@@ -1041,8 +1041,8 @@ function InstallationSectionContent() {
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '8px 10px',
                         borderRadius: 'var(--radius-sm)',
-                        background: isCurrent ? 'rgba(56,189,248,0.06)' : 'transparent',
-                        border: isCurrent ? '1px solid rgba(56,189,248,0.15)' : '1px solid transparent',
+                        background: isCurrent ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'transparent',
+                        border: isCurrent ? '1px solid var(--color-border-mid)' : '1px solid transparent',
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>

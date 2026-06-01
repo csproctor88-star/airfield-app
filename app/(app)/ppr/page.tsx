@@ -50,7 +50,7 @@ type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'p
 // Color tokens used by the status chip + KPI pills.
 const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; border: string }> = {
   pending_amops_triage:    { label: 'Awaiting Review',    bg: 'rgba(220,38,38,0.12)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
-  pending_coordination:    { label: 'In Coordination',    bg: 'rgba(56,189,248,0.10)', fg: 'var(--color-accent)', border: 'rgba(56,189,248,0.4)' },
+  pending_coordination:    { label: 'In Coordination',    bg: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', fg: 'var(--color-accent)', border: 'color-mix(in srgb, var(--color-accent) 40%, transparent)' },
   pending_amops_approval:  { label: 'Awaiting Approval',  bg: 'rgba(245,158,11,0.12)', fg: '#f59e0b', border: 'rgba(245,158,11,0.4)' },
   approved:                { label: 'Approved',           bg: 'rgba(34,197,94,0.10)',  fg: '#22c55e', border: 'rgba(34,197,94,0.4)' },
   denied:                  { label: 'Denied',             bg: 'rgba(220,38,38,0.10)',  fg: '#ef4444', border: 'rgba(220,38,38,0.4)' },
@@ -827,7 +827,7 @@ export default function PprPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         flexWrap: 'wrap', gap: 8,
         paddingBottom: 8, marginBottom: 12,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         <div style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)',
@@ -871,8 +871,8 @@ export default function PprPage() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 12px', borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(56,189,248,0.40)',
-                background: noColumns ? 'var(--color-border)' : 'rgba(56,189,248,0.10)',
+                border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                background: noColumns ? 'var(--color-border)' : 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
                 color: noColumns ? 'var(--color-text-3)' : 'var(--color-accent)',
                 cursor: noColumns ? 'not-allowed' : 'pointer',
                 fontSize: 'var(--fs-xs)', fontWeight: 700,
@@ -939,9 +939,9 @@ export default function PprPage() {
                   count={n}
                   label={a.agency_name}
                   icon={<MailQuestion size={14} />}
-                  colorBg="rgba(56,189,248,0.10)"
+                  colorBg="color-mix(in srgb, var(--color-accent) 10%, transparent)"
                   colorFg="var(--color-accent)"
-                  colorBorder="rgba(56,189,248,0.4)"
+                  colorBorder="color-mix(in srgb, var(--color-accent) 40%, transparent)"
                   active={isActive}
                   onClick={() => {
                     setAgencyFilter(isActive ? null : a.id)
@@ -991,7 +991,7 @@ export default function PprPage() {
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '8px 12px', borderRadius: 'var(--radius-sm)',
             border: `1px solid ${filtersOpen || activeFilterCount > 0 ? 'var(--color-accent)' : 'var(--color-border)'}`,
-            background: filtersOpen ? 'rgba(56,189,248,0.08)' : 'var(--color-bg-surface)',
+            background: filtersOpen ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'var(--color-bg-surface)',
             color: filtersOpen || activeFilterCount > 0 ? 'var(--color-accent)' : 'var(--color-text-2)',
             cursor: 'pointer', fontFamily: 'inherit',
             fontSize: 'var(--fs-xs)', fontWeight: 700,
@@ -1211,8 +1211,8 @@ export default function PprPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '6px 12px', borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(56,189,248,0.40)',
-                  background: 'rgba(56,189,248,0.10)', color: 'var(--color-accent)',
+                  border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)',
                   cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '0.06em',
                   fontFamily: 'inherit',
@@ -1233,8 +1233,8 @@ export default function PprPage() {
               display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
               padding: '8px 12px', marginBottom: 8,
               borderRadius: 'var(--radius-sm)',
-              border: '1px solid rgba(56,189,248,0.40)',
-              background: 'rgba(56,189,248,0.08)',
+              border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+              background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
             }}>
               <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-accent)' }}>
                 {selectedEntries.length} selected
@@ -1971,7 +1971,7 @@ export default function PprPage() {
                     fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
                     textTransform: 'uppercase', letterSpacing: '0.08em',
                     paddingBottom: 6, marginBottom: 8,
-                    borderBottom: '1px solid rgba(56,189,248,0.20)',
+                    borderBottom: '1px solid var(--color-border-active)',
                   }}>
                     Coordination
                   </div>
@@ -2031,7 +2031,7 @@ export default function PprPage() {
                   fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
                   textTransform: 'uppercase', letterSpacing: '0.08em',
                   paddingBottom: 6, marginBottom: 8,
-                  borderBottom: '1px solid rgba(56,189,248,0.20)',
+                  borderBottom: '1px solid var(--color-border-active)',
                 }}>
                   Remarks
                 </div>
@@ -2239,7 +2239,7 @@ function SegmentedCard<T extends string>({
               display: 'flex', alignItems: 'flex-start', gap: 10,
               padding: '12px 14px', borderRadius: 12,
               border: selected ? '2px solid var(--color-accent)' : '2px solid var(--color-border)',
-              background: selected ? 'rgba(56,189,248,0.08)' : 'transparent',
+              background: selected ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
               cursor: disabled ? 'not-allowed' : 'pointer',
               opacity: disabled ? 0.5 : 1,
               transition: 'border-color 0.15s, background 0.15s',
@@ -2291,8 +2291,8 @@ function ActiveFilterChip({ label, onClear }: { label: string; onClear: () => vo
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
       padding: '3px 4px 3px 10px', borderRadius: 999,
-      background: 'rgba(56,189,248,0.10)',
-      border: '1px solid rgba(56,189,248,0.40)',
+      background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
       color: 'var(--color-accent)',
       fontSize: 'var(--fs-2xs)', fontWeight: 700,
       textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -2325,7 +2325,7 @@ function DetailSection({ title, rows, footnote }: { title: string; rows: DetailR
         fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)',
         textTransform: 'uppercase', letterSpacing: '0.08em',
         paddingBottom: 6, marginBottom: 8,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         {title}
       </div>
@@ -2474,7 +2474,7 @@ function chipStyle(active: boolean): React.CSSProperties {
   return {
     padding: '4px 10px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
     border: `1px solid ${active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-    background: active ? 'rgba(56,189,248,0.08)' : 'var(--color-bg)',
+    background: active ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'var(--color-bg)',
     color: active ? 'var(--color-accent)' : 'var(--color-text-3)',
     cursor: 'pointer', fontFamily: 'inherit',
     textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -2485,7 +2485,7 @@ function chipBtn(selected: boolean): React.CSSProperties {
   return {
     padding: '6px 12px', borderRadius: 16, fontSize: 'var(--fs-sm)', fontWeight: 600,
     border: selected ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
-    background: selected ? 'rgba(56,189,248,0.10)' : 'var(--color-bg)',
+    background: selected ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'var(--color-bg)',
     color: selected ? 'var(--color-accent)' : 'var(--color-text-3)',
     cursor: 'pointer', fontFamily: 'inherit',
   }

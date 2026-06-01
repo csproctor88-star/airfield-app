@@ -713,7 +713,7 @@ export default function HomePage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(56,189,248,0.03)',
+          background: 'color-mix(in srgb, var(--color-accent) 3%, transparent)',
           border: '1px solid var(--color-border-mid)',
           marginBottom: 16,
           position: 'relative',
@@ -780,8 +780,8 @@ export default function HomePage() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 22, height: 22, borderRadius: 'var(--radius-sm)',
-                    border: '1px solid rgba(56,189,248,0.35)',
-                    background: 'rgba(56,189,248,0.08)',
+                    border: '1px solid color-mix(in srgb, var(--color-accent) 35%, transparent)',
+                    background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
                     color: 'var(--color-accent)',
                   }}>
                   <Plus size={14} strokeWidth={2.5} />
@@ -826,8 +826,8 @@ export default function HomePage() {
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 22, height: 22, borderRadius: 'var(--radius-sm)',
-                    border: '1px solid rgba(56,189,248,0.35)',
-                    background: 'rgba(56,189,248,0.08)',
+                    border: '1px solid color-mix(in srgb, var(--color-accent) 35%, transparent)',
+                    background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
                     color: 'var(--color-accent)',
                   }}>
                   <Plus size={14} strokeWidth={2.5} />
@@ -1458,7 +1458,7 @@ export default function HomePage() {
                   style={{
                     flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-lg)', fontWeight: 700,
                     cursor: 'pointer', border: rscDraftValue === c ? '2px solid var(--color-accent)' : '1px solid var(--color-border-mid)',
-                    background: rscDraftValue === c ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
+                    background: rscDraftValue === c ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-bg-inset)',
                     color: rscDraftValue === c ? 'var(--color-accent)' : 'var(--color-text-2)',
                   }}
                 >{c}</button>
@@ -1737,7 +1737,7 @@ export default function HomePage() {
               letterSpacing: '0.08em',
               marginBottom: 6,
               paddingBottom: 4,
-              borderBottom: '1px solid rgba(56,189,248,0.20)',
+              borderBottom: '1px solid var(--color-border-active)',
             }
 
         return (<>
@@ -2219,7 +2219,7 @@ export default function HomePage() {
                 padding: '8px 12px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-2xl)', fontWeight: 800,
                 cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                 color: 'var(--color-accent)', background: 'var(--color-bg-inset)',
-                border: '2px solid rgba(56,189,248,0.3)',
+                border: '2px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
                 minWidth: 70,
               }}
             >
@@ -2299,7 +2299,7 @@ export default function HomePage() {
       {/* ===== Personnel on Airfield ===== */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid var(--color-border-active)',
       }}>
         <span style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
@@ -2455,7 +2455,7 @@ export default function HomePage() {
       {/* ===== Construction / Closures ===== */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid var(--color-border-active)',
       }}>
         <span style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
@@ -2555,7 +2555,7 @@ export default function HomePage() {
                     alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6,
                     marginTop: items.length > 0 ? 4 : 0,
                     padding: '4px 10px', borderRadius: 'var(--radius-sm)',
-                    border: '1px dashed rgba(56,189,248,0.40)', background: 'transparent',
+                    border: '1px dashed color-mix(in srgb, var(--color-accent) 40%, transparent)', background: 'transparent',
                     color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
                     letterSpacing: '0.05em', textTransform: 'uppercase',
                     cursor: 'pointer', fontFamily: 'inherit',
@@ -2627,8 +2627,8 @@ export default function HomePage() {
                       disabled={!newConstructionLocation.trim() || !newConstructionWork.trim()}
                       style={{
                         padding: '3px 12px', borderRadius: 'var(--radius-sm)',
-                        border: '1px solid rgba(56,189,248,0.40)',
-                        background: 'rgba(56,189,248,0.10)',
+                        border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                        background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
                         color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 800,
                         letterSpacing: '0.04em', textTransform: 'uppercase',
                         cursor: newConstructionLocation.trim() && newConstructionWork.trim() ? 'pointer' : 'not-allowed',
@@ -2650,7 +2650,7 @@ export default function HomePage() {
       {/* ===== Miscellaneous Info ===== */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+        marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid var(--color-border-active)',
       }}>
         <span style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
@@ -2723,7 +2723,7 @@ export default function HomePage() {
           <div style={{ marginTop: 12 }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(56,189,248,0.20)',
+              marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid var(--color-border-active)',
             }}>
               <span style={{
                 fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',

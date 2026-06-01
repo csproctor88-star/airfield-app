@@ -746,8 +746,8 @@ export default function AuditPanel({
               padding: '6px 0',
               marginTop: 4,
               borderRadius: 6,
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              background: 'rgba(56, 189, 248, 0.1)',
+              border: '1px solid var(--color-border-active)',
+              background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
               color: 'var(--color-cyan)',
               fontSize: 11,
               fontWeight: 600,
@@ -769,8 +769,8 @@ export default function AuditPanel({
               width: '100%',
               padding: '6px 0',
               borderRadius: 6,
-              border: barGroupsOpen ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid var(--color-border)',
-              background: barGroupsOpen ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+              border: barGroupsOpen ? '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)' : '1px solid var(--color-border)',
+              background: barGroupsOpen ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
               color: barGroupsOpen ? 'var(--color-cyan)' : 'var(--color-text-3)',
               fontSize: 11,
               fontWeight: 600,
@@ -783,8 +783,8 @@ export default function AuditPanel({
 
           {barGroupsOpen && (
             <div style={{
-              background: 'rgba(56, 189, 248, 0.05)',
-              border: '1px solid rgba(56, 189, 248, 0.15)',
+              background: 'color-mix(in srgb, var(--color-accent) 5%, transparent)',
+              border: '1px solid var(--color-border-mid)',
               borderRadius: 8,
               padding: 8,
               marginBottom: 8,
@@ -857,8 +857,8 @@ export default function AuditPanel({
                         }}
                         style={{
                           padding: '3px 8px', borderRadius: 4,
-                          border: '1px solid rgba(56, 189, 248, 0.3)',
-                          background: inputVal.trim() ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                          border: '1px solid var(--color-border-active)',
+                          background: inputVal.trim() ? 'color-mix(in srgb, var(--color-accent) 15%, transparent)' : 'transparent',
                           color: inputVal.trim() ? 'var(--color-cyan)' : 'var(--color-text-3)',
                           fontSize: 10, fontWeight: 600,
                           cursor: inputVal.trim() ? 'pointer' : 'default',

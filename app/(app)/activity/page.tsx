@@ -537,7 +537,7 @@ export default function ActivityPage() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         gap: 12, flexWrap: 'wrap',
         marginBottom: 10, paddingBottom: 6,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
           <span style={{
@@ -594,8 +594,8 @@ export default function ActivityPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 8, width: '100%',
             padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-md)',
-            background: 'rgba(56,189,248,0.08)',
-            border: '1px solid rgba(56,189,248,0.3)',
+            background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)',
             cursor: 'pointer', fontFamily: 'inherit',
           }}
         >

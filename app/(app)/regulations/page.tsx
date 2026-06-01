@@ -655,7 +655,7 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
 
               {/* Clear Cache */}
               {(cachedCount ?? 0) > 0 && !cacheProgress && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(56,189,248,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--color-border)' }}>
                   <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
                     Free up storage space
                   </span>
@@ -1370,7 +1370,7 @@ function AddReferenceModal({ existingRegIds, onClose, onAdd }: { existingRegIds:
           {/* Auto-derived info */}
           <div style={{
             padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-            background: 'rgba(56,189,248,0.04)',
+            background: 'color-mix(in srgb, var(--color-accent) 4%, transparent)',
             border: '1px solid var(--color-border)',
             fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', lineHeight: 1.6,
           }}>

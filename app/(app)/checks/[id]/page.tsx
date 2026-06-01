@@ -272,7 +272,7 @@ export default function CheckDetailPage() {
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         gap: 8, paddingBottom: 8, marginBottom: 12,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         <button
           onClick={() => router.back()}
@@ -831,8 +831,8 @@ export default function CheckDetailPage() {
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-            border: '1px solid rgba(56,189,248,0.40)',
-            background: 'rgba(56,189,248,0.10)', color: 'var(--color-accent)',
+            border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+            background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)',
             fontSize: 'var(--fs-xs)', fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.06em',
             textDecoration: 'none', fontFamily: 'inherit',

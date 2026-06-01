@@ -29,7 +29,7 @@ export function PhotoPickerButton({ onUpload, disabled, variant = 'full', label 
       disabled={disabled}
       style={isCompact ? {
         padding: '5px 10px', borderRadius: 6, fontSize: 'var(--fs-sm)', fontWeight: 600,
-        border: '1px solid rgba(56,189,248,0.3)', background: 'rgba(56,189,248,0.08)',
+        border: '1px solid color-mix(in srgb, var(--color-accent) 30%, transparent)', background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
         color: 'var(--color-accent-secondary)', cursor: disabled ? 'default' : 'pointer',
         fontFamily: 'inherit', opacity: disabled ? 0.7 : 1,
         display: 'flex', alignItems: 'center', gap: 4,

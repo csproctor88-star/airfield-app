@@ -530,7 +530,7 @@ export default function DiscrepanciesPage() {
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             gap: 12, flexWrap: 'wrap',
             marginBottom: 10, paddingBottom: 6,
-            borderBottom: '1px solid rgba(56,189,248,0.20)',
+            borderBottom: '1px solid var(--color-border-active)',
           }}>
             <span style={{
               fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
@@ -555,8 +555,8 @@ export default function DiscrepanciesPage() {
                   data-tour="discrepancies-primary-action"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    background: 'rgba(56,189,248,0.10)',
-                    border: '1px solid rgba(56,189,248,0.40)',
+                    background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
                     borderRadius: 'var(--radius-md)',
                     padding: '5px 12px',
                     color: 'var(--color-accent)',
@@ -724,8 +724,8 @@ export default function DiscrepanciesPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '7px 12px', borderRadius: 'var(--radius-md)',
-                  border: filtersOpen || activeCount > 0 ? '1px solid rgba(56,189,248,0.40)' : '1px solid var(--color-border)',
-                  background: filtersOpen ? 'rgba(56,189,248,0.10)' : 'var(--color-bg-surface)',
+                  border: filtersOpen || activeCount > 0 ? '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)' : '1px solid var(--color-border)',
+                  background: filtersOpen ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'var(--color-bg-surface)',
                   color: filtersOpen || activeCount > 0 ? 'var(--color-accent)' : 'var(--color-text-2)',
                   fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
                   cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
@@ -1160,8 +1160,8 @@ export default function DiscrepanciesPage() {
                     href="/discrepancies/new"
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
-                      background: 'rgba(56,189,248,0.10)',
-                      border: '1px solid rgba(56,189,248,0.40)',
+                      background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+                      border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
                       borderRadius: 'var(--radius-md)',
                       padding: '6px 14px',
                       color: 'var(--color-accent)',

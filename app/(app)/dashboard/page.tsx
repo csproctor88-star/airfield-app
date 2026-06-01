@@ -147,7 +147,7 @@ export default function AMDashboardPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, flexWrap: 'wrap',
           marginBottom: 10, paddingBottom: 6,
-          borderBottom: '1px solid rgba(56,189,248,0.20)',
+          borderBottom: '1px solid var(--color-border-active)',
         }}>
           <span style={{
             fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
@@ -275,7 +275,7 @@ export default function AMDashboardPage() {
           <Link key={q.label} href={q.href} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             padding: '10px 8px', borderRadius: 'var(--radius-md)', minHeight: 68,
-            background: 'var(--color-bg-elevated)', border: '1px solid rgba(56,189,248,0.40)',
+            background: 'var(--color-bg-elevated)', border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
             textDecoration: 'none', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)',
             textAlign: 'center', lineHeight: 1.2,
           }}>

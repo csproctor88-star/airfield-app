@@ -293,7 +293,7 @@ function CategoryChip({ cat }: { cat: string }) {
 function TriagePill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
     new:              { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'New' },
-    reviewing:        { bg: 'rgba(56,189,248,0.15)', text: 'rgb(3,105,161)', label: 'Reviewing' },
+    reviewing:        { bg: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', text: 'rgb(3,105,161)', label: 'Reviewing' },
     promoted:         { bg: 'rgba(168,85,247,0.15)', text: 'rgb(107,33,168)', label: 'Promoted' },
     closed_no_action: { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Closed' },
     duplicate:        { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Duplicate' },

@@ -579,7 +579,7 @@ export function UserDetailModal({
                   position: 'absolute', top: '100%', left: 0, right: 0,
                   zIndex: 100, marginTop: 4,
                   background: 'var(--color-bg-elevated)',
-                  border: '1px solid rgba(56,189,248,0.15)',
+                  border: '1px solid var(--color-border-mid)',
                   borderRadius: 8,
                   maxHeight: 200, overflowY: 'auto',
                 }}>
@@ -603,9 +603,9 @@ export function UserDetailModal({
                         onClick={() => { setBaseId(inst.id); setShowInstDropdown(false); setInstSearch('') }}
                         style={{
                           display: 'block', width: '100%', padding: '10px 14px',
-                          background: inst.id === baseId ? 'rgba(56,189,248,0.08)' : 'transparent',
+                          background: inst.id === baseId ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
                           border: 'none',
-                          borderBottom: '1px solid rgba(56,189,248,0.04)',
+                          borderBottom: '1px solid var(--color-border)',
                           cursor: 'pointer', textAlign: 'left',
                           color: inst.id === baseId ? 'var(--color-accent)' : 'var(--color-text-1)',
                           fontSize: 'var(--fs-md)', fontFamily: 'inherit',
@@ -734,7 +734,7 @@ export function UserDetailModal({
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '6px 10px', borderRadius: 6,
                       background: 'var(--color-bg-elevated)',
-                      border: m.base_id === user.primary_base_id ? '1px solid rgba(56,189,248,0.3)' : '1px solid var(--color-border)',
+                      border: m.base_id === user.primary_base_id ? '1px solid var(--color-border-active)' : '1px solid var(--color-border)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -747,7 +747,7 @@ export function UserDetailModal({
                         <span style={{
                           fontSize: '9px', fontWeight: 700, color: 'var(--color-cyan)',
                           padding: '1px 4px', borderRadius: 3,
-                          background: 'rgba(56,189,248,0.1)',
+                          background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
                         }}>PRIMARY</span>
                       )}
                     </div>
@@ -1101,7 +1101,7 @@ export function UserDetailModal({
                         <span style={{
                           marginLeft: 'auto', fontSize: '9px', fontWeight: 700,
                           color: 'var(--color-cyan)', padding: '1px 4px', borderRadius: 3,
-                          background: 'rgba(56,189,248,0.1)',
+                          background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
                         }}>PRIMARY</span>
                       )}
                     </label>
@@ -1129,7 +1129,7 @@ export function UserDetailModal({
                 disabled={bulkSaving}
                 style={{
                   padding: '8px 16px', borderRadius: 6, border: 'none',
-                  background: bulkSaving ? 'rgba(56,189,248,0.4)' : 'var(--color-cyan)',
+                  background: bulkSaving ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-cyan)',
                   color: '#000', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   cursor: bulkSaving ? 'not-allowed' : 'pointer',
                 }}

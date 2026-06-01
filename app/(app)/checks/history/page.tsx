@@ -95,7 +95,7 @@ export default function CheckHistoryPage() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         flexWrap: 'wrap', gap: 8,
         paddingBottom: 8, marginBottom: 12,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         <div style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700,
@@ -109,8 +109,8 @@ export default function CheckHistoryPage() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '6px 12px', borderRadius: 'var(--radius-sm)',
-            border: '1px solid rgba(56,189,248,0.40)',
-            background: 'rgba(56,189,248,0.10)',
+            border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+            background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
             color: 'var(--color-accent)',
             fontSize: 'var(--fs-xs)', fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -146,7 +146,7 @@ export default function CheckHistoryPage() {
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '8px 12px', borderRadius: 'var(--radius-sm)',
             border: `1px solid ${filtersOpen || activeFilterCount > 0 ? 'var(--color-accent)' : 'var(--color-border)'}`,
-            background: filtersOpen ? 'rgba(56,189,248,0.08)' : 'var(--color-bg-surface)',
+            background: filtersOpen ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'var(--color-bg-surface)',
             color: filtersOpen || activeFilterCount > 0 ? 'var(--color-accent)' : 'var(--color-text-2)',
             cursor: 'pointer', fontFamily: 'inherit',
             fontSize: 'var(--fs-xs)', fontWeight: 700,
@@ -286,8 +286,8 @@ export default function CheckHistoryPage() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 12px', borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(56,189,248,0.40)',
-                background: 'rgba(56,189,248,0.10)', color: 'var(--color-accent)',
+                border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+                background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', color: 'var(--color-accent)',
                 cursor: 'pointer', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 textTransform: 'uppercase', letterSpacing: '0.06em',
                 fontFamily: 'inherit', textDecoration: 'none',
@@ -473,8 +473,8 @@ function ActiveChip({ label, onClear }: { label: string; onClear: () => void }) 
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 6,
       padding: '3px 4px 3px 10px', borderRadius: 999,
-      background: 'rgba(56,189,248,0.10)',
-      border: '1px solid rgba(56,189,248,0.40)',
+      background: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
       color: 'var(--color-accent)',
       fontSize: 'var(--fs-2xs)', fontWeight: 700,
       textTransform: 'uppercase', letterSpacing: '0.06em',

@@ -775,7 +775,7 @@ export default function AirfieldChecksPage() {
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
         gap: 8, paddingBottom: 8, marginBottom: 12,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>
         <div style={{
           fontSize: 'var(--fs-sm)', fontWeight: 700,
@@ -1570,8 +1570,8 @@ export default function AirfieldChecksPage() {
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               flex: '2 1 200px', padding: '14px 16px', borderRadius: 'var(--radius-md)',
-              border: '1px solid rgba(56,189,248,0.40)',
-              background: 'rgba(56,189,248,0.12)',
+              border: '1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)',
+              background: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
               color: 'var(--color-accent)',
               fontSize: 'var(--fs-md)', fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '0.06em',

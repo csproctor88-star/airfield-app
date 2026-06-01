@@ -23,7 +23,7 @@ const formGroupHeaderStyle: React.CSSProperties = {
   fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
   textTransform: 'uppercase', letterSpacing: '0.08em',
   marginBottom: 8, paddingBottom: 4,
-  borderBottom: '1px solid rgba(56,189,248,0.20)',
+  borderBottom: '1px solid var(--color-border-active)',
 }
 
 const DiscrepancyLocationMap = dynamic(
@@ -225,7 +225,7 @@ export default function NewDiscrepancyPage() {
         fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
         textTransform: 'uppercase', letterSpacing: '0.08em',
         marginBottom: 10, paddingBottom: 6,
-        borderBottom: '1px solid rgba(56,189,248,0.20)',
+        borderBottom: '1px solid var(--color-border-active)',
       }}>New Discrepancy</div>
 
       <div className="card">

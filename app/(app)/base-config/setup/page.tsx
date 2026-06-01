@@ -345,7 +345,7 @@ export default function BaseSetupPage() {
           {/* Step header card — form column lead */}
           <div style={{
             padding: '14px 18px', borderRadius: 10, marginBottom: 12,
-            background: 'linear-gradient(135deg, rgba(34,211,238,0.06), rgba(56,189,248,0.03))',
+            background: 'linear-gradient(135deg, rgba(34,211,238,0.06), color-mix(in srgb, var(--color-accent) 3%, transparent))',
             border: '1px solid rgba(34,211,238,0.15)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1424,7 +1424,7 @@ function RunwayTab({
               padding: '10px 14px',
               borderRadius: 'var(--radius-base)',
               border: '1px solid var(--color-cyan)',
-              background: 'rgba(56,189,248,0.08)',
+              background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
               color: 'var(--color-cyan)',
               cursor: 'pointer',
               fontSize: 'var(--fs-md)',
@@ -1501,7 +1501,7 @@ function RunwayTab({
                 {/* Airport info */}
                 <div style={{
                   padding: '12px 14px', borderRadius: 8, marginBottom: 12,
-                  background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)',
+                  background: 'color-mix(in srgb, var(--color-accent) 6%, transparent)', border: '1px solid var(--color-border-active)',
                 }}>
                   <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)' }}>
                     {lookupResult.name}
@@ -4054,7 +4054,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
             }}
           >
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: isExp ? 'rgba(56,189,248,0.06)' : 'transparent', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: isExp ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'transparent', cursor: 'pointer' }}
               onClick={() => handleExpand(sys.id)}
             >
               <span
@@ -5295,7 +5295,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
               style={{
                 padding: '0 8px', height: 22, borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                 border: `1px solid ${col.is_required ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                background: col.is_required ? 'rgba(56,189,248,0.08)' : 'transparent',
+                background: col.is_required ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
                 color: col.is_required ? 'var(--color-accent)' : 'var(--color-text-4)',
                 cursor: 'pointer', fontFamily: 'inherit',
               }}
@@ -5366,7 +5366,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
               padding: '2px 8px', height: 22, borderRadius: 'var(--radius-sm)',
               fontSize: 'var(--fs-xs)', fontWeight: 700,
               border: `1px solid ${newColRequired ? 'var(--color-accent)' : 'var(--color-border)'}`,
-              background: newColRequired ? 'rgba(56,189,248,0.10)' : 'transparent',
+              background: newColRequired ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'transparent',
               color: newColRequired ? 'var(--color-accent)' : 'var(--color-text-4)',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -5473,7 +5473,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
                   style={{
                     padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
                     border: `1px solid ${a.is_active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                    background: a.is_active ? 'rgba(56,189,248,0.08)' : 'transparent',
+                    background: a.is_active ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
                     color: a.is_active ? 'var(--color-accent)' : 'var(--color-text-3)',
                     cursor: 'pointer',
                   }}
@@ -5598,7 +5598,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '8px 12px', borderBottom: '1px solid var(--color-border)',
                         cursor: 'pointer',
-                        background: checked ? 'rgba(56,189,248,0.06)' : 'transparent',
+                        background: checked ? 'color-mix(in srgb, var(--color-accent) 6%, transparent)' : 'transparent',
                       }}
                     >
                       <input

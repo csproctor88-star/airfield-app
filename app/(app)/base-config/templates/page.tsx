@@ -367,7 +367,7 @@ export default function TemplateManagementPage() {
                 fontSize: 'var(--fs-md)',
                 fontWeight: 700,
                 fontFamily: 'inherit',
-                background: isActive ? 'rgba(56,189,248,0.12)' : 'var(--color-bg-inset)',
+                background: isActive ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-bg-inset)',
                 color: isActive ? 'var(--color-accent)' : 'var(--color-text-2)',
                 transition: 'all 0.15s',
               }}

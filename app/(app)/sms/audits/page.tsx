@@ -309,7 +309,7 @@ function AuditEditor({ audit, onChange, onSave }: {
 
 function AuditStatusPill({ status }: { status: string }) {
   const palette: Record<string, { bg: string; text: string; label: string }> = {
-    scheduled:   { bg: 'rgba(56,189,248,0.15)', text: 'rgb(3,105,161)', label: 'Scheduled' },
+    scheduled:   { bg: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', text: 'rgb(3,105,161)', label: 'Scheduled' },
     in_progress: { bg: 'rgba(245,158,11,0.15)', text: 'rgb(180,83,9)', label: 'In Progress' },
     completed:   { bg: 'rgba(34,197,94,0.15)',  text: 'rgb(21,128,61)', label: 'Completed' },
     closed:      { bg: 'rgba(100,116,139,0.18)', text: 'rgb(71,85,105)', label: 'Closed' },
