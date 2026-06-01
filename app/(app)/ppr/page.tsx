@@ -811,7 +811,7 @@ export default function PprPage() {
     // Cancel is a soft state flip — only meaningful on non-terminal
     // entries. Already-denied or already-canceled rows skip it.
     if (canWrite && entry.status !== 'denied' && entry.status !== 'canceled') {
-      acts.push({ label: 'Cancel', color: '#94a3b8', onClick: () => handleCancel(entry) })
+      acts.push({ label: 'Cancel', color: 'var(--color-text-4)', onClick: () => handleCancel(entry) })
     }
     if (canDelete) {
       acts.push({ label: 'Del', color: 'var(--color-danger)', onClick: () => handleDelete(entry) })

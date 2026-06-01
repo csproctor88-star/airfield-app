@@ -236,13 +236,13 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
     fontSize: 16, fontFamily: 'inherit', outline: 'none',
   }
   const labelStyle: React.CSSProperties = {
-    display: 'block', fontSize: 14, fontWeight: 600, color: '#94A3B8', marginBottom: 4,
+    display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--color-text-4)', marginBottom: 4,
   }
 
   if (loading) {
     return (
       <div style={shellStyle('center')}>
-        <div style={{ color: '#94A3B8', fontSize: 16 }}>Loading...</div>
+        <div style={{ color: 'var(--color-text-4)', fontSize: 16 }}>Loading...</div>
       </div>
     )
   }
@@ -260,7 +260,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       <div style={shellStyle('center')}>
         <div style={{ textAlign: 'center', maxWidth: 420, padding: 24 }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 10 }}>{heading}</div>
-          <div style={{ fontSize: 14, color: '#94A3B8', lineHeight: 1.5 }}>{body}</div>
+          <div style={{ fontSize: 14, color: 'var(--color-text-4)', lineHeight: 1.5 }}>{body}</div>
         </div>
       </div>
     )
@@ -271,7 +271,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       <div style={shellStyle('center')}>
         <div style={{ textAlign: 'center', maxWidth: 400, padding: 24 }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#E2E8F0', marginBottom: 8 }}>Thanks</div>
-          <div style={{ fontSize: 14, color: '#64748B' }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-3)' }}>
             You recently submitted a PPR request. Please wait a few minutes before submitting another, or
             contact AMOPS directly if you need to update an existing request.
           </div>
@@ -297,11 +297,11 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
               Request Submitted
             </div>
           </div>
-          <div style={{ fontSize: 14, color: '#CBD5E1', lineHeight: 1.55 }}>
+          <div style={{ fontSize: 14, color: 'var(--color-text-3)', lineHeight: 1.55 }}>
             {config.baseName} AMOPS has received your request and will review it.
             You will receive a separate email with your assigned PPR number once it is approved.
           </div>
-          <div style={{ marginTop: 14, fontSize: 12, color: '#64748B' }}>
+          <div style={{ marginTop: 14, fontSize: 12, color: 'var(--color-text-3)' }}>
             A confirmation has been sent to {requesterEmail}.
           </div>
         </div>
@@ -324,7 +324,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
             {config.baseName}
           </div>
           <div style={{
-            fontSize: 11, fontWeight: 600, color: '#94A3B8',
+            fontSize: 11, fontWeight: 600, color: 'var(--color-text-4)',
             textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>
             Prior Permission Required Request
@@ -356,7 +356,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
               placeholder="your.email@example.com"
               style={inputStyle}
             />
-            <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>
               We&apos;ll send your PPR number here once AMOPS approves the request.
             </div>
           </div>
@@ -371,7 +371,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
               placeholder="e.g. +1 555 123 4567"
               style={inputStyle}
             />
-            <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>
               POC number AMOPS or coordinating agencies can reach you on if a question comes up.
             </div>
           </div>
@@ -394,7 +394,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
               const [y, m, d] = arrivalDate.split('-').map(Number)
               if (!y || !m || !d) return null
               return (
-                <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--color-text-3)', marginTop: 4 }}>
                   → {String(d).padStart(2, '0')} {months[m - 1]} {y}
                 </div>
               )
@@ -472,7 +472,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
           </button>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: '#475569' }}>
+        <div style={{ textAlign: 'center', marginTop: 16, fontSize: 11, color: 'var(--color-text-3)' }}>
           Powered by Glidepath
         </div>
       </div>
