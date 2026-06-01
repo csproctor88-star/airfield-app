@@ -205,7 +205,10 @@ deterministic. Gate the commit on `npx tsc --noEmit` **and** `npm run build` RC=
 - **PPR "Date" uses `DD MMM YY`** — `formatC2imeraDate(arrival_date)` (new
   date-only helper), not the raw `YYYY-MM-DD`.
 - **Events "Remarks"** — blank Details renders `N/A`, and the entry's operating
-  initials are appended as ` (OI)` (e.g. `PAPI OUT (JD)`, `N/A (JD)`).
+  initials are appended after an ellipsis (`PAPI OUT...JD`, `N/A...JD`). If the
+  remarks already end in `.`, only two dots are added so the result still has
+  exactly three (`WORK COMPLETED.` → `WORK COMPLETED...JD`). Omitted when there
+  are no initials.
 
 ## Open items to resolve during planning (not blocking design)
 

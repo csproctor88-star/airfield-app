@@ -53,11 +53,14 @@ export function buildEventsLogSheet(
 }
 
 // Remarks = the Events Log "Details" string, blank → "N/A", with the entry's
-// operating initials appended as " (OI)".
+// operating initials appended after an ellipsis (e.g. "PAPI OUT...JD"). If the
+// remarks already end in a period, only two dots are added so the result still
+// has exactly three (e.g. "WORK COMPLETED." → "WORK COMPLETED...JD").
 function buildRemarks(a: ActivityEntry, detailsMap: Map<string, EntityDetails>): string {
   const base = buildDetailsString(a, detailsMap) || 'N/A'
   const oi = (a.user_operating_initials || '').trim()
-  return oi ? `${base} (${oi})` : base
+  if (!oi) return base
+  return `${base}${base.endsWith('.') ? '..' : '...'}${oi}`
 }
 
 // ── PPR Log ─────────────────────────────────────────────────────────

@@ -137,13 +137,18 @@ describe('buildEventsLogSheet', () => {
     return rows[0][key]
   }
 
-  it('uses buildDetailsString for Remarks and appends the OI as " (OI)"', () => {
+  it('appends the OI after an ellipsis (no trailing period on the remarks)', () => {
     const details = new Map<string, EntityDetails>([['e1', { title: 'PAPI out' } as EntityDetails]])
-    expect(remarksOf(activityEntry({ entity_id: 'e1', metadata: null, user_operating_initials: 'JD' }), details)).toBe('PAPI OUT (JD)')
+    expect(remarksOf(activityEntry({ entity_id: 'e1', metadata: null, user_operating_initials: 'JD' }), details)).toBe('PAPI OUT...JD')
+  })
+
+  it('adds only two dots when the remarks already end in a period', () => {
+    const details = new Map<string, EntityDetails>([['e1', { title: 'Work completed.' } as EntityDetails]])
+    expect(remarksOf(activityEntry({ entity_id: 'e1', metadata: null, user_operating_initials: 'JD' }), details)).toBe('WORK COMPLETED...JD')
   })
 
   it('uses "N/A" when Remarks are blank, then appends the OI', () => {
-    expect(remarksOf(activityEntry({ entity_id: null, metadata: null, user_operating_initials: 'JD' }))).toBe('N/A (JD)')
+    expect(remarksOf(activityEntry({ entity_id: null, metadata: null, user_operating_initials: 'JD' }))).toBe('N/A...JD')
   })
 
   it('omits the OI suffix when there are no operating initials', () => {
