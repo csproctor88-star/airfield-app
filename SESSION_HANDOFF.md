@@ -5,7 +5,7 @@
 below is deployed (Vercel deploys on push).
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
 (723 pass / 74 files).
-**HEAD:** `a1192bf`
+**HEAD:** `7b85b70`
 
 ---
 
@@ -20,13 +20,16 @@ type, a User Management "Active 24h" KPI, and a new PPR feature (notify
 coordinating agencies when a PPR changes). The session closed by updating the
 v2.34 release-notes builder for next-session review.
 
-**The v2 design is now the DEFAULT** (`a1192bf`, end of session, per user
-request). It's gated behind `data-design="v2"` on `<html>`; the design context
-and the flash-prevention script default to v2 unless the user explicitly chose
-**Classic** in **Settings → Appearance → App Design**. Existing `localStorage`
-(`glidepath_design`) choices are preserved; everyone who never toggled now gets
-the refreshed look. Classic remains a one-click opt-out and is byte-for-byte the
-old app.
+**The v2 design is now the ONLY design — Classic was removed entirely** (`a1192bf`
+made v2 the default, then `14ae4e0` + `7b85b70` deleted the Classic path per
+user request). `lib/design-context.tsx` and the Settings "App Design" toggle are
+gone; `data-design="v2"` is set statically on `<html>` (so the `globals.css`
+`[data-design="v2"]` blocks always apply), the flash script always paints the v2
+background, and the `design==='v2'` conditionals in header / dashboard /
+airfield-status were collapsed to their v2 values. Any old `glidepath_design`
+localStorage value is now inert. The `globals.css` base (`:root`) v1 tokens
+remain as the layer v2 overrides — a future cleanup could merge them, but
+they're unreachable.
 
 ### Navigation reorg + AMTR + module gating (`fc56fb7`, `eda4f7d`, `2251700`, `8f83d39`)
 
@@ -151,6 +154,7 @@ sessions.
 
 | Item | Severity | Notes |
 |---|---|---|
+| globals.css base (v1) tokens now dead | Low | Classic is removed but the `:root` v1 token values still exist as the layer the always-on `[data-design="v2"]` blocks override. Harmless but redundant — a future pass could merge v2 into `:root` and drop the `[data-design]` wrapper. |
 | v2 color sweep: extended-palette hex still literal | Low | A handful of hex outside the token set (`#a855f7`, `#ec4899`, `#eab308`, `#6366f1`, `#f472b6`, `#f43f5e`, `#d946ef`) weren't converted — they have no matching token. Add tokens or leave. |
 | usr-analytics privacy disclosure | Med | Carried — per-user usage tracking still has no user-facing disclosure line; hold the release-note bullet until it ships. |
 | v2.34 release prep | Med | Carried — version still 2.33.0 (5 places + `lib/release-notes.ts`). Release builder is updated and ready for review. |
@@ -175,10 +179,10 @@ release.** Sensible candidates:
    `lib/release-notes.ts`, date the CHANGELOG, add an in-app release note. This
    releases the whole staged backlog since 2.33.0 (FAA expansion, user-mgmt,
    AMTR, Records Export, nav reorg, the v2 design, PPR coordination + notify).
-2. **Verify on the deploy** — the v2 look is now the default for everyone (dark
-   + light, mobile); confirm it reads well across the app, and check the new PPR
-   notify-on-change prompt on a coordinated PPR. Classic is the opt-out if a
-   screen regresses.
+2. **Verify on the deploy** — the v2 look is now the only design for everyone
+   (dark + light, mobile); there's no Classic fallback, so confirm it reads well
+   across the whole app and flag any screen that regresses. Also check the new
+   PPR notify-on-change prompt on a coordinated PPR.
 
 ### Long-running carryover (bandwidth-permitting)
 - Privacy/help copy for page-view tracking (`usr-analytics`).
@@ -209,7 +213,7 @@ Middleware                  74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | — | Nav reorg + v2 "Refreshed" design now default (readability/hierarchy, cream light, Plex type; Classic opt-out) + full hardcoded-color sweep; AMTR navigable + roster-scoped; airport-type module gating; User Mgmt Active-24h KPI; PPR notify-coordinated-agencies-on-change. On top of the prior unreleased deltas (FAA expansion, user-mgmt + activity, AMTR batch, Records Export). Not version-tagged; CHANGELOG `[Unreleased]`. |
+| **Unreleased** | — | Nav reorg + v2 "Refreshed" design (readability/hierarchy, cream light, Plex type) is now the only look (Classic removed) + full hardcoded-color sweep; AMTR navigable + roster-scoped; airport-type module gating; User Mgmt Active-24h KPI; PPR notify-coordinated-agencies-on-change. On top of the prior unreleased deltas (FAA expansion, user-mgmt + activity, AMTR batch, Records Export). Not version-tagged; CHANGELOG `[Unreleased]`. |
 | v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes |
 
 ---
