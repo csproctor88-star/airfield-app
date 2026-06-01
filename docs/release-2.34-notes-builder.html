@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glidepath v2.34 — Release Notes Builder</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232c; --edge:#2b333d;
+    --ink:#e6edf3; --muted:#9aa7b4; --faint:#6b7682;
+    --cyan:#38bdf8; --cyan-dim:#0b3a4a; --green:#34d399; --amber:#fbbf24;
+    --red:#f87171; --violet:#a78bfa; --accent:#38bdf8;
+    --on:#143b2b; --on-edge:#1f6b4d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--cyan)}
+  .wrap{max-width:1480px;margin:0 auto;padding:0 20px 120px}
+
+  header.top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#0d1117 70%,rgba(13,17,23,.0));padding:18px 20px 10px;border-bottom:1px solid var(--edge);backdrop-filter:blur(6px)}
+  header.top .inner{max-width:1480px;margin:0 auto;display:flex;align-items:flex-start;gap:22px;flex-wrap:wrap}
+  .titleblock h1{margin:0;font-size:20px;letter-spacing:.2px}
+  .titleblock .sub{color:var(--muted);font-size:13px;margin-top:3px}
+  .verbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-left:auto}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint)}
+  .field input{background:var(--panel2);border:1px solid var(--edge);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:14px}
+  .field input.ver{width:90px} .field input.date{width:135px} .field input.headline{width:420px;max-width:60vw}
+  .counts{font-size:13px;color:var(--muted)}
+  .counts b{color:var(--cyan)}
+
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0 8px}
+  .seg{display:inline-flex;border:1px solid var(--edge);border-radius:9px;overflow:hidden}
+  .seg button{background:transparent;border:0;color:var(--muted);padding:6px 12px;font-size:13px;cursor:pointer}
+  .seg button.active{background:var(--cyan-dim);color:var(--cyan)}
+  .btn{background:var(--panel2);border:1px solid var(--edge);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer}
+  .btn:hover{border-color:var(--faint)}
+  .btn.primary{background:var(--cyan-dim);border-color:#1d5a73;color:#bfe8fb}
+  .spacer{flex:1}
+
+  .layout{display:grid;grid-template-columns:1fr 460px;gap:24px;align-items:start;margin-top:8px}
+  @media(max-width:1180px){.layout{grid-template-columns:1fr}}
+
+  section.group{margin:18px 0 10px}
+  .ghead{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;padding:6px 2px;border-bottom:1px solid var(--edge)}
+  .ghead h2{margin:0;font-size:15px;letter-spacing:.3px}
+  .ghead .gtag{font-size:11px;color:var(--faint)}
+  .ghead .gcount{margin-left:auto;font-size:12px;color:var(--muted)}
+  .ghead .chev{transition:transform .15s;color:var(--faint)}
+  section.collapsed .ghead .chev{transform:rotate(-90deg)}
+  section.collapsed .items{display:none}
+  .gactions{font-size:11px;color:var(--faint)}
+  .gactions a{cursor:pointer;text-decoration:underline;margin-left:8px}
+
+  .items{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+  .card{display:grid;grid-template-columns:26px 1fr;gap:10px;background:var(--panel);border:1px solid var(--edge);border-radius:11px;padding:11px 13px;transition:border-color .12s,background .12s}
+  .card.on{background:linear-gradient(180deg,#11231b, #131a22);border-color:var(--on-edge)}
+  .card.off{opacity:.62}
+  .chk{appearance:none;width:18px;height:18px;margin-top:3px;border:1.5px solid var(--faint);border-radius:5px;cursor:pointer;position:relative;background:transparent}
+  .chk:checked{background:var(--green);border-color:var(--green)}
+  .chk:checked::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#06281c;font-size:13px;font-weight:700}
+  .cbody{min-width:0}
+  .crow1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+  .tag{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px;border:1px solid;white-space:nowrap}
+  .tag.usaf{color:#9fd0ff;border-color:#2a557d;background:#10263b}
+  .tag.civ{color:#c5b3ff;border-color:#473a7a;background:#1d1a31}
+  .tag.sec{color:#fca5a5;border-color:#6b2b2b;background:#2a1414}
+  .tag.fix{color:#fcd9a5;border-color:#6b522b;background:#2a2014}
+  .tag.internal{color:#9aa7b4;border-color:#3a434d;background:#1a2027}
+  .star{margin-left:auto;background:transparent;border:0;cursor:pointer;font-size:15px;color:var(--faint);padding:2px 4px;border-radius:6px}
+  .star.on{color:var(--amber)}
+  .star:hover{background:var(--panel2)}
+  textarea.verb{width:100%;background:var(--panel2);border:1px solid var(--edge);color:var(--ink);border-radius:8px;padding:8px 10px;font:14px/1.5 inherit;resize:vertical;min-height:46px}
+  textarea.verb:focus{outline:none;border-color:var(--cyan)}
+  .ref{margin-top:6px;font-size:12px;color:var(--faint)}
+  .ref code{background:var(--panel2);border:1px solid var(--edge);border-radius:5px;padding:0 5px;color:var(--muted)}
+
+  /* output panel */
+  .out{position:sticky;top:120px;background:var(--panel);border:1px solid var(--edge);border-radius:12px;overflow:hidden}
+  .out h3{margin:0;padding:12px 14px;font-size:14px;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:10px}
+  .out .fmtseg{margin-left:auto}
+  .out pre{margin:0;padding:14px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe3f0;white-space:pre-wrap;word-break:break-word;max-height:62vh;overflow:auto}
+  .out .foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--edge);align-items:center}
+  .out .foot .hint{font-size:11.5px;color:var(--faint)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#143b2b;border:1px solid var(--on-edge);color:#bff3dc;padding:9px 16px;border-radius:9px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1}
+  .legend{font-size:12px;color:var(--muted);margin:4px 0 0}
+  .legend .tag{margin-right:6px}
+  @media print{header.top,.toolbar,.out,.star,.chk{display:none!important}.layout{grid-template-columns:1fr}.card.off{display:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <div class="titleblock">
+      <h1>Glidepath — Release Notes Builder</h1>
+      <div class="sub">Everything staged since v2.33.0 (2026-05-02), through 2026-06-01 · toggle, edit, star, then copy the final notes</div>
+    </div>
+    <div class="verbar">
+      <div class="field"><label>Version</label><input class="ver" id="fVer" value="2.34.0"></div>
+      <div class="field"><label>Date (Zulu)</label><input class="date" id="fDate" value="2026-05-30"></div>
+      <div class="field"><label>Headline tagline</label><input class="headline" id="fHeadline" placeholder="One-line tagline for the What's New modal"></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <div class="seg" id="audFilter">
+      <button data-aud="all" class="active">All</button>
+      <button data-aud="usaf">USAF</button>
+      <button data-aud="civ">Civilian Part 139</button>
+      <button data-aud="sec">Security</button>
+      <button data-aud="on">Selected only</button>
+    </div>
+    <span class="counts" id="counts"></span>
+    <div class="spacer"></div>
+    <button class="btn" id="selAll">Select all</button>
+    <button class="btn" id="selNone">Clear all</button>
+    <button class="btn" id="selDefault">Reset to suggested</button>
+    <button class="btn" id="expandAll">Expand all</button>
+    <button class="btn" id="collapseAll">Collapse all</button>
+  </div>
+  <div class="legend">
+    <span class="tag usaf">USAF</span> existing USAF bases see it ·
+    <span class="tag civ">Civilian</span> civilian FAA Part 139 only (gated, invisible to USAF) ·
+    <span class="tag sec">Security</span> ·
+    <span class="tag fix">Fix</span> ·
+    <span class="tag internal">Under-the-hood</span> · ★ = headline candidate
+  </div>
+
+  <div class="layout">
+    <div id="groups"></div>
+
+    <div class="out">
+      <h3>Output
+        <span class="seg fmtseg" id="fmtSeg">
+          <button data-fmt="inapp" class="active">In-app</button>
+          <button data-fmt="md">CHANGELOG</button>
+          <button data-fmt="plain">Plain</button>
+        </span>
+      </h3>
+      <pre id="output"></pre>
+      <div class="foot">
+        <button class="btn primary" id="copyBtn">Copy</button>
+        <span class="hint" id="outHint"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---- Candidate items. audience: usaf | civ | sec.  cat tag rendered from `tags`. ---- */
+const SECTIONS = [
+  { id:'amtr', title:'AMTR — Airfield Management Training Record', tag:'USAF · new module', items:[
+    {id:'amtr-core', aud:'usaf', def:true, head:true, tags:['usaf'],
+      text:"Airfield Management Training Record (AMTR) — a fully digital AF 1098, 623A, JQS, and DAF 803 training record with per-Airfield-Manager tracking, sign-off, and reporting, replacing the standalone AFFSA training-record workbook.",
+      ref:"Commits 328cb24…11fd7fb · /amtr · migrations 2026061400–2026061503"},
+    {id:'amtr-623a', aud:'usaf', def:true, tags:['usaf'],
+      text:"Auto-623A documentation — completing a 1098 task drafts the matching AF 623A entry automatically, through a multi-stage trainee → trainer → certifier sign-off flow.",
+      ref:"bb84552, 297070c, 65b161f, b8bfb91"},
+    {id:'amtr-templates', aud:'usaf', def:true, tags:['usaf'],
+      text:"Twelve DAFMAN comment templates — one-click standardized 623A narrative entries keep documentation language consistent and compliant.",
+      ref:"40f99db, 2423664"},
+    {id:'amtr-1098yr', aud:'usaf', def:true, tags:['usaf'],
+      text:"Per-year 1098 catalog with archive — open and lock training years explicitly; prior years are preserved read-only with a clear archived treatment.",
+      ref:"fb2fb07, dad9d3e, 2872220, ae024ce"},
+    {id:'amtr-import', aud:'usaf', def:true, tags:['usaf'],
+      text:"Import and export round-trip with the standard HAF/AFFSA Excel training record — transcribe an existing record into Glidepath and export back to the official format.",
+      ref:"cb5c11d, 509dfd8, a6f756d, 3d102bf"},
+    {id:'amtr-transcribe', aud:'usaf', def:true, tags:['usaf'],
+      text:"Transcribe — bulk-capture handwritten initials and dates from an imported record straight into the live form, across every form tab.",
+      ref:"0f3e69b, 5f47922, 0e500c1"},
+    {id:'amtr-files', aud:'usaf', def:false, tags:['usaf'],
+      text:"Files tab — attach supporting documents to a training record with title and date metadata and a PII/CUI handling notice.",
+      ref:"879a3ee, 11fd7fb"},
+    {id:'amtr-insp', aud:'usaf', def:false, tags:['usaf'],
+      text:"Monthly training-record self-inspections built into AMTR.",
+      ref:"1b57daf"},
+    {id:'amtr-catalogs', aud:'usaf', def:false, tags:['usaf'],
+      text:"Shared, editable catalogs — Qualifications, Skill Levels, SEIs, the standard DAF 803 task list, and 623A entry types, with one-click populate and version-aware HAF updates.",
+      ref:"4493fb4, 5d8feb1, def9b7c, 9b877a0"},
+    {id:'amtr-roster-roles', aud:'usaf', def:false, tags:['usaf'],
+      text:"Training records auto-populate only for airfield-management personnel (Airfield Manager, NAMO, Base Admin, AMOPS); read-only and other base members are no longer added to the roster automatically.",
+      ref:"eda4f7d · AMTR_ROSTER_ROLES"},
+  ]},
+
+  { id:'export', title:'Records Export', tag:'USAF + Civilian · new feature', items:[
+    {id:'exp-core', aud:'usaf', def:true, head:true, tags:['usaf'],
+      text:"One-click Records Export (Settings → Records Export) packages your airfield's records into a single organized ZIP for Air Force records disposition or migration — generated entirely in your browser, so record data never leaves the device.",
+      ref:"CHANGELOG [Unreleased] · /settings/exports · migration 2026061900"},
+    {id:'exp-range', aud:'usaf', def:true, tags:['usaf'],
+      text:"Export any time range — all-time or a date range with This Month / Last Month / This Quarter / This FY quick-picks.",
+      ref:"64e6c7d, 6f6f490"},
+    {id:'exp-kinds', aud:'usaf', def:true, tags:['usaf'],
+      text:"Five output kinds, each optional — formatted PDF documents, Excel workbooks, photos, an offline interactive viewer, and raw JSON.",
+      ref:"0542768"},
+    {id:'exp-pdf', aud:'usaf', def:false, tags:['usaf'],
+      text:"PDF documents cover every module — record tables, AF 3616-style Events Log, PPR coordination cards, full inspection report forms with colored PASS / FAIL / N-A, waivers, ACSI, and training transcripts.",
+      ref:"283c8cd, 29f6926, b8c609a"},
+    {id:'exp-photos', aud:'usaf', def:false, tags:['usaf'],
+      text:"Organized photo tree — every in-window photo downloaded into a labeled folder structure with a provenance manifest; ACSI and waiver PDFs can embed their photos inline.",
+      ref:"de82a1a, b3c53c4"},
+    {id:'exp-viewer', aud:'usaf', def:true, tags:['usaf'],
+      text:"Offline interactive viewer — a single self-contained file with searchable, sortable tables per module that opens from a USB stick on any computer or phone, with no internet or login.",
+      ref:"c0d8c05, 4dfa032"},
+    {id:'exp-audit', aud:'usaf', def:true, tags:['usaf'],
+      text:"Tamper-evident audit cover — a START-HERE cover sheet and manifest carry per-module record counts and a SHA-256 hash of every file, so a recipient can verify nothing was altered.",
+      ref:"export-manifest.ts, export-cover-pdf.ts"},
+  ]},
+
+  { id:'faa', title:'FAA Part 139 — Civilian Commercial Airport Mode', tag:'Civilian only · strategic', items:[
+    {id:'faa-dual', aud:'civ', def:true, head:true, tags:['civ'],
+      text:"Glidepath now runs civilian FAA Part 139 commercial airports as well as USAF airfields — airport type is chosen at base setup, and civilian bases automatically see Part 139 modules and FAA terminology. (Gated; existing USAF bases are unaffected.)",
+      ref:"Phase 1 — 3f4185d…0f10338 · airport_type flag"},
+    {id:'faa-sms', aud:'civ', def:true, tags:['civ'],
+      text:"Safety Management System (SMS) module — 14 CFR §139.401 / AC 150/5200-37A hazard register, risk matrix, and safety performance indicators with automated monthly measurement.",
+      ref:"Phase 2 — 8799b08"},
+    {id:'faa-training', aud:'civ', def:true, tags:['civ'],
+      text:"§139.303 Training module — 13 seeded topics, per-user records with automatic expiry and renewal chains, AAAE/ACE certificates, a compliance matrix, and a 30-day expiry email digest.",
+      ref:"Phase 3a — migrations 2026053000–06"},
+    {id:'faa-aep', aud:'civ', def:true, tags:['civ'],
+      text:"Airport Emergency Plan (AEP) module — versioned plan with FAA acceptance tracking, response-agency roster, monthly communications checks, and triennial/annual drill program logging.",
+      ref:"Phase 3b — migrations 2026060700×7"},
+    {id:'faa-part77', aud:'civ', def:false, tags:['civ'],
+      text:"Part 77 obstruction surfaces — FAA §77.19 imaginary-surface evaluation across all six approach types alongside the existing UFC 3-260-01 engine, with FAA Form 7460-1 waiver guidance.",
+      ref:"Phase 3c — 1abe42d, b9aafc4"},
+    {id:'faa-ficon', aud:'civ', def:true, tags:['civ'],
+      text:"Field Conditions / TALPA — per-runway RwyCC assessment per AC 150/5200-30D with an automatic FICON NOTAM generator, ready to paste into FAA NOTAM Manager.",
+      ref:"Phase 3d — 24bf162, lib/calculations/rwycc.ts"},
+    {id:'faa-whmp', aud:'civ', def:true, tags:['civ'],
+      text:"Wildlife Hazard Management Plan (WHMP) — annual §139.337 assessment with an AE sign-off countdown, hazardous-species register, and one-click promotion of findings into the SMS hazard register.",
+      ref:"Phase 3e — 319464a, migration 2026061000"},
+  ]},
+
+  { id:'users', title:'User Management & Activity Monitoring', tag:'USAF + Civilian', items:[
+    {id:'usr-redesign', aud:'usaf', def:true, head:true, tags:['usaf'],
+      text:"Redesigned User Management — a cleaner roster with Unit and Office Symbol on every profile.",
+      ref:"737048f, 55f05fe"},
+    {id:'usr-signup', aud:'usaf', def:true, tags:['usaf'],
+      text:"Cleaner directory — new accounts require Rank, Role, Unit, and Office Symbol (with a Civilian-airport escape) and names auto-capitalize, so user records stay consistent.",
+      ref:"737048f · see civilian-airport unit gating"},
+    {id:'usr-analytics', aud:'usaf', def:false, tags:['usaf'],
+      text:"Usage analytics — a system-administrator dashboard showing per-user engagement and daily page views, so you can see how the platform is actually being used. (Needs a privacy/disclosure line before announcing.)",
+      ref:"737048f · /users/analytics · migration 2026061800 · ⚠ no user-facing disclosure yet"},
+    {id:'usr-email', aud:'usaf', def:true, tags:['usaf'],
+      text:"Self-service email change in your profile, with an administrator override in User Management.",
+      ref:"7672a92"},
+    {id:'usr-approval', aud:'usaf', def:false, tags:['usaf','sec'],
+      text:"Account-approval flow consolidated — pending accounts are gated at the database until approved.",
+      ref:"cc49085, 96d87b6, migration 2026061600"},
+    {id:'usr-active24h', aud:'usaf', def:true, head:true, tags:['usaf'],
+      text:"Active in the last 24 hours — a User Management metric showing how many people used the app today; click it to filter the roster to exactly who, with each person's last-seen time.",
+      ref:"8f83d39 · profiles.last_seen_at"},
+  ]},
+
+  { id:'ppr', title:'PPR Coordination', tag:'USAF + Civilian', items:[
+    {id:'ppr-coord', aud:'usaf', def:true, tags:['usaf'],
+      text:"PPR multi-agency coordination — coordinating agencies are notified by email automatically on approve, deny, and cancel, and can be added to a request after it is created.",
+      ref:"f8cadc6, 39afb49"},
+    {id:'ppr-copyurl', aud:'usaf', def:false, tags:['usaf'],
+      text:"Copy the base's public PPR request link from the module header in one click.",
+      ref:"9053593"},
+    {id:'ppr-pdf', aud:'usaf', def:true, tags:['usaf'],
+      text:"PPR PDF rebuilt — cleaner card layout, summary table, arrival ETA, and base-local times.",
+      ref:"0224c92, 5762190, 8b93a1b"},
+    {id:'ppr-count', aud:'usaf', def:false, tags:['usaf','fix'],
+      text:"PPR active counts now exclude denied and canceled requests, so the dashboard total reflects live requests.",
+      ref:"2003be0"},
+    {id:'ppr-update-notify', aud:'usaf', def:true, head:true, tags:['usaf'],
+      text:"Keep coordinating agencies current on PPR changes — editing a PPR after agencies have coordinated prompts you to send them the updated details (what changed, plus the full current request), so they always have the latest. Informational only; it doesn't reset coordination.",
+      ref:"d6c494c · /api/send-ppr-update"},
+  ]},
+
+  { id:'mil', title:'.mil Email Deliverability', tag:'USAF', items:[
+    {id:'mil-deliver', aud:'usaf', def:true, tags:['usaf','fix'],
+      text:"Email deliverability hardened for .mil inboxes — invite, signup, password-reset, and PPR emails were reworked to clear Microsoft Defender filtering, using plain links and PDF attachments instead of tracked deep-link buttons.",
+      ref:"e75e9b0, d7155dd, d4bed5d, c19871f · see .mil deliverability memo"},
+  ]},
+
+  { id:'parking', title:'Parking Plans', tag:'USAF + Civilian', items:[
+    {id:'park-capture', aud:'usaf', def:true, tags:['usaf'],
+      text:"Parking plan PDF capture rebuilt — reliable satellite-imagery export with a WYSIWYG capture frame, multi-apron support, rotation, and a heading slider.",
+      ref:"ae55636…73fac77 (parking PDF capture rebuild)"},
+    {id:'park-edit', aud:'usaf', def:false, tags:['usaf'],
+      text:"Edit a parking plan's name and description after creation, and toggle aircraft labels on the diagram.",
+      ref:"d9b134c, 391d41a"},
+  ]},
+
+  { id:'qrc', title:'QRC — Quick Reaction Checklists', tag:'USAF + Civilian', items:[
+    {id:'qrc-editor', aud:'usaf', def:true, tags:['usaf'],
+      text:"Build Quick Reaction Checklists from scratch with a full step-type editor (\"QRC Templates\" is now simply \"QRCs\").",
+      ref:"76ca23b"},
+    {id:'qrc-reviews', aud:'usaf', def:false, tags:['usaf'],
+      text:"Per-user QRC reviews — monthly or quarterly per base, with a consolidated compliance PDF.",
+      ref:"255c77a, 3bdc404, 9689cfd"},
+  ]},
+
+  { id:'misc', title:'Across the App', tag:'USAF + Civilian', items:[
+    {id:'events-cap', aud:'usaf', def:true, tags:['usaf'],
+      text:"Events Log is no longer capped at 500 entries — infinite scroll, server-side search, and a full PDF export across the whole log.",
+      ref:"76a2e99"},
+    {id:'maps-sat', aud:'usaf', def:false, tags:['usaf'],
+      text:"Per-base satellite provider toggle for OCONUS bases where Google imagery is thin.",
+      ref:"47d32a1, 0b36ef8"},
+    {id:'maps-loc', aud:'usaf', def:false, tags:['usaf'],
+      text:"Unified \"Use My Location\" across Visual NAVAIDs, Obstruction Evaluation, and Discrepancies.",
+      ref:"b0a8898, 45454ce, 9f165a9"},
+    {id:'disc-createdby', aud:'usaf', def:false, tags:['usaf'],
+      text:"\"Created By\" now appears in discrepancy detail, the list export, and the PDFs.",
+      ref:"8c12f57"},
+    {id:'disc-icons', aud:'usaf', def:false, tags:['usaf'],
+      text:"Color-coded per-type discrepancy icons across the map and lists.",
+      ref:"05d8c79, d5d8577"},
+    {id:'help-refresh', aud:'usaf', def:false, tags:['usaf'],
+      text:"In-app Glidepath training guide moved to Help & Training with 64 updated screenshots and refreshed copy across all 27 module guides.",
+      ref:"1932c32, 7012092, baed8bd"},
+    {id:'ios-pwa', aud:'usaf', def:false, tags:['usaf','fix'],
+      text:"iOS app polish — correct safe-area handling on the header and bottom navigation, and the native photo picker.",
+      ref:"0833999, 9a03565"},
+  ]},
+
+  { id:'nav', title:'Navigation & Layout', tag:'USAF + Civilian', items:[
+    {id:'nav-reorg', aud:'usaf', def:true, head:true, tags:['usaf'],
+      text:"Cleaner navigation — the sidebar and mobile menu are reorganized into four focused sections (Daily Operations, Airfield Management, Reference, Admin) with the secondary sections collapsed by default, so the resting view is short and scannable.",
+      ref:"2251700"},
+    {id:'nav-amtr', aud:'usaf', def:true, tags:['usaf'],
+      text:"Training Records (AMTR) is now in the navigation — previously reachable only by direct link, it's surfaced for Airfield Managers, NAMO, AMOPS, and Base Admins.",
+      ref:"2251700 · gated by amtr:view"},
+    {id:'nav-module-gating', aud:'usaf', def:false, tags:['usaf','civ'],
+      text:"Base Configuration only shows modules relevant to the airfield type — USAF airfields no longer see Part 139-only modules, and civilian airports don't see USAF-only ones, reducing setup clutter.",
+      ref:"fc56fb7"},
+  ]},
+
+  { id:'design', title:'New "Refreshed" App Design (opt-in preview)', tag:'USAF + Civilian · opt-in', items:[
+    {id:'design-v2', aud:'usaf', def:false, head:true, tags:['usaf'],
+      text:"A new Refreshed look you can opt into (Settings → Appearance) — a readability and hierarchy overhaul: a distinctive type pairing with a monospace face for operational data (Zulu time, ICAO, counts), clearer headings, calmer neutral chrome so the green/amber/red status colors stand out, brighter dark-mode text, and a warm cream light theme instead of stark white. Classic stays the default; flip to Refreshed to try it. (Consider holding the announcement until it's promoted to default.)",
+      ref:"a9f1f33 + Phase 2 sweep · data-design=v2"},
+  ]},
+
+  { id:'security', title:'Security & Reliability (mostly under-the-hood)', tag:'Internal — usually not announced', items:[
+    {id:'sec-silentsave', aud:'sec', def:false, tags:['fix'],
+      text:"Saves that previously failed silently now surface an error instead of appearing to succeed.",
+      ref:"ed326a4"},
+    {id:'sec-ratelimit', aud:'sec', def:false, tags:['sec'],
+      text:"Rate limiting added to unauthenticated email endpoints and billed proxy routes.",
+      ref:"7b164fd, d1aaa47, lib/rate-limit.ts"},
+    {id:'sec-kiosk', aud:'sec', def:false, tags:['sec'],
+      text:"Kiosk login tokens isolated in a service-role-only table.",
+      ref:"48e5b97, migrations 2026061601/02"},
+    {id:'sec-escalation', aud:'sec', def:false, tags:['sec'],
+      text:"Closed a self-signup admin-role escalation path; pending accounts are gated at the database.",
+      ref:"96d87b6"},
+    {id:'sec-rls-tests', aud:'sec', def:false, tags:['internal'],
+      text:"Cross-base data isolation and the safety-critical outage and parking-clearance math are now covered by automated tests.",
+      ref:"f2cbc47, 3708c76"},
+    {id:'sec-dblint', aud:'sec', def:false, tags:['sec'],
+      text:"Database security hardening (RLS, function privileges, search_path) resolving all linter findings.",
+      ref:"e62028a, migration 2026061700"},
+    {id:'sec-deps', aud:'sec', def:false, tags:['sec'],
+      text:"Removed a vulnerable dependency; user deletion now nulls audit references safely.",
+      ref:"7209b8c, 06355cd, migration 2026061504"},
+    {id:'sec-authz', aud:'sec', def:false, tags:['sec'],
+      text:"Password-reset endpoint now derives the target account from the user ID rather than the request body.",
+      ref:"dd79e18"},
+  ]},
+];
+
+/* ---------- state ---------- */
+const LS_KEY = 'glidepath_rel_234_builder_v1';
+let state = load();
+
+function freshState(){
+  const s = {meta:{ver:'2.34.0',date:'2026-05-30',headline:''}, items:{}};
+  SECTIONS.forEach(sec=>sec.items.forEach(it=>{ s.items[it.id]={on:!!it.def, head:!!it.head, text:it.text}; }));
+  return s;
+}
+function load(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(!raw) return freshState();
+    const saved=JSON.parse(raw); const base=freshState();
+    base.meta={...base.meta,...(saved.meta||{})};
+    SECTIONS.forEach(sec=>sec.items.forEach(it=>{ if(saved.items&&saved.items[it.id]){ base.items[it.id]={...base.items[it.id],...saved.items[it.id]}; }}));
+    return base;
+  }catch(e){ return freshState(); }
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+/* ---------- render ---------- */
+let audFilter='all', fmt='inapp';
+const groupsEl=document.getElementById('groups');
+const collapsed={};
+
+function tagHtml(tags){
+  const map={usaf:['usaf','USAF'],civ:['civ','Civilian'],sec:['sec','Security'],fix:['fix','Fix'],internal:['internal','Under-the-hood']};
+  return tags.map(t=>{const m=map[t]; return m?`<span class="tag ${m[0]}">${m[1]}</span>`:''}).join('');
+}
+function itemVisible(it){
+  const st=state.items[it.id];
+  if(audFilter==='on') return st.on;
+  if(audFilter==='all') return true;
+  return it.aud===audFilter || (audFilter==='sec'&&it.tags.includes('sec'));
+}
+function render(){
+  document.getElementById('fVer').value=state.meta.ver;
+  document.getElementById('fDate').value=state.meta.date;
+  document.getElementById('fHeadline').value=state.meta.headline;
+  groupsEl.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const vis=sec.items.filter(itemVisible);
+    if(!vis.length) return;
+    const onCount=sec.items.filter(it=>state.items[it.id].on).length;
+    const secEl=document.createElement('section');
+    secEl.className='group'+(collapsed[sec.id]?' collapsed':'');
+    secEl.innerHTML=`
+      <div class="ghead" data-sec="${sec.id}">
+        <span class="chev">▾</span>
+        <h2>${sec.title}</h2><span class="gtag">${sec.tag}</span>
+        <span class="gcount">${onCount}/${sec.items.length} on
+          <span class="gactions"><a data-act="allon" data-sec="${sec.id}">all</a><a data-act="alloff" data-sec="${sec.id}">none</a></span>
+        </span>
+      </div>
+      <div class="items"></div>`;
+    const itemsEl=secEl.querySelector('.items');
+    vis.forEach(it=>{
+      const st=state.items[it.id];
+      const card=document.createElement('div');
+      card.className='card '+(st.on?'on':'off');
+      card.innerHTML=`
+        <input type="checkbox" class="chk" ${st.on?'checked':''} data-id="${it.id}">
+        <div class="cbody">
+          <div class="crow1">${tagHtml(it.tags)}
+            <button class="star ${st.head?'on':''}" data-star="${it.id}" title="Headline candidate">★</button>
+          </div>
+          <textarea class="verb" data-text="${it.id}" rows="2">${st.text.replace(/</g,'&lt;')}</textarea>
+          <div class="ref">${it.ref}</div>
+        </div>`;
+      itemsEl.appendChild(card);
+    });
+    groupsEl.appendChild(secEl);
+  });
+  // autosize textareas
+  document.querySelectorAll('textarea.verb').forEach(autosize);
+  updateCounts(); updateOutput(); save();
+}
+function autosize(t){ t.style.height='auto'; t.style.height=Math.max(46,t.scrollHeight)+'px'; }
+
+function updateCounts(){
+  const total=SECTIONS.reduce((n,s)=>n+s.items.length,0);
+  const on=SECTIONS.reduce((n,s)=>n+s.items.filter(it=>state.items[it.id].on).length,0);
+  const heads=SECTIONS.reduce((n,s)=>n+s.items.filter(it=>state.items[it.id].on&&state.items[it.id].head).length,0);
+  document.getElementById('counts').innerHTML=`<b>${on}</b> of ${total} selected · ${heads} starred`;
+}
+
+/* ---------- output formats ---------- */
+function selected(){
+  const out=[];
+  SECTIONS.forEach(sec=>sec.items.forEach(it=>{ const st=state.items[it.id]; if(st.on) out.push({sec,it,st}); }));
+  return out;
+}
+function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function updateOutput(){
+  const sel=selected();
+  const m=state.meta;
+  let txt='';
+  if(fmt==='inapp'){
+    const heads=sel.filter(x=>x.st.head).map(x=>x.st.text);
+    const rest=sel.filter(x=>!x.st.head).map(x=>x.st.text);
+    const bullets=[...heads,...rest];
+    txt=`{\n  version: '${m.ver}',\n  date: '${m.date}',\n  headline: '${esc(m.headline||'')}',\n  highlights: [\n`+
+      bullets.map(b=>`    '${esc(b)}',`).join('\n')+
+      `\n  ],\n},`;
+    document.getElementById('outHint').textContent=`Paste at top of RELEASE_NOTES[] in lib/release-notes.ts · ${bullets.length} bullets`;
+  } else if(fmt==='md'){
+    txt=`## [${m.ver}] — ${m.date}\n`;
+    if(m.headline) txt+=`\n_${m.headline}_\n`;
+    SECTIONS.forEach(sec=>{
+      const its=sec.items.filter(it=>state.items[it.id].on);
+      if(!its.length) return;
+      txt+=`\n### ${sec.title}\n`;
+      its.forEach(it=>{ txt+=`- ${state.items[it.id].text}\n`; });
+    });
+    document.getElementById('outHint').textContent='Replace the [Unreleased] section in CHANGELOG.md';
+  } else {
+    txt=sel.map(x=>`• ${x.st.text}`).join('\n');
+    document.getElementById('outHint').textContent=`${sel.length} bullets, plain text`;
+  }
+  document.getElementById('output').textContent=txt;
+}
+
+/* ---------- events ---------- */
+groupsEl.addEventListener('click',e=>{
+  const head=e.target.closest('.ghead');
+  const star=e.target.closest('[data-star]');
+  const act=e.target.closest('[data-act]');
+  if(act){ e.stopPropagation(); const sid=act.dataset.sec, on=act.dataset.act==='allon';
+    SECTIONS.find(s=>s.id===sid).items.forEach(it=>state.items[it.id].on=on); render(); return; }
+  if(star){ const id=star.dataset.star; state.items[id].head=!state.items[id].head; render(); return; }
+  if(head){ const sid=head.dataset.sec; collapsed[sid]=!collapsed[sid]; render(); return; }
+});
+groupsEl.addEventListener('change',e=>{
+  if(e.target.classList.contains('chk')){ const id=e.target.dataset.id; state.items[id].on=e.target.checked;
+    e.target.closest('.card').classList.toggle('on',e.target.checked);
+    e.target.closest('.card').classList.toggle('off',!e.target.checked);
+    updateCounts(); updateOutput(); save(); }
+});
+groupsEl.addEventListener('input',e=>{
+  if(e.target.classList.contains('verb')){ const id=e.target.dataset.text; state.items[id].text=e.target.value; autosize(e.target); updateOutput(); save(); }
+});
+document.getElementById('audFilter').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#audFilter button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); audFilter=b.dataset.aud; render();
+});
+document.getElementById('fmtSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#fmtSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); fmt=b.dataset.fmt; updateOutput();
+});
+['fVer','fDate','fHeadline'].forEach(idf=>{
+  const key=idf==='fVer'?'ver':idf==='fDate'?'date':'headline';
+  document.getElementById(idf).addEventListener('input',e=>{ state.meta[key]=e.target.value; updateOutput(); save(); });
+});
+document.getElementById('selAll').onclick=()=>{ SECTIONS.forEach(s=>s.items.forEach(it=>state.items[it.id].on=true)); render(); };
+document.getElementById('selNone').onclick=()=>{ SECTIONS.forEach(s=>s.items.forEach(it=>state.items[it.id].on=false)); render(); };
+document.getElementById('selDefault').onclick=()=>{ if(confirm('Reset selections AND verbiage to the suggested defaults? This discards your edits.')){ localStorage.removeItem(LS_KEY); state=freshState(); render(); } };
+document.getElementById('expandAll').onclick=()=>{ SECTIONS.forEach(s=>collapsed[s.id]=false); render(); };
+document.getElementById('collapseAll').onclick=()=>{ SECTIONS.forEach(s=>collapsed[s.id]=true); render(); };
+document.getElementById('copyBtn').onclick=()=>{
+  const t=document.getElementById('output').textContent;
+  navigator.clipboard.writeText(t).then(()=>toast('Copied to clipboard')).catch(()=>toast('Copy failed — select manually'));
+};
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1600); }
+
+render();
+</script>
+</body>
+</html>
