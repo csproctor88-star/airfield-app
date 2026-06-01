@@ -1328,9 +1328,10 @@ export const MODULES: ModuleRef[] = [
       ],
     },
     screenshots: [
-      { src: '/training/training-part139_1.png', caption: '§139.303 Training landing — three section tiles (Training Topics, Training Roster, Compliance Matrix) each with a short description of what each sub-page contains and how it supports FAA inspections.' },
-      { src: '/training/training-part139_2.png', caption: 'Training Roster — 15 active topics × 2 members table showing each member\'s Name, Role, REQ count, and per-status counts (Current, Expiring, Expired) with the last-trained date and topic name.' },
-      { src: '/training/training-part139_3.png', caption: 'Compliance Matrix — a members × topics grid (2 members × 14 topics = 28 cells) with currency chip filters (Current, Expiring, Expired, Not Started) and each cell color-coded by latest record status; Export CSV button in the upper right.' },
+      { src: '/training/training-part139_1.png', caption: 'Training Topics catalog — the 13 §139.303(e) system topics (plus base-specific custom topics) listed with CODE, title and description, RECURRENT cadence (6 or 12 mo), and RETENTION (24 mo); a BASE badge marks an overridden topic and each row has an edit pencil, with + Add Custom Topic in the header.' },
+      { src: '/training/training-part139_2.png', caption: 'Training Roster (15 active topics × 2 members) — a name search and All / Expired / Expiring / Not Started / Current filter chips above a table of each member\'s Name, Role, REQ count, Current / Expiring / Expired counts, and Last Trained date with the topic name.' },
+      { src: '/training/training-part139_3.png', caption: 'Compliance Matrix — a members × topics grid (2 members × 14 topics = 28 cells) with currency filter chips (1 Current / 0 Expiring / 0 Expired / 27 Not started), each cell color-coded by latest record status, and an Export CSV button in the upper right.' },
+      { src: '/training/training-part139_4.png', caption: 'A member\'s record (TSgt Demo) — Records / Certificates / History tabs plus a Transcript button, with the Records tab listing all 14 §139.303(e) topics, each showing Status (Current / Not started), the Completed / Expires dates, and a + Log button.' },
     ],
     faq: [],
     relatedModules: ['sms', 'aep'],
