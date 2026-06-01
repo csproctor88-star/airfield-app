@@ -1212,7 +1212,7 @@ export const MODULES: ModuleRef[] = [
     color: 'var(--color-cyan)',
     path: '/settings/exports',
     tagline: 'One-click records-disposition export — PDFs, Excel, photos, and an offline viewer in one ZIP',
-    roles: ['sys_admin', 'base_admin', ...OPS_CORE],
+    roles: OPS_CORE,
     overview:
       'Records Export packages your airfield\'s records into a single organized ZIP for Air Force records disposition or migration. Everything is generated in your browser, so record data never leaves the device — the download is one self-contained archive.\n\n' +
       'Pick a time range, choose which output kinds and modules to include, and generate. A tamper-evident START-HERE cover sheet and a SHA-256 manifest travel with the export so a recipient can verify nothing was altered, and the bundled offline viewer opens the records on any computer with no internet or login.',
