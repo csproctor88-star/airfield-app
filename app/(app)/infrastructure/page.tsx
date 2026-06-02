@@ -327,6 +327,27 @@ const SIGN_DISPLAY_SCALE = 0.4
 const FEATURE_ICON_SCALE = 0.45 // base icon px = 24 * this
 const LIGHT_RADIUS_METERS = 1.5 // real-world radius of a light dot
 
+// Signs/PAPIs/beacons are raster markers (can't be meter-sized), so they scale
+// with zoom in JS instead — growing as you zoom in, capped, and never below
+// their base size so labels stay readable. Only the few hundred markers are
+// touched (on zoom-settle), so the native light Circles keep zoom smooth.
+const MARKER_REF_ZOOM = 16 // markers sit at base size at/below this zoom
+const MARKER_MAX_GROWTH = 4 // …and grow up to this multiple as you zoom in
+function markerZoomFactor(zoom: number): number {
+  return Math.min(MARKER_MAX_GROWTH, Math.max(1, 2 ** (zoom - MARKER_REF_ZOOM)))
+}
+function markerBaseSize(natural: { w: number; h: number } | undefined, isSign: boolean): { w: number; h: number } {
+  if (isSign) {
+    const n = natural || { w: 60, h: 24 }
+    return {
+      w: Math.max(Math.round(n.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 20),
+      h: Math.max(Math.round(n.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 10),
+    }
+  }
+  const s = Math.max(Math.round(24 * FEATURE_ICON_SCALE), 10)
+  return { w: s, h: s }
+}
+
 // Sign type → colors for labeled signs
 const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   location_sign:      { bg: '#000000', text: '#FBBF24', border: '#FBBF24' },
@@ -2042,6 +2063,9 @@ export default function InfrastructureMapPage() {
   }, [])
 
   // ── Render all features as Google Maps markers ──
+  // Per-marker metadata for the zoom rescale of sign/icon markers (signKey =>
+  // a labeled sign; undefined => a plain icon). Lights are Circles, not here.
+  const markerMetaRef = useRef<Map<string, { signKey?: string }>>(new Map())
   // Refs for selection / health circles
   const selectionCirclesRef = useRef<google.maps.Circle[]>([])
   const healthCirclesRef = useRef<google.maps.Circle[]>([])
@@ -2051,9 +2075,11 @@ export default function InfrastructureMapPage() {
   const renderFeatures = useCallback((wrapper: GMapWrapper, geojson: GeoJSON.FeatureCollection) => {
     // Clear old markers (but keep non-feature markers like location, drag, freemove)
     clearAllObjects(wrapper)
+    markerMetaRef.current.clear()
 
-    // Features render at a constant size at every zoom and are always shown.
+    // Lights (Circles) are meter-based; markers (signs/icons) scale with zoom.
     const initialMap = wrapper.gmap
+    const markerFactor = markerZoomFactor(wrapper.gmap.getZoom() ?? MARKER_REF_ZOOM)
 
     // All visible-layer features are rendered regardless of viewport position.
     // Since layers start hidden and users enable 1-2 at a time, the feature count
@@ -2099,30 +2125,23 @@ export default function InfrastructureMapPage() {
       }
 
       if (iconUrl) {
-        // Signs / PAPIs / beacons — px-sized raster icon markers (labels must
-        // stay readable, so these don't scale with the map). Optimized by
-        // default and few in number.
-        let markerIcon: google.maps.Icon
-        if (props.signIcon) {
-          // Sign labels: source canvas is high-res; SIGN_DISPLAY_SCALE shrinks
-          // the on-map footprint while keeping the source crisp at high zoom.
-          const iconKey = props.signIcon as string
-          const natural = wrapper.iconSizes.get(iconKey) || { w: 60, h: 24 }
-          const w = Math.max(Math.round(natural.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 20)
-          const h = Math.max(Math.round(natural.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 10)
-          markerIcon = { url: iconUrl, scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) }
-        } else {
-          const sz = Math.max(Math.round(24 * FEATURE_ICON_SCALE), 10)
-          markerIcon = { url: iconUrl, scaledSize: new google.maps.Size(sz, sz), anchor: new google.maps.Point(sz / 2, sz / 2) }
-        }
+        // Signs / PAPIs / beacons — raster icon markers. Sized at base × the
+        // current zoom factor (grow when zoomed in; see markerZoomFactor). Sign
+        // labels: source canvas is high-res; SIGN_DISPLAY_SCALE shrinks the
+        // footprint while keeping the source crisp at high zoom.
+        const signKey = props.signIcon ? (props.signIcon as string) : undefined
+        const base = markerBaseSize(signKey ? wrapper.iconSizes.get(signKey) : undefined, !!signKey)
+        const w = Math.round(base.w * markerFactor)
+        const h = Math.round(base.h * markerFactor)
         const marker = new google.maps.Marker({
           position: { lat, lng },
           map: initialMap,
-          icon: markerIcon,
+          icon: { url: iconUrl, scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) },
           zIndex: isInop ? 100 : 10,
         })
         marker.addListener('click', () => showPopup(marker))
         wrapper.markers.set(featureId, marker)
+        markerMetaRef.current.set(featureId, { signKey })
       } else {
         // Airfield lights — meter-based google.maps.Circle. Scales with the map
         // (small zoomed out, larger zoomed in) and renders far lighter than a
@@ -2143,6 +2162,34 @@ export default function InfrastructureMapPage() {
       }
     }
   }, [visibleLayers, buildPopupHtml])
+
+  // Rescale sign/icon markers when the zoom factor changes. Fires on 'idle'
+  // (after the zoom/pan settles) and only walks wrapper.markers — the few
+  // hundred markers, not the ~1,300 native light Circles — so it's cheap and
+  // doesn't reintroduce zoom choppiness. The clamp in markerZoomFactor makes
+  // most small zoom changes a no-op (factor unchanged).
+  useEffect(() => {
+    const w = map.current
+    if (!w || !mapLoaded) return
+    let lastFactor = -1
+    const onIdle = () => {
+      const factor = markerZoomFactor(w.gmap.getZoom() ?? MARKER_REF_ZOOM)
+      if (factor === lastFactor) return
+      lastFactor = factor
+      w.markers.forEach((marker, id) => {
+        const meta = markerMetaRef.current.get(id)
+        if (!meta) return
+        const icon = marker.getIcon() as google.maps.Icon | undefined
+        if (!icon?.url) return
+        const base = markerBaseSize(meta.signKey ? w.iconSizes.get(meta.signKey) : undefined, !!meta.signKey)
+        const ww = Math.round(base.w * factor)
+        const hh = Math.round(base.h * factor)
+        marker.setIcon({ url: icon.url, scaledSize: new google.maps.Size(ww, hh), anchor: new google.maps.Point(ww / 2, hh / 2) })
+      })
+    }
+    const listener = w.gmap.addListener('idle', onIdle)
+    return () => google.maps.event.removeListener(listener)
+  }, [mapLoaded])
 
   // Initialize map
   useEffect(() => {
