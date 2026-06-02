@@ -319,12 +319,13 @@ function createLabeledSign(
 // so even a fully zoomed-in sign upscales the source minimally.
 const SIGN_DISPLAY_SCALE = 0.4
 
-// Features render at a single fixed size at every zoom (no zoom-based scaling).
-// Sized to roughly the old zoom-16 appearance — small, since the map is always
-// viewed zoomed in. Constant size means markers are built once and never
-// resized on zoom, so pan/zoom stays smooth.
+// Feature sizing. Signs / PAPIs / beacons are px-sized icon markers (constant,
+// so their labels stay readable). Airfield lights are google.maps.Circle sized
+// in METERS, so they scale with the map (small when zoomed out, larger zoomed
+// in) and render far lighter than 1,300+ symbol markers. Nothing is rescaled in
+// JS on zoom either way — pan/zoom stays smooth.
 const FEATURE_ICON_SCALE = 0.45 // base icon px = 24 * this
-const FEATURE_CIRCLE_RADIUS = 5 // CIRCLE symbol radius in px
+const LIGHT_RADIUS_METERS = 1.5 // real-world radius of a light dot
 
 // Sign type → colors for labeled signs
 const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -2085,59 +2086,61 @@ export default function InfrastructureMapPage() {
       const isInop = props.status === 'inoperative'
       const color = isInop ? '#EF4444' : layerCfg.color
 
-      // Build marker options (constant size — no zoom scaling)
-      let markerIcon: google.maps.Icon | google.maps.Symbol | undefined
+      // Shared popup opener. Markers anchor to themselves; circles (no marker
+      // to anchor to) open at the feature's position.
+      const showPopup = (anchor: google.maps.Marker | null) => {
+        wrapper.infoWindow.setContent(buildPopupHtml(props, layerCfg.color, layerCfg.label, lng, lat))
+        if (anchor) {
+          wrapper.infoWindow.open(wrapper.gmap, anchor)
+        } else {
+          wrapper.infoWindow.setPosition({ lat, lng })
+          wrapper.infoWindow.open(wrapper.gmap)
+        }
+      }
+
       if (iconUrl) {
-        const isSign = !!props.signIcon
-        if (isSign) {
+        // Signs / PAPIs / beacons — px-sized raster icon markers (labels must
+        // stay readable, so these don't scale with the map). Optimized by
+        // default and few in number.
+        let markerIcon: google.maps.Icon
+        if (props.signIcon) {
           // Sign labels: source canvas is high-res; SIGN_DISPLAY_SCALE shrinks
           // the on-map footprint while keeping the source crisp at high zoom.
           const iconKey = props.signIcon as string
           const natural = wrapper.iconSizes.get(iconKey) || { w: 60, h: 24 }
           const w = Math.max(Math.round(natural.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 20)
           const h = Math.max(Math.round(natural.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 10)
-          markerIcon = {
-            url: iconUrl,
-            scaledSize: new google.maps.Size(w, h),
-            anchor: new google.maps.Point(w / 2, h / 2),
-          } as google.maps.Icon
+          markerIcon = { url: iconUrl, scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) }
         } else {
-          // Regular feature icons (approach lights, PAPI, etc.)
           const sz = Math.max(Math.round(24 * FEATURE_ICON_SCALE), 10)
-          markerIcon = {
-            url: iconUrl,
-            scaledSize: new google.maps.Size(sz, sz),
-            anchor: new google.maps.Point(sz / 2, sz / 2),
-          } as google.maps.Icon
+          markerIcon = { url: iconUrl, scaledSize: new google.maps.Size(sz, sz), anchor: new google.maps.Point(sz / 2, sz / 2) }
         }
+        const marker = new google.maps.Marker({
+          position: { lat, lng },
+          map: initialMap,
+          icon: markerIcon,
+          zIndex: isInop ? 100 : 10,
+        })
+        marker.addListener('click', () => showPopup(marker))
+        wrapper.markers.set(featureId, marker)
       } else {
-        // Circle renderType — use a Symbol
-        markerIcon = {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: FEATURE_CIRCLE_RADIUS,
+        // Airfield lights — meter-based google.maps.Circle. Scales with the map
+        // (small zoomed out, larger zoomed in) and renders far lighter than a
+        // symbol marker, so zoom stays smooth across ~1,300 lights.
+        const circle = new google.maps.Circle({
+          map: initialMap,
+          center: { lat, lng },
+          radius: LIGHT_RADIUS_METERS,
           fillColor: color,
           fillOpacity: 0.85,
           strokeColor: isInop ? '#FFFFFF' : '#000000',
           strokeWeight: isInop ? 2 : 1,
-          rotation: props.rotation || 0,
-        }
+          clickable: true,
+          zIndex: isInop ? 100 : 10,
+        })
+        circle.addListener('click', () => showPopup(null))
+        wrapper.circles.set(featureId, circle)
       }
-
-      const marker = new google.maps.Marker({
-        position: { lat, lng },
-        map: initialMap,
-        icon: markerIcon,
-        zIndex: isInop ? 100 : 10,
-      })
-
-      // Click handler — build popup HTML and show InfoWindow
-      marker.addListener('click', () => {
-        const html = buildPopupHtml(props, layerCfg.color, layerCfg.label, lng, lat)
-        wrapper.infoWindow.setContent(html)
-        wrapper.infoWindow.open(wrapper.gmap, marker)
-      })
-
-      wrapper.markers.set(featureId, marker)
     }
   }, [visibleLayers, buildPopupHtml])
 
@@ -2372,15 +2375,16 @@ export default function InfrastructureMapPage() {
 
     wrapper.featureIndex.forEach((entry, id) => {
       const marker = wrapper.markers.get(id)
-      if (!marker) return
+      const circle = wrapper.circles.get(id)
+      if (!marker && !circle) return
+      let dim = false
       if (highlighting) {
-        // Check if this feature's DB layer matches the selected layer
+        // Dim features whose DB layer doesn't match the selected layer.
         const dbFeat = dbFeatures.find(f => f.id === id)
-        const matches = dbFeat && dbFeat.layer === shiftLayer
-        marker.setOpacity(matches ? 1 : 0.15)
-      } else {
-        marker.setOpacity(1)
+        dim = !(dbFeat && dbFeat.layer === shiftLayer)
       }
+      if (marker) marker.setOpacity(dim ? 0.15 : 1)
+      if (circle) circle.setOptions({ fillOpacity: dim ? 0.15 : 0.85, strokeOpacity: dim ? 0.15 : 1 })
     })
   }, [bulkShiftOpen, shiftLayer, mapLoaded, dbFeatures])
 
