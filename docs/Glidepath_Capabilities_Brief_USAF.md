@@ -2,19 +2,19 @@
 
 > **Proprietary & Confidential, Developed at private expense, © Glidepath.** This document describes Glidepath's capabilities and the regulatory requirements they satisfy. It is a capabilities/requirements overview, not an implementation design or data specification.
 
-Glidepath is a real-time airfield-management platform for United States Air Force airfields and FAA Part 139 commercial-service airports. It replaces the paper daily logs, shared spreadsheets, and phone-based status reporting that traditionally carry an airfield's operational rhythm with a single, role-based, compliance-driven system that holds the day-to-day operations, the records that prove the work was done, and the analytical engines that evaluate the airfield against current regulation. It is used day-to-day by Airfield Managers and Airfield Management Operations (AMOPS) personnel at USAF airfields, and by airport operations personnel at civilian Part 139 airports. It is delivered as an installable Progressive Web App that runs on phones, tablets, and desktops, online or offline.
+Glidepath is a real-time airfield-management platform for United States Air Force airfields. It replaces the paper daily logs, shared spreadsheets, and phone-based status reporting that traditionally carry an airfield's operational rhythm with a single, role-based, compliance-driven system that holds the day-to-day operations, the records that prove the work was done, and the analytical engines that evaluate the airfield against current regulation. It is used day-to-day by Airfield Managers and Airfield Management Operations (AMOPS) personnel at USAF airfields. It is delivered as an installable Progressive Web App that runs on phones, tablets, and desktops, online or offline.
 
 ## 1 Overview
 
 Glidepath is a real-time, role-based, multi-installation platform. A single user account can hold access to one or more airfields ("installations" / "bases"), and all operational data is strictly isolated to the base it belongs to. Each base describes its own physical airfield, runways, taxiways, areas, lighting and visual navigation aids, aircraft rescue and firefighting (ARFF) assets, supporting shops, and facilities, through a guided setup process, and the set of active capabilities is configured per base. Every action is governed by a role-and-permission model, and the live operational state updates in real time for everyone viewing it.
 
-### 1.1 Dual-mode (USAF and FAA Part 139)
+### 1.1 Purpose-built for USAF airfield management
 
-Glidepath supports two kinds of airfield from one platform. A base is configured as either a USAF airfield or an FAA Part 139 civilian commercial-service airport, and the system adapts to that choice end to end: terminology, role labels, the governing regulation set, and the obstruction-surface criteria all switch to the correct vocabulary for the selected mode. Capabilities are enabled or hidden according to the installation's type, some are USAF-specific, some are civilian-specific, and many apply to both. The default mode is USAF; civilian terminology is never surfaced unless a base explicitly opts into Part 139 mode.
+Glidepath is built end to end around the way a USAF airfield management team operates. Its terminology, role labels, governing regulation set, obstruction-surface criteria, and forms are those of Air Force airfield management, so an Airfield Manager or AMOPS member sees the vocabulary, workflows, and compliance artifacts they already work to. The platform mirrors the operational rhythm of a flying wing, from the daily shift sign-off and the live airfield status board to the annual compliance inspection, and every capability is grounded in the DAFMAN, UFC, AFMAN, and Air Force forms that govern airfield operations.
 
 ### 1.2 Module-based
 
-Capabilities are delivered as modules that are enabled per base. A base administrator turns on the modules that apply to that airfield, and the navigation, setup steps, and permissions adjust accordingly. A small set of core capabilities (the dashboard, activity log, reporting, settings, and reference data) is always available; the rest are opt-in per installation. This lets the same platform serve a small civilian airport and a large USAF flying wing without either being burdened by the other's features. New capabilities can be made available to existing bases without disturbing their current configuration.
+Capabilities are delivered as modules that are enabled per base. A base administrator turns on the modules that apply to that airfield, and the navigation, setup steps, and permissions adjust accordingly. A small set of core capabilities (the dashboard, activity log, reporting, settings, and reference data) is always available; the rest are opt-in per installation. This lets the same platform serve a small remote airfield and a large USAF flying wing without either being burdened by the other's features. New capabilities can be made available to existing bases without disturbing their current configuration.
 
 ## 2 Platform-wide capabilities
 
@@ -26,7 +26,7 @@ A user with the appropriate role can belong to several airfields and switch betw
 
 ### 2.2 Role-based access control and per-base data isolation
 
-Every user holds a role that defines what they can see and do, and individual permissions can be granted or revoked per user on top of that role. Access is enforced both in the interface (controls and pages are hidden when a user lacks the permission) and at the data layer (the database independently refuses any read or write the user is not entitled to), so the interface and the underlying records can never disagree. All operational records are isolated to their base; a user with access to one airfield cannot see or alter another airfield's data. Roles span the full range of airfield personnel, Airfield Managers, AMOPS personnel, Civil Engineering shops, safety, air traffic, base and system administrators, command-echelon resource managers, and the civilian Part 139 equivalents (accountable executive, safety manager, emergency-plan coordinator, operations supervisor, ARFF chief).
+Every user holds a role that defines what they can see and do, and individual permissions can be granted or revoked per user on top of that role. Access is enforced both in the interface (controls and pages are hidden when a user lacks the permission) and at the data layer (the database independently refuses any read or write the user is not entitled to), so the interface and the underlying records can never disagree. All operational records are isolated to their base; a user with access to one airfield cannot see or alter another airfield's data. Roles span the full range of airfield personnel, Airfield Managers, AMOPS personnel, Civil Engineering shops, safety, air traffic, base and system administrators, and command-echelon resource managers.
 
 ### 2.3 Full audit trail / activity log
 
@@ -61,7 +61,6 @@ Every record type can be rendered to a formatted PDF report on demand. Reports a
 Glidepath exposes a small number of public, no-login intake forms reachable by QR code or kiosk, so transient aircrew and visitors can submit information without an account:
 
 - A public **Prior Permission Required (PPR) request** form for transient aircrew, which lands in the AMOPS triage queue.
-- A public, anonymous **safety report** form (civilian Part 139) that feeds the Safety Management System.
 - A public **customer feedback** form for transient aircrew and contractors.
 - A **kiosk** mode secured by a per-base token that can be rotated or revoked by an administrator.
 
@@ -78,11 +77,11 @@ The platform can export a base's records in bulk for Air Force records-dispositi
 
 ## 3 Modules
 
-Capabilities are delivered as modules, enabled per base and gated by airport type (USAF vs FAA Part 139). Each module below describes what it does, the regulatory requirement it supports, its key functions, outputs, and the roles involved.
+Capabilities are delivered as modules, enabled per base. Each module below describes what it does, the regulatory requirement it supports, its key functions, outputs, and the roles involved.
 
 ### 3.1 Core Operations Modules
 
-The core-operations modules are the daily-use backbone of the platform: the screens an airfield management team touches every shift to record conditions, track deficiencies, coordinate with civil engineering, and keep the live airfield picture accurate. They are enabled by default on every installation and, except where noted, serve both USAF airfields and FAA Part 139 civilian airports. Each module below is described at the capability level so an outside team can scope its own implementation; mechanics, formulas, and internal identifiers are intentionally omitted.
+The core-operations modules are the daily-use backbone of the platform: the screens an airfield management team touches every shift to record conditions, track deficiencies, coordinate with civil engineering, and keep the live airfield picture accurate. They are enabled by default on every installation. Each module below is described at the capability level so an outside team can scope its own implementation; mechanics, formulas, and internal identifiers are intentionally omitted.
 
 ---
 
@@ -93,8 +92,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 **What it does.** Provides a single, consistent way to capture every category of airfield check performed during a shift: foreign-object-debris (FOD) checks, runway surface condition checks, in-flight and ground emergency response sweeps, heavy-aircraft checks, bird/wildlife (BASH) condition checks, and construction checks, plus a general-purpose check type. The user selects a check type, marks the affected airfield areas, answers the prompts specific to that check type, attaches photos to specific issues, captures GPS coordinates, and records free-text remarks. A check can be started, saved as a draft, and resumed later on a different device, then filed as a completed, signed record. Threaded comments allow follow-up discussion on a filed check. The most important behavior is the write-through to the live airfield picture: a runway surface condition check updates the runway condition shown on the status board, and a bird/wildlife condition check updates the current bird-watch condition and contributes to wildlife trend analytics, so the rest of the team sees the new condition immediately without re-keying it.
 
 **Regulatory basis.** DAFMAN 13-204 Volumes 1-3 (airfield checks and daily operations). Results that set runway surface condition and bird-watch condition feed the DAFMAN-governed airfield status board.
-
-**Applies to.** Both (USAF and FAA Part 139).
 
 **Key functions.**
 - Multiple configured check types covering FOD, runway surface condition, emergencies, heavy aircraft, wildlife, and construction.
@@ -117,8 +114,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 **Regulatory basis.** DAFMAN 13-204 Volume 2 (daily airfield inspection). Templates derive from DAFMAN defaults and are tailored to the local operating instruction.
 
-**Applies to.** Both (USAF and FAA Part 139).
-
 **Key functions.**
 - Section-by-section guided inspection with pass/fail/not-applicable per item.
 - Airfield, lighting, construction-meeting, and joint-monthly inspection types.
@@ -138,11 +133,9 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 **Capability.** Tracks every airfield deficiency from initial report, through routing to the owning civil-engineering shop, through the work, to airfield-manager verification and closure, the airfield's work-order backbone.
 
-**What it does.** Provides the central register for airfield deficiencies of every kind: FOD hazards, pavement, lighting, marking, signage, drainage, vegetation, wildlife, obstruction, NAVAID, and other. Each discrepancy captures a title, description, airfield location, one or more deficiency types, photos, an assigned civil-engineering shop, an optional NOTAM reference, estimated completion date, project number and cost, and a risk-control measure. The platform routes each discrepancy to the correct civil-engineering shop automatically based on its type, falling back to the airfield management dispatcher when no shop is mapped. A discrepancy moves through a clearly defined workflow, reported to airfield management, submitted to civil engineering, in work, awaiting a project, work complete and awaiting verification, then verified and closed, and every status change is written to an append-only, attributed audit trail so the full history of who changed what and when is preserved. A dashboard badge surfaces the count of items where civil engineering has finished the work and the airfield manager still needs to verify and close them. Discrepancies are also created automatically by other modules: failed inspection items and reported lighting/NAVAID outages both open discrepancies here. On a civilian Part 139 airport, a discrepancy can be promoted into the safety hazard register.
+**What it does.** Provides the central register for airfield deficiencies of every kind: FOD hazards, pavement, lighting, marking, signage, drainage, vegetation, wildlife, obstruction, NAVAID, and other. Each discrepancy captures a title, description, airfield location, one or more deficiency types, photos, an assigned civil-engineering shop, an optional NOTAM reference, estimated completion date, project number and cost, and a risk-control measure. The platform routes each discrepancy to the correct civil-engineering shop automatically based on its type, falling back to the airfield management dispatcher when no shop is mapped. A discrepancy moves through a clearly defined workflow, reported to airfield management, submitted to civil engineering, in work, awaiting a project, work complete and awaiting verification, then verified and closed, and every status change is written to an append-only, attributed audit trail so the full history of who changed what and when is preserved. A dashboard badge surfaces the count of items where civil engineering has finished the work and the airfield manager still needs to verify and close them. Discrepancies are also created automatically by other modules: failed inspection items and reported lighting/NAVAID outages both open discrepancies here.
 
 **Regulatory basis.** DAFMAN 13-204 (airfield discrepancy management and coordination with civil engineering).
-
-**Applies to.** Both (USAF and FAA Part 139).
 
 **Key functions.**
 - Central register for all airfield deficiency types with photos and location.
@@ -150,7 +143,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 - Defined report-to-closure workflow with an append-only, attributed audit trail.
 - Dashboard count of work awaiting airfield-manager verification.
 - Auto-creation from failed inspections and reported lighting/NAVAID outages.
-- Promotion into the safety hazard register on civilian airports.
 - NOTAM cross-reference and links to the affected infrastructure or lighting system.
 
 **Outputs.** A discrepancy record with a unique identifier; a discrepancy report (PDF); an audit trail of all status changes and notes; automatic routing to a civil-engineering shop; and cross-links to NOTAMs, infrastructure, and source inspections.
@@ -166,8 +158,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 **What it does.** Gives civil-engineering personnel a streamlined dashboard scoped to only the discrepancies assigned to their shops. The board lists open work organized into shop tabs with per-shop counts, and surfaces key indicators: how many items are newly submitted, in work, waiting for a project, and awaiting verification, plus an overdue count for items open beyond a month and a recently-completed list for the last week. Civil engineering can advance a discrepancy's status (in work, waiting for a project, work complete), add resolution notes, and leave a free-form note, with every change captured in the same audit trail used by the main discrepancy module. Verification and final closure deliberately remain with airfield management, civil engineering reports the work as complete but does not close it. This is the landing experience for the civil-engineering role, which sees a deliberately reduced application surface (work orders, discrepancies, visual NAVAIDs, and settings only).
 
 **Regulatory basis.** Supports the DAFMAN 13-204 airfield-management-to-civil-engineering discrepancy workflow.
-
-**Applies to.** Both (USAF and FAA Part 139). This is the primary module for the civil-engineering role.
 
 **Key functions.**
 - Shop-scoped work-order board with tabs and per-shop counts.
@@ -189,8 +179,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 **What it does.** Maintains a complete, map-based inventory of airfield lighting and visual navigational aids, runway, taxiway, threshold and end lights, approach lighting systems, precision approach path indicators, runway end identifier lights, sequenced flashers, bar lights, airfield signs, the rotating beacon, wind cones, distance markers, and more, grouped into lighting systems (for example, the various approach lighting system types) and their components. Authorized users place, move, and relabel features directly on the airfield map. When a feature fails, the user reports the outage; the platform marks the feature inoperative, builds a descriptive name from its system and component context, and automatically opens a lighting discrepancy linked back to that feature for tracking and resolution, recording the event in the feature's outage history. Critically, an automated outage engine continuously evaluates each lighting system against the allowable-outage criteria in the governing regulation and raises a graduated alert as outages approach or exceed what is permitted, including detection of a downed lighting bar, and indicates the required follow-on actions (such as issuing a NOTAM, notifying civil engineering or airspace authorities, or taking a system out of service). This is the only module that auto-creates a discrepancy when an outage is reported. Restoring a feature to operational status clears the condition and can prompt closure of the linked discrepancy.
 
 **Regulatory basis.** DAFMAN 13-204 Volume 2 (allowable visual-NAVAID outages and bar-out criteria). The outage capability evaluates lighting against the regulation's allowable-outage thresholds; specific thresholds and the evaluation method are not described here.
-
-**Applies to.** Both (USAF and FAA Part 139).
 
 **Key functions.**
 - Map-based inventory of all airfield lighting, signs, and visual NAVAIDs, organized into systems and components.
@@ -214,8 +202,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 **Regulatory basis.** UFC 3-260-01 (aircraft wingtip and taxilane clearance criteria, and aircraft design-group classification). Clearance is evaluated against the UFC criteria; the specific clearance values and the evaluation method are not described here.
 
-**Applies to.** Both (USAF and FAA Part 139).
-
 **Key functions.**
 - To-scale, map-based parking diagrams with aircraft drawn from a silhouette library.
 - Per-spot aircraft, tail number, unit/callsign, heading, position, and status.
@@ -238,8 +224,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 **Regulatory basis.** DAFMAN 13-204 (shift operations and turnover).
 
-**Applies to.** Both (USAF and FAA Part 139).
-
 **Key functions.**
 - Per-shift task lists (Day, Swing, Mid) from an administrator-configured template.
 - Daily, weekly, and monthly task cadence, showing only what is due.
@@ -256,21 +240,19 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 #### 3.1.8 NOTAMs
 
-**Capability.** Surfaces the live FAA NOTAM feed for the base's ICAO so the team can see active and expired NOTAMs in-app, with no parallel local NOTAM store to maintain.
+**Capability.** Surfaces the live NOTAM feed for the base's ICAO so the team can see active and expired NOTAMs in-app, with no parallel local NOTAM store to maintain.
 
-**What it does.** Pulls the current NOTAMs for the installation's ICAO directly from the FAA's public NOTAM service and presents them in-app, separated into active and expired, each with its number, type, title, full text, and effective start/end. The feed is read-only and authoritative, there is no local NOTAM-authoring workflow, so the team always sees the official FAA picture rather than a manually maintained copy that can drift. Expiry is determined from the official effective dates and cancellation flags. Discrepancies elsewhere in the platform can reference a NOTAM by its number.
+**What it does.** Pulls the current NOTAMs for the installation's ICAO directly from the official public NOTAM service and presents them in-app, separated into active and expired, each with its number, type, title, full text, and effective start/end. The feed is read-only and authoritative, there is no local NOTAM-authoring workflow, so the team always sees the official picture rather than a manually maintained copy that can drift. Expiry is determined from the official effective dates and cancellation flags. Discrepancies elsewhere in the platform can reference a NOTAM by its number.
 
-**Regulatory basis.** DAFMAN 13-204 (NOTAM awareness); data sourced from the FAA NOTAM Search service.
-
-**Applies to.** Both (USAF and FAA Part 139).
+**Regulatory basis.** DAFMAN 13-204 (NOTAM awareness); data sourced from the official public NOTAM search service.
 
 **Key functions.**
-- Live retrieval of the official FAA NOTAMs for the base's ICAO.
+- Live retrieval of the official NOTAMs for the base's ICAO.
 - Active-versus-expired separation with full NOTAM detail.
 - Read-only by design, no divergent local NOTAM store.
 - NOTAM numbers referenceable from discrepancies.
 
-**Outputs.** A rendered live NOTAM list (active and expired), refreshed from the FAA feed.
+**Outputs.** A rendered live NOTAM list (active and expired), refreshed from the official feed.
 
 **Roles.** Airfield management personnel view the feed; the feed is read-only for all users.
 
@@ -278,7 +260,7 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 ### 3.2 Compliance Modules
 
-The compliance modules turn recurring airfield regulatory obligations, annual inspections, obstruction evaluations, wildlife programs, criteria waivers, personnel control, training records, and the FAA safety/wildlife planning artifacts, into structured, auditable, inspection-ready workflows. Each module is independently enableable per base, gated by role-based permissions, scoped so a user only ever sees and edits data for the bases they belong to, and capable of producing a formatted PDF for filing or for an external inspector. Modules are tagged by airport type so a given installation only sees the modules relevant to its operating authority (USAF, FAA Part 139, or both).
+The compliance modules turn recurring airfield regulatory obligations, annual inspections, obstruction evaluations, wildlife programs, criteria waivers, personnel control, and training records, into structured, auditable, inspection-ready workflows. Each module is independently enableable per base, gated by role-based permissions, scoped so a user only ever sees and edits data for the bases they belong to, and capable of producing a formatted PDF for filing or for an external inspector.
 
 ---
 
@@ -289,8 +271,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 **What it does.** Guides an inspector through a sectioned checklist, recording a pass, fail, or not-applicable response for each item. When an item fails, the inspector captures one or more discrepancies, each with a written comment, a risk-control measure where required, map locations, photos, and project/work-order tracking (work order number, project number, estimated cost, and estimated completion date). The inspection carries a running summary of passed, failed, and not-applicable counts, an inspection-team roster (with role, name, rank, and title), and a block of risk-management certification signatures. Inspections save as drafts and resume across devices, can be filed once complete, and can be reopened for amendment. A filed inspection produces the formal report.
 
 **Regulatory basis.** DAFMAN 13-204 Vol 2, Para 5.4.3 (annual airfield inspection). The bundled checklist cites, per section, UFC 3-260-01, UFC 3-260-03, TSPWG M 3260-01.09-2, AFMAN 32-1041, AFI 32-1015, AFH 32-7084, and HQ AFCEC pavement-evaluation / PCI / friction reports.
-
-**Applies to.** USAF.
 
 **Key functions.**
 - Sectioned pass/fail/N-A checklist with parent and sub-field items.
@@ -309,18 +289,16 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Capability.** Evaluate a point obstruction against airfield imaginary surfaces and taxiway object-free areas and record a verifiable clearance/violation determination.
 
-**What it does.** The user selects a point on the map (or uses their current location), the system retrieves ground elevation, and the user enters the object height, a description, and photos, then chooses the applicable surface set and runs the evaluation. The result reports, per runway and per taxiway, whether the object is clear or in violation (and, for taxiways, whether it falls within an object-free area), names the controlling surface, gives the maximum allowable height and the penetration, and provides a NOTAM-ready bearing-and-distance reference from the nearest threshold. Evaluations are saved with their photos and can be revisited or updated later; the surface set used is preserved with each evaluation so historical results stay interpretable even if the base's default later changes.
+**What it does.** The user selects a point on the map (or uses their current location), the system retrieves ground elevation, and the user enters the object height, a description, and photos, then runs the evaluation. The result reports, per runway and per taxiway, whether the object is clear or in violation (and, for taxiways, whether it falls within an object-free area), names the controlling surface, gives the maximum allowable height and the penetration, and provides a NOTAM-ready bearing-and-distance reference from the nearest threshold. Evaluations are saved with their photos and can be revisited or updated later.
 
-**Regulatory basis.** UFC 3-260-01, Chapter 3 and Appendix B (imaginary surfaces, clear zone, graded area, primary, approach-departure, and related surfaces); DoD Instruction 4165.57 (accident-potential-zone land-use zones); 14 CFR §77.19 (FAA Part 77 civilian surfaces).
-
-**Applies to.** Both (USAF and FAA Part 139). The surface set is selectable per evaluation, UFC 3-260-01 surfaces or FAA Part 77 surfaces, defaulting to the base's operating mode.
+**Regulatory basis.** UFC 3-260-01, Chapter 3 and Appendix B (imaginary surfaces, clear zone, graded area, primary, approach-departure, and related surfaces); DoD Instruction 4165.57 (accident-potential-zone land-use zones).
 
 **Key functions.**
 - Map-point or GPS coordinate selection with automatic ground-elevation lookup.
-- Multi-runway and taxiway evaluation against the selected surface set.
+- Multi-runway and taxiway evaluation against the UFC 3-260-01 surface set.
 - Controlling-surface identification with maximum allowable height and penetration.
 - NOTAM bearing/distance reference from the nearest threshold.
-- Saved evaluation history with photos and a preserved per-evaluation surface set.
+- Saved evaluation history with photos.
 
 **Outputs.** On-screen per-runway and per-taxiway surface analysis with a controlling-surface banner and NOTAM reference; a PDF evaluation report; and an activity-log event when a violation is saved.
 
@@ -332,11 +310,9 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Capability.** Capture wildlife sightings and bird/wildlife strikes, track the Bird Watch Condition, and surface trend analytics and a hazard heatmap for the Bird/Wildlife Aircraft Strike Hazard program.
 
-**What it does.** Maintains running logs of wildlife sightings (species, count, behavior, location, observation conditions, dispersal action taken, and dispersal effectiveness) and of strikes (species, aircraft and flight data, phase of flight, parts struck and damaged, damage level, ingestion, costs and time out of service, and remains/lab disposition). The current Bird Watch Condition is tracked with a change history. Sightings and strikes can be entered inline from airfield checks and inspections, and a sighting can be linked to a resulting strike. The captured data drives trend analytics and a BASH heatmap and feeds the annual Wildlife Hazard Management Plan narrative.
+**What it does.** Maintains running logs of wildlife sightings (species, count, behavior, location, observation conditions, dispersal action taken, and dispersal effectiveness) and of strikes (species, aircraft and flight data, phase of flight, parts struck and damaged, damage level, ingestion, costs and time out of service, and remains/lab disposition). The current Bird Watch Condition is tracked with a change history. Sightings and strikes can be entered inline from airfield checks and inspections, and a sighting can be linked to a resulting strike. The captured data drives trend analytics and a BASH heatmap.
 
-**Regulatory basis.** DAFMAN 91-212 (BASH program). Strike fields align with USAF/FAA strike-reporting conventions.
-
-**Applies to.** Both (USAF and FAA Part 139).
+**Regulatory basis.** DAFMAN 91-212 (BASH program). Strike fields align with USAF strike-reporting conventions.
 
 **Key functions.**
 - Wildlife sighting log with species, conditions, behavior, and dispersal effectiveness.
@@ -345,7 +321,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 - Sighting-to-strike linking and inline capture from checks and inspections.
 - Filtering by date range, species, zone, and damage level.
 
-**Outputs.** Analytics (totals, top species, sightings and strikes by month, species-group breakdown, dispersal effectiveness); a BASH heatmap point feed (strikes weighted more heavily than sightings); activity-log events on creation; and source data for the WHMP annual assessment.
+**Outputs.** Analytics (totals, top species, sightings and strikes by month, species-group breakdown, dispersal effectiveness); a BASH heatmap point feed (strikes weighted more heavily than sightings); and activity-log events on creation.
 
 **Roles.** View-only reviewers; users who can record and edit sightings, strikes, and Bird Watch Condition changes; and users who can delete records.
 
@@ -355,11 +331,9 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Capability.** Manage airfield criteria waivers across their full lifecycle, from classification and hazard rating through multi-office coordination to annual review.
 
-**What it does.** Records a waiver's classification, hazard rating, requested action, description, justification, risk-assessment summary, corrective action, and the specific criteria it impacts; tracks associated project, cost, fiscal-year, and (for civilian airports) FAA case data; captures the validity period and submission/approval/expiration dates; supports per-office coordination with concur/non-concur status and comments; holds attachments; and runs an annual review that records a recommendation, verifies mitigation, and tracks facilities-board presentation. Submitting and approving a waiver stamps the relevant dates, and recording an annual review advances the next-review-due date and is organized by review year. Waiver numbers are generated automatically from the classification and installation.
+**What it does.** Records a waiver's classification, hazard rating, requested action, description, justification, risk-assessment summary, corrective action, and the specific criteria it impacts; tracks associated project, cost, and fiscal-year data; captures the validity period and submission/approval/expiration dates; supports per-office coordination with concur/non-concur status and comments; holds attachments; and runs an annual review that records a recommendation, verifies mitigation, and tracks facilities-board presentation. Submitting and approving a waiver stamps the relevant dates, and recording an annual review advances the next-review-due date and is organized by review year. Waiver numbers are generated automatically from the classification and installation.
 
 **Regulatory basis.** AF Form 505 (Request for Waiver). Criteria sources reference UFC 3-260-01, UFC 3-260-04, and UFC 3-535-01.
-
-**Applies to.** Both (USAF and FAA Part 139).
 
 **Key functions.**
 - Lifecycle management across six classifications (permanent, temporary, construction, event, extension, amendment) and a full status progression.
@@ -379,11 +353,9 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Capability.** Log personnel and contractors operating on the airfield with escort/credential tracking and credential-expiry warnings.
 
-**What it does.** Maintains a roster of personnel and companies working on the airfield, capturing company, point of contact and phone, work location and description, start/end dates, and radio/flag/callsign assignments. Each entry records the on-airfield credential reference and its expiration date, and the system flags credentials that are expired or expiring within thirty days. Entries move through a simple active-then-completed lifecycle, and reusable templates let a base pre-fill recurring contractors. The credential label adapts to the airport type, the USAF personnel-on-airfield form on military airfields, or the SIDA badge on civilian Part 139 airports.
+**What it does.** Maintains a roster of personnel and companies working on the airfield, capturing company, point of contact and phone, work location and description, start/end dates, and radio/flag/callsign assignments. Each entry records the on-airfield credential reference and its expiration date, and the system flags credentials that are expired or expiring within thirty days. Entries move through a simple active-then-completed lifecycle, and reusable templates let a base pre-fill recurring contractors. The credential reference follows the USAF personnel-on-airfield form.
 
-**Regulatory basis.** AF Form 483 (Personnel on Airfield); civilian SIDA badge equivalent.
-
-**Applies to.** Both (USAF and FAA Part 139).
+**Regulatory basis.** AF Form 483 (Personnel on Airfield).
 
 **Key functions.**
 - Personnel/contractor roster with contact, location, work description, and dates.
@@ -392,7 +364,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 - Active / completed lifecycle with filtered views.
 - Reusable contractor templates shared across base users.
 
-**Outputs.** A landscape "Personnel on Airfield" roster (PDF) with active/completed/total counts and a credential column whose header switches between the USAF form and the SIDA badge by airport type, with expiry annotated inline. Email distribution of the roster.
+**Outputs.** A landscape "Personnel on Airfield" roster (PDF) with active/completed/total counts and a credential column keyed to the USAF form, with expiry annotated inline. Email distribution of the roster.
 
 **Roles.** View-only reviewers; users who can add and edit entries; and users who can delete them.
 
@@ -405,8 +377,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 **What it does.** Maintains a unit roster (auto-populated from the base's airfield-management personnel, with exclusions) and a tabbed per-member record covering the member's training documentation, on-the-job and career-field task progress, formal courses, qualifications, milestones, and Ready Airman Training, plus a supporting-files tab and a history tab. Sign-offs are the core of the record and are governed by an AMTR-specific role layer that is separate from general app access: this layer decides what a user may sign inside a record, with authority arranged hierarchically (trainee, trainer, certifier, and the senior training-manager and Airfield Manager roles), a guard that limits a user to signing only the trainee block on their own record, and the ability for the senior roles to reopen a locked block. Signing a qualifying task automatically generates and advances the multi-stage training-record entry through its trainee, trainer, and certifier stages, with senior endorsement applied manually. Training reference catalogs are configurable per base and can be synchronized to bundled, versioned standard catalogs (with added/updated/retired items previewed before applying, and deliberately preserving local edits to certain fields). The record also supports bulk transcription of historical (back-dated) entries, an off-network spreadsheet import, and a structured data round-trip for import/export.
 
 **Regulatory basis.** DAFI 36-2670 and CFETP 1C7X1; AF Forms 623A, 797, 803, and 1098. Bundled standard catalogs are versioned to a published 1C7X1 catalog edition.
-
-**Applies to.** USAF.
 
 **Key functions.**
 - Auto-populated unit roster with per-user exclusions.
@@ -433,8 +403,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Regulatory basis.** AFMAN 91-203 (emergency / contingency checklists) and DAFMAN 13-204v2 §2.5.2.8. Ships with 25 default checklist templates seeded at base setup.
 
-**Applies to.** Both (USAF and FAA Part 139).
-
 **Key functions.**
 - Build and maintain per-base checklist templates with ordered, multi-type steps and optional sub-steps.
 - Open, work through, close, reopen, or cancel a checklist execution against any template.
@@ -458,8 +426,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Regulatory basis.** DAFMAN 13-204v2 §4.2.2.3.7 (daily SCN check for emergency coordination).
 
-**Applies to.** USAF only. (Civilian Part 139 bases use the Airport Emergency Plan module instead.)
-
 **Key functions.**
 - Maintain a per-base roster of crash-net agencies (managed in base setup).
 - Run a daily primary check and a monthly back-up check, each setting every agency loud-and-clear / no-response / out-of-service.
@@ -481,8 +447,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 **What it does.** PPR manages transient-aircraft permission requests end to end. The fields on the form and log are configurable per base (text, date, time, yes/no/N-A, phone, number, email, or informational), and each field can be independently shown on the public form, the internal log, and the airfield-status board, with per-field Zulu-or-local time display. A request can arrive two ways: a member of the public submits the public request form (reached by ICAO at a no-login URL), or AMOPS creates the entry internally. From there the request moves through triage, where AMOPS routes it to the appropriate coordinating agencies; coordination, where each agency records concur or non-concur with a comment; and final approval (or denial, or cancellation). A pre-coordinated request can skip straight to approved, and agencies can be added mid-flow, which steps the request back into coordination. Each PPR is assigned a server-minted PPR number that stays unique even under simultaneous submissions, and a remarks timeline records the running narrative, including coordinating agencies' concur/non-concur comments. Cancellation and denial are soft terminal states that keep the record. Email notifications keep the requester and coordinating agencies in the loop at each step, and active PPRs roll up into the day's operational count on the header and status board.
 
 **Regulatory basis.** DAFMAN 13-204 (PPR for transient aircraft). Otherwise driven by base policy rather than a single-paragraph mandate.
-
-**Applies to.** Both (USAF and FAA Part 139).
 
 **Key functions.**
 - Configure per-base PPR fields and where each appears (public form / log / status board) with per-field time display.
@@ -509,8 +473,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Regulatory basis.** None. This is a base-service / customer-experience tool, not a regulatory requirement.
 
-**Applies to.** Both (USAF and FAA Part 139). This is the only module in this set that is off by default and must be enabled per base.
-
 **Key functions.**
 - Configure the public form: title, description, thank-you message, custom fields, and optional name/email/organization/overall-rating capture.
 - Publish the form via a scannable QR code to a no-login URL.
@@ -520,7 +482,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 **Outputs.** A feedback PDF. An analytics rollup (total submissions, average rating, rating distribution, recent count). No outbound notification emails.
 
-**Roles.** Staff with feedback view access can read submissions; deleting a submission and configuring the form are each governed by their own permissions. The public submission path requires no login.
+**Roles.** Staff with feedback view access can read submissions; deleting a submission and configuring the form are each governed by their own permissions. The public submission path requires no login. This module is off by default and must be enabled per base.
 
 ## 4 Cross-cutting capabilities
 
@@ -532,17 +494,13 @@ The platform continuously evaluates the operational state of runway and taxiway 
 
 ### 4.2 Obstruction evaluation against imaginary surfaces
 
-The platform evaluates a point obstruction (by map location or GPS, with a height) against the airfield's imaginary surfaces and land-use zones, returning a clear/violation determination per surface, the controlling surface, the maximum allowable height, and the degree of any penetration, with a human-readable breakdown for verification and a NOTAM-ready bearing-and-distance reference. It operates against the UFC 3-260-01 imaginary-surface criteria (and the associated land-use-zone instruction) for USAF airfields and against the FAA Part 77 (14 CFR §77.19) surfaces for civilian airports, selecting the correct surface set for the base. Evaluations are saved with photos as a permanent record, and violations carry coordination/waiver guidance.
+The platform evaluates a point obstruction (by map location or GPS, with a height) against the airfield's imaginary surfaces and land-use zones, returning a clear/violation determination per surface, the controlling surface, the maximum allowable height, and the degree of any penetration, with a human-readable breakdown for verification and a NOTAM-ready bearing-and-distance reference. It operates against the UFC 3-260-01 imaginary-surface criteria and the associated land-use-zone instruction for USAF airfields. Evaluations are saved with photos as a permanent record, and violations carry coordination/waiver guidance.
 
 ### 4.3 Aircraft parking clearance analysis
 
 Planners can lay out to-scale aircraft parking on the airfield map, and the platform validates wingtip and taxilane clearances against the UFC 3-260-01 parking and taxilane criteria, flagging any spacing that falls short of the required clearance for the aircraft involved and the parking context (parked, transient apron, or taxilane). The result is a checked parking diagram suitable for transient or exercise operations, replacing manual clearance arithmetic and reducing the risk of a clearance violation on a crowded ramp.
 
-### 4.4 Runway condition / field-condition assessment (civilian)
-
-For Part 139 airports, the platform supports per-third runway condition assessment and generates the FICON NOTAM text required when surface conditions degrade. It implements the TALPA runway-condition methodology of FAA AC 150/5200-30D and the §139.313 field-condition reporting obligation, producing auditable, time-stamped, revisable condition reports and the NOTAM text for the FAA NOTAM Manager, replacing ad-hoc winter-operations spreadsheets.
-
-### 4.5 Protective rate-limiting on public endpoints
+### 4.4 Protective rate-limiting on public endpoints
 
 The public, no-login endpoints (such as PPR request submission and password-reset/sign-up email) are protected by rate limiting so that automated abuse cannot flood the system or run up the cost of external services, while legitimate users are unaffected.
 
@@ -552,13 +510,13 @@ Glidepath draws on a small number of external services for live data and deliver
 
 | Capability | What it provides |
 |---|---|
-| Live FAA NOTAM feed | Current and recently expired NOTAMs for the base's airport identifier, shown in-app so the team works from the authoritative source rather than a parallel local copy |
+| Live NOTAM feed | Current and recently expired NOTAMs for the base's airport identifier, shown in-app so the team works from the authoritative source rather than a parallel local copy |
 | Airport / ICAO identifier lookup | Airport metadata and runway geometry during base setup, so the airfield is configured from authoritative survey data |
 | Terrain elevation lookup | Ground elevation at a point, used by the obstruction-evaluation capability |
 | Satellite mapping | The interactive maps underlying status, infrastructure, parking, and obstruction work |
-| Weather | Conditions captured alongside inspections and field-condition reports |
+| Weather | Conditions captured alongside inspections |
 | Branded transactional email | Delivery of report PDFs and lifecycle notifications (invitations, approvals, password resets, PPR coordination and decisions) under the Glidepath brand |
 
 ## 6 Closing note
 
-Glidepath is a built, deployed, and operating product, maintained against current DAFMAN, UFC, and FAA Part 139 regulations. This brief is intended to convey the scope of what the platform does so an implementation team can plan its own punch list; it is a capabilities and requirements overview, not an implementation design, a data specification, or a substitute for the product itself.
+Glidepath is a built, deployed, and operating product, maintained against current DAFMAN, UFC, and AFMAN regulations. This brief is intended to convey the scope of what the platform does so an implementation team can plan its own punch list; it is a capabilities and requirements overview, not an implementation design, a data specification, or a substitute for the product itself.
