@@ -2861,8 +2861,9 @@ export default function InfrastructureMapPage() {
           />
         )}
 
-        {/* Loading overlay */}
-        {!mapLoaded && (
+        {/* Loading overlay — only for the Google renderer (mapLoaded is set by
+            the Google map's idle event; the OL pilot manages its own render). */}
+        {!mapLoaded && !useOlRenderer && (
           <div style={{
             position: 'absolute',
             inset: 0,
