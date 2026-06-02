@@ -27,7 +27,7 @@ export function getInstallationMapProvider(
 }
 
 /** Bing tiling scheme is quadkey, not standard XYZ. */
-function tileToQuadkey(x: number, y: number, zoom: number): string {
+export function tileToQuadkey(x: number, y: number, zoom: number): string {
   let quadkey = ''
   for (let i = zoom; i > 0; i--) {
     let digit = 0
@@ -110,4 +110,34 @@ export function applyMapProvider(
   if (!layer) return
   map.mapTypes.set(provider, layer)
   map.setMapTypeId(provider)
+}
+
+// ── OpenLayers imagery ──────────────────────────────────────────────
+// OpenLayers can't render Google's satellite tiles (Google imagery only renders
+// inside Google's own API). So the OL renderer falls back to Esri World Imagery
+// for the 'google' provider, and otherwise honours the per-base choice. Returned
+// as a library-agnostic descriptor; lib/openlayers.ts turns it into an ol source.
+export type OlImagery =
+  | { scheme: 'xyz'; url: string; maxZoom: number; attributions: string }
+  | { scheme: 'bing-quadkey'; maxZoom: number; key: string; attributions: string }
+
+const ESRI_WORLD_IMAGERY: OlImagery = {
+  scheme: 'xyz',
+  // {z}/{y}/{x} order — ArcGIS REST tile endpoint (matches getAlternateImageMapType).
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  maxZoom: 19,
+  attributions: 'Imagery © Esri, Maxar, Earthstar Geographics',
+}
+
+export function getOlImagery(provider: MapProvider): OlImagery {
+  if (provider === 'bing') {
+    return {
+      scheme: 'bing-quadkey',
+      maxZoom: 21,
+      key: process.env.NEXT_PUBLIC_BING_MAPS_KEY ?? '',
+      attributions: 'Imagery © Microsoft',
+    }
+  }
+  // 'esri' and 'google' (no OL equivalent for Google) → Esri World Imagery.
+  return ESRI_WORLD_IMAGERY
 }
