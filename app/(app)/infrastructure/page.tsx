@@ -276,11 +276,12 @@ function createLabeledSign(
   bgColor: string,
   textColor: string,
   borderColor: string,
+  rotation = 0,
 ): ImageData {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
-  // Measure text to size the canvas — high-resolution source (was fontSize 14)
+  // Measure text to size the sign panel — high-resolution source (was fontSize 14)
   const fontSize = 28
   const fontBold = `bold ${fontSize}px system-ui, sans-serif`
   ctx.font = fontBold
@@ -291,8 +292,20 @@ function createLabeledSign(
   const w = textW + padX * 2 + borderW * 2
   const h = fontSize + padY * 2 + borderW * 2
 
-  canvas.width = w
-  canvas.height = h
+  // Raster icon markers can't rotate, so the rotation is baked into the image:
+  // size the canvas to the rotated panel's bounding box and draw the panel
+  // rotated about its centre (the marker anchors on that centre, so the sign
+  // pivots in place).
+  const rad = ((rotation || 0) * Math.PI) / 180
+  const cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad))
+  const cw = Math.ceil(w * cos + h * sin)
+  const ch = Math.ceil(w * sin + h * cos)
+  canvas.width = cw
+  canvas.height = ch
+
+  ctx.translate(cw / 2, ch / 2)
+  ctx.rotate(rad)
+  ctx.translate(-w / 2, -h / 2)
 
   // Border
   ctx.fillStyle = borderColor
@@ -309,7 +322,7 @@ function createLabeledSign(
   ctx.textBaseline = 'middle'
   ctx.fillText(text, w / 2, h / 2)
 
-  return ctx.getImageData(0, 0, w, h)
+  return ctx.getImageData(0, 0, cw, ch)
 }
 
 // Sign display scale — reduces the on-map size of labeled signs.
@@ -364,7 +377,7 @@ function registerLabeledSigns(wrapper: GMapWrapper, features: InfrastructureFeat
     if (!f.label || !SIGN_COLORS[f.feature_type]) continue
     const imgName = `sign-label-${f.id}`
     const colors = SIGN_COLORS[f.feature_type]
-    const img = createLabeledSign(f.label, colors.bg, colors.text, colors.border)
+    const img = createLabeledSign(f.label, colors.bg, colors.text, colors.border, f.rotation || 0)
     registerIcon(wrapper, imgName, img)
     registered.add(imgName)
   }
