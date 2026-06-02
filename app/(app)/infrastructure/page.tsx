@@ -319,6 +319,13 @@ function createLabeledSign(
 // so even a fully zoomed-in sign upscales the source minimally.
 const SIGN_DISPLAY_SCALE = 0.4
 
+// Features render at a single fixed size at every zoom (no zoom-based scaling).
+// Sized to roughly the old zoom-16 appearance — small, since the map is always
+// viewed zoomed in. Constant size means markers are built once and never
+// resized on zoom, so pan/zoom stays smooth.
+const FEATURE_ICON_SCALE = 0.45 // base icon px = 24 * this
+const FEATURE_CIRCLE_RADIUS = 5 // CIRCLE symbol radius in px
+
 // Sign type → colors for labeled signs
 const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   location_sign:      { bg: '#000000', text: '#FBBF24', border: '#FBBF24' },
@@ -2033,140 +2040,6 @@ export default function InfrastructureMapPage() {
     return html
   }, [])
 
-  // ── Zoom-based icon scaling (replaces Mapbox interpolation expressions) ──
-  const currentZoomRef = useRef(14)
-
-  // Per-marker metadata for in-place zoom rescaling (avoids full re-render on zoom)
-  type MarkerMeta = { kind: 'sign'; signKey: string } | { kind: 'icon' } | { kind: 'circle'; color: string; isInop: boolean }
-  const markerMetaRef = useRef<Map<string, MarkerMeta>>(new Map())
-
-  // Tracks whether feature markers/circles are currently hidden (zoom < 13).
-  // Used to flip setMap(null/gmap) only when crossing the threshold and to
-  // gate the initial render in renderFeatures().
-  const featuresHiddenRef = useRef(false)
-  // Last applied scale — short-circuits the rescale loop when the new scale
-  // is within ~10% of the prior one (most zoom adjustments inside the flat
-  // 13-15 region don't change scale at all).
-  const lastScaleRef = useRef<number>(0)
-
-  // Below this zoom, every feature marker and overlay circle is removed from
-  // the map (setMap(null)). Google Maps stops rasterizing mapless markers
-  // entirely — biggest single perf win when "all layers enabled" with
-  // thousands of lights and the user is zoomed way out.
-  const HIDE_FEATURES_BELOW_ZOOM = 13
-
-  // In-place zoom rescale — fires on 'idle' (after zoom/pan animation settles),
-  // not on 'zoom_changed' (which fires during the animation and causes flicker).
-  // Markers keep their old size during the animation and snap to new size once settled.
-  useEffect(() => {
-    const w = map.current
-    if (!w || !mapLoaded) return
-    let lastZoom = currentZoomRef.current
-
-    const onIdle = () => {
-      const zoom = w.gmap.getZoom() ?? 14
-      if (zoom === lastZoom) return // pan-only — no rescale needed
-      lastZoom = zoom
-      currentZoomRef.current = zoom
-
-      // Threshold cross: flip every feature marker + overlay circle on/off
-      // the map. Only runs when actually crossing — pure no-op otherwise.
-      const shouldHide = zoom < HIDE_FEATURES_BELOW_ZOOM
-      if (shouldHide !== featuresHiddenRef.current) {
-        const target = shouldHide ? null : w.gmap
-        w.markers.forEach(m => m.setMap(target))
-        selectionCirclesRef.current.forEach(c => c.setMap(target))
-        healthCirclesRef.current.forEach(c => c.setMap(target))
-        auditCirclesRef.current.forEach(c => c.setMap(target))
-        inopCirclesRef.current.forEach(c => c.setMap(target))
-        featuresHiddenRef.current = shouldHide
-      }
-      if (shouldHide) return // nothing on the map — skip the rescale walk
-
-      // Scale-delta short-circuit: skip the per-marker walk when the new
-      // scale is essentially the same as the last applied scale. Combined
-      // with the flat 13-15 region in zoomScale(), most zoom adjustments
-      // never touch a marker.
-      const scale = zoomScale(zoom)
-      const circleRad = zoomCircleRadius(zoom)
-      if (lastScaleRef.current > 0 && Math.abs(scale - lastScaleRef.current) / lastScaleRef.current < 0.10) {
-        return
-      }
-      lastScaleRef.current = scale
-
-      w.markers.forEach((marker, featureId) => {
-        const meta = markerMetaRef.current.get(featureId)
-        if (!meta) return
-
-        if (meta.kind === 'sign') {
-          const natural = w.iconSizes.get(meta.signKey) || { w: 60, h: 24 }
-          const mw = Math.max(Math.round(natural.w * scale * SIGN_DISPLAY_SCALE), 20)
-          const mh = Math.max(Math.round(natural.h * scale * SIGN_DISPLAY_SCALE), 10)
-          marker.setIcon({
-            url: w.iconCache.get(meta.signKey) || '',
-            scaledSize: new google.maps.Size(mw, mh),
-            anchor: new google.maps.Point(mw / 2, mh / 2),
-          } as google.maps.Icon)
-        } else if (meta.kind === 'icon') {
-          const sz = Math.max(Math.round(24 * scale), 10)
-          const currentIcon = marker.getIcon() as google.maps.Icon | undefined
-          if (currentIcon?.url) {
-            marker.setIcon({
-              url: currentIcon.url,
-              scaledSize: new google.maps.Size(sz, sz),
-              anchor: new google.maps.Point(sz / 2, sz / 2),
-            } as google.maps.Icon)
-          }
-        } else if (meta.kind === 'circle') {
-          marker.setIcon({
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: circleRad,
-            fillColor: meta.color,
-            fillOpacity: 0.85,
-            strokeColor: meta.isInop ? '#FFFFFF' : '#000000',
-            strokeWeight: meta.isInop ? 2 : 1,
-          })
-        }
-      })
-    }
-
-    const listener = w.gmap.addListener('idle', onIdle)
-    return () => {
-      google.maps.event.removeListener(listener)
-    }
-  }, [mapLoaded])
-
-  // Features stay small (constant) up to zoom 15, then ramp into final size
-  // between zoom 16-19. Most zoom transitions land in the flat region and
-  // become no-ops, so the per-marker setIcon walk stays quiet during normal
-  // panning/zooming. Below zoom 13 features are hidden entirely (see the
-  // hide-below-13 logic in the rescale useEffect).
-  function zoomScale(zoom: number): number {
-    if (zoom <= 15) return 0.30
-    if (zoom >= 19) return 1.40
-    const stops = [[15, 0.30], [16, 0.45], [17, 0.70], [18, 1.00], [19, 1.40]]
-    for (let i = 0; i < stops.length - 1; i++) {
-      if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
-        const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
-        return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
-      }
-    }
-    return 0.30
-  }
-
-  function zoomCircleRadius(zoom: number): number {
-    if (zoom <= 15) return 3
-    if (zoom >= 19) return 16
-    const stops = [[15, 3], [16, 5], [17, 8], [18, 11], [19, 16]]
-    for (let i = 0; i < stops.length - 1; i++) {
-      if (zoom >= stops[i][0] && zoom <= stops[i + 1][0]) {
-        const t = (zoom - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
-        return stops[i][1] + t * (stops[i + 1][1] - stops[i][1])
-      }
-    }
-    return 3
-  }
-
   // ── Render all features as Google Maps markers ──
   // Refs for selection / health circles
   const selectionCirclesRef = useRef<google.maps.Circle[]>([])
@@ -2177,15 +2050,9 @@ export default function InfrastructureMapPage() {
   const renderFeatures = useCallback((wrapper: GMapWrapper, geojson: GeoJSON.FeatureCollection) => {
     // Clear old markers (but keep non-feature markers like location, drag, freemove)
     clearAllObjects(wrapper)
-    markerMetaRef.current.clear()
 
-    const zoom = currentZoomRef.current
-    // Honor the hide-below-13 threshold on initial draw so layer toggles
-    // while zoomed out don't briefly flash visible markers. The zoom listener
-    // will flip them back on when the user crosses back above the threshold.
-    const initiallyHidden = zoom < HIDE_FEATURES_BELOW_ZOOM
-    featuresHiddenRef.current = initiallyHidden
-    const initialMap = initiallyHidden ? null : wrapper.gmap
+    // Features render at a constant size at every zoom and are always shown.
+    const initialMap = wrapper.gmap
 
     // All visible-layer features are rendered regardless of viewport position.
     // Since layers start hidden and users enable 1-2 at a time, the feature count
@@ -2218,12 +2085,8 @@ export default function InfrastructureMapPage() {
       const isInop = props.status === 'inoperative'
       const color = isInop ? '#EF4444' : layerCfg.color
 
-      // Build marker options
-      const scale = zoomScale(zoom)
-      const circleRad = zoomCircleRadius(zoom)
-
+      // Build marker options (constant size — no zoom scaling)
       let markerIcon: google.maps.Icon | google.maps.Symbol | undefined
-      let meta: MarkerMeta
       if (iconUrl) {
         const isSign = !!props.signIcon
         if (isSign) {
@@ -2231,36 +2094,33 @@ export default function InfrastructureMapPage() {
           // the on-map footprint while keeping the source crisp at high zoom.
           const iconKey = props.signIcon as string
           const natural = wrapper.iconSizes.get(iconKey) || { w: 60, h: 24 }
-          const w = Math.max(Math.round(natural.w * scale * SIGN_DISPLAY_SCALE), 20)
-          const h = Math.max(Math.round(natural.h * scale * SIGN_DISPLAY_SCALE), 10)
+          const w = Math.max(Math.round(natural.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 20)
+          const h = Math.max(Math.round(natural.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 10)
           markerIcon = {
             url: iconUrl,
             scaledSize: new google.maps.Size(w, h),
             anchor: new google.maps.Point(w / 2, h / 2),
           } as google.maps.Icon
-          meta = { kind: 'sign', signKey: iconKey }
         } else {
           // Regular feature icons (approach lights, PAPI, etc.)
-          const sz = Math.max(Math.round(24 * scale), 10)
+          const sz = Math.max(Math.round(24 * FEATURE_ICON_SCALE), 10)
           markerIcon = {
             url: iconUrl,
             scaledSize: new google.maps.Size(sz, sz),
             anchor: new google.maps.Point(sz / 2, sz / 2),
           } as google.maps.Icon
-          meta = { kind: 'icon' }
         }
       } else {
         // Circle renderType — use a Symbol
         markerIcon = {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: circleRad,
+          scale: FEATURE_CIRCLE_RADIUS,
           fillColor: color,
           fillOpacity: 0.85,
           strokeColor: isInop ? '#FFFFFF' : '#000000',
           strokeWeight: isInop ? 2 : 1,
           rotation: props.rotation || 0,
         }
-        meta = { kind: 'circle', color, isInop }
       }
 
       const marker = new google.maps.Marker({
@@ -2278,7 +2138,6 @@ export default function InfrastructureMapPage() {
       })
 
       wrapper.markers.set(featureId, marker)
-      markerMetaRef.current.set(featureId, meta)
     }
   }, [visibleLayers, buildPopupHtml])
 
