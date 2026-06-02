@@ -327,7 +327,7 @@ export function Auto623aDialog(props: {
 
               <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: '12px 14px', alignItems: 'center', fontSize: 'var(--fs-sm)' }}>
                 <label htmlFor="auto623-date" style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.06em' }}>Date</label>
-                <input id="auto623-date" type="date" className="input-dark" value={formDate} onChange={(e) => setFormDate(e.target.value)} disabled={saving || !!existingRow} style={{ width: 180 }} />
+                <input id="auto623-date" type="date" className="input-dark" value={formDate} onChange={(e) => setFormDate(e.target.value)} disabled={saving} style={{ width: 180 }} />
 
                 <label htmlFor="auto623-type" style={{ color: 'var(--color-text-3)', fontWeight: 600, textTransform: 'uppercase', fontSize: 'var(--fs-xs)', letterSpacing: '0.06em' }}>Entry Type</label>
                 <input id="auto623-type" className="input-dark" list="auto623-types" value={entryType} onChange={(e) => setEntryType(e.target.value)} disabled={saving} placeholder="Type or pick…" />
