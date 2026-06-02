@@ -149,6 +149,12 @@ export function OlNavaidsMap({
       overlays: [overlay],
       view: createBaseView(center, zoom),
     })
+    // The target mounts via the ?renderer=ol flag flip, so OL may read a 0x0
+    // size at creation and render blank. Force a size recompute after layout
+    // and on any container resize.
+    requestAnimationFrame(() => map.updateSize())
+    const ro = new ResizeObserver(() => map.updateSize())
+    ro.observe(elRef.current)
     map.on('singleclick', (e) => {
       const hit = map.forEachFeatureAtPixel(e.pixel, (f) => f as Feature, { hitTolerance: 4 })
       if (hit) {
@@ -160,17 +166,22 @@ export function OlNavaidsMap({
     })
     mapRef.current = map
     return () => {
+      ro.disconnect()
       map.setTarget(undefined)
       mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Swap imagery when the provider changes.
+  // Swap imagery when the provider changes (skip the first run — the build
+  // effect already added the correct imagery layer).
+  const lastProviderRef = useRef<MapProvider>(mapProvider)
   useEffect(() => {
     const map = mapRef.current
     const old = imageryRef.current
     if (!map || !old) return
+    if (lastProviderRef.current === mapProvider) return
+    lastProviderRef.current = mapProvider
     const next = createImageryLayer(mapProvider)
     map.getLayers().insertAt(0, next)
     map.removeLayer(old)
