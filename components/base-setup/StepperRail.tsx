@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { Check, AlertTriangle, Ban } from 'lucide-react'
-import { isStepDone, isWizardStepEnabled, type WizardStepKey, type SetupProgress } from '@/lib/modules-config'
+import { isStepDone, type WizardStepKey, type SetupProgress } from '@/lib/modules-config'
 
 export type StepperStep = {
   key: WizardStepKey
@@ -60,18 +60,18 @@ export function StepperRail({
   steps,
   currentIndex,
   setupProgress,
-  enabledModules,
   touched,
   onStepClick,
 }: {
+  /** Already filtered by the page (module + airport_type). The rail renders
+   *  these verbatim so its index space matches the page's content. */
   steps: StepperStep[]
   currentIndex: number
   setupProgress: SetupProgress | null | undefined
-  enabledModules: readonly string[] | null | undefined
   touched: ReadonlySet<WizardStepKey>
   onStepClick: (index: number) => void
 }) {
-  const visible = steps.filter(s => isWizardStepEnabled(s.key, enabledModules))
+  const visible = steps
   const scrollRef = useRef<HTMLDivElement | null>(null)
 
   // Snap mobile scroll strip to the current step on mount + when step changes.

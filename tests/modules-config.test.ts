@@ -94,6 +94,20 @@ describe('isWizardStepEnabled', () => {
   it('steps not mapped to any module fail open', () => {
     expect(isWizardStepEnabled('statusboards', [])).toBe(true)
   })
+
+  it('gates AEP/SCN setup steps by airport_type', () => {
+    // aepagencies → aep (civilian only); scnagencies → scn (USAF only).
+    // The base-config rail desynced because it called this WITHOUT airport_type,
+    // which fails open and leaked the AEP step onto USAF.
+    expect(isWizardStepEnabled('aepagencies', ['aep'], 'usaf')).toBe(false)
+    expect(isWizardStepEnabled('aepagencies', ['aep'], 'faa_part139')).toBe(true)
+    expect(isWizardStepEnabled('scnagencies', ['scn'], 'usaf')).toBe(true)
+    expect(isWizardStepEnabled('scnagencies', ['scn'], 'faa_part139')).toBe(false)
+  })
+
+  it('fails open on airport_type when omitted — why callers must pass a pre-filtered list', () => {
+    expect(isWizardStepEnabled('aepagencies', ['aep'])).toBe(true)
+  })
 })
 
 describe('isStepDone', () => {

@@ -331,10 +331,9 @@ export default function BaseSetupPage() {
 
       {/* Labeled stepper rail (replaces numbered circles) */}
       <StepperRail
-        steps={WIZARD_STEPS}
+        steps={visibleSteps}
         currentIndex={safeStepIndex}
         setupProgress={setupProgress}
-        enabledModules={enabledModules}
         touched={touched}
         onStepClick={(i) => { setCurrentStep(i); window.scrollTo(0, 0) }}
       />
