@@ -1,4 +1,4 @@
-# Glidepath — Capabilities Brief
+# Glidepath — Capabilities Brief — FAA Part 139 (Civilian) Edition
 
 > **Proprietary & Confidential, Developed at private expense, © Glidepath.** This document describes Glidepath's capabilities and the regulatory requirements they satisfy. It is a capabilities/requirements overview, not an implementation design or data specification.
 
@@ -304,30 +304,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.1 ACSI (Annual Compliance Inspection)
-
-**Capability.** Conduct, document, and file the annual airfield compliance and safety inspection as a structured multi-section checklist.
-
-**What it does.** Guides an inspector through a sectioned checklist, recording a pass, fail, or not-applicable response for each item. When an item fails, the inspector captures one or more discrepancies, each with a written comment, a risk-control measure where required, map locations, photos, and project/work-order tracking (work order number, project number, estimated cost, and estimated completion date). The inspection carries a running summary of passed, failed, and not-applicable counts, an inspection-team roster (with role, name, rank, and title), and a block of risk-management certification signatures. Inspections save as drafts and resume across devices, can be filed once complete, and can be reopened for amendment. A filed inspection produces the formal report.
-
-**Regulatory basis.** DAFMAN 13-204 Vol 2, Para 5.4.3 (annual airfield inspection). The bundled checklist cites, per section, UFC 3-260-01, UFC 3-260-03, TSPWG M 3260-01.09-2, AFMAN 32-1041, AFI 32-1015, AFH 32-7084, and HQ AFCEC pavement-evaluation / PCI / friction reports.
-
-**Applies to.** USAF.
-
-**Key functions.**
-- Sectioned pass/fail/N-A checklist with parent and sub-field items.
-- Per-failure discrepancy capture with required risk-control measures, photos, map locations, and project/work-order tracking.
-- Running pass/fail/N-A summary counts.
-- Inspection-team roster and risk-management certification signature blocks.
-- Cross-device draft save and resume; file, then reopen for amendment.
-
-**Outputs.** A letter-portrait inspection report (header with regulatory citation, summary KPIs, per-section checklist tables with inline discrepancy detail and embedded photos, inspection-team and risk-management certification signature blocks, and general notes). Activity-log events on reopen. Inclusion in the base Records Export.
-
-**Roles.** View-only reviewers; inspectors who create, edit, and file inspections; users who can delete records; and a filing authority. Edit and reopen are available to authorized writers or to the person who filed the inspection; deletion is restricted to delete-authorized users or to writers/filers acting on a not-yet-filed record.
-
----
-
-#### 3.2.2 Obstructions
+#### 3.2.1 Obstructions
 
 **Capability.** Evaluate a point obstruction against airfield imaginary surfaces and taxiway object-free areas and record a verifiable clearance/violation determination.
 
@@ -350,7 +327,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.3 Wildlife / BASH
+#### 3.2.2 Wildlife / BASH
 
 **Capability.** Capture wildlife sightings and bird/wildlife strikes, track the Bird Watch Condition, and surface trend analytics and a hazard heatmap for the Bird/Wildlife Aircraft Strike Hazard program.
 
@@ -373,7 +350,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.4 Waivers
+#### 3.2.3 Waivers
 
 **Capability.** Manage airfield criteria waivers across their full lifecycle, from classification and hazard rating through multi-office coordination to annual review.
 
@@ -397,7 +374,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.5 Contractors / Personnel on Airfield
+#### 3.2.4 Contractors / Personnel on Airfield
 
 **Capability.** Log personnel and contractors operating on the airfield with escort/credential tracking and credential-expiry warnings.
 
@@ -420,32 +397,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.6 AMTR (Airfield Management Training Record)
-
-**Capability.** The electronic Airfield Management Training Record for 1C7X1 personnel: a unit roster plus a per-member record spanning the full set of airfield-management training documentation, with role-based hierarchical sign-offs, configurable training catalogs, supporting-file uploads, and due-date notifications.
-
-**What it does.** Maintains a unit roster (auto-populated from the base's airfield-management personnel, with exclusions) and a tabbed per-member record covering the member's training documentation, on-the-job and career-field task progress, formal courses, qualifications, milestones, and Ready Airman Training, plus a supporting-files tab and a history tab. Sign-offs are the core of the record and are governed by an AMTR-specific role layer that is separate from general app access: this layer decides what a user may sign inside a record, with authority arranged hierarchically (trainee, trainer, certifier, and the senior training-manager and Airfield Manager roles), a guard that limits a user to signing only the trainee block on their own record, and the ability for the senior roles to reopen a locked block. Signing a qualifying task automatically generates and advances the multi-stage training-record entry through its trainee, trainer, and certifier stages, with senior endorsement applied manually. Training reference catalogs are configurable per base and can be synchronized to bundled, versioned standard catalogs (with added/updated/retired items previewed before applying, and deliberately preserving local edits to certain fields). The record also supports bulk transcription of historical (back-dated) entries, an off-network spreadsheet import, and a structured data round-trip for import/export.
-
-**Regulatory basis.** DAFI 36-2670 and CFETP 1C7X1; AF Forms 623A, 797, 803, and 1098. Bundled standard catalogs are versioned to a published 1C7X1 catalog edition.
-
-**Applies to.** USAF.
-
-**Key functions.**
-- Auto-populated unit roster with per-user exclusions.
-- Tabbed per-member record across training documentation, task/career-field progress, formal courses, qualifications, milestones, and Ready Airman Training.
-- AMTR role layer with hierarchical, per-block signing authority and a self-certification guard.
-- Automatic multi-stage training-record entry generation from task sign-offs.
-- Per-base configurable catalogs with version-aware sync to bundled standard catalogs.
-- Supporting-file uploads, bulk back-dated transcription, off-network spreadsheet import, and structured import/export.
-- Due-date and sign-off notifications, and a per-action audit trail.
-
-**Outputs.** A landscape unit-roster report (PDF) with task-completion percentages, recurring-training status, and KPIs; a per-member record-inspection report (PDF); recipient notifications and an audit log; and inclusion in the base Records Export.
-
-**Roles.** Module access is gated separately from the in-record AMTR role layer. View access opens the module; users with a senior in-record role or management access see the full roster, while others see only their own record. Catalog editing is reserved to the senior training-manager / Airfield Manager in-record roles or to users with management access.
-
----
-
-#### 3.2.7 Safety Management System (SMS)
+#### 3.2.5 Safety Management System (SMS)
 
 **Capability.** A full FAA Part 139 Safety Management System spanning safety policy, a hazard register with risk assessment and mitigation, safety performance indicators, internal audits, management of change, and anonymous public safety reporting, surfaced through an Accountable Executive dashboard.
 
@@ -471,7 +423,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.8 Training (§139.303)
+#### 3.2.6 Training (§139.303)
 
 **Capability.** Personnel-training records for FAA Part 139 §139.303: a topic catalog, per-user completion records with expiry and retention, professional certificates, a compliance matrix, and an expiry digest.
 
@@ -494,7 +446,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.9 WHMP (Wildlife Hazard Management Plan)
+#### 3.2.7 WHMP (Wildlife Hazard Management Plan)
 
 **Capability.** The annual Wildlife Hazard Management Plan artifact for FAA Part 139: a versioned plan with FAA acceptance, Accountable-Executive sign-off, an annual-review cadence, a hazardous-species register, a mitigation summary, and findings that link into the SMS hazard register.
 
@@ -544,31 +496,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.3.2 Secondary Crash Net (SCN)
-
-**Capability.** A daily (plus monthly back-up) Secondary Crash Net communications-check log against the base's emergency-response agencies.
-
-**What it does.** AMOPS personnel poll each emergency-response agency on the crash net and record whether each line came back loud and clear, gave no response, or is out of service. The module presents two cards, a daily check and a monthly back-up check, each backed by a per-base, configurable roster of agencies. The daily check includes opening and closing radio scripts to standardize the call. A one-tap "Mark All Loud & Clear" quick-fills the common case, while any out-of-service line forces the operator to record a reason before the check can be saved. Saving writes a plain-language summary to the Events Log (for example, all agencies loud and clear, or all clear except named exceptions with their status). A rolling 30-day history lists prior checks, which can be edited or deleted. Checks are keyed to the Zulu date so they line up with the rest of the activity record, and agency names are preserved on historical results so removing an agency from the roster never erases past check history.
-
-**Regulatory basis.** DAFMAN 13-204v2 §4.2.2.3.7 (daily SCN check for emergency coordination).
-
-**Applies to.** USAF only. (Civilian Part 139 bases use the Airport Emergency Plan module instead.)
-
-**Key functions.**
-- Maintain a per-base roster of crash-net agencies (managed in base setup).
-- Run a daily primary check and a monthly back-up check, each setting every agency loud-and-clear / no-response / out-of-service.
-- Require a reason note on any out-of-service agency before save.
-- "Mark All Loud & Clear" quick-fill.
-- Edit or delete prior checks from a 30-day rolling history.
-- Operating initials auto-pulled from the user's profile.
-
-**Outputs.** A monthly back-up SCN PDF for a selected month (a per-day by per-agency grid). An Events Log summary written on each saved check.
-
-**Roles.** Personnel with SCN view access can see checks; running, editing, and deleting checks requires write access; managing the agency roster is a separate, narrower permission.
-
----
-
-#### 3.3.3 Airport Emergency Plan (AEP)
+#### 3.3.2 Airport Emergency Plan (AEP)
 
 **Capability.** The civilian Part 139 Airport Emergency Plan: a versioned plan document with executive annual sign-off, a response-agency roster, periodic comms checks, and a drill program.
 
@@ -592,7 +520,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.3.4 Prior Permission Required (PPR)
+#### 3.3.3 Prior Permission Required (PPR)
 
 **Capability.** A Prior Permission Required log with a public no-login request form, AMOPS triage, multi-agency coordination, and final approval/denial, with per-base configurable fields and server-minted PPR numbers.
 
@@ -619,7 +547,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.3.5 Customer Feedback
+#### 3.3.4 Customer Feedback
 
 **Capability.** A public, no-login, QR-code-reachable feedback channel for transient aircrew and contractors, with an admin-configurable form and inline staff review.
 

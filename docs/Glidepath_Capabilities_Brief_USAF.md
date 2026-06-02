@@ -1,4 +1,4 @@
-# Glidepath — Capabilities Brief
+# Glidepath — Capabilities Brief — USAF Edition
 
 > **Proprietary & Confidential, Developed at private expense, © Glidepath.** This document describes Glidepath's capabilities and the regulatory requirements they satisfy. It is a capabilities/requirements overview, not an implementation design or data specification.
 
@@ -276,28 +276,6 @@ The core-operations modules are the daily-use backbone of the platform: the scre
 
 ---
 
-#### 3.1.9 Field Conditions (TALPA)
-
-**Capability.** Lets civilian Part 139 airports issue auditable, per-third runway condition reports whenever surface conditions degrade, and generates the FICON NOTAM text for the FAA NOTAM Manager.
-
-**What it does.** Gives a Part 139 operator a purpose-built workflow for reporting degraded runway surface conditions under the TALPA runway-condition-assessment approach, replacing ad-hoc winter spreadsheets. For each runway, the operator assesses each third of the runway (touchdown, midpoint, rollout) by selecting the contaminant present, its depth, and its coverage; the platform derives the runway condition code for each third from those inputs, and the operator may override a derived code when local judgment differs, with a required reason recorded for the audit trail. Temperature, treatments applied, a validity window, and notes round out the report. Reports are append-only: each runway has at most one active report, and revising it always creates a new report that supersedes the prior one, preserving the full revision chain. The platform produces the FICON NOTAM text for the operator to enter into the FAA NOTAM Manager, shows the active report per runway alongside a trailing history, and the entry screen is tuned for fast, cold-weather, gloved input.
-
-**Regulatory basis.** 14 CFR §139.313 and AC 150/5200-30D (TALPA / Runway Condition Assessment Matrix).
-
-**Applies to.** FAA Part 139 only.
-
-**Key functions.**
-- Per-third (touchdown/midpoint/rollout) runway condition assessment.
-- Contaminant, depth, and coverage entry with an automatically derived condition code.
-- Operator override of a derived code with a required, recorded reason.
-- Temperature, treatments, validity window, and notes.
-- Append-only revision chain, one active report per runway, superseded on revision.
-- Generation of FICON NOTAM text for the FAA NOTAM Manager.
-
-**Outputs.** An active field condition report with the per-third condition matrix; FICON NOTAM text for the FAA NOTAM Manager; a trailing report history; and a data export (CSV).
-
-**Roles.** Authorized airport operations personnel create and revise reports; the team views active reports and history.
-
 ### 3.2 Compliance Modules
 
 The compliance modules turn recurring airfield regulatory obligations, annual inspections, obstruction evaluations, wildlife programs, criteria waivers, personnel control, training records, and the FAA safety/wildlife planning artifacts, into structured, auditable, inspection-ready workflows. Each module is independently enableable per base, gated by role-based permissions, scoped so a user only ever sees and edits data for the bases they belong to, and capable of producing a formatted PDF for filing or for an external inspector. Modules are tagged by airport type so a given installation only sees the modules relevant to its operating authority (USAF, FAA Part 139, or both).
@@ -445,78 +423,6 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.2.7 Safety Management System (SMS)
-
-**Capability.** A full FAA Part 139 Safety Management System spanning safety policy, a hazard register with risk assessment and mitigation, safety performance indicators, internal audits, management of change, and anonymous public safety reporting, surfaced through an Accountable Executive dashboard.
-
-**What it does.** Holds a single active, versioned safety policy with safety objectives; a hazard register where each hazard carries a risk assessment scored on a five-by-five likelihood/severity matrix, an initial and residual risk band, and one or more mitigations that drive the residual risk; safety performance indicators measured per period against target, warning, and alert thresholds and auto-classified into bands; internal audits with findings; management-of-change requests that require an approval step; and a public, anonymous safety-report intake that lands for triage. Hazards progress from open through review and control to closure. Everything rolls up to an Accountable Executive dashboard summarizing policy currency, hazards by risk band, indicators in warning or alert, open and pending changes, and reports awaiting triage.
-
-**Regulatory basis.** 14 CFR §§139.401-415 (the Part 139 SMS rule); AC 150/5200-37A and its four pillars (Safety Policy, Safety Risk Management, Safety Assurance, Safety Promotion).
-
-**Applies to.** FAA Part 139.
-
-**Key functions.**
-- Versioned, single-active safety policy with objectives and signature.
-- Hazard register with five-by-five risk assessment, residual-band tracking, and mitigations.
-- Safety performance indicators with target/warning/alert bands and periodic measurement.
-- Internal audits with findings, and management-of-change requests with an approval gate.
-- Anonymous public safety-report intake and triage.
-- Accountable Executive summary dashboard.
-
-**Outputs.** The Accountable Executive dashboard; a one-click SMS Manual PDF aggregating policy, hazards, assessments, mitigations, indicators and measurements, audits, changes, and reports for FAA certification-inspector visits; and a public safety-report URL for the airport.
-
-**Roles.** Read-only reviewers; users who can author and edit SMS content; a policy-signing authority; a change-approval authority; and a report-triage authority. The public safety-report intake requires no login.
-
-**Integrations.** Wildlife Hazard Management Plan findings can be promoted directly into the SMS hazard register, and emergency-plan drill completions feed the safety performance indicators.
-
----
-
-#### 3.2.8 Training (§139.303)
-
-**Capability.** Personnel-training records for FAA Part 139 §139.303: a topic catalog, per-user completion records with expiry and retention, professional certificates, a compliance matrix, and an expiry digest.
-
-**What it does.** Maintains a catalog of training topics, the mandatory §139.303(e) topics seeded for every civilian base, plus base-custom topics, each with its initial and recurrent requirements, recurrence frequency, retention period, and reference material. Per-user completions are logged as an append-only history (with completion date, training type, instructor, and evidence) and carry a computed expiry derived from the topic's recurrence; renewals link supersession chains. The module also tracks professional credentials with issue and expiry dates. Each user's status for each topic (current, expiring, expired, or not started) is derived from their latest record's expiry, and the data rolls up into per-user rosters and a users-by-topics compliance matrix, with a 30-day expiry digest.
-
-**Regulatory basis.** 14 CFR Part 139 §139.303 (and §139.303(e), the mandatory topics and 24-month record retention).
-
-**Applies to.** FAA Part 139. A USAF base may opt in per topic, but AMTR remains the canonical 1C7X1 record.
-
-**Key functions.**
-- Topic catalog with the mandatory §139.303(e) topics plus base-custom topics and per-base overrides.
-- Append-only per-user completion records with computed expiry and supersession chains.
-- Professional certificate tracking (with optional lifetime credentials).
-- Per-user status derivation (current / expiring / expired / not started).
-- Compliance matrix and 30-day expiry digest.
-
-**Outputs.** A per-user roster (current/expiring/overdue), a users-by-topics compliance matrix, CSV and PDF roster exports for FAA inspections, a 30-day expiry digest, and activity-log events.
-
-**Roles.** Read-only reviewers; users who can record completions and edit the catalog; and users authorized to export.
-
----
-
-#### 3.2.9 WHMP (Wildlife Hazard Management Plan)
-
-**Capability.** The annual Wildlife Hazard Management Plan artifact for FAA Part 139: a versioned plan with FAA acceptance, Accountable-Executive sign-off, an annual-review cadence, a hazardous-species register, a mitigation summary, and findings that link into the SMS hazard register.
-
-**What it does.** Holds the current WHMP as a versioned record: the assessment year and who performed it (for example, USDA Wildlife Services), the uploaded plan document, the FAA acceptance date and reference, a register of hazardous species with hazard level, attractants, and mitigations, a mitigation summary, and a list of findings with recommended actions. The plan is signed and activated by the Accountable Executive the first time, then carried forward through recorded annual reviews; filing a new year (optionally pre-filling from the prior plan) supersedes the previous record. The system tracks annual-review due status (current, due soon, overdue, or never reviewed). Each finding can be promoted into the SMS hazard register and then marked as linked, tying the wildlife plan to the safety program.
-
-**Regulatory basis.** 14 CFR §139.337 (including §139.337(c), the annual-review obligation); AC 150/5200-33C; AC 150/5200-32B.
-
-**Applies to.** FAA Part 139.
-
-**Key functions.**
-- Versioned annual plan with supersession across years.
-- FAA acceptance recording and Accountable-Executive sign-off.
-- Hazardous-species register and mitigation summary.
-- Findings with recommended actions and promotion into the SMS hazard register.
-- Annual-review cadence with due-status tracking.
-
-**Outputs.** An active-assessment card (FAA acceptance, AE sign-off, annual-review countdown, species register, and findings), a prior-years history, compliance copy confirming that a recorded annual review satisfies the §139.337(c) requirement to keep the WHMP current, and activity-log events on file, amend, and review.
-
-**Roles.** Create, amend, and sign/review are gated on wildlife write access; read follows wildlife view access. The plan lives within the wildlife module.
-
-**Integrations.** Findings link into the SMS hazard register, and the strike/sighting capture in the wildlife module feeds the annual assessment narrative.
-
 ### 3.3 Emergency & Optional Modules
 
 #### 3.3.1 Quick Reaction Checklists (QRC)
@@ -568,31 +474,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.3.3 Airport Emergency Plan (AEP)
-
-**Capability.** The civilian Part 139 Airport Emergency Plan: a versioned plan document with executive annual sign-off, a response-agency roster, periodic comms checks, and a drill program.
-
-**What it does.** AEP is the civilian counterpart to the USAF crash-net workflow. It maintains the airport's emergency plan as a versioned document: a base has one active plan at a time, new versions supersede the prior one cleanly, and the plan record tracks effective date, FAA acceptance reference, the uploaded plan document, and the Accountable Executive's annual review and sign-off. It keeps a roster of response agencies (ARFF, mutual-aid fire, EMS, police, hospital, ATC, FAA, NTSB, FBI, public works, utilities, and others) with primary and backup contact names, phones, and radios. It runs periodic communications checks against that roster, monthly, quarterly, or ad hoc, recording each agency's status and notes, much like the SCN check. And it manages a drill program covering full-scale exercises, tabletops, functional drills, orientation, and ARFF familiarization, each with a scenario, scheduled date, participant attendance, after-action notes, findings, and optional evidence upload. The module tracks review and exercise due-dates with current / due-soon / overdue / never status, and drill completions feed the Safety Management System's safety-performance indicators.
-
-**Regulatory basis.** 14 CFR §139.325 and AC 150/5200-31C; specifically §139.325(d) annual operator review, §139.325(h) triennial full-scale exercise, and §139.325(j) tabletop/functional exercises.
-
-**Applies to.** FAA Part 139 only.
-
-**Key functions.**
-- Maintain a versioned, single-active emergency plan with clean supersession to new versions.
-- Record the Accountable Executive's annual plan review and sign-off.
-- Maintain a response-agency roster with primary and backup contacts.
-- Schedule and complete drills (full-scale, tabletop, functional, orientation, ARFF familiarization) with participants, after-action notes, findings, and evidence.
-- Run periodic (monthly / quarterly / ad-hoc) comms checks against the agency roster.
-- Track annual-review and triennial-full-scale due dates with current / due-soon / overdue / never status.
-
-**Outputs.** An AEP PDF. Stored plan documents and drill after-action reports (in base-scoped storage). Events Log entries on plan create / update / supersede / review, agency changes, drill create and completion, and comms checks. Dashboard due-date chips and a feed into the SMS safety-performance indicators.
-
-**Roles.** Personnel with AEP read access can view the plan, roster, drills, and checks; write access covers maintaining the plan, roster, drills, and comms checks; a separate sign permission governs the Accountable Executive sign-off.
-
----
-
-#### 3.3.4 Prior Permission Required (PPR)
+#### 3.3.3 Prior Permission Required (PPR)
 
 **Capability.** A Prior Permission Required log with a public no-login request form, AMOPS triage, multi-agency coordination, and final approval/denial, with per-base configurable fields and server-minted PPR numbers.
 
@@ -619,7 +501,7 @@ The compliance modules turn recurring airfield regulatory obligations, annual in
 
 ---
 
-#### 3.3.5 Customer Feedback
+#### 3.3.4 Customer Feedback
 
 **Capability.** A public, no-login, QR-code-reachable feedback channel for transient aircrew and contractors, with an admin-configurable form and inline staff review.
 
