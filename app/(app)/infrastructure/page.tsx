@@ -444,7 +444,10 @@ export default function InfrastructureMapPage() {
   const watchIdRef = useRef<number | null>(null)
 
   const [visibleLayers, setVisibleLayers] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(LAYERS.map(l => [l.key, false]))
+    // Default to all layers visible — feature rendering is now light enough
+    // (meter Circles for lights, zoom-scaled markers for signs) to show the
+    // full set on load without the old loading/zoom choppiness.
+    () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
   const { runways, installationId, facilities, mapProvider } = useInstallation()
