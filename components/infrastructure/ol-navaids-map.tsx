@@ -9,6 +9,7 @@
 // wired here yet — it stays on the Google path.
 
 import { useEffect, useRef } from 'react'
+import 'ol/ol.css' // required for overlay/control positioning (popups won't place without it)
 import OlMap from 'ol/Map'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
@@ -25,8 +26,8 @@ import { createImageryLayer, createBaseView } from '@/lib/openlayers'
 import type { MapProvider } from '@/lib/map-providers'
 
 const LIGHT_RADIUS_METERS = 1.5
-const LIGHT_MIN_RADIUS_PX = 1.5 // keep dots visible when zoomed out
-const LIGHT_MAX_RADIUS_PX = 7 // cap so dots don't balloon when zoomed way in
+const LIGHT_MIN_RADIUS_PX = 2 // keep dots visible when zoomed out
+const LIGHT_MAX_RADIUS_PX = 10 // cap so dots don't balloon when zoomed way in
 const SIGN_TARGET_METERS = 9 // real-world height a sign represents (drives zoom scaling)
 
 type LayerCfg = { key: string; color: string; types: string[]; renderType: 'circle' | 'symbol'; strokeColor?: string }
