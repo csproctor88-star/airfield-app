@@ -26,6 +26,7 @@ import { formatZuluDateTime } from '@/lib/utils'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { usePermissions } from '@/lib/permissions'
+import { isMobileDevice } from '@/lib/device'
 import type jsPDF from 'jspdf'
 import { Check, X } from 'lucide-react'
 
@@ -67,11 +68,17 @@ export default function DailyReviewSignModal({
   const [emailOpen, setEmailOpen] = useState(false)
   const [emailSending, setEmailSending] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  // Layout (isMobile) is viewport-width based, but the PDF-preview decision is
+  // device based: iOS/iPadOS WebKit renders only the first page of a PDF in an
+  // <iframe> (regardless of width — iPads are >768px), so those devices fall
+  // back to the "open in the native viewer" link. See lib/device.ts.
+  const [pdfInlineUnsupported, setPdfInlineUnsupported] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)')
     const update = () => setIsMobile(mq.matches)
     update()
+    setPdfInlineUnsupported(isMobileDevice())
     mq.addEventListener('change', update)
     return () => mq.removeEventListener('change', update)
   }, [])
@@ -304,10 +311,10 @@ export default function DailyReviewSignModal({
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>Loading review…</div>
             ) : pdfUrl ? (
-              isMobile ? (
+              pdfInlineUnsupported ? (
                 <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                    PDF preview isn&apos;t supported inline on mobile. Open it in a new tab to review before signing.
+                    PDF preview isn&apos;t supported inline on this device. Open it in a new tab to review before signing.
                   </div>
                   <a
                     href={pdfUrl}
