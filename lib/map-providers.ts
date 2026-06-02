@@ -123,8 +123,11 @@ export type OlImagery =
 
 const ESRI_WORLD_IMAGERY: OlImagery = {
   scheme: 'xyz',
-  // {z}/{y}/{x} order — ArcGIS REST tile endpoint (matches getAlternateImageMapType).
-  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  // Esri World Imagery WMTS REST tiles on services.arcgisonline.com — the exact
+  // host + WMTS service C2IMERA uses (verified on the AF network), so it matches
+  // whatever the network whitelists. GoogleMapsCompatible matrix set =
+  // Web Mercator {z}/{y}/{x}. Verified 200 image/jpeg.
+  url: 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/tile/1.0.0/World_Imagery/default/GoogleMapsCompatible/{z}/{y}/{x}',
   maxZoom: 19,
   attributions: 'Imagery © Esri, Maxar, Earthstar Geographics',
 }
