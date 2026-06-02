@@ -21,6 +21,7 @@ import {
   imageDataToDataUrl,
 } from '@/lib/google-map-adapter'
 import { applyMapProvider } from '@/lib/map-providers'
+import { OlNavaidsMap } from '@/components/infrastructure/ol-navaids-map'
 import { Crosshair } from 'lucide-react'
 import {
   fetchInfrastructureFeatures,
@@ -493,6 +494,13 @@ export default function InfrastructureMapPage() {
 
   // Show outages only filter
   const [showOutagesOnly, setShowOutagesOnly] = useState(false)
+  // OpenLayers pilot: read-only OL renderer behind ?renderer=ol (read from the
+  // URL client-side to avoid a useSearchParams Suspense boundary). When on, the
+  // Google map container isn't mounted, so the Google init effect no-ops.
+  const [useOlRenderer, setUseOlRenderer] = useState(false)
+  useEffect(() => {
+    setUseOlRenderer(new URLSearchParams(window.location.search).get('renderer') === 'ol')
+  }, [])
 
   // Outage events for timeline
   const [outageEvents, setOutageEvents] = useState<EnrichedOutageEvent[]>([])
@@ -2732,7 +2740,19 @@ export default function InfrastructureMapPage() {
 
       {/* Map + Overlays */}
       <div data-tour="infrastructure-map" style={{ flex: 1, position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
-        <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+        {useOlRenderer ? (
+          <OlNavaidsMap
+            featureGeoJson={featureGeoJson}
+            layers={LAYERS}
+            visibleLayers={visibleLayers}
+            mapProvider={mapProvider}
+            center={runways[0]
+              ? [((runways[0].end1_longitude ?? 0) + (runways[0].end2_longitude ?? 0)) / 2, ((runways[0].end1_latitude ?? 0) + (runways[0].end2_latitude ?? 0)) / 2]
+              : [-82.8369, 42.6139]}
+          />
+        ) : (
+          <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+        )}
 
         {/* Audit panel */}
         {auditMode && (
