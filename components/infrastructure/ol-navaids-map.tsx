@@ -30,7 +30,7 @@ const LIGHT_MIN_RADIUS_PX = 2 // keep dots visible when zoomed out
 const LIGHT_MAX_RADIUS_PX = 10 // cap so dots don't balloon when zoomed way in
 const SIGN_TARGET_METERS = 9 // real-world height a sign represents (drives zoom scaling)
 
-type LayerCfg = { key: string; color: string; types: string[]; renderType: 'circle' | 'symbol'; strokeColor?: string }
+type LayerCfg = { key: string; label: string; color: string; types: string[]; renderType: 'circle' | 'symbol'; strokeColor?: string }
 
 // Duplicated (intentionally, for the standalone pilot) from the page's sign
 // rendering — colors + a rotation-baked labeled-sign image.
@@ -105,6 +105,7 @@ export function OlNavaidsMap({
   mapProvider,
   center,
   zoom = 16,
+  buildPopupHtml,
 }: {
   featureGeoJson: GeoJSON.FeatureCollection
   layers: LayerCfg[]
@@ -112,6 +113,10 @@ export function OlNavaidsMap({
   mapProvider: MapProvider
   center: [number, number]
   zoom?: number
+  /** The page's real popup builder — its buttons call window.__* handlers
+   *  (Report Outage, Mark Operational, Delete, …) that work in any renderer. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  buildPopupHtml: (props: Record<string, any>, color: string, label: string, lng: number, lat: number) => string
 }) {
   const elRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<OlMap | null>(null)
@@ -208,10 +213,10 @@ export function OlNavaidsMap({
       const [lng, lat] = (gf.geometry as GeoJSON.Point).coordinates
       const inop = p.status === 'inoperative'
       const label = String(p.text ?? '')
-      const popup = `<div style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:8px 10px;font-size:12px;max-width:240px;font-family:system-ui,sans-serif;">
-        <div style="font-weight:700;margin-bottom:2px;">${escapeHtml(label || lc.key.replace(/_/g, ' '))}</div>
-        <div style="color:#94a3b8;">${escapeHtml(type.replace(/_/g, ' '))} · ${inop ? '<span style="color:#f87171;font-weight:700;">INOP</span>' : 'Operational'}</div>
-      </div>`
+      // Use the page's real popup (details + Report Outage / Mark Operational /
+      // Delete via window.__* handlers, which operate on the DB regardless of
+      // renderer). Wrapped so the overlay box has a card background.
+      const popup = `<div style="background:var(--color-bg-surface-solid,var(--color-bg-surface));border:1px solid var(--color-border-mid,var(--color-border));border-radius:8px;padding:10px 12px;max-width:280px;box-shadow:0 4px 16px rgba(0,0,0,0.35);">${buildPopupHtml(p, lc.color, lc.label, lng, lat)}</div>`
 
       const f = new Feature({ geometry: new Point(fromLonLat([lng, lat])) })
       const signColors = SIGN_COLORS[type]
@@ -227,7 +232,7 @@ export function OlNavaidsMap({
     source.clear()
     source.addFeatures(feats)
     overlayRef.current?.setPosition(undefined)
-  }, [featureGeoJson, visibleLayers, layers])
+  }, [featureGeoJson, visibleLayers, layers, buildPopupHtml])
 
   return (
     <>
@@ -237,8 +242,4 @@ export function OlNavaidsMap({
       </div>
     </>
   )
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

@@ -2746,6 +2746,7 @@ export default function InfrastructureMapPage() {
             layers={LAYERS}
             visibleLayers={visibleLayers}
             mapProvider={mapProvider}
+            buildPopupHtml={buildPopupHtml}
             center={runways[0]
               ? [((runways[0].end1_longitude ?? 0) + (runways[0].end2_longitude ?? 0)) / 2, ((runways[0].end1_latitude ?? 0) + (runways[0].end2_latitude ?? 0)) / 2]
               : [-82.8369, 42.6139]}
