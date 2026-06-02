@@ -25,6 +25,8 @@ import { createImageryLayer, createBaseView } from '@/lib/openlayers'
 import type { MapProvider } from '@/lib/map-providers'
 
 const LIGHT_RADIUS_METERS = 1.5
+const LIGHT_MIN_RADIUS_PX = 1.5 // keep dots visible when zoomed out
+const LIGHT_MAX_RADIUS_PX = 7 // cap so dots don't balloon when zoomed way in
 const SIGN_TARGET_METERS = 9 // real-world height a sign represents (drives zoom scaling)
 
 type LayerCfg = { key: string; color: string; types: string[]; renderType: 'circle' | 'symbol'; strokeColor?: string }
@@ -129,7 +131,7 @@ export function OlNavaidsMap({
         const geom = feature.getGeometry() as Point
         const ground = getPointResolution('EPSG:3857', resolution, geom.getCoordinates())
         if (m.kind === 'circle') {
-          const r = Math.max(LIGHT_RADIUS_METERS / ground, 1.5)
+          const r = Math.min(LIGHT_MAX_RADIUS_PX, Math.max(LIGHT_MIN_RADIUS_PX, LIGHT_RADIUS_METERS / ground))
           return circleStyle(m.color, m.strokeColor, m.strokeW, Math.round(r * 2) / 2)
         }
         const raw = SIGN_TARGET_METERS / ground / m.naturalH
