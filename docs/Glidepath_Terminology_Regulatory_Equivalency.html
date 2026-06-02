@@ -44,7 +44,15 @@ tbody tr:hover{background:#eef6f9}
 .totop{position:fixed;right:20px;bottom:20px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:18px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:0;transition:opacity .2s}
 .totop.show{opacity:.92}
 @media(max-width:880px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto}.content{padding:24px 18px 80px}}
-@media print{.sidebar,.totop{display:none}.layout{display:block}.content{max-width:none;padding:0}h2{break-after:avoid}table,h3,h4{break-inside:avoid}}
+@media print{.sidebar,.totop,.etoolbar,.addrow{display:none}.layout{display:block}.content{max-width:none;padding:0}h2{break-after:avoid}table,h3,h4{break-inside:avoid}}
+/* Editable mode */
+.etoolbar{position:sticky;top:0;z-index:20;display:flex;gap:8px;align-items:center;padding:8px 14px;background:#0b2545;color:#fff;border-bottom:1px solid #0b1220}
+.etoolbar button{background:#22d3ee;color:#03212b;border:none;border-radius:6px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.etoolbar button.ghost{background:transparent;color:#cbd5e1;border:1px solid #2c4a6e}
+.etoolbar .hint{color:#9fb0c8;font-size:12px}
+[contenteditable="true"]{outline:none}
+[contenteditable="true"] td:focus,[contenteditable="true"] th:focus,[contenteditable="true"] p:focus,[contenteditable="true"] li:focus{background:#fffbea;box-shadow:inset 0 0 0 2px #fde68a;border-radius:3px}
+.addrow{display:inline-block;margin:4px 0 14px;background:#ecfeff;border:1px solid #06b6d4;color:#0e7490;border-radius:6px;padding:3px 10px;font:600 12px -apple-system,Segoe UI,Arial,sans-serif;cursor:pointer}
 </style></head><body>
 <div class="layout">
 <aside class="sidebar">
@@ -66,6 +74,7 @@ tbody tr:hover{background:#eef6f9}
 <a class="toc-l2" href="#9-source-of-truth-and-how-to-extend" data-target="9-source-of-truth-and-how-to-extend">9 Source of truth and how to extend</a></nav>
 </aside>
 <main class="content">
+<div class="etoolbar"><button id="exMd">⬇ Export Markdown</button><button id="exHtml" class="ghost">⬇ Download HTML</button><span class="hint">Click any text or table cell to edit · use “+ row” under a table to add a row · Export Markdown when done.</span></div><div class="doc" contenteditable="true">
 <h1 id="glidepath-usaf-and-faa-part-139-terminology-and-regulatory-equivalency">Glidepath — USAF and FAA Part 139: Terminology and Regulatory Equivalency</h1>
 <blockquote><strong>Proprietary &amp; Confidential, Developed at private expense, © Glidepath.</strong> Reference framework for the dual-mode (USAF / FAA Part 139) vocabulary, role, module, and regulation equivalencies. Derived from the live source of truth in the codebase; see "Source of truth" at the end.</blockquote>
 <h2 id="1-purpose">1 Purpose</h2>
@@ -100,6 +109,7 @@ tbody tr:hover{background:#eef6f9}
 <p>The authoritative, machine-enforced version of this framework lives in code, not in this document:</p>
 <ul><li><strong><code>lib/airport-mode.ts</code></strong> is the canonical terminology engine. <code>getTerm(key, base)</code> resolves the 26-key <code>TERMS</code> vocabulary map; <code>getRoleLabel(role, base)</code> resolves the role labels; <code>getRegSource(base)</code> selects the applicable regulation set; <code>getSurfaceSet(base)</code> selects the obstruction surface set; <code>getDiscrepancyStatusLabel(value, base)</code> resolves status wording. All mode-dependent wording routes through these helpers (it is not hard-coded in components).</li><li><strong><code>lib/supabase/daily-reviews.ts</code></strong> maps the daily-review sign-off slots to <code>TERMS</code> keys.</li><li><strong><code>lib/modules-config.ts</code></strong> declares each module's <code>appliesTo</code> (<code>usaf</code> / <code>faa_part139</code> / both), which determines module visibility per mode.</li></ul>
 <p>To add or change a term, add or edit a <code>TermKey</code> entry in <code>lib/airport-mode.ts</code>; to change a role label, edit the role map there; to change module applicability, edit <code>appliesTo</code> in <code>lib/modules-config.ts</code>. This document should be regenerated/updated whenever those change so the two stay in agreement.</p>
+</div>
 </main></div>
 <button id="totop" class="totop" title="Back to top">↑</button>
 <script>
@@ -112,5 +122,16 @@ f.addEventListener('input',()=>{const q=f.value.toLowerCase();links.forEach(a=>{
 const top=document.getElementById('totop');
 addEventListener('scroll',()=>{top.classList.toggle('show',scrollY>500);});
 top.addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+</script>
+<script>
+var BT=String.fromCharCode(96);
+function inlineMd(el){var s='';Array.prototype.forEach.call(el.childNodes,function(n){if(n.nodeType===3)s+=n.textContent;else if(/^(STRONG|B)$/.test(n.tagName))s+='**'+n.textContent+'**';else if(n.tagName==='CODE')s+=BT+n.textContent+BT;else if(/^(EM|I)$/.test(n.tagName))s+='*'+n.textContent+'*';else if(n.tagName==='A')s+='['+n.textContent+']('+n.getAttribute('href')+')';else if(n.tagName==='BR')s+=' ';else s+=n.textContent;});return s.replace(/\s+/g,' ').trim();}
+function tableMd(t){var rows=Array.prototype.slice.call(t.querySelectorAll('tr'));function cells(tr){return Array.prototype.slice.call(tr.children).map(function(td){return inlineMd(td).replace(/\|/g,'\\|');});}var h=cells(rows[0]);var o='| '+h.join(' | ')+' |\n|'+h.map(function(){return '---';}).join('|')+'|';for(var i=1;i<rows.length;i++)o+='\n| '+cells(rows[i]).join(' | ')+' |';return o;}
+function docMd(){var root=document.querySelector('.doc')||document.querySelector('.content');var out=[];Array.prototype.forEach.call(root.children,function(el){var tag=el.tagName;if(/^H[1-6]$/.test(tag))out.push('#'.repeat(+tag[1])+' '+inlineMd(el));else if(tag==='P')out.push(inlineMd(el));else if(tag==='UL'||tag==='OL')out.push(Array.prototype.slice.call(el.children).map(function(li){return '- '+inlineMd(li);}).join('\n'));else if(tag==='BLOCKQUOTE')out.push('> '+inlineMd(el));else if(tag==='HR')out.push('---');else if(el.querySelector&&el.querySelector('table'))out.push(tableMd(el.querySelector('table')));else return;out.push('');});return out.join('\n').replace(/\n{3,}/g,'\n\n').trim()+'\n';}
+function dl(text,name,type){var b=new Blob([text],{type:type});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+var base=(document.title||'document').replace(/[^\w]+/g,'_').replace(/^_+|_+$/g,'');
+document.getElementById('exMd').onclick=function(){dl(docMd(),base+'.md','text/markdown');};
+document.getElementById('exHtml').onclick=function(){dl('<!DOCTYPE html>'+String.fromCharCode(10)+document.documentElement.outerHTML,base+'.edited.html','text/html');};
+Array.prototype.forEach.call(document.querySelectorAll('.content table'),function(t){var btn=document.createElement('div');btn.className='addrow';btn.contentEditable='false';btn.textContent='+ row';btn.onclick=function(){var tb=t.tBodies[0]||t;var ref=tb.rows[tb.rows.length-1];var nr=tb.insertRow();var n=ref?ref.cells.length:(t.tHead?t.tHead.rows[0].cells.length:2);for(var i=0;i<n;i++){nr.insertCell().textContent='';}};t.parentNode.insertBefore(btn,t.nextSibling);});
 </script>
 </body></html>

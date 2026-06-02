@@ -12,8 +12,9 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const [, , inPath, outPath, titleArg] = process.argv
+const editable = process.argv.includes('--editable')
 if (!inPath || !outPath) {
-  console.error('Usage: node scripts/build-spec-html.mjs <input.md> <output.html> "<Title>"')
+  console.error('Usage: node scripts/build-spec-html.mjs <input.md> <output.html> "<Title>" [--editable]')
   process.exit(1)
 }
 const md = readFileSync(inPath, 'utf8').replace(/\r\n/g, '\n')
@@ -182,7 +183,15 @@ tbody tr:hover{background:#eef6f9}
 .totop{position:fixed;right:20px;bottom:20px;background:var(--accent);color:#fff;border:none;border-radius:50%;width:42px;height:42px;font-size:18px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:0;transition:opacity .2s}
 .totop.show{opacity:.92}
 @media(max-width:880px){.layout{grid-template-columns:1fr}.sidebar{position:static;height:auto}.content{padding:24px 18px 80px}}
-@media print{.sidebar,.totop{display:none}.layout{display:block}.content{max-width:none;padding:0}h2{break-after:avoid}table,h3,h4{break-inside:avoid}}
+@media print{.sidebar,.totop,.etoolbar,.addrow{display:none}.layout{display:block}.content{max-width:none;padding:0}h2{break-after:avoid}table,h3,h4{break-inside:avoid}}
+/* Editable mode */
+.etoolbar{position:sticky;top:0;z-index:20;display:flex;gap:8px;align-items:center;padding:8px 14px;background:#0b2545;color:#fff;border-bottom:1px solid #0b1220}
+.etoolbar button{background:#22d3ee;color:#03212b;border:none;border-radius:6px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+.etoolbar button.ghost{background:transparent;color:#cbd5e1;border:1px solid #2c4a6e}
+.etoolbar .hint{color:#9fb0c8;font-size:12px}
+[contenteditable="true"]{outline:none}
+[contenteditable="true"] td:focus,[contenteditable="true"] th:focus,[contenteditable="true"] p:focus,[contenteditable="true"] li:focus{background:#fffbea;box-shadow:inset 0 0 0 2px #fde68a;border-radius:3px}
+.addrow{display:inline-block;margin:4px 0 14px;background:#ecfeff;border:1px solid #06b6d4;color:#0e7490;border-radius:6px;padding:3px 10px;font:600 12px -apple-system,Segoe UI,Arial,sans-serif;cursor:pointer}
 `
 
 const JS = `
@@ -196,6 +205,27 @@ const top=document.getElementById('totop');
 addEventListener('scroll',()=>{top.classList.toggle('show',scrollY>500);});
 top.addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
 `
+
+// Editable mode: click-to-edit content + a toolbar that exports Markdown / HTML
+// and "+ row" buttons on each table. The document content is wrapped in a
+// contenteditable .doc; the toolbar stays outside it (not editable).
+const toolbarHtml = '<div class="etoolbar"><button id="exMd">⬇ Export Markdown</button><button id="exHtml" class="ghost">⬇ Download HTML</button><span class="hint">Click any text or table cell to edit · use “+ row” under a table to add a row · Export Markdown when done.</span></div>'
+
+const EDIT_JS = `
+var BT=String.fromCharCode(96);
+function inlineMd(el){var s='';Array.prototype.forEach.call(el.childNodes,function(n){if(n.nodeType===3)s+=n.textContent;else if(/^(STRONG|B)$/.test(n.tagName))s+='**'+n.textContent+'**';else if(n.tagName==='CODE')s+=BT+n.textContent+BT;else if(/^(EM|I)$/.test(n.tagName))s+='*'+n.textContent+'*';else if(n.tagName==='A')s+='['+n.textContent+']('+n.getAttribute('href')+')';else if(n.tagName==='BR')s+=' ';else s+=n.textContent;});return s.replace(/\\s+/g,' ').trim();}
+function tableMd(t){var rows=Array.prototype.slice.call(t.querySelectorAll('tr'));function cells(tr){return Array.prototype.slice.call(tr.children).map(function(td){return inlineMd(td).replace(/\\|/g,'\\\\|');});}var h=cells(rows[0]);var o='| '+h.join(' | ')+' |\\n|'+h.map(function(){return '---';}).join('|')+'|';for(var i=1;i<rows.length;i++)o+='\\n| '+cells(rows[i]).join(' | ')+' |';return o;}
+function docMd(){var root=document.querySelector('.doc')||document.querySelector('.content');var out=[];Array.prototype.forEach.call(root.children,function(el){var tag=el.tagName;if(/^H[1-6]$/.test(tag))out.push('#'.repeat(+tag[1])+' '+inlineMd(el));else if(tag==='P')out.push(inlineMd(el));else if(tag==='UL'||tag==='OL')out.push(Array.prototype.slice.call(el.children).map(function(li){return '- '+inlineMd(li);}).join('\\n'));else if(tag==='BLOCKQUOTE')out.push('> '+inlineMd(el));else if(tag==='HR')out.push('---');else if(el.querySelector&&el.querySelector('table'))out.push(tableMd(el.querySelector('table')));else return;out.push('');});return out.join('\\n').replace(/\\n{3,}/g,'\\n\\n').trim()+'\\n';}
+function dl(text,name,type){var b=new Blob([text],{type:type});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+var base=(document.title||'document').replace(/[^\\w]+/g,'_').replace(/^_+|_+$/g,'');
+document.getElementById('exMd').onclick=function(){dl(docMd(),base+'.md','text/markdown');};
+document.getElementById('exHtml').onclick=function(){dl('<!DOCTYPE html>'+String.fromCharCode(10)+document.documentElement.outerHTML,base+'.edited.html','text/html');};
+Array.prototype.forEach.call(document.querySelectorAll('.content table'),function(t){var btn=document.createElement('div');btn.className='addrow';btn.contentEditable='false';btn.textContent='+ row';btn.onclick=function(){var tb=t.tBodies[0]||t;var ref=tb.rows[tb.rows.length-1];var nr=tb.insertRow();var n=ref?ref.cells.length:(t.tHead?t.tHead.rows[0].cells.length:2);for(var i=0;i<n;i++){nr.insertCell().textContent='';}};t.parentNode.insertBefore(btn,t.nextSibling);});
+`
+
+const body = editable
+  ? `${toolbarHtml}<div class="doc" contenteditable="true">\n${out.join('\n')}\n</div>`
+  : out.join('\n')
 
 const html = [
   '<!DOCTYPE html>',
@@ -211,10 +241,11 @@ const html = [
   `<nav class="toc">${tocHtml}</nav>`,
   '</aside>',
   '<main class="content">',
-  out.join('\n'),
+  body,
   '</main></div>',
   '<button id="totop" class="totop" title="Back to top">↑</button>',
   `<script>${JS}</script>`,
+  editable ? `<script>${EDIT_JS}</script>` : '',
   '</body></html>',
 ].join('\n')
 
