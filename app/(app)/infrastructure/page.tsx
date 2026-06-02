@@ -349,13 +349,22 @@ const MARKER_MAX_GROWTH = 4 // …and grow up to this multiple as you zoom in
 function markerZoomFactor(zoom: number): number {
   return Math.min(MARKER_MAX_GROWTH, Math.max(1, 2 ** (zoom - MARKER_REF_ZOOM)))
 }
+const SIGN_MIN_SIDE = 12 // base floor on a sign's shorter side (before zoom factor)
 function markerBaseSize(natural: { w: number; h: number } | undefined, isSign: boolean): { w: number; h: number } {
   if (isSign) {
     const n = natural || { w: 60, h: 24 }
-    return {
-      w: Math.max(Math.round(n.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 20),
-      h: Math.max(Math.round(n.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE), 10),
+    let w = n.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE
+    let h = n.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE
+    // Aspect-preserving floor: if the shorter side is below the minimum, scale
+    // BOTH sides up by the same factor (clamping each independently distorts
+    // the sign — short signs like "H" got stretched wide).
+    const shorter = Math.min(w, h)
+    if (shorter > 0 && shorter < SIGN_MIN_SIDE) {
+      const k = SIGN_MIN_SIDE / shorter
+      w *= k
+      h *= k
     }
+    return { w: Math.round(w), h: Math.round(h) }
   }
   const s = Math.max(Math.round(24 * FEATURE_ICON_SCALE), 10)
   return { w: s, h: s }
