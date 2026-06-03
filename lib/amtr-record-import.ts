@@ -421,6 +421,10 @@ export async function applyAmtrImport(
   // should carry over on a close match. Same matcher as the 1098 import.
   const qualCandidates = qualCat.map((c) => ({ task: String(c.name ?? ''), row: c }))
   const ratByName = byName(ratCat, 'course')
+  // Fuzzy fallback for RAT, same as 1098/Qualifications: source records list
+  // course titles that rarely match the catalog verbatim (abbreviations, extra
+  // parentheticals), so a close-enough title should still carry the date over.
+  const ratCandidates = ratCat.map((c) => ({ task: String(c.course ?? ''), row: c }))
   const jqsByNum = new Map<string, Row>()
   for (const c of jqsCat) { if (c.kind === 'section') continue; const n = String(c.number ?? '').replace(/[.\s]+$/, '').trim(); if (n) jqsByNum.set(n, c) }
   // 1098 catalog is per-year now. Build a {year_label → {normTask → row}}
@@ -521,7 +525,7 @@ export async function applyAmtrImport(
 
   // RAT by course.
   for (const row of p.rat) {
-    const c = ratByName.get(norm(row.course))
+    const c = ratByName.get(norm(row.course)) ?? matchTaskFuzzy(row.course, ratCandidates)
     if (!c) { unmatched.push(`RAT: ${row.course}`); continue }
     const { error } = await upsertAmtrRow(
       'amtr_rat_progress',

@@ -86,8 +86,8 @@ export function RatTab(props: {
                   <tr key={String(c.id)} data-amtr-item={String(c.id)} style={{ borderBottom: '1px solid var(--color-border)', background: hi ? 'var(--color-accent-glow)' : undefined }}>
                     <td style={{ padding: '8px 12px' }}>{String(c.course)}</td>
                     <td>{String(c.method ?? '')}</td>
-                    <td><input type="date" className="input-dark" disabled={!canWrite} defaultValue={completed ? completed.slice(0, 10) : ''} onBlur={(e) => setRow(String(c.id), 'completed', e.target.value)} /></td>
-                    <td><input type="date" className="input-dark" disabled={!canWrite} defaultValue={due ? due.slice(0, 10) : ''} onBlur={(e) => setRow(String(c.id), 'due', e.target.value)} /></td>
+                    <td><input type="date" className="input-dark" style={{ width: 150 }} disabled={!canWrite} defaultValue={completed ? completed.slice(0, 10) : ''} onBlur={(e) => setRow(String(c.id), 'completed', e.target.value)} /></td>
+                    <td><input type="date" className="input-dark" style={{ width: 150 }} disabled={!canWrite} defaultValue={due ? due.slice(0, 10) : ''} onBlur={(e) => setRow(String(c.id), 'due', e.target.value)} /></td>
                     <td><StatusPill status={status} /></td>
                   </tr>
                 )
