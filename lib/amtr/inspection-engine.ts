@@ -31,6 +31,9 @@ export type InspectionScanData = {
    *  amtr_audit_log 'transcribe' action). Transcription clears the certifier
    *  column, so a transcribed row's missing certifier is expected, not a gap. */
   transcribedRowIds: string[]
+  /** Today as YYYY-MM-DD (installation-local, supplied by the page). Used to tell
+   *  whether a recurring item is currently due vs. not-due-yet. */
+  today: string
 }
 
 const has = (v: unknown): boolean => v != null && String(v).trim() !== ''
@@ -221,10 +224,11 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
 
   // 6.1 — 1098 completed items have dates + signatures
   {
-    // Only items actually started AND completed are expected to be signed. A
-    // not-due item (e.g. a future monthly proficiency test with no start/complete
-    // date) is skipped — it isn't missing required signatures, it isn't due yet.
-    const completed = d.r1098Progress.filter((p) => has(p.start_date) && has(p.last_completed))
+    // Only flag items that are actually started, completed, AND currently due.
+    // A recurring item that's been completed for its cycle and isn't due again
+    // yet (next_due in the future) is current — not a missing-signature gap.
+    const futureDue = (v: unknown): boolean => has(v) && String(v).slice(0, 10) > d.today
+    const completed = d.r1098Progress.filter((p) => has(p.start_date) && has(p.last_completed) && !futureDue(p.next_due))
     if (completed.length === 0) set('1098_dates_signed', 'na')
     else {
       const r1098Name = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))

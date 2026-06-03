@@ -137,6 +137,7 @@ export default function AmtrInspectPage() {
       formalCatalog: formalCat, formalProgress: formalProg,
       qualCatalog: qualCat, qualProgress: qualProg,
       transcribedRowIds,
+      today: new Date().toISOString().slice(0, 10),
     }) : ({} as Record<string, { auto: 'yes' | 'no' | 'na' | null; findings: string[] }>)
 
     // Existing draft (most recent), else seed a fresh response set.

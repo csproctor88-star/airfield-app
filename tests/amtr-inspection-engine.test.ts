@@ -15,6 +15,7 @@ function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
     formalCatalog: [], formalProgress: [],
     qualCatalog: [], qualProgress: [],
     transcribedRowIds: [],
+    today: '2026-06-02',
     ...over,
   }
 }
@@ -199,6 +200,15 @@ describe('runInspectionScan', () => {
     expect(runInspectionScan(baseData({ r1098Progress: [{ id: 'p1', catalog_id: 'k1', next_due: '2027-07-01', trainee_initials: '', certifier_initials: '' }] }))['1098_dates_signed'].auto).toBe('na')
     // Completed date but no start date → not evaluated (needs BOTH dates).
     expect(runInspectionScan(baseData({ r1098Progress: [{ id: 'p1', catalog_id: 'k1', last_completed: '2026-01-01', trainee_initials: '', certifier_initials: '' }] }))['1098_dates_signed'].auto).toBe('na')
+  })
+
+  it('1098_dates_signed: a completed item that is not due again yet (future next_due) is not flagged', () => {
+    // Completed this cycle, missing trainee signature, but next_due is in the future → current, not a gap.
+    const future = [{ id: 'p1', catalog_id: 'k1', start_date: '2026-02-01', last_completed: '2026-02-01', next_due: '2027-02-01', trainee_initials: '', certifier_initials: 'PG' }]
+    expect(runInspectionScan(baseData({ r1098Progress: future }))['1098_dates_signed'].auto).toBe('na')
+    // Same item but past-due (next_due already passed) → evaluated → missing trainee → flagged.
+    const due = [{ id: 'p1', catalog_id: 'k1', start_date: '2025-02-01', last_completed: '2025-02-01', next_due: '2026-02-01', trainee_initials: '', certifier_initials: 'PG' }]
+    expect(runInspectionScan(baseData({ r1098Progress: due }))['1098_dates_signed'].auto).toBe('no')
   })
 
   it('monthly_inspection_done: yes when a Monthly Training Records Inspection 623A entry exists', () => {
