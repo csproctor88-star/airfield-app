@@ -21,6 +21,15 @@ const dt = (v: unknown): string => (v ? String(v).slice(0, 10) : '')
 const str = (v: unknown): string => (v == null ? '' : String(v))
 function set(ws: WS, addr: string, v: unknown) { ws.getCell(addr).value = v === '' || v == null ? null : (v as ExcelJS.CellValue) }
 
+// Deep-copy a cell's style so an appended/cloned row keeps the template's
+// borders, alignment and fonts (assigning the live object would share refs).
+function cloneStyle(s: Partial<ExcelJS.Style>): Partial<ExcelJS.Style> {
+  return JSON.parse(JSON.stringify(s || {})) as Partial<ExcelJS.Style>
+}
+const colRow = (a: string) => { const m = /^([A-Z]+)(\d+)$/.exec(a)!; return { col: m[1], row: Number(m[2]) } }
+type Merge = { a: { col: string; row: number }; b: { col: string; row: number } }
+const parseMerge = (s: string): Merge => { const [a, b] = s.split(':'); return { a: colRow(a), b: colRow(b) } }
+
 /** "Last, First M" → "LAST - FIRST - M." for the cover title. */
 function coverName(full: string): string {
   const s = (full || '').trim()
@@ -64,18 +73,26 @@ async function fetchRecordData(installationId: string, memberId: string) {
 // (each an array of [colLetter, value] pairs), appending rows (with the
 // first data row's style) when there are more rows than blanks.
 function writeFlatTable(ws: WS, startRow: number, cols: string[], rows: [string, unknown][][]) {
-  // Clear range covers (a) the existing sheet's rowCount so the
-  // template's baked-in example data — the 623A sheet ships with
-  // ~105 illustrative rows from a sample record — gets wiped even
-  // when the member has fewer entries, AND (b) a 60-row pad past
-  // the new data so growth headroom is also clean. Without (a), a
-  // 30-entry export would leave rows 32-107 populated with the
-  // template's sample data and show up in the exported workbook.
-  const clearTo = Math.max(startRow + rows.length, startRow + 60, ws.rowCount)
+  // Clear range covers (a) the existing sheet's rowCount so the template's
+  // baked-in example data (the 623A sheet ships with ~106 illustrative rows)
+  // gets wiped even when the member has fewer entries, AND (b) a 60-row pad
+  // past the new data so growth headroom is clean.
+  const origRowCount = ws.rowCount
+  const clearTo = Math.max(startRow + rows.length, startRow + 60, origRowCount)
   for (let r = startRow; r <= clearTo; r++) for (const c of cols) set(ws, `${c}${r}`, null)
+  // Style source for appended rows: the second template data row (the first
+  // can carry a special top border); fall back to the first. Appended rows
+  // beyond the template's pre-formatted region copy this style so every entry
+  // keeps the table's borders instead of spilling outside it.
+  const styleRow = Math.min(startRow + 1, origRowCount)
+  const tplHeight = ws.getRow(styleRow).height
+  const tplStyles = cols.map((c) => cloneStyle(ws.getCell(`${c}${styleRow}`).style))
   rows.forEach((cells, i) => {
     const rn = startRow + i
-    if (rn > ws.rowCount) ws.insertRow(rn, [], 'i')
+    if (rn > origRowCount) {
+      if (tplHeight) ws.getRow(rn).height = tplHeight
+      cols.forEach((c, ci) => { ws.getCell(`${c}${rn}`).style = tplStyles[ci] })
+    }
     for (const [c, v] of cells) set(ws, `${c}${rn}`, v)
   })
 }
@@ -202,24 +219,56 @@ function fillJqs(ws: WS | undefined, cat: Row[], prog: Row[]) {
   }
 }
 
-// DAF 803: one row per evaluation — A:J (merged) = STS item, K date, L UGT,
-// M results, N evaluator initials. Clears example values, writes member evals.
+// DAF 803 sheets are NOT a flat table — each evaluation is a fixed multi-row
+// BLOCK: a "JQS Task Item(s) Evaluated" header row, the STS item merged across
+// the next rows (with Date / UGT / Results / Evaluator merged alongside in
+// cols K-N), a merged "Remarks" label row, then a merged remarks area. Blocks
+// repeat on a fixed stride (typically 10 rows). We write one evaluation into
+// each block's data row, clear the template's sample evals, and clone a fresh
+// block (styles + merges) for any evaluation beyond the template's blocks.
+
+const LABEL_RE = /JQS Task Item|^Date$|In UGT|Results|Evaluator|Remarks/i
+function clone803Block(ws: WS, srcStart: number, height: number, relMerges: Merge[], dstStart: number) {
+  for (let k = 0; k < height; k++) {
+    const sr = ws.getRow(srcStart + k), dr = ws.getRow(dstStart + k)
+    if (sr.height) dr.height = sr.height
+    for (let cn = 1; cn <= 14; cn++) {
+      const sc = sr.getCell(cn), dc = dr.getCell(cn)
+      dc.style = cloneStyle(sc.style)
+      const v = sc.value
+      dc.value = (typeof v === 'string' && LABEL_RE.test(v)) ? v : null // keep static labels, drop sample data
+    }
+  }
+  for (const m of relMerges) ws.mergeCells(`${m.a.col}${dstStart + m.a.row}:${m.b.col}${dstStart + m.b.row}`)
+}
+
 function fill803(ws: WS | undefined, items: Row[]) {
   if (!ws) return
-  // Find the header row (col A starts with "JQS Task Item").
-  let header = 0
-  for (let r = 1; r <= 8; r++) { if (/JQS Task Item/i.test(str(ws.getCell(`A${r}`).value))) { header = r; break } }
-  const start = (header || 3) + 1
-  const clearTo = Math.max(start + items.length, start + 30)
-  for (let r = start; r <= clearTo; r++) for (const c of ['A', 'K', 'L', 'M', 'N']) set(ws, `${c}${r}`, null)
+  // Block header rows = those whose col A starts with "JQS Task Item".
+  const headers: number[] = []
+  for (let r = 1; r <= ws.rowCount; r++) if (/JQS Task Item/i.test(str(ws.getCell(`A${r}`).value))) headers.push(r)
+  if (!headers.length) return
+  const height = headers.length > 1 ? headers[1] - headers[0] : 10
+  const srcStart = headers[0], srcEnd = srcStart + height - 1
+  // First block's merges, captured relative to its start, for cloning overflow blocks.
+  const relMerges: Merge[] = (ws.model.merges || []).map(parseMerge)
+    .filter((m) => m.a.row >= srcStart && m.b.row <= srcEnd)
+    .map((m) => ({ a: { col: m.a.col, row: m.a.row - srcStart }, b: { col: m.b.col, row: m.b.row - srcStart } }))
+  // Clear the template's sample evaluation + remarks from every existing block.
+  for (const h of headers) {
+    for (const c of ['A', 'K', 'L', 'M', 'N']) set(ws, `${c}${h + 1}`, null)
+    for (let r = h + 1; r < h + height; r++) { if (/^Remarks$/i.test(str(ws.getCell(`A${r}`).value))) { set(ws, `A${r + 1}`, null); break } }
+  }
+  // One evaluation per block; clone new blocks once the template's run out.
   items.forEach((it, i) => {
-    const r = start + i
-    if (r > ws.rowCount) ws.insertRow(r, [], 'i')
-    set(ws, `A${r}`, str(it.sts_item))
-    set(ws, `K${r}`, dt(it.eval_date))
-    set(ws, `L${r}`, str(it.in_ugt))
-    set(ws, `M${r}`, str(it.results))
-    set(ws, `N${r}`, str(it.evaluator_initials))
+    let base: number
+    if (i < headers.length) base = headers[i]
+    else { base = headers[headers.length - 1] + height * (i - headers.length + 1); clone803Block(ws, srcStart, height, relMerges, base) }
+    set(ws, `A${base + 1}`, str(it.sts_item))
+    set(ws, `K${base + 1}`, dt(it.eval_date))
+    set(ws, `L${base + 1}`, str(it.in_ugt))
+    set(ws, `M${base + 1}`, str(it.results))
+    set(ws, `N${base + 1}`, str(it.evaluator_initials))
   })
 }
 
