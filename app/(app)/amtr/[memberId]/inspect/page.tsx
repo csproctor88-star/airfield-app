@@ -13,7 +13,7 @@ import {
   fetchAmtrInspectionsByMember, saveAmtrInspectionDraft, completeAmtrInspection, reopenAmtrInspection,
   type InspectionItemResponse,
 } from '@/lib/supabase/amtr-inspections'
-import { runInspectionScan } from '@/lib/amtr/inspection-engine'
+import { runInspectionScan, highestSkillLevel } from '@/lib/amtr/inspection-engine'
 import { DEFAULT_INSPECTION_CHECKLIST } from '@/lib/amtr/inspection-checklist'
 import { generateAmtrInspectionPdf } from '@/lib/amtr-inspection-pdf'
 import type { AmtrInspection } from '@/lib/supabase/amtr-inspections'
@@ -27,6 +27,7 @@ import { Form803Tab } from '@/components/amtr/form803-tab'
 import { MilestonesTab } from '@/components/amtr/milestones-tab'
 import { FormalTab } from '@/components/amtr/formal-tab'
 import { RatTab } from '@/components/amtr/rat-tab'
+import { QualificationsTab } from '@/components/amtr/qualifications-tab'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
@@ -38,6 +39,7 @@ type ChecklistRow = { kind: 'section' | 'item'; item_number: string; label: stri
 const RECORD_TABS: [string, string][] = [
   ['jqs', 'JQS-CFETP'], ['623a', 'DAF 623A'], ['797', 'DAF 797'], ['803', 'DAF 803'],
   ['1098', 'DAF 1098'], ['milestones', 'Milestones'], ['formal', 'Formal'], ['rat', 'RAT'],
+  ['qual', 'Qualifications'],
 ]
 // Which record tab each checklist section maps to (for the "view in record" jump).
 const SECTION_TAB: Record<string, string> = {
@@ -80,7 +82,7 @@ export default function AmtrInspectPage() {
     if (supabase) { try { const { data: { user } } = await supabase.auth.getUser(); uid = user?.id ?? null } catch { /* */ } }
     setMyUserId(uid)
 
-    const [m, roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg, checklistRows, inspections] = await Promise.all([
+    const [m, roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg, qualCat, qualProg, checklistRows, inspections] = await Promise.all([
       fetchAmtrMember(memberId),
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
@@ -96,12 +98,14 @@ export default function AmtrInspectPage() {
       fetchAmtrByMember<Row>('amtr_milestone_progress', memberId),
       fetchAmtrByBase<Row>('amtr_formal_catalog', installationId),
       fetchAmtrByMember<Row>('amtr_formal_progress', memberId),
+      fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
+      fetchAmtrByMember<Row>('amtr_qual_progress', memberId),
       fetchAmtrByBase<ChecklistRow>('amtr_inspection_checklist', installationId),
       fetchAmtrInspectionsByMember(memberId),
     ])
     setMember(m)
     setMyRoles(roles.filter((r) => r.user_id === uid).map((r) => r.role))
-    setData({ jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg })
+    setData({ jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg, qualCat, qualProg })
 
     // display name for the completed-by stamp
     if (supabase && uid) {
@@ -129,6 +133,7 @@ export default function AmtrInspectPage() {
       e623a, items797, items803,
       milestoneCatalog: mileCat,
       formalCatalog: formalCat, formalProgress: formalProg,
+      qualCatalog: qualCat, qualProgress: qualProg,
     }) : ({} as Record<string, { auto: 'yes' | 'no' | 'na' | null; findings: string[] }>)
 
     // Existing draft (most recent), else seed a fresh response set.
@@ -179,6 +184,9 @@ export default function AmtrInspectPage() {
   }
 
   const itemByNum = useMemo(() => new Map(items.map((it) => [it.item_number, it])), [items])
+  // Highest skill level attained (Qualifications tab). JQS core tasks that only
+  // become required above this level are not expected of the member.
+  const skillLevel = useMemo(() => highestSkillLevel(data.qualCat ?? [], data.qualProg ?? []), [data])
 
   const complete = async () => {
     if (!installationId || !inspectionId) {
@@ -267,6 +275,12 @@ export default function AmtrInspectPage() {
         <Btn variant="ghost" onClick={() => router.push(`/amtr/${memberId}`)}><ArrowLeft size={15} /> Record</Btn>
         <ClipboardCheck size={20} style={{ color: 'var(--color-accent)' }} />
         <h1 style={{ margin: 0, fontSize: 18 }}>Record Inspection — {member.full_name}</h1>
+        {skillLevel != null && (
+          <span title="Highest skill level attained (Qualifications tab). JQS core tasks that only become required above this level are not expected to be signed."
+            style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--color-accent) 35%, transparent)', color: 'var(--color-accent)' }}>
+            {skillLevel}-skill level
+          </span>
+        )}
         <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>
           {answered}/{items.length} answered · {gapCount} gap{gapCount === 1 ? '' : 's'}
         </span>
@@ -400,6 +414,7 @@ function RecordPanel({ tab, member, memberId, installationId, data, myUserId }: 
     case 'milestones': return <MilestonesTab catalog={data.mileCat ?? []} progress={data.mileProg ?? []} canEnterData={false} installationId={installationId} memberId={memberId} onChange={noop} />
     case 'formal': return <FormalTab catalog={data.formalCat ?? []} progress={data.formalProg ?? []} canEnterData={false} canManage={false} installationId={installationId} memberId={memberId} onChange={noop} />
     case 'rat': return <RatTab catalog={data.ratCat ?? []} progress={data.ratProg ?? []} canWrite={false} canManage={false} memberId={memberId} installationId={installationId} member={member} onChange={noop} highlightItem={null} />
+    case 'qual': return <QualificationsTab installationId={installationId} memberId={memberId} canEnterData={false} />
     default: return null
   }
 }

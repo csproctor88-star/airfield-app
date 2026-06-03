@@ -26,6 +26,7 @@ export type InspectionScanData = {
   items803: Row[]
   milestoneCatalog: Row[]
   formalCatalog: Row[]; formalProgress: Row[]
+  qualCatalog: Row[]; qualProgress: Row[]
 }
 
 const has = (v: unknown): boolean => v != null && String(v).trim() !== ''
@@ -43,6 +44,38 @@ const live = (rows: Row[]): Row[] => rows.filter((r) => !r.retired)
  *  false-flags a qualified member. */
 const jqsNeedsCertifier = (cat: Row | undefined): boolean => String(cat?.core_cert ?? '').includes('^')
 
+/** Skill level (3/5/7/9) named by a `skill_level` qualification, e.g.
+ *  "1C751 Skill Level" → 5 or "5-Skill Level" → 5. Non-level entries that
+ *  share the `skill_level` category ("Trainer", "Certifier") return null. */
+export function skillLevelFromName(name: unknown): number | null {
+  const s = String(name ?? '')
+  const dafsc = s.match(/1C7([3579])1/)
+  if (dafsc) return Number(dafsc[1])
+  const plain = s.match(/\b([3579])\s*-?\s*skill/i)
+  return plain ? Number(plain[1]) : null
+}
+
+/** Highest skill level the member has marked attained in the Qualifications
+ *  tab (`amtr_qual_catalog` category 'skill_level' + `amtr_qual_progress`).
+ *  Returns null when none is determinable — callers then apply no level gate. */
+export function highestSkillLevel(qualCatalog: Row[], qualProgress: Row[]): number | null {
+  const attained = new Set(qualProgress.filter((p) => p.attained === true).map((p) => String(p.catalog_id)))
+  let max: number | null = null
+  for (const c of qualCatalog) {
+    if (c.category !== 'skill_level' || !attained.has(String(c.id))) continue
+    const lvl = skillLevelFromName(c.name)
+    if (lvl != null && (max == null || lvl > max)) max = lvl
+  }
+  return max
+}
+
+/** Leading skill-level digit of a JQS `core_cert` marking ("7^" → 7), or null
+ *  when it carries no level (e.g. "^"). */
+const coreCertLevel = (v: unknown): number | null => {
+  const m = String(v ?? '').match(/([3579])/)
+  return m ? Number(m[1]) : null
+}
+
 /** Cap a findings list so the UI stays readable. */
 function summarize(missing: string[], noun: string): string[] {
   if (missing.length === 0) return []
@@ -58,6 +91,10 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
   const m = d.member
   const userId = m.user_id ? String(m.user_id) : null
   const holdsRole = (role: string) => !!userId && d.roleAssignments.some((a) => a.user_id === userId && a.role === role)
+  // Member's current skill level (from the Qualifications tab). Used to ignore
+  // JQS core tasks that only become required at a higher level than the member
+  // holds — e.g. a 7-level core task isn't expected signed for a 5-level member.
+  const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
 
   // 2.1 — member identity fields
   {
@@ -101,9 +138,15 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     }
   }
 
-  // 4.8 / 9.2 — JQS core tasks fully signed (certifier only where caret-marked)
+  // 4.8 / 9.2 — JQS core tasks fully signed (certifier only where caret-marked).
+  // Core tasks that become required above the member's skill level are excluded
+  // (not yet expected to be signed).
   {
-    const core = live(d.jqsCatalog).filter((c) => c.kind !== 'section' && has(c.core_cert))
+    const core = live(d.jqsCatalog).filter((c) => {
+      if (c.kind === 'section' || !has(c.core_cert)) return false
+      const lvl = coreCertLevel(c.core_cert)
+      return skill == null || lvl == null || lvl <= skill
+    })
     if (core.length === 0) set('jqs_core_signed', 'na')
     else {
       const progByCat = new Map(d.jqsProgress.map((p) => [String(p.catalog_id), p]))

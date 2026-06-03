@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { runInspectionScan, type InspectionScanData } from '@/lib/amtr/inspection-engine'
+import { runInspectionScan, highestSkillLevel, type InspectionScanData } from '@/lib/amtr/inspection-engine'
 
 function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
   return {
@@ -13,6 +13,7 @@ function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
     items803: [],
     milestoneCatalog: [],
     formalCatalog: [], formalProgress: [],
+    qualCatalog: [], qualProgress: [],
     ...over,
   }
 }
@@ -97,5 +98,51 @@ describe('runInspectionScan', () => {
 
   it('rat_dates: na for RAT-exempt members', () => {
     expect(runInspectionScan(baseData({ member: { id: 'm1', status: 'Civilian' } })).rat_dates.auto).toBe('na')
+  })
+
+  it('highestSkillLevel: parses the highest attained 1C7X1 level, ignoring non-level quals', () => {
+    const cat = [
+      { id: 'q5', category: 'skill_level', name: '1C751 Skill Level' },
+      { id: 'q7', category: 'skill_level', name: '1C771 Skill Level' },
+      { id: 'tr', category: 'skill_level', name: 'Trainer' },
+      { id: 'qtp', category: 'qtp', name: '7-level QTP' },
+    ]
+    expect(highestSkillLevel(cat, [{ catalog_id: 'q5', attained: true }])).toBe(5)
+    expect(highestSkillLevel(cat, [{ catalog_id: 'q5', attained: true }, { catalog_id: 'q7', attained: true }])).toBe(7)
+    expect(highestSkillLevel(cat, [{ catalog_id: 'q7', attained: false }])).toBe(null) // not attained
+    expect(highestSkillLevel(cat, [{ catalog_id: 'tr', attained: true }])).toBe(null) // Trainer is not a skill level
+    expect(highestSkillLevel(cat, [{ catalog_id: 'qtp', attained: true }])).toBe(null) // QTP category ignored
+    expect(highestSkillLevel(cat, [])).toBe(null)
+    // Custom "5-Skill Level" naming also parses.
+    expect(highestSkillLevel([{ id: 'x', category: 'skill_level', name: '5-Skill Level' }], [{ catalog_id: 'x', attained: true }])).toBe(5)
+  })
+
+  it('jqs_core_signed: ignores core tasks above the member’s attained skill level', () => {
+    const qualCatalog = [
+      { id: 'q5', category: 'skill_level', name: '1C751 Skill Level' },
+      { id: 'q7', category: 'skill_level', name: '1C771 Skill Level' },
+    ]
+    const qualProgress = [{ catalog_id: 'q5', attained: true }] // 5-level only
+    // A 7-level core task left unsigned must NOT be flagged for a 5-level member.
+    const sevenOnly = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
+    expect(runInspectionScan(baseData({ qualCatalog, qualProgress, jqsCatalog: sevenOnly, jqsProgress: [] })).jqs_core_signed.auto).toBe('na')
+    // A 5-level core task IS expected → unsigned → 'no', and findings name only the 5-level task.
+    const both = [...sevenOnly, { id: 'c2', kind: 'item', number: '5.1.1', core_cert: '5' }]
+    const r = runInspectionScan(baseData({ qualCatalog, qualProgress, jqsCatalog: both, jqsProgress: [] }))
+    expect(r.jqs_core_signed.auto).toBe('no')
+    expect(r.jqs_core_signed.findings.join()).toContain('5.1.1')
+    expect(r.jqs_core_signed.findings.join()).not.toContain('7.9.1')
+  })
+
+  it('jqs_core_signed: a 7-level member IS expected to have 7-level core tasks signed', () => {
+    const qualCatalog = [{ id: 'q7', category: 'skill_level', name: '1C771 Skill Level' }]
+    const qualProgress = [{ catalog_id: 'q7', attained: true }]
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
+    expect(runInspectionScan(baseData({ qualCatalog, qualProgress, jqsCatalog, jqsProgress: [] })).jqs_core_signed.auto).toBe('no')
+  })
+
+  it('jqs_core_signed: with no skill-level data, no level gate is applied (all core inspected)', () => {
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
+    expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress: [] })).jqs_core_signed.auto).toBe('no')
   })
 })
