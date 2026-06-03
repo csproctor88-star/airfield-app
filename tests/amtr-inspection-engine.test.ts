@@ -23,7 +23,7 @@ function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
 describe('runInspectionScan', () => {
   it('findings list every offending item (no "+N more" cap)', () => {
     // 9 unsigned core tasks → all 9 should be enumerated in the findings.
-    const cat = Array.from({ length: 9 }, (_, i) => ({ id: `c${i}`, kind: 'item', number: `7.1.${i}`, core_cert: 'C' }))
+    const cat = Array.from({ length: 9 }, (_, i) => ({ id: `c${i}`, kind: 'item', number: `7.1.${i}`, core_cert: 'C', required: true }))
     const r = runInspectionScan(baseData({ jqsCatalog: cat, jqsProgress: [] }))
     expect(r.jqs_core_signed.auto).toBe('no')
     const text = r.jqs_core_signed.findings.join(' ')
@@ -63,26 +63,26 @@ describe('runInspectionScan', () => {
   it('jqs_core_signed: certifier required only on caret (^) tasks per the CFETP convention', () => {
     expect(runInspectionScan(baseData()).jqs_core_signed.auto).toBe('na')
     // Non-caret core task: trainee + trainer is sufficient, empty certifier is fine.
-    const plain = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C' }]
+    const plain = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C', required: true }]
     expect(runInspectionScan(baseData({ jqsCatalog: plain, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_core_signed.auto).toBe('yes')
     // Caret core task: certifier IS required.
-    const caret = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^' }]
+    const caret = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^', required: true }]
     expect(runInspectionScan(baseData({ jqsCatalog: caret, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_core_signed.auto).toBe('no')
     expect(runInspectionScan(baseData({ jqsCatalog: caret, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: 'CC' }] })).jqs_core_signed.auto).toBe('yes')
   })
 
   it('jqs_dates_signed: certifier required only on caret (^) tasks', () => {
-    const plain = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C' }]
+    const plain = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C', required: true }]
     expect(runInspectionScan(baseData({ jqsCatalog: plain, jqsProgress: [{ catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_dates_signed.auto).toBe('yes')
-    const caret = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '5^' }]
+    const caret = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '5^', required: true }]
     expect(runInspectionScan(baseData({ jqsCatalog: caret, jqsProgress: [{ catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_dates_signed.auto).toBe('no')
   })
 
   it('retired catalog rows are excluded from catalog-driven checks', () => {
     // jqs_core_signed: a retired caret core task with no signatures must not flag.
     const jqsCat = [
-      { id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^' },
-      { id: 'c2', kind: 'item', number: '7.1.2', core_cert: '7^', retired: true },
+      { id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^', required: true },
+      { id: 'c2', kind: 'item', number: '7.1.2', core_cert: '7^', required: true, retired: true },
     ]
     const jqsProgress = [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: 'CC' }]
     expect(runInspectionScan(baseData({ jqsCatalog: jqsCat, jqsProgress })).jqs_core_signed.auto).toBe('yes')
@@ -136,10 +136,10 @@ describe('runInspectionScan', () => {
     ]
     const qualProgress = [{ catalog_id: 'q5', attained: true }] // 5-level only
     // A 7-level core task left unsigned must NOT be flagged for a 5-level member.
-    const sevenOnly = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
+    const sevenOnly = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7', required: true }]
     expect(runInspectionScan(baseData({ qualCatalog, qualProgress, jqsCatalog: sevenOnly, jqsProgress: [] })).jqs_core_signed.auto).toBe('na')
     // A 5-level core task IS expected → unsigned → 'no', and findings name only the 5-level task.
-    const both = [...sevenOnly, { id: 'c2', kind: 'item', number: '5.1.1', core_cert: '5' }]
+    const both = [...sevenOnly, { id: 'c2', kind: 'item', number: '5.1.1', core_cert: '5', required: true }]
     const r = runInspectionScan(baseData({ qualCatalog, qualProgress, jqsCatalog: both, jqsProgress: [] }))
     expect(r.jqs_core_signed.auto).toBe('no')
     expect(r.jqs_core_signed.findings.join()).toContain('5.1.1')
@@ -149,17 +149,30 @@ describe('runInspectionScan', () => {
   it('jqs_core_signed: a 7-level member IS expected to have 7-level core tasks signed', () => {
     const qualCatalog = [{ id: 'q7', category: 'skill_level', name: '1C771 Skill Level' }]
     const qualProgress = [{ catalog_id: 'q7', attained: true }]
-    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7', required: true }]
     expect(runInspectionScan(baseData({ qualCatalog, qualProgress, jqsCatalog, jqsProgress: [] })).jqs_core_signed.auto).toBe('no')
   })
 
   it('jqs_core_signed: with no skill-level data, no level gate is applied (all core inspected)', () => {
-    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7', required: true }]
     expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress: [] })).jqs_core_signed.auto).toBe('no')
   })
 
+  it('JQS tasks NOT marked Required for the location are excluded from the checks', () => {
+    // Unsigned core task that isn't required here → not flagged (na).
+    const notReq = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '5', required: false }]
+    expect(runInspectionScan(baseData({ jqsCatalog: notReq, jqsProgress: [] })).jqs_core_signed.auto).toBe('na')
+    // Same task marked required + unsigned → flagged.
+    const req = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '5', required: true }]
+    expect(runInspectionScan(baseData({ jqsCatalog: req, jqsProgress: [] })).jqs_core_signed.auto).toBe('no')
+    // jqs_dates_signed: a non-required task with dates but missing signatures → not flagged.
+    const datedProgress = [{ id: 'p1', catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: '', trainer_initials: '' }]
+    expect(runInspectionScan(baseData({ jqsCatalog: notReq, jqsProgress: datedProgress })).jqs_dates_signed.auto).toBe('na')
+    expect(runInspectionScan(baseData({ jqsCatalog: req, jqsProgress: datedProgress })).jqs_dates_signed.auto).toBe('no')
+  })
+
   it('jqs_core_signed: a transcribed caret task missing certifier is NOT flagged (certifier not transcribed)', () => {
-    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '5^' }]
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '5^', required: true }]
     // trainee + trainer present, certifier blank (cleared by transcription)
     const jqsProgress = [{ id: 'p1', catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }]
     // Not transcribed → caret task needs certifier → flagged.
@@ -169,7 +182,7 @@ describe('runInspectionScan', () => {
   })
 
   it('jqs_dates_signed: a transcribed caret task missing certifier is NOT flagged', () => {
-    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^' }]
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^', required: true }]
     const jqsProgress = [{ id: 'p1', catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }]
     expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress })).jqs_dates_signed.auto).toBe('no')
     expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress, transcribedRowIds: ['p1'] })).jqs_dates_signed.auto).toBe('yes')
@@ -236,7 +249,7 @@ describe('runInspectionScan', () => {
     // Transcribed 797 row missing initials → no.
     expect(runInspectionScan(baseData({ items797: [{ id: 'r1', task: 'X', complete_date: '2026-01-01', trainee_initials: '' }], transcribedRowIds: ['r1'] }))['797_transcribed'].auto).toBe('no')
     // JQS transcribed missing date → no.
-    expect(runInspectionScan(baseData({ jqsCatalog: [{ id: 'c1', kind: 'item', number: '7.1.1' }], jqsProgress: [{ id: 'p1', catalog_id: 'c1', complete_date: '', trainee_initials: 'JD' }], transcribedRowIds: ['p1'] })).jqs_transcribed.auto).toBe('no')
+    expect(runInspectionScan(baseData({ jqsCatalog: [{ id: 'c1', kind: 'item', number: '7.1.1', required: true }], jqsProgress: [{ id: 'p1', catalog_id: 'c1', complete_date: '', trainee_initials: 'JD' }], transcribedRowIds: ['p1'] })).jqs_transcribed.auto).toBe('no')
     // 803 transcribed with eval date + evaluator → yes.
     expect(runInspectionScan(baseData({ items803: [{ id: 's1', sts_item: '7.5', eval_date: '2026-01-01', evaluator_initials: 'EV' }], transcribedRowIds: ['s1'] }))['803_transcribed'].auto).toBe('yes')
   })

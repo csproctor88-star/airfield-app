@@ -157,7 +157,9 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
   // (not yet expected to be signed).
   {
     const core = live(d.jqsCatalog).filter((c) => {
-      if (c.kind === 'section' || !has(c.core_cert)) return false
+      // Only tasks marked Required for this location count — a core task that
+      // isn't required here shouldn't be flagged incomplete.
+      if (c.kind === 'section' || !c.required || !has(c.core_cert)) return false
       const lvl = coreCertLevel(c.core_cert)
       return skill == null || lvl == null || lvl <= skill
     })
@@ -269,12 +271,13 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     }
   }
 
-  // 9.5 — JQS dated tasks have required signatures (certifier only where caret-marked)
+  // 9.5 — JQS dated tasks have required signatures (certifier only where caret-marked).
+  // Only tasks marked Required for this location are evaluated.
   {
-    const dated = d.jqsProgress.filter((p) => has(p.start_date) || has(p.complete_date))
+    const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
+    const dated = d.jqsProgress.filter((p) => (has(p.start_date) || has(p.complete_date)) && !!catById.get(String(p.catalog_id))?.required)
     if (dated.length === 0) set('jqs_dates_signed', 'na')
     else {
-      const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
       const missing = dated.filter((p) => {
         const needCert = jqsNeedsCertifier(catById.get(String(p.catalog_id))) && !isTranscribed(p.id)
         return !(has(p.trainee_initials) && has(p.trainer_initials) && (!needCert || has(p.certifier_initials)))
@@ -328,10 +331,10 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     }
   }
   {
-    const tr = d.jqsProgress.filter((p) => isTranscribed(p.id))
+    const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
+    const tr = d.jqsProgress.filter((p) => isTranscribed(p.id) && !!catById.get(String(p.catalog_id))?.required)
     if (tr.length === 0) set('jqs_transcribed', 'na')
     else {
-      const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
       const missing = tr.filter((p) => !(has(p.complete_date) && has(p.trainee_initials))).map((p) => String(catById.get(String(p.catalog_id))?.number ?? p.catalog_id))
       set('jqs_transcribed', missing.length ? 'no' : 'yes', summarize(missing, 'transcribed JQS task(s) missing a date or initials'))
     }
