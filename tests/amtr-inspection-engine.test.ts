@@ -21,6 +21,16 @@ function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
 }
 
 describe('runInspectionScan', () => {
+  it('findings list every offending item (no "+N more" cap)', () => {
+    // 9 unsigned core tasks → all 9 should be enumerated in the findings.
+    const cat = Array.from({ length: 9 }, (_, i) => ({ id: `c${i}`, kind: 'item', number: `7.1.${i}`, core_cert: 'C' }))
+    const r = runInspectionScan(baseData({ jqsCatalog: cat, jqsProgress: [] }))
+    expect(r.jqs_core_signed.auto).toBe('no')
+    const text = r.jqs_core_signed.findings.join(' ')
+    expect(text).not.toContain('more')
+    for (let i = 0; i < 9; i++) expect(text).toContain(`7.1.${i}`)
+  })
+
   it('member_identity: yes when all cover fields present, no when one missing', () => {
     expect(runInspectionScan(baseData()).member_identity.auto).toBe('yes')
     const missing = runInspectionScan(baseData({ member: { id: 'm1', full_name: 'Doe, Jane', grade: 'SSgt', duty_position: 'AMOPS', dafsc: '1C751', tsc: '', status: 'Active' } }))

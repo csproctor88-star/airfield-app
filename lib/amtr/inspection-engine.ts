@@ -83,12 +83,12 @@ const coreCertLevel = (v: unknown): number | null => {
   return m ? Number(m[1]) : null
 }
 
-/** Cap a findings list so the UI stays readable. */
+/** Format a findings line listing every offending item. */
 function summarize(missing: string[], noun: string): string[] {
   if (missing.length === 0) return []
-  const shown = missing.slice(0, 6).join(', ')
-  const more = missing.length > 6 ? `, +${missing.length - 6} more` : ''
-  return [`${missing.length} ${noun}: ${shown}${more}`]
+  // List every offending item — the saved inspection PDF (and the on-screen
+  // findings) must enumerate all annotated discrepancies, not a "+N more" cap.
+  return [`${missing.length} ${noun}: ${missing.join(', ')}`]
 }
 
 export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoKey, AutoResult> {
