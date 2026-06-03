@@ -70,6 +70,7 @@ export default function AmtrInspectPage() {
   const [recordTab, setRecordTab] = useState('jqs')
   const [checklistOpen, setChecklistOpen] = useState(true)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [commentOpen, setCommentOpen] = useState<Set<string>>(new Set())
   const [data, setData] = useState<Record<string, Row[]>>({})
   const [myUserId, setMyUserId] = useState<string | null>(null)
   const [myName, setMyName] = useState<string>('')
@@ -364,6 +365,24 @@ export default function AmtrInspectPage() {
                       {resp && resp.auto != null && (
                         <div style={{ marginLeft: 42, marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>auto-suggested: {resp.auto.toUpperCase()}</div>
                       )}
+                      {(() => {
+                        const showComment = resp?.status === 'no' || !!resp?.note || commentOpen.has(it.item_number)
+                        if (!showComment) {
+                          return (status !== 'completed' && canWrite) ? (
+                            <button onClick={() => setCommentOpen((p) => { const n = new Set(p); n.add(it.item_number); return n })}
+                              style={{ marginLeft: 42, marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
+                              + Add comment
+                            </button>
+                          ) : null
+                        }
+                        return (
+                          <textarea className="input-dark" rows={2}
+                            placeholder={resp?.status === 'no' ? 'Reason / corrective action for this finding…' : 'Comment…'}
+                            style={{ marginLeft: 42, marginTop: 6, width: 'calc(100% - 42px)', resize: 'vertical', fontSize: 'var(--fs-xs)' }}
+                            value={resp?.note ?? ''} disabled={status === 'completed' || !canWrite}
+                            onChange={(e) => setItemNote(it.item_number, e.target.value)} />
+                        )
+                      })()}
                     </div>
                   )
                 })}

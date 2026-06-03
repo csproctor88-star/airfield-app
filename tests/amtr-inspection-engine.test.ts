@@ -171,8 +171,45 @@ describe('runInspectionScan', () => {
   })
 
   it('1098_dates_signed: a transcribed completed item missing certifier is NOT flagged', () => {
-    const r1098Progress = [{ id: 'p1', catalog_id: 'k1', last_completed: '2026-01-01', trainee_initials: 'JD', certifier_initials: '' }]
+    const r1098Progress = [{ id: 'p1', catalog_id: 'k1', start_date: '2026-01-01', last_completed: '2026-01-01', trainee_initials: 'JD', certifier_initials: '' }]
     expect(runInspectionScan(baseData({ r1098Progress }))['1098_dates_signed'].auto).toBe('no')
     expect(runInspectionScan(baseData({ r1098Progress, transcribedRowIds: ['p1'] }))['1098_dates_signed'].auto).toBe('yes')
+  })
+
+  it('1098_dates_signed: findings name the task, not the catalog id', () => {
+    const r1098Catalog = [{ id: 'k1', task: 'Airfield Driving' }]
+    const r1098Progress = [{ id: 'p1', catalog_id: 'k1', start_date: '2026-01-01', last_completed: '2026-01-01', trainee_initials: 'JD', certifier_initials: '' }]
+    const r = runInspectionScan(baseData({ r1098Catalog, r1098Progress }))
+    expect(r['1098_dates_signed'].auto).toBe('no')
+    expect(r['1098_dates_signed'].findings.join()).toContain('Airfield Driving')
+    expect(r['1098_dates_signed'].findings.join()).not.toContain('k1')
+  })
+
+  it('rat_dates: findings name the course, not the catalog id', () => {
+    const ratCatalog = [{ id: 'rc1', course: 'Self Aid Buddy Care' }]
+    const ratProgress = [{ id: 'rp1', catalog_id: 'rc1', completed: '', due: '' }]
+    const r = runInspectionScan(baseData({ ratCatalog, ratProgress }))
+    expect(r.rat_dates.auto).toBe('no')
+    expect(r.rat_dates.findings.join()).toContain('Self Aid Buddy Care')
+    expect(r.rat_dates.findings.join()).not.toContain('rc1')
+  })
+
+  it('1098_dates_signed: not-due items (missing start and/or completed date) are not evaluated', () => {
+    // Future monthly proficiency test: a next_due but no dates/signatures → not flagged.
+    expect(runInspectionScan(baseData({ r1098Progress: [{ id: 'p1', catalog_id: 'k1', next_due: '2027-07-01', trainee_initials: '', certifier_initials: '' }] }))['1098_dates_signed'].auto).toBe('na')
+    // Completed date but no start date → not evaluated (needs BOTH dates).
+    expect(runInspectionScan(baseData({ r1098Progress: [{ id: 'p1', catalog_id: 'k1', last_completed: '2026-01-01', trainee_initials: '', certifier_initials: '' }] }))['1098_dates_signed'].auto).toBe('na')
+  })
+
+  it('623a_signed: historical (transcribed) entries are ignored', () => {
+    // A historical import: trainee/trainer blank, marked transcribed → not flagged.
+    const historical = [{ id: 'e1', entry_type: 'Initial', transcribed: true, trainee_initials: '', trainer_initials: '' }]
+    expect(runInspectionScan(baseData({ e623a: historical }))['623a_signed'].auto).toBe('na')
+    // Same entry NOT marked historical → flagged for missing initials.
+    const notMarked = [{ id: 'e1', entry_type: 'Initial', transcribed: false, trainee_initials: '', trainer_initials: '' }]
+    expect(runInspectionScan(baseData({ e623a: notMarked }))['623a_signed'].auto).toBe('no')
+    // Historical alongside a complete manual entry → grade only the manual one.
+    const mixed = [...historical, { id: 'e2', entry_type: 'Initial', trainee_initials: 'JD', trainer_initials: 'AB' }]
+    expect(runInspectionScan(baseData({ e623a: mixed }))['623a_signed'].auto).toBe('yes')
   })
 })

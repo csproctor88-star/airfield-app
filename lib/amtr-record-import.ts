@@ -549,7 +549,10 @@ export async function applyAmtrImport(
   if (p.e623a.length) {
     const { inserted, error } = await insertAmtrRows('amtr_623a', p.e623a.map((e) => {
       const c = splitInit(e.trainee), d = splitInit(e.trainer), n = splitInit(e.namt), a = splitInit(e.afm)
-      return { base_id: installationId, member_id: memberId, form_date: e.form_date || null, entry_type: e.entry_type || null, trainee_initials: c.init || null, trainee_comment: c.comment || null, trainer_initials: d.init || null, trainer_comment: d.comment || null, namt_initials: n.init || null, namt_comment: n.comment || null, afm_initials: a.init || null, afm_comment: a.comment || null }
+      // Imported 623A entries are historical (already transcribed in the prior
+      // system) — mark them so the record inspection treats missing in-system
+      // initials/signatures as expected, not a gap.
+      return { base_id: installationId, member_id: memberId, form_date: e.form_date || null, entry_type: e.entry_type || null, transcribed: true, trainee_initials: c.init || null, trainee_comment: c.comment || null, trainer_initials: d.init || null, trainer_comment: d.comment || null, namt_initials: n.init || null, namt_comment: n.comment || null, afm_initials: a.init || null, afm_comment: a.comment || null }
     }))
     written += inserted
     onErr(`623A (${p.e623a.length} rows)`, error)

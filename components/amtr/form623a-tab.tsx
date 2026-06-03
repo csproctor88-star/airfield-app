@@ -59,6 +59,11 @@ export function Form623aTab(props: {
     if (error) { toast.error(error); return }
     onChange()
   }
+  const setTranscribed = async (id: string, value: boolean) => {
+    const { error } = await updateAmtrRow('amtr_623a', id, { transcribed: value })
+    if (error) { toast.error(error); return }
+    onChange()
+  }
   const remove = async (id: string) => {
     if (!window.confirm('Delete this 623A entry?')) return
     const { error } = await deleteAmtrRow('amtr_623a', id)
@@ -119,6 +124,12 @@ export function Form623aTab(props: {
                     Entry Type
                     <input className="input-dark" list="amtr-623a-types" style={{ display: 'block', marginTop: 4 }} placeholder="Type or pick…" disabled={!canEnterData}
                       defaultValue={(e.entry_type as string) ?? ''} onBlur={(ev) => canEnterData && setField(id, 'entry_type', ev.target.value)} />
+                  </label>
+                  <label title="Transcribed historical entry — initials/signatures are not required and won't be flagged during a records inspection."
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', cursor: canEnterData ? 'pointer' : 'default' }}>
+                    <input type="checkbox" disabled={!canEnterData} checked={e.transcribed === true}
+                      onChange={(ev) => canEnterData && setTranscribed(id, ev.target.checked)} />
+                    Historical
                   </label>
                   <Btn variant="ghost" onClick={() => toggle(id)}>{open ? <><ChevronDown size={14} /> Hide details</> : <><ChevronRight size={14} /> Show details</>}</Btn>
                   {canEnterData && <button onClick={() => remove(id)} title="Delete entry" style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer' }}><X size={16} /></button>}

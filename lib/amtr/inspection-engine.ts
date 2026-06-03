@@ -137,7 +137,10 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
   // single-slot certification records, often trainee + namt with no trainer; the
   // underlying task is already graded by the 797/JQS/1098 checks, so skip them.
   {
-    const manual = d.e623a.filter((e) => !has(e.source_table))
+    // Skip source-linked auto-entries and historical (transcribed) entries —
+    // imported entries from a prior system are reference-only and aren't expected
+    // to carry in-system initials/signatures.
+    const manual = d.e623a.filter((e) => !has(e.source_table) && e.transcribed !== true)
     if (manual.length === 0) set('623a_signed', 'na')
     else {
       const missing = manual.filter((e) => !(has(e.trainee_initials) && has(e.trainer_initials)))
@@ -218,13 +221,17 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
 
   // 6.1 — 1098 completed items have dates + signatures
   {
-    const completed = d.r1098Progress.filter((p) => has(p.last_completed))
+    // Only items actually started AND completed are expected to be signed. A
+    // not-due item (e.g. a future monthly proficiency test with no start/complete
+    // date) is skipped — it isn't missing required signatures, it isn't due yet.
+    const completed = d.r1098Progress.filter((p) => has(p.start_date) && has(p.last_completed))
     if (completed.length === 0) set('1098_dates_signed', 'na')
     else {
+      const r1098Name = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
       const missing = completed.filter((p) => {
         const needCert = !isTranscribed(p.id)
         return !(has(p.trainee_initials) && (!needCert || has(p.certifier_initials)))
-      }).map((p) => String(p.catalog_id))
+      }).map((p) => r1098Name.get(String(p.catalog_id)) ?? String(p.catalog_id))
       set('1098_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'completed 1098 item(s) missing signatures'))
     }
   }
@@ -277,7 +284,8 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     if (RAT_EXEMPT_STATUSES.has(String(m.status))) set('rat_dates', 'na')
     else if (d.ratProgress.length === 0) set('rat_dates', 'na')
     else {
-      const missing = d.ratProgress.filter((p) => !(has(p.completed) || has(p.due))).map((p) => String(p.catalog_id))
+      const ratName = new Map(d.ratCatalog.map((c) => [String(c.id), String(c.course ?? c.id)]))
+      const missing = d.ratProgress.filter((p) => !(has(p.completed) || has(p.due))).map((p) => ratName.get(String(p.catalog_id)) ?? String(p.catalog_id))
       set('rat_dates', missing.length ? 'no' : 'yes', summarize(missing, 'RAT row(s) with no date'))
     }
   }
