@@ -25,9 +25,15 @@ export function generateAmtrInspectionPdf(
     baseName: base.baseName, baseIcao: base.baseIcao,
     sectionLabel: 'AIRFIELD MANAGEMENT — TRAINING RECORD INSPECTION',
   })
+  // Rank + name on the title line; DAFSC / Status / Date labeled on the subtitle.
+  // (drawReportTitle sanitizes em dashes to "--", so the title avoids them.)
+  const idFields: string[] = []
+  if (member.dafsc) idFields.push(`DAFSC: ${member.dafsc}`)
+  if (member.status) idFields.push(`Status: ${member.status}`)
+  idFields.push(`Date: ${inspection.inspection_date}`)
   y = drawReportTitle(ctx, y, {
-    title: `Record Inspection — ${member.full_name}`,
-    subtitle: `${[member.grade, member.dafsc, member.status].filter(Boolean).join(' · ')}  ·  ${inspection.inspection_date}`,
+    title: `Record Inspection: ${[member.grade, member.full_name].filter(Boolean).join(' ')}`,
+    subtitle: idFields.join('  ·  '),
   })
   y = drawStatBox(ctx, y, [
     { label: 'Yes', value: String(inspection.yes_count) },

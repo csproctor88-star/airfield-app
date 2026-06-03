@@ -1,17 +1,21 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { fetchAmtrByBase, fetchAmtrByMember, type AmtrMember } from '@/lib/supabase/amtr'
-import { fetchAmtrInspectionsByMember, type AmtrInspection } from '@/lib/supabase/amtr-inspections'
+import { fetchAmtrInspectionsByMember, deleteAmtrInspection, type AmtrInspection } from '@/lib/supabase/amtr-inspections'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { dueStatus, ratApplies } from '@/lib/amtr/status'
 import { pct } from '@/lib/amtr/rollup'
 import { NotificationCenter } from '@/components/amtr/notification-center'
-import { ClipboardCheck } from 'lucide-react'
+import { ClipboardCheck, Trash2 } from 'lucide-react'
 
 type Row = Record<string, unknown>
 
 export function MemberOverview({ installationId, member }: { installationId: string; member: AmtrMember }) {
   const memberId = member.id
+  const { has } = usePermissions()
+  const canDelete = has(PERM.AMTR_DELETE)
   const [stats, setStats] = useState<{
     jqsPct: number; jqsDone: number; jqsReq: number
     formalPct: number; formalDone: number; formalReq: number
@@ -49,6 +53,15 @@ export function MemberOverview({ installationId, member }: { installationId: str
   }, [installationId, memberId, member.status])
 
   useEffect(() => { load() }, [load])
+
+  const removeInspection = async (e: React.MouseEvent, i: AmtrInspection) => {
+    e.stopPropagation()
+    if (!window.confirm(`Delete the ${i.status === 'completed' ? 'completed' : 'draft'} inspection from ${i.inspection_date}? This cannot be undone.`)) return
+    const { error } = await deleteAmtrInspection(i.id)
+    if (error) { toast.error(error); return }
+    toast.success('Inspection deleted')
+    load()
+  }
 
   const cards = stats ? [
     { label: 'JQS-CFETP', value: `${stats.jqsPct}%`, sub: `${stats.jqsDone}/${stats.jqsReq} tasks`, color: 'var(--color-accent)' },
@@ -90,6 +103,12 @@ export function MemberOverview({ installationId, member }: { installationId: str
             <span style={{ width: 90 }}>{i.inspection_date}</span>
             <span style={{ color: i.status === 'completed' ? 'var(--color-success)' : 'var(--color-warning)' }}>{i.status === 'completed' ? 'Completed' : 'Draft'}</span>
             <span style={{ marginLeft: 'auto', color: i.gap_count > 0 ? 'var(--color-danger)' : 'var(--color-text-3)' }}>{i.gap_count} gap{i.gap_count === 1 ? '' : 's'}</span>
+            {canDelete && (
+              <button onClick={(e) => removeInspection(e, i)} title="Delete inspection"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', padding: 2, display: 'inline-flex' }}>
+                <Trash2 size={14} />
+              </button>
+            )}
           </div>
         ))}
       </div>
