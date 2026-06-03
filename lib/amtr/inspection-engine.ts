@@ -27,6 +27,10 @@ export type InspectionScanData = {
   milestoneCatalog: Row[]
   formalCatalog: Row[]; formalProgress: Row[]
   qualCatalog: Row[]; qualProgress: Row[]
+  /** Form-row ids that were brought in via bulk transcription (from the
+   *  amtr_audit_log 'transcribe' action). Transcription clears the certifier
+   *  column, so a transcribed row's missing certifier is expected, not a gap. */
+  transcribedRowIds: string[]
 }
 
 const has = (v: unknown): boolean => v != null && String(v).trim() !== ''
@@ -95,6 +99,10 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
   // JQS core tasks that only become required at a higher level than the member
   // holds — e.g. a 7-level core task isn't expected signed for a 5-level member.
   const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
+  // Rows brought in by transcription: the certifier column was deliberately
+  // cleared, so a missing certifier on these is expected, not a gap.
+  const transcribed = new Set(d.transcribedRowIds.map(String))
+  const isTranscribed = (rowId: unknown): boolean => rowId != null && transcribed.has(String(rowId))
 
   // 2.1 — member identity fields
   {
@@ -153,7 +161,7 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
       const missing = core.filter((c) => {
         const p = progByCat.get(String(c.id))
         if (!p) return true
-        const needCert = jqsNeedsCertifier(c)
+        const needCert = jqsNeedsCertifier(c) && !isTranscribed(p.id)
         return !(has(p.trainee_initials) && has(p.trainer_initials) && (!needCert || has(p.certifier_initials)))
       }).map((c) => label(c))
       set('jqs_core_signed', missing.length ? 'no' : 'yes', summarize(missing, 'core task(s) not fully signed'))
@@ -193,7 +201,7 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
       const missing = d.items797.filter((r) => {
         const started = has(r.start_date) || has(r.complete_date)
         if (!started) return false
-        const needCert = !!r.requires_certifier
+        const needCert = !!r.requires_certifier && !isTranscribed(r.id)
         return !(has(r.trainee_initials) && has(r.trainer_initials) && (!needCert || has(r.certifier_initials)))
       }).map((r) => label(r))
       set('797_dates_initials', missing.length ? 'no' : 'yes', summarize(missing, '797 task(s) missing required initials'))
@@ -213,7 +221,10 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     const completed = d.r1098Progress.filter((p) => has(p.last_completed))
     if (completed.length === 0) set('1098_dates_signed', 'na')
     else {
-      const missing = completed.filter((p) => !(has(p.trainee_initials) && has(p.certifier_initials))).map((p) => String(p.catalog_id))
+      const missing = completed.filter((p) => {
+        const needCert = !isTranscribed(p.id)
+        return !(has(p.trainee_initials) && (!needCert || has(p.certifier_initials)))
+      }).map((p) => String(p.catalog_id))
       set('1098_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'completed 1098 item(s) missing signatures'))
     }
   }
@@ -254,7 +265,7 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     else {
       const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
       const missing = dated.filter((p) => {
-        const needCert = jqsNeedsCertifier(catById.get(String(p.catalog_id)))
+        const needCert = jqsNeedsCertifier(catById.get(String(p.catalog_id))) && !isTranscribed(p.id)
         return !(has(p.trainee_initials) && has(p.trainer_initials) && (!needCert || has(p.certifier_initials)))
       }).map((p) => String(catById.get(String(p.catalog_id))?.number ?? p.catalog_id))
       set('jqs_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'JQS task(s) with dates but missing signatures'))

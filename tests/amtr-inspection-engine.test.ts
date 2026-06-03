@@ -14,6 +14,7 @@ function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
     milestoneCatalog: [],
     formalCatalog: [], formalProgress: [],
     qualCatalog: [], qualProgress: [],
+    transcribedRowIds: [],
     ...over,
   }
 }
@@ -144,5 +145,34 @@ describe('runInspectionScan', () => {
   it('jqs_core_signed: with no skill-level data, no level gate is applied (all core inspected)', () => {
     const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.9.1', core_cert: '7' }]
     expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress: [] })).jqs_core_signed.auto).toBe('no')
+  })
+
+  it('jqs_core_signed: a transcribed caret task missing certifier is NOT flagged (certifier not transcribed)', () => {
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '5^' }]
+    // trainee + trainer present, certifier blank (cleared by transcription)
+    const jqsProgress = [{ id: 'p1', catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }]
+    // Not transcribed → caret task needs certifier → flagged.
+    expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress })).jqs_core_signed.auto).toBe('no')
+    // Transcribed (audit row_id 'p1') → certifier waived → not flagged.
+    expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress, transcribedRowIds: ['p1'] })).jqs_core_signed.auto).toBe('yes')
+  })
+
+  it('jqs_dates_signed: a transcribed caret task missing certifier is NOT flagged', () => {
+    const jqsCatalog = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^' }]
+    const jqsProgress = [{ id: 'p1', catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }]
+    expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress })).jqs_dates_signed.auto).toBe('no')
+    expect(runInspectionScan(baseData({ jqsCatalog, jqsProgress, transcribedRowIds: ['p1'] })).jqs_dates_signed.auto).toBe('yes')
+  })
+
+  it('797_dates_initials: a transcribed certifier-required task missing certifier is NOT flagged', () => {
+    const items797 = [{ id: 'r1', task: 'Drive', start_date: '2026-01-01', requires_certifier: true, trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }]
+    expect(runInspectionScan(baseData({ items797 }))['797_dates_initials'].auto).toBe('no')
+    expect(runInspectionScan(baseData({ items797, transcribedRowIds: ['r1'] }))['797_dates_initials'].auto).toBe('yes')
+  })
+
+  it('1098_dates_signed: a transcribed completed item missing certifier is NOT flagged', () => {
+    const r1098Progress = [{ id: 'p1', catalog_id: 'k1', last_completed: '2026-01-01', trainee_initials: 'JD', certifier_initials: '' }]
+    expect(runInspectionScan(baseData({ r1098Progress }))['1098_dates_signed'].auto).toBe('no')
+    expect(runInspectionScan(baseData({ r1098Progress, transcribedRowIds: ['p1'] }))['1098_dates_signed'].auto).toBe('yes')
   })
 })

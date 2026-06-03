@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  fetchAmtrMember, fetchAmtrByBase, fetchAmtrByMember, fetchAmtrRoleAssignments, uploadAmtrFile,
+  fetchAmtrMember, fetchAmtrByBase, fetchAmtrByMember, fetchAmtrRoleAssignments, uploadAmtrFile, fetchAmtrTranscribedRowIds,
   type AmtrMember, type AmtrRole,
 } from '@/lib/supabase/amtr'
 import {
@@ -82,7 +82,7 @@ export default function AmtrInspectPage() {
     if (supabase) { try { const { data: { user } } = await supabase.auth.getUser(); uid = user?.id ?? null } catch { /* */ } }
     setMyUserId(uid)
 
-    const [m, roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg, qualCat, qualProg, checklistRows, inspections] = await Promise.all([
+    const [m, roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, items803, mileCat, mileProg, formalCat, formalProg, qualCat, qualProg, transcribedRowIds, checklistRows, inspections] = await Promise.all([
       fetchAmtrMember(memberId),
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
@@ -100,6 +100,7 @@ export default function AmtrInspectPage() {
       fetchAmtrByMember<Row>('amtr_formal_progress', memberId),
       fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
       fetchAmtrByMember<Row>('amtr_qual_progress', memberId),
+      fetchAmtrTranscribedRowIds(memberId),
       fetchAmtrByBase<ChecklistRow>('amtr_inspection_checklist', installationId),
       fetchAmtrInspectionsByMember(memberId),
     ])
@@ -134,6 +135,7 @@ export default function AmtrInspectPage() {
       milestoneCatalog: mileCat,
       formalCatalog: formalCat, formalProgress: formalProg,
       qualCatalog: qualCat, qualProgress: qualProg,
+      transcribedRowIds,
     }) : ({} as Record<string, { auto: 'yes' | 'no' | 'na' | null; findings: string[] }>)
 
     // Existing draft (most recent), else seed a fresh response set.

@@ -577,6 +577,25 @@ export async function fetchAmtrAudit(memberId: string): Promise<AmtrAuditEntry[]
   return (data ?? []) as AmtrAuditEntry[]
 }
 
+/** Distinct form-row ids that were brought in via bulk transcription (audit
+ *  action 'transcribe'). The transcribe RPC clears the certifier column, so the
+ *  record inspection uses this to waive the certifier requirement on these rows
+ *  (a missing certifier there is expected, not a gap). Filtered server-side so
+ *  it isn't subject to the History view's recent-500 cap. */
+export async function fetchAmtrTranscribedRowIds(memberId: string): Promise<string[]> {
+  const supabase = db()
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('amtr_audit_log').select('row_id')
+    .eq('member_id', memberId).eq('action', 'transcribe')
+  if (error) {
+    console.error('Failed to fetch AMTR transcribe audit:', error.message)
+    return []
+  }
+  const ids = (data ?? []).map((r) => (r as { row_id: string | null }).row_id).filter((x): x is string => !!x)
+  return Array.from(new Set(ids))
+}
+
 // ── Notifications ──────────────────────────────────────────
 
 export async function fetchAmtrNotifications(): Promise<AmtrNotification[]> {
