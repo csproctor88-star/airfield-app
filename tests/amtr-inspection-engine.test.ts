@@ -31,17 +31,55 @@ describe('runInspectionScan', () => {
     expect(r.certifier_qualified.auto).toBe('na')
   })
 
-  it('623a_signed: na when no entries, no when missing required initials, yes when complete', () => {
+  it('623a_signed: na when no entries, no when a manual entry lacks required initials, yes when complete', () => {
     expect(runInspectionScan(baseData())['623a_signed'].auto).toBe('na')
     expect(runInspectionScan(baseData({ e623a: [{ id: 'e1', entry_type: 'Initial', trainee_initials: 'JD', trainer_initials: '' }] }))['623a_signed'].auto).toBe('no')
     expect(runInspectionScan(baseData({ e623a: [{ id: 'e1', entry_type: 'Initial', trainee_initials: 'JD', trainer_initials: 'AB' }] }))['623a_signed'].auto).toBe('yes')
   })
 
-  it('jqs_core_signed: no when a core task is unsigned, yes when all signed, na when no core tasks', () => {
+  it('623a_signed: ignores source-linked auto-entries (certification records have no trainer slot)', () => {
+    // An auto-623A created when a 1098 certifier signs: trainee + namt, no trainer.
+    // It must NOT be graded by the trainee+trainer rule — only manual entries are.
+    const sourceLinked = [{ id: 'e1', source_table: 'amtr_1098_progress', source_row_id: 'p1', trainee_initials: 'JD', namt_initials: 'CC', trainer_initials: '' }]
+    expect(runInspectionScan(baseData({ e623a: sourceLinked }))['623a_signed'].auto).toBe('na')
+    // A source-linked entry alongside a complete manual entry → grade only the manual one.
+    const mixed = [...sourceLinked, { id: 'e2', entry_type: 'Initial', trainee_initials: 'JD', trainer_initials: 'AB' }]
+    expect(runInspectionScan(baseData({ e623a: mixed }))['623a_signed'].auto).toBe('yes')
+  })
+
+  it('jqs_core_signed: certifier required only on caret (^) tasks per the CFETP convention', () => {
     expect(runInspectionScan(baseData()).jqs_core_signed.auto).toBe('na')
-    const cat = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C' }]
-    expect(runInspectionScan(baseData({ jqsCatalog: cat, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_core_signed.auto).toBe('no')
-    expect(runInspectionScan(baseData({ jqsCatalog: cat, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: 'CC' }] })).jqs_core_signed.auto).toBe('yes')
+    // Non-caret core task: trainee + trainer is sufficient, empty certifier is fine.
+    const plain = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C' }]
+    expect(runInspectionScan(baseData({ jqsCatalog: plain, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_core_signed.auto).toBe('yes')
+    // Caret core task: certifier IS required.
+    const caret = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^' }]
+    expect(runInspectionScan(baseData({ jqsCatalog: caret, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_core_signed.auto).toBe('no')
+    expect(runInspectionScan(baseData({ jqsCatalog: caret, jqsProgress: [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: 'CC' }] })).jqs_core_signed.auto).toBe('yes')
+  })
+
+  it('jqs_dates_signed: certifier required only on caret (^) tasks', () => {
+    const plain = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: 'C' }]
+    expect(runInspectionScan(baseData({ jqsCatalog: plain, jqsProgress: [{ catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_dates_signed.auto).toBe('yes')
+    const caret = [{ id: 'c1', kind: 'item', number: '7.1.1', core_cert: '5^' }]
+    expect(runInspectionScan(baseData({ jqsCatalog: caret, jqsProgress: [{ catalog_id: 'c1', complete_date: '2026-01-01', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: '' }] })).jqs_dates_signed.auto).toBe('no')
+  })
+
+  it('retired catalog rows are excluded from catalog-driven checks', () => {
+    // jqs_core_signed: a retired caret core task with no signatures must not flag.
+    const jqsCat = [
+      { id: 'c1', kind: 'item', number: '7.1.1', core_cert: '7^' },
+      { id: 'c2', kind: 'item', number: '7.1.2', core_cert: '7^', retired: true },
+    ]
+    const jqsProgress = [{ catalog_id: 'c1', trainee_initials: 'JD', trainer_initials: 'AB', certifier_initials: 'CC' }]
+    expect(runInspectionScan(baseData({ jqsCatalog: jqsCat, jqsProgress })).jqs_core_signed.auto).toBe('yes')
+    // 1098_all_documented: a retired requirement with no progress row must not flag.
+    const r1098Catalog = [
+      { id: 'k1', task: 'Airfield Driving' },
+      { id: 'k2', task: 'Retired Task', retired: true },
+    ]
+    const r1098Progress = [{ catalog_id: 'k1', last_completed: '2026-01-01', trainee_initials: 'JD', certifier_initials: 'CC' }]
+    expect(runInspectionScan(baseData({ r1098Catalog, r1098Progress }))['1098_all_documented'].auto).toBe('yes')
   })
 
   it('1098_catalog_fields: no when a catalog row lacks score/type/frequency', () => {

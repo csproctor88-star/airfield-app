@@ -31,6 +31,18 @@ export type InspectionScanData = {
 const has = (v: unknown): boolean => v != null && String(v).trim() !== ''
 const label = (r: Row): string => String(r.number ?? r.item_number ?? r.task ?? r.course ?? r.title ?? r.sts_item ?? r.id ?? '?')
 
+/** Drop soft-deleted (retired) catalog rows so the scan doesn't grade a member
+ *  against requirements the program has removed. `!retired` treats a missing
+ *  flag as live, which is safe for catalogs predating the versioning columns. */
+const live = (rows: Row[]): Row[] => rows.filter((r) => !r.retired)
+
+/** JQS follows the CFETP caret convention used by the member record
+ *  (components/amtr/jqs-tab.tsx): a separate certifier signature is required
+ *  ONLY when the task's `core_cert` marking contains '^'. Plain markings
+ *  ('5', '7', 'C') are trainer-certified — demanding a certifier there
+ *  false-flags a qualified member. */
+const jqsNeedsCertifier = (cat: Row | undefined): boolean => String(cat?.core_cert ?? '').includes('^')
+
 /** Cap a findings list so the UI stays readable. */
 function summarize(missing: string[], noun: string): string[] {
   if (missing.length === 0) return []
@@ -74,25 +86,32 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     evalSection('continuation', 'formal_continuation_dates')
   }
 
-  // 4.1 — 623A entries signed by required members (trainee + trainer)
+  // 4.1 — 623A entries signed by required members (trainee + trainer).
+  // Only manual narrative entries are graded this way. Source-linked entries
+  // (auto-created when a 1098/JQS/797 slot is signed — auto-623a-dialog.tsx) are
+  // single-slot certification records, often trainee + namt with no trainer; the
+  // underlying task is already graded by the 797/JQS/1098 checks, so skip them.
   {
-    if (d.e623a.length === 0) set('623a_signed', 'na')
+    const manual = d.e623a.filter((e) => !has(e.source_table))
+    if (manual.length === 0) set('623a_signed', 'na')
     else {
-      const missing = d.e623a.filter((e) => !(has(e.trainee_initials) && has(e.trainer_initials)))
+      const missing = manual.filter((e) => !(has(e.trainee_initials) && has(e.trainer_initials)))
         .map((e) => String(e.entry_type ?? e.form_date ?? e.id))
       set('623a_signed', missing.length ? 'no' : 'yes', summarize(missing, 'entry/entries missing required initials'))
     }
   }
 
-  // 4.8 / 9.2 — JQS core tasks fully signed
+  // 4.8 / 9.2 — JQS core tasks fully signed (certifier only where caret-marked)
   {
-    const core = d.jqsCatalog.filter((c) => c.kind !== 'section' && has(c.core_cert))
+    const core = live(d.jqsCatalog).filter((c) => c.kind !== 'section' && has(c.core_cert))
     if (core.length === 0) set('jqs_core_signed', 'na')
     else {
       const progByCat = new Map(d.jqsProgress.map((p) => [String(p.catalog_id), p]))
       const missing = core.filter((c) => {
         const p = progByCat.get(String(c.id))
-        return !(p && has(p.trainee_initials) && has(p.trainer_initials) && has(p.certifier_initials))
+        if (!p) return true
+        const needCert = jqsNeedsCertifier(c)
+        return !(has(p.trainee_initials) && has(p.trainer_initials) && (!needCert || has(p.certifier_initials)))
       }).map((c) => label(c))
       set('jqs_core_signed', missing.length ? 'no' : 'yes', summarize(missing, 'core task(s) not fully signed'))
     }
@@ -157,39 +176,44 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
   }
   // 6.3 — every 1098 catalog item has a progress row
   {
-    if (d.r1098Catalog.length === 0) set('1098_all_documented', 'na')
+    const catalog = live(d.r1098Catalog)
+    if (catalog.length === 0) set('1098_all_documented', 'na')
     else {
       const documented = new Set(d.r1098Progress.map((p) => String(p.catalog_id)))
-      const missing = d.r1098Catalog.filter((c) => !documented.has(String(c.id))).map((c) => String(c.task ?? c.id))
+      const missing = catalog.filter((c) => !documented.has(String(c.id))).map((c) => String(c.task ?? c.id))
       set('1098_all_documented', missing.length ? 'no' : 'yes', summarize(missing, '1098 requirement(s) with no record'))
     }
   }
   // 6.4 — 1098 catalog rows carry score/hours, type, frequency
   {
-    if (d.r1098Catalog.length === 0) set('1098_catalog_fields', 'na')
+    const catalog = live(d.r1098Catalog)
+    if (catalog.length === 0) set('1098_catalog_fields', 'na')
     else {
-      const missing = d.r1098Catalog.filter((c) => !(has(c.score_or_hours) && has(c.type) && has(c.frequency))).map((c) => String(c.task ?? c.id))
+      const missing = catalog.filter((c) => !(has(c.score_or_hours) && has(c.type) && has(c.frequency))).map((c) => String(c.task ?? c.id))
       set('1098_catalog_fields', missing.length ? 'no' : 'yes', summarize(missing, '1098 task(s) missing score/type/frequency'))
     }
   }
 
   // 8.1 — milestones have a target window (color-coding); defined in the catalog
   {
-    if (d.milestoneCatalog.length === 0) set('milestone_window_set', 'na')
+    const catalog = live(d.milestoneCatalog)
+    if (catalog.length === 0) set('milestone_window_set', 'na')
     else {
-      const missing = d.milestoneCatalog.filter((c) => !has(c.target_window)).map((c) => String(c.topic ?? c.id))
+      const missing = catalog.filter((c) => !has(c.target_window)).map((c) => String(c.topic ?? c.id))
       set('milestone_window_set', missing.length ? 'no' : 'yes', summarize(missing, 'milestone(s) missing a target window'))
     }
   }
 
-  // 9.5 — JQS dated tasks have required signatures
+  // 9.5 — JQS dated tasks have required signatures (certifier only where caret-marked)
   {
     const dated = d.jqsProgress.filter((p) => has(p.start_date) || has(p.complete_date))
     if (dated.length === 0) set('jqs_dates_signed', 'na')
     else {
       const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
-      const missing = dated.filter((p) => !(has(p.trainee_initials) && has(p.trainer_initials) && has(p.certifier_initials)))
-        .map((p) => String(catById.get(String(p.catalog_id))?.number ?? p.catalog_id))
+      const missing = dated.filter((p) => {
+        const needCert = jqsNeedsCertifier(catById.get(String(p.catalog_id)))
+        return !(has(p.trainee_initials) && has(p.trainer_initials) && (!needCert || has(p.certifier_initials)))
+      }).map((p) => String(catById.get(String(p.catalog_id))?.number ?? p.catalog_id))
       set('jqs_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'JQS task(s) with dates but missing signatures'))
     }
   }

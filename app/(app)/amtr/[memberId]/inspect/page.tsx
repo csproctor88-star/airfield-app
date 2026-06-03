@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  fetchAmtrMember, fetchAmtrByBase, fetchAmtrByMember, fetchAmtrRoleAssignments,
+  fetchAmtrMember, fetchAmtrByBase, fetchAmtrByMember, fetchAmtrRoleAssignments, uploadAmtrFile,
   type AmtrMember, type AmtrRole,
 } from '@/lib/supabase/amtr'
 import {
@@ -30,7 +30,7 @@ import { RatTab } from '@/components/amtr/rat-tab'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
-import { ArrowLeft, ClipboardCheck, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ClipboardCheck, ChevronDown, ChevronRight, Minus } from 'lucide-react'
 
 type Row = Record<string, unknown>
 type ChecklistRow = { kind: 'section' | 'item'; item_number: string; label: string; auto_key: string | null }
@@ -66,6 +66,7 @@ export default function AmtrInspectPage() {
   const [inspectionId, setInspectionId] = useState<string | null>(null)
   const [status, setStatus] = useState<'draft' | 'completed'>('draft')
   const [recordTab, setRecordTab] = useState('jqs')
+  const [checklistOpen, setChecklistOpen] = useState(true)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [data, setData] = useState<Record<string, Row[]>>({})
   const [myUserId, setMyUserId] = useState<string | null>(null)
@@ -191,13 +192,30 @@ export default function AmtrInspectPage() {
     await finalize(inspectionId)
   }
   const finalize = async (id: string) => {
+    const dateStr = new Date().toISOString().slice(0, 10)
     const { error } = await completeAmtrInspection({
-      id, base_id: installationId!, member_id: memberId, inspection_date: new Date().toISOString().slice(0, 10),
+      id, base_id: installationId!, member_id: memberId, inspection_date: dateStr,
       items, notes, completed_by: myUserId, completed_by_name: myName,
     })
     if (error) { toast.error(error); return }
-    toast.success('Inspection completed — 623A entry added to the record')
     setStatus('completed')
+
+    // Archive a point-in-time PDF of the completed inspection to the member's
+    // Files tab so it can be reviewed later. Best-effort — a failed upload must
+    // not undo the completion the user just made.
+    try {
+      const { doc, filename } = buildInspectionPdf('completed')
+      const blob = doc.output('blob')
+      const file = new File([blob], filename, { type: 'application/pdf' })
+      const no = items.filter((it) => it.status === 'no').length
+      const title = `Records Inspection — ${dateStr}${no ? ` (${no} gap${no === 1 ? '' : 's'})` : ''}`
+      const { error: upErr } = await uploadAmtrFile(installationId!, memberId, file, { documentTitle: title, documentDate: dateStr })
+      toast.success(upErr
+        ? 'Inspection completed — 623A entry added (couldn’t archive PDF to Files)'
+        : 'Inspection completed — 623A entry added and PDF saved to Files')
+    } catch {
+      toast.success('Inspection completed — 623A entry added to the record')
+    }
   }
   const reopen = async () => {
     if (!inspectionId) return
@@ -206,20 +224,28 @@ export default function AmtrInspectPage() {
     setStatus('draft'); toast.success('Inspection reopened')
   }
 
-  const exportPdf = () => {
-    if (!member) return
+  // Build the inspection record + its PDF (shared by Export and the
+  // save-to-Files archive on completion).
+  const buildInsp = (forStatus: 'draft' | 'completed'): AmtrInspection => {
     const no = items.filter((it) => it.status === 'no').length
-    const insp: AmtrInspection = {
+    return {
       id: inspectionId ?? '', base_id: installationId ?? '', member_id: memberId,
-      inspection_date: new Date().toISOString().slice(0, 10), status, items, notes,
+      inspection_date: new Date().toISOString().slice(0, 10), status: forStatus, items, notes,
       yes_count: items.filter((it) => it.status === 'yes').length,
       no_count: no, na_count: items.filter((it) => it.status === 'na').length, gap_count: no,
-      completed_at: status === 'completed' ? new Date().toISOString() : null,
+      completed_at: forStatus === 'completed' ? new Date().toISOString() : null,
       completed_by: myUserId, completed_by_name: myName, created_623a_id: null,
       created_by: myUserId, created_at: '', updated_at: '',
     }
+  }
+  const buildInspectionPdf = (forStatus: 'draft' | 'completed') => {
     const ci = currentInstallation as { name?: string; icao?: string } | null
-    const { doc, filename } = generateAmtrInspectionPdf(insp, member, checklist, { baseName: ci?.name, baseIcao: ci?.icao })
+    return generateAmtrInspectionPdf(buildInsp(forStatus), member!, checklist, { baseName: ci?.name, baseIcao: ci?.icao })
+  }
+
+  const exportPdf = () => {
+    if (!member) return
+    const { doc, filename } = buildInspectionPdf(status)
     doc.save(filename); toast.success('Inspection PDF exported')
   }
 
@@ -259,9 +285,9 @@ export default function AmtrInspectPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, minHeight: 0 }}>
-        {/* ── Left: read-only record ── */}
-        <div style={{ overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 10, padding: 12 }}>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+        {/* ── Full-width read-only record (the checklist floats over it) ── */}
+        <div style={{ height: '100%', overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 10, padding: 12 }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap', position: 'sticky', top: 0, background: 'var(--color-bg-surface)', paddingBottom: 6, zIndex: 1 }}>
             {RECORD_TABS.map(([k, lbl]) => (
               <button key={k} onClick={() => setRecordTab(k)}
@@ -271,8 +297,27 @@ export default function AmtrInspectPage() {
           <RecordPanel tab={recordTab} member={member} memberId={memberId} installationId={installationId!} data={data} myUserId={myUserId} />
         </div>
 
-        {/* ── Right: checklist ── */}
-        <div style={{ overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 10, padding: 12 }}>
+        {/* ── Floating checklist: minimize to read the record full-width ── */}
+        {!checklistOpen && (
+          <button onClick={() => setChecklistOpen(true)} title="Open inspection checklist"
+            style={{ position: 'absolute', right: 14, bottom: 14, zIndex: 20, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>
+            <ClipboardCheck size={16} style={{ color: 'var(--color-accent)' }} />
+            Checklist · {answered}/{items.length}
+            <span style={{ color: gapCount ? 'var(--color-danger)' : 'var(--color-text-3)' }}>· {gapCount} gap{gapCount === 1 ? '' : 's'}</span>
+          </button>
+        )}
+
+        <aside style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 440, maxWidth: 'calc(100% - 24px)', display: checklistOpen ? 'flex' : 'none', flexDirection: 'column', borderRadius: 10, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', boxShadow: '0 10px 34px rgba(0,0,0,0.28)', zIndex: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderBottom: '1px solid var(--color-border)' }}>
+            <ClipboardCheck size={16} style={{ color: 'var(--color-accent)' }} />
+            <strong style={{ fontSize: 'var(--fs-sm)' }}>Inspection Checklist</strong>
+            <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)' }}>{answered}/{items.length} · {gapCount} gap{gapCount === 1 ? '' : 's'}</span>
+            <button onClick={() => setChecklistOpen(false)} title="Minimize"
+              style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)', fontFamily: 'inherit', fontSize: 'var(--fs-xs)' }}>
+              <Minus size={16} /> Minimize
+            </button>
+          </div>
+          <div style={{ overflow: 'auto', padding: 12, flex: 1, minHeight: 0 }}>
           {checklist.filter((r) => r.kind === 'section').map((sec) => {
             const open = !collapsed.has(sec.item_number)
             const secItems = checklist.filter((r) => r.kind === 'item' && r.item_number.split('.')[0] === sec.item_number)
@@ -314,7 +359,8 @@ export default function AmtrInspectPage() {
             <textarea className="input-dark" rows={3} style={{ width: '100%', resize: 'vertical' }} value={notes} disabled={status === 'completed' || !canWrite}
               onChange={(e) => { setNotes(e.target.value); queueSave(items, e.target.value) }} />
           </div>
-        </div>
+          </div>
+        </aside>
       </div>
     </div>
   )
