@@ -201,6 +201,26 @@ describe('runInspectionScan', () => {
     expect(runInspectionScan(baseData({ r1098Progress: [{ id: 'p1', catalog_id: 'k1', last_completed: '2026-01-01', trainee_initials: '', certifier_initials: '' }] }))['1098_dates_signed'].auto).toBe('na')
   })
 
+  it('monthly_inspection_done: yes when a Monthly Training Records Inspection 623A entry exists', () => {
+    expect(runInspectionScan(baseData()).monthly_inspection_done.auto).toBe('no')
+    const e623a = [{ id: 'e1', entry_type: 'Monthly Training Records Inspection' }]
+    expect(runInspectionScan(baseData({ e623a })).monthly_inspection_done.auto).toBe('yes')
+  })
+
+  it('transcribed-completeness checks: na when nothing transcribed, else verify date + initials', () => {
+    // Nothing transcribed → na on every form.
+    const none = runInspectionScan(baseData({ items797: [{ id: 'r1', task: 'X', complete_date: '2026-01-01', trainee_initials: 'JD' }] }))
+    expect(none['797_transcribed'].auto).toBe('na')
+    // Transcribed 797 row with date + trainee initials → yes.
+    expect(runInspectionScan(baseData({ items797: [{ id: 'r1', task: 'X', complete_date: '2026-01-01', trainee_initials: 'JD' }], transcribedRowIds: ['r1'] }))['797_transcribed'].auto).toBe('yes')
+    // Transcribed 797 row missing initials → no.
+    expect(runInspectionScan(baseData({ items797: [{ id: 'r1', task: 'X', complete_date: '2026-01-01', trainee_initials: '' }], transcribedRowIds: ['r1'] }))['797_transcribed'].auto).toBe('no')
+    // JQS transcribed missing date → no.
+    expect(runInspectionScan(baseData({ jqsCatalog: [{ id: 'c1', kind: 'item', number: '7.1.1' }], jqsProgress: [{ id: 'p1', catalog_id: 'c1', complete_date: '', trainee_initials: 'JD' }], transcribedRowIds: ['p1'] })).jqs_transcribed.auto).toBe('no')
+    // 803 transcribed with eval date + evaluator → yes.
+    expect(runInspectionScan(baseData({ items803: [{ id: 's1', sts_item: '7.5', eval_date: '2026-01-01', evaluator_initials: 'EV' }], transcribedRowIds: ['s1'] }))['803_transcribed'].auto).toBe('yes')
+  })
+
   it('623a_signed: historical (transcribed) entries are ignored', () => {
     // A historical import: trainee/trainer blank, marked transcribed → not flagged.
     const historical = [{ id: 'e1', entry_type: 'Initial', transcribed: true, trainee_initials: '', trainer_initials: '' }]

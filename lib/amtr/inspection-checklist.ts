@@ -33,6 +33,11 @@ export type InspectionAutoKey =
   | 'milestone_window_set'
   | 'jqs_dates_signed'
   | 'rat_dates'
+  | 'monthly_inspection_done'
+  | '797_transcribed'
+  | '1098_transcribed'
+  | '803_transcribed'
+  | 'jqs_transcribed'
 
 export type ChecklistSeedRow = {
   kind: 'section' | 'item'
@@ -74,25 +79,25 @@ export const DEFAULT_INSPECTION_CHECKLIST: ChecklistSeedRow[] = [
   I('4.9', 'Are task evaluation results (sat/unsat) documented in the 623As and 803s? If an item is unsat, is the reason specified, and corrective actions required documented?', '803_unsat_remarks'),
   I('4.10', "Was a Newcomer's Indoctrination Guide issued to the trainee and completed in the allotted amount of time?"),
   I('4.11', 'Are monthly upgrade training evaluation results documented, acknowledged and signed by all required members?'),
-  I('4.12', 'Have monthly training records inspections been conducted along with a signed entry by all required members?'),
+  I('4.12', 'Have monthly training records inspections been conducted along with a signed entry by all required members?', 'monthly_inspection_done'),
   I('4.13', 'Have upgrade training progression reports, and start and completion dates been tracked and signed?'),
   I('4.14', 'Has the NAMT ensured a 623A entry was completed for all reviewed AFFSA messages by the individual?'),
 
   S('5', 'DAF Form 797'),
   I('5.1', 'Has the individual started or completed all local training? If so, does the record have annotated dates and required initials?', '797_dates_initials'),
-  I('5.2', 'If the records were transcribed, do all transcriptions have annotated dates and initials?'),
+  I('5.2', 'If the records were transcribed, do all transcriptions have annotated dates and initials?', '797_transcribed'),
   I('5.3', 'Are local milestones assigned to all training items?', '797_milestone_assigned'),
   I('5.4', 'Have CBRN TQT items been accomplished? If so, do all items have trainee and trainer initials to include Go/No-Go status?'),
 
   S('6', 'DAF Form 1098'),
   I('6.1', 'Has the individual started and/or completed monthly proficiency training? If so, are dates and signatures annotated?', '1098_dates_signed'),
-  I('6.2', 'If the records were transcribed, do all transcriptions have annotated dates and initials?'),
+  I('6.2', 'If the records were transcribed, do all transcriptions have annotated dates and initials?', '1098_transcribed'),
   I('6.3', 'Are all recurring training requirements documented?', '1098_all_documented'),
   I('6.4', 'Do the 1098 feature score/hours, type and frequency of training?', '1098_catalog_fields'),
 
   S('7', 'DAF Form 803'),
   I('7.1', 'Are task evaluation results (sat/unsat) documented for required items to include UGT status?', '803_results_ugt'),
-  I('7.2', 'If the records were transcribed, do all transcriptions have annotated dates and initials?'),
+  I('7.2', 'If the records were transcribed, do all transcriptions have annotated dates and initials?', '803_transcribed'),
   I('7.3', 'If an item is unsat, is the reason specified in the remarks along with corrective actions?', '803_unsat_remarks'),
   I('7.4', "Do all 803s have dates and the evaluator's initials?", '803_date_evaluator'),
 
@@ -101,7 +106,7 @@ export const DEFAULT_INSPECTION_CHECKLIST: ChecklistSeedRow[] = [
   I('8.2', 'Have all milestones been started according to HAF guidelines?'),
 
   S('9', 'JQS-CFETP'),
-  I('9.1', 'If the records were transcribed, do all transcriptions have annotated dates and initials?'),
+  I('9.1', 'If the records were transcribed, do all transcriptions have annotated dates and initials?', 'jqs_transcribed'),
   I('9.2', 'Are all core task items trained before an individual recommended for upgrade?', 'jqs_core_signed'),
   I('9.3', 'Are all current changes to the CFETP posted?'),
   I('9.4', 'Are all required JQS tasks that apply to the current installation highlighted in yellow?'),

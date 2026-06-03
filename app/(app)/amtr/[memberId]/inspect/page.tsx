@@ -317,7 +317,7 @@ export default function AmtrInspectPage() {
         {/* ── Floating checklist: minimize to read the record full-width ── */}
         {!checklistOpen && (
           <button onClick={() => setChecklistOpen(true)} title="Open inspection checklist"
-            style={{ position: 'absolute', right: 14, bottom: 14, zIndex: 20, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>
+            style={{ position: 'absolute', right: 14, top: 14, zIndex: 20, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>
             <ClipboardCheck size={16} style={{ color: 'var(--color-accent)' }} />
             Checklist · {answered}/{items.length}
             <span style={{ color: gapCount ? 'var(--color-danger)' : 'var(--color-text-3)' }}>· {gapCount} gap{gapCount === 1 ? '' : 's'}</span>
@@ -364,6 +364,9 @@ export default function AmtrInspectPage() {
                       )}
                       {resp && resp.auto != null && (
                         <div style={{ marginLeft: 42, marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>auto-suggested: {resp.auto.toUpperCase()}</div>
+                      )}
+                      {resp && resp.auto == null && (
+                        <div style={{ marginLeft: 42, marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>manual review — no automated check for this item</div>
                       )}
                       {(() => {
                         const showComment = resp?.status === 'no' || !!resp?.note || commentOpen.has(it.item_number)

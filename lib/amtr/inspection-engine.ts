@@ -290,5 +290,48 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     }
   }
 
+  // 4.12 — a monthly training records inspection has been recorded (the
+  // completed inspection drops a "Monthly Training Records Inspection" 623A entry).
+  set('monthly_inspection_done', d.e623a.some((e) => String(e.entry_type ?? '').toLowerCase().includes('inspection')) ? 'yes' : 'no')
+
+  // 5.2 / 6.2 / 7.2 / 9.1 — transcribed rows carry a completion date + initials.
+  // Transcription stamps the completion date and the chosen non-certifier slot,
+  // so a properly transcribed row has its date and at least the trainee/evaluator
+  // initials. `na` when nothing on the form was transcribed.
+  {
+    const tr = d.items797.filter((r) => isTranscribed(r.id))
+    if (tr.length === 0) set('797_transcribed', 'na')
+    else {
+      const missing = tr.filter((r) => !(has(r.complete_date) && has(r.trainee_initials))).map((r) => label(r))
+      set('797_transcribed', missing.length ? 'no' : 'yes', summarize(missing, 'transcribed 797 task(s) missing a date or initials'))
+    }
+  }
+  {
+    const tr = d.r1098Progress.filter((p) => isTranscribed(p.id))
+    if (tr.length === 0) set('1098_transcribed', 'na')
+    else {
+      const r1098Name = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
+      const missing = tr.filter((p) => !(has(p.last_completed) && has(p.trainee_initials))).map((p) => r1098Name.get(String(p.catalog_id)) ?? String(p.catalog_id))
+      set('1098_transcribed', missing.length ? 'no' : 'yes', summarize(missing, 'transcribed 1098 item(s) missing a date or initials'))
+    }
+  }
+  {
+    const tr = d.items803.filter((r) => isTranscribed(r.id))
+    if (tr.length === 0) set('803_transcribed', 'na')
+    else {
+      const missing = tr.filter((r) => !(has(r.eval_date) && has(r.evaluator_initials))).map((r) => label(r))
+      set('803_transcribed', missing.length ? 'no' : 'yes', summarize(missing, 'transcribed 803 row(s) missing a date or initials'))
+    }
+  }
+  {
+    const tr = d.jqsProgress.filter((p) => isTranscribed(p.id))
+    if (tr.length === 0) set('jqs_transcribed', 'na')
+    else {
+      const catById = new Map(d.jqsCatalog.map((c) => [String(c.id), c]))
+      const missing = tr.filter((p) => !(has(p.complete_date) && has(p.trainee_initials))).map((p) => String(catById.get(String(p.catalog_id))?.number ?? p.catalog_id))
+      set('jqs_transcribed', missing.length ? 'no' : 'yes', summarize(missing, 'transcribed JQS task(s) missing a date or initials'))
+    }
+  }
+
   return out
 }
