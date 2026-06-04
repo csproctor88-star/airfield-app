@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import type { QrcExecution, QrcTemplate, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
 import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
 import { getStepStatus } from '@/lib/qrc-step-status'
+import { deriveQrcIdentifier } from '@/lib/qrc/identifier'
 import { STEP_ROW_GAP_MM, BLOCK_POST_SPACING_MM } from '@/lib/pdf-utils'
 
 interface QrcPdfInput {
@@ -83,6 +84,17 @@ export async function generateQrcPdf(input: QrcPdfInput): Promise<{ doc: jsPDF; 
   setText(COLOR.text2)
   doc.text(execution.title, margin, y + 4)
   y += 9
+
+  // ── Identifier (call sign / first filled field / manual label) ──
+  const identifier = deriveQrcIdentifier(execution, template)
+  if (identifier) {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    setText(COLOR.amber)
+    doc.text(identifier, margin, y + 2)
+    doc.setFont('helvetica', 'normal')
+    y += 6
+  }
 
   // ── Info box ──
   setDraw(COLOR.bgRule)

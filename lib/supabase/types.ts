@@ -3385,6 +3385,7 @@ export type Database = {
           closed_by: string | null
           created_at: string
           id: string
+          label: string | null
           open_initials: string | null
           opened_at: string
           opened_by: string | null
@@ -3404,6 +3405,7 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           id?: string
+          label?: string | null
           open_initials?: string | null
           opened_at?: string
           opened_by?: string | null
@@ -3423,6 +3425,7 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           id?: string
+          label?: string | null
           open_initials?: string | null
           opened_at?: string
           opened_by?: string | null

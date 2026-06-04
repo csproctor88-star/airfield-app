@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { QrcStepToggle, QrcStepStatusPill } from '@/components/ui/qrc-step-toggle'
 import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-step-status'
+import { deriveQrcIdentifierShort } from '@/lib/qrc/identifier'
 
 export default function AMDashboardPage() {
   const router = useRouter()
@@ -1471,7 +1472,9 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
               {openExecs.length > 0 && (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-bwc-mod)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Active</div>
-                  {openExecs.map(ex => (
+                  {openExecs.map(ex => {
+                    const ident = deriveQrcIdentifierShort(ex, templates.find(t => t.id === ex.template_id))
+                    return (
                     <button key={ex.id} onClick={() => setActiveExecId(ex.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                       background: 'color-mix(in srgb, var(--color-amber) 8%, var(--color-bg-surface))',
@@ -1483,11 +1486,17 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
                         fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-amber)',
                         background: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
                         border: '1px solid color-mix(in srgb, var(--color-amber) 45%, transparent)',
-                        padding: '2px 8px', borderRadius: 'var(--radius-xs)',
+                        padding: '2px 8px', borderRadius: 'var(--radius-xs)', flexShrink: 0,
                       }}>QRC-{ex.qrc_number}</span>
-                      <span style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', flex: 1 }}>{ex.title}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.title}</span>
+                        {ident && (
+                          <span style={{ display: 'block', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-amber)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ident}</span>
+                        )}
+                      </span>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Start New</div>

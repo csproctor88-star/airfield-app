@@ -291,6 +291,20 @@ export async function updateExecutionRemarks(
   return { error: error?.message || null }
 }
 
+// Persist the manual label override for an active execution (autosave on blur).
+export async function updateExecutionLabel(
+  executionId: string,
+  label: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+  const { error } = await supabase
+    .from('qrc_executions')
+    .update({ label: label || null, updated_at: new Date().toISOString() })
+    .eq('id', executionId)
+  return { error: error?.message || null }
+}
+
 export async function closeQrcExecution(
   executionId: string,
   baseId?: string | null,

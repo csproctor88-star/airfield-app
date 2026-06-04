@@ -17,6 +17,7 @@ import {
   updateStepResponse,
   updateScnData,
   updateExecutionRemarks,
+  updateExecutionLabel,
   closeQrcExecution,
   reopenQrcExecution,
   cancelQrcExecution,
@@ -25,6 +26,7 @@ import {
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
 import { formatZuluDate, formatZuluDateTime, formatZuluTime } from '@/lib/utils'
 import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-step-status'
+import { deriveQrcIdentifierShort } from '@/lib/qrc/identifier'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 import { QrcStepToggle, QrcStepStatusPill } from '@/components/ui/qrc-step-toggle'
@@ -336,7 +338,9 @@ export default function QrcPage() {
             <EmptyState message="No active QRCs. Start one from the Available tab." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {openExecs.map(ex => (
+              {openExecs.map(ex => {
+                const ident = deriveQrcIdentifierShort(ex, templates.find(t => t.id === ex.template_id))
+                return (
                 <button
                   key={ex.id}
                   onClick={() => setActiveExecId(ex.id)}
@@ -355,10 +359,18 @@ export default function QrcPage() {
                   }}
                 >
                   <QrcBadge number={ex.qrc_number} />
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>
                       {ex.title}
                     </div>
+                    {ident && (
+                      <div style={{
+                        fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-amber)', marginTop: 1,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {ident}
+                      </div>
+                    )}
                     <div style={{
                       fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 2,
                       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -370,7 +382,8 @@ export default function QrcPage() {
                   </div>
                   <StatusPill kind="open">Open</StatusPill>
                 </button>
-              ))}
+                )
+              })}
             </div>
           )
         )
@@ -381,6 +394,7 @@ export default function QrcPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {history.map(ex => {
               const isOpen = ex.status === 'open'
+              const ident = deriveQrcIdentifierShort(ex, templates.find(t => t.id === ex.template_id))
               return (
                 <button
                   key={ex.id}
@@ -400,10 +414,18 @@ export default function QrcPage() {
                   }}
                 >
                   <QrcBadge number={ex.qrc_number} />
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--color-text-1)' }}>
                       {ex.title}
                     </div>
+                    {ident && (
+                      <div style={{
+                        fontSize: 'var(--fs-sm)', fontWeight: 700, color: isOpen ? 'var(--color-amber)' : 'var(--color-text-2)', marginTop: 1,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>
+                        {ident}
+                      </div>
+                    )}
                     <div style={{
                       fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginTop: 2,
                       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -448,6 +470,7 @@ function QrcExecutionView({
   )
   const [closing, setClosing] = useState(false)
   const [remarks, setRemarks] = useState(execution.remarks || '')
+  const [label, setLabel] = useState(execution.label || '')
   const [showReview, setShowReview] = useState(false)
   const [reviewNotes, setReviewNotes] = useState(template?.review_notes || '')
   const [reviewing, setReviewing] = useState(false)
@@ -615,6 +638,21 @@ function QrcExecutionView({
     const { error } = await updateExecutionRemarks(execution.id, remarks)
     if (error) toast.error(error)
   }
+
+  async function handleLabelBlur() {
+    if (isClosed) return
+    if ((execution.label || '') === label) return
+    const { error } = await updateExecutionLabel(execution.id, label)
+    if (error) toast.error(error)
+    else await onUpdate()
+  }
+
+  // Auto-derived identifier (callsign / first filled field) shown as the input's
+  // placeholder hint — what the Active list will display if no manual label.
+  const autoIdentifier = deriveQrcIdentifierShort(
+    { label: null, scn_data: scnData as QrcExecution['scn_data'], step_responses: responses as unknown as QrcExecution['step_responses'] },
+    template,
+  )
 
   async function handleReopen() {
     if (!confirm('Reopen this QRC?')) return
@@ -944,6 +982,28 @@ function QrcExecutionView({
         </div>
         <StatusPill kind={isClosed ? 'closed' : 'open'}>{isClosed ? 'Closed' : 'Open'}</StatusPill>
       </div>
+
+      {/* Label — distinguishes this QRC in the Active list */}
+      {!isClosed ? (
+        <div style={{ marginBottom: 14 }}>
+          <input
+            className="input-dark"
+            placeholder={autoIdentifier
+              ? `${autoIdentifier}  (auto — type to override)`
+              : 'Label this QRC (optional) — shows in the Active list'}
+            value={label}
+            onChange={e => setLabel(e.target.value)}
+            onBlur={handleLabelBlur}
+            style={{ width: '100%', fontSize: 'var(--fs-sm)', fontWeight: 600 }}
+          />
+        </div>
+      ) : (label || autoIdentifier) ? (
+        <div style={{
+          marginBottom: 14, fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-amber)',
+        }}>
+          {label || autoIdentifier}
+        </div>
+      ) : null}
 
       {/* Warning note — banner-tier */}
       {template?.notes && (
