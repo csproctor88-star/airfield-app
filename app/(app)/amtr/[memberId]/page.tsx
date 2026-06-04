@@ -52,7 +52,7 @@ export default function AmtrMemberPage() {
   const memberId = params.memberId
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, allInstallations, switchInstallation } = useInstallation()
   const { has } = usePermissions()
   const canWrite = has(PERM.AMTR_WRITE)
   const canManage = has(PERM.AMTR_MANAGE)
@@ -278,6 +278,28 @@ export default function AmtrMemberPage() {
 
   if (loading) return <div style={{ padding: 24 }}><LoadingState message="Loading record…" /></div>
   if (!member) return <div style={{ padding: 24 }}><EmptyState message="Member not found." /></div>
+  // Cross-base record (e.g. a notification deep-link to a member at another base
+  // you also have access to). The roster, catalogs, and role checks here are all
+  // scoped to the CURRENT base, so rendering the record inline would mismatch
+  // (wrong dropdown selection, wrong catalogs). Require an explicit base switch.
+  if (installationId && member.base_id !== installationId) {
+    const target = allInstallations.find((i) => i.id === member.base_id)
+    return (
+      <div style={{ padding: 24 }}>
+        <Btn variant="ghost" onClick={() => router.push('/amtr')}><ArrowLeft size={15} /> Roster</Btn>
+        <div style={{ marginTop: 16 }}>
+          <EmptyState message={`${member.full_name}'s training record belongs to ${target?.name ?? 'another base'}, not your current base. Switch bases to view it.`} />
+          {target && (
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <Btn variant="primary" onClick={async () => { await switchInstallation(member.base_id) }}>
+                Switch to {target.name}
+              </Btn>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
   if (!canSee) return (
     <div style={{ padding: 24 }}>
       <Btn variant="ghost" onClick={() => router.push('/amtr')}><ArrowLeft size={15} /> Roster</Btn>
