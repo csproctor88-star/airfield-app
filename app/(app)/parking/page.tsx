@@ -3166,10 +3166,12 @@ export default function ParkingPage() {
       list = list.filter(a => a.category === aircraftCategoryFilter)
     }
     if (!aircraftSearch.trim()) {
-      // Show favorites first, then the rest
+      // Show favorites first, then the rest. Render the full roster (~210
+      // aircraft) — no cap, so every type is reachable by scrolling, not just
+      // by searching.
       const favs = list.filter(a => favoriteAircraft.includes(a.aircraft))
       const rest = list.filter(a => !favoriteAircraft.includes(a.aircraft))
-      return [...favs, ...rest].slice(0, 50)
+      return [...favs, ...rest]
     }
     const q = aircraftSearch.toLowerCase()
     const results = list.filter(a =>
@@ -3180,7 +3182,7 @@ export default function ParkingPage() {
     // Favorites first in search results too
     const favs = results.filter(a => favoriteAircraft.includes(a.aircraft))
     const rest = results.filter(a => !favoriteAircraft.includes(a.aircraft))
-    return [...favs, ...rest].slice(0, 50)
+    return [...favs, ...rest]
   }, [aircraftSearch, aircraftCategoryFilter, favoriteAircraft])
 
   // ── Render ──
