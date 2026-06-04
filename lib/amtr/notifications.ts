@@ -81,6 +81,20 @@ export function build797Signature(traineeName: string, taskName: string, itemId:
   }
 }
 
+/** Trainee-owed signature on a form item (fired by the daily reconcile).
+ *  formLabel is the human form name, e.g. "DAF 1098". */
+export function buildSignatureRequired(
+  formLabel: string, itemName: string, tab: string, itemId: string,
+): NotificationDraft {
+  return {
+    kind: 'signature_required',
+    body: `Signature required – ${formLabel} – ${itemName}`,
+    target_tab: tab,
+    target_item_id: itemId,
+    dedupe_key: `signature_required:${tab}:${itemId}`,
+  }
+}
+
 // ── Firing helpers (persist) ───────────────────────────────
 
 /** Send a notification to a single recipient (the trainee). */
