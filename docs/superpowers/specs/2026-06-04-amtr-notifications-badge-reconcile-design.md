@@ -112,8 +112,9 @@ Both take the same `InspectionScanData` the inspection already builds.
 - **Auto-resolve**: load the base's non-dismissed `training_due` /
   `signature_required` rows; for any whose `(tab,itemId)` is no longer in the
   freshly-computed set for that member, set `dismissed_at = now()`.
-- **`today`**: installation-local date per base (base timezone), matching how the
-  page supplies `today` to the engine.
+- **`today`**: UTC date (`new Date().toISOString().slice(0,10)`) — exactly what
+  the Inspect page (`amtr/[memberId]/inspect/page.tsx`) supplies to the engine,
+  so the reconcile's due/currently-due decisions match the on-screen view.
 - Returns a JSON summary (bases processed, created, resolved, errors) like the
   digest route.
 
