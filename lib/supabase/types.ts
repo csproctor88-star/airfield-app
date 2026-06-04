@@ -3389,6 +3389,7 @@ export type Database = {
           opened_at: string
           opened_by: string | null
           qrc_number: number
+          remarks: string | null
           scn_data: Json | null
           status: string
           step_responses: Json
@@ -3407,6 +3408,7 @@ export type Database = {
           opened_at?: string
           opened_by?: string | null
           qrc_number: number
+          remarks?: string | null
           scn_data?: Json | null
           status?: string
           step_responses?: Json
@@ -3425,6 +3427,7 @@ export type Database = {
           opened_at?: string
           opened_by?: string | null
           qrc_number?: number
+          remarks?: string | null
           scn_data?: Json | null
           status?: string
           step_responses?: Json

@@ -239,6 +239,19 @@ export async function updateStepResponse(
     .single()
 
   const responses = (current?.step_responses || {}) as Record<string, QrcStepResponse>
+
+  // Attribution fallback: the page stamps completed_by for instant display, but
+  // if it didn't have the user id yet (e.g. a click right after open), fill it
+  // here so a completed/N/A step is never left unattributed. Only hits the auth
+  // endpoint when the stamp is actually missing.
+  const isActioned = response.status === 'completed' || response.status === 'not_applicable' || response.completed
+  if (isActioned && !response.completed_by) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) response = { ...response, completed_by: user.id, completed_at: response.completed_at || new Date().toISOString() }
+    } catch { /* */ }
+  }
+
   responses[stepId] = response
 
   const { error } = await supabase
@@ -262,10 +275,26 @@ export async function updateScnData(
   return { error: error?.message || null }
 }
 
+// Persist free-form remarks for an open execution (autosave on blur). Kept
+// separate from close so remarks survive even if the user navigates away
+// without closing.
+export async function updateExecutionRemarks(
+  executionId: string,
+  remarks: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase not configured' }
+  const { error } = await supabase
+    .from('qrc_executions')
+    .update({ remarks: remarks || null, updated_at: new Date().toISOString() })
+    .eq('id', executionId)
+  return { error: error?.message || null }
+}
+
 export async function closeQrcExecution(
   executionId: string,
-  initials?: string,
-  baseId?: string | null
+  baseId?: string | null,
+  remarks?: string | null,
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
@@ -276,13 +305,14 @@ export async function closeQrcExecution(
     if (user) userId = user.id
   } catch { /* */ }
 
+  // The closer is captured automatically from the session — no manual initials.
   const { data, error } = await supabase
     .from('qrc_executions')
     .update({
       status: 'closed',
       closed_by: userId || null,
       closed_at: new Date().toISOString(),
-      close_initials: initials || null,
+      remarks: remarks ?? undefined,
       updated_at: new Date().toISOString(),
     })
     .eq('id', executionId)

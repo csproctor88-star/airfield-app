@@ -214,6 +214,27 @@ export async function generateQrcPdf(input: QrcPdfInput): Promise<{ doc: jsPDF; 
     y += 2
   }
 
+  // ── Remarks ──
+  if (execution.remarks) {
+    checkPageBreak(16)
+    setFill(COLOR.bgInset)
+    setDraw(COLOR.bgRule)
+    const remarkLines = doc.splitTextToSize(execution.remarks, contentWidth - 14)
+    const remarkH = 6 + remarkLines.length * 4
+    doc.roundedRect(margin, y, contentWidth, remarkH, 1.5, 1.5, 'FD')
+    setFill(COLOR.cyan)
+    doc.rect(margin, y, 1.5, remarkH, 'F')
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    setText(COLOR.text3)
+    doc.text('REMARKS', margin + 5, y + 4)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    setText(COLOR.text1)
+    doc.text(remarkLines, margin + 5, y + 8.5)
+    y += remarkH + 4
+  }
+
   // ── Steps ──
   checkPageBreak(12)
   sectionHeader('CHECKLIST STEPS')

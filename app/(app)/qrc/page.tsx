@@ -16,13 +16,14 @@ import {
   startQrcExecution,
   updateStepResponse,
   updateScnData,
+  updateExecutionRemarks,
   closeQrcExecution,
   reopenQrcExecution,
   cancelQrcExecution,
   reviewQrcTemplate,
 } from '@/lib/supabase/qrc'
 import type { QrcTemplate, QrcExecution, QrcStep, QrcStepResponse } from '@/lib/supabase/types'
-import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { formatZuluDate, formatZuluDateTime, formatZuluTime } from '@/lib/utils'
 import { getStepStatus, getAgencyStatus, type QrcStepStatus } from '@/lib/qrc-step-status'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -446,12 +447,17 @@ function QrcExecutionView({
     (execution.scn_data || {}) as Record<string, unknown>
   )
   const [closing, setClosing] = useState(false)
-  const [closeInitials, setCloseInitials] = useState('')
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [remarks, setRemarks] = useState(execution.remarks || '')
   const [showReview, setShowReview] = useState(false)
   const [reviewNotes, setReviewNotes] = useState(template?.review_notes || '')
   const [reviewing, setReviewing] = useState(false)
   const [reviewerName, setReviewerName] = useState<string | null>(null)
+
+  // Who/when stamp for completed steps (mirrors the shift checklist). The
+  // step response already carries completed_by/completed_at; we resolve the
+  // ids to "Rank Name" via profiles and stamp the current user on action.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [stepProfiles, setStepProfiles] = useState<Record<string, string>>({})
 
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
@@ -477,6 +483,33 @@ function QrcExecutionView({
     void supabase
   }, [template?.last_reviewed_by])
 
+  // Resolve the current user (to stamp new completions) + names for anyone who
+  // already completed a step in this execution. Runs once on mount.
+  useEffect(() => {
+    void (async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const sb = createClient()
+      if (!sb) return
+      const ids = new Set<string>()
+      const existing = (execution.step_responses || {}) as Record<string, QrcStepResponse>
+      Object.values(existing).forEach(r => { if (r?.completed_by) ids.add(r.completed_by) })
+      try {
+        const { data: { user } } = await sb.auth.getUser()
+        if (user) { setCurrentUserId(user.id); ids.add(user.id) }
+      } catch { /* */ }
+      if (ids.size === 0) return
+      const { data } = await sb.from('profiles').select('id, name, rank').in('id', Array.from(ids))
+      if (data) {
+        const map: Record<string, string> = {}
+        ;(data as { id: string; name: string; rank: string | null }[]).forEach(p => {
+          map[p.id] = p.rank ? `${p.rank} ${p.name}` : p.name
+        })
+        setStepProfiles(prev => ({ ...prev, ...map }))
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [execution.id])
+
   function flattenSteps(s: QrcStep[]): QrcStep[] {
     const flat: QrcStep[] = []
     for (const step of s) {
@@ -495,11 +528,13 @@ function QrcExecutionView({
   async function handleStepStatus(stepId: string, next: QrcStepStatus) {
     if (isClosed) return
     const current = responses[stepId] || { completed: false }
+    const actioned = next === 'completed' || next === 'not_applicable'
     const newResp: QrcStepResponse = {
       ...current,
       status: next,
       completed: next === 'completed',
-      completed_at: next === 'completed' ? new Date().toISOString() : current.completed_at,
+      completed_by: actioned ? (currentUserId ?? undefined) : undefined,
+      completed_at: actioned ? new Date().toISOString() : undefined,
     }
     if (next === undefined) {
       delete (newResp as Partial<QrcStepResponse>).status
@@ -538,6 +573,8 @@ function QrcExecutionView({
       agencies_na: na,
       completed: checked.length > 0,
       status: anyMarked && checked.length === 0 && na.length > 0 ? 'not_applicable' : (checked.length > 0 ? 'completed' : undefined),
+      completed_by: anyMarked ? (currentUserId ?? undefined) : undefined,
+      completed_at: anyMarked ? new Date().toISOString() : undefined,
     }
     if (!anyMarked) delete (newResp as Partial<QrcStepResponse>).status
     const updated = { ...responses, [stepId]: newResp }
@@ -563,14 +600,20 @@ function QrcExecutionView({
 
   async function handleClose() {
     setClosing(true)
-    const { error } = await closeQrcExecution(execution.id, closeInitials, installationId)
+    const { error } = await closeQrcExecution(execution.id, installationId, remarks)
     if (error) toast.error(error)
     else {
       toast.success(`QRC-${execution.qrc_number} closed`)
-      setShowCloseConfirm(false)
       await onUpdate()
     }
     setClosing(false)
+  }
+
+  async function handleRemarksBlur() {
+    if (isClosed) return
+    if ((execution.remarks || '') === remarks) return
+    const { error } = await updateExecutionRemarks(execution.id, remarks)
+    if (error) toast.error(error)
   }
 
   async function handleReopen() {
@@ -661,6 +704,21 @@ function QrcExecutionView({
     setSendingEmail(false)
   }
 
+  // "Marked complete by {name} · {time}Z" line under an actioned step. Mirrors
+  // the shift checklist's per-item attribution.
+  function renderCompletionStamp(resp: QrcStepResponse | undefined) {
+    if (!resp?.completed_by) return null
+    const st = getStepStatus(resp)
+    if (st !== 'completed' && st !== 'not_applicable') return null
+    const who = stepProfiles[resp.completed_by] || 'Unknown'
+    const when = resp.completed_at ? `${formatZuluTime(new Date(resp.completed_at))}Z` : ''
+    return (
+      <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
+        {st === 'not_applicable' ? 'N/A' : '✓'} {who}{when ? ` · ${when}` : ''}
+      </div>
+    )
+  }
+
   function renderStep(step: QrcStep, depth = 0) {
     const resp = responses[step.id]
     const status = getStepStatus(resp)
@@ -729,6 +787,7 @@ function QrcExecutionView({
                     style={{ width: '100%', fontSize: 'var(--fs-sm)', marginTop: 6 }}
                   />
                 )}
+                {renderCompletionStamp(resp)}
               </div>
             )}
 
@@ -763,6 +822,7 @@ function QrcExecutionView({
                     )
                   })}
                 </div>
+                {renderCompletionStamp(resp)}
               </div>
             )}
 
@@ -982,21 +1042,19 @@ function QrcExecutionView({
         {steps.map(step => renderStep(step))}
       </div>
 
-      {/* Annual Review */}
+      {/* Annual Review — compact single line; expands only when reviewing */}
       {template && (
         <div style={{
-          padding: 14, borderRadius: 'var(--radius-md)', marginBottom: 16,
+          padding: '10px 14px', borderRadius: 'var(--radius-md)', marginBottom: 16,
           background: 'var(--color-bg-surface)',
           border: '1px solid var(--color-border)',
           borderLeft: '3px solid var(--color-cyan)',
         }}>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8,
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)',
               textTransform: 'uppercase', letterSpacing: '0.08em',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
+              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
             }}>
               <Calendar size={12} />
               Annual Review
@@ -1008,21 +1066,37 @@ function QrcExecutionView({
             ) : (
               <StatusPill kind="overdue">Never reviewed</StatusPill>
             )}
-          </div>
-          {template.last_reviewed_at && (
-            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 6 }}>
-              Last reviewed: {formatReviewDate(template.last_reviewed_at)}
-              {reviewerName && ` by ${reviewerName}`}
+            <div
+              title={template.review_notes || undefined}
+              style={{
+                flex: 1, minWidth: 0, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}
+            >
+              {template.last_reviewed_at
+                ? `Last reviewed ${formatReviewDate(template.last_reviewed_at)}${reviewerName ? ` by ${reviewerName}` : ''}${template.review_notes ? ` — ${template.review_notes}` : ''}`
+                : ''}
             </div>
-          )}
-          {template.review_notes && !showReview && (
-            <div style={{
-              fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)',
-              fontStyle: 'italic', marginBottom: 6,
-            }}>{template.review_notes}</div>
-          )}
-          {showReview ? (
-            <div>
+            {!showReview && (
+              <button
+                onClick={() => setShowReview(true)}
+                style={{
+                  flexShrink: 0,
+                  padding: '5px 12px', borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--color-cyan)',
+                  background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
+                  color: 'var(--color-cyan)', fontWeight: 700, fontSize: 'var(--fs-sm)',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <CheckCircle2 size={14} />
+                Mark as Reviewed
+              </button>
+            )}
+          </div>
+          {showReview && (
+            <div style={{ marginTop: 10 }}>
               <textarea
                 className="input-dark"
                 placeholder="Review notes (optional) — e.g. steps verified, changes made, POC..."
@@ -1052,93 +1126,68 @@ function QrcExecutionView({
                 >Cancel</button>
               </div>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowReview(true)}
-              style={{
-                padding: '6px 14px', borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-cyan)',
-                background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
-                color: 'var(--color-cyan)', fontWeight: 700, fontSize: 'var(--fs-sm)',
-                cursor: 'pointer', fontFamily: 'inherit',
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              <CheckCircle2 size={14} />
-              Mark as Reviewed
-            </button>
           )}
         </div>
       )}
 
-      {/* Close / Reopen */}
-      {!isClosed ? (
-        showCloseConfirm ? (
-          <div style={{
-            padding: 16, borderRadius: 'var(--radius-md)',
-            background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-          }}>
-            <div style={{ fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
-              Close QRC-{execution.qrc_number}?
-            </div>
-            <input
-              className="input-dark"
-              placeholder="Closing initials (optional)"
-              value={closeInitials}
-              onChange={e => setCloseInitials(e.target.value)}
-              style={{ width: '100%', marginBottom: 8, fontSize: 'var(--fs-sm)' }}
-            />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={handleClose}
-                disabled={closing}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                  background: 'var(--color-success)', color: '#fff', fontWeight: 700,
-                  fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >{closing ? 'Closing...' : 'Confirm Close'}</button>
-              <button
-                onClick={() => setShowCloseConfirm(false)}
-                style={{
-                  padding: '10px 16px', borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border)', background: 'transparent',
-                  color: 'var(--color-text-2)', fontWeight: 700, fontSize: 'var(--fs-base)',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >Back</button>
-            </div>
+      {/* Remarks — captured before close, recorded against the execution */}
+      <div style={{
+        padding: 14, borderRadius: 'var(--radius-md)', marginBottom: 16,
+        background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
+      }}>
+        <div style={{
+          fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)',
+          textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
+        }}>Remarks</div>
+        {isClosed ? (
+          <div style={{ fontSize: 'var(--fs-sm)', color: remarks ? 'var(--color-text-1)' : 'var(--color-text-3)', whiteSpace: 'pre-wrap' }}>
+            {remarks || 'No remarks recorded.'}
           </div>
         ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => setShowCloseConfirm(true)}
-              style={{
-                flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                background: 'var(--color-success)', color: '#fff', fontWeight: 700,
-                fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              }}
-            >
-              <CheckCircle2 size={16} />
-              Close QRC
-            </button>
-            <button
-              onClick={handleCancel}
-              style={{
-                padding: '12px 16px', borderRadius: 'var(--radius-md)',
-                border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
-                background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
-                color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
-                cursor: 'pointer', fontFamily: 'inherit',
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              <X size={16} />
-              Cancel QRC
-            </button>
-          </div>
-        )
+          <textarea
+            className="input-dark"
+            placeholder="Add remarks for this QRC (optional) — saved automatically"
+            value={remarks}
+            onChange={e => setRemarks(e.target.value)}
+            onBlur={handleRemarksBlur}
+            rows={3}
+            style={{ width: '100%', fontSize: 'var(--fs-sm)', resize: 'vertical' }}
+          />
+        )}
+      </div>
+
+      {/* Close / Reopen */}
+      {!isClosed ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleClose}
+            disabled={closing}
+            style={{
+              flex: 1, padding: '12px 0', borderRadius: 'var(--radius-md)', border: 'none',
+              background: 'var(--color-success)', color: '#fff', fontWeight: 700,
+              fontSize: 'var(--fs-base)', cursor: closing ? 'default' : 'pointer', fontFamily: 'inherit',
+              opacity: closing ? 0.7 : 1,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            <CheckCircle2 size={16} />
+            {closing ? 'Closing...' : 'Close QRC'}
+          </button>
+          <button
+            onClick={handleCancel}
+            style={{
+              padding: '12px 16px', borderRadius: 'var(--radius-md)',
+              border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+              background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
+              color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
+              cursor: 'pointer', fontFamily: 'inherit',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <X size={16} />
+            Cancel QRC
+          </button>
+        </div>
       ) : (
         <button
           onClick={handleReopen}

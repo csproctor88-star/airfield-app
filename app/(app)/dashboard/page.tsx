@@ -1095,8 +1095,6 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
   const [responses, setResponses] = useState<Record<string, QrcStepResponse>>({})
   const [scnData, setScnDataLocal] = useState<Record<string, unknown>>({})
   const [closing, setClosing] = useState(false)
-  const [closeInitials, setCloseInitials] = useState('')
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   const load = useCallback(async () => {
     const { fetchQrcTemplates, fetchOpenExecutions } = await import('@/lib/supabase/qrc')
@@ -1211,13 +1209,11 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
     setClosing(true)
     const { closeQrcExecution } = await import('@/lib/supabase/qrc')
     const exec = openExecs.find(e => e.id === activeExecId)
-    const { error } = await closeQrcExecution(activeExecId, closeInitials, installationId)
+    const { error } = await closeQrcExecution(activeExecId, installationId)
     if (error) toast.error(error)
     else {
       toast.success(`QRC-${exec?.qrc_number} closed`)
       setActiveExecId(null)
-      setShowCloseConfirm(false)
-      setCloseInitials('')
       await load()
       await onActivity?.()
     }
@@ -1374,7 +1370,7 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {activeExecId && (
-                <button onClick={() => { setActiveExecId(null); setShowCloseConfirm(false) }} style={{
+                <button onClick={() => setActiveExecId(null)} style={{
                   background: 'none', border: 'none', color: 'var(--color-cyan)', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, padding: 0,
                 }}>&larr;</button>
@@ -1529,40 +1525,21 @@ function QrcDialog({ installationId, onClose, onActivity }: { installationId: st
         {/* Footer */}
         {activeExec && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
-            {showCloseConfirm ? (
-              <div>
-                <input className="input-dark" placeholder="Closing initials (optional)"
-                  value={closeInitials} onChange={e => setCloseInitials(e.target.value)}
-                  style={{ width: '100%', marginBottom: 8, fontSize: 'var(--fs-sm)' }} />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={handleClose} disabled={closing} style={{
-                    flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                    background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
-                    fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-                  }}>{closing ? 'Closing...' : 'Confirm Close'}</button>
-                  <button onClick={() => setShowCloseConfirm(false)} style={{
-                    padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
-                    background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
-                    fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-                  }}>Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setShowCloseConfirm(true)} style={{
-                  flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
-                  background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
-                  fontSize: 'var(--fs-base)', cursor: 'pointer', fontFamily: 'inherit',
-                }}>Close QRC</button>
-                <button onClick={handleCancel} style={{
-                  padding: '10px 14px', borderRadius: 'var(--radius-md)',
-                  border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
-                  background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
-                  color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}>Cancel</button>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleClose} disabled={closing} style={{
+                flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', border: 'none',
+                background: 'var(--color-status-pass)', color: '#fff', fontWeight: 700,
+                fontSize: 'var(--fs-base)', cursor: closing ? 'default' : 'pointer', fontFamily: 'inherit',
+                opacity: closing ? 0.7 : 1,
+              }}>{closing ? 'Closing...' : 'Close QRC'}</button>
+              <button onClick={handleCancel} style={{
+                padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                border: '1px solid color-mix(in srgb, var(--color-danger) 35%, transparent)',
+                background: 'color-mix(in srgb, var(--color-danger) 6%, transparent)',
+                color: 'var(--color-danger)', fontWeight: 700, fontSize: 'var(--fs-base)',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>Cancel</button>
+            </div>
           </div>
         )}
       </div>
