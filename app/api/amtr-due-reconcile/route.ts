@@ -160,20 +160,23 @@ async function handler(request: Request) {
         }
       }
 
-      // Upsert (idempotent; never resurrects a dismissed row).
+      // Declarative reconcile: every currently-owed item must have an ACTIVE
+      // notification. Upsert with dismissed_at:null and update-on-conflict so an
+      // item that was resolved (dismissed) and is owed again gets REVIVED — the
+      // old ignoreDuplicates left dismissed rows permanently blocking re-notify.
       for (let i = 0; i < notifs.length; i += 500) {
-        const chunk = notifs.slice(i, i + 500)
+        const chunk = notifs.slice(i, i + 500).map((n) => ({ ...n, dismissed_at: null }))
         const { error } = await supabase
           .from('amtr_notifications')
-          .upsert(chunk as never, { onConflict: 'recipient_user_id,dedupe_key', ignoreDuplicates: true })
+          .upsert(chunk as never, { onConflict: 'recipient_user_id,dedupe_key' })
         if (error) throw new Error(`upsert: ${error.message}`)
       }
       created += notifs.length
 
-      // Auto-resolve: dismiss non-dismissed reconcile notifications whose item
-      // is no longer in the live set. Paginate — a base can hold well over 1000
-      // open notifications, and an un-paginated read would leave the overflow
-      // permanently un-resolvable.
+      // Resolve: DELETE any reconcile notification (active OR dismissed) whose
+      // item is no longer owed, so the list always equals current reality and no
+      // stale/dismissed row lingers to block a future re-notify. Paginate — a
+      // base can hold well over 1000 rows.
       const existing: { id: string; recipient_user_id: string; dedupe_key: string | null }[] = []
       for (let from = 0; ; from += 1000) {
         const { data, error: exErr } = await supabase
@@ -181,7 +184,6 @@ async function handler(request: Request) {
           .select('id, recipient_user_id, dedupe_key')
           .eq('base_id', baseId)
           .in('kind', ['training_due', 'signature_required', 'trainer_signature_required'])
-          .is('dismissed_at', null)
           .range(from, from + 999)
         if (exErr) throw new Error(`existing: ${exErr.message}`)
         existing.push(...((data ?? []) as { id: string; recipient_user_id: string; dedupe_key: string | null }[]))
@@ -194,7 +196,7 @@ async function handler(request: Request) {
         const chunk = stale.slice(i, i + 500)
         const { error } = await supabase
           .from('amtr_notifications')
-          .update({ dismissed_at: new Date().toISOString() } as never)
+          .delete()
           .in('id', chunk)
         if (error) throw new Error(`resolve: ${error.message}`)
         resolved += chunk.length
