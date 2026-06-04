@@ -130,16 +130,18 @@ describe('traineeSignatureGaps', () => {
     expect(traineeSignatureGaps(scan({ ...base, jqsProgress: [{ catalog_id: 'j1', start_date: '2026-05-01', trainer_initials: '', trainee_initials: '' }] }))).toEqual([]) // trainer unsigned
   })
 
-  it('flags a completed-and-due 1098 row the certifier verified, not a future-due one', () => {
+  it('flags any completed 1098 row the trainee has not signed, regardless of next-due; skips not-completed', () => {
     const d = scan({
-      r1098Catalog: [{ id: 'c1', task: 'CPR' }, { id: 'c2', task: 'AED' }],
+      r1098Catalog: [{ id: 'c1', task: 'CPR' }, { id: 'c2', task: 'AED' }, { id: 'c3', task: 'OPSEC' }],
       r1098Progress: [
-        { catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', certifier_initials: 'CG', trainee_initials: '' }, // due, certified → flag
-        { catalog_id: 'c2', start_date: '2026-05-01', last_completed: '2026-05-01', next_due: '2027-05-01', certifier_initials: 'CG', trainee_initials: '' }, // future → skip
+        { catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', trainee_initials: '' }, // past-due, unsigned → flag
+        { catalog_id: 'c2', start_date: '2026-05-01', last_completed: '2026-05-01', next_due: '2027-05-01', trainee_initials: '' }, // future-due, unsigned → flag (the fix)
+        { catalog_id: 'c3', start_date: '2026-05-01', last_completed: null, trainee_initials: '' },                                 // not completed → skip
       ],
     })
     expect(traineeSignatureGaps(d)).toEqual([
       { tab: '1098', itemId: 'c1', itemName: 'CPR' },
+      { tab: '1098', itemId: 'c2', itemName: 'AED' },
     ])
   })
 
@@ -176,13 +178,17 @@ describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
     expect(trainerSignatureGaps(d)).toEqual([])
   })
 
-  it('flags a 1098 row the trainee signed but the certifier has not verified', () => {
+  it('flags a 1098 row the trainee signed but the certifier has not, even when next-due is in the future', () => {
     const d = scan({
-      r1098Catalog: [{ id: 'c1', task: 'CPR' }],
-      r1098Progress: [{ catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', trainee_initials: 'RS', certifier_initials: '' }],
+      r1098Catalog: [{ id: 'c1', task: 'CPR' }, { id: 'c2', task: 'OPSEC' }],
+      r1098Progress: [
+        { catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', trainee_initials: 'RS', certifier_initials: '' }, // past-due
+        { catalog_id: 'c2', start_date: '2026-06-02', last_completed: '2026-06-02', next_due: '2027-06-02', trainee_initials: 'PG', certifier_initials: '' }, // future-due → must still flag
+      ],
     })
     expect(trainerSignatureGaps(d)).toEqual([
       { tab: '1098', itemId: 'c1', itemName: 'CPR' },
+      { tab: '1098', itemId: 'c2', itemName: 'OPSEC' },
     ])
   })
 

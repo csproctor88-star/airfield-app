@@ -390,7 +390,6 @@ export function dueItemsForMember(d: InspectionScanData): DueItem[] {
 export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
   const out: TraineeSigGap[] = []
   const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
-  const futureDue = (v: unknown): boolean => has(v) && String(v).slice(0, 10) > d.today
   const dated = (r: Row): boolean => has(r.start_date) || has(r.complete_date)
 
   // The trainee only owes a signature once the work is DONE: the supervising
@@ -410,11 +409,13 @@ export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
     }
   }
 
-  // 1098 — completed & currently-due rows the certifier verified.
+  // 1098 — a completed item the trainee hasn't signed (1098 is signed
+  // trainee-first, then certifier-verified). NOT gated on next-due: a missing
+  // signature is owed regardless of when the item next recurs.
   const name1098 = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
   for (const p of d.r1098Progress) {
-    if (!(has(p.start_date) && has(p.last_completed) && !futureDue(p.next_due))) continue
-    if (has(p.certifier_initials) && !has(p.trainee_initials)) {
+    if (!(has(p.start_date) && has(p.last_completed))) continue
+    if (!has(p.trainee_initials)) {
       out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id) })
     }
   }
@@ -444,7 +445,6 @@ export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
 export function trainerSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
   const out: TraineeSigGap[] = []
   const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
-  const futureDue = (v: unknown): boolean => has(v) && String(v).slice(0, 10) > d.today
   const dated = (r: Row): boolean => has(r.start_date) || has(r.complete_date)
 
   // JQS — trainee signed + dated, trainer hasn't.
@@ -459,10 +459,11 @@ export function trainerSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
     }
   }
 
-  // 1098 — completed & currently-due, trainee signed, certifier hasn't verified.
+  // 1098 — trainee signed a completed item the certifier hasn't verified. NOT
+  // gated on next-due: the certifier owes regardless of when the item recurs.
   const name1098 = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
   for (const p of d.r1098Progress) {
-    if (!(has(p.start_date) && has(p.last_completed) && !futureDue(p.next_due))) continue
+    if (!(has(p.start_date) && has(p.last_completed))) continue
     if (has(p.trainee_initials) && !has(p.certifier_initials)) {
       out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id) })
     }

@@ -101,9 +101,11 @@ export function buildSignatureRequired(
 export function buildTrainerSignatureRequired(
   memberName: string, formLabel: string, itemName: string, tab: string, itemId: string,
 ): NotificationDraft {
+  // The 1098 supervisor signature is the certifier; the others are the trainer.
+  const signer = tab === '1098' ? 'certifier' : 'trainer'
   return {
     kind: 'trainer_signature_required',
-    body: `${memberName} – ${formLabel} – ${itemName} awaiting a trainer signature`,
+    body: `${memberName} – ${formLabel} – ${itemName} awaiting a ${signer} signature`,
     target_tab: tab,
     target_item_id: itemId,
     dedupe_key: `trainer_signature_required:${tab}:${itemId}`,
