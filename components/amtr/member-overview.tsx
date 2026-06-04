@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { fetchAmtrByBase, fetchAmtrByMember, type AmtrMember } from '@/lib/supabase/amtr'
-import { createClient } from '@/lib/supabase/client'
 import { fetchAmtrInspectionsByMember, deleteAmtrInspection, type AmtrInspection } from '@/lib/supabase/amtr-inspections'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { dueStatus, ratApplies } from '@/lib/amtr/status'
@@ -23,19 +22,6 @@ export function MemberOverview({ installationId, member }: { installationId: str
     complete: number; dueSoon: number; overdue: number
   } | null>(null)
   const [inspections, setInspections] = useState<AmtrInspection[]>([])
-  // The notification center shows the CURRENT user's notifications, so only
-  // surface it on the viewer's own record — not when looking at someone else's.
-  const [isOwnRecord, setIsOwnRecord] = useState(false)
-  useEffect(() => {
-    let active = true
-    void (async () => {
-      const supabase = createClient()
-      if (!supabase) return
-      const { data: { session } } = await supabase.auth.getSession()
-      if (active) setIsOwnRecord(!!session?.user && !!member.user_id && session.user.id === member.user_id)
-    })()
-    return () => { active = false }
-  }, [member.user_id])
 
   const load = useCallback(async () => {
     const currentYear = String(new Date().getUTCFullYear())
@@ -99,7 +85,7 @@ export function MemberOverview({ installationId, member }: { installationId: str
           ))}
         </div>
       </div>
-      {isOwnRecord && <NotificationCenter />}
+      <NotificationCenter memberId={memberId} />
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>

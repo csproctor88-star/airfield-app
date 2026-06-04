@@ -19,16 +19,20 @@ const KIND_COLOR: Record<string, string> = {
   trainer_signature_required: 'var(--color-accent)',
 }
 
-export function NotificationCenter() {
+export function NotificationCenter({ memberId }: { memberId?: string } = {}) {
   const router = useRouter()
   const { allInstallations } = useInstallation()
-  const [items, setItems] = useState<AmtrNotification[]>([])
+  const [allItems, setAllItems] = useState<AmtrNotification[]>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    setItems(await fetchAmtrNotifications())
+    setAllItems(await fetchAmtrNotifications())
     setLoading(false)
   }, [])
+
+  // On an individual record (memberId set) show only that member's items; the
+  // global roster view (no memberId) shows everything the user must act on.
+  const items = memberId ? allItems.filter((n) => n.member_id === memberId) : allItems
 
   useEffect(() => { load() }, [load])
 
@@ -41,7 +45,7 @@ export function NotificationCenter() {
 
   const dismiss = async (id: string) => {
     await dismissAmtrNotification(id)
-    setItems((prev) => prev.filter((n) => n.id !== id))
+    setAllItems((prev) => prev.filter((n) => n.id !== id))
     window.dispatchEvent(new Event('glidepath:badges-refresh'))
   }
 
