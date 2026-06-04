@@ -14,6 +14,7 @@ const KIND_COLOR: Record<string, string> = {
   entry_623a: 'var(--color-danger)',
   item_797_added: 'var(--color-accent)',
   signature_797: 'var(--color-danger)',
+  signature_required: 'var(--color-danger)',
 }
 
 export function NotificationCenter() {

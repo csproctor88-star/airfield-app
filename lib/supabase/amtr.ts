@@ -53,6 +53,7 @@ export type AmtrRoleAssignment = {
 
 export type AmtrNotificationKind =
   | 'training_due' | 'signoff' | 'entry_623a' | 'item_797_added' | 'signature_797'
+  | 'signature_required'
 
 export type AmtrNotification = {
   id: string
