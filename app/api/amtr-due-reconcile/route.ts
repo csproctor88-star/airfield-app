@@ -65,34 +65,48 @@ async function handler(request: Request) {
   for (const [baseId, baseMembers] of Array.from(byBase.entries())) {
     try {
       // Bulk-fetch everything the two compute functions need, base-scoped.
-      const t = (table: string) => supabase.from(table).select('*').eq('base_id', baseId)
+      // Paginate: Supabase caps a single request at 1000 rows, and a base's
+      // jqs_progress routinely exceeds that — an un-paginated fetch silently
+      // truncates, making every member past row 1000 look entirely unsigned.
+      const fetchAll = async (table: string): Promise<Row[]> => {
+        const out: Row[] = []
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase
+            .from(table).select('*').eq('base_id', baseId).range(from, from + 999)
+          if (error) throw new Error(`${table}: ${error.message}`)
+          out.push(...((data ?? []) as Row[]))
+          if (!data || data.length < 1000) break
+        }
+        return out
+      }
+      const { data: rolesData } = await supabase
+        .from('amtr_role_assignments').select('user_id, role').eq('base_id', baseId)
       const [
-        roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg,
+        jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg,
         e623a, items797, qualCat, qualProg,
       ] = await Promise.all([
-        supabase.from('amtr_role_assignments').select('user_id, role').eq('base_id', baseId),
-        t('amtr_jqs_catalog'), t('amtr_jqs_progress'),
-        t('amtr_1098_catalog'), t('amtr_1098_progress'),
-        t('amtr_rat_catalog'), t('amtr_rat_progress'),
-        t('amtr_623a'), t('amtr_797'),
-        t('amtr_qual_catalog'), t('amtr_qual_progress'),
+        fetchAll('amtr_jqs_catalog'), fetchAll('amtr_jqs_progress'),
+        fetchAll('amtr_1098_catalog'), fetchAll('amtr_1098_progress'),
+        fetchAll('amtr_rat_catalog'), fetchAll('amtr_rat_progress'),
+        fetchAll('amtr_623a'), fetchAll('amtr_797'),
+        fetchAll('amtr_qual_catalog'), fetchAll('amtr_qual_progress'),
       ])
-      const roleAssignments = ((roles.data ?? []) as { user_id: string; role: string }[])
+      const roleAssignments = ((rolesData ?? []) as { user_id: string; role: string }[])
       const teamUids = Array.from(new Set(
         roleAssignments.filter((a) => a.role === 'trainer' || a.role === 'namt' || a.role === 'afm').map((a) => a.user_id),
       ))
 
       // Group member-scoped rows by member_id.
-      const group = (rows: Row[] | null) => {
+      const group = (rows: Row[]) => {
         const map = new Map<string, Row[]>()
-        for (const r of rows ?? []) {
+        for (const r of rows) {
           const k = String(r.member_id)
           const arr = map.get(k) ?? []; arr.push(r); map.set(k, arr)
         }
         return map
       }
-      const jqsP = group(jqsProg.data), r1098P = group(r1098Prog.data), ratP = group(ratProg.data)
-      const e623aP = group(e623a.data), items797P = group(items797.data), qualP = group(qualProg.data)
+      const jqsP = group(jqsProg), r1098P = group(r1098Prog), ratP = group(ratProg)
+      const e623aP = group(e623a), items797P = group(items797), qualP = group(qualProg)
 
       const notifs: Notif[] = []
       const liveKeys = new Set<string>()
@@ -104,12 +118,12 @@ async function handler(request: Request) {
         const d: InspectionScanData = {
           member: m,
           roleAssignments,
-          jqsCatalog: (jqsCat.data ?? []) as Row[], jqsProgress: jqsP.get(memberId) ?? [],
-          r1098Catalog: (r1098Cat.data ?? []) as Row[], r1098Progress: r1098P.get(memberId) ?? [],
-          ratCatalog: (ratCat.data ?? []) as Row[], ratProgress: ratP.get(memberId) ?? [],
+          jqsCatalog: jqsCat, jqsProgress: jqsP.get(memberId) ?? [],
+          r1098Catalog: r1098Cat, r1098Progress: r1098P.get(memberId) ?? [],
+          ratCatalog: ratCat, ratProgress: ratP.get(memberId) ?? [],
           e623a: e623aP.get(memberId) ?? [], items797: items797P.get(memberId) ?? [],
           items803: [], milestoneCatalog: [], formalCatalog: [], formalProgress: [],
-          qualCatalog: (qualCat.data ?? []) as Row[], qualProgress: qualP.get(memberId) ?? [],
+          qualCatalog: qualCat, qualProgress: qualP.get(memberId) ?? [],
           transcribedRowIds: [],
           today,
         }
@@ -147,15 +161,23 @@ async function handler(request: Request) {
       created += notifs.length
 
       // Auto-resolve: dismiss non-dismissed reconcile notifications whose item
-      // is no longer in the live set.
-      const { data: existing, error: exErr } = await supabase
-        .from('amtr_notifications')
-        .select('id, recipient_user_id, dedupe_key')
-        .eq('base_id', baseId)
-        .in('kind', ['training_due', 'signature_required'])
-        .is('dismissed_at', null)
-      if (exErr) throw new Error(`existing: ${exErr.message}`)
-      const stale = ((existing ?? []) as { id: string; recipient_user_id: string; dedupe_key: string | null }[])
+      // is no longer in the live set. Paginate — a base can hold well over 1000
+      // open notifications, and an un-paginated read would leave the overflow
+      // permanently un-resolvable.
+      const existing: { id: string; recipient_user_id: string; dedupe_key: string | null }[] = []
+      for (let from = 0; ; from += 1000) {
+        const { data, error: exErr } = await supabase
+          .from('amtr_notifications')
+          .select('id, recipient_user_id, dedupe_key')
+          .eq('base_id', baseId)
+          .in('kind', ['training_due', 'signature_required'])
+          .is('dismissed_at', null)
+          .range(from, from + 999)
+        if (exErr) throw new Error(`existing: ${exErr.message}`)
+        existing.push(...((data ?? []) as { id: string; recipient_user_id: string; dedupe_key: string | null }[]))
+        if (!data || data.length < 1000) break
+      }
+      const stale = existing
         .filter((r) => r.dedupe_key && !liveKeys.has(`${r.recipient_user_id}::${r.dedupe_key}`))
         .map((r) => r.id)
       for (let i = 0; i < stale.length; i += 500) {
