@@ -613,6 +613,22 @@ export async function fetchAmtrNotifications(): Promise<AmtrNotification[]> {
   return (data ?? []) as AmtrNotification[]
 }
 
+/** Count of the current user's non-dismissed AMTR notifications (RLS scopes
+ *  the table to recipient_user_id = auth.uid()). Used by the sidebar badge. */
+export async function fetchAmtrNotificationCount(): Promise<number> {
+  const supabase = db()
+  if (!supabase) return 0
+  const { count, error } = await supabase
+    .from('amtr_notifications')
+    .select('id', { count: 'exact', head: true })
+    .is('dismissed_at', null)
+  if (error) {
+    console.error('Failed to count AMTR notifications:', error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
 export async function createAmtrNotification(input: {
   base_id: string
   recipient_user_id: string
