@@ -95,6 +95,21 @@ export function buildSignatureRequired(
   }
 }
 
+/** A supervisor owes a countersignature on an item the trainee already signed
+ *  (fired by the daily reconcile, fanned to the base's signers). memberName
+ *  identifies whose record it is. */
+export function buildTrainerSignatureRequired(
+  memberName: string, formLabel: string, itemName: string, tab: string, itemId: string,
+): NotificationDraft {
+  return {
+    kind: 'trainer_signature_required',
+    body: `${memberName} – ${formLabel} – ${itemName} awaiting a trainer signature`,
+    target_tab: tab,
+    target_item_id: itemId,
+    dedupe_key: `trainer_signature_required:${tab}:${itemId}`,
+  }
+}
+
 // ── Firing helpers (persist) ───────────────────────────────
 
 /** Send a notification to a single recipient (the trainee). */

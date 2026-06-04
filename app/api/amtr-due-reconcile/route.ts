@@ -17,9 +17,9 @@ export const maxDuration = 60
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
-  dueItemsForMember, traineeSignatureGaps, type InspectionScanData,
+  dueItemsForMember, traineeSignatureGaps, trainerSignatureGaps, type InspectionScanData,
 } from '@/lib/amtr/inspection-engine'
-import { buildTrainingDue, buildSignatureRequired } from '@/lib/amtr/notifications'
+import { buildTrainingDue, buildSignatureRequired, buildTrainerSignatureRequired } from '@/lib/amtr/notifications'
 
 type Row = Record<string, unknown>
 const FORM_LABEL: Record<string, string> = {
@@ -92,8 +92,10 @@ async function handler(request: Request) {
         fetchAll('amtr_qual_catalog'), fetchAll('amtr_qual_progress'),
       ])
       const roleAssignments = ((rolesData ?? []) as { user_id: string; role: string }[])
-      const teamUids = Array.from(new Set(
-        roleAssignments.filter((a) => a.role === 'trainer' || a.role === 'namt' || a.role === 'afm').map((a) => a.user_id),
+      // Supervisors who can countersign trainee work — recipients of
+      // trainer_signature_required (any of them can sign).
+      const signerUids = Array.from(new Set(
+        roleAssignments.filter((a) => a.role === 'trainer' || a.role === 'certifier' || a.role === 'namt' || a.role === 'afm').map((a) => a.user_id),
       ))
 
       // Group member-scoped rows by member_id.
@@ -128,24 +130,32 @@ async function handler(request: Request) {
           today,
         }
 
-        // Due/overdue → trainee + team.
-        for (const item of dueItemsForMember(d)) {
-          const draft = buildTrainingDue(item.itemName, item.dueISO, item.itemId, item.tab)
-          const recipients = new Set<string>(teamUids)
-          if (traineeUid) recipients.add(traineeUid)
-          for (const uid of Array.from(recipients)) {
-            const dedupe_key = `${draft.dedupe_key}:${uid}`
-            liveKeys.add(`${uid}::${dedupe_key}`)
-            notifs.push({ base_id: baseId, recipient_user_id: uid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key })
-          }
-        }
-
-        // Missing trainee signature → trainee only.
+        // Trainee's own items → the trainee only. Due/overdue training to keep
+        // current, plus items awaiting the trainee's signature. A supervisor
+        // does not need every member's due date.
         if (traineeUid) {
+          for (const item of dueItemsForMember(d)) {
+            const draft = buildTrainingDue(item.itemName, item.dueISO, item.itemId, item.tab)
+            const dedupe_key = `${draft.dedupe_key}:${traineeUid}`
+            liveKeys.add(`${traineeUid}::${dedupe_key}`)
+            notifs.push({ base_id: baseId, recipient_user_id: traineeUid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key })
+          }
           for (const gap of traineeSignatureGaps(d)) {
             const draft = buildSignatureRequired(FORM_LABEL[gap.tab] ?? gap.tab, gap.itemName, gap.tab, gap.itemId)
             liveKeys.add(`${traineeUid}::${draft.dedupe_key}`)
             notifs.push({ base_id: baseId, recipient_user_id: traineeUid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key: draft.dedupe_key })
+          }
+        }
+
+        // Items awaiting a supervisor countersignature → the base's signers.
+        // Each is a concrete action they own; no member-due-date noise.
+        const memberName = String(m.full_name ?? 'Member')
+        for (const gap of trainerSignatureGaps(d)) {
+          const draft = buildTrainerSignatureRequired(memberName, FORM_LABEL[gap.tab] ?? gap.tab, gap.itemName, gap.tab, gap.itemId)
+          for (const uid of signerUids) {
+            const dedupe_key = `${draft.dedupe_key}:${uid}`
+            liveKeys.add(`${uid}::${dedupe_key}`)
+            notifs.push({ base_id: baseId, recipient_user_id: uid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key })
           }
         }
       }
@@ -170,7 +180,7 @@ async function handler(request: Request) {
           .from('amtr_notifications')
           .select('id, recipient_user_id, dedupe_key')
           .eq('base_id', baseId)
-          .in('kind', ['training_due', 'signature_required'])
+          .in('kind', ['training_due', 'signature_required', 'trainer_signature_required'])
           .is('dismissed_at', null)
           .range(from, from + 999)
         if (exErr) throw new Error(`existing: ${exErr.message}`)

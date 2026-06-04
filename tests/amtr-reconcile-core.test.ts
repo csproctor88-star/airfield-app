@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dueItemsForMember, traineeSignatureGaps } from '@/lib/amtr/inspection-engine'
+import { dueItemsForMember, traineeSignatureGaps, trainerSignatureGaps } from '@/lib/amtr/inspection-engine'
 import type { InspectionScanData } from '@/lib/amtr/inspection-engine'
 
 type Row = Record<string, unknown>
@@ -149,5 +149,60 @@ describe('traineeSignatureGaps', () => {
       e623a: [{ id: 'e1', entry_type: 'Y', trainer_initials: 'PG', trainee_initials: 'RS' }],
     })
     expect(traineeSignatureGaps(d)).toEqual([])
+  })
+})
+
+describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
+  it('flags a 797 item the trainee signed + dated but the trainer has not', () => {
+    const d = scan({
+      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: '' }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([
+      { tab: '797', itemId: 'a1', itemName: 'Taxi signals' },
+    ])
+  })
+
+  it('does not flag a 797 item the trainee has not signed yet (not the trainer turn)', () => {
+    const d = scan({
+      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: '', trainer_initials: '' }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([])
+  })
+
+  it('does not flag a 797 item the trainer already signed', () => {
+    const d = scan({
+      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG' }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([])
+  })
+
+  it('flags a 1098 row the trainee signed but the certifier has not verified', () => {
+    const d = scan({
+      r1098Catalog: [{ id: 'c1', task: 'CPR' }],
+      r1098Progress: [{ catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', trainee_initials: 'RS', certifier_initials: '' }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([
+      { tab: '1098', itemId: 'c1', itemName: 'CPR' },
+    ])
+  })
+
+  it('flags a trainee-signed 623A entry the trainer has not, skipping transcribed/source-linked', () => {
+    const d = scan({
+      e623a: [
+        { id: 'e1', entry_type: 'Counseling', trainee_initials: 'RS', trainer_initials: '' },                 // flag
+        { id: 'e2', entry_type: 'Old', trainee_initials: 'RS', trainer_initials: '', transcribed: true },      // skip
+        { id: 'e3', entry_type: 'Auto', trainee_initials: 'RS', trainer_initials: '', source_table: 'amtr_797' }, // skip
+      ],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([
+      { tab: '623a', itemId: 'e1', itemName: 'Counseling' },
+    ])
+  })
+
+  it('returns no gaps when nothing awaits a supervisor signature', () => {
+    const d = scan({
+      items797: [{ id: 'a1', task: 'X', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG' }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([])
   })
 })
