@@ -580,16 +580,27 @@ export function SidebarNav() {
 
     // Aggregate per-section pending count. Add new modules here as
     // they start contributing to the sidebar badge hook.
-    const sectionPendingCount =
-      (section.items.includes('/ppr') ? badgeCounts.ppr : 0)
-      + (section.items.includes('/qrc') ? badgeCounts.qrc : 0)
-      + (section.items.includes('/discrepancies') ? badgeCounts.discrepancies : 0)
-      + (section.items.includes('/amtr') ? badgeCounts.amtr : 0)
+    const sectionPpr = section.items.includes('/ppr') ? badgeCounts.ppr : 0
+    const sectionQrc = section.items.includes('/qrc') ? badgeCounts.qrc : 0
+    const sectionDisc = section.items.includes('/discrepancies') ? badgeCounts.discrepancies : 0
+    const sectionAmtr = section.items.includes('/amtr') ? badgeCounts.amtr : 0
+    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr
 
-    // Airfield Management's only badge contributor is Discrepancies-pending-
-    // verification, which uses green per the dot-color convention. Other
-    // sections (Operations PPR/QRC) keep the standard red pending dot.
-    const sectionDotIsGreen = section.label === 'Airfield Management'
+    // Dot color matches the contributor (so it reads the same as the module's
+    // own nav dot): red for PPR/QRC action, amber for AMTR training action,
+    // green for Discrepancies-pending-verification. Priority red > amber > green
+    // when a section mixes them.
+    let sectionDotColor = 'var(--color-danger)'
+    let sectionDotGlow = '0 0 6px rgba(239,68,68,0.5)'
+    if (sectionPpr === 0 && sectionQrc === 0) {
+      if (sectionAmtr > 0) {
+        sectionDotColor = 'var(--color-warning)'
+        sectionDotGlow = '0 0 6px rgba(245,158,11,0.5)'
+      } else if (sectionDisc > 0) {
+        sectionDotColor = 'var(--color-success)'
+        sectionDotGlow = '0 0 6px rgba(52,211,153,0.5)'
+      }
+    }
 
     return (
       <button
@@ -623,12 +634,12 @@ export function SidebarNav() {
               position: 'absolute', top: -4, right: -6,
               width: isOpen ? 14 : 12, height: isOpen ? 14 : 12,
               borderRadius: '50%',
-              background: sectionDotIsGreen ? 'var(--color-success)' : 'var(--color-danger)',
+              background: sectionDotColor,
               color: '#fff',
               fontSize: 9, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               lineHeight: 1,
-              boxShadow: sectionDotIsGreen ? '0 0 6px rgba(52,211,153,0.5)' : '0 0 6px rgba(239,68,68,0.5)',
+              boxShadow: sectionDotGlow,
             }}>
               {sectionPendingCount > 9 ? '9+' : sectionPendingCount}
             </span>
