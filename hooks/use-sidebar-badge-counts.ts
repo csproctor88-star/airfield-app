@@ -9,6 +9,7 @@ import { fetchPendingTriageCount, fetchPendingApprovalCount } from '@/lib/supaba
 import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-members'
 import { fetchActiveQrcCount } from '@/lib/supabase/qrc'
 import { fetchPendingVerificationCount } from '@/lib/supabase/discrepancies'
+import { fetchAmtrNotificationCount } from '@/lib/supabase/amtr'
 
 /**
  * Per-module pending-action counts for sidebar badges.
@@ -42,6 +43,7 @@ export function useSidebarBadgeCounts() {
   const [pprCoord, setPprCoord] = useState(0)
   const [qrcActive, setQrcActive] = useState(0)
   const [discrepanciesPendingVerification, setDiscrepanciesPendingVerification] = useState(0)
+  const [amtrNotifications, setAmtrNotifications] = useState(0)
 
   const refresh = useCallback(async () => {
     if (!installationId || !permsLoaded) return
@@ -85,6 +87,11 @@ export function useSidebarBadgeCounts() {
       )
     } else {
       setDiscrepanciesPendingVerification(0)
+    }
+    if (has(PERM.AMTR_VIEW)) {
+      tasks.push(fetchAmtrNotificationCount().then(setAmtrNotifications))
+    } else {
+      setAmtrNotifications(0)
     }
     await Promise.all(tasks)
   }, [installationId, has, permsLoaded])
@@ -130,6 +137,11 @@ export function useSidebarBadgeCounts() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'discrepancies', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'amtr_notifications' },
         () => refresh(),
       )
       .subscribe((status) => {
@@ -191,7 +203,8 @@ export function useSidebarBadgeCounts() {
   const ppr = pprTriage + pprApproval + pprCoord
   const qrc = qrcActive
   const discrepancies = discrepanciesPendingVerification
-  const total = ppr + qrc + discrepancies
+  const amtr = amtrNotifications
+  const total = ppr + qrc + discrepancies + amtr
 
-  return { ppr, qrc, discrepancies, total }
+  return { ppr, qrc, discrepancies, amtr, total }
 }
