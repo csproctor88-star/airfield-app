@@ -57,7 +57,11 @@ type WhmpRow = {
   last_reviewed_at: string | null
 }
 
-export async function POST(request: Request) {
+// Vercel cron invokes the path with GET; POST is kept for manual testing.
+export async function GET(request: Request) { return handler(request) }
+export async function POST(request: Request) { return handler(request) }
+
+async function handler(request: Request) {
   // Auth: require CRON_SECRET. Vercel cron sets Authorization automatically.
   const auth = request.headers.get('authorization') ?? ''
   const secret = process.env.CRON_SECRET

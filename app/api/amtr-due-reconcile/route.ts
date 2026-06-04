@@ -26,7 +26,11 @@ const FORM_LABEL: Record<string, string> = {
   jqs: 'JQS-CFETP', '1098': 'DAF 1098', '797': 'DAF 797', '623a': 'DAF 623A',
 }
 
-export async function POST(request: Request) {
+// Vercel cron invokes the path with GET; POST is kept for manual testing.
+export async function GET(request: Request) { return handler(request) }
+export async function POST(request: Request) { return handler(request) }
+
+async function handler(request: Request) {
   const auth = request.headers.get('authorization') ?? ''
   const secret = process.env.CRON_SECRET
   if (!secret) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
