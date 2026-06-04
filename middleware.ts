@@ -63,6 +63,13 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/api/installations')
     || pathname.startsWith('/api/signup-email')
     || pathname.startsWith('/api/send-ppr-confirmation')
+    // Vercel cron routes: invoked by Vercel with no auth cookie, so they must
+    // bypass the cookie auth-gate — otherwise middleware 307-redirects them to
+    // /login and the handler never runs. Each enforces Bearer CRON_SECRET
+    // itself, so this is not an open endpoint.
+    || pathname.startsWith('/api/amtr-due-reconcile')
+    || pathname.startsWith('/api/training-expiry-digest')
+    || pathname.startsWith('/api/annual-review-digest')
     || pathname.startsWith('/feedback')
     || pathname.startsWith('/ppr-request')
     || pathname.startsWith('/kiosk')
