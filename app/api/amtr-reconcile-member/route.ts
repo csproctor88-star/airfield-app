@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   // One member's data: base catalogs + role assignments + this member's progress.
   const baseTbl = (t: string) => admin.from(t).select('*').eq('base_id', baseId)
   const memberTbl = (t: string) => admin.from(t).select('*').eq('member_id', memberId)
-  const [roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, qualCat, qualProg] =
+  const [roles, jqsCat, jqsProg, r1098Cat, r1098Prog, ratCat, ratProg, e623a, items797, qualCat, qualProg, transcribed] =
     await Promise.all([
       admin.from('amtr_role_assignments').select('user_id, role').eq('base_id', baseId),
       baseTbl('amtr_jqs_catalog'), memberTbl('amtr_jqs_progress'),
@@ -63,8 +63,11 @@ export async function POST(request: Request) {
       baseTbl('amtr_rat_catalog'), memberTbl('amtr_rat_progress'),
       memberTbl('amtr_623a'), memberTbl('amtr_797'),
       baseTbl('amtr_qual_catalog'), memberTbl('amtr_qual_progress'),
+      admin.from('amtr_audit_log').select('row_id').eq('member_id', memberId).eq('action', 'transcribe'),
     ])
   const roleAssignments = ((roles.data ?? []) as { user_id: string; role: string }[])
+  const transcribedRowIds = ((transcribed.data ?? []) as { row_id: string | null }[])
+    .map((r) => r.row_id).filter((x): x is string => !!x)
 
   const d: InspectionScanData = {
     member: m as unknown as Row,
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
     e623a: (e623a.data ?? []) as Row[], items797: (items797.data ?? []) as Row[],
     items803: [], milestoneCatalog: [], formalCatalog: [], formalProgress: [],
     qualCatalog: (qualCat.data ?? []) as Row[], qualProgress: (qualProg.data ?? []) as Row[],
-    transcribedRowIds: [],
+    transcribedRowIds,
     today,
   }
 

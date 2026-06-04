@@ -100,9 +100,8 @@ export function buildSignatureRequired(
  *  identifies whose record it is. */
 export function buildTrainerSignatureRequired(
   memberName: string, formLabel: string, itemName: string, tab: string, itemId: string,
+  signer: 'trainer' | 'certifier',
 ): NotificationDraft {
-  // The 1098 supervisor signature is the certifier; the others are the trainer.
-  const signer = tab === '1098' ? 'certifier' : 'trainer'
   return {
     kind: 'trainer_signature_required',
     body: `${memberName} – ${formLabel} – ${itemName} awaiting a ${signer} signature`,

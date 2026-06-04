@@ -350,6 +350,9 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
 
 export type DueItem = { tab: '1098' | 'rat'; itemId: string; itemName: string; dueISO: string }
 export type TraineeSigGap = { tab: 'jqs' | '1098' | '797' | '623a'; itemId: string; itemName: string }
+/** A supervisor-owed signature, with which signer (trainer vs certifier) is
+ *  next in line — the body wording + who's nudged depends on it. */
+export type SupervisorSigGap = TraineeSigGap & { signer: 'trainer' | 'certifier' }
 
 /** Due-soon / overdue recurring items (1098 + RAT) for a member. Mirrors the
  *  reconcile in form1098-tab.tsx / rat-tab.tsx. RAT is skipped for exempt
@@ -442,20 +445,28 @@ export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
  *  the supervising party (trainer, or certifier on the 1098) has NOT
  *  countersigned. This is the supervisor's action — fanned to the base's
  *  signers by the reconcile. Same eligibility filters, opposite signer. */
-export function trainerSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
-  const out: TraineeSigGap[] = []
+export function trainerSignatureGaps(d: InspectionScanData): SupervisorSigGap[] {
+  const out: SupervisorSigGap[] = []
   const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
   const dated = (r: Row): boolean => has(r.start_date) || has(r.complete_date)
+  // Bulk-transcribed rows have the certifier column deliberately cleared, so a
+  // missing certifier there is waived (matches the inspection scan).
+  const transcribed = new Set(d.transcribedRowIds.map(String))
+  const isTranscribed = (id: unknown): boolean => id != null && transcribed.has(String(id))
 
-  // JQS — trainee signed + dated, trainer hasn't.
+  // JQS — the next supervisor in line after the trainee has signed: the trainer,
+  // then (caret-marked tasks only) the certifier.
   const jqsProgByCat = new Map(d.jqsProgress.map((p) => [String(p.catalog_id), p]))
   for (const c of live(d.jqsCatalog)) {
     if (c.kind === 'section' || !c.required || !has(c.core_cert)) continue
     const lvl = coreCertLevel(c.core_cert)
     if (!(skill == null || lvl == null || lvl <= skill)) continue
     const p = jqsProgByCat.get(String(c.id))
-    if (p && has(p.trainee_initials) && dated(p) && !has(p.trainer_initials)) {
-      out.push({ tab: 'jqs', itemId: String(c.id), itemName: label(c) })
+    if (!p || !dated(p) || !has(p.trainee_initials)) continue
+    if (!has(p.trainer_initials)) {
+      out.push({ tab: 'jqs', itemId: String(c.id), itemName: label(c), signer: 'trainer' })
+    } else if (jqsNeedsCertifier(c) && !isTranscribed(p.id) && !has(p.certifier_initials)) {
+      out.push({ tab: 'jqs', itemId: String(c.id), itemName: label(c), signer: 'certifier' })
     }
   }
 
@@ -465,14 +476,17 @@ export function trainerSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
   for (const p of d.r1098Progress) {
     if (!(has(p.start_date) && has(p.last_completed))) continue
     if (has(p.trainee_initials) && !has(p.certifier_initials)) {
-      out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id) })
+      out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id), signer: 'certifier' })
     }
   }
 
-  // 797 — trainee signed + dated, trainer hasn't.
+  // 797 — trainer after the trainee, then (requires_certifier items) the certifier.
   for (const r of d.items797) {
-    if (has(r.trainee_initials) && dated(r) && !has(r.trainer_initials)) {
-      out.push({ tab: '797', itemId: String(r.id), itemName: label(r) })
+    if (!dated(r) || !has(r.trainee_initials)) continue
+    if (!has(r.trainer_initials)) {
+      out.push({ tab: '797', itemId: String(r.id), itemName: label(r), signer: 'trainer' })
+    } else if (!!r.requires_certifier && !isTranscribed(r.id) && !has(r.certifier_initials)) {
+      out.push({ tab: '797', itemId: String(r.id), itemName: label(r), signer: 'certifier' })
     }
   }
 
@@ -480,7 +494,7 @@ export function trainerSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
   for (const e of d.e623a) {
     if (has(e.source_table) || e.transcribed === true) continue
     if (has(e.trainee_initials) && !has(e.trainer_initials)) {
-      out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id) })
+      out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id), signer: 'trainer' })
     }
   }
 

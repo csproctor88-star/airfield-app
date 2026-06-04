@@ -85,6 +85,18 @@ async function handler(request: Request) {
       const roleAssignments = ((rolesData ?? []) as { user_id: string; role: string }[])
       const signerUids = signerUidsFromRoles(roleAssignments)
 
+      // Bulk-transcribed row ids (their certifier column was cleared on import,
+      // so a missing certifier is waived — see trainerSignatureGaps).
+      const transcribedRowIds: string[] = []
+      for (let from = 0; ; from += 1000) {
+        const { data } = await supabase
+          .from('amtr_audit_log').select('row_id')
+          .eq('base_id', baseId).eq('action', 'transcribe').range(from, from + 999)
+        const rows = (data ?? []) as { row_id: string | null }[]
+        for (const r of rows) if (r.row_id) transcribedRowIds.push(String(r.row_id))
+        if (rows.length < 1000) break
+      }
+
       // Group member-scoped rows by member_id.
       const group = (rows: Row[]) => {
         const map = new Map<string, Row[]>()
@@ -111,7 +123,7 @@ async function handler(request: Request) {
           e623a: e623aP.get(memberId) ?? [], items797: items797P.get(memberId) ?? [],
           items803: [], milestoneCatalog: [], formalCatalog: [], formalProgress: [],
           qualCatalog: qualCat, qualProgress: qualP.get(memberId) ?? [],
-          transcribedRowIds: [],
+          transcribedRowIds,
           today,
         }
         const { notifs: memberNotifs, liveKeys: memberLive } = buildMemberNotifs(d, baseId, signerUids)

@@ -160,7 +160,7 @@ describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
       items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: '' }],
     })
     expect(trainerSignatureGaps(d)).toEqual([
-      { tab: '797', itemId: 'a1', itemName: 'Taxi signals' },
+      { tab: '797', itemId: 'a1', itemName: 'Taxi signals', signer: 'trainer' },
     ])
   })
 
@@ -171,7 +171,7 @@ describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
     expect(trainerSignatureGaps(d)).toEqual([])
   })
 
-  it('does not flag a 797 item the trainer already signed', () => {
+  it('does not flag a 797 item the trainer signed when no certifier is required', () => {
     const d = scan({
       items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG' }],
     })
@@ -187,8 +187,8 @@ describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
       ],
     })
     expect(trainerSignatureGaps(d)).toEqual([
-      { tab: '1098', itemId: 'c1', itemName: 'CPR' },
-      { tab: '1098', itemId: 'c2', itemName: 'OPSEC' },
+      { tab: '1098', itemId: 'c1', itemName: 'CPR', signer: 'certifier' },
+      { tab: '1098', itemId: 'c2', itemName: 'OPSEC', signer: 'certifier' },
     ])
   })
 
@@ -201,7 +201,7 @@ describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
       ],
     })
     expect(trainerSignatureGaps(d)).toEqual([
-      { tab: '623a', itemId: 'e1', itemName: 'Counseling' },
+      { tab: '623a', itemId: 'e1', itemName: 'Counseling', signer: 'trainer' },
     ])
   })
 
@@ -210,5 +210,47 @@ describe('trainerSignatureGaps (supervisor owes the countersignature)', () => {
       items797: [{ id: 'a1', task: 'X', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG' }],
     })
     expect(trainerSignatureGaps(d)).toEqual([])
+  })
+
+  // Three-signature items (caret ^ JQS task / requires_certifier 797): the
+  // certifier is the third and final signer, after trainee + trainer.
+  it('flags the trainer first, then the certifier, on a caret JQS task', () => {
+    const cat = [{ id: 'j1', kind: 'item', required: true, core_cert: '5^', number: '1.1' }]
+    // trainee signed, trainer not → trainer owes
+    expect(trainerSignatureGaps(scan({
+      jqsCatalog: cat,
+      jqsProgress: [{ id: 'p1', catalog_id: 'j1', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: '', certifier_initials: '' }],
+    }))).toEqual([{ tab: 'jqs', itemId: 'j1', itemName: '1.1', signer: 'trainer' }])
+    // trainee + trainer signed, certifier not → certifier owes
+    expect(trainerSignatureGaps(scan({
+      jqsCatalog: cat,
+      jqsProgress: [{ id: 'p1', catalog_id: 'j1', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG', certifier_initials: '' }],
+    }))).toEqual([{ tab: 'jqs', itemId: 'j1', itemName: '1.1', signer: 'certifier' }])
+  })
+
+  it('does not require a certifier on a NON-caret JQS task once trainee + trainer signed', () => {
+    const d = scan({
+      jqsCatalog: [{ id: 'j1', kind: 'item', required: true, core_cert: '5', number: '1.1' }],
+      jqsProgress: [{ id: 'p1', catalog_id: 'j1', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG', certifier_initials: '' }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([])
+  })
+
+  it('waives the certifier on a transcribed (imported) caret JQS row', () => {
+    const d = scan({
+      jqsCatalog: [{ id: 'j1', kind: 'item', required: true, core_cert: '5^', number: '1.1' }],
+      jqsProgress: [{ id: 'p1', catalog_id: 'j1', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG', certifier_initials: '' }],
+      transcribedRowIds: ['p1'],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([])
+  })
+
+  it('flags the certifier on a requires_certifier 797 item after trainee + trainer sign', () => {
+    const d = scan({
+      items797: [{ id: 'a1', task: 'Hot brakes', start_date: '2026-05-01', trainee_initials: 'RS', trainer_initials: 'PG', certifier_initials: '', requires_certifier: true }],
+    })
+    expect(trainerSignatureGaps(d)).toEqual([
+      { tab: '797', itemId: 'a1', itemName: 'Hot brakes', signer: 'certifier' },
+    ])
   })
 })

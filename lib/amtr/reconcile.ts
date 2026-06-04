@@ -55,7 +55,7 @@ export function buildMemberNotifs(
 
   const memberName = String(m.full_name ?? 'Member')
   for (const gap of trainerSignatureGaps(d)) {
-    const draft = buildTrainerSignatureRequired(memberName, FORM_LABEL[gap.tab] ?? gap.tab, gap.itemName, gap.tab, gap.itemId)
+    const draft = buildTrainerSignatureRequired(memberName, FORM_LABEL[gap.tab] ?? gap.tab, gap.itemName, gap.tab, gap.itemId, gap.signer)
     for (const uid of signerUids) {
       const dedupe_key = `${draft.dedupe_key}:${uid}`
       liveKeys.add(`${uid}::${dedupe_key}`)
