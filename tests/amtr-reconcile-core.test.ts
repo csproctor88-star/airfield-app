@@ -62,28 +62,39 @@ describe('dueItemsForMember', () => {
 })
 
 describe('traineeSignatureGaps', () => {
-  it('flags a started 797 item missing trainee initials', () => {
+  // The trainee only owes a signature once a trainer has signed + dated the
+  // item but the trainee hasn't countersigned.
+
+  it('flags a 797 item the trainer signed + dated but the trainee has not', () => {
     const d = scan({
-      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: '' }],
+      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainer_initials: 'PG', trainee_initials: '' }],
     })
     expect(traineeSignatureGaps(d)).toEqual([
       { tab: '797', itemId: 'a1', itemName: 'Taxi signals' },
     ])
   })
 
-  it('does not flag a 797 item the trainee already signed', () => {
+  it('does not flag a 797 item the trainer has not signed yet (not yet trained)', () => {
     const d = scan({
-      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainee_initials: 'RS' }],
+      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainer_initials: '', trainee_initials: '' }],
     })
     expect(traineeSignatureGaps(d)).toEqual([])
   })
 
-  it('flags a manual 623A entry missing trainee initials but skips transcribed/source-linked', () => {
+  it('does not flag a 797 item the trainee already signed', () => {
+    const d = scan({
+      items797: [{ id: 'a1', task: 'Taxi signals', start_date: '2026-05-01', trainer_initials: 'PG', trainee_initials: 'RS' }],
+    })
+    expect(traineeSignatureGaps(d)).toEqual([])
+  })
+
+  it('flags a trainer-signed 623A entry missing trainee initials but skips transcribed/source-linked', () => {
     const d = scan({
       e623a: [
-        { id: 'e1', entry_type: 'Counseling', trainee_initials: '' },                 // flag
-        { id: 'e2', entry_type: 'Old', trainee_initials: '', transcribed: true },      // skip (historical)
-        { id: 'e3', entry_type: 'Auto', trainee_initials: '', source_table: 'amtr_1098_progress' }, // skip (source-linked)
+        { id: 'e1', entry_type: 'Counseling', trainer_initials: 'PG', trainee_initials: '' },                 // flag
+        { id: 'e2', entry_type: 'Old', trainer_initials: 'PG', trainee_initials: '', transcribed: true },      // skip (historical)
+        { id: 'e3', entry_type: 'Auto', trainer_initials: 'PG', trainee_initials: '', source_table: 'amtr_1098_progress' }, // skip (source-linked)
+        { id: 'e4', entry_type: 'Unsigned', trainer_initials: '', trainee_initials: '' },                      // skip (trainer hasn't signed)
       ],
     })
     expect(traineeSignatureGaps(d)).toEqual([
@@ -91,7 +102,7 @@ describe('traineeSignatureGaps', () => {
     ])
   })
 
-  it('flags a required JQS core task missing trainee initials, respecting skill level', () => {
+  it('flags a required JQS core task the trainer signed + dated, respecting skill level', () => {
     const d = scan({
       // Member is 5-level (attained skill_level qual).
       qualCatalog: [{ id: 'q5', category: 'skill_level', name: '1C751 Skill Level' }],
@@ -100,19 +111,31 @@ describe('traineeSignatureGaps', () => {
         { id: 'j1', kind: 'task', required: true, core_cert: '5', number: '1.1' }, // 5-level → applies
         { id: 'j2', kind: 'task', required: true, core_cert: '7', number: '2.1' }, // 7-level → above skill, ignore
       ],
-      jqsProgress: [],
+      jqsProgress: [
+        { catalog_id: 'j1', start_date: '2026-05-01', trainer_initials: 'PG', trainee_initials: '' }, // trainer signed, trainee not → flag
+      ],
     })
     expect(traineeSignatureGaps(d)).toEqual([
       { tab: 'jqs', itemId: 'j1', itemName: '1.1' },
     ])
   })
 
-  it('flags a completed-and-due 1098 row missing trainee initials, not a future-due one', () => {
+  it('does not flag a JQS task with no progress row or no trainer signature (not yet trained)', () => {
+    const base = {
+      qualCatalog: [{ id: 'q5', category: 'skill_level', name: '1C751 Skill Level' }],
+      qualProgress: [{ catalog_id: 'q5', attained: true }],
+      jqsCatalog: [{ id: 'j1', kind: 'task', required: true, core_cert: '5', number: '1.1' }],
+    }
+    expect(traineeSignatureGaps(scan({ ...base, jqsProgress: [] }))).toEqual([]) // no progress
+    expect(traineeSignatureGaps(scan({ ...base, jqsProgress: [{ catalog_id: 'j1', start_date: '2026-05-01', trainer_initials: '', trainee_initials: '' }] }))).toEqual([]) // trainer unsigned
+  })
+
+  it('flags a completed-and-due 1098 row the certifier verified, not a future-due one', () => {
     const d = scan({
       r1098Catalog: [{ id: 'c1', task: 'CPR' }, { id: 'c2', task: 'AED' }],
       r1098Progress: [
-        { catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', trainee_initials: '' }, // due → flag
-        { catalog_id: 'c2', start_date: '2026-05-01', last_completed: '2026-05-01', next_due: '2027-05-01', trainee_initials: '' }, // future → skip
+        { catalog_id: 'c1', start_date: '2025-01-01', last_completed: '2025-01-01', next_due: '2026-01-01', certifier_initials: 'CG', trainee_initials: '' }, // due, certified → flag
+        { catalog_id: 'c2', start_date: '2026-05-01', last_completed: '2026-05-01', next_due: '2027-05-01', certifier_initials: 'CG', trainee_initials: '' }, // future → skip
       ],
     })
     expect(traineeSignatureGaps(d)).toEqual([
@@ -122,8 +145,8 @@ describe('traineeSignatureGaps', () => {
 
   it('returns no gaps for a fully-signed current member', () => {
     const d = scan({
-      items797: [{ id: 'a1', task: 'X', start_date: '2026-05-01', trainee_initials: 'RS' }],
-      e623a: [{ id: 'e1', entry_type: 'Y', trainee_initials: 'RS' }],
+      items797: [{ id: 'a1', task: 'X', start_date: '2026-05-01', trainer_initials: 'PG', trainee_initials: 'RS' }],
+      e623a: [{ id: 'e1', entry_type: 'Y', trainer_initials: 'PG', trainee_initials: 'RS' }],
     })
     expect(traineeSignatureGaps(d)).toEqual([])
   })

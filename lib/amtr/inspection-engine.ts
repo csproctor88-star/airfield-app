@@ -391,34 +391,47 @@ export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
   const out: TraineeSigGap[] = []
   const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
   const futureDue = (v: unknown): boolean => has(v) && String(v).slice(0, 10) > d.today
+  const dated = (r: Row): boolean => has(r.start_date) || has(r.complete_date)
 
-  // JQS — required core tasks at/below the member's skill level.
+  // The trainee only owes a signature once the work is DONE: the supervising
+  // party (trainer, or certifier on the 1098) has signed and the item is dated,
+  // but the trainee hasn't countersigned. An item with no progress, or one the
+  // trainer hasn't signed yet, is "not yet trained" — not the trainee's action.
+
+  // JQS — required core tasks (at/below skill) the trainer signed + dated.
   const jqsProgByCat = new Map(d.jqsProgress.map((p) => [String(p.catalog_id), p]))
   for (const c of live(d.jqsCatalog)) {
     if (c.kind === 'section' || !c.required || !has(c.core_cert)) continue
     const lvl = coreCertLevel(c.core_cert)
     if (!(skill == null || lvl == null || lvl <= skill)) continue
     const p = jqsProgByCat.get(String(c.id))
-    if (!p || !has(p.trainee_initials)) out.push({ tab: 'jqs', itemId: String(c.id), itemName: label(c) })
+    if (p && has(p.trainer_initials) && dated(p) && !has(p.trainee_initials)) {
+      out.push({ tab: 'jqs', itemId: String(c.id), itemName: label(c) })
+    }
   }
 
-  // 1098 — completed AND currently-due rows.
+  // 1098 — completed & currently-due rows the certifier verified.
   const name1098 = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
   for (const p of d.r1098Progress) {
     if (!(has(p.start_date) && has(p.last_completed) && !futureDue(p.next_due))) continue
-    if (!has(p.trainee_initials)) out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id) })
+    if (has(p.certifier_initials) && !has(p.trainee_initials)) {
+      out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id) })
+    }
   }
 
-  // 797 — started items.
+  // 797 — tasks the trainer signed + dated.
   for (const r of d.items797) {
-    if (!(has(r.start_date) || has(r.complete_date))) continue
-    if (!has(r.trainee_initials)) out.push({ tab: '797', itemId: String(r.id), itemName: label(r) })
+    if (has(r.trainer_initials) && dated(r) && !has(r.trainee_initials)) {
+      out.push({ tab: '797', itemId: String(r.id), itemName: label(r) })
+    }
   }
 
-  // 623A — manual, non-transcribed entries.
+  // 623A — manual, non-transcribed entries the trainer signed.
   for (const e of d.e623a) {
     if (has(e.source_table) || e.transcribed === true) continue
-    if (!has(e.trainee_initials)) out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id) })
+    if (has(e.trainer_initials) && !has(e.trainee_initials)) {
+      out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id) })
+    }
   }
 
   return out
