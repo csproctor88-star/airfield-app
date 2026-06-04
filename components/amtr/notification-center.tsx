@@ -39,6 +39,7 @@ export function NotificationCenter() {
   const dismiss = async (id: string) => {
     await dismissAmtrNotification(id)
     setItems((prev) => prev.filter((n) => n.id !== id))
+    window.dispatchEvent(new Event('glidepath:badges-refresh'))
   }
 
   if (loading) return null
