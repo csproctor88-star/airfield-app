@@ -8,6 +8,10 @@
     {
       "path": "/api/annual-review-digest",
       "schedule": "30 13 * * *"
+    },
+    {
+      "path": "/api/amtr-due-reconcile",
+      "schedule": "0 12 * * *"
     }
   ]
 }
