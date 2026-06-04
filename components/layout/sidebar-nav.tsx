@@ -469,6 +469,20 @@ export function SidebarNav() {
               {badgeCounts.discrepancies > 9 ? '9+' : badgeCounts.discrepancies}
             </span>
           )}
+          {/* AMTR training-notification dot — current user's non-dismissed
+              amtr_notifications. Amber: "training action needed". */}
+          {href === '/amtr' && badgeCounts.amtr > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-warning)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(245,158,11,0.5)',
+            }}>
+              {badgeCounts.amtr > 9 ? '9+' : badgeCounts.amtr}
+            </span>
+          )}
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
@@ -489,6 +503,11 @@ export function SidebarNav() {
         {isOpen && href === '/discrepancies' && badgeCounts.discrepancies > 0 && !active && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-success)', marginLeft: 'auto' }}>
             {badgeCounts.discrepancies} to verify
+          </span>
+        )}
+        {isOpen && href === '/amtr' && badgeCounts.amtr > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-warning)', marginLeft: 'auto' }}>
+            {badgeCounts.amtr} to action
           </span>
         )}
       </Link>
@@ -565,6 +584,7 @@ export function SidebarNav() {
       (section.items.includes('/ppr') ? badgeCounts.ppr : 0)
       + (section.items.includes('/qrc') ? badgeCounts.qrc : 0)
       + (section.items.includes('/discrepancies') ? badgeCounts.discrepancies : 0)
+      + (section.items.includes('/amtr') ? badgeCounts.amtr : 0)
 
     // Airfield Management's only badge contributor is Discrepancies-pending-
     // verification, which uses green per the dot-color convention. Other
