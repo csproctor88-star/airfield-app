@@ -8,7 +8,7 @@
 // override. Items with no auto_key are answered manually.
 // ─────────────────────────────────────────────────────────────
 
-import { RAT_EXEMPT_STATUSES } from './status'
+import { RAT_EXEMPT_STATUSES, dueStatus, parseDate, ratApplies } from './status'
 import type { InspectionAutoKey } from './inspection-checklist'
 
 type Row = Record<string, unknown>
@@ -338,6 +338,87 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
       const missing = tr.filter((p) => !(has(p.complete_date) && has(p.trainee_initials))).map((p) => String(catById.get(String(p.catalog_id))?.number ?? p.catalog_id))
       set('jqs_transcribed', missing.length ? 'no' : 'yes', summarize(missing, 'transcribed JQS task(s) missing a date or initials'))
     }
+  }
+
+  return out
+}
+
+// ─────────────────────────────────────────────────────────────
+// Reconcile inputs for the daily notification cron. Pure; co-located
+// with the inspection scan so the signing rules can't drift from it.
+// ─────────────────────────────────────────────────────────────
+
+export type DueItem = { tab: '1098' | 'rat'; itemId: string; itemName: string; dueISO: string }
+export type TraineeSigGap = { tab: 'jqs' | '1098' | '797' | '623a'; itemId: string; itemName: string }
+
+/** Due-soon / overdue recurring items (1098 + RAT) for a member. Mirrors the
+ *  reconcile in form1098-tab.tsx / rat-tab.tsx. RAT is skipped for exempt
+ *  statuses (Civilian / Contractor / Separated). */
+export function dueItemsForMember(d: InspectionScanData): DueItem[] {
+  const out: DueItem[] = []
+  const today = parseDate(d.today) ?? new Date()
+
+  const name1098 = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
+  for (const p of d.r1098Progress) {
+    const due = (p.next_due as string | null) ?? null
+    if (!due) continue
+    const s = dueStatus({ dueDate: due, completedDate: (p.last_completed as string) ?? '' }, today)
+    if (s === 'due_soon' || s === 'overdue') {
+      out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id), dueISO: String(due) })
+    }
+  }
+
+  if (ratApplies(String(d.member.status ?? ''))) {
+    const nameRat = new Map(d.ratCatalog.map((c) => [String(c.id), String(c.course ?? c.id)]))
+    for (const p of d.ratProgress) {
+      const due = (p.due as string | null) ?? null
+      if (!due) continue
+      const s = dueStatus({ dueDate: due, completedDate: (p.completed as string) ?? '' }, today)
+      if (s === 'due_soon' || s === 'overdue') {
+        out.push({ tab: 'rat', itemId: String(p.catalog_id), itemName: nameRat.get(String(p.catalog_id)) ?? String(p.catalog_id), dueISO: String(due) })
+      }
+    }
+  }
+  return out
+}
+
+/** Items awaiting the TRAINEE's initials across JQS / 1098 / 797 / 623A,
+ *  honoring the same eligibility filters the inspection scan applies. The
+ *  certifier transcribe-waiver does NOT apply here — the engine still requires
+ *  trainee initials on transcribed rows; only 623A historical/source-linked
+ *  entries are excluded entirely (as in scan rule 4.1). */
+export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
+  const out: TraineeSigGap[] = []
+  const skill = highestSkillLevel(d.qualCatalog, d.qualProgress)
+  const futureDue = (v: unknown): boolean => has(v) && String(v).slice(0, 10) > d.today
+
+  // JQS — required core tasks at/below the member's skill level.
+  const jqsProgByCat = new Map(d.jqsProgress.map((p) => [String(p.catalog_id), p]))
+  for (const c of live(d.jqsCatalog)) {
+    if (c.kind === 'section' || !c.required || !has(c.core_cert)) continue
+    const lvl = coreCertLevel(c.core_cert)
+    if (!(skill == null || lvl == null || lvl <= skill)) continue
+    const p = jqsProgByCat.get(String(c.id))
+    if (!p || !has(p.trainee_initials)) out.push({ tab: 'jqs', itemId: String(c.id), itemName: label(c) })
+  }
+
+  // 1098 — completed AND currently-due rows.
+  const name1098 = new Map(d.r1098Catalog.map((c) => [String(c.id), String(c.task ?? c.id)]))
+  for (const p of d.r1098Progress) {
+    if (!(has(p.start_date) && has(p.last_completed) && !futureDue(p.next_due))) continue
+    if (!has(p.trainee_initials)) out.push({ tab: '1098', itemId: String(p.catalog_id), itemName: name1098.get(String(p.catalog_id)) ?? String(p.catalog_id) })
+  }
+
+  // 797 — started items.
+  for (const r of d.items797) {
+    if (!(has(r.start_date) || has(r.complete_date))) continue
+    if (!has(r.trainee_initials)) out.push({ tab: '797', itemId: String(r.id), itemName: label(r) })
+  }
+
+  // 623A — manual, non-transcribed entries.
+  for (const e of d.e623a) {
+    if (has(e.source_table) || e.transcribed === true) continue
+    if (!has(e.trainee_initials)) out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id) })
   }
 
   return out
