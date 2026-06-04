@@ -501,6 +501,21 @@ export async function deleteAmtrRow(table: string, id: string): Promise<{ error:
 
 // ── Signature RPC wrapper ──────────────────────────────────
 
+/** Fire-and-forget per-member notification reconcile after a signature change,
+ *  so the record's notifications update immediately rather than at the next
+ *  daily cron. Best-effort — the cron is the backstop if this fails. On
+ *  completion it nudges the sidebar badge + Notifications panel to re-fetch. */
+function triggerMemberReconcile(table: string, rowId: string): void {
+  if (typeof window === 'undefined') return
+  void fetch('/api/amtr-reconcile-member', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table, rowId }),
+  })
+    .then(() => window.dispatchEvent(new Event('glidepath:badges-refresh')))
+    .catch(() => { /* best-effort */ })
+}
+
 export async function amtrSign(
   table: AmtrSignableTable, rowId: string, slot: string, initials: string,
 ): Promise<{ error: string | null }> {
@@ -513,6 +528,7 @@ export async function amtrSign(
     console.error('amtr_sign failed:', error.message)
     return { error: friendlyError(error.message) }
   }
+  triggerMemberReconcile(table, rowId)
   return { error: null }
 }
 
@@ -532,6 +548,7 @@ export async function amtrTranscribe(
     console.error('amtr_transcribe failed:', error.message)
     return { error: friendlyError(error.message) }
   }
+  triggerMemberReconcile(table, rowId)
   return { error: null }
 }
 
@@ -546,6 +563,7 @@ export async function amtrReopen(
     console.error('amtr_reopen failed:', error.message)
     return { error: friendlyError(error.message) }
   }
+  triggerMemberReconcile(table, rowId)
   return { error: null }
 }
 

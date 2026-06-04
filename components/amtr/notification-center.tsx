@@ -36,6 +36,14 @@ export function NotificationCenter({ memberId }: { memberId?: string } = {}) {
 
   useEffect(() => { load() }, [load])
 
+  // Re-fetch when a sign/reopen reconciles notifications (fires badges-refresh)
+  // so the panel reflects the change immediately, not at the next daily cron.
+  useEffect(() => {
+    const onRefresh = () => { void load() }
+    window.addEventListener('glidepath:badges-refresh', onRefresh)
+    return () => window.removeEventListener('glidepath:badges-refresh', onRefresh)
+  }, [load])
+
   const open = async (n: AmtrNotification) => {
     const params = new URLSearchParams()
     if (n.target_tab) params.set('tab', n.target_tab)

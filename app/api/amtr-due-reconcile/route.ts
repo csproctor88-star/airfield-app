@@ -16,15 +16,10 @@ export const maxDuration = 60
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import {
-  dueItemsForMember, traineeSignatureGaps, trainerSignatureGaps, type InspectionScanData,
-} from '@/lib/amtr/inspection-engine'
-import { buildTrainingDue, buildSignatureRequired, buildTrainerSignatureRequired } from '@/lib/amtr/notifications'
+import { type InspectionScanData } from '@/lib/amtr/inspection-engine'
+import { buildMemberNotifs, signerUidsFromRoles, type ReconcileNotif } from '@/lib/amtr/reconcile'
 
 type Row = Record<string, unknown>
-const FORM_LABEL: Record<string, string> = {
-  jqs: 'JQS-CFETP', '1098': 'DAF 1098', '797': 'DAF 797', '623a': 'DAF 623A',
-}
 
 // Vercel cron invokes the path with GET; POST is kept for manual testing.
 export async function GET(request: Request) { return handler(request) }
@@ -55,10 +50,6 @@ async function handler(request: Request) {
     byBase.set(b, arr)
   }
 
-  type Notif = {
-    base_id: string; recipient_user_id: string; member_id: string
-    kind: string; body: string; target_tab: string; target_item_id: string; dedupe_key: string
-  }
   let created = 0, resolved = 0
   const errors: { base: string; error: string }[] = []
 
@@ -92,11 +83,7 @@ async function handler(request: Request) {
         fetchAll('amtr_qual_catalog'), fetchAll('amtr_qual_progress'),
       ])
       const roleAssignments = ((rolesData ?? []) as { user_id: string; role: string }[])
-      // Supervisors who can countersign trainee work — recipients of
-      // trainer_signature_required (any of them can sign).
-      const signerUids = Array.from(new Set(
-        roleAssignments.filter((a) => a.role === 'trainer' || a.role === 'certifier' || a.role === 'namt' || a.role === 'afm').map((a) => a.user_id),
-      ))
+      const signerUids = signerUidsFromRoles(roleAssignments)
 
       // Group member-scoped rows by member_id.
       const group = (rows: Row[]) => {
@@ -110,13 +97,11 @@ async function handler(request: Request) {
       const jqsP = group(jqsProg), r1098P = group(r1098Prog), ratP = group(ratProg)
       const e623aP = group(e623a), items797P = group(items797), qualP = group(qualProg)
 
-      const notifs: Notif[] = []
+      const notifs: ReconcileNotif[] = []
       const liveKeys = new Set<string>()
 
       for (const m of baseMembers) {
         const memberId = String(m.id)
-        const traineeUid = m.user_id ? String(m.user_id) : null
-
         const d: InspectionScanData = {
           member: m,
           roleAssignments,
@@ -129,35 +114,9 @@ async function handler(request: Request) {
           transcribedRowIds: [],
           today,
         }
-
-        // Trainee's own items → the trainee only. Due/overdue training to keep
-        // current, plus items awaiting the trainee's signature. A supervisor
-        // does not need every member's due date.
-        if (traineeUid) {
-          for (const item of dueItemsForMember(d)) {
-            const draft = buildTrainingDue(item.itemName, item.dueISO, item.itemId, item.tab)
-            const dedupe_key = `${draft.dedupe_key}:${traineeUid}`
-            liveKeys.add(`${traineeUid}::${dedupe_key}`)
-            notifs.push({ base_id: baseId, recipient_user_id: traineeUid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key })
-          }
-          for (const gap of traineeSignatureGaps(d)) {
-            const draft = buildSignatureRequired(FORM_LABEL[gap.tab] ?? gap.tab, gap.itemName, gap.tab, gap.itemId)
-            liveKeys.add(`${traineeUid}::${draft.dedupe_key}`)
-            notifs.push({ base_id: baseId, recipient_user_id: traineeUid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key: draft.dedupe_key })
-          }
-        }
-
-        // Items awaiting a supervisor countersignature → the base's signers.
-        // Each is a concrete action they own; no member-due-date noise.
-        const memberName = String(m.full_name ?? 'Member')
-        for (const gap of trainerSignatureGaps(d)) {
-          const draft = buildTrainerSignatureRequired(memberName, FORM_LABEL[gap.tab] ?? gap.tab, gap.itemName, gap.tab, gap.itemId)
-          for (const uid of signerUids) {
-            const dedupe_key = `${draft.dedupe_key}:${uid}`
-            liveKeys.add(`${uid}::${dedupe_key}`)
-            notifs.push({ base_id: baseId, recipient_user_id: uid, member_id: memberId, kind: draft.kind, body: draft.body, target_tab: draft.target_tab, target_item_id: draft.target_item_id, dedupe_key })
-          }
-        }
+        const { notifs: memberNotifs, liveKeys: memberLive } = buildMemberNotifs(d, baseId, signerUids)
+        notifs.push(...memberNotifs)
+        memberLive.forEach((k) => liveKeys.add(k))
       }
 
       // Declarative reconcile: every currently-owed item must have an ACTIVE
