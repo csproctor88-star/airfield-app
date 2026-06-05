@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCurrentWeather, type WeatherResult } from '@/lib/weather'
-import { fetchNavaidStatuses, updateNavaidStatus, type NavaidStatus } from '@/lib/supabase/navaids'
+import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
+import { getWriteQueue } from '@/lib/sync/write-queue'
+import { enqueueNavaidStatus } from '@/lib/navaid-status-write'
 import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
 import { fetchPprEntriesForDate, fetchPprColumns, formatPprColumnValue, isActivePpr, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
@@ -95,6 +97,7 @@ export default function HomePage() {
   const [weatherLoaded, setWeatherLoaded] = useState(false)
   const [navaids, setNavaids] = useState<NavaidStatus[]>([])
   const [navaidNotes, setNavaidNotes] = useState<Record<string, string>>({})
+  const userIdRef = useRef<string | null>(null)
   const [customBoards, setCustomBoards] = useState<CustomStatusBoard[]>([])
   const [customItems, setCustomItems] = useState<CustomStatusItem[]>([])
   const [customItemNotes, setCustomItemNotes] = useState<Record<string, string>>({})
@@ -352,6 +355,15 @@ export default function HomePage() {
     return () => { supabase.removeChannel(channel) }
   }, [installationId, refreshStatus])
 
+  // Load the current user id once for queue bookkeeping on offline writes.
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getSession().then(({ data }) => {
+      userIdRef.current = data.session?.user?.id ?? null
+    })
+  }, [])
+
   // Realtime: subscribe to navaid_statuses UPDATE events for cross-device sync
   useEffect(() => {
     const supabase = createClient()
@@ -448,21 +460,53 @@ export default function HomePage() {
     return () => { supabase.removeChannel(channel) }
   }, [installationId, loadContractors])
 
-  // --- NAVAID status toggle handler ---
+  // --- NAVAID status handlers ---
+  // Route through the offline write queue (lib/navaid-status-write) with an
+  // optimistic local update, so a flightline change survives a dropped
+  // connection — queued, shown in the header "Queued" badge, drained on
+  // reconnect — instead of being silently dropped by a direct write.
+  async function persistNavaid(
+    navaid: NavaidStatus,
+    newStatus: 'green' | 'yellow' | 'red',
+    notes: string | null,
+    details: string,
+  ) {
+    // Optimistic local update so the grid reflects the change even offline.
+    setNavaids(prev => prev.map(n => n.id === navaid.id ? { ...n, status: newStatus, notes } : n))
+    const userId = userIdRef.current ?? ''
+    try {
+      const res = await enqueueNavaidStatus(navaid.id, newStatus, notes, installationId, userId)
+      // Queue the Events Log entry too, so an offline change still records.
+      void getWriteQueue().enqueueOrExecute(
+        'activity_log_insert',
+        {
+          action: 'updated', entity_type: 'navaid_status', entity_id: navaid.id,
+          entity_display_id: navaid.navaid_name, metadata: { details },
+          baseId: installationId, createdAt: new Date().toISOString(),
+        },
+        { baseId: installationId ?? '', userId },
+      )
+      if (res.status === 'queued') {
+        toast.warning('Saved offline — NAVAID status will sync when you reconnect.', { id: 'navaid-queued', duration: 5000 })
+      } else {
+        loadNavaids()
+      }
+    } catch {
+      toast.error('Could not save the NAVAID status change.', { id: 'navaid-error' })
+      loadNavaids() // revert optimistic state to server truth
+    }
+  }
+
   async function handleNavaidToggle(navaid: NavaidStatus, newStatus: 'green' | 'yellow' | 'red', dialogNotes?: string) {
     const notes = newStatus === 'green' ? null : (dialogNotes ?? (navaidNotes[navaid.id] || null))
-    const ok = await updateNavaidStatus(navaid.id, newStatus, notes)
-    if (ok) {
-      loadNavaids()
-      logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { details: `${navaid.navaid_name.toUpperCase()} STATUS CHANGED TO ${newStatus === 'green' ? 'OPERATIONAL' : newStatus === 'yellow' ? 'DEGRADED' : 'OUTAGE'}${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
-    }
+    const details = `${navaid.navaid_name.toUpperCase()} STATUS CHANGED TO ${newStatus === 'green' ? 'OPERATIONAL' : newStatus === 'yellow' ? 'DEGRADED' : 'OUTAGE'}${notes ? `. ${notes.toUpperCase()}` : ''}`
+    await persistNavaid(navaid, newStatus, notes, details)
   }
 
   async function handleNavaidNotesSave(navaid: NavaidStatus, overrideNotes?: string) {
     const notes = overrideNotes ?? (navaidNotes[navaid.id] || null)
-    await updateNavaidStatus(navaid.id, navaid.status, notes)
-    loadNavaids()
-    logActivity('updated', 'navaid_status', navaid.id, navaid.navaid_name, { details: `${navaid.navaid_name.toUpperCase()} REMARKS UPDATED${notes ? `. ${notes.toUpperCase()}` : ''}` }, installationId)
+    const details = `${navaid.navaid_name.toUpperCase()} REMARKS UPDATED${notes ? `. ${notes.toUpperCase()}` : ''}`
+    await persistNavaid(navaid, navaid.status, notes, details)
   }
 
   // --- Custom Status Board handlers ---

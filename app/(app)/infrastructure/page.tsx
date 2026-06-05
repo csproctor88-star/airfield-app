@@ -45,6 +45,7 @@ import {
   type InfrastructureFeatureType,
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
+import { submitDiscrepancyFanout } from '@/lib/discrepancy-write'
 import { createOutageEvent, fetchOutageEventsForBase, type EnrichedOutageEvent } from '@/lib/supabase/outage-events'
 import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
 import { calculateAllSystemHealth, calculateComponentOutage, getAlertTier, type SystemHealth, type OutageStatus, type AlertTier } from '@/lib/outage-rules'
@@ -1264,6 +1265,50 @@ export default function InfrastructureMapPage() {
 
     const feature = dbFeatures.find(f => f.id === id)
     if (!feature) return
+
+    // Offline: optimistically mark the feature inoperative locally and queue
+    // the full fan-out (status + auto-discrepancy + outage event) through the
+    // write queue. The online path below — refetch + DAFMAN A3.1 threshold
+    // recalc + alert dialog — needs the network, so it is skipped offline and
+    // runs on the next queue drain.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      const compOff = feature.system_component_id
+        ? allComponentsRef.current.find(c => c.id === feature.system_component_id)
+        : null
+      const nameOff = buildFeatureDisplayName(feature, compOff?.system_name, compOff?.label)
+      setDbFeatures(prev => prev.map(f => f.id === id ? { ...f, status: 'inoperative' } : f))
+      const sb = createClient()
+      const userId = sb ? (await sb.auth.getSession()).data.session?.user?.id ?? '' : ''
+      try {
+        await submitDiscrepancyFanout({
+          discrepancy: {
+            title: `INOP: ${nameOff}`,
+            description: 'Status: INOPERATIVE',
+            location_text: feature.layer || 'Airfield',
+            type: 'lighting',
+            latitude: feature.latitude,
+            longitude: feature.longitude,
+            base_id: installationId,
+            infrastructure_feature_id: id,
+            assigned_shop: 'Airfield Management',
+          },
+          inopFeatureIds: [id],
+          outageEvents: [{
+            base_id: installationId,
+            feature_id: id,
+            system_component_id: feature.system_component_id || undefined,
+            event_type: 'reported' as const,
+            notes: `INOP — ${nameOff}`,
+          }],
+          baseId: installationId,
+          userId,
+        })
+        toast.warning('Saved offline — outage will sync when you reconnect.', { id: 'infra-outage-queued' })
+      } catch {
+        toast.error('Could not queue the outage. Try again when online.')
+      }
+      return
+    }
 
     const updated = await updateFeatureStatus(id, 'inoperative')
     if (!updated) {

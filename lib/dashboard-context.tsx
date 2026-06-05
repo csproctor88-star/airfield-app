@@ -1,7 +1,9 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
-import { fetchAirfieldStatus, updateAirfieldStatus, type AirfieldStatus, type AdvisoryItem, type RunwayStatuses } from '@/lib/supabase/airfield-status'
+import { fetchAirfieldStatus, type AirfieldStatus, type AdvisoryItem, type RunwayStatuses } from '@/lib/supabase/airfield-status'
+import { toast } from 'sonner'
+import { enqueueAirfieldStatus, type AirfieldStatusUpdates } from '@/lib/airfield-status-write'
 import { logBwcChange } from '@/lib/supabase/wildlife'
 import { warnIfRealtimeDown } from '@/lib/realtime-subscribe'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
@@ -78,6 +80,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [afmClosedMessage, setAfmClosedMsgLocal] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const lastLocalUpdate = useRef(0)
+  const userIdRef = useRef<string | null>(null)
 
   // Build runway labels from installation runways (e.g., "06L/24R")
   const runwayLabels = runways.map(r => `${r.end1_designator}/${r.end2_designator}`)
@@ -136,6 +139,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
     load()
   }, [installationId])
+
+  // Load the current user id once for queue bookkeeping on offline writes.
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getSession().then(({ data }) => {
+      userIdRef.current = data.session?.user?.id ?? null
+    })
+  }, [])
 
   // Realtime: subscribe to airfield_status UPDATE events for this base
   useEffect(() => {
@@ -207,8 +219,35 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const markLocalUpdate = useCallback(() => {
     lastLocalUpdate.current = Date.now()
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:local-status-update'))
-    warnIfRealtimeDown()
+    // warnIfRealtimeDown is about realtime push to OTHER users after a
+    // successful save. When offline the write is queued instead (the header
+    // "Queued" badge + the toast in persistAirfieldStatus are the feedback),
+    // so only fire the realtime-down warning when we're actually online.
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) warnIfRealtimeDown()
   }, [])
+
+  // Persist an airfield_status change through the offline write queue. Online:
+  // runs inline. Offline: queued (surfaces in the header "Queued" badge) and
+  // drained on reconnect — so a flightline edit is never silently dropped.
+  // Replaces the old direct updateAirfieldStatus call; signature mirrors it.
+  const persistAirfieldStatus = useCallback(
+    async (updates: AirfieldStatusUpdates, baseId: string | null) => {
+      if (!baseId) return
+      try {
+        const res = await enqueueAirfieldStatus(updates, baseId, userIdRef.current ?? '')
+        if (res.status === 'queued') {
+          toast.warning('Saved offline — airfield status will sync when you reconnect.', {
+            id: 'airfield-status-queued',
+            duration: 5000,
+          })
+        }
+      } catch {
+        // NonRetriable (no row / RLS) bubbles from the queue when online.
+        toast.error('Could not save the airfield status change.', { id: 'airfield-status-error' })
+      }
+    },
+    [],
+  )
 
   // Helper: persist runway_statuses and sync legacy fields from first runway
   const persistRunwayStatuses = useCallback(async (updated: RunwayStatuses) => {
@@ -221,7 +260,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       legacyUpdates.active_runway = firstEntry.active_end
       legacyUpdates.runway_status = firstEntry.status
     }
-    await updateAirfieldStatus(legacyUpdates, installationId)
+    await persistAirfieldStatus(legacyUpdates, installationId)
   }, [installationId, runwayLabels])
 
   // Helper: persist advisories array + sync legacy fields from first item
@@ -229,7 +268,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setAdvisoriesLocal(items)
     markLocalUpdate()
     const first = items[0] ?? null
-    await updateAirfieldStatus({
+    await persistAirfieldStatus({
       advisories: items,
       advisory_type: first?.type ?? null,
       advisory_text: first?.text ?? null,
@@ -260,14 +299,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setActiveRunway = useCallback(async (r: string) => {
     setActiveRunwayLocal(r)
     markLocalUpdate()
-    await updateAirfieldStatus({ active_runway: r }, installationId)
+    await persistAirfieldStatus({ active_runway: r }, installationId)
   }, [installationId])
 
   // Legacy: Persist runway status changes (single-runway compat)
   const setRunwayStatus = useCallback(async (s: 'open' | 'suspended' | 'closed') => {
     setRunwayStatusLocal(s)
     markLocalUpdate()
-    await updateAirfieldStatus({ runway_status: s }, installationId)
+    await persistAirfieldStatus({ runway_status: s }, installationId)
   }, [installationId])
 
   // Multi-runway: set active end for a specific runway
@@ -298,7 +337,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setArffCat = useCallback(async (cat: number | null) => {
     setArffCatLocal(cat)
     markLocalUpdate()
-    await updateAirfieldStatus({ arff_cat: cat }, installationId)
+    await persistAirfieldStatus({ arff_cat: cat }, installationId)
   }, [installationId])
 
   // ARFF: set readiness status for a specific aircraft
@@ -306,13 +345,18 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const updated = { ...arffStatuses, [name]: status }
     setArffStatusesLocal(updated)
     markLocalUpdate()
-    await updateAirfieldStatus({ arff_statuses: updated }, installationId)
+    await persistAirfieldStatus({ arff_statuses: updated }, installationId)
   }, [arffStatuses, installationId])
 
   // RSC: set runway surface condition
   // Safety users don't have full airfield_status:write — they route
   // through the safety_update_rsc_bwc SECURITY DEFINER RPC.
   const setRscCondition = useCallback(async (val: string | null) => {
+    // Safety-role RSC writes go through an RPC and are online-only by design.
+    if (userRole === 'safety' && installationId && typeof navigator !== 'undefined' && navigator.onLine === false) {
+      toast.error("You're offline — RSC changes need a connection for the Safety role.", { id: 'safety-offline' })
+      return
+    }
     const now = new Date().toISOString()
     setRscConditionLocal(val)
     setRscUpdatedAtLocal(now)
@@ -321,12 +365,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const { safetyUpdateRscBwc } = await import('@/lib/supabase/airfield-status')
       await safetyUpdateRscBwc(installationId, { rsc_condition: val })
     } else {
-      await updateAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
+      await persistAirfieldStatus({ rsc_condition: val, rsc_updated_at: now }, installationId)
     }
   }, [installationId, userRole])
 
   // BWC: set bird watch condition (Safety routes through RPC, same reason)
   const setBwcValue = useCallback(async (val: string | null) => {
+    // Safety-role BWC writes go through an RPC and are online-only by design.
+    if (userRole === 'safety' && installationId && typeof navigator !== 'undefined' && navigator.onLine === false) {
+      toast.error("You're offline — BWC changes need a connection for the Safety role.", { id: 'safety-offline' })
+      return
+    }
     const now = new Date().toISOString()
     setBwcValueLocal(val)
     setBwcUpdatedAtLocal(now)
@@ -335,7 +384,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       const { safetyUpdateRscBwc } = await import('@/lib/supabase/airfield-status')
       await safetyUpdateRscBwc(installationId, { bwc_value: val })
     } else {
-      await updateAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
+      await persistAirfieldStatus({ bwc_value: val, bwc_updated_at: now }, installationId)
     }
     if (val) {
       logBwcChange(installationId, val, 'dashboard', null, null, null)
@@ -346,21 +395,21 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const setConstructionRemarks = useCallback(async (val: string | null) => {
     setConstructionRemarksLocal(val)
     markLocalUpdate()
-    await updateAirfieldStatus({ construction_remarks: val }, installationId)
+    await persistAirfieldStatus({ construction_remarks: val }, installationId)
   }, [installationId])
 
   // Misc remarks
   const setMiscRemarks = useCallback(async (val: string | null) => {
     setMiscRemarksLocal(val)
     markLocalUpdate()
-    await updateAirfieldStatus({ misc_remarks: val }, installationId)
+    await persistAirfieldStatus({ misc_remarks: val }, installationId)
   }, [installationId])
 
   const setAfmOutOfOffice = useCallback(async (active: boolean, message?: string | null) => {
     setAfmOooLocal(active)
     setAfmOooMsgLocal(message ?? null)
     markLocalUpdate()
-    await updateAirfieldStatus({ afm_out_of_office: active, afm_ooo_message: message ?? null }, installationId)
+    await persistAirfieldStatus({ afm_out_of_office: active, afm_ooo_message: message ?? null }, installationId)
   }, [installationId])
 
   // Activate / deactivate "closed for the day". On activate, clear per-runway
@@ -411,7 +460,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       patch.bwc_updated_at = null
     }
 
-    await updateAirfieldStatus(patch, installationId)
+    await persistAirfieldStatus(patch, installationId)
   }, [installationId, runwayLabels, runwayStatuses])
 
   // Re-fetch airfield_status (called on mount, by dashboard realtime, and by polling fallback)

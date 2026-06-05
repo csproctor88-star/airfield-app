@@ -31,6 +31,7 @@ import {
   type DailyReviewRow,
 } from '@/lib/supabase/daily-reviews'
 import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
+import { updateNavaidStatus } from '@/lib/supabase/navaids'
 import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { logActivity } from '@/lib/supabase/activity'
@@ -228,6 +229,31 @@ const airfieldStatusUpdateHandler: WriteHandler<
 }
 
 // ---------------------------------------------------------------------------
+// navaid_status_update  (Airfield Status board NAVAID grid)
+// ---------------------------------------------------------------------------
+
+export interface NavaidStatusUpdatePayload {
+  id: string
+  status: 'green' | 'yellow' | 'red'
+  notes: string | null
+}
+
+const navaidStatusUpdateHandler: WriteHandler<NavaidStatusUpdatePayload, boolean> = async (
+  payload,
+) => {
+  const ok = await updateNavaidStatus(payload.id, payload.status, payload.notes)
+  if (!ok) {
+    // updateNavaidStatus returns false on a structured error or no row.
+    // Offline → transient (retry on reconnect); online → non-retriable.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error('navaid_status update failed offline')
+    }
+    throw new NonRetriableError('navaid_status update failed (no row or RLS)')
+  }
+  return true
+}
+
+// ---------------------------------------------------------------------------
 // infrastructure_feature_status_update
 // ---------------------------------------------------------------------------
 
@@ -319,6 +345,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('acsi_submit', acsiSubmitHandler)
   queue.registerHandler('daily_review_sign', dailyReviewSignHandler)
   queue.registerHandler('airfield_status_update', airfieldStatusUpdateHandler)
+  queue.registerHandler('navaid_status_update', navaidStatusUpdateHandler)
   queue.registerHandler(
     'infrastructure_feature_status_update',
     infrastructureFeatureStatusUpdateHandler,
@@ -339,6 +366,7 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   acsi_submit: acsiSubmitHandler,
   daily_review_sign: dailyReviewSignHandler,
   airfield_status_update: airfieldStatusUpdateHandler,
+  navaid_status_update: navaidStatusUpdateHandler,
   infrastructure_feature_status_update: infrastructureFeatureStatusUpdateHandler,
   outage_event_create: outageEventCreateHandler,
   activity_log_insert: activityLogInsertHandler,

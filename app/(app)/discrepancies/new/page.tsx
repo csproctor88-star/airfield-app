@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
 import { getDiscrepancyStatusOptions } from '@/lib/airport-mode'
-import { createDiscrepancy, uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
+import { uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
 import { PhotoPickerButton } from '@/components/ui/photo-picker-button'
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
-import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
-import { createOutageEvent } from '@/lib/supabase/outage-events'
+import { submitDiscrepancyFanout } from '@/lib/discrepancy-write'
+import { persistPendingPhoto } from '@/lib/sync/pending-photos'
+import { createClient } from '@/lib/supabase/client'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 import { ArrowLeft, ListChecks } from 'lucide-react'
 import UseMyLocationButton from '@/components/ui/use-my-location-button'
@@ -147,56 +148,81 @@ export default function NewDiscrepancyPage() {
     }
 
     setSaving(true)
-    const { data: created, error } = await createDiscrepancy({
-      title: formData.title,
-      description: formData.description,
-      location_text: formData.location_text,
-      type: selectedTypes.join(', '),
-      notam_reference: formData.notam_reference || undefined,
-      current_status: formData.current_status,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      facility_number: formData.facility_number || undefined,
-      estimated_completion_date: formData.estimated_completion_date || undefined,
-      base_id: installationId,
-      assigned_shop: assignedShop || undefined,
-      infrastructure_feature_id: selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : undefined,
-    })
+    const supabase = createClient()
+    const userId = supabase ? (await supabase.auth.getSession()).data.session?.user?.id ?? '' : ''
 
-    if (error || !created) {
-      toast.error(error || 'Failed to create discrepancy')
+    // Route create + feature-inop + outage events through the offline write
+    // queue (lib/discrepancy-write). Online runs inline; offline queues the
+    // whole fan-out against a pre-allocated id and drains on reconnect.
+    let result
+    try {
+      result = await submitDiscrepancyFanout({
+        discrepancy: {
+          title: formData.title,
+          description: formData.description,
+          location_text: formData.location_text,
+          type: selectedTypes.join(', '),
+          notam_reference: formData.notam_reference || undefined,
+          current_status: formData.current_status,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          facility_number: formData.facility_number || undefined,
+          estimated_completion_date: formData.estimated_completion_date || undefined,
+          base_id: installationId,
+          assigned_shop: assignedShop || undefined,
+          infrastructure_feature_id: selectedFeatureIds.length > 0 ? selectedFeatureIds[0] : undefined,
+        },
+        inopFeatureIds: selectedFeatureIds,
+        outageEvents: selectedFeatureIds.map((fid) => ({
+          base_id: installationId ?? '',
+          feature_id: fid,
+          event_type: 'reported' as const,
+          notes: `INOP — ${formData.title}`,
+        })),
+        baseId: installationId ?? '',
+        userId,
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create discrepancy')
       setSaving(false)
       return
     }
 
-    // Mark selected features as inoperative + create outage events
-    if (selectedFeatureIds.length > 0 && installationId) {
-      await bulkUpdateStatus(selectedFeatureIds, 'inoperative')
-      for (const fid of selectedFeatureIds) {
-        await createOutageEvent({
-          base_id: installationId,
-          feature_id: fid,
-          event_type: 'reported',
-          discrepancy_id: created.id,
-          notes: `INOP — ${formData.title}`,
-        })
-      }
+    if (selectedFeatureIds.length > 0) {
       toast.success(`${selectedFeatureIds.length} feature${selectedFeatureIds.length !== 1 ? 's' : ''} marked inoperative`)
     }
 
-    // Upload user photos
+    // Photos: upload now when online; otherwise stash to the pending-photos
+    // store keyed to the pre-allocated discrepancy id for upload on reconnect.
     if (photos.length > 0) {
-      let uploaded = 0
-      for (const photo of photos) {
-        const { error: photoErr } = await uploadDiscrepancyPhoto(created.id, photo.file, installationId)
-        if (!photoErr) uploaded++
-      }
-      if (uploaded < photos.length) {
-        toast.error(`${photos.length - uploaded} photo(s) failed to upload`)
+      if (result.status === 'committed') {
+        let uploaded = 0
+        for (const photo of photos) {
+          const { error: photoErr } = await uploadDiscrepancyPhoto(result.id, photo.file, installationId)
+          if (!photoErr) uploaded++
+        }
+        if (uploaded < photos.length) {
+          toast.error(`${photos.length - uploaded} photo(s) failed to upload`)
+        }
+      } else {
+        for (const photo of photos) {
+          await persistPendingPhoto({
+            entityType: 'discrepancy',
+            entityId: result.id,
+            blob: photo.file,
+            filename: photo.name,
+            mime: photo.file.type,
+            baseId: installationId,
+          })
+        }
       }
     }
 
-    toast.success('Discrepancy saved!')
+    toast.success(
+      result.status === 'queued'
+        ? 'Saved offline — will sync when you reconnect.'
+        : 'Discrepancy saved!',
+    )
     router.push('/discrepancies')
   }
 

@@ -4,6 +4,18 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 /** Module-level flag tracking whether any realtime channel is connected */
 let connected = false
 
+// The browser's `offline` event is a far more reliable signal that realtime
+// has stopped delivering than waiting for a channel to emit CHANNEL_ERROR /
+// TIMED_OUT, which can lag the actual network drop by many seconds (or never
+// fire for the tab that went offline). Reset eagerly so isRealtimeConnected()
+// and warnIfRealtimeDown() reflect reality immediately. A real reconnect
+// flips it back to true via the SUBSCRIBED status below.
+if (typeof window !== 'undefined') {
+  window.addEventListener('offline', () => {
+    connected = false
+  })
+}
+
 /**
  * Returns whether the Supabase Realtime connection is currently healthy.
  * Use this after user actions that rely on realtime to push updates to
