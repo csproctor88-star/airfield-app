@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import { logActivity } from './activity'
 import type { ObstructionEvaluation } from './types'
 
@@ -101,7 +102,7 @@ export async function createObstructionEvaluation(input: {
     photo_storage_path: photo_storage_paths.length > 0 ? JSON.stringify(photo_storage_paths) : null,
   }
   if (evaluated_by) row.evaluated_by = evaluated_by
-  if (base_id) row.base_id = base_id
+  row.base_id = await resolveBaseId(supabase, base_id, evaluated_by)
 
   const { data, error } = await supabase
     .from('obstruction_evaluations')

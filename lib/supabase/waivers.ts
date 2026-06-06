@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import type {
   WaiverStatus,
   WaiverClassification,
@@ -223,7 +224,7 @@ export async function createWaiver(input: {
     notes: input.notes || null,
   }
   if (created_by) row.created_by = created_by
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id, created_by)
 
   const { data, error } = await supabase
     .from('waivers')

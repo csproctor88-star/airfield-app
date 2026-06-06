@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 
 export async function logActivity(
   action: string,
@@ -24,7 +25,7 @@ export async function logActivity(
     entity_display_id: entity_display_id ?? null,
     metadata: metadata ?? {},
   }
-  if (baseId) row.base_id = baseId
+  row.base_id = await resolveBaseId(supabase, baseId, user.id)
   // Preserve the originating timestamp when the insert is replayed from
   // the offline queue. Without it, an "AFLD3 off airfield at 14:32Z"
   // entry that drains an hour later would carry the drain timestamp
@@ -50,7 +51,7 @@ export async function logManualEntry(text: string, baseId?: string | null, categ
     entity_display_id: null,
     metadata: { details: text, ...(category ? { template_category: category } : {}), ...(templateLabel ? { template_label: templateLabel } : {}) },
   }
-  if (baseId) row.base_id = baseId
+  row.base_id = await resolveBaseId(supabase, baseId, user.id)
 
   const { error } = await supabase.from('activity_log').insert(row as never)
 

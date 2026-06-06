@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import { logActivity } from './activity'
 import { updateAirfieldStatus } from './airfield-status'
 import type { CheckType, Json } from './types'
@@ -85,7 +86,8 @@ export async function createCheck(input: {
     longitude: input.longitude ?? null,
     saved_by_id: completedById,
   }
-  if (input.base_id) row.base_id = input.base_id
+  const resolvedBaseId = await resolveBaseId(supabase, input.base_id, completedById)
+  row.base_id = resolvedBaseId
 
   const { data, error } = await supabase
     .from('airfield_checks')
@@ -108,7 +110,7 @@ export async function createCheck(input: {
         comment: c.comment,
         user_name: c.user_name,
       }
-      if (input.base_id) cr.base_id = input.base_id
+      cr.base_id = resolvedBaseId
       return cr
     })
       const { error: commentError } = await supabase
@@ -259,7 +261,7 @@ export async function addCheckComment(
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
   const row: Record<string, unknown> = { check_id: checkId, comment, user_name: userName }
-  if (baseId) row.base_id = baseId
+  row.base_id = await resolveBaseId(supabase, baseId)
 
   const { data, error } = await supabase
     .from('check_comments')
@@ -424,7 +426,7 @@ export async function uploadCheckPhoto(
   }
   if (thumbnailUrl) photoRow.thumbnail_path = thumbnailUrl
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
-  if (baseId) photoRow.base_id = baseId
+  photoRow.base_id = await resolveBaseId(supabase, baseId, uploaded_by)
   if (issueIndex != null) photoRow.issue_index = issueIndex
 
   const { data, error } = await supabase
@@ -528,7 +530,7 @@ export async function saveCheckDraftToDb(input: {
     saved_by_id: userId || null,
     saved_at: now.toISOString(),
   }
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id, userId)
 
   const { data, error } = await supabase
     .from('airfield_checks')

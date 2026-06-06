@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import { logActivity } from './activity'
 
 // ── Types ──
@@ -157,7 +158,7 @@ export async function createSighting(input: {
     inspection_id: input.inspection_id ?? null,
     notes: input.notes ?? null,
   }
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id)
 
   const { data, error } = await supabase
     .from('wildlife_sightings')
@@ -383,7 +384,7 @@ export async function createStrike(input: {
     sighting_id: input.sighting_id ?? null,
     notes: input.notes ?? null,
   }
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id)
 
   const { data, error } = await supabase
     .from('wildlife_strikes')
@@ -550,7 +551,7 @@ export async function logBwcChange(
     set_by: setBy ?? null,
     notes: notes ?? null,
   }
-  if (baseId) row.base_id = baseId
+  row.base_id = await resolveBaseId(supabase, baseId, setBy)
 
   const { error } = await supabase
     .from('bwc_history')

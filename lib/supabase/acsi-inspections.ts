@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import { logActivity } from './activity'
 import type { AcsiInspection, AcsiItem, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData } from './types'
 
@@ -147,7 +148,7 @@ export async function saveAcsiDraft(input: {
     saved_at: now.toISOString(),
   }
   if (userId) row.inspector_id = userId
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id, userId)
 
   const { data, error } = await supabase
     .from('acsi_inspections')
@@ -439,7 +440,7 @@ export async function uploadAcsiPhoto(
   }
   if (thumbnailUrl) photoRow.thumbnail_path = thumbnailUrl
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
-  if (baseId) photoRow.base_id = baseId
+  photoRow.base_id = await resolveBaseId(supabase, baseId, uploaded_by)
 
   const { data, error } = await supabase
     .from('photos')

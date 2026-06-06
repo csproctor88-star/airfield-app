@@ -1,5 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import { logActivity } from './activity'
 import { updateAirfieldStatus } from './airfield-status'
 import type { InspectionType, InspectionItem, Json } from './types'
@@ -193,7 +194,7 @@ export async function createInspection(input: {
     filed_at: now.toISOString(),
   }
   if (inspector_id) row.inspector_id = inspector_id
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id)
 
   const { data, error } = await supabase
     .from('inspections')
@@ -340,7 +341,7 @@ export async function createInspectionDraftWithId(input: {
     started_at: now.toISOString(),
   }
   if (userId) row.inspector_id = userId
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id)
 
   const { data, error } = await supabase
     .from('inspections')
@@ -482,7 +483,7 @@ export async function saveInspectionDraft(input: {
     started_at: now.toISOString(),
   }
   if (userId) row.inspector_id = userId
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id)
 
   const { data, error } = await supabase
     .from('inspections')
@@ -757,7 +758,7 @@ export async function uploadInspectionPhoto(
   }
   if (thumbnailUrl) photoRow.thumbnail_path = thumbnailUrl
   if (uploaded_by) photoRow.uploaded_by = uploaded_by
-  if (baseId) photoRow.base_id = baseId
+  photoRow.base_id = await resolveBaseId(supabase, baseId, uploaded_by)
   if (latitude != null) photoRow.latitude = latitude
   if (longitude != null) photoRow.longitude = longitude
   if (discIndex != null) photoRow.issue_index = discIndex

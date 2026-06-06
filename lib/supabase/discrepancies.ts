@@ -1,6 +1,7 @@
 import { friendlyError } from '@/lib/utils'
 import { CURRENT_STATUS_OPTIONS } from '@/lib/constants'
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 import type { DiscrepancyStatus, CurrentStatus } from './types'
 
 // Human-readable label for a current_status enum value. Used when we
@@ -165,7 +166,7 @@ export async function createDiscrepancy(input: {
   if (input.estimated_cost) row.estimated_cost = input.estimated_cost
   if (input.risk_control_measure) row.risk_control_measure = input.risk_control_measure
   if (reported_by) row.reported_by = reported_by
-  if (input.base_id) row.base_id = input.base_id
+  row.base_id = await resolveBaseId(supabase, input.base_id, reported_by)
 
   const { data, error } = await supabase
     .from('discrepancies')
@@ -245,7 +246,7 @@ export async function updateDiscrepancy(
           notes: `Status changed to: ${currentStatusLabel(fields.current_status as string)}`,
           updated_by: user.id,
         }
-        if (updated?.base_id) auditRow.base_id = updated.base_id
+        auditRow.base_id = await resolveBaseId(supabase, updated?.base_id, user.id)
         await supabase.from('status_updates').insert(auditRow as never)
       }
     } catch (e) {
@@ -337,7 +338,7 @@ export async function updateDiscrepancyStatus(
         notes: notes || null,
         updated_by: user.id,
       }
-      if (statusUpdated?.base_id) auditRow.base_id = statusUpdated.base_id
+      auditRow.base_id = await resolveBaseId(supabase, statusUpdated?.base_id, user.id)
           const { error: auditError } = await supabase.from('status_updates').insert(auditRow as never)
       if (auditError) {
         console.error('Failed to save status update note:', auditError.message)
@@ -663,7 +664,7 @@ export async function addStatusNote(discrepancyId: string, notes: string, baseId
       notes,
       updated_by: user.id,
     }
-    if (baseId) row.base_id = baseId
+    row.base_id = await resolveBaseId(supabase, baseId, user.id)
 
       const { error } = await supabase
       .from('status_updates')

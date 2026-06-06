@@ -1,4 +1,5 @@
 import { createClient } from './client'
+import { resolveBaseId } from './resolve-base-id'
 
 export interface RunwayStatusEntry {
   status: 'open' | 'suspended' | 'closed'
@@ -162,7 +163,7 @@ export async function logArffStatusChange(
   if (!supabase) return
   const { data: { user } } = await supabase.auth.getUser()
   await supabase.from('arff_status_log').insert({
-    base_id: baseId ?? null,
+    base_id: await resolveBaseId(supabase, baseId, user?.id),
     old_cat: params.oldCat ?? null,
     new_cat: params.newCat ?? null,
     aircraft_name: params.aircraftName ?? null,
@@ -219,17 +220,11 @@ export async function logRunwayStatusChange(
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Never write an orphan (NULL base_id) audit row — those are now hidden from
-  // every base by RLS (migration 2026062011). Fall back to the actor's primary
-  // base when a caller hasn't supplied one.
-  let resolvedBaseId = baseId ?? null
-  if (!resolvedBaseId && user) {
-    const { data: prof } = await supabase.from('profiles').select('primary_base_id').eq('id', user.id).single()
-    resolvedBaseId = (prof as { primary_base_id?: string | null } | null)?.primary_base_id ?? null
-  }
-
+  // Never write an orphan (NULL base_id) audit row — those are hidden from every
+  // base by RLS (migration 2026062011) and rejected once the helper's NULL escape
+  // hatch is removed. Fall back to the actor's primary base when none was supplied.
   await supabase.from('runway_status_log').insert({
-    base_id: resolvedBaseId,
+    base_id: await resolveBaseId(supabase, baseId, user?.id),
     old_runway_status: params.oldRunwayStatus ?? null,
     new_runway_status: params.newRunwayStatus ?? null,
     old_active_runway: params.oldActiveRunway ?? null,
