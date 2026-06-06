@@ -219,8 +219,17 @@ export async function logRunwayStatusChange(
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Never write an orphan (NULL base_id) audit row — those are now hidden from
+  // every base by RLS (migration 2026062011). Fall back to the actor's primary
+  // base when a caller hasn't supplied one.
+  let resolvedBaseId = baseId ?? null
+  if (!resolvedBaseId && user) {
+    const { data: prof } = await supabase.from('profiles').select('primary_base_id').eq('id', user.id).single()
+    resolvedBaseId = (prof as { primary_base_id?: string | null } | null)?.primary_base_id ?? null
+  }
+
   await supabase.from('runway_status_log').insert({
-    base_id: baseId ?? null,
+    base_id: resolvedBaseId,
     old_runway_status: params.oldRunwayStatus ?? null,
     new_runway_status: params.newRunwayStatus ?? null,
     old_active_runway: params.oldActiveRunway ?? null,

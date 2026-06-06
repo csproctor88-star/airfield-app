@@ -81,3 +81,60 @@ describe.skipIf(gated)('cross-base RLS isolation', () => {
     if (ins.data?.id) await client.from('discrepancies').delete().eq('id', ins.data.id)
   })
 })
+
+// Regression guards for the 2026-06-06 pentest findings (migration 2026062011).
+// Each asserts the exact hole that was open is now closed. Do not loosen without
+// understanding which cross-tenant breach the assertion protects.
+describe.skipIf(gated)('pentest remediation guards', () => {
+  // #1 — self privilege-escalation. THE critical finding: any user could set
+  // their own role to sys_admin via a direct profiles UPDATE.
+  it('a low-priv user cannot escalate their own role to sys_admin', async () => {
+    const client = await signIn(READONLY_A)
+    const { data: me } = await client.auth.getUser()
+    const uid = me.user!.id
+    const before = (await client.from('profiles').select('role').eq('id', uid).single()).data?.role
+    await client.from('profiles').update({ role: 'sys_admin' }).eq('id', uid)
+    const after = (await client.from('profiles').select('role').eq('id', uid).single()).data?.role
+    expect(after).not.toBe('sys_admin')
+    expect(after).toBe(before)
+    if (after === 'sys_admin') await client.from('profiles').update({ role: before }).eq('id', uid) // safety revert
+  })
+
+  // #3 — base-config tables must not leak other bases (were USING(true)).
+  it.each(['base_areas', 'base_navaids', 'base_runways', 'base_arff_aircraft'])(
+    'reads no foreign-base rows from %s',
+    async (table) => {
+      const client = await signIn(READONLY_A)
+      const { data, error } = await client.from(table).select('base_id').limit(500)
+      expect(error).toBeNull()
+      expect((data ?? []).filter((r) => r.base_id && r.base_id !== baseA).length).toBe(0)
+    },
+  )
+
+  // #2 — profiles is a cross-tenant directory unless scoped to shared bases.
+  it('does not expose profiles from other bases', async () => {
+    const client = await signIn(READONLY_A)
+    const { data: me } = await client.auth.getUser()
+    const { data } = await client.from('profiles').select('id, primary_base_id')
+    const foreign = (data ?? []).filter((p) => p.primary_base_id && p.primary_base_id !== baseA && p.id !== me.user!.id)
+    expect(foreign).toHaveLength(0)
+  })
+
+  // #4 — bases must not be enumerable beyond membership.
+  it('cannot enumerate the full customer roster via bases', async () => {
+    const client = await signIn(READONLY_A)
+    const { data } = await client.from('bases').select('id')
+    expect((data ?? []).filter((b) => b.id !== baseA)).toHaveLength(0)
+  })
+
+  // #5 — NULL-base_id rows must not be readable cross-tenant.
+  it.each(['runway_status_log', 'status_updates', 'check_comments', 'activity_log'])(
+    'exposes no NULL-base_id rows from %s',
+    async (table) => {
+      const client = await signIn(READONLY_A)
+      const { data, error } = await client.from(table).select('base_id').is('base_id', null).limit(1)
+      expect(error).toBeNull()
+      expect(data ?? []).toHaveLength(0)
+    },
+  )
+})
