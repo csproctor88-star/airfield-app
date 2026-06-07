@@ -1260,7 +1260,10 @@ export default function InfrastructureMapPage() {
   // Report Outage handler — marks feature inoperative + auto-creates discrepancy
   const reportOutageRef = useRef<((id: string) => Promise<void>) | undefined>(undefined)
   reportOutageRef.current = async (id: string) => {
-    if (!installationId) return
+    if (!installationId) {
+      toast.error('Could not report outage — no base selected. Pick a base, then try again.', { id: 'outage-no-base' })
+      return
+    }
     if (map.current) map.current.infoWindow.close()
 
     const feature = dbFeatures.find(f => f.id === id)
