@@ -232,7 +232,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   // Replaces the old direct updateAirfieldStatus call; signature mirrors it.
   const persistAirfieldStatus = useCallback(
     async (updates: AirfieldStatusUpdates, baseId: string | null) => {
-      if (!baseId) return
+      if (!baseId) {
+        // No base resolved → the write would be refused by RLS (base_id can't be
+        // null since 2026062012). Surface it instead of silently dropping the edit.
+        toast.error('Could not save — no base selected. Pick a base, then try again.', {
+          id: 'airfield-status-no-base',
+        })
+        return
+      }
       try {
         const res = await enqueueAirfieldStatus(updates, baseId, userIdRef.current ?? '')
         if (res.status === 'queued') {
