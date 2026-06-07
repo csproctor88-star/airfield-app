@@ -53,6 +53,15 @@ export interface DrainSummary {
 export interface WriteQueueOptions {
   storage?: QueueStorage
   /**
+   * Returns the currently signed-in user's id (or null). When provided, the
+   * queue is "user-scoped": drain, list, and counts only touch items queued by
+   * that user. This prevents one user's offline writes from draining under a
+   * different user's session on a shared device — which RLS rejects cross-base
+   * ("no row or RLS") and would misattribute same-base. When omitted, the queue
+   * is unscoped (legacy behaviour; used by unit tests).
+   */
+  getUserId?: () => Promise<string | null> | string | null
+  /**
    * Override navigator.onLine. Useful for tests and for narrowing what
    * counts as "online" (e.g., gating on a heartbeat ping).
    */
@@ -93,6 +102,7 @@ export class WriteQueue {
   private readonly isOnline: () => boolean
   private readonly now: () => Date
   private readonly uuid: () => string
+  private getUserIdFn: (() => Promise<string | null> | string | null) | null
   private readonly handlers = new Map<WriteType, WriteHandler<any, any>>()
 
   /** Single-flight guard so concurrent triggers don't double-drain. */
@@ -103,6 +113,41 @@ export class WriteQueue {
     this.isOnline = opts.isOnline ?? defaultIsOnline
     this.now = opts.now ?? (() => new Date())
     this.uuid = opts.uuid ?? defaultUuid
+    this.getUserIdFn = opts.getUserId ?? null
+  }
+
+  /**
+   * Wire (or replace) the current-user provider at runtime. Used by the app
+   * shell to make the singleton user-scoped once a Supabase session exists.
+   */
+  setUserIdProvider(fn: () => Promise<string | null> | string | null): void {
+    this.getUserIdFn = fn
+  }
+
+  private get userScoped(): boolean {
+    return this.getUserIdFn != null
+  }
+
+  private async currentUserId(): Promise<string | null> {
+    if (!this.getUserIdFn) return null
+    try {
+      return await this.getUserIdFn()
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Whether a queued item belongs to the signed-in user. Unscoped queues own
+   * everything (legacy/tests). Scoped queues own an item when the user is known
+   * and the item's userId matches (or is absent — legacy items predating the
+   * userId field, drained best-effort under the current user). When the user
+   * can't be determined, nothing is owned, so no one else's writes drain.
+   */
+  private ownsItem(item: QueuedWrite, currentUserId: string | null): boolean {
+    if (!this.userScoped) return true
+    if (currentUserId == null) return false
+    return item.userId == null || item.userId === currentUserId
   }
 
   // -------------------------------------------------------------------
@@ -186,13 +231,16 @@ export class WriteQueue {
   // Inspection helpers
   // -------------------------------------------------------------------
 
-  list(): Promise<QueuedWrite[]> {
-    return this.storage.list()
+  async list(): Promise<QueuedWrite[]> {
+    const all = await this.storage.list()
+    if (!this.userScoped) return all
+    const uid = await this.currentUserId()
+    return all.filter((w) => this.ownsItem(w, uid))
   }
 
   async pendingCount(): Promise<number> {
-    const all = await this.storage.list()
-    return all.filter((w) => w.status === 'pending').length
+    const mine = await this.list()
+    return mine.filter((w) => w.status === 'pending').length
   }
 
   /**
@@ -201,8 +249,8 @@ export class WriteQueue {
    * pending pill — they need a Retry or Discard from the inspector.
    */
   async needsAttentionCount(): Promise<number> {
-    const all = await this.storage.list()
-    return all.filter((w) => w.status === 'failed' || w.status === 'conflict').length
+    const mine = await this.list()
+    return mine.filter((w) => w.status === 'failed' || w.status === 'conflict').length
   }
 
   async clear(): Promise<void> {
@@ -261,9 +309,16 @@ export class WriteQueue {
     items.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 
     const nowMs = this.now().getTime()
+    // Resolve once per drain: only the signed-in user's writes are eligible.
+    // Another user's items stay queued (untouched) until that user returns.
+    const currentUserId = this.userScoped ? await this.currentUserId() : null
 
     for (const item of items) {
       if (item.status !== 'pending') {
+        summary.skipped++
+        continue
+      }
+      if (!this.ownsItem(item, currentUserId)) {
         summary.skipped++
         continue
       }

@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getWriteQueue } from '@/lib/sync/write-queue'
 import {
   PENDING_PHOTOS_CHANGED_EVENT,
-  getPendingPhotoStorage,
+  countPendingPhotosForCurrentUser,
 } from '@/lib/sync/pending-photos'
 import { fetchPprEntriesForDate, isActivePpr } from '@/lib/supabase/ppr'
 import { QueueInspector } from '@/components/sync/queue-inspector'
@@ -67,13 +67,12 @@ function useQueueCounts(): {
   useEffect(() => {
     let cancelled = false
     const queue = getWriteQueue()
-    const photoStore = getPendingPhotoStorage()
     const refresh = async () => {
       try {
         const [pending, attention, photos] = await Promise.all([
           queue.pendingCount(),
           queue.needsAttentionCount(),
-          photoStore.count(),
+          countPendingPhotosForCurrentUser(),
         ])
         if (!cancelled) setCounts({ pending, attention, photos })
       } catch {

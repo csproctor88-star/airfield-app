@@ -10,7 +10,7 @@ import type { QueuedWrite, QueueStatus, WriteType } from '@/lib/sync/types'
 import {
   PENDING_PHOTOS_CHANGED_EVENT,
   deletePendingPhoto,
-  getPendingPhotoStorage,
+  listPendingPhotosForCurrentUser,
   type PendingPhoto,
 } from '@/lib/sync/pending-photos'
 import { uploadInspectionPhoto } from '@/lib/supabase/inspections'
@@ -215,7 +215,7 @@ export function QueueInspector({ open, onClose }: QueueInspectorProps) {
     try {
       const [allWrites, allPhotos] = await Promise.all([
         getWriteQueue().list(),
-        getPendingPhotoStorage().list(),
+        listPendingPhotosForCurrentUser(),
       ])
       allWrites.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       allPhotos.sort((a, b) => b.createdAt.localeCompare(a.createdAt))

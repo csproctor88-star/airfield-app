@@ -36,6 +36,9 @@ export interface PendingPhoto {
   latitude?: number | null
   longitude?: number | null
   baseId?: string | null
+  /** Id of the user who queued this photo; used to scope the inspector to the
+   *  signed-in user on shared devices. Absent on legacy entries. */
+  userId?: string | null
   createdAt: string
 }
 
@@ -223,6 +226,53 @@ export function getPendingPhotoStorage(): PendingPhotoStorage {
 /** Test-only: reset the singleton. */
 export function _resetPendingPhotoStorageForTests(): void {
   storage = null
+  userIdProvider = null
+}
+
+// ---------------------------------------------------------------------------
+// User scoping
+// ---------------------------------------------------------------------------
+
+let userIdProvider: (() => Promise<string | null> | string | null) | null = null
+
+/**
+ * Wire the current-user provider so the inspector list + count badge only show
+ * the signed-in user's pending photos on a shared device. When unset, behaviour
+ * is unscoped (legacy/tests).
+ */
+export function setPendingPhotoUserIdProvider(
+  fn: () => Promise<string | null> | string | null,
+): void {
+  userIdProvider = fn
+}
+
+async function currentUserId(): Promise<string | null> {
+  if (!userIdProvider) return null
+  try {
+    return await userIdProvider()
+  } catch {
+    return null
+  }
+}
+
+function ownsPhoto(photo: PendingPhoto, uid: string | null): boolean {
+  if (!userIdProvider) return true
+  if (uid == null) return false
+  return photo.userId == null || photo.userId === uid // legacy entries drain best-effort
+}
+
+/** Pending photos belonging to the signed-in user (all, if unscoped). */
+export async function listPendingPhotosForCurrentUser(): Promise<PendingPhoto[]> {
+  const all = await getPendingPhotoStorage().list()
+  if (!userIdProvider) return all
+  const uid = await currentUserId()
+  return all.filter((p) => ownsPhoto(p, uid))
+}
+
+/** Count of the signed-in user's pending photos (all, if unscoped). */
+export async function countPendingPhotosForCurrentUser(): Promise<number> {
+  if (!userIdProvider) return getPendingPhotoStorage().count()
+  return (await listPendingPhotosForCurrentUser()).length
 }
 
 /**
@@ -281,6 +331,7 @@ export async function persistPendingPhoto(input: {
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
     baseId: input.baseId ?? null,
+    userId: await currentUserId(),
     createdAt: new Date().toISOString(),
   }
   await getPendingPhotoStorage().put(item)
