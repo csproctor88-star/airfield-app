@@ -1,138 +1,124 @@
 # Session Handoff
 
-**Date:** 2026-06-01
-**Branch:** `main` — **pushed.** `origin/main` == local (0 ahead); v2.34.0 is
-deployed (Vercel deploys on push).
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
-(728 pass / 75 files).
-**HEAD:** `7453a3bc`
+**Date:** 2026-06-07
+**Branch:** `main` — local is **1 commit ahead of `origin/main`**. The video-doc
+commit `7b5e908a` is **unpushed by request** (docs-only, user chose to bundle it
+with later work). Everything before it is pushed. Still v2.34.0 (no version bump).
+**Build:** Unchanged — **docs-only session, no application code touched.** Last
+verified clean at `63306d38` (`npx tsc --noEmit` ✓, `npm run build` ✓,
+`npx vitest run` ✓, 851 pass / 88 files). Full suite not re-run (would only
+re-measure prior state).
+**HEAD:** `7b5e908a`
 
 ---
 
-## What shipped this session
+## What shipped this session (docs-only)
 
-One theme: **cut and shipped v2.34.0.** The bulk of the work was bringing the
-in-app **Help & Training** guide to parity with the module set the release
-announces — seven new module guides + airport-type gating + verified
-screenshots. Along the way a real gap surfaced (AMTR was hidden on 35 of 41
-USAF bases) and got a data backfill, the AMTR guide gained an off-network Excel
-import procedure, and the session closed by bumping the version, rebuilding the
-What's New modal as scannable grouped sections, dating the CHANGELOG, and
-pushing everything to production.
+A non-code session: set up OBS Studio for screen-recorded Glidepath training
+walkthroughs and produced an editable production/hosting plan. No code, no
+migrations.
 
-### Training-guide coverage + airport-type gating (`acd60f66` spec → `52ac12cd`, `9f639e62`, `d172fdbd`, `a35b84fa`, `e40d7782`, `8b779d4b` plan)
+### Video walkthrough production & hosting plan (`7b5e908a`)
 
-The `/help` guide (`MODULES` in `lib/training/modules.ts`) had guides for the 27
-established modules but none for what v2.34 announces. Added seven full
-`ModuleRef` guides — **AMTR, Records Export, SMS, §139.303 Training, AEP, Field
-Conditions, WHMP** — with content sourced by reading each module's actual
-implementation (no fabricated reg text; every citation already existed in code).
-Added `appliesTo?: AirportType[]` to `ModuleRef` + a `moduleRefAppliesToAirport`
-helper mirroring `lib/modules-config.ts`; the help page (`app/(app)/help/page.tsx`)
-now filters the grid, the count pill, the reviewed denominator, and the Module
-Reference PDF by `currentInstallation.airport_type`. Existing ACSI/SCN gated
-USAF-only too. `tests/training-modules-gating.test.ts` locks the gating so a
-future edit can't leak a civilian guide onto USAF bases. Built via
-brainstorm→spec→plan→subagent-driven execution with two-stage (spec + quality)
-review per unit.
+Brainstormed the training-video effort and configured OBS live over a series of
+screenshots, then wrote a self-contained, editable HTML reference at
+`docs/Video_Walkthrough_Production_Plan.html` (toolbar with in-browser Edit +
+localStorage autosave + Download/Print/Reset). The earlier `.md` draft was
+deleted in favour of the `.html`. The commit is **local-only** (not pushed).
 
-### Screenshots wired into all 7 guides (`07e0e8ce`, `a6f08469`, `148abf35`)
+Decisions captured in the doc:
+- **Priority order:** new-user onboarding course (primary) → admin/base-setup
+  guide → in-app contextual help → marketing reel. The onboarding chapters are
+  modular so one set of recordings feeds all four uses.
+- **Capture:** record against the **Demo base** (`/login?demo=true`) so no real
+  base data / personnel names are exposed; record-and-ship (light edit), voiceover
+  only, narrate-while-clicking.
+- **Hosting:** **YouTube, Unlisted**, via `youtube-nocookie.com` embeds. The cost
+  driver for self-hosting would be **Supabase egress, not storage** (full library
+  is only ~5–6 GB to store, but streaming burns metered egress fast) — YouTube
+  serves bandwidth free and usually works on AFNet, with personal-device fallback.
+  Auto-captions give a near-zero-effort 508 path. Archive master `.mp4`s for the
+  Platform One IL4/IL5 contingency (external embeds won't reach inside that
+  boundary).
+- **In-app embed is a deferred, separate spec** — `/help/[module-id]` iframe +
+  blocked-network fallback is the only part that touches code; not built.
 
-17 screenshots copied into `public/training/` and captioned. Captions were
-verified **against the actual images**, not the planning doc — which caught a
-fabricated `amtr_1` caption (claimed table columns JQS% / Formal% / Last
-Inspection that aren't in the image) and a "five-column grid" imprecision, both
-corrected. User recaptured the §139.303 Training set (cleaner Topics / Roster /
-Compliance / member-Records shots, banner-free) → swapped in, added a 4th. Records
-Export shot added once the user supplied it. Records Export is the only guide
-that briefly shipped text-only.
+OBS gotchas worth pinning (all in the doc):
+- **Windows HDR on → washed-out / grey OBS captures.** Toggle HDR off
+  (**Win + Alt + B**) before recording. This was the session's main time sink.
+- **Color Range = Partial** (not Full; Full washes out in mainstream players).
+- **Judge colour/audio in Chrome / VLC / YouTube, never Windows Media Player** —
+  WMP mis-renders both.
+- **MV7+ warmth** = proximity (~a fist, on-axis) + MOTIV Tone:Natural + a single
+  denoiser (never stack MOTIV's and OBS's). The OBS **Noise Gate** is what
+  silences keyboard clicks in pauses.
 
-### AMTR hidden on 35/41 USAF bases — `enabled_modules` backfill (`8cc2d329`, migration `2026062000`)
+---
 
-User reported AMTR missing from the sidebar. Root cause: AMTR was added to the
-module catalog after most bases' `enabled_modules` arrays were already set, and
-`lib/installation-context.tsx` only falls back to "all modules" when
-`enabled_modules` is `null` — a non-null array missing `amtr` silently hides it
-(`isModuleEnabled` → false). Query confirmed 35 of 41 USAF bases affected (only
-Air Force Academy + a few had it). Wrote an additive, idempotent backfill
-(`array_append` guarded by containment), applied it to the linked DB, and
-verified **41/41** USAF bases now carry `amtr`. Migration file committed as the
-record.
+## Carried forward — earlier today: RLS pentest remediation (NOT yet walked on prod)
 
-### AMTR off-network Excel import procedure + multi-workflow (`62983725`)
+> This is the prior body of work from 2026-06-07. It is committed
+> (`e7887a5c`, `ea2e22c1`, `2a57f5ed`, `d2e85240`, `9a9b8aa0`, `63306d38`) and
+> test-verified, **but it was tested against stale code (ghost dev servers /
+> un-promoted Vercel) and has not been browser-walked on a properly promoted
+> build.** Walking it is still the top finish line.
 
-Added a dedicated **"Importing an existing AFFSA Excel training record (must be
-done off the AFNET)"** numbered procedure to the AMTR guide: copy each sheet
-into a fresh workbook one at a time, exclude the Formal Training sheet, strip all
-PII/CUI (SSNs etc.), email to a non-AFNET account, upload over commercial
-internet (AFNET blocks non-AFNET uploads); manual transcription still works on
-the AFNET. Plus a reinforcing FAQ. To carry two procedures, `ModuleRef.workflow`
-now accepts `WorkflowDef | WorkflowDef[]` and the detail renderer maps over them
-— the 14 single-workflow guides are unchanged.
+A black-box RLS/authorization pentest of the live DB (lowest-priv real user vs.
+PostgREST) surfaced five cross-tenant breaks — including a **critical** self
+privilege-escalation to `sys_admin` — all fixed (migration `2026062011`):
 
-### Stale banner removed + v2.34 builder refreshed (`9e887d3d`, `2bc1be9a`)
+1. **CRITICAL — self privilege-escalation.** Any user could `UPDATE` their own
+   `profiles` row to `role='sys_admin'`. Fixed with a `BEFORE UPDATE` trigger
+   (`profiles_block_priv_escalation`) rejecting role/status/is_active changes
+   unless the caller has `users:manage` / is sys_admin (service-role exempt).
+2. **HIGH — cross-tenant user directory.** `profiles_select` was `USING (true)`.
+   Now self / sys_admin / shares-a-base via `SECURITY DEFINER user_shares_base()`.
+3. **HIGH — cross-tenant airfield config.** `base_areas`/`base_navaids`/
+   `base_runways`/`base_arff_aircraft` SELECT were `USING (true)`; now
+   `user_has_base_access(auth.uid(), base_id)`.
+4. **MEDIUM — customer-roster enumeration.** `bases_select` was `USING (true)`;
+   now membership + sys_admin.
+5. **MEDIUM — NULL-`base_id` rows readable cross-tenant.** `runway_status_log`/
+   `status_updates`/`check_comments`/`activity_log` SELECT now exclude
+   `base_id IS NULL`; existing NULLs backfilled.
 
-`9e887d3d` removed a leftover "Phase 3a build in progress" banner from the
-`/training` (§139.303) landing — the module is shipped, so the banner read as
-unfinished. `2bc1be9a` updated `docs/release-2.34-notes-builder.html`: added a
-Help & Training candidate item, a §139.303 banner-fix item, and de-staled the
-design item/section (it still said "opt-in preview / Classic stays default" —
-Classic was removed, v2 is the only look).
-
-### v2.34.0 release (`7453a3bc`)
-
-Version → **2.34.0** in six spots (`package.json`, `package-lock.json` root,
-login footer, Settings → About, README — README also refreshed to 728 tests /
-259 migrations). Dated the CHANGELOG `[2.34.0] — 2026-06-01` with the user's
-curated grouped notes (replaced the incomplete `[Unreleased]` block, which only
-covered Records Export + the FAA phases). Reworked the in-app **What's New**:
-added a `ReleaseSection` shape (`{ title, items }[]`) and a grouped renderer in
-`components/whats-new-modal.tsx`, so the 2.34 entry shows 10 scannable section
-headers instead of a flat 31-bullet wall (the user's explicit ask). `highlights`
-is now optional; older entries still render their flat list.
+Plus: writes now populate `base_id` via `lib/supabase/resolve-base-id.ts`
+(`ea2e22c1`); the NULL-`base_id` escape hatch in `user_has_base_access` was
+removed (migration `2026062012`, `d2e85240`); the offline write queue + pending
+photos were scoped per-user (`2a57f5ed`); and silent no-base saves now toast
+(`9a9b8aa0`, `63306d38`). Full detail in those commit messages.
 
 ---
 
 ## Migrations status
 
+No new migrations this session. Prior two remain applied live, none pending:
+
 | File | Applied | What |
 |---|---|---|
-| `2026062000_backfill_amtr_enabled_modules.sql` | ✅ applied live this session | Adds `amtr` to USAF bases' `enabled_modules` where missing (35 bases). Additive + idempotent; civilian bases untouched. Verified 41/41 USAF bases now carry `amtr`. |
-
-No pending migrations. All earlier `202606xx` migrations were applied in prior
-sessions.
+| `2026062011_rls_pentest_remediation.sql` | ✅ live | trigger + scoped SELECT policies (findings #1–#5) + backfill |
+| `2026062012_harden_base_access_null.sql` | ✅ live | `user_has_base_access` NULL → FALSE |
 
 ---
 
 ## Bugs fixed during the session
 
-| Symptom | Root cause | Commit |
-|---|---|---|
-| AMTR module missing from sidebar / More on most USAF bases | `enabled_modules` arrays predate AMTR; the context only falls back to "all modules" on `null`, not on a non-null array missing the newer key | `8cc2d329` |
-| Guide screenshot caption claimed table columns not present in the image | subagent captioned from the planning doc, not the PNG (`amtr_1`) | `a6f08469` |
-| `regulations` guide's "related modules" silently rendered nothing | `relatedModules: ['training']` pointed at a non-existent id (predates the new `training-part139`) | `9f639e62` |
-| "X of Y reviewed" could read e.g. "8 of 6" | `reviewedCount` came from a localStorage Set spanning all airport types; `totalCount` is now the gated set | `a35b84fa` |
+None (docs-only). The OBS washout was an environment issue, not app code — see
+Lessons.
 
 ---
 
 ## Lessons from this session
 
-- **New `defaultEnabled` modules don't reach existing bases.** A base with a
-  non-null `enabled_modules` array never picks up a module added later — only a
-  `null` array falls back to "all". Every new module in the catalog needs a
-  one-time backfill (or a fallback-semantics fix) or it's invisible on every
-  pre-existing base. Saved as a project memory.
-- **Caption-first is non-negotiable** — verifying 15 wired captions against the
-  real PNGs caught one fabricated caption that read plausibly. Always open the
-  image. (Already memory `feedback_caption_screenshots_first`.)
-- **The What's New builder persists selections in browser localStorage, which
-  overrides the HTML file's text for *existing* items on load.** New items added
-  to the file's `SECTIONS` show up; text edits to existing items don't reach a
-  user who has saved state. Edit in the builder UI or Reset, not just the file.
-- **The Bash tool's cwd doesn't reliably persist between calls.** A `git add`
-  with a relative path missed, and `npx tsc` ran from the wrong dir and printed
-  a misleading "TSC_OK" (no tsconfig → compiled nothing). Prefix git/tsc/build
-  commands with `cd "C:/Users/cspro/airfield-app" && …`.
+- **Windows HDR silently washes out OBS screen captures.** SDR content captured
+  while the display is in HDR mode comes out grey/low-contrast in *every* player,
+  which reads like a colour-pipeline bug but is just the HDR toggle. Check HDR
+  first (Win+Alt+B) before chasing OBS colour settings.
+- **Windows Media Player mis-renders OBS recordings** (colour washed, audio
+  dulled) even when the file is fine. Always judge a recording in Chrome / VLC /
+  YouTube before concluding anything's wrong with the file.
+- **Egress, not storage, is the cost of self-hosting video** on Supabase/Vercel —
+  the deciding factor for the YouTube call.
 
 ---
 
@@ -140,55 +126,68 @@ sessions.
 
 | Item | Severity | Notes |
 |---|---|---|
-| `scn` missing on 26 USAF bases | Med | Same frozen-`enabled_modules` cause as AMTR. User chose amtr-only backfill this session; SCN backfill not done. Mirror `2026062000` if wanted. |
-| New `defaultEnabled` modules don't reach existing bases | Med | Systemic — see Lessons. Next module add needs a backfill, or fix the `enabled_modules` null-only fallback in `lib/installation-context.tsx`. |
-| `/help/[module-id]` detail route not airport-type-gated | Low | Renders any guide id regardless of airport type; no in-app path links to a cross-mode guide today. Defensive follow-up: `notFound()` (or a notice) when `appliesTo` excludes the current type. |
-| Records Export guide bullet is USAF-flavored on civilian bases | Low | Records Export shows on both modes; the "AMTR is exported from its own module" bullet references a USAF-only module on civilian bases. Cosmetic. |
-| v2.34 not yet walked on the deploy | Med | What's New grouped modal (desktop + mobile), AMTR visibility on USAF bases post-backfill, and the 7 new guides + screenshots all need a real-browser pass on the Vercel deploy. |
-| usr-analytics privacy disclosure | Med | Carried — per-user usage tracking still has no user-facing disclosure line. |
-| `types.ts` regen deferred | Med | Carried — hand-maintained additions; full `supabase gen types` is a large diff. |
+| RLS pentest work not walked on a **promoted** deploy | High | Carried — all demo testing ran against stale code. Promote `63306d38`, then walk: a normal save, a no-base save (toast), an offline save + drain as one user, and confirm a low-priv user still can't escalate. Then `node scripts/scan-null-base.mjs` → expect CLEAN. |
+| Independent human review of pentest fixes #1/#2 | Med | Author wrote both bug and patch; trigger + `profiles` scoping deserve a second set of eyes before the Platform One assessment. |
+| Vercel production is manually promoted | Med | Carried — caused hours of "fix isn't working" confusion. Strongly consider auto-promote on `main`. |
+| In-app training-video embed not built | Low | New — `/help/[module-id]` YouTube iframe + blocked-network fallback is a deferred spec (see the video plan doc). |
+| Other module save handlers not audited for silent no-base guards | Low | Carried — a stray `if (!installationId) return` before some module's save would still no-op quietly. |
+| `scn` missing on 26 USAF bases | Med | Carried — frozen-`enabled_modules`; mirror `2026062000`. |
+| New `defaultEnabled` modules don't reach existing bases | Med | Carried — systemic null-only fallback in `lib/installation-context.tsx`. |
+| AMTR notif system not fully walked on deploy | Med | Carried — `8ec3c8b2` (certifier) + `a154631a` (real-time on-sign). |
+| usr-analytics privacy disclosure | Med | Carried — per-user usage tracking has no user-facing line. |
+| `types.ts` regen deferred | Med | Carried — several `amtr_*` tables hand-typed; route handlers cast `as any`. |
 | Base-setup file extraction deferred | Med | Carried — `base-config/setup/page.tsx` ~6k LOC. |
-| AMTR batch never walked in a live browser | Med | Carried. |
-| Records Export photo embed unverified on deploy | Low | Carried. |
-| globals.css base (v1) tokens now dead | Low | Carried — `:root` v1 tokens remain as the layer the always-on `[data-design="v2"]` overrides. |
-| extended-palette hex still literal | Low | Carried — a handful of hex outside the token set weren't converted. |
-| `npm audit` transitives | Low | Carried. |
+| v2.34 not yet walked on the deploy | Med | Carried. |
+| Codebase guide uncommitted | Info | Carried — `docs/glidepath-guide.html` gitignored; generator + `docs/guide-content/` untracked. |
 | Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
 
 ---
 
 ## Next session tasks
 
-No required next step — v2.34.0 is shipped and deployed. Sensible candidates:
+No required next step this session added. The standing finish line is unchanged:
+**walk the RLS pentest work on a properly promoted build** — it's committed and
+test-verified but never browser-confirmed live.
 
-1. **Walk v2.34 on the Vercel deploy** — confirm the What's New modal reads as
-   grouped, scannable sections (desktop + mobile), AMTR is now visible on USAF
-   bases (post-backfill), and the seven new Help & Training guides + screenshots
-   render correctly with the airport-type gating.
-2. **SCN backfill** (optional) — 26 USAF bases are missing `scn` for the same
-   reason AMTR was; a migration mirroring `2026062000` would surface it.
-3. **Fix the systemic `enabled_modules` gap** (optional) — so future modules
-   reach existing bases without a per-module backfill.
+1. **Promote `63306d38` to production**, hard-refresh (or incognito), and walk:
+   normal airfield-status save; a no-base save shows the toast; an offline save +
+   reconnect drains as a single user; the queue does NOT show/drain another user's
+   items after a user switch; a `read_only` user cannot escalate their role. Then
+   `node scripts/scan-null-base.mjs` → expect CLEAN.
+2. **Decide on Vercel auto-promote for `main`** — the manual promote was the
+   single biggest time sink.
+3. **Get an independent review** of pentest fixes #1 (escalation trigger) and #2
+   (`profiles` scoping).
+
+### Video walkthrough follow-ons (when you pick the effort back up)
+- Record the onboarding chapters against the Demo base per
+  `docs/Video_Walkthrough_Production_Plan.html`; upload Unlisted to YouTube.
+- When ready, spec + build the in-app `/help/[module-id]` YouTube embed +
+  blocked-network fallback (the only code-touching part).
+- Push the unpushed `7b5e908a` whenever you next push (docs-only, harmless).
 
 ### Long-running carryover (bandwidth-permitting)
-- `/help/[module-id]` detail-route airport gating; the civilian-flavored Records
-  Export bullet.
-- usr-analytics privacy/help copy.
-- `types.ts` regen; `base-config/setup` extraction; live-browser walk of AMTR.
+- Extend no-base toasts to any module save that still silently no-ops.
+- Promote `8ec3c8b2` and walk the AMTR notification system end-to-end.
+- `scn` `enabled_modules` backfill; the systemic `enabled_modules` fallback fix.
+- usr-analytics privacy copy; `types.ts` regen; `base-config/setup` extraction.
+- v2.34 deploy walk; the prior AMTR inspection-engine batch walk.
 
 ---
 
 ## Build snapshot
 
 ```
+No application code changed this session (docs-only) — snapshot carried from 63306d38.
+
 TypeScript clean (npx tsc --noEmit exit 0)
 Build: npm run build — compiled successfully.
-Tests: 728 pass / 75 files (+5 this session: training-modules-gating).
+Tests: 851 pass / 88 files.
 
-Notable First Load JS (routes touched this session):
-  /help                     215 kB   (5.06 kB route — airport-type gating)
-  /help/[module-id]         197 kB   (6.2 kB route — multi-workflow renderer)
-  /settings/exports         174 kB
+Heaviest / most-recently-touched routes (First Load JS, as of 63306d38):
+  ○ /                       ~221 kB   (Airfield Status)
+  ○ /infrastructure         226 kB
+  ○ /discrepancies/new      192 kB
 First Load JS shared        91.5 kB
 Middleware                  74.5 kB
 ```
@@ -199,29 +198,19 @@ Middleware                  74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **v2.34.0** | 2026-06-01 | Help & Training covers every module + airport-type gating; AMTR visible fleet-wide (enabled_modules backfill); FAA Part 139 civilian mode; PPR coordination + notify; Records Export; refreshed design now the only look; grouped scannable What's New |
+| **Unreleased** | 2026-06-07 | RLS/authorization pentest remediation: closed self-escalation to sys_admin + four cross-tenant read leaks (`2026062011`), removed the NULL-base_id escape hatch (`2026062012`), scoped the offline write queue per-user, and surfaced no-base saves as toasts |
+| **Unreleased** | 2026-06-05 | Offline write-queue coverage for the airfield-status board, NAVAID grid, New Discrepancy, Report Outage; realtime-down flag hardening |
+| **v2.34.0** | 2026-06-01 | Help & Training covers every module + airport-type gating; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination + notify; Records Export; grouped What's New |
 | v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes |
 
 ---
 
-## Key files touched this session
+## Key docs / files touched this session
 
 ### New files
-- `tests/training-modules-gating.test.ts`
-- `supabase/migrations/2026062000_backfill_amtr_enabled_modules.sql`
-- `public/training/` — `amtr_1..3`, `records-export_1`, `sms_1..3`, `aep_1..3`,
-  `training-part139_1..4`, `field-conditions_1..2`, `whmp_1..2` (.png)
-- `docs/superpowers/specs/2026-06-01-training-guide-coverage-design.md`,
-  `docs/superpowers/plans/2026-06-01-training-guide-coverage.md`
+- `docs/Video_Walkthrough_Production_Plan.html` — editable OBS + recording +
+  YouTube-hosting reference (committed in `7b5e908a`).
 
-### Modified files
-- `lib/training/modules.ts` (7 new guides, `appliesTo` + helper, multi-workflow,
-  AMTR import procedure + FAQ)
-- `app/(app)/help/page.tsx` (airport-type gating), `app/(app)/help/[module-id]/page.tsx`
-  (multi-workflow renderer)
-- `lib/release-notes.ts` (`ReleaseSection` + 2.34 entry),
-  `components/whats-new-modal.tsx` (grouped renderer)
-- `app/(app)/training/page.tsx` (banner removal)
-- `CHANGELOG.md`, `README.md`, `package.json`, `app/login/page.tsx`,
-  `app/(app)/settings/page.tsx` (version bump + notes)
-- `docs/release-2.34-notes-builder.html` (candidate refresh)
+### Removed
+- `docs/Video_Walkthrough_Production_Plan.md` — superseded by the `.html` (the
+  `.md` was never committed).
