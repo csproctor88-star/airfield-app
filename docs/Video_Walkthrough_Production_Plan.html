@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glidepath Video Walkthrough — Production &amp; Hosting Plan</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --ink: #1c2530;
+    --ink-soft: #55606e;
+    --ink-faint: #8a94a3;
+    --accent: #0e7c86;        /* glidepath cyan, darkened for contrast */
+    --accent-soft: #e3f3f5;
+    --border: #e3e7ec;
+    --warn-bg: #fff6e6;
+    --warn-border: #f0c66b;
+    --warn-ink: #8a5a00;
+    --code-bg: #eef1f4;
+    --shadow: 0 1px 3px rgba(20,30,45,.06), 0 6px 24px rgba(20,30,45,.05);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .toolbar .brand {
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .02em;
+    margin-right: auto;
+    font-size: 14px;
+  }
+  .btn {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    padding: 7px 14px;
+    border-radius: 8px;
+    transition: all .15s ease;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); color: #fff; }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .save-hint { font-size: 12px; color: var(--ink-faint); margin-left: 2px; min-width: 90px; }
+
+  /* Page */
+  .page {
+    max-width: 860px;
+    margin: 32px auto 80px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 48px 56px;
+  }
+  .page[contenteditable="true"] {
+    outline: 2px dashed var(--accent);
+    outline-offset: 6px;
+    background: #fffdf8;
+  }
+
+  h1 {
+    font-size: 30px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    letter-spacing: -.01em;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin: 0 0 4px; }
+  .meta { color: var(--ink-faint); font-size: 13px; margin: 0 0 28px; }
+
+  h2 {
+    font-size: 22px;
+    margin: 40px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent-soft);
+    letter-spacing: -.01em;
+  }
+  h3 { font-size: 17px; margin: 26px 0 8px; color: var(--ink); }
+  p { margin: 10px 0; }
+  ul, ol { margin: 10px 0; padding-left: 24px; }
+  li { margin: 5px 0; }
+  a { color: var(--accent); }
+
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 13.5px;
+  }
+  strong { font-weight: 700; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+
+  blockquote {
+    margin: 16px 0;
+    padding: 12px 18px;
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 8px 8px 0;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+  }
+  blockquote p { margin: 4px 0; }
+
+  .callout {
+    margin: 16px 0;
+    padding: 14px 18px;
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 8px;
+    color: var(--warn-ink);
+    font-size: 14.5px;
+  }
+  .callout strong { color: var(--warn-ink); }
+  .callout .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-right: 8px;
+    color: #b07400;
+  }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  @media print {
+    .toolbar { display: none; }
+    body { background: #fff; }
+    .page { box-shadow: none; border: none; margin: 0; max-width: none; padding: 0; }
+  }
+  @media (max-width: 720px) {
+    .page { padding: 28px 22px; margin: 16px; }
+    .toolbar { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="brand">GLIDEPATH</span>
+  <span class="save-hint" id="saveHint"></span>
+  <button class="btn" id="editBtn">✎ Edit</button>
+  <button class="btn" id="downloadBtn">⤓ Download</button>
+  <button class="btn" id="printBtn">⎙ Print / PDF</button>
+  <button class="btn" id="resetBtn" title="Discard your local edits and restore the original">↺ Reset</button>
+</div>
+
+<article class="page" id="content">
+
+  <h1>Glidepath Video Walkthrough — Production &amp; Hosting Plan</h1>
+  <p class="subtitle">Reference for recording, producing, and publishing Glidepath training walkthroughs.</p>
+  <p class="meta">Created 2026-06-07 · Tuned to: Shure MV7+ mic, 3200×2000 HiDPI panel (16:10), NVIDIA GPU (NVENC), OBS Studio.</p>
+
+  <h2>1. Goal &amp; Priority</h2>
+  <p>Produce a library of screen-recorded walkthroughs, voiceover only (no facecam), narrated live while clicking. One set of recordings, repurposed four ways — in <strong>priority order</strong>:</p>
+  <ol>
+    <li><strong>New-user onboarding course</strong> (primary) — sequenced chapters that walk a brand-new Airfield Manager through the whole app.</li>
+    <li><strong>Admin / base-setup guide</strong> — the harder admin tasks, aimed at base admins.</li>
+    <li><strong>In-app contextual help</strong> — the same onboarding chapters, re-surfaced individually inside <code>/help/[module-id]</code> at the moment of need.</li>
+    <li><strong>Marketing / sales reel</strong> — a 2–3 min supercut of the best moments for glidepathops.com.</li>
+  </ol>
+  <p>Because the onboarding chapters are modular, recording them once feeds all four uses.</p>
+
+  <h2>2. OBS Studio Recipe <span style="font-weight:400;font-size:15px;color:var(--ink-faint)">(final, as configured)</span></h2>
+
+  <div class="callout">
+    <span class="tag">Critical gotcha</span><strong>Turn HDR OFF first.</strong>
+    On this HiDPI/HDR-capable panel, leaving <strong>Windows HDR on makes every recording washed-out and grey</strong> (SDR→HDR tone-mapping isn't handled by the capture). Always disable HDR before recording.
+    <ul>
+      <li>Windows <strong>Settings → System → Display → HDR → Off</strong> (and disable "Auto HDR").</li>
+      <li>Quick toggle: <strong>Win + Alt + B</strong>.</li>
+    </ul>
+  </div>
+
+  <h3>Video (Settings → Video)</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Base (Canvas) Resolution</td><td><strong>1920×1080</strong></td></tr>
+      <tr><td>Output (Scaled) Resolution</td><td><strong>1920×1080</strong></td></tr>
+      <tr><td>Downscale Filter</td><td>N/A (greyed — base = output, this is correct)</td></tr>
+      <tr><td>Common FPS</td><td><strong>30</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>HiDPI sharpness — set at the SOURCE, not the canvas</h3>
+  <p>Because the monitor is 3200×2000 but the canvas is 1080p, the downscale happens at the source:</p>
+  <ul>
+    <li>Right-click the capture source → <strong>Scale Filtering → "Lanczos (Sharpened scaling)"</strong> — this is what keeps UI text crisp.</li>
+    <li>Before recording, <strong>bump browser zoom to ~125–150%</strong> (Ctrl + +) so text survives the downscale.</li>
+    <li>Right-click source → <strong>Transform → Fit to Screen</strong> (Ctrl+F) so it fills the whole frame.</li>
+  </ul>
+
+  <h3>Color (Settings → Advanced → Video)</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Color Format</td><td><strong>NV12</strong></td></tr>
+      <tr><td>Color Space</td><td><strong>Rec. 709</strong> (or sRGB)</td></tr>
+      <tr><td>Color Range</td><td><strong>Partial</strong> — <em>not Full; Full causes washout in mainstream players</em></td></tr>
+    </tbody>
+  </table>
+  <blockquote><p>If a recording ever looks cloudy/grey again: check <strong>HDR is off</strong> first, then confirm Color Range = Partial and Color Space = Rec. 709. Verify color in <strong>Chrome/VLC/YouTube</strong>, never Windows Media Player (it mis-renders color).</p></blockquote>
+
+  <h3>Output (Settings → Output — Simple mode is fine)</h3>
+  <table>
+    <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Recording Quality</td><td><strong>Indistinguishable Quality, Large File Size</strong> (crisp text; YouTube re-compresses anyway)</td></tr>
+      <tr><td>Recording Format</td><td><strong>MPEG-4 (.mp4)</strong></td></tr>
+      <tr><td>Video Encoder</td><td><strong>Hardware (NVENC, H.264)</strong></td></tr>
+      <tr><td>Audio Encoder</td><td><strong>AAC</strong></td></tr>
+      <tr><td>Recording Path</td><td><code>C:/Users/cspro/Videos/Glidepath Tutorial Videos</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Audio Recipe <span style="font-weight:400;font-size:15px;color:var(--ink-faint)">(Shure MV7+)</span></h2>
+
+  <h3>Mic technique &amp; MOTIV app</h3>
+  <ul>
+    <li>Connect via <strong>USB-C</strong>; <strong>48 kHz</strong>.</li>
+    <li><strong>Distance ~3–4 inches</strong> (a fist), speaking <strong>on-axis</strong> into the front face (logo side) — dynamic mic, so proximity = warmth and off-axis = muffled.</li>
+    <li>MOTIV <strong>Tone → Natural</strong> (Dark sounds muffled; Bright sounds airy).</li>
+    <li><strong>High-Pass Filter ~80 Hz</strong>.</li>
+    <li>Run <strong>only one</strong> denoiser — MOTIV's <em>or</em> OBS's, never both (doubling thins/dulls the voice).</li>
+    <li>Set gain so normal speech peaks <strong>−12 to −6 dB</strong> (with filters off) before tuning the chain.</li>
+  </ul>
+
+  <h3>OBS mic filter chain (Audio Mixer → MV7+ gear → Filters), in this order:</h3>
+  <ol>
+    <li><strong>Noise Suppression</strong> → RNNoise <em>(skip if MOTIV's denoiser is on)</em></li>
+    <li><strong>Noise Gate</strong> — Close <strong>−40 dB</strong>, Open <strong>−32 dB</strong>, Attack <strong>10 ms</strong>, Hold <strong>150 ms</strong>, Release <strong>120 ms</strong> <em>(this is what silences keyboard/mouse clicks in pauses)</em></li>
+    <li><strong>Compressor</strong> — Ratio <strong>3:1</strong>, Threshold <strong>−18 dB</strong>, Attack <strong>6 ms</strong>, Release <strong>60 ms</strong>, Output Gain <strong>+3 dB</strong></li>
+    <li><strong>Limiter</strong> — Threshold <strong>−3 dB</strong>, Release <strong>60 ms</strong></li>
+    <li><em>(optional, for clarity)</em> <strong>3-Band Equalizer</strong> — High <strong>+3 dB</strong>, Mid <strong>−2 to −3 dB</strong> (cuts mud), Low <strong>0</strong></li>
+  </ol>
+  <blockquote><p>Tuning: clicks leaking through the gate → raise Open Threshold toward −28. Words clipped at the start → lower it. "Airy/thin" → get closer + Tone:Natural. "Muffled" → EQ high band up, back off distance slightly, ease denoiser.</p></blockquote>
+
+  <h2>4. Recording Workflow <span style="font-weight:400;font-size:15px;color:var(--ink-faint)">(record-and-ship)</span></h2>
+  <ul>
+    <li><strong>Record against the Demo base</strong> — <code>/login?demo=true</code> (isolated Demo AFB seed). Fully populated, consistent across takes, and exposes <strong>no real base data or personnel names</strong>.</li>
+    <li><strong>Browser in fullscreen (F11)</strong> — no tabs/address bar in frame.</li>
+    <li><strong>Light bullet outline per chapter</strong> (not a word-for-word script) — keeps narration on-rails and takes short.</li>
+    <li><strong>One take per chapter</strong>; if you fumble, pause and restate the sentence, trim later. Light edit only.</li>
+    <li>Optional reusable <strong>3–5 sec title card</strong> per chapter.</li>
+    <li><strong>30-sec test before each session</strong>: read a sentence, type/click during a pause → confirm sharp text + clicks gated out. Check color in Chrome/VLC, not WMP.</li>
+  </ul>
+
+  <h2>5. Video Structure <span style="font-weight:400;font-size:15px;color:var(--ink-faint)">(chapter list)</span></h2>
+
+  <h3>Onboarding track (3–6 min each)</h3>
+  <ol>
+    <li>Welcome &amp; Orientation (sign in, layout, sidebar, switching bases, theme)</li>
+    <li>Airfield Status (default landing — runway/RSC/RCR, ARFF, NAVAID grid)</li>
+    <li>Daily Operations &amp; Events Log</li>
+    <li>Shift Checklist &amp; Daily Reviews (shift sign-off)</li>
+    <li>Airfield Checks</li>
+    <li>Inspections</li>
+    <li>Discrepancies (+ CES work-order workflow)</li>
+    <li>Visual NAVAIDs &amp; the outage engine</li>
+    <li>NOTAMs</li>
+    <li>PPR (Prior Permission Required)</li>
+    <li>QRCs</li>
+    <li>Wildlife / BASH</li>
+    <li>Obstructions</li>
+    <li>Parking Plans</li>
+    <li>Waivers</li>
+    <li>Reports &amp; Exports</li>
+  </ol>
+
+  <h3>Admin track</h3>
+  <ul>
+    <li>A1. Base Setup Wizard</li>
+    <li>A2. User Management &amp; the Permission Matrix</li>
+    <li>A3. Module Configuration</li>
+    <li>A4. Records Export / Disposition</li>
+  </ul>
+
+  <h3>Repurposing</h3>
+  <ul>
+    <li><strong>Contextual help (#1):</strong> each chapter above re-embedded on its <code>/help/[module-id]</code> page.</li>
+    <li><strong>Marketing reel (#4):</strong> 2–3 min supercut of the best 15–20 sec of each.</li>
+  </ul>
+
+  <h3>Naming convention</h3>
+  <p><code>glidepath-onboarding-NN-&lt;slug&gt;.mp4</code> (e.g. <code>glidepath-onboarding-02-airfield-status.mp4</code>), <code>glidepath-admin-NN-&lt;slug&gt;.mp4</code>.</p>
+
+  <h2>6. Hosting &amp; Delivery Plan</h2>
+
+  <h3>Primary host: YouTube (Unlisted)</h3>
+  <ul>
+    <li>Upload as <strong>Unlisted</strong>, organized into <strong>Playlists</strong> ("Glidepath Onboarding", "Glidepath Admin").</li>
+    <li>Embed via <strong><code>youtube-nocookie.com</code></strong> (privacy-enhanced — no tracking cookies until play; cleaner for gov use).</li>
+    <li><strong>Captions / 508:</strong> rely on YouTube <strong>auto-captions</strong>, then correct in YT Studio. Near-zero-effort 508 path.</li>
+  </ul>
+
+  <h3>Why YouTube over self-hosting (Supabase/Vercel)</h3>
+  <p>Storage isn't the problem — <strong>egress (bandwidth) is.</strong> Supabase Pro includes ~100 GB storage (the whole library is ~5–6 GB, trivial) but only ~250 GB egress/month, and video <em>streaming</em> burns egress fast (one 190 MB chapter × 100 views ≈ 19 GB). YouTube serves bandwidth free and at every resolution/device automatically. YouTube usually works on AFNet; for the rare blocked network, users watch on a personal device.</p>
+
+  <h3>In-app surfacing (future — separate spec, not built yet)</h3>
+  <ul>
+    <li><code>/help/[module-id]</code> pages and the onboarding flow embed the matching YouTube iframe.</li>
+    <li>On networks where YouTube is blocked: show a fallback message + link/QR to "watch on your phone."</li>
+  </ul>
+
+  <h3>Platform One contingency</h3>
+  <p>External YouTube embeds <strong>won't be reachable inside an IL4/IL5 boundary</strong>. <strong>Archive the master <code>.mp4</code>s</strong> (~5–6 GB delivery / ~10–30 GB OBS masters) locally + a cloud backup, so the videos can be self-hosted if Glidepath migrates to Platform One.</p>
+
+  <h2>7. Storage Math <span style="font-weight:400;font-size:15px;color:var(--ink-faint)">(reference)</span></h2>
+  <p>1080p30 H.264 screen content (low motion, lots of text):</p>
+  <table>
+    <thead><tr><th>Quality</th><th>Bitrate</th><th>Per minute</th><th>5-min chapter</th><th>Full library (~150 min)</th></tr></thead>
+    <tbody>
+      <tr><td>Lean</td><td>~2.5 Mbps</td><td>~19 MB</td><td>~95 MB</td><td>~2.8 GB</td></tr>
+      <tr><td>Typical (recommended delivery)</td><td>~5 Mbps</td><td>~38 MB</td><td>~190 MB</td><td>~5.6 GB</td></tr>
+      <tr><td>High</td><td>~8 Mbps</td><td>~60 MB</td><td>~300 MB</td><td>~9 GB</td></tr>
+    </tbody>
+  </table>
+  <ul>
+    <li><strong>Delivery library</strong> (compressed, if ever self-hosted): <strong>~5–6 GB</strong>.</li>
+    <li><strong>OBS masters</strong> (Indistinguishable/NVENC): larger, <strong>~10–30 GB</strong> total — fine to keep on a local drive + cloud backup.</li>
+    <li>On YouTube, your hosted bandwidth/storage cost is <strong>$0</strong>.</li>
+  </ul>
+
+</article>
+
+<script>
+  (function () {
+    var content   = document.getElementById('content');
+    var editBtn   = document.getElementById('editBtn');
+    var dlBtn      = document.getElementById('downloadBtn');
+    var printBtn  = document.getElementById('printBtn');
+    var resetBtn  = document.getElementById('resetBtn');
+    var hint      = document.getElementById('saveHint');
+    var KEY       = 'glidepath-video-plan-v1';
+    var ORIGINAL  = content.innerHTML;
+    var editing   = false;
+    var saveTimer;
+
+    // Restore any locally-saved edits
+    try {
+      var saved = localStorage.getItem(KEY);
+      if (saved) { content.innerHTML = saved; hint.textContent = 'Local edits loaded'; }
+    } catch (e) {}
+
+    function flash(msg) {
+      hint.textContent = msg;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function () { hint.textContent = editing ? 'Editing…' : ''; }, 1600);
+    }
+
+    editBtn.addEventListener('click', function () {
+      editing = !editing;
+      content.contentEditable = editing ? 'true' : 'false';
+      editBtn.classList.toggle('active', editing);
+      editBtn.textContent = editing ? '✓ Done' : '✎ Edit';
+      hint.textContent = editing ? 'Editing… (autosaves to this browser)' : '';
+      if (editing) content.focus();
+    });
+
+    content.addEventListener('input', function () {
+      try { localStorage.setItem(KEY, content.innerHTML); flash('Saved ✓'); } catch (e) { flash('Save failed'); }
+    });
+
+    dlBtn.addEventListener('click', function () {
+      // Persist current edits into the DOM, then export the whole document.
+      var wasEditing = editing;
+      if (wasEditing) content.contentEditable = 'false';
+      var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      if (wasEditing) content.contentEditable = 'true';
+      var blob = new Blob([html], { type: 'text/html' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Video_Walkthrough_Production_Plan.html';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      flash('Downloaded ✓');
+    });
+
+    printBtn.addEventListener('click', function () { window.print(); });
+
+    resetBtn.addEventListener('click', function () {
+      if (!confirm('Discard your local edits and restore the original document?')) return;
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      content.innerHTML = ORIGINAL;
+      flash('Reset to original');
+    });
+  })();
+</script>
+
+</body>
+</html>
