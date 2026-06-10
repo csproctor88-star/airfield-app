@@ -75,8 +75,6 @@ export default function DailyReviewSignModal({
     return () => mq.removeEventListener('change', update)
   }, [])
 
-  const [reportData, setReportData] = useState<DailyReportData | null>(null)
-
   const buildReviewSignoff = (r: DailyReviewRow | null, signerMap: Partial<Record<DailyReviewSlot, SignerInfo>>): DailyReviewSignoff | null => {
     if (!r) return null
     const required = requiredSlotsForShifts(shiftCount)
@@ -124,7 +122,6 @@ export default function DailyReviewSignModal({
         ])
         if (cancelled) return
         setRow(existing)
-        setReportData(data)
 
         const signerMap = existing ? await fetchDailyReviewSigners(existing) : {}
         if (cancelled) return
