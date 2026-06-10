@@ -815,11 +815,10 @@ export function SidebarNav() {
 
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`} data-tour="sidebar">
-      {/* Header with logo + tagline + collapse toggle.
-          When expanded, the logo and tagline stay centered as a
-          stacked unit and the collapse toggle floats in the top-right
-          corner so it doesn't pull the wordmark off-center. When
-          collapsed, only the toggle is shown, centered. */}
+      {/* Header with logo + collapse toggle.
+          When expanded, the logo stays centered and the collapse toggle
+          floats in the top-right corner so it doesn't pull the wordmark
+          off-center. When collapsed, only the toggle is shown, centered. */}
       <div style={{
         padding: isOpen ? '20px 16px 12px' : '20px 0 12px',
         borderBottom: '1px solid var(--color-border)',
@@ -837,17 +836,6 @@ export function SidebarNav() {
               alt="Glidepath"
               style={{ height: 40, objectFit: 'contain', marginBottom: 2 }}
             />
-            <div style={{
-              fontSize: 'var(--fs-sm)',
-              fontWeight: 300,
-              fontStyle: 'italic',
-              color: 'var(--color-text-2)',
-              letterSpacing: '0.04em',
-              lineHeight: 1.4,
-              textAlign: 'center',
-            }}>
-              Guiding You to Mission Success
-            </div>
             <button
               onClick={toggle}
               title="Collapse sidebar"
