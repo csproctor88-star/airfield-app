@@ -5,6 +5,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
 import {
   fetchRecentReviews,
+  fetchOutstandingReviews,
   fetchSignersForRows,
   requiredSlotsForShifts,
   isFullyCertified,
@@ -96,6 +97,89 @@ function SlotTile({ label, signed, signer }: SlotTileProps) {
   )
 }
 
+function ReviewRow({ date, row, shiftCount, todayIso, signerMap, currentInstallation, onOpen }: {
+  date: string
+  row: DailyReviewRow | null
+  shiftCount: number
+  todayIso: string | null
+  signerMap: Map<string, SignerInfo>
+  currentInstallation: ReturnType<typeof useInstallation>['currentInstallation']
+  onOpen: (date: string) => void
+}) {
+  const required = requiredSlotsForShifts(shiftCount)
+  const certified = row ? isFullyCertified(row, shiftCount) : false
+  const isToday = date === todayIso
+  const dateLabel = formatRowDate(date, todayIso)
+  // Left rail communicates state at a glance:
+  //   reviewed → success, today + pending → amber (your turn),
+  //   past + pending → text-4 (quiet).
+  const railColor = certified
+    ? 'var(--color-success)'
+    : isToday
+      ? 'var(--color-amber)'
+      : 'var(--color-text-4)'
+  const statusLabel = certified ? 'REVIEWED' : 'PENDING'
+  const statusColor = certified
+    ? 'var(--color-success)'
+    : isToday
+      ? 'var(--color-amber)'
+      : 'var(--color-text-3)'
+  return (
+    <div
+      onClick={() => onOpen(date)}
+      style={{
+        padding: '12px 14px', borderRadius: 'var(--radius-md)',
+        background: certified
+          ? 'color-mix(in srgb, var(--color-success) 6%, transparent)'
+          : isToday
+            ? 'color-mix(in srgb, var(--color-amber) 5%, transparent)'
+            : 'var(--color-bg-surface-solid)',
+        border: '1px solid var(--color-border)',
+        borderLeft: `3px solid ${railColor}`,
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
+            {dateLabel.primary}
+          </span>
+          {dateLabel.secondary && (
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
+              {dateLabel.secondary}
+            </span>
+          )}
+        </div>
+        <span style={{
+          fontSize: 'var(--fs-2xs)', color: statusColor, fontWeight: 700,
+          letterSpacing: '0.1em', whiteSpace: 'nowrap',
+        }}>
+          {statusLabel}
+        </span>
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${required.length}, minmax(0, 1fr))`,
+        gap: 6,
+      }}>
+        {required.map((slot) => {
+          const signedAt = row?.[`${slot}_signed_at` as keyof DailyReviewRow] as string | null
+          const signedById = row?.[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
+          const signer = signedById ? signerMap.get(signedById) : null
+          return (
+            <SlotTile
+              key={slot}
+              label={getSlotLabel(slot as DailyReviewSlot, currentInstallation)}
+              signed={!!signedAt}
+              signer={signer ?? null}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function DailyReviewsPage() {
   const { installationId, currentInstallation } = useInstallation()
   const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
@@ -106,6 +190,8 @@ export default function DailyReviewsPage() {
 
   const [loaded, setLoaded] = useState(false)
   const [rows, setRows] = useState<DailyReviewRow[]>([])
+  const [outstanding, setOutstanding] = useState<DailyReviewRow[]>([])
+  const [outstandingCapped, setOutstandingCapped] = useState(false)
   const [signerMap, setSignerMap] = useState<Map<string, SignerInfo>>(new Map())
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState('')
@@ -126,9 +212,19 @@ export default function DailyReviewsPage() {
     }
     const reviews = await fetchRecentReviews(installationId, 30)
     setRows(reviews)
-    setSignerMap(await fetchSignersForRows(reviews))
+    // Outstanding = uncertified reviews older than the 14-day recent window
+    // (oldest recent date = today−13). Surfaces overdue days that scrolled off.
+    const todayFloorBase = getEffectiveReviewDate(baseTimezone, baseResetTime)
+    const [yy, mm, dd] = todayFloorBase.split('-').map(Number)
+    const floor = new Date(Date.UTC(yy, mm - 1, dd))
+    floor.setUTCDate(floor.getUTCDate() - 13)
+    const floorIso = floor.toISOString().slice(0, 10)
+    const out = await fetchOutstandingReviews(installationId, floorIso, 50)
+    setOutstandingCapped(out.length > 50)
+    setOutstanding(out.slice(0, 50))
+    setSignerMap(await fetchSignersForRows([...reviews, ...out]))
     setLoaded(true)
-  }, [installationId])
+  }, [installationId, baseTimezone, baseResetTime])
 
   useEffect(() => { load() }, [load])
 
@@ -158,7 +254,6 @@ export default function DailyReviewsPage() {
 
   const rowByDate = new Map(rows.map((r) => [r.review_date, r] as const))
 
-  const required = requiredSlotsForShifts(shiftCount)
   const todayIso = visibleDates[0] ?? null
 
   // Tally counts across the visible window so the header gives an
@@ -176,8 +271,18 @@ export default function DailyReviewsPage() {
 
   return (
     <div data-tour="daily-reviews-header" style={{ padding: 16 }}>
-      <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', marginBottom: 4 }}>
-        Daily Reviews
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
+        <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+          Daily Reviews
+        </div>
+        <input
+          type="date"
+          max={todayIso ?? undefined}
+          onChange={(e) => { if (e.target.value) { openSign(e.target.value); e.target.value = '' } }}
+          className="input-dark"
+          style={{ maxWidth: 170 }}
+          aria-label="Jump to a past review date"
+        />
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <span>DAFMAN 13-204v1 Para 2.5.2.10.3 &amp; 10.4 — shift turnover + daily review.</span>
@@ -200,82 +305,46 @@ export default function DailyReviewsPage() {
       ) : !installationId ? (
         <EmptyState message="Select an installation to view daily reviews." />
       ) : (
-        <div data-tour="daily-reviews-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {visibleDates.map((date) => {
-            const row = rowByDate.get(date) ?? null
-            const certified = row ? isFullyCertified(row, shiftCount) : false
-            const isToday = date === todayIso
-            const dateLabel = formatRowDate(date, todayIso)
-            // Left rail communicates state at a glance:
-            //   reviewed → success, today + pending → amber (your turn),
-            //   past + pending → text-4 (quiet).
-            const railColor = certified
-              ? 'var(--color-success)'
-              : isToday
-                ? 'var(--color-amber)'
-                : 'var(--color-text-4)'
-            const statusLabel = certified ? 'REVIEWED' : 'PENDING'
-            const statusColor = certified
-              ? 'var(--color-success)'
-              : isToday
-                ? 'var(--color-amber)'
-                : 'var(--color-text-3)'
-            return (
-              <div
-                key={date}
-                onClick={() => openSign(date)}
-                style={{
-                  padding: '12px 14px', borderRadius: 'var(--radius-md)',
-                  background: certified
-                    ? 'color-mix(in srgb, var(--color-success) 6%, transparent)'
-                    : isToday
-                      ? 'color-mix(in srgb, var(--color-amber) 5%, transparent)'
-                      : 'var(--color-bg-surface-solid)',
-                  border: '1px solid var(--color-border)',
-                  borderLeft: `3px solid ${railColor}`,
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>
-                      {dateLabel.primary}
-                    </span>
-                    {dateLabel.secondary && (
-                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 500 }}>
-                        {dateLabel.secondary}
-                      </span>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: 'var(--fs-2xs)', color: statusColor, fontWeight: 700,
-                    letterSpacing: '0.1em', whiteSpace: 'nowrap',
-                  }}>
-                    {statusLabel}
-                  </span>
-                </div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${required.length}, minmax(0, 1fr))`,
-                  gap: 6,
-                }}>
-                  {required.map((slot) => {
-                    const signedAt = row?.[`${slot}_signed_at` as keyof DailyReviewRow] as string | null
-                    const signedById = row?.[`${slot}_signed_by` as keyof DailyReviewRow] as string | null
-                    const signer = signedById ? signerMap.get(signedById) : null
-                    return (
-                      <SlotTile
-                        key={slot}
-                        label={getSlotLabel(slot as DailyReviewSlot, currentInstallation)}
-                        signed={!!signedAt}
-                        signer={signer ?? null}
-                      />
-                    )
-                  })}
-                </div>
+        <div>
+          {outstanding.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--color-amber)', letterSpacing: '0.04em', marginBottom: 8 }}>
+                ⚠ OUTSTANDING — started, not certified ({outstanding.length}{outstandingCapped ? '+' : ''})
               </div>
-            )
-          })}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {outstanding.map((r) => (
+                  <ReviewRow key={r.review_date} date={r.review_date} row={r}
+                    shiftCount={shiftCount} todayIso={todayIso} signerMap={signerMap}
+                    currentInstallation={currentInstallation} onOpen={openSign} />
+                ))}
+              </div>
+              {outstandingCapped && (
+                <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                  Showing the 50 most recent outstanding reviews — use “Jump to date” to reach older ones.
+                </div>
+              )}
+              <div style={{ marginTop: 14, fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-3)', letterSpacing: '0.04em' }}>
+                RECENT — last 14 days
+              </div>
+            </div>
+          )}
+          <div data-tour="daily-reviews-list" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {visibleDates.map((date) => {
+              const row = rowByDate.get(date) ?? null
+              return (
+                <ReviewRow
+                  key={date}
+                  date={date}
+                  row={row}
+                  shiftCount={shiftCount}
+                  todayIso={todayIso}
+                  signerMap={signerMap}
+                  currentInstallation={currentInstallation}
+                  onOpen={openSign}
+                />
+              )
+            })}
+          </div>
         </div>
       )}
 
