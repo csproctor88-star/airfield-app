@@ -81,7 +81,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ActivityPage() {
   const router = useRouter()
-  const { installationId, userRole, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { installationId, userRole, currentInstallation } = useInstallation()
   const { has } = usePermissions()
   const isAdmin = ['airfield_manager', 'sys_admin', 'base_admin', 'namo'].includes(userRole || '')
   const [customTemplates, setCustomTemplates] = useState<import('@/lib/activity-templates').TemplateCategory[] | null>(null)
@@ -1184,7 +1184,6 @@ export default function ActivityPage() {
           resetTime={baseResetTime}
           userId={currentUserId}
           userName={currentUserName}
-          defaultPdfEmail={defaultPdfEmail}
           onSigned={() => { refreshReviews(); loadFirstPage() }}
         />
       )}

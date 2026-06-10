@@ -102,7 +102,7 @@ function SlotTile({ label, signed, signer }: SlotTileProps) {
 }
 
 export default function DailyReviewsPage() {
-  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
   const baseName = currentInstallation?.name || ''
   const baseIcao = (currentInstallation as { icao?: string | null } | null)?.icao || null
@@ -297,7 +297,6 @@ export default function DailyReviewsPage() {
           resetTime={baseResetTime}
           userId={userId}
           userName={userName}
-          defaultPdfEmail={defaultPdfEmail}
           onSigned={load}
         />
       )}

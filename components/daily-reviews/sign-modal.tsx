@@ -23,11 +23,8 @@ import { ConflictError } from '@/lib/sync/types'
 import { fetchDailyReportData, type DailyReportData } from '@/lib/reports/daily-ops-data'
 import { generateDailyOpsPdf, type DailyReviewSignoff } from '@/lib/reports/daily-ops-pdf'
 import { formatZuluDateTime } from '@/lib/utils'
-import { sendPdfViaEmail } from '@/lib/email-pdf'
-import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { usePermissions } from '@/lib/permissions'
 import { isMobileDevice } from '@/lib/device'
-import type jsPDF from 'jspdf'
 import { Check, X } from 'lucide-react'
 
 interface SignModalProps {
@@ -44,13 +41,12 @@ interface SignModalProps {
   resetTime?: string | null
   userId: string
   userName: string
-  defaultPdfEmail: string | null
   onSigned: () => void
 }
 
 export default function DailyReviewSignModal({
   open, onClose, baseId, baseName, baseIcao, shiftCount, reviewDate,
-  timezone, resetTime, userId, userName, defaultPdfEmail, onSigned,
+  timezone, resetTime, userId, userName, onSigned,
 }: SignModalProps) {
   const { has } = usePermissions()
   const { currentInstallation } = useInstallation()
@@ -59,14 +55,10 @@ export default function DailyReviewSignModal({
   const [row, setRow] = useState<DailyReviewRow | null>(null)
   const [signers, setSigners] = useState<Partial<Record<DailyReviewSlot, SignerInfo>>>({})
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
-  const [pdfDoc, setPdfDoc] = useState<jsPDF | null>(null)
-  const [pdfFilename, setPdfFilename] = useState<string>('')
   const [eventsHash, setEventsHash] = useState<string>('')
   const [selectedSlot, setSelectedSlot] = useState<DailyReviewSlot | ''>('')
   const [notes, setNotes] = useState('')
   const [signing, setSigning] = useState(false)
-  const [emailOpen, setEmailOpen] = useState(false)
-  const [emailSending, setEmailSending] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   // Layout (isMobile) is viewport-width based, but the PDF-preview decision is
   // device based: iOS/iPadOS WebKit renders only the first page of a PDF in an
@@ -103,7 +95,7 @@ export default function DailyReviewSignModal({
     currentRow: DailyReviewRow | null,
     currentSigners: Partial<Record<DailyReviewSlot, SignerInfo>>,
   ) => {
-    const { doc, filename } = generateDailyOpsPdf(data, {
+    const { doc } = generateDailyOpsPdf(data, {
       startDate: reviewDate,
       endDate: reviewDate,
       isRange: false,
@@ -114,8 +106,6 @@ export default function DailyReviewSignModal({
     })
     const blob = doc.output('blob')
     const url = URL.createObjectURL(blob)
-    setPdfDoc(doc)
-    setPdfFilename(filename)
     setPdfUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return url })
   }
 
@@ -212,6 +202,7 @@ export default function DailyReviewSignModal({
           { duration: 6000 },
         )
         onSigned()
+        onClose()
         return
       }
       data = result.data
@@ -232,43 +223,12 @@ export default function DailyReviewSignModal({
     setNotes('')
     toast.success(`Signed as ${labelFor(selectedSlot)}`)
     onSigned()
-
-    // Refresh signer profiles and regenerate the preview PDF
-    const signerMap = await fetchDailyReviewSigners(data)
-    setSigners(signerMap)
-    if (reportData) regeneratePdf(reportData, data, signerMap)
-
-    if (data.fully_certified_at) {
-      setEmailOpen(true)
-    }
-  }
-
-  const handleDownload = () => {
-    if (!pdfDoc) return
-    pdfDoc.save(pdfFilename)
-  }
-
-  const handleEmail = async (to: string) => {
-    if (!pdfDoc) return
-    setEmailSending(true)
-    try {
-      const subject = `Reviewed Daily Operations — ${baseName}${baseIcao ? ` (${baseIcao})` : ''} — ${reviewDate}`
-      const { success, error } = await sendPdfViaEmail(pdfDoc, pdfFilename, to, subject)
-      if (success) {
-        toast.success(`Emailed to ${to}`)
-        setEmailOpen(false)
-      } else {
-        toast.error(error || 'Email failed')
-      }
-    } finally {
-      setEmailSending(false)
-    }
+    onClose()
   }
 
   if (!open) return null
 
   const required = requiredSlotsForShifts(shiftCount)
-  const canDownload = !!pdfDoc && !!row?.fully_certified_at
 
   return (
     <div
@@ -415,44 +375,10 @@ export default function DailyReviewSignModal({
                   opacity: signing || loading || !selectedSlot ? 0.5 : 1,
                 }}
               >{signing ? 'Signing…' : 'Sign Review'}</button>
-
-              {pdfDoc && (
-                <button
-                  onClick={() => setEmailOpen(true)}
-                  style={{
-                    marginTop: 8, width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                    background: 'var(--color-bg-inset)', color: 'var(--color-text-1)',
-                    border: '1px solid var(--color-border-mid)', cursor: 'pointer', fontSize: 'var(--fs-sm)',
-                  }}
-                >Email this review…</button>
-              )}
-
-              {canDownload && (
-                <button
-                  onClick={handleDownload}
-                  style={{
-                    marginTop: 8, width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)',
-                    background: 'color-mix(in srgb, var(--color-success) 12%, transparent)',
-                    color: 'var(--color-success)',
-                    border: '1px solid color-mix(in srgb, var(--color-success) 30%, transparent)',
-                    cursor: 'pointer',
-                    fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
-                  }}
-                >Download Reviewed PDF</button>
-              )}
             </div>
           </div>
         </div>
       </div>
-
-      <EmailPdfModal
-        open={emailOpen}
-        onClose={() => setEmailOpen(false)}
-        onSend={handleEmail}
-        sending={emailSending}
-        filename={pdfFilename}
-        defaultEmail={defaultPdfEmail}
-      />
     </div>
   )
 }
