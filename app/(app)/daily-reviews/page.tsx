@@ -10,6 +10,7 @@ import {
   isFullyCertified,
   getEffectiveReviewDate,
   getSlotLabel,
+  signerCompact,
   type DailyReviewRow,
   type DailyReviewSlot,
   type SignerInfo,
@@ -34,12 +35,6 @@ function formatRowDate(iso: string, todayIso: string | null): { primary: string;
     if (diffDays === 1) return { primary: 'Yesterday', secondary: longLabel }
   }
   return { primary: longLabel, secondary: null }
-}
-
-function signerCompact(s: SignerInfo): string {
-  // Last name + operating initials when present — fits the tile.
-  const last = (s.name || '').trim().split(/\s+/).slice(-1)[0] || 'Unknown'
-  return s.operating_initials ? `${last} (${s.operating_initials})` : last
 }
 
 interface SlotTileProps {

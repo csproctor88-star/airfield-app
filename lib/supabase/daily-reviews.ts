@@ -225,6 +225,12 @@ export function formatSigner(s: SignerInfo): string {
   return s.operating_initials ? `${primary} (${s.operating_initials})` : primary
 }
 
+/** Compact signer label for tiles/tables: "Last (initials)" or "Last". */
+export function signerCompact(s: SignerInfo): string {
+  const last = (s.name || '').trim().split(/\s+/).slice(-1)[0] || 'Unknown'
+  return s.operating_initials ? `${last} (${s.operating_initials})` : last
+}
+
 /** Batch-resolve signer profiles across multiple review rows — one Supabase round trip. */
 export async function fetchSignersForRows(rows: DailyReviewRow[]): Promise<Map<string, SignerInfo>> {
   const out = new Map<string, SignerInfo>()
@@ -301,6 +307,31 @@ export async function fetchRecentReviews(baseId: string, days = 14): Promise<Dai
     console.error('fetchRecentReviews:', error.message)
     return []
   }
+  return (data || []) as DailyReviewRow[]
+}
+
+/**
+ * Uncertified reviews older than `beforeDate` (exclusive), newest first.
+ * A row exists only once ≥1 slot is signed, so `fully_certified_at IS NULL`
+ * means "started but not certified". Fetches limit+1 so the caller can show
+ * a "+N older" hint.
+ */
+export async function fetchOutstandingReviews(
+  baseId: string,
+  beforeDate: string,
+  limit = 50,
+): Promise<DailyReviewRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('daily_reviews')
+    .select('*')
+    .eq('base_id', baseId)
+    .is('fully_certified_at', null)
+    .lt('review_date', beforeDate)
+    .order('review_date', { ascending: false })
+    .limit(limit + 1)
+  if (error) { console.error('fetchOutstandingReviews:', error.message); return [] }
   return (data || []) as DailyReviewRow[]
 }
 
