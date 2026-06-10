@@ -17,6 +17,7 @@ import {
   type SignerInfo,
 } from '@/lib/supabase/daily-reviews'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
+import DailyReviewExportModal from '@/components/daily-reviews/export-modal'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
@@ -197,6 +198,7 @@ export default function DailyReviewsPage() {
   const [userName, setUserName] = useState('')
   const [signOpen, setSignOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string>('')
+  const [exportOpen, setExportOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!installationId) return
@@ -275,14 +277,19 @@ export default function DailyReviewsPage() {
         <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
           Daily Reviews
         </div>
-        <input
-          type="date"
-          max={todayIso ?? undefined}
-          onChange={(e) => { if (e.target.value) { openSign(e.target.value); e.target.value = '' } }}
-          className="input-dark"
-          style={{ maxWidth: 170 }}
-          aria-label="Jump to a past review date"
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            type="date"
+            max={todayIso ?? undefined}
+            onChange={(e) => { if (e.target.value) { openSign(e.target.value); e.target.value = '' } }}
+            className="input-dark"
+            style={{ maxWidth: 170 }}
+            aria-label="Jump to a past review date"
+          />
+          <button onClick={() => setExportOpen(true)} className="input-dark" style={{ cursor: 'pointer', fontWeight: 700 }}>
+            Export…
+          </button>
+        </div>
       </div>
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
         <span>DAFMAN 13-204v1 Para 2.5.2.10.3 &amp; 10.4 — shift turnover + daily review.</span>
@@ -362,6 +369,21 @@ export default function DailyReviewsPage() {
           userId={userId}
           userName={userName}
           onSigned={load}
+        />
+      )}
+
+      {exportOpen && installationId && (
+        <DailyReviewExportModal
+          open={exportOpen}
+          onClose={() => setExportOpen(false)}
+          baseId={installationId}
+          baseName={baseName}
+          baseIcao={baseIcao}
+          shiftCount={shiftCount}
+          timezone={baseTimezone}
+          resetTime={baseResetTime}
+          userName={userName}
+          base={currentInstallation as { airport_type?: 'usaf' | 'faa_part139' | null } | null}
         />
       )}
     </div>
