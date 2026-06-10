@@ -1,124 +1,127 @@
 # Session Handoff
 
-**Date:** 2026-06-07
-**Branch:** `main` — local is **1 commit ahead of `origin/main`**. The video-doc
-commit `7b5e908a` is **unpushed by request** (docs-only, user chose to bundle it
-with later work). Everything before it is pushed. Still v2.34.0 (no version bump).
-**Build:** Unchanged — **docs-only session, no application code touched.** Last
-verified clean at `63306d38` (`npx tsc --noEmit` ✓, `npm run build` ✓,
-`npx vitest run` ✓, 851 pass / 88 files). Full suite not re-run (would only
-re-measure prior state).
-**HEAD:** `7b5e908a`
+**Date:** 2026-06-10
+**Branch:** `main` — in sync with `origin/main` (everything pushed; Vercel
+deploys on push). Still v2.34.0 (no version bump).
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled
+successfully), `npx vitest run` ✓ **859 pass / 89 files**.
+**HEAD:** `b5585961`
 
 ---
 
-## What shipped this session (docs-only)
+## What shipped this session
 
-A non-code session: set up OBS Studio for screen-recorded Glidepath training
-walkthroughs and produced an editable production/hosting plan. No code, no
-migrations.
+Two themes, both application code. First a brand-logo refresh across the login
+screen, sidebar, and PWA/favicon icons. Then a feature pass on the **Daily
+Reviews** module: reach and complete reviews older than 14 days, a date-range
+filter that drives the list, a timeframe certification-log PDF, and removal of
+the unused per-review email/delivery flow. The Daily Reviews work was specced,
+planned, and executed task-by-task via subagent-driven development with
+per-task spec + quality review.
 
-### Video walkthrough production & hosting plan (`7b5e908a`)
+### Logo refresh (`20a77d57`, `441ccf91`, `c4e90b46`, `a7b2af2a`)
 
-Brainstormed the training-video effort and configured OBS live over a series of
-screenshots, then wrote a self-contained, editable HTML reference at
-`docs/Video_Walkthrough_Production_Plan.html` (toolbar with in-browser Edit +
-localStorage autosave + Download/Print/Reset). The earlier `.md` draft was
-deleted in favour of the `.html`. The commit is **local-only** (not pushed).
+Replaced the login and sidebar wordmarks with dedicated light/dark artwork
+(navy on light, white + blue swoosh on dark) and regenerated the installed-app
+icon from the "PATH" composition plus a legible airplane-mark `favicon.ico`.
 
-Decisions captured in the doc:
-- **Priority order:** new-user onboarding course (primary) → admin/base-setup
-  guide → in-app contextual help → marketing reel. The onboarding chapters are
-  modular so one set of recordings feeds all four uses.
-- **Capture:** record against the **Demo base** (`/login?demo=true`) so no real
-  base data / personnel names are exposed; record-and-ship (light edit), voiceover
-  only, narrate-while-clicking.
-- **Hosting:** **YouTube, Unlisted**, via `youtube-nocookie.com` embeds. The cost
-  driver for self-hosting would be **Supabase egress, not storage** (full library
-  is only ~5–6 GB to store, but streaming burns metered egress fast) — YouTube
-  serves bandwidth free and usually works on AFNet, with personal-device fallback.
-  Auto-captions give a near-zero-effort 508 path. Archive master `.mp4`s for the
-  Platform One IL4/IL5 contingency (external embeds won't reach inside that
-  boundary).
-- **In-app embed is a deferred, separate spec** — `/help/[module-id]` iframe +
-  blocked-network fallback is the only part that touches code; not built.
+The non-obvious part: the login logo was a theme-conditional `<img src>` keyed
+on React `resolvedTheme`. That **SSR-mismatches** — the server renders with the
+provider's default (`dark`), paints the white logo, and never corrects after
+hydration because the post-hydration state equals the initializer (no
+re-render). Result: white logo on the cream login background. Fixed by swapping
+the logo via **CSS on the `[data-theme]` attribute** (set pre-hydration by the
+inline theme script) instead of React state — both variants ship in the DOM,
+CSS shows the right one, no flash, no mismatch. The sidebar was already safe
+because the app shell paints client-side behind the auth gate.
 
-OBS gotchas worth pinning (all in the doc):
-- **Windows HDR on → washed-out / grey OBS captures.** Toggle HDR off
-  (**Win + Alt + B**) before recording. This was the session's main time sink.
-- **Color Range = Partial** (not Full; Full washes out in mainstream players).
-- **Judge colour/audio in Chrome / VLC / YouTube, never Windows Media Player** —
-  WMP mis-renders both.
-- **MV7+ warmth** = proximity (~a fist, on-axis) + MOTIV Tone:Natural + a single
-  denoiser (never stack MOTIV's and OBS's). The OBS **Noise Gate** is what
-  silences keyboard clicks in pauses.
+Also: the source PNGs were 4961×3508 with the artwork floating in different
+positions per variant, so they were trimmed to their content bbox for
+consistent framing (a re-export reverts to the full canvas — re-trim on every
+new drop). `441ccf91` removed the superseded `glidepath2.png` /
+`glidepathdarkmode3.png` / stale `icon-*.svg`. `c4e90b46` dropped the sidebar's
+"Guiding You to Mission Success" text line (the new wordmark reads complete).
+`a7b2af2a` is a brightness bump to the dark login art.
 
----
+### Daily Reviews — older-review access + date-range filter (`8a2cb29`, `b5585961`, `7d71a68c`)
 
-## Carried forward — earlier today: RLS pentest remediation (NOT yet walked on prod)
+The list was hard-capped at the last 14 days (UI only — the data layer never
+restricted back-dated signing). Now a **date-range filter** (presets 7/14/30/90
++ MTD + custom start/end) drives the visible list: a descending day-spine over
+the chosen range, capped at 370 rendered cards for the view (the PDF export is
+uncapped). The same range feeds Export directly, so the originally-built
+standalone export modal was removed (`7d71a68c`). An **⚠ Outstanding** section
+surfaces uncertified reviews older than the range start so overdue days can't
+hide; clicking any day (or Outstanding row) opens the sign modal for that date.
 
-> This is the prior body of work from 2026-06-07. It is committed
-> (`e7887a5c`, `ea2e22c1`, `2a57f5ed`, `d2e85240`, `9a9b8aa0`, `63306d38`) and
-> test-verified, **but it was tested against stale code (ghost dev servers /
-> un-promoted Vercel) and has not been browser-walked on a properly promoted
-> build.** Walking it is still the top finish line.
+Toolbar gotcha worth pinning: the global `input-dark` class stretches buttons to
+**full width**, which stacked every preset on its own row — the toolbar chips
+are now styled inline (`chipBtn`) instead.
 
-A black-box RLS/authorization pentest of the live DB (lowest-priv real user vs.
-PostgREST) surfaced five cross-tenant breaks — including a **critical** self
-privilege-escalation to `sys_admin` — all fixed (migration `2026062011`):
+### Daily Reviews — certification-log PDF (`63507e8`, `33471fe`)
 
-1. **CRITICAL — self privilege-escalation.** Any user could `UPDATE` their own
-   `profiles` row to `role='sys_admin'`. Fixed with a `BEFORE UPDATE` trigger
-   (`profiles_block_priv_escalation`) rejecting role/status/is_active changes
-   unless the caller has `users:manage` / is sys_admin (service-role exempt).
-2. **HIGH — cross-tenant user directory.** `profiles_select` was `USING (true)`.
-   Now self / sys_admin / shares-a-base via `SECURITY DEFINER user_shares_base()`.
-3. **HIGH — cross-tenant airfield config.** `base_areas`/`base_navaids`/
-   `base_runways`/`base_arff_aircraft` SELECT were `USING (true)`; now
-   `user_has_base_access(auth.uid(), base_id)`.
-4. **MEDIUM — customer-roster enumeration.** `bases_select` was `USING (true)`;
-   now membership + sys_admin.
-5. **MEDIUM — NULL-`base_id` rows readable cross-tenant.** `runway_status_log`/
-   `status_updates`/`check_comments`/`activity_log` SELECT now exclude
-   `base_id IS NULL`; existing NULLs backfilled.
+New `lib/reports/daily-review-log-data.ts` (pure, unit-tested: `buildReviewDateSpine`,
+`buildCertLogRows`) + `lib/reports/daily-review-log-pdf.ts`
+(`generateDailyReviewLogPdf`, landscape roster via `pdf-utils` + autotable):
+one row per calendar day in the range, slot columns showing `Last (initials)`,
+a Certified column (Zulu time or `PENDING` / `PENDING (no entry)`), a summary
+stat box, and a notes appendix. New `fetchReviewsInRange` /
+`fetchOutstandingReviews` queries; `signerCompact` lifted into the data layer
+and shared with the page.
 
-Plus: writes now populate `base_id` via `lib/supabase/resolve-base-id.ts`
-(`ea2e22c1`); the NULL-`base_id` escape hatch in `user_has_base_access` was
-removed (migration `2026062012`, `d2e85240`); the offline write queue + pending
-photos were scoped per-user (`2a57f5ed`); and silent no-base saves now toast
-(`9a9b8aa0`, `63306d38`). Full detail in those commit messages.
+### Daily Reviews — sign-modal delivery removal (`61ca8cb`, `25626121`)
+
+The per-review sign modal auto-opened an email dialog on full certification and
+carried Email/Download buttons — all unused. Removed `EmailPdfModal`,
+`sendPdfViaEmail`, the buttons, and the `defaultPdfEmail` prop (which also
+touched a second caller in `app/(app)/activity/page.tsx`). Signing now simply
+closes the modal (committed and queued paths). The left **Daily Ops PDF
+preview** — the content being reviewed — is retained; `generateDailyOpsPdf`
+(still used by `/reports/daily`) is untouched. `25626121` removed the
+write-only `reportData` state left behind.
+
+Spec + plan live at `docs/superpowers/specs/2026-06-10-daily-reviews-history-and-report-design.md`
+and `docs/superpowers/plans/2026-06-10-daily-reviews-history-and-report.md`.
 
 ---
 
 ## Migrations status
 
-No new migrations this session. Prior two remain applied live, none pending:
+No new migrations this session. The two prior remain applied live, none
+pending:
 
 | File | Applied | What |
 |---|---|---|
-| `2026062011_rls_pentest_remediation.sql` | ✅ live | trigger + scoped SELECT policies (findings #1–#5) + backfill |
+| `2026062011_rls_pentest_remediation.sql` | ✅ live | trigger + scoped SELECT policies (pentest findings #1–#5) + backfill |
 | `2026062012_harden_base_access_null.sql` | ✅ live | `user_has_base_access` NULL → FALSE |
 
 ---
 
 ## Bugs fixed during the session
 
-None (docs-only). The OBS washout was an environment issue, not app code — see
-Lessons.
+| Symptom | Root cause | Commit |
+|---|---|---|
+| Login showed the white (dark) logo on the cream light background | Theme-conditional `<img src>` SSR-painted the default-`dark` asset; React never re-rendered post-hydration (state == initializer) | `a7b2af2a` (CSS `[data-theme]` swap) |
+| Daily Reviews list ignored the range, still 14 days | Range selectors lived only in the export modal; the list used a hardcoded 14-day loop | `b5585961` |
+| Toolbar preset buttons stacked full-width | Global `input-dark` class forces `width:100%` on buttons | `b5585961` (inline `chipBtn`) |
 
 ---
 
 ## Lessons from this session
 
-- **Windows HDR silently washes out OBS screen captures.** SDR content captured
-  while the display is in HDR mode comes out grey/low-contrast in *every* player,
-  which reads like a colour-pipeline bug but is just the HDR toggle. Check HDR
-  first (Win+Alt+B) before chasing OBS colour settings.
-- **Windows Media Player mis-renders OBS recordings** (colour washed, audio
-  dulled) even when the file is fine. Always judge a recording in Chrome / VLC /
-  YouTube before concluding anything's wrong with the file.
-- **Egress, not storage, is the cost of self-hosting video** on Supabase/Vercel —
-  the deciding factor for the YouTube call.
+- **`input-dark` stretches buttons to full width.** It's an input class; using
+  it on toolbar buttons makes each one a full-width row. Style compact toolbar
+  chips inline instead. (Saved as a feedback memory.)
+- **Theme-conditional `<img src>` on a server-rendered page mismatches.** Server
+  paints the provider default, and if the post-hydration theme value equals the
+  state initializer there's no re-render to correct it. Swap theme-dependent
+  images via CSS on `[data-theme]` (set pre-hydration), not React state.
+- **`git add A B` aborts staging when B doesn't match** — a commit landed with
+  only a file deletion because the second pathspec (an already-removed file)
+  errored and `page.tsx` was never staged. Stage one path at a time, or
+  `git status` before committing.
+- **Re-exported PNG logos revert to the full canvas** — re-trim to the content
+  bbox on every new drop so light/dark variants frame identically.
 
 ---
 
@@ -126,11 +129,10 @@ Lessons.
 
 | Item | Severity | Notes |
 |---|---|---|
-| RLS pentest work not walked on a **promoted** deploy | High | Carried — all demo testing ran against stale code. Promote `63306d38`, then walk: a normal save, a no-base save (toast), an offline save + drain as one user, and confirm a low-priv user still can't escalate. Then `node scripts/scan-null-base.mjs` → expect CLEAN. |
-| Independent human review of pentest fixes #1/#2 | Med | Author wrote both bug and patch; trigger + `profiles` scoping deserve a second set of eyes before the Platform One assessment. |
+| Daily Reviews cert-PDF not walked on a base with real cert data | Low | New — verified on the Demo base (no signed reviews) + unit tests + build; download/open a real roster on a base that has certified days. |
+| RLS pentest work not walked on a **promoted** deploy | High | Carried — all demo testing ran against stale code. Promote, then walk a normal save, a no-base save (toast), an offline save + drain as one user, and confirm a low-priv user still can't escalate. Then `node scripts/scan-null-base.mjs` → expect CLEAN. |
+| Independent human review of pentest fixes #1/#2 | Med | Carried — author wrote both bug and patch; trigger + `profiles` scoping deserve a second set of eyes before the Platform One assessment. |
 | Vercel production is manually promoted | Med | Carried — caused hours of "fix isn't working" confusion. Strongly consider auto-promote on `main`. |
-| In-app training-video embed not built | Low | New — `/help/[module-id]` YouTube iframe + blocked-network fallback is a deferred spec (see the video plan doc). |
-| Other module save handlers not audited for silent no-base guards | Low | Carried — a stray `if (!installationId) return` before some module's save would still no-op quietly. |
 | `scn` missing on 26 USAF bases | Med | Carried — frozen-`enabled_modules`; mirror `2026062000`. |
 | New `defaultEnabled` modules don't reach existing bases | Med | Carried — systemic null-only fallback in `lib/installation-context.tsx`. |
 | AMTR notif system not fully walked on deploy | Med | Carried — `8ec3c8b2` (certifier) + `a154631a` (real-time on-sign). |
@@ -138,35 +140,35 @@ Lessons.
 | `types.ts` regen deferred | Med | Carried — several `amtr_*` tables hand-typed; route handlers cast `as any`. |
 | Base-setup file extraction deferred | Med | Carried — `base-config/setup/page.tsx` ~6k LOC. |
 | v2.34 not yet walked on the deploy | Med | Carried. |
-| Codebase guide uncommitted | Info | Carried — `docs/glidepath-guide.html` gitignored; generator + `docs/guide-content/` untracked. |
+| In-app training-video embed not built | Low | Carried — `/help/[module-id]` YouTube iframe + blocked-network fallback is a deferred spec (see the video plan doc). |
+| Other module save handlers not audited for silent no-base guards | Low | Carried. |
 | Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
 
 ---
 
 ## Next session tasks
 
-No required next step this session added. The standing finish line is unchanged:
-**walk the RLS pentest work on a properly promoted build** — it's committed and
-test-verified but never browser-confirmed live.
+No required next step this session added — the Daily Reviews feature is shipped,
+built, and demo-verified. The standing finish line is unchanged:
 
-1. **Promote `63306d38` to production**, hard-refresh (or incognito), and walk:
-   normal airfield-status save; a no-base save shows the toast; an offline save +
-   reconnect drains as a single user; the queue does NOT show/drain another user's
-   items after a user switch; a `read_only` user cannot escalate their role. Then
-   `node scripts/scan-null-base.mjs` → expect CLEAN.
+1. **Walk the RLS pentest work on a properly promoted build** — promote, hard
+   refresh (or incognito), and walk: normal airfield-status save; a no-base save
+   shows the toast; an offline save + reconnect drains as a single user; the
+   queue does NOT show/drain another user's items after a user switch; a
+   `read_only` user cannot escalate their role. Then `node scripts/scan-null-base.mjs`
+   → expect CLEAN.
 2. **Decide on Vercel auto-promote for `main`** — the manual promote was the
-   single biggest time sink.
+   single biggest recurring time sink.
 3. **Get an independent review** of pentest fixes #1 (escalation trigger) and #2
    (`profiles` scoping).
-
-### Video walkthrough follow-ons (when you pick the effort back up)
-- Record the onboarding chapters against the Demo base per
-  `docs/Video_Walkthrough_Production_Plan.html`; upload Unlisted to YouTube.
-- When ready, spec + build the in-app `/help/[module-id]` YouTube embed +
-  blocked-network fallback (the only code-touching part).
-- Push the unpushed `7b5e908a` whenever you next push (docs-only, harmless).
+4. **Quick walk of the new Daily Reviews cert PDF** on a base with certified
+   days — confirm the roster, the Certified column, and the notes appendix
+   render correctly for real data.
 
 ### Long-running carryover (bandwidth-permitting)
+- Record the onboarding videos against the Demo base per
+  `docs/Video_Walkthrough_Production_Plan.html`; build the in-app
+  `/help/[module-id]` embed later.
 - Extend no-base toasts to any module save that still silently no-ops.
 - Promote `8ec3c8b2` and walk the AMTR notification system end-to-end.
 - `scn` `enabled_modules` backfill; the systemic `enabled_modules` fallback fix.
@@ -178,16 +180,13 @@ test-verified but never browser-confirmed live.
 ## Build snapshot
 
 ```
-No application code changed this session (docs-only) — snapshot carried from 63306d38.
-
-TypeScript clean (npx tsc --noEmit exit 0)
 Build: npm run build — compiled successfully.
-Tests: 851 pass / 88 files.
+TypeScript clean (npx tsc --noEmit exit 0).
+Tests: 859 pass / 89 files (npx vitest run) — incl. new tests/daily-review-log.test.ts.
 
-Heaviest / most-recently-touched routes (First Load JS, as of 63306d38):
-  ○ /                       ~221 kB   (Airfield Status)
-  ○ /infrastructure         226 kB
-  ○ /discrepancies/new      192 kB
+Routes touched this session (First Load JS):
+  ○ /daily-reviews          345 kB   (range filter + Outstanding + export)
+  ○ /login                  169 kB   (theme-aware logo swap)
 First Load JS shared        91.5 kB
 Middleware                  74.5 kB
 ```
@@ -198,7 +197,8 @@ Middleware                  74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-07 | RLS/authorization pentest remediation: closed self-escalation to sys_admin + four cross-tenant read leaks (`2026062011`), removed the NULL-base_id escape hatch (`2026062012`), scoped the offline write queue per-user, and surfaced no-base saves as toasts |
+| **Unreleased** | 2026-06-10 | Brand-logo refresh (theme-aware login/sidebar + new PWA/favicon icons); Daily Reviews gains date-range filtering, an Outstanding (overdue) section, a timeframe certification-log PDF, and drops the unused per-review email/delivery flow |
+| **Unreleased** | 2026-06-07 | RLS/authorization pentest remediation: closed self-escalation to sys_admin + four cross-tenant read leaks (`2026062011`), removed the NULL-base_id escape hatch (`2026062012`), scoped the offline write queue per-user, no-base saves toast |
 | **Unreleased** | 2026-06-05 | Offline write-queue coverage for the airfield-status board, NAVAID grid, New Discrepancy, Report Outage; realtime-down flag hardening |
 | **v2.34.0** | 2026-06-01 | Help & Training covers every module + airport-type gating; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination + notify; Records Export; grouped What's New |
 | v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes |
@@ -208,9 +208,27 @@ Middleware                  74.5 kB
 ## Key docs / files touched this session
 
 ### New files
-- `docs/Video_Walkthrough_Production_Plan.html` — editable OBS + recording +
-  YouTube-hosting reference (committed in `7b5e908a`).
+- `lib/reports/daily-review-log-data.ts` — pure spine/roster helpers (TDD).
+- `lib/reports/daily-review-log-pdf.ts` — certification-log PDF generator.
+- `tests/daily-review-log.test.ts` — unit tests for the pure helpers.
+- `public/Glidepath_logo_login_{light,dark}.png`,
+  `public/Glidepath_logo_sidenav_{light,dark}.png`,
+  `public/Glidepath_logo_PWAicon_dark.png`, `public/favicon.ico`,
+  `public/apple-touch-icon.png` — new brand assets.
+- `docs/superpowers/specs/2026-06-10-daily-reviews-history-and-report-design.md`,
+  `docs/superpowers/plans/2026-06-10-daily-reviews-history-and-report.md`.
+
+### Modified files
+- `app/(app)/daily-reviews/page.tsx` — range filter, Outstanding section, direct
+  export.
+- `components/daily-reviews/sign-modal.tsx` — delivery removed; close on sign.
+- `lib/supabase/daily-reviews.ts` — `signerCompact`, `fetchOutstandingReviews`,
+  `fetchReviewsInRange`.
+- `app/login/page.tsx`, `components/layout/sidebar-nav.tsx`, `app/globals.css`,
+  `app/layout.tsx`, `public/manifest.json` — logo wiring + CSS theme swap.
 
 ### Removed
-- `docs/Video_Walkthrough_Production_Plan.md` — superseded by the `.html` (the
-  `.md` was never committed).
+- `components/daily-reviews/export-modal.tsx` — superseded by the on-page range
+  filter + direct export.
+- Orphaned logo assets (`glidepath2.png`, `glidepathdarkmode3.png`,
+  `glidepath-logo-dark.jpg`, `icon-*.svg`).
