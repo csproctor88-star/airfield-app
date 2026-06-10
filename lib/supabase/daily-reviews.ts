@@ -335,6 +335,25 @@ export async function fetchOutstandingReviews(
   return (data || []) as DailyReviewRow[]
 }
 
+/** All reviews with review_date within [startDate, endDate] inclusive, ascending. */
+export async function fetchReviewsInRange(
+  baseId: string,
+  startDate: string,
+  endDate: string,
+): Promise<DailyReviewRow[]> {
+  const supabase = createClient()
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('daily_reviews')
+    .select('*')
+    .eq('base_id', baseId)
+    .gte('review_date', startDate)
+    .lte('review_date', endDate)
+    .order('review_date', { ascending: true })
+  if (error) { console.error('fetchReviewsInRange:', error.message); return [] }
+  return (data || []) as DailyReviewRow[]
+}
+
 /** Fetch-all for the records export: every daily review for a base, newest first. */
 export async function fetchDailyReviewsForBase(baseId: string | null): Promise<DailyReviewRow[]> {
   const supabase = createClient()
