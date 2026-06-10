@@ -1463,3 +1463,17 @@ html, body {
 
   --color-logo-end: #2C6FAA;
 }
+
+/* Login wordmark — swap by [data-theme] (set pre-hydration) rather than React
+   state, so the correct logo paints during SSR with no hydration mismatch. */
+.gp-login-logo {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
+}
+.gp-login-logo--dark { display: none; }
+[data-theme='dark'] .gp-login-logo--light { display: none; }
+[data-theme='dark'] .gp-login-logo--dark { display: block; }

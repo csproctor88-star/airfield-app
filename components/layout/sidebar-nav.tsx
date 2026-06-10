@@ -833,7 +833,7 @@ export function SidebarNav() {
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={resolvedTheme === 'dark' ? '/glidepathdarkmode3.png' : '/glidepath2.png'}
+              src={resolvedTheme === 'dark' ? '/Glidepath_logo_sidenav_dark.png' : '/Glidepath_logo_sidenav_light.png'}
               alt="Glidepath"
               style={{ height: 40, objectFit: 'contain', marginBottom: 2 }}
             />

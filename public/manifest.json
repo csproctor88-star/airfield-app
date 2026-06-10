@@ -4,7 +4,7 @@
   "description": "Glidepath — Airfield Operations Suite",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0B1120",
+  "background_color": "#000320",
   "theme_color": "#0B1120",
   "orientation": "any",
   "icons": [

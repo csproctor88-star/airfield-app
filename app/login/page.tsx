@@ -365,12 +365,23 @@ function LoginContent() {
       }}
     >
       <div style={{ width: '100%', maxWidth: 360 }}>
-        {/* Logo */}
+        {/* Logo — tagline is baked into the artwork, so no separate text line.
+            Both variants render; CSS shows the right one per [data-theme] to
+            avoid an SSR theme mismatch (no React state involved). */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src="/glidepath2.png" alt="Glidepath" style={{ display: 'block', width: '100%', maxWidth: 340, height: 'auto', objectFit: 'contain', margin: '0 auto' }} />
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', fontWeight: 600, letterSpacing: '0.06em', marginTop: 8 }}>
-            GUIDING YOU TO MISSION SUCCESS
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="gp-login-logo gp-login-logo--light"
+            src="/Glidepath_logo_login_light.png"
+            alt="Glidepath — Guiding You to Mission Success"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="gp-login-logo gp-login-logo--dark"
+            src="/Glidepath_logo_login_dark.png"
+            alt=""
+            aria-hidden="true"
+          />
         </div>
 
         {/* Login Card */}
