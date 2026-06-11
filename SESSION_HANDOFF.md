@@ -1,8 +1,8 @@
 # Session Handoff
 
 **Date:** 2026-06-11
-**Branch:** `main` — local commits NOT yet pushed (security remediation in
-working tree; review before pushing). Still v2.34.0.
+**Branch:** `main` — pushed to origin (`2d5b4e16`); promote on Vercel when ready.
+Still v2.34.0. Invite route now also surfaces email-send failures in the UI.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
 **866 pass / 90 files**.
 
