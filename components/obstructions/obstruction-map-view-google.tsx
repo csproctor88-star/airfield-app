@@ -5,6 +5,7 @@ import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/li
 import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
+import { escapeHtml } from '@/lib/utils'
 
 type Props = {
   evaluations: ObstructionRow[]
@@ -171,16 +172,16 @@ export default function ObstructionMapViewGoogle({ evaluations }: Props) {
         <div style="font-family:system-ui,-apple-system,sans-serif;max-width:260px;line-height:1.4;">
           ${photoHtml}
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:11px;font-weight:700;color:#64748B;font-family:monospace;">${ev.display_id}</span>
+            <span style="font-size:11px;font-weight:700;color:#64748B;font-family:monospace;">${escapeHtml(ev.display_id)}</span>
             ${statusBadge}
           </div>
-          ${ev.notes ? `<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">${ev.notes}</div>` : ''}
+          ${ev.notes ? `<div style="font-size:13px;font-weight:700;color:#1E293B;margin-bottom:4px;">${escapeHtml(ev.notes)}</div>` : ''}
           <div style="font-size:11px;color:#64748B;">
             <strong style="color:#334155;">${ev.object_height_agl}</strong> ft AGL
             &bull; <strong style="color:#334155;">${ev.distance_from_centerline_ft?.toFixed(0) ?? '\u2014'}</strong> ft from CL
             ${isViolation ? ` &bull; <span style="color:#EF4444;">${violatedCount} violated</span>` : ''}
           </div>
-          ${ev.controlling_surface ? `<div style="font-size:10px;color:#94A3B8;margin-top:2px;">Controlling: ${ev.controlling_surface}</div>` : ''}
+          ${ev.controlling_surface ? `<div style="font-size:10px;color:#94A3B8;margin-top:2px;">Controlling: ${escapeHtml(ev.controlling_surface)}</div>` : ''}
           ${violatedHtml}
           <a href="/obstructions/${ev.id}" style="display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#0891B2;text-decoration:none;">
             View Details &rarr;

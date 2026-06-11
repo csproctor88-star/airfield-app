@@ -88,7 +88,11 @@ export async function getAirfieldDiagram(baseId: string): Promise<string | null>
     const body = await res.json() as { publicUrl: string | null; updatedAt?: string | null }
     if (!body.publicUrl) return null
     const version = body.updatedAt ? encodeURIComponent(body.updatedAt) : Date.now().toString()
-    return `${body.publicUrl}?v=${version}`
+    // publicUrl is now the /api/photos proxy URL, which already carries a
+    // ?path= query — append the cache-buster with the right separator (the
+    // proxy ignores the extra param).
+    const sep = body.publicUrl.includes('?') ? '&' : '?'
+    return `${body.publicUrl}${sep}v=${version}`
   } catch {
     return null
   }

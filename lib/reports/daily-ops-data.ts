@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { photoUrl } from '@/lib/supabase/photos'
 import type { InspectionRow } from '@/lib/supabase/inspections'
 import type { CheckRow } from '@/lib/supabase/checks'
 import type { InspectionItem } from '@/lib/supabase/types'
@@ -628,9 +629,8 @@ async function fetchPhotosForDailyReport(
 async function resolvePhotoUrl(supabase: any, storagePath: string): Promise<string | null> {
   if (storagePath.startsWith('data:')) return storagePath
   try {
-    const { data: urlData } = supabase.storage.from('photos').getPublicUrl(storagePath)
-    if (urlData?.publicUrl) {
-      const response = await fetch(urlData.publicUrl)
+    {
+      const response = await fetch(photoUrl(storagePath))
       if (response.ok) {
         const blob = await response.blob()
         const reader = new FileReader()

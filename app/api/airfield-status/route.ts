@@ -26,19 +26,31 @@ async function requireAuth(): Promise<{ user: { id: string } } | NextResponse> {
   return { user }
 }
 
-/** GET — return the single airfield_status row */
+/** GET — return the caller's airfield_status row.
+ *
+ * SECURITY (M-1): the read goes through the caller's RLS-scoped session
+ * client, NOT the service-role client. Previously this used the service role
+ * with `.limit(1).single()` and no base filter, so any authenticated user
+ * received whichever base's status row sorted first — a cross-tenant leak.
+ * RLS (airfield_status_select, base-scoped) now confines the result to bases
+ * the caller actually belongs to.
+ */
 export async function GET() {
-  const auth = await requireAuth()
-  if (auth instanceof NextResponse) return auth
-
-  const supabase = getAdmin()
-  if (!supabase) return NextResponse.json({ error: 'Server not configured — SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 })
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
+  if (!url || !key) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  const cookieStore = cookies()
+  const supabase = createServerClient(url, key, {
+    cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
+  })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data, error } = await supabase
     .from('airfield_status')
     .select('*')
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
@@ -87,10 +99,19 @@ export async function PATCH(request: Request) {
     }
   }
 
+  // SECURITY (L-17): never spread the raw body into the UPDATE. Pick only
+  // the columns this route is allowed to change, so a crafted request can't
+  // smuggle id / base_id / audit columns into the write.
+  const WRITABLE = ['runway_status', 'active_runway', 'advisory_type', 'advisory_text', 'runway_statuses'] as const
+  const safeUpdates: Record<string, unknown> = {}
+  for (const col of WRITABLE) {
+    if (col in updates) safeUpdates[col] = updates[col]
+  }
+
   const { error } = await supabase
     .from('airfield_status')
     .update({
-      ...updates,
+      ...safeUpdates,
       updated_at: new Date().toISOString(),
     })
     .eq('id', existing.id)

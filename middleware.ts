@@ -5,8 +5,25 @@ import { getSupabaseConfig } from '@/lib/utils'
 export async function middleware(request: NextRequest) {
   const config = getSupabaseConfig()
 
-  // Demo mode: skip auth entirely when Supabase is not configured
+  // Demo mode: skip auth entirely when Supabase is not configured.
+  //
+  // SECURITY (L-4): in production this is fail-CLOSED. A real deployment
+  // always has Supabase configured, so a missing/typo'd config there is a
+  // misconfiguration — silently skipping the auth gate would expose the whole
+  // app. The no-auth demo bypass is allowed only outside production or when a
+  // deployment explicitly opts in via NEXT_PUBLIC_ALLOW_DEMO.
   if (!config) {
+    const demoAllowed =
+      process.env.NODE_ENV !== 'production' ||
+      process.env.NEXT_PUBLIC_ALLOW_DEMO === 'true'
+    if (demoAllowed) {
+      return NextResponse.next()
+    }
+    if (!isPublicPath(request.nextUrl.pathname)) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+      return NextResponse.redirect(redirectUrl)
+    }
     return NextResponse.next()
   }
 
@@ -63,6 +80,11 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/api/installations')
     || pathname.startsWith('/api/signup-email')
     || pathname.startsWith('/api/send-ppr-confirmation')
+    // Self-service password reset is called by anonymous users from the
+    // login page. Without this it was 307-redirected to /login (405) and
+    // silently failed — see M-6. The handler is per-email + per-IP
+    // rate-limited.
+    || pathname.startsWith('/api/forgot-password')
     // Vercel cron routes: invoked by Vercel with no auth cookie, so they must
     // bypass the cookie auth-gate — otherwise middleware 307-redirects them to
     // /login and the handler never runs. Each enforces Bearer CRON_SECRET
@@ -73,10 +95,12 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/feedback')
     || pathname.startsWith('/ppr-request')
     || pathname.startsWith('/kiosk')
-    // Short PPR request URL: /<icao>/ppr-request[/...]. The route
-    // handler validates the ICAO and shows a not-found state if the
-    // base doesn't exist, so a permissive prefix match is safe.
-    || /^\/[^/]+\/ppr-request(\/.*)?$/.test(pathname)
+    // Short public QR URLs: /<icao>/ppr-request and /<icao>/sms-report.
+    // Both route handlers validate the ICAO and show a not-found state if
+    // the base doesn't exist, so a permissive prefix match is safe. The
+    // SMS safety-report form is an anonymous hazard-reporting channel
+    // (AC 150/5200-37A) — M-7 restored it to the allowlist.
+    || /^\/[^/]+\/(ppr-request|sms-report)(\/.*)?$/.test(pathname)
   )
 }
 

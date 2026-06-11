@@ -6,6 +6,7 @@ import { applyMapProvider } from '@/lib/map-providers'
 import { useInstallation } from '@/lib/installation-context'
 import { WAIVER_CLASSIFICATIONS, WAIVER_STATUS_CONFIG } from '@/lib/constants'
 import type { WaiverRow } from '@/lib/supabase/waivers'
+import { escapeHtml } from '@/lib/utils'
 
 type Props = {
   waivers: WaiverRow[]
@@ -159,17 +160,17 @@ export default function WaiverMapViewGoogle({ waivers }: Props) {
       const infoContent = `
         <div style="font-family:system-ui,-apple-system,sans-serif;min-width:240px;max-width:340px;line-height:1.4;">
           <div style="margin-bottom:6px;">
-            <span style="font-size:13px;font-weight:800;color:#F59E0B;font-family:monospace;display:block;margin-bottom:4px;">${w.waiver_number}</span>
+            <span style="font-size:13px;font-weight:800;color:#F59E0B;font-family:monospace;display:block;margin-bottom:4px;">${escapeHtml(w.waiver_number)}</span>
             <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
               ${statusBadge}
               <span style="font-size:11px;font-weight:600;color:#CBD5E1;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.2);border-radius:4px;padding:1px 6px;">${emoji} ${classLabel}</span>
             </div>
           </div>
-          <div style="font-size:14px;font-weight:700;color:#1E293B;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">${w.description}</div>
+          <div style="font-size:14px;font-weight:700;color:#1E293B;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">${escapeHtml(w.description)}</div>
           <div style="font-size:12px;color:#64748B;">
-            ${w.location_description || ''}${w.proponent ? ' &bull; ' + w.proponent : ''}
+            ${escapeHtml(w.location_description || '')}${w.proponent ? ' &bull; ' + escapeHtml(w.proponent) : ''}
           </div>
-          ${w.criteria_impact ? `<div style="font-size:11px;color:#D97706;margin-top:3px;">${w.criteria_impact}</div>` : ''}
+          ${w.criteria_impact ? `<div style="font-size:11px;color:#D97706;margin-top:3px;">${escapeHtml(w.criteria_impact)}</div>` : ''}
           <a href="/waivers/${w.id}" style="display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#0891B2;text-decoration:none;">
             View Details &rarr;
           </a>

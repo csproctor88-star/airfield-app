@@ -1,7 +1,6 @@
 export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
@@ -21,7 +20,6 @@ export async function POST(request: Request) {
     // Authenticate caller via cookie
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, '')
     if (!url || !key) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
     }
@@ -69,25 +67,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
-    // Get PDF content — either from Supabase Storage or from base64 payload
+    // Get PDF content — either from Supabase Storage or from base64 payload.
+    //
+    // SECURITY (H-1): the download uses the CALLER's RLS-scoped session
+    // client (`supabase`), never the service-role key. Previously the
+    // service-role download bypassed storage RLS, letting any authenticated
+    // user exfiltrate another tenant's file by passing its storagePath and
+    // an arbitrary recipient. With the caller's client, the download is
+    // confined to what storage RLS permits for that user (base-scoped once
+    // the photos bucket is private — migration 2026062015).
+    const MAX_PDF_BYTES = 20 * 1024 * 1024 // 20 MB cap to bound abuse
     let pdfBuffer: Buffer
     if (storagePath) {
-      // Use service role key to bypass RLS, or fall back to anon key
-      const storageClient = serviceKey
-        ? createClient(url, serviceKey)
-        : supabase
-      const { data: fileData, error: downloadError } = await storageClient.storage
+      const { data: fileData, error: downloadError } = await supabase.storage
         .from('photos')
         .download(storagePath)
       if (downloadError || !fileData) {
         return NextResponse.json(
           { error: `Failed to download PDF: ${downloadError?.message || 'File not found'}` },
-          { status: 500 },
+          { status: 404 },
         )
       }
       pdfBuffer = Buffer.from(await fileData.arrayBuffer())
     } else {
       pdfBuffer = Buffer.from(pdfBase64!, 'base64')
+    }
+
+    if (pdfBuffer.length === 0 || pdfBuffer.length > MAX_PDF_BYTES) {
+      return NextResponse.json(
+        { error: 'PDF payload is empty or exceeds the 20 MB limit' },
+        { status: 413 },
+      )
     }
 
     const safeFilename = escapeHtml(filename)

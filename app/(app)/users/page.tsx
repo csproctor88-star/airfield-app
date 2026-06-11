@@ -290,10 +290,25 @@ export default function UserManagementPage() {
     role: string
     installationId: string
   }) => {
-    const result = await inviteUser(data)
+    const result = await inviteUser(data) as {
+      tempPassword?: string
+      emailSent?: boolean
+      emailError?: string | null
+    }
     setShowInviteModal(false)
-    const tempPw = (result as { tempPassword?: string })?.tempPassword
-    if (tempPw) {
+    const tempPw = result?.tempPassword
+    if (result?.emailSent === false) {
+      // Account was created, but the credential email did NOT go out. Make
+      // this loud so the admin relays the temp password manually instead of
+      // assuming the invitee received it.
+      toast.warning(
+        `Account created for ${data.email}, but the invite email did NOT send` +
+          `${result.emailError ? ` (${result.emailError})` : ''}. ` +
+          `Share the temporary password manually${tempPw ? `: ${tempPw}` : ''}. ` +
+          `The user will be prompted to change it on first sign-in.`,
+        { duration: 20000 },
+      )
+    } else if (tempPw) {
       toast.success(
         `Invited ${data.email}. Temp password: ${tempPw} (share if email is quarantined; user will be prompted to change on first sign-in).`,
         { duration: 15000 },

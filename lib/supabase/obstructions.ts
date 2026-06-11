@@ -1,6 +1,7 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { resolveBaseId } from './resolve-base-id'
+import { photoUrl } from './photos'
 import { logActivity } from './activity'
 import type { ObstructionEvaluation } from './types'
 
@@ -146,12 +147,7 @@ export async function uploadObstructionPhoto(
       .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
 
     if (!uploadError) {
-          const { data: urlData } = supabase.storage
-        .from('photos')
-        .getPublicUrl(storagePath)
-      if (urlData?.publicUrl) {
-        storageUrl = urlData.publicUrl
-      }
+      storageUrl = photoUrl(storagePath)
     } else {
       console.warn('Storage upload failed, storing as data URL:', uploadError.message)
     }

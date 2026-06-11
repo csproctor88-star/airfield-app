@@ -9,6 +9,7 @@ import { renderLucideToSvgString } from '@/lib/render-lucide-svg'
 import { ClipboardList, type LucideIcon } from 'lucide-react'
 import UseMyLocationButton from '@/components/ui/use-my-location-button'
 import type { DiscrepancyRow } from '@/lib/supabase/discrepancies'
+import { escapeHtml } from '@/lib/utils'
 
 type Props = {
   discrepancies: DiscrepancyRow[]
@@ -216,12 +217,12 @@ export default function DiscrepancyMapViewGoogle({
           <div style="font-family:system-ui,-apple-system,sans-serif;min-width:240px;max-width:340px;line-height:1.4;">
             ${photoHtml}
             <div style="margin-bottom:6px;">
-              <span style="font-size:13px;font-weight:800;color:#22D3EE;font-family:monospace;display:block;margin-bottom:4px;">${d.work_order_number || 'Pending'}</span>
-              <span style="font-size:11px;font-weight:600;color:#CBD5E1;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.2);border-radius:4px;padding:1px 6px;">${typeLabel}</span>
+              <span style="font-size:13px;font-weight:800;color:#22D3EE;font-family:monospace;display:block;margin-bottom:4px;">${escapeHtml(d.work_order_number || 'Pending')}</span>
+              <span style="font-size:11px;font-weight:600;color:#CBD5E1;background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.2);border-radius:4px;padding:1px 6px;">${escapeHtml(typeLabel)}</span>
             </div>
-            <div style="font-size:14px;font-weight:700;color:#F1F5F9;margin-bottom:6px;line-height:1.4;">${d.title}</div>
+            <div style="font-size:14px;font-weight:700;color:#F1F5F9;margin-bottom:6px;line-height:1.4;">${escapeHtml(d.title)}</div>
             <div style="font-size:12px;color:#94A3B8;">
-              ${d.location_text}${d.assigned_shop ? ' &bull; ' + d.assigned_shop : ''} &bull; ${days}d open
+              ${escapeHtml(d.location_text)}${d.assigned_shop ? ' &bull; ' + escapeHtml(d.assigned_shop) : ''} &bull; ${days}d open
             </div>
             <a href="/discrepancies/${d.id}" style="display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#22D3EE;text-decoration:none;">
               View Details &rarr;

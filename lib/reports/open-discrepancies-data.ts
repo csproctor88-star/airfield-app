@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { photoUrl } from '@/lib/supabase/photos'
 import { compressImageForPdf, fetchMapImageDataUrl, fetchSystemMapImageDataUrl } from '@/lib/utils'
 import { fetchSystemFeaturesForFeature } from '@/lib/supabase/infrastructure-features'
 
@@ -246,11 +247,8 @@ export async function fetchOpenDiscrepanciesData(
           dataUrl = await compressImageForPdf(row.storage_path, 400, 0.6)
         } else {
           try {
-            const { data: urlData } = supabase.storage
-              .from('photos')
-              .getPublicUrl(row.storage_path)
-            if (urlData?.publicUrl) {
-              const response = await fetch(urlData.publicUrl)
+            {
+              const response = await fetch(photoUrl(row.storage_path))
               if (response.ok) {
                 const blob = await response.blob()
                 const reader = new FileReader()

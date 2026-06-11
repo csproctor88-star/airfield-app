@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { DEMO_INSPECTIONS } from '@/lib/demo-data'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { photoUrl } from '@/lib/supabase/photos'
 import { fetchInspection, fetchDailyGroup, fetchInspectionPhotos, deleteInspection, reopenInspection, updateInspectionNotes, updateInspectionItems, uploadInspectionPhoto, deleteInspectionPhoto, type InspectionRow, type InspectionPhotoRow } from '@/lib/supabase/inspections'
 import type { InspectionItem } from '@/lib/supabase/types'
 import { useInstallation } from '@/lib/installation-context'
@@ -61,13 +62,7 @@ export default function InspectionDetailPage() {
   const [viewerPhotos, setViewerPhotos] = useState<{ url: string; name: string }[] | null>(null)
   const [viewerIndex, setViewerIndex] = useState(0)
 
-  const resolvePhotoUrl = (photo: InspectionPhotoRow): string => {
-    if (photo.storage_path.startsWith('data:')) return photo.storage_path
-    const supabase = createClient()
-    if (!supabase) return photo.storage_path
-    const { data } = supabase.storage.from('photos').getPublicUrl(photo.storage_path)
-    return data?.publicUrl || photo.storage_path
-  }
+  const resolvePhotoUrl = (photo: InspectionPhotoRow): string => photoUrl(photo.storage_path)
 
   const openPhotoViewer = (photos: InspectionPhotoRow[], index: number) => {
     setViewerPhotos(photos.map((p, i) => ({ url: resolvePhotoUrl(p), name: p.file_name || `Photo ${i + 1}` })))

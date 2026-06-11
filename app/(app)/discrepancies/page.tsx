@@ -3,6 +3,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import Link from 'next/link'
 import { fetchDiscrepancies, deleteDiscrepancy, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
+import { photoUrl } from '@/lib/supabase/photos'
 import { StatusBadge } from '@/components/ui/badge'
 import { DEMO_DISCREPANCIES } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
@@ -346,9 +347,8 @@ export default function DiscrepanciesPage() {
               if (imgPath.startsWith('data:')) {
                 dataUrl = await compressImageForPdf(imgPath, 400, 0.6)
               } else {
-                const { data: urlData } = supabase.storage.from('photos').getPublicUrl(imgPath)
-                if (urlData?.publicUrl) {
-                  const resp = await fetch(urlData.publicUrl)
+                {
+                  const resp = await fetch(photoUrl(imgPath))
                   if (resp.ok) {
                     const blob = await resp.blob()
                     const raw = await new Promise<string>((resolve, reject) => {

@@ -20,6 +20,7 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
 import { friendlyError } from '@/lib/utils'
+import { photoUrl } from './photos'
 
 function db() {
   return createClient()
@@ -393,8 +394,7 @@ export async function uploadTrainingEvidence(input: {
   const path = `training-evidence/${input.base_id}/${input.user_id}/${input.record_id}/evidence-${Date.now()}.${safeExt}`
   const { error: upErr } = await supabase.storage.from('photos').upload(path, input.file, { upsert: false, contentType: input.file.type || undefined })
   if (upErr) return { ok: false, error: friendlyError(upErr.message) }
-  const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
-  return { ok: true, url: urlData.publicUrl }
+  return { ok: true, url: photoUrl(path) }
 }
 
 export async function deleteTrainingRecord(id: string, baseId: string): Promise<{ ok: boolean; error?: string }> {

@@ -13,14 +13,28 @@ const rules: RateLimitRule[] = [
 ]
 
 describe('getClientIp', () => {
-  it('takes the first IP from x-forwarded-for', () => {
-    const req = new Request('https://x', { headers: { 'x-forwarded-for': '9.9.9.9, 10.0.0.1' } })
-    expect(getClientIp(req)).toBe('9.9.9.9')
+  // SECURITY (M-4): the leftmost x-forwarded-for token is client-spoofable.
+  // getClientIp must prefer platform-set, non-forgeable headers and, when it
+  // does fall back to XFF, use the LAST (closest-proxy) hop — never the
+  // attacker-controlled leftmost token. These tests lock that behavior so the
+  // per-IP throttle can't be bypassed by minting a fresh bucket per request.
+  it('prefers x-vercel-forwarded-for (platform-set) over x-forwarded-for', () => {
+    const req = new Request('https://x', {
+      headers: { 'x-vercel-forwarded-for': '203.0.113.7', 'x-forwarded-for': '9.9.9.9, 10.0.0.1' },
+    })
+    expect(getClientIp(req)).toBe('203.0.113.7')
   })
 
-  it('falls back to x-real-ip', () => {
-    const req = new Request('https://x', { headers: { 'x-real-ip': '8.8.8.8' } })
+  it('prefers x-real-ip over a spoofable x-forwarded-for', () => {
+    const req = new Request('https://x', {
+      headers: { 'x-real-ip': '8.8.8.8', 'x-forwarded-for': '9.9.9.9, 10.0.0.1' },
+    })
     expect(getClientIp(req)).toBe('8.8.8.8')
+  })
+
+  it('uses the LAST x-forwarded-for hop when only XFF is present (not the spoofable first)', () => {
+    const req = new Request('https://x', { headers: { 'x-forwarded-for': '9.9.9.9, 10.0.0.1' } })
+    expect(getClientIp(req)).toBe('10.0.0.1')
   })
 
   it('returns "unknown" when no proxy headers are present', () => {

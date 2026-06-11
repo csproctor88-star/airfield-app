@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
-import { formatZuluDateTime } from '@/lib/utils'
+import { formatZuluDateTime, escapeHtml } from '@/lib/utils'
 import {
   initGoogleMaps,
   isGoogleMapsConfigured,
@@ -1997,10 +1997,10 @@ export default function InfrastructureMapPage() {
     html += `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:${isInop ? 'var(--color-danger)' : 'var(--color-success)'};color:white;">${isInop ? 'INOP' : 'OP'}</span>`
     html += `</div>`
     if (props.block) {
-      html += `<div style="font-size:11px;color:var(--color-text-2);font-family:monospace;margin-bottom:2px;">${props.block}</div>`
+      html += `<div style="font-size:11px;color:var(--color-text-2);font-family:monospace;margin-bottom:2px;">${escapeHtml(props.block)}</div>`
     }
     if (props.text && ['location_sign','directional_sign','informational_sign','mandatory_sign'].includes(props.type)) {
-      html += `<div style="color:var(--color-text-2);">Sign Text: ${props.text}</div>`
+      html += `<div style="color:var(--color-text-2);">Sign Text: ${escapeHtml(props.text)}</div>`
     }
     // System/component — show deduplicated
     if (props.id && allComponentsRef.current.length > 0 && !isEditing) {
@@ -2010,14 +2010,14 @@ export default function InfrastructureMapPage() {
         const sysName = currentComp.system_name
         const compLabel = currentComp.label
         if (sysName === compLabel || sysName.endsWith(compLabel)) {
-          html += `<div style="font-size:10px;color:var(--color-text-3);">${sysName}</div>`
+          html += `<div style="font-size:10px;color:var(--color-text-3);">${escapeHtml(sysName)}</div>`
         } else {
-          html += `<div style="font-size:10px;color:var(--color-text-3);">${sysName} &mdash; ${compLabel}</div>`
+          html += `<div style="font-size:10px;color:var(--color-text-3);">${escapeHtml(sysName)} &mdash; ${escapeHtml(compLabel)}</div>`
         }
       }
     }
     if (props.notes) {
-      html += `<div style="margin-top:4px;font-size:10px;color:var(--color-text-3);">${props.notes}</div>`
+      html += `<div style="margin-top:4px;font-size:10px;color:var(--color-text-3);">${escapeHtml(props.notes)}</div>`
     }
     // Status toggle button (always visible)
     if (props.id) {

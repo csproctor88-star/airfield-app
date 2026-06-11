@@ -28,6 +28,7 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
 import { friendlyError } from '@/lib/utils'
+import { photoUrl } from './photos'
 
 function db() {
   return createClient()
@@ -509,8 +510,7 @@ export async function uploadPlanDocument(input: {
   })
   if (upErr) return { ok: false, error: friendlyError(upErr.message) }
 
-  const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
-  return { ok: true, url: urlData.publicUrl, storage_path: path }
+  return { ok: true, url: photoUrl(path), storage_path: path }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -804,8 +804,7 @@ export async function uploadDrillAfterAction(input: {
   })
   if (upErr) return { ok: false, error: friendlyError(upErr.message) }
 
-  const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
-  return { ok: true, url: urlData.publicUrl, storage_path: path }
+  return { ok: true, url: photoUrl(path), storage_path: path }
 }
 
 // ────────────────────────────────────────────────────────────────

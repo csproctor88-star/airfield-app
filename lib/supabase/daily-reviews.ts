@@ -384,47 +384,24 @@ export async function signDailyReview(input: {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  const existing = await fetchDailyReview(input.baseId, input.date)
+  // Signing goes through the SECURITY DEFINER RPC sign_daily_review_slot
+  // (migration 2026062013). The DB derives signed_by from auth.uid()
+  // (never the client), enforces the per-slot permission, refuses to
+  // overwrite another user's signature, and recomputes fully_certified_at
+  // server-side. input.userId is no longer trusted for attribution — kept
+  // in the signature for call-site compatibility but unused.
+  // NOTE: sign_daily_review_slot isn't in the generated types.ts yet
+  // (regen deferred — see project memory), so the rpc call is cast as any,
+  // matching the route-handler convention for hand-maintained DB functions.
+  const { data, error } = await (supabase as any).rpc('sign_daily_review_slot', {
+    p_base_id: input.baseId,
+    p_date: input.date,
+    p_slot: input.slot,
+    p_events_hash: input.eventsHash,
+    p_notes: input.notes || null,
+    p_shift_count: input.shiftCount,
+  })
 
-  const slotCols: Record<string, string | null> = {
-    [`${input.slot}_signed_by`]: input.userId,
-    [`${input.slot}_signed_at`]: new Date().toISOString(),
-    [`${input.slot}_notes`]: input.notes || null,
-    [`${input.slot}_events_hash`]: input.eventsHash,
-    updated_at: new Date().toISOString(),
-  }
-
-  let row: DailyReviewRow | null = null
-
-  if (existing) {
-    const { data, error } = await supabase
-      .from('daily_reviews')
-      .update(slotCols)
-      .eq('id', existing.id)
-      .select()
-      .single()
-    if (error) return { data: null, error: friendlyError(error.message) }
-    row = data as DailyReviewRow
-  } else {
-    const { data, error } = await supabase
-      .from('daily_reviews')
-      .insert({ base_id: input.baseId, review_date: input.date, ...slotCols })
-      .select()
-      .single()
-    if (error) return { data: null, error: friendlyError(error.message) }
-    row = data as DailyReviewRow
-  }
-
-  // Fire fully_certified_at once all required slots are filled
-  if (row && !row.fully_certified_at && isFullyCertified(row, input.shiftCount)) {
-    const { data: certified } = await supabase
-      .from('daily_reviews')
-      .update({ fully_certified_at: new Date().toISOString() })
-      .eq('id', row.id)
-      .select()
-      .single()
-    if (certified) row = certified as DailyReviewRow
-  }
-
-  return { data: row, error: null }
+  if (error) return { data: null, error: friendlyError(error.message) }
+  return { data: (data as DailyReviewRow) || null, error: null }
 }

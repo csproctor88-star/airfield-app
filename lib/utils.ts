@@ -143,6 +143,23 @@ export function sanitizeRegId(regId: string): string {
     .replace(/-+/g, '-')
 }
 
+/**
+ * Escape a string for safe interpolation into an HTML string assigned via
+ * innerHTML / Google Maps InfoWindow setContent(). Prevents stored XSS when
+ * user-controlled text (discrepancy titles, NAVAID notes, waiver
+ * descriptions, obstruction notes, sign text, fixture IDs) is rendered in a
+ * popup. Escapes the five HTML-significant characters so the value can never
+ * break out of text content OR a double-quoted attribute.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // Humanize Supabase/Postgres error messages for end users
 export function friendlyError(msg: string): string {
   if (/row-level security/i.test(msg) || /violates.*policy/i.test(msg) || /permission denied/i.test(msg)) {

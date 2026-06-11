@@ -1,11 +1,65 @@
 # Session Handoff
 
-**Date:** 2026-06-10
-**Branch:** `main` — in sync with `origin/main` (everything pushed; Vercel
-deploys on push). Still v2.34.0 (no version bump).
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled
-successfully), `npx vitest run` ✓ **859 pass / 89 files**.
-**HEAD:** `b5585961`
+**Date:** 2026-06-11
+**Branch:** `main` — local commits NOT yet pushed (security remediation in
+working tree; review before pushing). Still v2.34.0.
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
+**866 pass / 90 files**.
+
+---
+
+## 2026-06-11 — Full pentest + remediation (Fable 5 audit → fixes)
+
+A 77-agent Fable 5 pentest (report at `docs/security/Pentest_Audit_Fable5_2026-06-11.md`)
+found 2 Critical / 6 High / 7 Med / ~18 Low. Every Critical/High was
+**re-verified against real code AND the live DB** before fixing. Status:
+
+**Fixed + verified (code in working tree; tsc/build/vitest green):**
+- **C-1** installations IDOR — `app/api/installations/route.ts` now requires
+  auth + `userId===auth.uid()` on membership write/delete.
+- **C-2** profiles privilege-escalation — trigger `profiles_block_priv_escalation`
+  hardened to block ALL JWT role/status/is_active changes (migration
+  `2026062013`, **APPLIED LIVE**); `setup-account` no longer writes `status`.
+  **Exploit-verified blocked on prod** (rolled-back simulation).
+- **H-1** `send-pdf-email` — RLS-scoped download (no service-role bypass) + 20 MB cap.
+- **H-2** `user-emails` — base-scoped via `canBaseAdminManageUser`; recipient
+  derived from the target profile, not the body.
+- **H-3** `admin/invite` — per-invite `crypto.randomBytes` temp password (was the
+  universal static `glidepathpassword`).
+- **H-4** stored XSS — shared `escapeHtml` in `lib/utils.ts` applied to all 4 map
+  InfoWindows (infrastructure/discrepancy/waiver/obstruction). Unit-tested.
+- **H-6** daily-review forgery — `sign_daily_review_slot` SECURITY DEFINER RPC
+  (migration `2026062013`, **APPLIED LIVE**) derives signer from `auth.uid()`,
+  enforces per-slot permission; client wired to the RPC.
+- **M-1** airfield-status GET base leak; **M-4** `getClientIp` XFF-spoof;
+  **M-6** forgot-password allowlist; **M-7** sms-report allowlist; **L-4**
+  fail-open middleware (prod fail-closed); **L-17** airfield-status PATCH
+  mass-assignment allowlist.
+
+**H-5 (photos bucket) — converted via an authenticated proxy.** Rather than
+async signed-URL plumbing, all photo reads now go through `app/api/photos/route.ts`
+(streams via the caller's RLS-scoped client). `lib/supabase/photos.ts` →
+`photoUrl()` returns `/api/photos?path=…` (sync, stable, no expiry). All ~13
+`getPublicUrl('photos')` call sites converted (PDF generators, galleries,
+exports, airfield-diagram, upload helpers). Build/tsc/vitest green; proxy
+rejects anonymous reads (scripted).
+
+**L-6 CSP** added in **report-only** mode (next.config.js) — compensating
+control for the JS-readable cookie; promote to enforcing after monitoring.
+**I-4** `poweredByHeader:false`. **M-5** edge-fn versions pinned.
+
+**Staged — apply AFTER the code deploys (would break prod if applied early):**
+- `2026062014_daily_reviews_lockdown.sql` — REVOKE direct daily_reviews writes.
+- `2026062015_photos_bucket_private.sql` (**H-5 flip**) — base-scoped SELECT
+  policy + bucket→private. Header now also flags: rewrite legacy PERSISTED
+  public URLs (AEP/WHMP/§139-training/obstruction rows) to the proxy form
+  before flipping, then visually confirm galleries/PDFs render.
+
+**Not yet done (lower-severity / product decisions):** L-2 send-ppr authz, L-7
+demo-creds gating (left as-is — gating could break prod sales demos; isolate
+demo to a separate project instead), M-2 kiosk session lifecycle, M-3 anon-RPC
+rate limiting, I-3 constant-time CRON compare, Next.js 14.2.x→15 upgrade,
+remaining Lows/Info.
 
 ---
 
@@ -129,10 +183,7 @@ pending:
 
 | Item | Severity | Notes |
 |---|---|---|
-| Daily Reviews cert-PDF not walked on a base with real cert data | Low | New — verified on the Demo base (no signed reviews) + unit tests + build; download/open a real roster on a base that has certified days. |
-| RLS pentest work not walked on a **promoted** deploy | High | Carried — all demo testing ran against stale code. Promote, then walk a normal save, a no-base save (toast), an offline save + drain as one user, and confirm a low-priv user still can't escalate. Then `node scripts/scan-null-base.mjs` → expect CLEAN. |
-| Independent human review of pentest fixes #1/#2 | Med | Carried — author wrote both bug and patch; trigger + `profiles` scoping deserve a second set of eyes before the Platform One assessment. |
-| Vercel production is manually promoted | Med | Carried — caused hours of "fix isn't working" confusion. Strongly consider auto-promote on `main`. |
+| Independent human review of pentest fixes #1/#2 | Low | Deferred indefinitely (2026-06-11) — user will accomplish eventually; second set of eyes on trigger + `profiles` scoping before the Platform One assessment. |
 | `scn` missing on 26 USAF bases | Med | Carried — frozen-`enabled_modules`; mirror `2026062000`. |
 | New `defaultEnabled` modules don't reach existing bases | Med | Carried — systemic null-only fallback in `lib/installation-context.tsx`. |
 | AMTR notif system not fully walked on deploy | Med | Carried — `8ec3c8b2` (certifier) + `a154631a` (real-time on-sign). |
@@ -148,24 +199,21 @@ pending:
 
 ## Next session tasks
 
-No required next step this session added — the Daily Reviews feature is shipped,
-built, and demo-verified. The standing finish line is unchanged:
+**Done 2026-06-11 (user-verified):** the RLS pentest walkthrough on a promoted
+Vercel build is complete, and the Daily Reviews cert-log PDF was reviewed on
+real data.
 
-1. **Walk the RLS pentest work on a properly promoted build** — promote, hard
-   refresh (or incognito), and walk: normal airfield-status save; a no-base save
-   shows the toast; an offline save + reconnect drains as a single user; the
-   queue does NOT show/drain another user's items after a user switch; a
-   `read_only` user cannot escalate their role. Then `node scripts/scan-null-base.mjs`
-   → expect CLEAN.
-2. **Decide on Vercel auto-promote for `main`** — the manual promote was the
-   single biggest recurring time sink.
-3. **Get an independent review** of pentest fixes #1 (escalation trigger) and #2
-   (`profiles` scoping).
-4. **Quick walk of the new Daily Reviews cert PDF** on a base with certified
-   days — confirm the roster, the Certified column, and the notes appendix
-   render correctly for real data.
+**Closed 2026-06-11:** Vercel auto-promote — decided **against**; manual promote
+is deliberate. The user owns promotion and will promote what's ready — do not
+add promote reminders or "verify on a promoted build" follow-ups.
+
+The independent review of pentest fixes #1/#2 is **deferred indefinitely** (user
+will get to it eventually) — tracked under long-running carryover, not an active
+task. No required next step is queued.
 
 ### Long-running carryover (bandwidth-permitting)
+- Independent review of pentest fixes #1 (escalation trigger) and #2
+  (`profiles` scoping) — deferred indefinitely; user-owned.
 - Record the onboarding videos against the Demo base per
   `docs/Video_Walkthrough_Production_Plan.html`; build the in-app
   `/help/[module-id]` embed later.

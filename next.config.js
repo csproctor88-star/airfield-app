@@ -174,6 +174,8 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // I-4: don't advertise the framework.
+  poweredByHeader: false,
   // Enable image optimization for Supabase Storage
   images: {
     remotePatterns: [
@@ -200,6 +202,29 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+          // L-6: Content-Security-Policy in REPORT-ONLY mode. This is the
+          // primary compensating control for the @supabase/ssr JS-readable
+          // session cookie — it constrains where a hypothetical injected
+          // script could exfiltrate to. Report-only first so we can confirm
+          // the allowlist covers Google Maps / Mapbox / Supabase / the inline
+          // theme script with NO functional breakage, then promote to the
+          // enforcing `Content-Security-Policy` header. frame-ancestors 'none'
+          // duplicates X-Frame-Options: DENY for CSP-aware browsers.
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://api.mapbox.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.mapbox.com https://*.tiles.mapbox.com",
+              "worker-src 'self' blob:",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "object-src 'none'",
+            ].join('; '),
+          },
         ],
       },
     ]

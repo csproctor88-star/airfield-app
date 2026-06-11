@@ -4,6 +4,7 @@ import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import { formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
+import { photoUrl } from '@/lib/supabase/photos'
 import type { AcsiInspection, AcsiItem } from '@/lib/supabase/types'
 
 interface AcsiPdfOptions {
@@ -134,12 +135,7 @@ export async function generateAcsiPdf(
   // whole PDF, regardless of origin.
   const supabase = createClient()
   const photoUrlById: Record<string, string> = {}
-  const resolveStoragePath = (path: string): string => {
-    if (path.startsWith('data:')) return path
-    if (!supabase) return path
-    const { data } = supabase.storage.from('photos').getPublicUrl(path)
-    return data?.publicUrl || path
-  }
+  const resolveStoragePath = (path: string): string => photoUrl(path)
 
   const collectedPhotoIds = new Set<string>()
   for (const item of inspection.items || []) {

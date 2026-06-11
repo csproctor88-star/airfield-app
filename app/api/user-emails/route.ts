@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
+import { canBaseAdminManageUser } from '@/lib/admin/role-checks'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
     const admin = createClient(url, serviceKey)
     const { data: callerProfile } = await admin
       .from('profiles')
-      .select('role')
+      .select('role, primary_base_id')
       .eq('id', user.id)
       .single()
 
@@ -129,17 +130,43 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { template, toEmail, toName, customMessage, userId } = body as {
+    const { template, customMessage, userId } = body as {
       template: 'approved' | 'info_needed' | 'rejected'
-      toEmail: string
-      toName: string
       customMessage?: string
       userId?: string
     }
 
-    if (!template || !toEmail || !toName) {
-      return NextResponse.json({ error: 'template, toEmail, and toName are required' }, { status: 400 })
+    if (!template || !userId) {
+      return NextResponse.json({ error: 'template and userId are required' }, { status: 400 })
     }
+
+    // SECURITY (H-2): the target is identified ONLY by userId; the recipient
+    // address and name are derived from the target's profile — never from the
+    // request body (which previously let an admin email an arbitrary address
+    // and activate/deactivate an out-of-scope account). Base admins are also
+    // confined to their own installation.
+    const { data: targetProfile } = await admin
+      .from('profiles')
+      .select('email, name, primary_base_id')
+      .eq('id', userId)
+      .single()
+
+    if (!targetProfile || !targetProfile.email) {
+      return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
+    }
+
+    if (
+      callerProfile.role !== 'sys_admin' &&
+      !canBaseAdminManageUser(callerProfile.primary_base_id, targetProfile.primary_base_id)
+    ) {
+      return NextResponse.json(
+        { error: 'You can only manage users at your own installation.' },
+        { status: 403 },
+      )
+    }
+
+    const toEmail = targetProfile.email
+    const toName = targetProfile.name || targetProfile.email
 
     const resend = getResend()
 

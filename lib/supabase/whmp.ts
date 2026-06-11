@@ -17,6 +17,7 @@ import { createClient } from './client'
 import { logActivity } from './activity'
 import { friendlyError } from '@/lib/utils'
 import { daysBetween } from './aep'
+import { photoUrl } from './photos'
 
 function db() {
   return createClient()
@@ -372,6 +373,5 @@ export async function uploadWhmpDocument(input: {
   })
   if (upErr) return { ok: false, error: friendlyError(upErr.message) }
 
-  const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
-  return { ok: true, url: urlData.publicUrl, storage_path: path }
+  return { ok: true, url: photoUrl(path), storage_path: path }
 }

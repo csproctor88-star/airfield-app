@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
@@ -14,17 +15,23 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-// Initial temp password assigned by admin invites. The new user is
-// forced through /setup-account on first sign-in to pick their own.
-// Operator-chosen sentinel (not a security boundary — admin approval
-// + must_change_password gate are what actually protect access).
-const TEMP_PASSWORD = 'glidepathpassword'
+// SECURITY (H-3): each invite gets a UNIQUE, high-entropy temp password.
+// The previous build used one hardcoded password ('glidepathpassword') for
+// every invited account — anyone who knew it could sign in as a freshly
+// invited (possibly privileged) user before their first login and take the
+// account over. A per-invite random secret removes that universal key. The
+// new user is still forced through /setup-account to choose their own.
+function generateTempPassword(): string {
+  // ~16 chars, URL-safe, ~72 bits of entropy. Includes a fixed suffix so it
+  // always satisfies any min-length / character-class policy.
+  return randomBytes(12).toString('base64url') + 'A9!'
+}
 
 /**
  * Admin invite flow.
  *
  * Creates the auth.users row directly with email_confirm: true and
- * a fixed temp password ('glidepathpassword'). The handle_new_user()
+ * a per-invite random temp password (see generateTempPassword). The handle_new_user()
  * trigger fires on INSERT and creates the profile row with status=
  * 'pending'. We then UPDATE the profile to set status='active' (the
  * admin already approved by inviting them) and must_change_password=
@@ -113,13 +120,14 @@ export async function POST(request: Request) {
     const normFirst = toTitleCaseName(firstName)
     const normLast = toTitleCaseName(lastName)
     const fullName = `${normFirst} ${normLast}`
+    const tempPassword = generateTempPassword()
 
     // Create the user with the temp password and email confirmed.
     // user_metadata flows into raw_user_meta_data which handle_new_user()
     // reads to populate the profile row.
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
-      password: TEMP_PASSWORD,
+      password: tempPassword,
       email_confirm: true,
       user_metadata: {
         first_name: normFirst,
@@ -152,19 +160,27 @@ export async function POST(request: Request) {
       // manually via /users. Surface the issue but return success.
     }
 
-    // Best-effort email. Plain HTML, no deep links, info@ sender,
+    // Email the credentials. Plain HTML, no deep links, info@ sender,
     // text/plain alternative. Mirrors the deliverability-tested PPR
     // confirmation pattern. The temp password is in the body — these
     // emails go to .mil + commercial recipients alike; admin-created
     // credentials in a transactional email to the rightful owner is
     // the same risk profile as a password reset email.
+    //
+    // The send is non-fatal (the account is already created), but we report
+    // whether it succeeded so the admin UI can tell them to relay the temp
+    // password manually instead of silently leaving the invitee in the dark.
+    let emailSent = false
+    let emailError: string | null = null
     const resendKey = process.env.RESEND_API_KEY
-    if (resendKey) {
+    if (!resendKey) {
+      emailError = 'Email service is not configured (RESEND_API_KEY missing).'
+    } else {
       const html = `
         <p>Hello ${escapeHtml(fullName)},</p>
         <p>You've been invited to Glidepath by your installation's administrator. Your account is ready.</p>
         <p><strong>Sign-in email:</strong> ${escapeHtml(email)}<br>
-        <strong>Temporary password:</strong> <code>${escapeHtml(TEMP_PASSWORD)}</code></p>
+        <strong>Temporary password:</strong> <code>${escapeHtml(tempPassword)}</code></p>
         <p>On your first sign-in you'll be prompted to choose a new password. Sign in at the Glidepath URL provided by your administrator.</p>
         <p>If you have questions, contact your installation's Airfield Manager or <a href="mailto:info@glidepathops.com">info@glidepathops.com</a>.</p>
       `
@@ -174,7 +190,7 @@ export async function POST(request: Request) {
         "You've been invited to Glidepath by your installation's administrator. Your account is ready.",
         '',
         `Sign-in email: ${email}`,
-        `Temporary password: ${TEMP_PASSWORD}`,
+        `Temporary password: ${tempPassword}`,
         '',
         "On your first sign-in you'll be prompted to choose a new password. Sign in at the Glidepath URL provided by your administrator.",
         '',
@@ -192,9 +208,13 @@ export async function POST(request: Request) {
           text,
         })
         if (sendError) {
+          emailError = sendError.message || 'The email service rejected the message.'
           console.error('[admin/invite] Resend error:', sendError)
+        } else {
+          emailSent = true
         }
       } catch (e) {
+        emailError = e instanceof Error ? e.message : 'Email send failed.'
         console.error('[admin/invite] Email send threw:', e)
       }
     }
@@ -202,7 +222,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       userId: created.user.id,
-      tempPassword: TEMP_PASSWORD,
+      tempPassword,
+      emailSent,
+      emailError,
     })
   } catch (err) {
     console.error('[admin/invite] Error:', err)

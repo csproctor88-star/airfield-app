@@ -70,16 +70,21 @@ export default function SetupAccountPage() {
         return
       }
 
-      // Clear must_change_password so subsequent sign-ins skip the
-      // setup redirect, stamp last_seen_at, and (legacy invite-link
-      // flow) flip status active → active for any user that arrived
-      // via the old /auth/confirm path with status='pending'.
+      // Clear must_change_password so subsequent sign-ins skip the setup
+      // redirect, and stamp last_seen_at.
+      //
+      // SECURITY (C-2): we deliberately do NOT touch `status` here. Account
+      // activation is an admin decision and is now blocked for all
+      // JWT-authenticated callers by the profiles_block_priv_escalation
+      // trigger (migration 2026062013) — a user cannot self-activate.
+      // Admin-invited users already arrive with status='active' (set by the
+      // service-role invite route); self-signups are activated by an admin
+      // via the user-emails / users routes.
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         await supabase
           .from('profiles')
           .update({
-            status: 'active',
             must_change_password: false,
             last_seen_at: new Date().toISOString(),
           } as any)

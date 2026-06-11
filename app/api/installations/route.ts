@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     // Try auth but allow unauthenticated for signup flow
     const auth = await requireAuth()
     const isAuthenticated = !(auth instanceof NextResponse)
+    const authedUserId = isAuthenticated ? (auth as { user: { id: string } }).user.id : null
 
     const supabase = getAdmin()
     if (!supabase) {
@@ -136,8 +137,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create installation' }, { status: 500 })
     }
 
-    // If userId provided, ensure user is a member of this installation
+    // If userId provided, ensure user is a member of this installation.
+    // SECURITY (C-1): membership writes are self-only and require auth.
+    // The route runs with the service-role key (RLS-bypassing), so without
+    // this gate any caller could join — or force-move — an arbitrary user
+    // into any base by passing their UUID. A user may only enroll THEMSELVES,
+    // and only once authenticated (the signup flow holds a session by the
+    // time it enrolls). Adding OTHER users is the admin-invite route's job.
     if (userId) {
+      if (!isAuthenticated || userId !== authedUserId) {
+        return NextResponse.json(
+          { error: 'You can only join an installation as yourself.' },
+          { status: 403 },
+        )
+      }
+
       await supabase
         .from('base_members')
         .upsert(
@@ -166,6 +180,7 @@ export async function DELETE(request: Request) {
   try {
     const auth = await requireAuth()
     if (auth instanceof NextResponse) return auth
+    const authedUserId = auth.user.id
 
     const supabase = getAdmin()
     if (!supabase) {
@@ -180,6 +195,16 @@ export async function DELETE(request: Request) {
 
     if (!baseId || !userId) {
       return NextResponse.json({ error: 'baseId and userId are required' }, { status: 400 })
+    }
+
+    // SECURITY (C-1): a user may only remove THEIR OWN membership. The
+    // service-role client bypasses RLS, so without this an attacker could
+    // strip any user from any base.
+    if (userId !== authedUserId) {
+      return NextResponse.json(
+        { error: 'You can only leave an installation as yourself.' },
+        { status: 403 },
+      )
     }
 
     // Don't allow removing if this is the user's primary base

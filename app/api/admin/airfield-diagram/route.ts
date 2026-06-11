@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getAdminClient } from '@/lib/admin/role-checks'
+import { photoUrl } from '@/lib/supabase/photos'
 
 // Upload / delete the airfield diagram for a base.
 //
@@ -144,8 +145,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const { data: pub } = auth.admin.storage.from('photos').getPublicUrl(path)
-    return NextResponse.json({ success: true, publicUrl: pub?.publicUrl ?? null })
+    return NextResponse.json({ success: true, publicUrl: photoUrl(path) })
   } catch (err) {
     console.error('[airfield-diagram] POST error:', err)
     return NextResponse.json(
@@ -196,16 +196,12 @@ export async function GET(request: Request) {
     const entry = files?.find(f => f.name === 'diagram')
     if (!entry) return NextResponse.json({ publicUrl: null })
 
-    const { data: pub } = admin.storage
-      .from('photos')
-      .getPublicUrl(storagePath(baseId))
-
     // updated_at isn't always populated on newly-created objects; fall back
     // to created_at, then to 'now' so the URL still cache-busts on first
     // fetch.
     const version = entry.updated_at || entry.created_at || new Date().toISOString()
     return NextResponse.json({
-      publicUrl: pub?.publicUrl ?? null,
+      publicUrl: photoUrl(storagePath(baseId)),
       updatedAt: version,
     })
   } catch (err) {

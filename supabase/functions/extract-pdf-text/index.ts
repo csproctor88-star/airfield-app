@@ -13,8 +13,13 @@
  *   Body: {} or { "extractAll": true }         — batch all unprocessed
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import pdfParse from "https://esm.sh/pdf-parse@1.1.1";
+// M-5: pin EXACT versions of CDN-loaded modules. Floating tags (@2) and
+// abandoned packages (pdf-parse@1.1.1) on a mutable CDN are a supply-chain
+// risk in this service-role context — a poisoned/compromised module would run
+// with SUPABASE_SERVICE_ROLE_KEY (full RLS bypass) on the next deploy. Pinning
+// makes the resolved code deterministic; bump deliberately after review.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.3";
+import pdfParse from "https://esm.sh/pdf-parse@1.1.1?pin=v135";
 
 const BUCKET_NAME = "regulation-pdfs";
 

@@ -1,19 +1,29 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
- * Best-guess client IP from a request's proxy headers. On Vercel,
- * `x-forwarded-for` is set to a comma-separated list with the client first.
- * Falls back to `x-real-ip`, then a literal sentinel so callers always have a
- * stable bucket key (all unknown-IP callers share one bucket — acceptable for
- * an abuse throttle).
+ * Best-guess client IP from a request's proxy headers.
+ *
+ * SECURITY (M-4): prefer platform-set headers a client cannot forge. The
+ * leftmost `x-forwarded-for` token is fully attacker-controlled (a client can
+ * prepend any value), so keying a per-IP throttle off it lets an attacker
+ * mint a fresh bucket per request and bypass the limit. On Vercel,
+ * `x-vercel-forwarded-for` and `x-real-ip` are set by the edge to the true
+ * client address and are not spoofable, so we use those first and only fall
+ * back to the LAST (closest-proxy) `x-forwarded-for` hop off-platform.
  */
 export function getClientIp(request: Request): string {
+  const vercel = request.headers.get('x-vercel-forwarded-for')?.trim()
+  if (vercel) return vercel.split(',')[0]!.trim()
+
+  const real = request.headers.get('x-real-ip')?.trim()
+  if (real) return real
+
   const xff = request.headers.get('x-forwarded-for')
   if (xff) {
-    const first = xff.split(',')[0]?.trim()
-    if (first) return first
+    const hops = xff.split(',').map((h) => h.trim()).filter(Boolean)
+    if (hops.length) return hops[hops.length - 1]!
   }
-  return request.headers.get('x-real-ip')?.trim() || 'unknown'
+  return 'unknown'
 }
 
 export type RateLimitRule = {
