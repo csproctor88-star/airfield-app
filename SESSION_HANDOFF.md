@@ -1,8 +1,20 @@
 # Session Handoff
 
 **Date:** 2026-06-11
-**Branch:** `main` — pushed to origin (`2d5b4e16`); promote on Vercel when ready.
-Still v2.34.0. Invite route now also surfaces email-send failures in the UI.
+**Branch:** `main` — pushed to origin; promote on Vercel when ready. Still v2.34.0.
+
+**Post-remediation fixes (this session, after verification feedback):**
+- Invite route surfaces email-send failures in the UI (was silent).
+- Forgot-password email simplified to the plain `.mil`-deliverable pattern (no
+  gradient/CTA/logo; plain copyable link; info@ sender). NOTE: the "Vercel URL"
+  in reset links is `NEXT_PUBLIC_SITE_URL` set to the vercel.app domain in Vercel
+  env — set it to the canonical domain (code falls back to glidepathops.com).
+- PDF discrepancy tables (`lib/pdf-config.ts`): Title column capped at 65mm with
+  slack redistributed to text columns (was a giant Title + cramped/wrapping
+  others); `rowPageBreak:'avoid'` so photo rows don't clip at page breaks.
+- AEP: granted `accountable_executive` the `aep:write` permission (migration
+  `2026062016`, **applied live**) — the AE (Demo Regional Airport's demo persona)
+  could sign but not author the AEP; now can. UI already gates on aep:write.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
 **866 pass / 90 files**.
 

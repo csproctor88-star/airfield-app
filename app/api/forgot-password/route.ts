@@ -78,41 +78,37 @@ export async function POST(request: Request) {
     // app/api/admin/invite/route.ts.
     const resetUrl = `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent('/reset-password')}`
 
+    // Plain, deliverability-tested template (mirrors the invite / approval
+    // emails): no gradient wrapper, no styled CTA button, no logo. A password
+    // reset must carry a link, so the reset URL is shown as a plain, copyable
+    // link — the most likely form to survive .mil Safe Links rewriting. info@
+    // sender to match the other transactional emails.
     const resend = new Resend(resendKey)
+    const html = `
+      <p>Hello,</p>
+      <p>A password reset was requested for the Glidepath account associated with <strong>${escapeHtml(email)}</strong>. Use the link below to set a new password:</p>
+      <p><a href="${escapeHtml(resetUrl)}">${escapeHtml(resetUrl)}</a></p>
+      <p>This link expires in 24 hours. If you didn't request this, you can ignore this email — your password will not change.</p>
+      <p>Questions? Contact <a href="mailto:info@glidepathops.com">info@glidepathops.com</a>.</p>
+    `
+    const text = [
+      'Hello,',
+      '',
+      `A password reset was requested for the Glidepath account associated with ${email}. Use the link below to set a new password:`,
+      '',
+      resetUrl,
+      '',
+      "This link expires in 24 hours. If you didn't request this, you can ignore this email — your password will not change.",
+      '',
+      'Questions? Contact info@glidepathops.com.',
+    ].join('\n')
     const { error: sendError } = await resend.emails.send({
-      from: 'Glidepath <noreply@glidepathops.com>',
+      from: 'Glidepath <info@glidepathops.com>',
       replyTo: 'info@glidepathops.com',
       to: email,
       subject: 'Glidepath — Password Reset',
-      html: `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0B1120;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B1120;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:520px;background:#1E293B;border-radius:12px;border:1px solid #334155;overflow:hidden;">
-        <tr><td style="background:linear-gradient(135deg,#0369A1,#22D3EE);padding:24px 32px;text-align:center;">
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">GLIDEPATH</div>
-          <div style="font-size:22px;font-weight:800;color:#FFFFFF;">Password Reset</div>
-        </td></tr>
-        <tr><td style="padding:28px 32px;color:#E2E8F0;font-size:15px;line-height:1.6;">
-          <p style="margin:0 0 16px;">A password reset has been requested for the Glidepath account associated with <strong>${escapeHtml(email)}</strong>. Click the button below to set a new password:</p>
-          <div style="text-align:center;margin:0 0 20px;">
-            <a href="${escapeHtml(resetUrl)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Reset Password</a>
-          </div>
-          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">This link will expire in 24 hours. If you did not request this reset, you can safely ignore this email — your password will not change.</p>
-          <p style="margin:0;font-size:13px;color:#64748B;">Questions? Reply to this email or contact <a href="mailto:info@glidepathops.com" style="color:#22D3EE;text-decoration:none;">info@glidepathops.com</a></p>
-        </td></tr>
-        <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
-          <div style="font-size:11px;color:#64748B;">Glidepath Airfield Operations Platform</div>
-          <div style="font-size:11px;color:#475569;margin-top:4px;">Guiding You to Mission Success</div>
-          <div style="font-size:9px;color:#334155;margin-top:8px;line-height:1.4;">This application is not endorsed by, affiliated with, or associated with the Department of Defense (DoD) or any branch of the U.S. Armed Forces. The views and content herein do not reflect the official policy or position of the DoD.</div>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
+      html,
+      text,
     })
 
     if (sendError) {

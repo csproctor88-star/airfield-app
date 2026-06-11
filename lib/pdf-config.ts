@@ -215,9 +215,29 @@ export function buildDiscrepancyTable(opts: BuildTableOptions): number {
   // Build column defs in order
   const colDefs = orderedCols.map(key => getColumnDef(key)).filter(Boolean) as PdfColumnDef[]
 
-  // Calculate flex (title) width
+  // Calculate flex (title) width.
+  //
+  // Title is flex, but CAPPED so it doesn't swallow all leftover space when
+  // few columns are selected (which left a giant near-empty Title and cramped,
+  // wrapping Status/Comments/Created-By columns). Any leftover beyond the cap
+  // is redistributed to the text-heavy columns proportionally so they widen
+  // and stop truncating.
+  const TITLE_MAX = 65 // mm
+  const GROWABLE = new Set(['status', 'location', 'comments', 'reported_by', 'type', 'shop'])
   const fixedTotal = colDefs.reduce((sum, c) => sum + (c.key === 'title' ? 0 : c.baseWidth), 0)
-  const titleWidth = Math.max(24, contentWidth - fixedTotal)
+  const rawTitle = contentWidth - fixedTotal
+  const titleWidth = Math.min(TITLE_MAX, Math.max(24, rawTitle))
+  const slack = Math.max(0, rawTitle - titleWidth)
+  const growBase = colDefs
+    .filter(c => GROWABLE.has(c.key) && c.baseWidth > 0)
+    .reduce((sum, c) => sum + c.baseWidth, 0)
+  const widthFor = (c: PdfColumnDef): number => {
+    if (c.key === 'title') return titleWidth
+    if (slack > 0 && growBase > 0 && GROWABLE.has(c.key) && c.baseWidth > 0) {
+      return c.baseWidth + slack * (c.baseWidth / growBase)
+    }
+    return c.baseWidth
+  }
 
   // Build head row
   const headRow = colDefs.map(c => c.header)
@@ -250,7 +270,7 @@ export function buildDiscrepancyTable(opts: BuildTableOptions): number {
   const columnStyles: Record<number, Record<string, unknown>> = {}
   colDefs.forEach((c, i) => {
     const style: Record<string, unknown> = {
-      cellWidth: c.key === 'title' ? titleWidth : c.baseWidth,
+      cellWidth: widthFor(c),
     }
     if (c.halign) style.halign = c.halign
     if (c.fontSize) style.fontSize = c.fontSize
@@ -264,6 +284,9 @@ export function buildDiscrepancyTable(opts: BuildTableOptions): number {
     margin: { left: margin, right: margin },
     head: [headRow],
     body: tableBody,
+    // Keep a row (esp. tall photo rows) intact rather than splitting it across
+    // a page boundary, which clipped the photos at the page edge.
+    rowPageBreak: 'avoid',
     styles: {
       fontSize: PDF_TABLE_STYLES.FONT_SIZE,
       cellPadding: PDF_TABLE_STYLES.CELL_PADDING,
