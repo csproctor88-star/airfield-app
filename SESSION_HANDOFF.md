@@ -1,165 +1,118 @@
 # Session Handoff
 
-**Date:** 2026-06-11
-**Branch:** `main` — pushed to origin; promote on Vercel when ready. Still v2.34.0.
-
-**Post-remediation fixes (this session, after verification feedback):**
-- Invite route surfaces email-send failures in the UI (was silent).
-- Forgot-password email simplified to the plain `.mil`-deliverable pattern (no
-  gradient/CTA/logo; plain copyable link; info@ sender). NOTE: the "Vercel URL"
-  in reset links is `NEXT_PUBLIC_SITE_URL` set to the vercel.app domain in Vercel
-  env — set it to the canonical domain (code falls back to glidepathops.com).
-- PDF discrepancy tables (`lib/pdf-config.ts`): Title column capped at 65mm with
-  slack redistributed to text columns (was a giant Title + cramped/wrapping
-  others); `rowPageBreak:'avoid'` so photo rows don't clip at page breaks.
-- AEP: granted `accountable_executive` the `aep:write` permission (migration
-  `2026062016`, **applied live**) — the AE (Demo Regional Airport's demo persona)
-  could sign but not author the AEP; now can. UI already gates on aep:write.
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓, `npx vitest run` ✓
-**866 pass / 90 files**.
-
----
-
-## 2026-06-11 — Full pentest + remediation (Fable 5 audit → fixes)
-
-A 77-agent Fable 5 pentest (report at `docs/security/Pentest_Audit_Fable5_2026-06-11.md`)
-found 2 Critical / 6 High / 7 Med / ~18 Low. Every Critical/High was
-**re-verified against real code AND the live DB** before fixing. Status:
-
-**Fixed + verified (code in working tree; tsc/build/vitest green):**
-- **C-1** installations IDOR — `app/api/installations/route.ts` now requires
-  auth + `userId===auth.uid()` on membership write/delete.
-- **C-2** profiles privilege-escalation — trigger `profiles_block_priv_escalation`
-  hardened to block ALL JWT role/status/is_active changes (migration
-  `2026062013`, **APPLIED LIVE**); `setup-account` no longer writes `status`.
-  **Exploit-verified blocked on prod** (rolled-back simulation).
-- **H-1** `send-pdf-email` — RLS-scoped download (no service-role bypass) + 20 MB cap.
-- **H-2** `user-emails` — base-scoped via `canBaseAdminManageUser`; recipient
-  derived from the target profile, not the body.
-- **H-3** `admin/invite` — per-invite `crypto.randomBytes` temp password (was the
-  universal static `glidepathpassword`).
-- **H-4** stored XSS — shared `escapeHtml` in `lib/utils.ts` applied to all 4 map
-  InfoWindows (infrastructure/discrepancy/waiver/obstruction). Unit-tested.
-- **H-6** daily-review forgery — `sign_daily_review_slot` SECURITY DEFINER RPC
-  (migration `2026062013`, **APPLIED LIVE**) derives signer from `auth.uid()`,
-  enforces per-slot permission; client wired to the RPC.
-- **M-1** airfield-status GET base leak; **M-4** `getClientIp` XFF-spoof;
-  **M-6** forgot-password allowlist; **M-7** sms-report allowlist; **L-4**
-  fail-open middleware (prod fail-closed); **L-17** airfield-status PATCH
-  mass-assignment allowlist.
-
-**H-5 (photos bucket) — converted via an authenticated proxy.** Rather than
-async signed-URL plumbing, all photo reads now go through `app/api/photos/route.ts`
-(streams via the caller's RLS-scoped client). `lib/supabase/photos.ts` →
-`photoUrl()` returns `/api/photos?path=…` (sync, stable, no expiry). All ~13
-`getPublicUrl('photos')` call sites converted (PDF generators, galleries,
-exports, airfield-diagram, upload helpers). Build/tsc/vitest green; proxy
-rejects anonymous reads (scripted).
-
-**L-6 CSP** added in **report-only** mode (next.config.js) — compensating
-control for the JS-readable cookie; promote to enforcing after monitoring.
-**I-4** `poweredByHeader:false`. **M-5** edge-fn versions pinned.
-
-**Staged — apply AFTER the code deploys (would break prod if applied early):**
-- `2026062014_daily_reviews_lockdown.sql` — REVOKE direct daily_reviews writes.
-- `2026062015_photos_bucket_private.sql` (**H-5 flip**) — base-scoped SELECT
-  policy + bucket→private. Header now also flags: rewrite legacy PERSISTED
-  public URLs (AEP/WHMP/§139-training/obstruction rows) to the proxy form
-  before flipping, then visually confirm galleries/PDFs render.
-
-**Not yet done (lower-severity / product decisions):** L-2 send-ppr authz, L-7
-demo-creds gating (left as-is — gating could break prod sales demos; isolate
-demo to a separate project instead), M-2 kiosk session lifecycle, M-3 anon-RPC
-rate limiting, I-3 constant-time CRON compare, Next.js 14.2.x→15 upgrade,
-remaining Lows/Info.
+**Date:** 2026-06-14
+**Branch:** `main` — pushed to origin, in sync (`40086c7a`). Promote on Vercel
+when ready. Still v2.34.0 (no bump).
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (109 static pages),
+`npx vitest run` ✓ **866 pass / 90 files**.
+**HEAD:** `40086c7a`
 
 ---
 
 ## What shipped this session
 
-Two themes, both application code. First a brand-logo refresh across the login
-screen, sidebar, and PWA/favicon icons. Then a feature pass on the **Daily
-Reviews** module: reach and complete reviews older than 14 days, a date-range
-filter that drives the list, a timeframe certification-log PDF, and removal of
-the unused per-review email/delivery flow. The Daily Reviews work was specced,
-planned, and executed task-by-task via subagent-driven development with
-per-task spec + quality review.
+A full-codebase security pentest (77-agent Fable 5 audit; report at
+`docs/security/Pentest_Audit_Fable5_2026-06-11.md`) found 2 Critical / 6 High /
+7 Medium / ~18 Low. Every Critical/High was **re-verified against the real code
+AND the live database** before any fix — several were confirmed by rolled-back
+exploit simulations against prod. The two Criticals and five of six Highs are
+closed in code; H-5 (photos) is code-complete with its DB flip staged. Then a
+round of verification-feedback fixes (invite email surfacing, forgot-password
+email, PDF table layout, AEP authoring access). The prior session's logo refresh
++ Daily Reviews work is already on `main` (see Recent releases).
 
-### Logo refresh (`20a77d57`, `441ccf91`, `c4e90b46`, `a7b2af2a`)
+### Pentest remediation — Criticals + Highs (`2d5b4e16`)
 
-Replaced the login and sidebar wordmarks with dedicated light/dark artwork
-(navy on light, white + blue swoosh on dark) and regenerated the installed-app
-icon from the "PATH" composition plus a legible airplane-mark `favicon.ico`.
+- **C-1 — installations IDOR.** `POST/DELETE /api/installations` ran with the
+  service-role key and trusted a client `userId`, so any caller could enroll
+  themselves into (or force-move another user into) any base — full cross-tenant
+  read access since `base_members` is the gate for `user_has_base_access`. Now
+  requires auth and `userId === auth.uid()` on every membership write/delete.
+- **C-2 — profiles self-escalation to `sys_admin`.** `profiles_update` RLS
+  allows self-update (`id = auth.uid()`) and the old `2026062011` trigger only
+  fired for callers *without* `users:manage` — which `base_admin`/`airfield_manager`/
+  `namo` all hold (confirmed in `role_permissions`). So any of those roles could
+  `update profiles set role='sys_admin'` from the browser console. Fix: the
+  trigger now blocks **all** JWT-authenticated changes to `role`/`status`/
+  `is_active` (service-role admin routes have `auth.uid()` NULL and still work);
+  `setup-account` no longer writes `status`. Migration `2026062013`, applied live;
+  **exploit-verified blocked** (rolled-back sim returned the deny).
+- **H-1 `send-pdf-email`** — was downloading a client-supplied `storagePath` via
+  the service-role client (RLS bypass → cross-tenant exfil). Now downloads with
+  the caller's RLS-scoped client + a 20 MB cap.
+- **H-2 `user-emails`** — base-scoped via `canBaseAdminManageUser`; recipient is
+  derived from the target profile, not the request body (was an arbitrary mailer
+  + cross-base activate/deactivate).
+- **H-3 `admin/invite`** — per-invite `crypto.randomBytes` temp password,
+  replacing the universal static `glidepathpassword` (pre-activation takeover).
+- **H-4 stored XSS** — user free-text was concatenated into Google Maps
+  InfoWindow HTML via `setContent` (innerHTML) across infrastructure / discrepancy
+  / waiver / obstruction maps. Added shared `escapeHtml` in `lib/utils.ts`,
+  applied to all four (+ `tests/escape-html.test.ts`).
+- **H-6 daily-review forgery** — `daily_reviews` UPDATE needed only base access +
+  *any one* sign permission (`sign:amsl` is held by `amops` shift workers), with
+  a client-supplied `signed_by`, so anyone could forge AFM/NAMO certifications.
+  New `sign_daily_review_slot` SECURITY DEFINER RPC (migration `2026062013`,
+  live) derives the signer from `auth.uid()`, enforces the *specific* slot
+  permission, refuses overwriting another user's slot, and recomputes
+  `fully_certified_at`. `lib/supabase/daily-reviews.ts` calls the RPC.
+- **Mediums/Lows in the same commit:** M-1 (airfield-status GET cross-base leak →
+  caller RLS client), M-4 (`getClientIp` trusted spoofable leftmost XFF → prefer
+  platform headers), M-6 (`/api/forgot-password` was missing from the middleware
+  allowlist → 307'd to /login, silently broken), M-7 (public `/<icao>/sms-report`
+  allowlist), L-4 (fail-open middleware → prod fail-closed), L-17 (airfield-status
+  PATCH mass-assignment → explicit column allowlist), L-6 (report-only CSP),
+  I-4 (`poweredByHeader:false`), M-5 (edge-fn CDN versions pinned).
 
-The non-obvious part: the login logo was a theme-conditional `<img src>` keyed
-on React `resolvedTheme`. That **SSR-mismatches** — the server renders with the
-provider's default (`dark`), paints the white logo, and never corrects after
-hydration because the post-hydration state equals the initializer (no
-re-render). Result: white logo on the cream login background. Fixed by swapping
-the logo via **CSS on the `[data-theme]` attribute** (set pre-hydration by the
-inline theme script) instead of React state — both variants ship in the DOM,
-CSS shows the right one, no flash, no mismatch. The sidebar was already safe
-because the app shell paints client-side behind the auth gate.
+### H-5 photos bucket — authenticated proxy (`2d5b4e16`)
 
-Also: the source PNGs were 4961×3508 with the artwork floating in different
-positions per variant, so they were trimmed to their content bbox for
-consistent framing (a re-export reverts to the full canvas — re-trim on every
-new drop). `441ccf91` removed the superseded `glidepath2.png` /
-`glidepathdarkmode3.png` / stale `icon-*.svg`. `c4e90b46` dropped the sidebar's
-"Guiding You to Mission Success" text line (the new wordmark reads complete).
-`a7b2af2a` is a brightness bump to the dark login art.
+The `photos` bucket is public, so the carefully path-scoped storage RLS gives
+zero read confidentiality on CUI-adjacent imagery. Rather than thread async
+signed-URL plumbing (which expires, breaking persisted URLs) through ~13 call
+sites, all photo reads now go through **`app/api/photos/route.ts`** — it streams
+the object via the *caller's* RLS-scoped session, so the (staged) base-scoped
+SELECT policy decides access. `lib/supabase/photos.ts` → `photoUrl()` returns
+`/api/photos?path=…` (synchronous, stable, no expiry). All `getPublicUrl('photos')`
+call sites converted (PDF generators, galleries, exports, airfield-diagram,
+AEP/WHMP/§139-training/obstruction upload helpers). The bucket flip itself is
+staged (`2026062015`) — see Migrations.
 
-### Daily Reviews — older-review access + date-range filter (`8a2cb29`, `b5585961`, `7d71a68c`)
+### Verification-feedback fixes (`40086c7a`)
 
-The list was hard-capped at the last 14 days (UI only — the data layer never
-restricted back-dated signing). Now a **date-range filter** (presets 7/14/30/90
-+ MTD + custom start/end) drives the visible list: a descending day-spine over
-the chosen range, capped at 370 rendered cards for the view (the PDF export is
-uncapped). The same range feeds Export directly, so the originally-built
-standalone export modal was removed (`7d71a68c`). An **⚠ Outstanding** section
-surfaces uncertified reviews older than the range start so overdue days can't
-hide; clicking any day (or Outstanding row) opens the sign modal for that date.
-
-Toolbar gotcha worth pinning: the global `input-dark` class stretches buttons to
-**full width**, which stacked every preset on its own row — the toolbar chips
-are now styled inline (`chipBtn`) instead.
-
-### Daily Reviews — certification-log PDF (`63507e8`, `33471fe`)
-
-New `lib/reports/daily-review-log-data.ts` (pure, unit-tested: `buildReviewDateSpine`,
-`buildCertLogRows`) + `lib/reports/daily-review-log-pdf.ts`
-(`generateDailyReviewLogPdf`, landscape roster via `pdf-utils` + autotable):
-one row per calendar day in the range, slot columns showing `Last (initials)`,
-a Certified column (Zulu time or `PENDING` / `PENDING (no entry)`), a summary
-stat box, and a notes appendix. New `fetchReviewsInRange` /
-`fetchOutstandingReviews` queries; `signerCompact` lifted into the data layer
-and shared with the page.
-
-### Daily Reviews — sign-modal delivery removal (`61ca8cb`, `25626121`)
-
-The per-review sign modal auto-opened an email dialog on full certification and
-carried Email/Download buttons — all unused. Removed `EmailPdfModal`,
-`sendPdfViaEmail`, the buttons, and the `defaultPdfEmail` prop (which also
-touched a second caller in `app/(app)/activity/page.tsx`). Signing now simply
-closes the modal (committed and queued paths). The left **Daily Ops PDF
-preview** — the content being reviewed — is retained; `generateDailyOpsPdf`
-(still used by `/reports/daily`) is untouched. `25626121` removed the
-write-only `reportData` state left behind.
-
-Spec + plan live at `docs/superpowers/specs/2026-06-10-daily-reviews-history-and-report-design.md`
-and `docs/superpowers/plans/2026-06-10-daily-reviews-history-and-report.md`.
+- **Invite email failures now surface in the UI.** The invite route returns
+  `emailSent`/`emailError`; `/users` shows a warning toast ("account created but
+  the invite email did NOT send — share the temp password manually") instead of a
+  silent success.
+- **Forgot-password email simplified** to the plain `.mil`-deliverable pattern
+  (no gradient/CTA button/logo; plain copyable reset link; `info@` sender + text
+  alternative) — matching the other transactional emails.
+- **PDF discrepancy tables** (`lib/pdf-config.ts`): the flex Title column ate all
+  leftover width (giant Title, cramped/wrapping Status/Comments/Created-By). Now
+  capped at 65 mm with the slack redistributed proportionally to the text
+  columns; added `rowPageBreak:'avoid'` so tall photo rows aren't clipped at page
+  breaks.
+- **AEP authoring** — the Accountable Executive role had `aep:read`+`aep:sign`
+  but not `aep:write`, so the Demo Regional Airport's demo persona (an AE) could
+  sign but not author/upload the AEP. Granted `accountable_executive` →
+  `aep:write` (migration `2026062016`, applied live). The page already gates the
+  create/upload affordance on `aep:write`.
 
 ---
 
 ## Migrations status
 
-No new migrations this session. The two prior remain applied live, none
-pending:
-
 | File | Applied | What |
 |---|---|---|
-| `2026062011_rls_pentest_remediation.sql` | ✅ live | trigger + scoped SELECT policies (pentest findings #1–#5) + backfill |
-| `2026062012_harden_base_access_null.sql` | ✅ live | `user_has_base_access` NULL → FALSE |
+| `2026062011_rls_pentest_remediation.sql` | ✅ live | prior: trigger + scoped SELECT policies (#1–#5) |
+| `2026062012_harden_base_access_null.sql` | ✅ live | prior: `user_has_base_access` NULL → FALSE |
+| `2026062013_pentest_remediation_v2.sql` | ✅ live | C-2 trigger hardening + `sign_daily_review_slot` RPC |
+| `2026062014_daily_reviews_lockdown.sql` | ⏳ **PENDING** | REVOKE direct `daily_reviews` INSERT/UPDATE — apply **after** the RPC-calling client (`40086c7a`) deploys, else live signing breaks |
+| `2026062015_photos_bucket_private.sql` | ⏳ **PENDING** | H-5: base-scoped SELECT policy + flip bucket private. Apply **after** the proxy code deploys AND legacy persisted public URLs (AEP/WHMP/§139-training/obstruction rows) are rewritten to the proxy form — header has the UPDATE sketch. Then visually confirm galleries/PDFs render. |
+| `2026062016_grant_ae_aep_write.sql` | ✅ live | grant `accountable_executive` → `aep:write` |
+
+**Two pending migrations are deliberately deploy-gated** (expand/contract on a
+shared prod DB). Apply order after promoting `40086c7a`: `2026062014`, then
+`2026062015` (only once the legacy-URL rewrite + visual check are done).
 
 ---
 
@@ -167,27 +120,38 @@ pending:
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Login showed the white (dark) logo on the cream light background | Theme-conditional `<img src>` SSR-painted the default-`dark` asset; React never re-rendered post-hydration (state == initializer) | `a7b2af2a` (CSS `[data-theme]` swap) |
-| Daily Reviews list ignored the range, still 14 days | Range selectors lived only in the export modal; the list used a hardcoded 14-day loop | `b5585961` |
-| Toolbar preset buttons stacked full-width | Global `input-dark` class forces `width:100%` on buttons | `b5585961` (inline `chipBtn`) |
+| Any base admin / AFM / NAMO could become `sys_admin` from the browser console | `profiles_update` RLS allows self-update; the old trigger only blocked callers lacking `users:manage`, which those roles hold | `2d5b4e16` / `2026062013` |
+| `amops` shift worker could forge AFM/NAMO daily-review certifications | `daily_reviews` write policy accepted any one sign permission + a client `signed_by`, no per-slot gate | `2d5b4e16` / `2026062013` |
+| Forgot-password reset link points at the vercel.app domain | `NEXT_PUBLIC_SITE_URL` is set to the Vercel URL in prod env; `getSiteUrl()` prefers it (code falls back to glidepathops.com only when unset) | config, not code |
+| AEP upload → "you do not have permission" as the demo persona | Demo Regional Airport's demo account is an Accountable Executive, which lacked `aep:write` (read+sign only) | `40086c7a` / `2026062016` |
+| Invite created the account but no email; admin saw success | localhost has no `RESEND_API_KEY`; the invite route sent best-effort and swallowed the failure | `40086c7a` (now surfaced) |
+| Discrepancy PDF: giant Title column, cramped/truncated other columns, photos clipped at page breaks | Title was the only flex column (absorbed all slack); no `rowPageBreak` | `40086c7a` |
 
 ---
 
 ## Lessons from this session
 
-- **`input-dark` stretches buttons to full width.** It's an input class; using
-  it on toolbar buttons makes each one a full-width row. Style compact toolbar
-  chips inline instead. (Saved as a feedback memory.)
-- **Theme-conditional `<img src>` on a server-rendered page mismatches.** Server
-  paints the provider default, and if the post-hydration theme value equals the
-  state initializer there's no re-render to correct it. Swap theme-dependent
-  images via CSS on `[data-theme]` (set pre-hydration), not React state.
-- **`git add A B` aborts staging when B doesn't match** — a commit landed with
-  only a file deletion because the second pathspec (an already-removed file)
-  errored and `page.tsx` was never staged. Stage one path at a time, or
-  `git status` before committing.
-- **Re-exported PNG logos revert to the full canvas** — re-trim to the content
-  bbox on every new drop so light/dark variants frame identically.
+- **`user_has_base_access` special-cases `sys_admin` (returns true everywhere);
+  `user_has_permission` does NOT.** A permission key must be granted to a role
+  explicitly in `role_permissions` — sys_admin only has a key if it's listed.
+  That's why AEP authoring for the AE required an explicit grant, not a code
+  short-circuit.
+- **Private storage via an auth proxy beats signed URLs here.** `/api/photos`
+  streaming through the caller's RLS client keeps every call site synchronous and
+  the URL stable (no expiry → persisted-URL rows keep working), and centralizes
+  authz in one place. The trade-off is a serverless hop per image.
+- **Expand/contract on the shared prod DB.** Lock-down REVOKEs and the bucket
+  flip must land *after* the code that uses the new path deploys, or prod (still
+  on old code) breaks. Hence `2026062014`/`2026062015` are staged, not applied.
+- **Email only works on the deploy.** `RESEND_API_KEY` lives in Vercel, not
+  `.env.local` — invite/approval/reset emails all no-op locally. Test email on
+  the promoted build (or add the key locally; real mail will send).
+- **`NEXT_PUBLIC_SITE_URL` is the email-link domain.** Set it to the canonical
+  domain in Vercel or every server-built link points at vercel.app.
+- **Verify security fixes against the live DB, not just the static report.** The
+  audit was static and partly inferred; C-2 was actually *broader* than reported
+  (self-update path, not just `users:manage`), only visible by querying the live
+  policy + trigger.
 
 ---
 
@@ -195,60 +159,63 @@ pending:
 
 | Item | Severity | Notes |
 |---|---|---|
-| Independent human review of pentest fixes #1/#2 | Low | Deferred indefinitely (2026-06-11) — user will accomplish eventually; second set of eyes on trigger + `profiles` scoping before the Platform One assessment. |
+| Two security migrations pending | High | `2026062014` (daily_reviews lockdown) + `2026062015` (photos bucket private). Until applied, direct daily_reviews writes are still possible and the photos bucket is still public. Apply post-deploy per Migrations. |
+| Legacy persisted public photo URLs | Med | New — AEP/WHMP/§139-training/obstruction rows stored old `…/object/public/photos/…` URLs that will 404 when the bucket flips. Rewrite to the proxy form before applying `2026062015` (UPDATE sketch in the migration header). |
+| Lower-severity pentest items not done | Med | L-2 send-ppr authz, M-2 kiosk session lifecycle, M-3 anon-RPC rate limiting, I-3 constant-time CRON compare, Next.js 14.2→15 upgrade, remaining Lows/Info. See report §5. |
+| CSP is report-only | Low | New — `Content-Security-Policy-Report-Only` shipped; promote to enforcing after monitoring for violations. |
+| L-7 demo creds in prod bundle | Low | Left as-is — env-gating could break prod sales demos; the real fix is isolating demo to a separate Supabase project. |
+| Independent human review of pentest fixes | Low | Deferred indefinitely (user-owned) — second eyes on the trigger + `profiles`/daily-review RPC before the Platform One assessment. |
 | `scn` missing on 26 USAF bases | Med | Carried — frozen-`enabled_modules`; mirror `2026062000`. |
 | New `defaultEnabled` modules don't reach existing bases | Med | Carried — systemic null-only fallback in `lib/installation-context.tsx`. |
-| AMTR notif system not fully walked on deploy | Med | Carried — `8ec3c8b2` (certifier) + `a154631a` (real-time on-sign). |
 | usr-analytics privacy disclosure | Med | Carried — per-user usage tracking has no user-facing line. |
-| `types.ts` regen deferred | Med | Carried — several `amtr_*` tables hand-typed; route handlers cast `as any`. |
+| `types.ts` regen deferred | Med | Carried — `amtr_*` + `sign_daily_review_slot` hand-typed / cast `as any`. |
 | Base-setup file extraction deferred | Med | Carried — `base-config/setup/page.tsx` ~6k LOC. |
 | v2.34 not yet walked on the deploy | Med | Carried. |
-| In-app training-video embed not built | Low | Carried — `/help/[module-id]` YouTube iframe + blocked-network fallback is a deferred spec (see the video plan doc). |
-| Other module save handlers not audited for silent no-base guards | Low | Carried. |
-| Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
+| Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com` (also used by `scripts/verify-security-db.mjs`). |
 
 ---
 
 ## Next session tasks
 
-**Done 2026-06-11 (user-verified):** the RLS pentest walkthrough on a promoted
-Vercel build is complete, and the Daily Reviews cert-log PDF was reviewed on
-real data.
+The remediation is committed and pushed; the headline next step is **deploy +
+the two pending migrations**, in order:
 
-**Closed 2026-06-11:** Vercel auto-promote — decided **against**; manual promote
-is deliberate. The user owns promotion and will promote what's ready — do not
-add promote reminders or "verify on a promoted build" follow-ups.
-
-The independent review of pentest fixes #1/#2 is **deferred indefinitely** (user
-will get to it eventually) — tracked under long-running carryover, not an active
-task. No required next step is queued.
+1. **Promote `40086c7a` on Vercel.** This carries the daily-review RPC client and
+   the photo proxy that the pending migrations depend on.
+2. **Apply `2026062014`** (daily_reviews lockdown) — safe once the RPC client is live.
+3. **Before `2026062015`:** rewrite legacy persisted public photo URLs to the
+   proxy form (AEP/WHMP/§139-training/obstruction rows — sketch in the migration
+   header), then apply it and **visually confirm** photo galleries + photo-bearing
+   PDFs still render. This is the one change that needs eyes-on.
+4. **Set `NEXT_PUBLIC_SITE_URL`** in Vercel to the canonical domain so reset
+   emails stop linking to vercel.app.
+5. **Re-verify on the promoted build:** run `scripts/verify-security-db.mjs`
+   (10/10) and `scripts/verify-security-api.mjs` (7/7), then eyes-on: daily-review
+   signing, new-user onboarding email, the four map popups, AEP authoring as the
+   demo persona, and the discrepancy PDF column/photos.
 
 ### Long-running carryover (bandwidth-permitting)
-- Independent review of pentest fixes #1 (escalation trigger) and #2
-  (`profiles` scoping) — deferred indefinitely; user-owned.
-- Record the onboarding videos against the Demo base per
-  `docs/Video_Walkthrough_Production_Plan.html`; build the in-app
-  `/help/[module-id]` embed later.
-- Extend no-base toasts to any module save that still silently no-ops.
-- Promote `8ec3c8b2` and walk the AMTR notification system end-to-end.
+- Remaining lower-severity pentest items (L-2, M-2, M-3, I-3, Next.js upgrade,
+  Lows/Info) — see `docs/security/Pentest_Audit_Fable5_2026-06-11.md` §5 roadmap.
+- Independent human review of the pentest fixes — user-owned.
+- Record onboarding videos; build the `/help/[module-id]` embed.
 - `scn` `enabled_modules` backfill; the systemic `enabled_modules` fallback fix.
 - usr-analytics privacy copy; `types.ts` regen; `base-config/setup` extraction.
-- v2.34 deploy walk; the prior AMTR inspection-engine batch walk.
+- v2.34 deploy walk.
 
 ---
 
 ## Build snapshot
 
 ```
-Build: npm run build — compiled successfully.
+Build: npm run build — compiled successfully (109 static pages).
 TypeScript clean (npx tsc --noEmit exit 0).
-Tests: 859 pass / 89 files (npx vitest run) — incl. new tests/daily-review-log.test.ts.
+Tests: 866 pass / 90 files (npx vitest run) — incl. new tests/escape-html.test.ts.
 
-Routes touched this session (First Load JS):
-  ○ /daily-reviews          345 kB   (range filter + Outstanding + export)
-  ○ /login                  169 kB   (theme-aware logo swap)
-First Load JS shared        91.5 kB
-Middleware                  74.5 kB
+New route this session:
+  ƒ /api/photos             — authenticated photo proxy (H-5)
+First Load JS shared        91.6 kB
+Middleware                  74.6 kB
 ```
 
 ---
@@ -257,9 +224,10 @@ Middleware                  74.5 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-10 | Brand-logo refresh (theme-aware login/sidebar + new PWA/favicon icons); Daily Reviews gains date-range filtering, an Outstanding (overdue) section, a timeframe certification-log PDF, and drops the unused per-review email/delivery flow |
-| **Unreleased** | 2026-06-07 | RLS/authorization pentest remediation: closed self-escalation to sys_admin + four cross-tenant read leaks (`2026062011`), removed the NULL-base_id escape hatch (`2026062012`), scoped the offline write queue per-user, no-base saves toast |
-| **Unreleased** | 2026-06-05 | Offline write-queue coverage for the airfield-status board, NAVAID grid, New Discrepancy, Report Outage; realtime-down flag hardening |
+| **Unreleased** | 2026-06-11 | Pentest remediation: closed self-escalation to sys_admin (`2026062013`) + daily-review forgery RPC, installations IDOR, email-route authz, invite password, map XSS, photo-read auth proxy (H-5), middleware/CSP/header hardening; AE granted `aep:write` (`2026062016`); forgot-password email + discrepancy-PDF layout fixes |
+| **Unreleased** | 2026-06-10 | Brand-logo refresh (theme-aware login/sidebar + new PWA/favicon icons); Daily Reviews gains date-range filtering, an Outstanding section, a certification-log PDF, drops the unused per-review email flow |
+| **Unreleased** | 2026-06-07 | RLS/authorization pentest remediation round 1 (`2026062011`/`2026062012`), offline write queue scoped per-user, no-base saves toast |
+| **Unreleased** | 2026-06-05 | Offline write-queue coverage for airfield-status board, NAVAID grid, New Discrepancy, Report Outage; realtime-down flag hardening |
 | **v2.34.0** | 2026-06-01 | Help & Training covers every module + airport-type gating; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination + notify; Records Export; grouped What's New |
 | v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes |
 
@@ -268,27 +236,20 @@ Middleware                  74.5 kB
 ## Key docs / files touched this session
 
 ### New files
-- `lib/reports/daily-review-log-data.ts` — pure spine/roster helpers (TDD).
-- `lib/reports/daily-review-log-pdf.ts` — certification-log PDF generator.
-- `tests/daily-review-log.test.ts` — unit tests for the pure helpers.
-- `public/Glidepath_logo_login_{light,dark}.png`,
-  `public/Glidepath_logo_sidenav_{light,dark}.png`,
-  `public/Glidepath_logo_PWAicon_dark.png`, `public/favicon.ico`,
-  `public/apple-touch-icon.png` — new brand assets.
-- `docs/superpowers/specs/2026-06-10-daily-reviews-history-and-report-design.md`,
-  `docs/superpowers/plans/2026-06-10-daily-reviews-history-and-report.md`.
+- `app/api/photos/route.ts` — authenticated photo proxy (H-5).
+- `lib/utils.ts` `escapeHtml` + `tests/escape-html.test.ts`.
+- `scripts/verify-security-db.mjs`, `scripts/verify-security-api.mjs` — headless +
+  dev-server security verification (run before pushing security changes).
+- `supabase/migrations/2026062013…2026062016` — see Migrations.
+- `docs/security/Pentest_Audit_Fable5_2026-06-11.md` — the full audit report.
 
-### Modified files
-- `app/(app)/daily-reviews/page.tsx` — range filter, Outstanding section, direct
-  export.
-- `components/daily-reviews/sign-modal.tsx` — delivery removed; close on sign.
-- `lib/supabase/daily-reviews.ts` — `signerCompact`, `fetchOutstandingReviews`,
-  `fetchReviewsInRange`.
-- `app/login/page.tsx`, `components/layout/sidebar-nav.tsx`, `app/globals.css`,
-  `app/layout.tsx`, `public/manifest.json` — logo wiring + CSS theme swap.
-
-### Removed
-- `components/daily-reviews/export-modal.tsx` — superseded by the on-page range
-  filter + direct export.
-- Orphaned logo assets (`glidepath2.png`, `glidepathdarkmode3.png`,
-  `glidepath-logo-dark.jpg`, `icon-*.svg`).
+### Modified files (security-relevant)
+- `middleware.ts`, `lib/rate-limit.ts`, `next.config.js` — allowlists, IP source,
+  fail-closed, CSP, poweredByHeader.
+- `app/api/installations|send-pdf-email|user-emails|admin/invite|airfield-status|
+  forgot-password/route.ts`, `app/setup-account/page.tsx`, `app/(app)/users/page.tsx`.
+- `lib/supabase/{photos,daily-reviews,aep,whmp,training-part139,obstructions}.ts`,
+  `lib/{acsi-pdf,airfield-diagram,pdf-config}.ts`,
+  `lib/reports/{daily-ops-data,open-discrepancies-data}.ts`,
+  `app/(app)/{infrastructure,discrepancies,inspections/[id]}/...`,
+  `components/{discrepancies,waivers,obstructions}/*-map-view-google.tsx`.
