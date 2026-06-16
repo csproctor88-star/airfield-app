@@ -6,6 +6,7 @@ import { StatusBadge, Badge } from '@/components/ui/badge'
 import { ActionButton } from '@/components/ui/button'
 import { fetchDiscrepancy, fetchDiscrepancyPhotos, uploadDiscrepancyPhoto, deleteDiscrepancyPhoto, fetchStatusUpdates, deleteDiscrepancy, type DiscrepancyRow, type PhotoRow, type StatusUpdateRow } from '@/lib/supabase/discrepancies'
 import { createClient } from '@/lib/supabase/client'
+import { photoUrl } from '@/lib/supabase/photos'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { DEMO_DISCREPANCIES, DEMO_NOTAMS } from '@/lib/demo-data'
@@ -247,14 +248,11 @@ export default function DiscrepancyDetailPage() {
     ? (d as typeof DEMO_DISCREPANCIES[0]).days_open
     : Math.max(0, Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86400000))
 
-  // Build photo gallery from DB-stored photos
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
+  // Build photo gallery from DB-stored photos. photoUrl() routes through the
+  // authenticated /api/photos proxy (H-5; the bucket is private) and passes
+  // data: URLs straight through.
   const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
-    url: p.storage_path.startsWith('data:')
-      ? p.storage_path
-      : supabaseUrl
-        ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}`
-        : p.storage_path,
+    url: photoUrl(p.storage_path),
     name: p.file_name,
   }))
 

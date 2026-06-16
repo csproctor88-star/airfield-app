@@ -115,7 +115,6 @@ export default function DiscrepanciesPage() {
       // Fetch first photo per discrepancy for map popups
       if (data.length > 0 && supabase) {
         try {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
           const ids = data.map(d => d.id)
           const { data: photoRows } = await supabase
             .from('photos')
@@ -129,13 +128,9 @@ export default function DiscrepanciesPage() {
               if (!dId) continue
               // Only keep the first photo per discrepancy
               if (pMap[dId]) continue
-              if (row.storage_path.startsWith('data:')) {
-                pMap[dId] = row.storage_path
-              } else if (supabaseUrl) {
-                // Prefer thumbnail for list views (much smaller)
-                const path = row.thumbnail_path || row.storage_path
-                pMap[dId] = `${supabaseUrl}/storage/v1/object/public/photos/${path}`
-              }
+              // Prefer thumbnail for list views (much smaller). photoUrl()
+              // routes through the authenticated proxy and passes data: through.
+              pMap[dId] = photoUrl(row.thumbnail_path || row.storage_path)
             }
             setDiscrepancyPhotoMap(pMap)
           }

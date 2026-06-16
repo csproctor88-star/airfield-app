@@ -5,6 +5,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { PhotoPickerInput } from '@/components/ui/photo-picker-input'
 import { uploadAcsiPhoto, fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
 import { fetchDiscrepancyPhotos } from '@/lib/supabase/discrepancies'
+import { photoUrl } from '@/lib/supabase/photos'
 import { toast } from 'sonner'
 import { X, Check, Link2 } from 'lucide-react'
 import type { AcsiDiscrepancyDetail } from '@/lib/supabase/types'
@@ -30,7 +31,6 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
   // Load photos from DB — fires on mount, when linked, or when photo_ids change
   useEffect(() => {
     if (!detail.photo_ids?.length) { setPhotoUrls([]); return }
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
     let cancelled = false
 
     const loadPhotos = async () => {
@@ -58,9 +58,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
 
       if (cancelled) return
       setPhotoUrls(matched.map(p => ({
-        url: p.storage_path.startsWith('data:')
-          ? p.storage_path
-          : supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}` : p.storage_path,
+        url: photoUrl(p.storage_path),
         name: p.file_name,
       })))
     }
@@ -99,10 +97,7 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
       if (!error && data) {
         uploaded++
         newPhotoIds.push(data.id)
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-        const url = data.storage_path.startsWith('data:')
-          ? data.storage_path
-          : supabaseUrl ? `${supabaseUrl}/storage/v1/object/public/photos/${data.storage_path}` : data.storage_path
+        const url = photoUrl(data.storage_path)
         setPhotoUrls(prev => [...prev, { url, name: data.file_name }])
       }
     }

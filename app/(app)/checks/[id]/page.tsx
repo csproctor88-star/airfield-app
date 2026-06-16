@@ -15,6 +15,7 @@ import {
 import { DEMO_CHECKS, DEMO_CHECK_COMMENTS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchCheck, fetchCheckComments, addCheckComment, fetchCheckPhotos, uploadCheckPhoto, deleteCheck, type CheckRow, type CheckCommentRow, type CheckPhotoRow } from '@/lib/supabase/checks'
+import { photoUrl } from '@/lib/supabase/photos'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
@@ -222,14 +223,9 @@ export default function CheckDetailPage() {
     )
   }
 
-  // Build photo gallery from DB-stored photos
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
-  const getPhotoUrl = (p: CheckPhotoRow) =>
-    p.storage_path.startsWith('data:')
-      ? p.storage_path
-      : supabaseUrl
-        ? `${supabaseUrl}/storage/v1/object/public/photos/${p.storage_path}`
-        : p.storage_path
+  // Build photo gallery from DB-stored photos. photoUrl() routes through the
+  // authenticated /api/photos proxy (H-5) and passes data: URLs through.
+  const getPhotoUrl = (p: CheckPhotoRow) => photoUrl(p.storage_path)
   const allPhotos: { url: string; name: string }[] = dbPhotos.map((p) => ({
     url: getPhotoUrl(p),
     name: p.file_name,
