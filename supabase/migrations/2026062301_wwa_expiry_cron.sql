@@ -9,9 +9,12 @@
 -- effective_end. Mirrors the sms-spi-nightly best-effort cron pattern.
 -- ============================================================
 
--- System-authored audit rows (cron expirations) have no human actor.
--- The normal insert path (lib/supabase/activity.ts) always sets user_id,
--- so NULLs only ever originate from this sweep.
+-- System-authored audit rows (cron expirations) have no human actor, so the
+-- sweep inserts NULL user_id. activity_log.user_id was already made nullable
+-- in 2026022802_user_delete_set_null.sql; re-asserted here (idempotent) so
+-- this migration is self-contained. The normal insert path
+-- (lib/supabase/activity.ts) always sets user_id, so NULLs only ever
+-- originate from this sweep.
 ALTER TABLE activity_log ALTER COLUMN user_id DROP NOT NULL;
 
 -- ── Sweep worker ─────────────────────────────────────────────
