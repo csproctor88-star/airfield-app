@@ -4907,11 +4907,14 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
   const [editingColName, setEditingColName] = useState('')
   const [loading, setLoading] = useState(true)
 
-  // Coordinating agencies (free-text, per base — no role mapping)
-  type Agency = { id: string; agency_name: string; sort_order: number; is_active: boolean; send_calendar_invite: boolean }
+  // Coordinating agencies (free-text, per base — no role mapping).
+  // notify_only rows are "info-only recipients": they receive the final
+  // approval email but never coordinate (hidden from the per-PPR picker).
+  type Agency = { id: string; agency_name: string; sort_order: number; is_active: boolean; send_calendar_invite: boolean; notify_only: boolean }
   const [agencies, setAgencies] = useState<Agency[]>([])
   const [newAgencyName, setNewAgencyName] = useState('')
   const [newAgencyInvite, setNewAgencyInvite] = useState(false)
+  const [newAgencyNotifyOnly, setNewAgencyNotifyOnly] = useState(false)
 
   // Per-agency coordinator membership. The mapping drives both the
   // count chip on each agency row and the email recipient list when
@@ -4958,6 +4961,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
       sort_order: r.sort_order,
       is_active: r.is_active,
       send_calendar_invite: r.send_calendar_invite,
+      notify_only: r.notify_only,
     })))
     // Per-agency member count drives the row chip + the no-coordinators
     // warning. Issued as one query rather than N — handful of agencies
@@ -5102,7 +5106,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
   const handleAddAgency = async () => {
     if (!installationId || !newAgencyName.trim()) return
     const { createPprAgency } = await import('@/lib/supabase/ppr-agencies')
-    const res = await createPprAgency(installationId, newAgencyName, newAgencyInvite)
+    const res = await createPprAgency(installationId, newAgencyName, newAgencyInvite, newAgencyNotifyOnly)
     if (res.error || !res.data) {
       toast.error(res.error || 'Failed to add agency')
       return
@@ -5113,10 +5117,115 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
       sort_order: res.data!.sort_order,
       is_active: res.data!.is_active,
       send_calendar_invite: res.data!.send_calendar_invite,
+      notify_only: res.data!.notify_only,
     }])
     setNewAgencyName('')
     setNewAgencyInvite(false)
+    setNewAgencyNotifyOnly(false)
     toast.success(`Added "${res.data.agency_name}"`)
+  }
+
+  const handleToggleAgencyNotifyOnly = async (a: Agency) => {
+    const { updatePprAgency } = await import('@/lib/supabase/ppr-agencies')
+    const next = !a.notify_only
+    const res = await updatePprAgency(a.id, { notify_only: next })
+    if (res.error) {
+      toast.error(res.error)
+      return
+    }
+    setAgencies(prev => prev.map(x => x.id === a.id ? { ...x, notify_only: next } : x))
+    toast.success(next
+      ? `"${a.agency_name}" is now an info-only recipient (no coordination)`
+      : `"${a.agency_name}" is now a coordinating agency`)
+  }
+
+  // Shared row renderer — used by both the Coordinating Agencies and the
+  // Info-Only Recipients lists. Labels adapt to the row's notify_only flag
+  // (recipients vs coordinators); the Type button flips between the two.
+  const renderAgencyRow = (a: Agency) => {
+    const memberCount = memberCounts[a.id] ?? 0
+    const noun = a.notify_only ? 'recipient' : 'coordinator'
+    return (
+      <div key={a.id} style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ color: a.is_active ? 'var(--color-text-1)' : 'var(--color-text-3)', fontWeight: 600 }}>
+            {a.agency_name}
+            {!a.is_active && <span style={{ marginLeft: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>(inactive)</span>}
+          </span>
+          {memberCount === 0 ? (
+            <span style={{
+              fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-warning)',
+              background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.4)',
+              padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+            }}>No {noun}s — emails won&apos;t fire</span>
+          ) : (
+            <span style={{
+              fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
+              background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+              padding: '1px 6px', borderRadius: 'var(--radius-sm)',
+            }}>{memberCount} {noun}{memberCount === 1 ? '' : 's'}</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={() => openCoordPicker(a)}
+            style={{
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: '1px solid var(--color-border)', background: 'transparent',
+              color: 'var(--color-text-2)', cursor: 'pointer',
+            }}
+          >
+            {a.notify_only ? 'Recipients' : 'Coordinators'}
+          </button>
+          <button
+            onClick={() => handleToggleAgencyNotifyOnly(a)}
+            title={a.notify_only
+              ? 'Info-only recipient: receives the approval email but does not coordinate. Click to make this a coordinating agency.'
+              : 'Coordinating agency: appears in the per-PPR coordinator picker and must concur. Click to make this an info-only recipient (approval email only).'}
+            style={{
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: `1px solid ${a.notify_only ? 'var(--color-warning)' : 'var(--color-accent)'}`,
+              background: a.notify_only ? 'color-mix(in srgb, var(--color-warning) 10%, transparent)' : 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
+              color: a.notify_only ? 'var(--color-warning)' : 'var(--color-accent)', cursor: 'pointer',
+            }}
+          >
+            {a.notify_only ? 'Info-only' : 'Coordinating'}
+          </button>
+          <button
+            onClick={() => handleToggleAgency(a)}
+            style={{
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: `1px solid ${a.is_active ? 'var(--color-accent)' : 'var(--color-border)'}`,
+              background: a.is_active ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
+              color: a.is_active ? 'var(--color-accent)' : 'var(--color-text-3)', cursor: 'pointer',
+            }}
+          >
+            {a.is_active ? 'Active' : 'Inactive'}
+          </button>
+          <button
+            onClick={() => handleToggleAgencyInvite(a)}
+            title="Attach the .ics calendar invite to this group's email when a PPR is approved"
+            style={{
+              padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+              border: `1px solid ${a.send_calendar_invite ? 'var(--color-success)' : 'var(--color-border)'}`,
+              background: a.send_calendar_invite ? 'color-mix(in srgb, var(--color-success) 10%, transparent)' : 'transparent',
+              color: a.send_calendar_invite ? 'var(--color-success)' : 'var(--color-text-3)', cursor: 'pointer',
+            }}
+          >
+            {a.send_calendar_invite ? 'Invite ✓' : 'Invite'}
+          </button>
+          <button
+            onClick={() => handleDeleteAgency(a)}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const handleToggleAgencyInvite = async (a: Agency) => {
@@ -5460,87 +5569,22 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
           Anyone with the PPR role can act on any coordination row; the per-agency KPI badges on the PPR page filter the list.
         </p>
 
-        {agencies.length === 0 && (
-          <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 8 }}>No agencies yet.</p>
+        {agencies.filter(a => !a.notify_only).length === 0 ? (
+          <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 8 }}>No coordinating agencies yet.</p>
+        ) : (
+          agencies.filter(a => !a.notify_only).map(a => renderAgencyRow(a))
         )}
 
-        {agencies.map(a => {
-          const memberCount = memberCounts[a.id] ?? 0
-          return (
-            <div key={a.id} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-md)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ color: a.is_active ? 'var(--color-text-1)' : 'var(--color-text-3)', fontWeight: 600 }}>
-                  {a.agency_name}
-                  {!a.is_active && <span style={{ marginLeft: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>(inactive)</span>}
-                </span>
-                {/* Coordinator count chip — warns when zero so admins
-                    know emails won't fire for this agency. */}
-                {memberCount === 0 ? (
-                  <span style={{
-                    fontSize: 'var(--fs-xs)', fontWeight: 700,
-                    color: 'var(--color-warning)',
-                    background: 'rgba(245,158,11,0.10)',
-                    border: '1px solid rgba(245,158,11,0.4)',
-                    padding: '1px 6px', borderRadius: 'var(--radius-sm)',
-                  }}>No coordinators — emails won&apos;t fire</span>
-                ) : (
-                  <span style={{
-                    fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)',
-                    background: 'var(--color-bg-inset)',
-                    border: '1px solid var(--color-border)',
-                    padding: '1px 6px', borderRadius: 'var(--radius-sm)',
-                  }}>{memberCount} coordinator{memberCount === 1 ? '' : 's'}</span>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button
-                  onClick={() => openCoordPicker(a)}
-                  style={{
-                    padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    border: '1px solid var(--color-border)', background: 'transparent',
-                    color: 'var(--color-text-2)', cursor: 'pointer',
-                  }}
-                >
-                  Coordinators
-                </button>
-                <button
-                  onClick={() => handleToggleAgency(a)}
-                  style={{
-                    padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    border: `1px solid ${a.is_active ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                    background: a.is_active ? 'color-mix(in srgb, var(--color-accent) 8%, transparent)' : 'transparent',
-                    color: a.is_active ? 'var(--color-accent)' : 'var(--color-text-3)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {a.is_active ? 'Active' : 'Inactive'}
-                </button>
-                <button
-                  onClick={() => handleToggleAgencyInvite(a)}
-                  title="Attach the .ics calendar invite to this group's email when a PPR is approved"
-                  style={{
-                    padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
-                    border: `1px solid ${a.send_calendar_invite ? 'var(--color-success)' : 'var(--color-border)'}`,
-                    background: a.send_calendar_invite ? 'color-mix(in srgb, var(--color-success) 10%, transparent)' : 'transparent',
-                    color: a.send_calendar_invite ? 'var(--color-success)' : 'var(--color-text-3)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {a.send_calendar_invite ? 'Invite ✓' : 'Invite'}
-                </button>
-                <button
-                  onClick={() => handleDeleteAgency(a)}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
-                >
-                  &times;
-                </button>
-              </div>
-            </div>
-          )
-        })}
+        {/* ── Info-Only Recipients ──────────────────────────────── */}
+        <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginTop: 24, marginBottom: 4 }}>Info-Only Recipients</h3>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
+          These groups receive the final approval email (and the calendar invite, if enabled) on every approved PPR, but never coordinate &mdash; they&apos;re hidden from the per-PPR coordinator picker and don&apos;t concur or gate approval. Manage their recipients the same way (Recipients button).
+        </p>
+        {agencies.filter(a => a.notify_only).length === 0 ? (
+          <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 8 }}>No info-only recipients. Add one below, or use the <strong>Coordinating / Info-only</strong> button on any agency to convert it.</p>
+        ) : (
+          agencies.filter(a => a.notify_only).map(a => renderAgencyRow(a))
+        )}
 
         {/* Info-only body editor modal */}
         {infoEditCol && (
@@ -5783,6 +5827,15 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
             style={{ cursor: 'pointer' }}
           />
           Send this group a calendar invite (.ics) when a PPR is approved
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={newAgencyNotifyOnly}
+            onChange={e => setNewAgencyNotifyOnly(e.target.checked)}
+            style={{ cursor: 'pointer' }}
+          />
+          Info-only recipient &mdash; receives the approval email but does not coordinate (hidden from the coordinator picker)
         </label>
       </div>
 

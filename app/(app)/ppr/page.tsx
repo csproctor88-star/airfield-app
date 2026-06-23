@@ -330,7 +330,9 @@ export default function PprPage() {
     setLoading(true)
     const [cols, ags, ents, triageCount, approvalCount, agencyCounts, coordCounts] = await Promise.all([
       fetchPprColumns(installationId),
-      fetchPprAgencies(installationId, true),
+      // coordinatingOnly: info-only recipient groups are hidden from the
+      // per-PPR coordinator picker (they only receive the approval email).
+      fetchPprAgencies(installationId, true, true),
       fetchPprEntries(installationId, effectiveFrom, effectiveTo),
       fetchPendingTriageCount(installationId),
       fetchPendingApprovalCount(installationId),

@@ -6,7 +6,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 import { formatPprColumnValue, isSummaryColumn } from '@/lib/supabase/ppr'
-import { notifyCoordinatingAgencies } from '@/lib/ppr-agency-notify'
+import { notifyCoordinatingAgencies, notifyInfoOnlyRecipients } from '@/lib/ppr-agency-notify'
 import { buildPprInvite } from '@/lib/ppr-ics'
 
 let _resend: Resend | null = null
@@ -245,7 +245,23 @@ export async function POST(request: Request) {
       inviteAttachment: agencyInvite,
     })
 
-    return NextResponse.json({ success: true, agencies: agencyResult })
+    // Best-effort: blast the approval email to info-only recipient groups
+    // (ppr_agencies.notify_only) — standing distribution, not coordinators.
+    const infoOnlyResult = await notifyInfoOnlyRecipients({
+      reader,
+      resend: getResend(),
+      entry: {
+        id: entry.id,
+        base_id: entry.base_id,
+        ppr_number: entry.ppr_number,
+        arrival_date: entry.arrival_date,
+        requester_name: entry.requester_name,
+      },
+      base: { name: base.name, amops_email: base.amops_email },
+      inviteAttachment: agencyInvite,
+    })
+
+    return NextResponse.json({ success: true, agencies: agencyResult, infoOnly: infoOnlyResult })
   } catch (err) {
     console.error('[send-ppr-approval] Error:', err)
     return NextResponse.json(

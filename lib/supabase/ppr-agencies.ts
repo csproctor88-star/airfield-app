@@ -13,10 +13,24 @@ export type PprAgency = {
   is_active: boolean
   /** When true, this group gets the .ics calendar invite on PPR approval. */
   send_calendar_invite: boolean
+  /** When true, this is an information-only recipient group: it receives the
+   *  final approval email but is NOT a coordinating agency — hidden from the
+   *  coordinator picker, no concur/non-concur, never gates approval. */
+  notify_only: boolean
   created_at: string
 }
 
-export async function fetchPprAgencies(baseId: string, onlyActive = false): Promise<PprAgency[]> {
+/**
+ * @param onlyActive          restrict to is_active rows.
+ * @param coordinatingOnly    exclude notify_only (info-only) groups — used for
+ *                            the per-PPR coordinator picker. Base Setup fetches
+ *                            all rows so both kinds can be managed.
+ */
+export async function fetchPprAgencies(
+  baseId: string,
+  onlyActive = false,
+  coordinatingOnly = false,
+): Promise<PprAgency[]> {
   const supabase = db()
   if (!supabase) return []
 
@@ -28,6 +42,7 @@ export async function fetchPprAgencies(baseId: string, onlyActive = false): Prom
     .order('agency_name', { ascending: true })
 
   if (onlyActive) query = query.eq('is_active', true)
+  if (coordinatingOnly) query = query.eq('notify_only', false)
 
   const { data, error } = await query
   if (error) {
@@ -41,6 +56,7 @@ export async function createPprAgency(
   baseId: string,
   name: string,
   sendCalendarInvite = false,
+  notifyOnly = false,
 ): Promise<{ data: PprAgency | null; error: string | null }> {
   const supabase = db()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -60,7 +76,7 @@ export async function createPprAgency(
 
   const { data, error } = await supabase
     .from('ppr_agencies')
-    .insert({ base_id: baseId, agency_name: trimmed, sort_order: nextOrder, send_calendar_invite: sendCalendarInvite })
+    .insert({ base_id: baseId, agency_name: trimmed, sort_order: nextOrder, send_calendar_invite: sendCalendarInvite, notify_only: notifyOnly })
     .select('*')
     .single()
 
@@ -70,7 +86,7 @@ export async function createPprAgency(
 
 export async function updatePprAgency(
   id: string,
-  fields: { agency_name?: string; is_active?: boolean; sort_order?: number; send_calendar_invite?: boolean },
+  fields: { agency_name?: string; is_active?: boolean; sort_order?: number; send_calendar_invite?: boolean; notify_only?: boolean },
 ): Promise<{ error: string | null }> {
   const supabase = db()
   if (!supabase) return { error: 'Supabase not configured' }
@@ -80,6 +96,7 @@ export async function updatePprAgency(
   if (fields.is_active !== undefined) patch.is_active = fields.is_active
   if (fields.sort_order !== undefined) patch.sort_order = fields.sort_order
   if (fields.send_calendar_invite !== undefined) patch.send_calendar_invite = fields.send_calendar_invite
+  if (fields.notify_only !== undefined) patch.notify_only = fields.notify_only
 
   const { error } = await supabase.from('ppr_agencies').update(patch).eq('id', id)
   return { error: error ? friendlyError(error.message) : null }

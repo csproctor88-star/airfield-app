@@ -100,8 +100,11 @@ export function buildAgencyEmail(args: {
   reason?: string | null
   changes?: PprChange[]
   currentDetails?: { label: string; value: string }[]
+  /** Information-only recipient (not a coordinating agency). Swaps the
+   *  "you coordinated on this" framing for neutral awareness wording. */
+  infoOnly?: boolean
 }): { subject: string; html: string; text: string } {
-  const { base, entry, agencyName, outcome, reason, changes, currentDetails } = args
+  const { base, entry, agencyName, outcome, reason, changes, currentDetails, infoOnly } = args
   const accent = OUTCOME_ACCENT[outcome]
   const outcomeWord = OUTCOME_LABEL[outcome]
   const safeBase = escapeHtml(base.name)
@@ -112,10 +115,14 @@ export function buildAgencyEmail(args: {
 
   const subject = `${base.name} PPR ${outcomeWord} — ${entry.ppr_number} (${agencyName})`
 
-  const introText = outcome === 'updated'
+  const introText = infoOnly
+    ? `A Prior Permission Required (PPR) request at ${base.name} has been ${outcomeWord.toLowerCase()}. This is for your awareness — no action needed.`
+    : outcome === 'updated'
     ? `A Prior Permission Required (PPR) request at ${base.name} that ${agencyName} coordinated on has been updated by AMOPS. This is for your awareness — no action needed.`
     : `A Prior Permission Required (PPR) request at ${base.name} that ${agencyName} coordinated on has been ${outcomeWord.toLowerCase()}.`
-  const introHtml = outcome === 'updated'
+  const introHtml = infoOnly
+    ? `<p>A Prior Permission Required (PPR) request at ${safeBase} has been <strong style="color:${accent.color};">${outcomeWord.toLowerCase()}</strong>. This is for your awareness — no action needed.</p>`
+    : outcome === 'updated'
     ? `<p>A Prior Permission Required (PPR) request at ${safeBase} that <strong>${safeAgency}</strong> coordinated on has been <strong style="color:${accent.color};">updated</strong> by AMOPS. This is for your awareness — no action needed.</p>`
     : `<p>A Prior Permission Required (PPR) request at ${safeBase} that <strong>${safeAgency}</strong> coordinated on has been <strong style="color:${accent.color};">${outcomeWord.toLowerCase()}</strong>.</p>`
 
@@ -161,7 +168,9 @@ export function buildAgencyEmail(args: {
     changesText,
     detailsText,
     '',
-    `You're receiving this because you're listed as a coordinator for ${agencyName} at ${base.name}. Ask AMOPS or your base admin to update coordinators in Base Setup.`,
+    infoOnly
+      ? `You're receiving this as an information-only recipient (${agencyName}) for ${base.name}'s PPR approvals. Ask AMOPS or your base admin to update recipients in Base Setup.`
+      : `You're receiving this because you're listed as a coordinator for ${agencyName} at ${base.name}. Ask AMOPS or your base admin to update coordinators in Base Setup.`,
   ].filter((line) => line !== '').join('\n')
 
   const html = `
@@ -173,8 +182,9 @@ export function buildAgencyEmail(args: {
     ${changesHtml}
     ${detailsHtml}
     <p style="color:#888;font-size:12px;margin-top:18px;">
-      You're receiving this because you're listed as a coordinator for <strong>${safeAgency}</strong> at <strong>${safeBase}</strong>.
-      Ask AMOPS or your base admin to update coordinators in Base Setup.
+      ${infoOnly
+        ? `You're receiving this as an information-only recipient (<strong>${safeAgency}</strong>) for <strong>${safeBase}</strong>'s PPR approvals. Ask AMOPS or your base admin to update recipients in Base Setup.`
+        : `You're receiving this because you're listed as a coordinator for <strong>${safeAgency}</strong> at <strong>${safeBase}</strong>. Ask AMOPS or your base admin to update coordinators in Base Setup.`}
     </p>
   `
 
@@ -317,6 +327,118 @@ export async function notifyCoordinatingAgencies(args: {
       sent += 1
     } catch (e) {
       console.error(`[notifyCoordinatingAgencies] send threw for agency ${aid} (${outcome}):`, e)
+      skipped += 1
+    }
+  }
+
+  return { sent, skipped }
+}
+
+/**
+ * Server-only helper. On PPR approval, blast the approval email to every
+ * active "info-only" recipient group at the base (ppr_agencies.notify_only =
+ * true). These are NOT coordinating agencies — they have no coordination rows
+ * and never concur — so they're resolved by base, not from the entry's coord
+ * rows. Wording uses the info-only framing; the .ics rides along for groups
+ * whose send_calendar_invite is on. Fire-and-forget; never throws.
+ *
+ * Recipient gathering mirrors notifyCoordinatingAgencies (members +
+ * external emails, deduped) but is kept self-contained so the proven
+ * coordinator path is untouched.
+ */
+export async function notifyInfoOnlyRecipients(args: {
+  reader: SupabaseClient
+  resend: Resend
+  entry: AgencyNotifyEntry
+  base: AgencyNotifyBase
+  /** Calendar invite (.ics) to attach to groups whose send_calendar_invite is on. */
+  inviteAttachment?: { filename: string; content: Buffer; contentType: string }
+}): Promise<{ sent: number; skipped: number; reason?: string }> {
+  const { reader, resend, entry, base, inviteAttachment } = args
+
+  // 1. Active info-only groups for this base (NOT derived from coord rows).
+  const { data: agencies, error } = await reader
+    .from('ppr_agencies')
+    .select('id, agency_name, send_calendar_invite')
+    .eq('base_id', entry.base_id)
+    .eq('is_active', true)
+    .eq('notify_only', true)
+
+  if (error) {
+    console.error('[notifyInfoOnlyRecipients] agency lookup failed:', error.message)
+    return { sent: 0, skipped: 0, reason: 'agency_lookup_failed' }
+  }
+  const agencyRows = (agencies ?? []) as { id: string; agency_name: string; send_calendar_invite: boolean }[]
+  if (agencyRows.length === 0) return { sent: 0, skipped: 0, reason: 'no_info_only_recipients' }
+
+  const agencyIds = agencyRows.map((a) => a.id)
+  const agencyMap = new Map<string, { name: string; sendInvite: boolean }>(
+    agencyRows.map((a) => [a.id, { name: a.agency_name, sendInvite: !!a.send_calendar_invite }]),
+  )
+
+  // 2. Recipients: account members + manually-added external emails.
+  const recipientsByAgency = new Map<string, string[]>()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: members } = await (reader as any)
+    .from('ppr_agency_members')
+    .select('agency_id, profiles:user_id(email)')
+    .in('agency_id', agencyIds)
+  for (const row of (members || []) as Record<string, unknown>[]) {
+    const aid = row.agency_id as string
+    const email = (row.profiles as { email?: string } | null)?.email
+    if (!email) continue
+    const list = recipientsByAgency.get(aid) ?? []
+    list.push(email)
+    recipientsByAgency.set(aid, list)
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: extEmails } = await (reader as any)
+    .from('ppr_agency_emails')
+    .select('agency_id, email')
+    .in('agency_id', agencyIds)
+  for (const row of (extEmails || []) as { agency_id: string; email: string | null }[]) {
+    const email = (row.email || '').trim()
+    if (!email) continue
+    const list = recipientsByAgency.get(row.agency_id) ?? []
+    list.push(email)
+    recipientsByAgency.set(row.agency_id, list)
+  }
+
+  const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
+  const replyTo = validReplyTo(base.amops_email)
+
+  // 3. One email per group. Approval framing, info-only wording.
+  let sent = 0
+  let skipped = 0
+  for (const aid of agencyIds) {
+    const recipients = dedupeEmails(recipientsByAgency.get(aid) ?? [])
+    const meta = agencyMap.get(aid)
+    if (recipients.length === 0) { skipped += 1; continue }
+
+    const { subject, html, text } = buildAgencyEmail({
+      base, entry, agencyName: meta?.name ?? 'Recipients', outcome: 'approved', infoOnly: true,
+    })
+    const attachInvite = inviteAttachment && meta?.sendInvite
+
+    try {
+      const { error: sendErr } = await resend.emails.send({
+        from: fromLabel,
+        to: recipients,
+        replyTo,
+        cc: replyTo ? [replyTo] : undefined,
+        subject,
+        html,
+        text,
+        attachments: attachInvite ? [inviteAttachment] : undefined,
+      })
+      if (sendErr) {
+        console.error(`[notifyInfoOnlyRecipients] Resend error for agency ${aid}:`, sendErr.message)
+        skipped += 1
+        continue
+      }
+      sent += 1
+    } catch (e) {
+      console.error(`[notifyInfoOnlyRecipients] send threw for agency ${aid}:`, e)
       skipped += 1
     }
   }
