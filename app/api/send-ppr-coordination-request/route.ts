@@ -71,9 +71,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { entryId, agencyIds } = (await request.json()) as {
+    const { entryId, agencyIds, reminder } = (await request.json()) as {
       entryId?: string
       agencyIds?: string[]
+      reminder?: boolean
     }
     if (!entryId || !Array.isArray(agencyIds) || agencyIds.length === 0) {
       return NextResponse.json({ error: 'Missing entryId or agencyIds' }, { status: 400 })
@@ -209,8 +210,12 @@ export async function POST(request: Request) {
         .map((row) => `${row.name}: ${row.value}`)
         .join('\n')
 
+      const introText = reminder
+        ? `Reminder: a Prior Permission Required (PPR) request at ${base.name} is still awaiting coordination from ${agencyName}. Please review and respond.`
+        : `A Prior Permission Required (PPR) request at ${base.name} has been routed to ${agencyName} for coordination.`
+
       const textBody = [
-        `A Prior Permission Required (PPR) request at ${base.name} has been routed to ${agencyName} for coordination.`,
+        introText,
         '',
         `PPR number: ${entry.ppr_number}`,
         `Requester: ${entry.requester_name || entry.requester_email || 'Internal request'}`,
@@ -228,9 +233,13 @@ export async function POST(request: Request) {
         to: recipients,
         replyTo,
         cc: replyTo ? [replyTo] : undefined,
-        subject: `${base.name} PPR coordination requested — ${agencyName}`,
+        subject: reminder
+          ? `${base.name} PPR — coordination still needed (${agencyName})`
+          : `${base.name} PPR coordination requested — ${agencyName}`,
         html: `
-          <p>A Prior Permission Required (PPR) request at ${safeBase} has been routed to <strong>${safeAgency}</strong> for coordination.</p>
+          ${reminder
+            ? `<p><strong>Reminder:</strong> a Prior Permission Required (PPR) request at ${safeBase} is still awaiting coordination from <strong>${safeAgency}</strong>. Please review and respond.</p>`
+            : `<p>A Prior Permission Required (PPR) request at ${safeBase} has been routed to <strong>${safeAgency}</strong> for coordination.</p>`}
           <p><strong>PPR number:</strong> <span style="font-family:monospace;">${safePpr}</span></p>
           <p><strong>Requester:</strong> ${safeRequester}</p>
           <p><strong>Arrival date:</strong> ${safeArrival}</p>

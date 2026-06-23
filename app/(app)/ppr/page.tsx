@@ -1006,6 +1006,42 @@ export default function PprPage() {
     }
   }
 
+  // Resend the coordination request to just the agencies still showing
+  // pending — a reminder nudge for a PPR stuck in coordination.
+  const handleRemindPending = async (entry: PprEntry) => {
+    if (!installationId) return
+    const coords = coordsByEntry[entry.id] ?? []
+    const pendingAgencyIds = Array.from(new Set(
+      coords.filter((c) => c.status === 'pending' && c.agency_id).map((c) => c.agency_id as string),
+    ))
+    if (pendingAgencyIds.length === 0) {
+      toast.info('All agencies have already responded.')
+      return
+    }
+    if (!window.confirm(`Send a coordination reminder to ${pendingAgencyIds.length} pending agency${pendingAgencyIds.length === 1 ? '' : 'ies'} for PPR ${entry.ppr_number}?`)) return
+    try {
+      const res = await fetch('/api/send-ppr-coordination-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: entry.id, agencyIds: pendingAgencyIds, reminder: true }),
+      })
+      const body = await res.json().catch(() => null)
+      if (!res.ok) {
+        toast.error(body?.error || 'Could not send reminder')
+        return
+      }
+      const sentCount = Array.isArray(body?.sent) ? body.sent.length : 0
+      const skippedCount = Array.isArray(body?.skipped) ? body.skipped.length : 0
+      if (sentCount === 0) {
+        toast.warning('No reminders sent — pending agencies have no coordinators or emails configured.')
+      } else {
+        toast.success(`Reminder sent to ${sentCount} agency${sentCount === 1 ? '' : 'ies'}${skippedCount ? ` (${skippedCount} skipped — no recipients)` : ''}`)
+      }
+    } catch {
+      toast.error('Could not send reminder')
+    }
+  }
+
   const noColumns = columns.length === 0
 
   // Per-row affordances. Anyone with the relevant permission gets
@@ -1019,6 +1055,11 @@ export default function PprPage() {
     }
     if (canCoordinate && entry.status === 'pending_coordination' && hasPendingCoord) {
       acts.push({ label: 'Coordinate', color: 'var(--color-accent)', onClick: () => openCoordinate(entry) })
+    }
+    // Nudge the agencies still showing pending — only meaningful while a
+    // PPR is awaiting coordination and at least one row is unresolved.
+    if (canTriage && entry.status === 'pending_coordination' && hasPendingCoord) {
+      acts.push({ label: 'Remind', color: 'var(--color-amber)', onClick: () => handleRemindPending(entry) })
     }
     if (canApprove && entry.status === 'pending_amops_approval') {
       acts.push({ label: 'Decide', color: 'var(--color-amber)', onClick: () => openDecide(entry) })
