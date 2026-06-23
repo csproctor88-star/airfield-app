@@ -40,4 +40,11 @@ describe('resolveAdvisoryWindow', () => {
     expect(result.effEnd).toBeNull()
     expect(result.error).toMatch(/past/i)
   })
+
+  it('blocks a malformed (non-null) start time', () => {
+    const now = new Date('2026-06-23T09:00:00Z')
+    const result = resolveAdvisoryWindow('2026-06-23T1', '2026-06-23T18:00', now)
+    expect(result.effEnd).toBeNull()
+    expect(result.error).toMatch(/start/i)
+  })
 })

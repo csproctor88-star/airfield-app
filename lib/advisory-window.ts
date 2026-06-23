@@ -13,6 +13,7 @@ export function resolveAdvisoryWindow(
   if (!end) return { effEnd: null, error: null }
 
   const startMs = start ? Date.parse(start + 'Z') : now.getTime()
+  if (start && Number.isNaN(startMs)) return { effEnd: null, error: 'Start time is invalid.' }
   let endMs = Date.parse(end + 'Z')
   if (Number.isNaN(endMs)) return { effEnd: null, error: 'End time is invalid.' }
 
