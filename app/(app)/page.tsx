@@ -203,34 +203,22 @@ export default function HomePage() {
     loadWeather()
   }, [])
 
-  // --- Advisory expiration timer ---
+  // --- Advisory countdown display timer ---
+  // Expiration is authoritative server-side (pg_cron `wwa-expiry-sweep` →
+  // `_expire_weather_advisories`), which removes expired items and logs them at
+  // their true effective_end; the realtime airfield_status subscription pushes
+  // the removal here. This interval only re-renders the live countdown.
   useEffect(() => {
-    const hasExpiring = advisories.some(a => a.effective_end)
-    if (!hasExpiring) {
+    const hasCountdown = advisories.some(a => a.effective_end)
+    if (!hasCountdown) {
       if (expiryTimerRef.current) { clearInterval(expiryTimerRef.current); expiryTimerRef.current = null }
       return
     }
-    // Tick every 15s to update countdowns and check for expirations
     expiryTimerRef.current = setInterval(() => {
-      const now = Date.now()
-      for (const adv of advisories) {
-        if (adv.effective_end) {
-          const endMs = new Date(adv.effective_end).getTime()
-          if (now >= endMs) {
-            // Expired — log and remove
-            const effLabel = adv.effective_start
-              ? `${formatZuluTime(new Date(adv.effective_start))}Z–${formatZuluTime(new Date(adv.effective_end))}Z`
-              : `UFN–${formatZuluTime(new Date(adv.effective_end))}Z`
-            const expNum = adv.number ? ` #${adv.number.toUpperCase()}` : ''
-            if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${adv.type.toUpperCase()}${expNum}`, { details: `WEATHER ${adv.type.toUpperCase()}${expNum} EXPIRED — ${adv.text.toUpperCase()} (EFF ${effLabel})` }, installationId)
-            removeAdvisory(adv.id)
-          }
-        }
-      }
-      setExpiryTick(t => t + 1) // force re-render for countdowns
+      setExpiryTick(t => t + 1)
     }, 15000)
     return () => { if (expiryTimerRef.current) clearInterval(expiryTimerRef.current) }
-  }, [advisories, installationId, removeAdvisory])
+  }, [advisories])
 
   // --- Load NAVAIDs ---
   const loadNavaids = useCallback(async () => {
