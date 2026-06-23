@@ -132,9 +132,14 @@ export async function fetchAllAcks(baseId: string): Promise<ReadFileAckRow[]> {
 }
 
 /**
- * Required-reader roster — base_members in READ_FILE_READER_ROLES with
- * profile fields. Two-step query (members then profiles) for the same
- * PostgREST embed-cache reason as fetchEligibleReviewers in qrc-reviews.ts.
+ * Required-reader roster — base members whose authoritative role
+ * (profiles.role) is in READ_FILE_READER_ROLES.
+ *
+ * base_members tells us WHO belongs to the base; the role comes from
+ * profiles.role — the same source user_has_permission reads and that User
+ * Management edits. base_members.role is a legacy per-base column that has
+ * drifted (often stale 'read_only'), so filtering on it silently dropped
+ * real reviewers (same bug fixed in qrc-reviews.ts fetchEligibleReviewers).
  */
 export async function fetchReadFileReviewers(baseId: string): Promise<ReadFileReviewer[]> {
   const supabase = createClient()
@@ -143,32 +148,29 @@ export async function fetchReadFileReviewers(baseId: string): Promise<ReadFileRe
   const sb = supabase as any
   const { data: members, error } = await sb
     .from('base_members')
-    .select('user_id, role')
+    .select('user_id')
     .eq('base_id', baseId)
-    .in('role', READ_FILE_READER_ROLES as unknown as string[])
   if (error || !members) return []
-  const memberRows = members as { user_id: string; role: string }[]
-  if (memberRows.length === 0) return []
+  const userIds = (members as { user_id: string }[]).map(m => m.user_id)
+  if (userIds.length === 0) return []
 
-  const userIds = memberRows.map(m => m.user_id)
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, name, rank, operating_initials')
+    .select('id, name, rank, operating_initials, role')
     .in('id', userIds)
-  type ProfileRow = { id: string; name: string | null; rank: string | null; operating_initials: string | null }
-  const byId = new Map<string, ProfileRow>()
-  for (const p of (profiles ?? []) as unknown as ProfileRow[]) byId.set(p.id, p)
+  type ProfileRow = { id: string; name: string | null; rank: string | null; operating_initials: string | null; role: string | null }
+  const readerRoles = READ_FILE_READER_ROLES as readonly string[]
 
-  return memberRows.map(m => {
-    const p = byId.get(m.user_id)
-    return {
-      user_id: m.user_id,
-      name: p?.name ?? '(unknown)',
-      rank: p?.rank ?? null,
-      operating_initials: p?.operating_initials ?? null,
-      role: m.role,
-    }
-  }).sort((a, b) => a.name.localeCompare(b.name))
+  return ((profiles ?? []) as unknown as ProfileRow[])
+    .filter(p => p.role != null && readerRoles.includes(p.role))
+    .map(p => ({
+      user_id: p.id,
+      name: p.name ?? '(unknown)',
+      rank: p.rank ?? null,
+      operating_initials: p.operating_initials ?? null,
+      role: p.role as string,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /** Count of active files the current user has not acknowledged at current version. */

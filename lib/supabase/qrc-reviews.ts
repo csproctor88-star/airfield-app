@@ -132,36 +132,38 @@ export async function fetchEligibleReviewers(baseId: string): Promise<EligibleRe
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
+  // base_members tells us WHO belongs to the base. The role itself comes from
+  // profiles.role — the authoritative role the permission matrix
+  // (user_has_permission) reads and that User Management edits. base_members.role
+  // is a legacy per-base column that has drifted (often stale 'read_only'); using
+  // it here silently dropped real reviewers from the report.
   const { data: members, error } = await sb
     .from('base_members')
-    .select('user_id, role')
+    .select('user_id')
     .eq('base_id', baseId)
-    .in('role', REVIEWER_ROLES)
 
   if (error || !members) return []
-  const memberRows = members as { user_id: string; role: string }[]
-  if (memberRows.length === 0) return []
+  const userIds = (members as { user_id: string }[]).map(m => m.user_id)
+  if (userIds.length === 0) return []
 
-  const userIds = memberRows.map(m => m.user_id)
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, name, rank, operating_initials')
+    .select('id, name, rank, operating_initials, role')
     .in('id', userIds)
 
-  type ProfileRow = { id: string; name: string | null; rank: string | null; operating_initials: string | null }
-  const byId = new Map<string, ProfileRow>()
-  for (const p of (profiles ?? []) as unknown as ProfileRow[]) byId.set(p.id, p)
+  type ProfileRow = { id: string; name: string | null; rank: string | null; operating_initials: string | null; role: string | null }
+  const reviewerRoles = REVIEWER_ROLES as readonly string[]
 
-  return memberRows.map(m => {
-    const p = byId.get(m.user_id)
-    return {
-      user_id: m.user_id,
-      name: p?.name ?? '(unknown)',
-      rank: p?.rank ?? null,
-      operating_initials: p?.operating_initials ?? null,
-      role: m.role,
-    }
-  }).sort((a, b) => a.name.localeCompare(b.name))
+  return ((profiles ?? []) as unknown as ProfileRow[])
+    .filter(p => p.role != null && reviewerRoles.includes(p.role))
+    .map(p => ({
+      user_id: p.id,
+      name: p.name ?? '(unknown)',
+      rank: p.rank ?? null,
+      operating_initials: p.operating_initials ?? null,
+      role: p.role as string,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 /**
