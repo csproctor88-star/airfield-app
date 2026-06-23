@@ -123,13 +123,14 @@ export async function fetchPprCoordinatorPicker(baseId: string): Promise<{ user_
   if (!supabase) return []
   const { data, error } = await supabase
     .from('base_members')
-    .select('user_id, role, profiles:user_id(name, rank, email)')
+    .select('user_id, profiles:user_id(name, rank, email, role)')
     .eq('base_id', baseId)
 
   if (error || !data) return []
   return (data as Record<string, unknown>[]).map((row) => ({
     user_id: row.user_id as string,
-    role: (row.role as string) || '',
+    // Authoritative role from profiles (base_members.role is legacy/stale).
+    role: (row.profiles as { role?: string } | null)?.role || '',
     name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
     rank: (row.profiles as { rank?: string } | null)?.rank || null,
     email: (row.profiles as { email?: string } | null)?.email || '',

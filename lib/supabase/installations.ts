@@ -149,7 +149,7 @@ export async function fetchInstallationMembers(installationId: string): Promise<
 
   const { data, error } = await supabase
     .from('base_members')
-    .select('*, profiles:user_id(name, rank, email)')
+    .select('*, profiles:user_id(name, rank, email, role)')
     .eq('base_id', installationId)
 
   if (error) {
@@ -162,6 +162,9 @@ export async function fetchInstallationMembers(installationId: string): Promise<
     name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
     rank: (row.profiles as { rank?: string } | null)?.rank || null,
     email: (row.profiles as { email?: string } | null)?.email || '',
+    // Authoritative role from profiles (the source user_has_permission reads).
+    // base_members.role is a legacy per-base column that drifts to 'read_only'.
+    role: (row.profiles as { role?: string } | null)?.role ?? (row.role as string),
   })) as (InstallationMember & { name: string; rank: string | null; email: string })[]
 }
 
