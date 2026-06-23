@@ -9,13 +9,15 @@ import { toast } from 'sonner'
 import {
   FileText, FileSpreadsheet, FileImage, File as FileIcon, Upload, Archive,
   ArchiveRestore, ExternalLink, ShieldAlert, Paperclip, X, CheckCircle2,
-  RefreshCw,
+  RefreshCw, FileDown,
 } from 'lucide-react'
 import {
   fetchReadFiles, fetchMyAcks, getReadFileUrl, addReadFile, replaceReadFile,
   setReadFileArchived, acknowledgeReadFile, humanFileSize,
+  fetchAllAcks, fetchReadFileReviewers,
   type ReadFileRow, type ReadFileAckRow,
 } from '@/lib/supabase/read-files'
+import { generateReadFileReviewPdf } from '@/lib/read-file-review-pdf'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { Btn, Field } from '@/components/amtr/ui'
@@ -35,7 +37,7 @@ function iconFor(name: string, mime: string | null) {
 }
 
 export default function ReadFilePage() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const { has } = usePermissions()
   const canManage = has(PERM.READ_FILE_MANAGE)
 
@@ -88,12 +90,32 @@ export default function ReadFilePage() {
   const active = files.filter(f => !f.is_archived)
   const archived = files.filter(f => f.is_archived)
 
+  const runReport = async () => {
+    if (!installationId) return
+    const [reviewers, allAcks] = await Promise.all([
+      fetchReadFileReviewers(installationId),
+      fetchAllAcks(installationId),
+    ])
+    const { doc, filename } = await generateReadFileReviewPdf({
+      baseName: currentInstallation?.name,
+      baseIcao: currentInstallation?.icao,
+      files: active,
+      reviewers,
+      acks: allAcks,
+      generatedAtIso: new Date().toISOString(),
+    })
+    doc.save(filename)
+  }
+
   return (
     <div style={{ padding: '16px 20px', maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <h1 style={{ margin: 0, fontSize: 20 }}>Read File</h1>
         {canManage && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <Btn variant="secondary" onClick={runReport}>
+              <FileDown size={15} /> Review report
+            </Btn>
             <Btn variant="primary" onClick={() => setShowAdd(true)}>
               <Upload size={15} /> Add file
             </Btn>
