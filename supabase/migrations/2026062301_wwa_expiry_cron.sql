@@ -39,6 +39,8 @@ DECLARE
   v_start_text TEXT;
   v_end_ts     TIMESTAMPTZ;
   v_start_ts   TIMESTAMPTZ;
+  v_is_expired BOOLEAN;
+  v_have_start BOOLEAN;
   v_type       TEXT;
   v_text       TEXT;
   v_number     TEXT;
@@ -49,32 +51,60 @@ DECLARE
   v_changed    BOOLEAN;
   v_expired    INT := 0;
 BEGIN
+  -- Iterate every base whose advisories array is non-empty. We deliberately do
+  -- NOT cast effective_end in the row pre-filter: one malformed timestamp there
+  -- would abort the whole sweep (poison pill) and stall expiration fleet-wide
+  -- every minute. All timestamp parsing happens per-item below, isolated.
+  --
+  -- Timestamps are assumed Z-suffixed / UTC (the dashboard always writes ISO+Z;
+  -- lib/advisory-window.ts round-trips through '+ Z'). A naive value would be
+  -- read in the session TimeZone (UTC on Supabase) — documented here as a
+  -- contract, not enforced. Display labels convert explicitly via AT TIME ZONE.
   FOR v_row IN
     SELECT * FROM airfield_status s
     WHERE jsonb_typeof(s.advisories) = 'array'
-      AND EXISTS (
-        SELECT 1 FROM jsonb_array_elements(s.advisories) e
-        WHERE NULLIF(e->>'effective_end', '') IS NOT NULL
-          AND (e->>'effective_end')::timestamptz <= now()
-      )
+      AND jsonb_array_length(s.advisories) > 0
   LOOP
     v_remaining := '[]'::jsonb;
     v_changed := FALSE;
 
     FOR v_item IN SELECT * FROM jsonb_array_elements(v_row.advisories)
     LOOP
+      -- Parse effective_end in isolation. An unparseable value (only reachable
+      -- via a hand-edit / bad import) is treated as "not expired" so it is kept,
+      -- never silently dropped, and never poisons the run.
       v_end_text := NULLIF(v_item->>'effective_end', '');
-      IF v_end_text IS NOT NULL AND v_end_text::timestamptz <= now() THEN
+      v_is_expired := FALSE;
+      IF v_end_text IS NOT NULL THEN
+        BEGIN
+          v_end_ts := v_end_text::timestamptz;
+          v_is_expired := v_end_ts <= now();
+        EXCEPTION WHEN others THEN
+          v_is_expired := FALSE;
+        END;
+      END IF;
+
+      IF v_is_expired THEN
         -- Expired → log, then drop.
         v_type   := upper(coalesce(v_item->>'type', 'INFO'));
         v_text   := upper(coalesce(v_item->>'text', ''));
         v_number := NULLIF(v_item->>'number', '');
         v_numsfx := CASE WHEN v_number IS NOT NULL THEN ' #' || upper(v_number) ELSE '' END;
-        v_start_text := NULLIF(v_item->>'effective_start', '');
-        v_end_ts := v_end_text::timestamptz;
 
+        -- Optional start time, also parsed in isolation; if absent/unparseable
+        -- the label falls back to the UFN form.
+        v_start_text := NULLIF(v_item->>'effective_start', '');
+        v_have_start := FALSE;
         IF v_start_text IS NOT NULL THEN
-          v_start_ts  := v_start_text::timestamptz;
+          BEGIN
+            v_start_ts := v_start_text::timestamptz;
+            v_have_start := TRUE;
+          EXCEPTION WHEN others THEN
+            v_have_start := FALSE;
+          END;
+        END IF;
+
+        IF v_have_start THEN
           v_eff_label := to_char(v_start_ts AT TIME ZONE 'UTC', 'HH24MI') || 'Z–'
                        || to_char(v_end_ts   AT TIME ZONE 'UTC', 'HH24MI') || 'Z';
         ELSE
