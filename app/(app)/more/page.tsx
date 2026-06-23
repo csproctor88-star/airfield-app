@@ -60,6 +60,8 @@ const mgmtItems: ModuleItem[] = [
   // USAF-only (isModuleEnabled hides on civilian bases); HREF_PERMISSION below
   // gates it to amtr:view holders so read-only members don't see it.
   { name: 'Training Records', icon: Award, color: 'var(--color-purple)', href: '/amtr' },
+  // Gated to read_file:view (operational roles) via HREF_PERMISSION below.
+  { name: 'Read File', icon: ClipboardCheck, color: 'var(--color-purple)', href: '/read-file' },
   // Gated to ces:view (CES role + sys_admin) via HREF_PERMISSION below.
   { name: 'CES Work Orders', icon: Wrench, color: 'var(--color-cyan)', href: '/ces' },
 ]
@@ -310,6 +312,7 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
   '/users':          PERM.USERS_VIEW,
   '/feedback':       PERM.FEEDBACK_VIEW,
   '/amtr':           PERM.AMTR_VIEW,
+  '/read-file':      PERM.READ_FILE_VIEW,
   '/ces':            PERM.CES_VIEW,
 }
 
