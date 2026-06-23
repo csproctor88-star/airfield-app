@@ -11,6 +11,8 @@ export type PprAgency = {
   agency_name: string
   sort_order: number
   is_active: boolean
+  /** When true, this group gets the .ics calendar invite on PPR approval. */
+  send_calendar_invite: boolean
   created_at: string
 }
 
@@ -38,6 +40,7 @@ export async function fetchPprAgencies(baseId: string, onlyActive = false): Prom
 export async function createPprAgency(
   baseId: string,
   name: string,
+  sendCalendarInvite = false,
 ): Promise<{ data: PprAgency | null; error: string | null }> {
   const supabase = db()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -57,7 +60,7 @@ export async function createPprAgency(
 
   const { data, error } = await supabase
     .from('ppr_agencies')
-    .insert({ base_id: baseId, agency_name: trimmed, sort_order: nextOrder })
+    .insert({ base_id: baseId, agency_name: trimmed, sort_order: nextOrder, send_calendar_invite: sendCalendarInvite })
     .select('*')
     .single()
 
@@ -67,7 +70,7 @@ export async function createPprAgency(
 
 export async function updatePprAgency(
   id: string,
-  fields: { agency_name?: string; is_active?: boolean; sort_order?: number },
+  fields: { agency_name?: string; is_active?: boolean; sort_order?: number; send_calendar_invite?: boolean },
 ): Promise<{ error: string | null }> {
   const supabase = db()
   if (!supabase) return { error: 'Supabase not configured' }
@@ -76,6 +79,7 @@ export async function updatePprAgency(
   if (fields.agency_name !== undefined) patch.agency_name = fields.agency_name.trim()
   if (fields.is_active !== undefined) patch.is_active = fields.is_active
   if (fields.sort_order !== undefined) patch.sort_order = fields.sort_order
+  if (fields.send_calendar_invite !== undefined) patch.send_calendar_invite = fields.send_calendar_invite
 
   const { error } = await supabase.from('ppr_agencies').update(patch).eq('id', id)
   return { error: error ? friendlyError(error.message) : null }

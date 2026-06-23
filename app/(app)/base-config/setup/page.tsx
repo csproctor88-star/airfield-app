@@ -4908,9 +4908,10 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
   const [loading, setLoading] = useState(true)
 
   // Coordinating agencies (free-text, per base — no role mapping)
-  type Agency = { id: string; agency_name: string; sort_order: number; is_active: boolean }
+  type Agency = { id: string; agency_name: string; sort_order: number; is_active: boolean; send_calendar_invite: boolean }
   const [agencies, setAgencies] = useState<Agency[]>([])
   const [newAgencyName, setNewAgencyName] = useState('')
+  const [newAgencyInvite, setNewAgencyInvite] = useState(false)
 
   // Per-agency coordinator membership. The mapping drives both the
   // count chip on each agency row and the email recipient list when
@@ -4920,6 +4921,8 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
   const [coordEditAgency, setCoordEditAgency] = useState<Agency | null>(null)
   const [coordCandidates, setCoordCandidates] = useState<CoordPicker[]>([])
   const [coordSelected, setCoordSelected] = useState<Set<string>>(new Set())
+  const [coordEmails, setCoordEmails] = useState<string[]>([])
+  const [newCoordEmail, setNewCoordEmail] = useState('')
   const [coordSaving, setCoordSaving] = useState(false)
 
   // Info-only column body editor — separate from the create-row
@@ -4954,19 +4957,27 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
       agency_name: r.agency_name,
       sort_order: r.sort_order,
       is_active: r.is_active,
+      send_calendar_invite: r.send_calendar_invite,
     })))
     // Per-agency member count drives the row chip + the no-coordinators
     // warning. Issued as one query rather than N — handful of agencies
     // per base.
     const supabase = createClient()
     if (supabase && rows.length > 0) {
+      const agencyIds = rows.map(r => r.id)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: memberRows } = await (supabase as any)
-        .from('ppr_agency_members')
-        .select('agency_id')
-        .in('agency_id', rows.map(r => r.id))
+      const sb = supabase as any
+      const [{ data: memberRows }, { data: emailRows }] = await Promise.all([
+        sb.from('ppr_agency_members').select('agency_id').in('agency_id', agencyIds),
+        sb.from('ppr_agency_emails').select('agency_id').in('agency_id', agencyIds),
+      ])
       const counts: Record<string, number> = {}
       for (const m of (memberRows || []) as { agency_id: string }[]) {
+        counts[m.agency_id] = (counts[m.agency_id] || 0) + 1
+      }
+      // External emails count toward recipients too (drives the row chip
+      // + the "no coordinators — emails won't fire" warning).
+      for (const m of (emailRows || []) as { agency_id: string }[]) {
         counts[m.agency_id] = (counts[m.agency_id] || 0) + 1
       }
       setMemberCounts(counts)
@@ -4977,36 +4988,50 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
 
   const openCoordPicker = useCallback(async (agency: Agency) => {
     if (!installationId) return
-    const [{ fetchPprCoordinatorPicker, fetchAgencyMembers }] = await Promise.all([
-      import('@/lib/supabase/ppr-agency-members'),
-    ])
-    const [candidates, current] = await Promise.all([
+    const { fetchPprCoordinatorPicker, fetchAgencyMembers, fetchAgencyExternalEmails } =
+      await import('@/lib/supabase/ppr-agency-members')
+    const [candidates, current, emails] = await Promise.all([
       fetchPprCoordinatorPicker(installationId),
       fetchAgencyMembers(agency.id),
+      fetchAgencyExternalEmails(agency.id),
     ])
     setCoordCandidates(candidates)
     setCoordSelected(new Set(current.map(m => m.user_id)))
+    setCoordEmails(emails)
+    setNewCoordEmail('')
     setCoordEditAgency(agency)
   }, [installationId])
+
+  // Stage an external email into the modal list (validated, de-duped).
+  const addCoordEmail = useCallback(() => {
+    const e = newCoordEmail.trim().toLowerCase()
+    if (!e) return
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      toast.error('Enter a valid email address')
+      return
+    }
+    setCoordEmails(prev => prev.includes(e) ? prev : [...prev, e])
+    setNewCoordEmail('')
+  }, [newCoordEmail])
 
   const handleSaveCoordinators = useCallback(async () => {
     if (!coordEditAgency || !installationId) return
     setCoordSaving(true)
-    const { setAgencyMembers } = await import('@/lib/supabase/ppr-agency-members')
-    const result = await setAgencyMembers(
-      coordEditAgency.id,
-      installationId,
-      Array.from(coordSelected),
-    )
+    const { setAgencyMembers, setAgencyExternalEmails } = await import('@/lib/supabase/ppr-agency-members')
+    const [memberRes, emailRes] = await Promise.all([
+      setAgencyMembers(coordEditAgency.id, installationId, Array.from(coordSelected)),
+      setAgencyExternalEmails(coordEditAgency.id, installationId, coordEmails),
+    ])
     setCoordSaving(false)
-    if (!result.ok) {
-      toast.error(result.error || 'Failed to save coordinators')
+    if (!memberRes.ok || !emailRes.ok) {
+      toast.error(memberRes.error || emailRes.error || 'Failed to save coordinators')
       return
     }
-    toast.success(`Coordinators saved (${coordSelected.size})`)
-    setMemberCounts(prev => ({ ...prev, [coordEditAgency.id]: coordSelected.size }))
+    const total = coordSelected.size + coordEmails.length
+    toast.success(`Coordinators saved (${total})`)
+    setMemberCounts(prev => ({ ...prev, [coordEditAgency.id]: total }))
     setCoordEditAgency(null)
-  }, [coordEditAgency, coordSelected, installationId])
+  }, [coordEditAgency, coordSelected, coordEmails, installationId])
 
   const loadAmopsEmail = useCallback(async () => {
     if (!installationId) return
@@ -5077,7 +5102,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
   const handleAddAgency = async () => {
     if (!installationId || !newAgencyName.trim()) return
     const { createPprAgency } = await import('@/lib/supabase/ppr-agencies')
-    const res = await createPprAgency(installationId, newAgencyName)
+    const res = await createPprAgency(installationId, newAgencyName, newAgencyInvite)
     if (res.error || !res.data) {
       toast.error(res.error || 'Failed to add agency')
       return
@@ -5087,9 +5112,23 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
       agency_name: res.data!.agency_name,
       sort_order: res.data!.sort_order,
       is_active: res.data!.is_active,
+      send_calendar_invite: res.data!.send_calendar_invite,
     }])
     setNewAgencyName('')
+    setNewAgencyInvite(false)
     toast.success(`Added "${res.data.agency_name}"`)
+  }
+
+  const handleToggleAgencyInvite = async (a: Agency) => {
+    const { updatePprAgency } = await import('@/lib/supabase/ppr-agencies')
+    const next = !a.send_calendar_invite
+    const res = await updatePprAgency(a.id, { send_calendar_invite: next })
+    if (res.error) {
+      toast.error(res.error)
+      return
+    }
+    setAgencies(prev => prev.map(x => x.id === a.id ? { ...x, send_calendar_invite: next } : x))
+    toast.success(next ? `"${a.agency_name}" will get calendar invites` : `"${a.agency_name}" won't get calendar invites`)
   }
 
   const handleDeleteAgency = async (a: Agency) => {
@@ -5480,6 +5519,19 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
                   {a.is_active ? 'Active' : 'Inactive'}
                 </button>
                 <button
+                  onClick={() => handleToggleAgencyInvite(a)}
+                  title="Attach the .ics calendar invite to this group's email when a PPR is approved"
+                  style={{
+                    padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--fs-xs)', fontWeight: 600,
+                    border: `1px solid ${a.send_calendar_invite ? 'var(--color-success)' : 'var(--color-border)'}`,
+                    background: a.send_calendar_invite ? 'color-mix(in srgb, var(--color-success) 10%, transparent)' : 'transparent',
+                    color: a.send_calendar_invite ? 'var(--color-success)' : 'var(--color-text-3)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {a.send_calendar_invite ? 'Invite ✓' : 'Invite'}
+                </button>
+                <button
                   onClick={() => handleDeleteAgency(a)}
                   style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-2xl)', padding: '0 4px', lineHeight: 1 }}
                 >
@@ -5575,7 +5627,7 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
                   {coordEditAgency.agency_name}
                 </div>
                 <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-                  Selected users will receive an email when a PPR is routed to this agency.
+                  Selected users — plus any external emails below — receive coordination, approval, and calendar-invite emails for this agency.
                 </div>
               </div>
 
@@ -5621,6 +5673,56 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
                     </label>
                   )
                 })}
+              </div>
+
+              {/* External email recipients — coordinators without a Glidepath account. */}
+              <div>
+                <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+                  External emails (no Glidepath account)
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="email"
+                    value={newCoordEmail}
+                    onChange={e => setNewCoordEmail(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCoordEmail() } }}
+                    placeholder="name@example.mil"
+                    style={{
+                      flex: 1, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                      color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    onClick={addCoordEmail}
+                    disabled={!newCoordEmail.trim()}
+                    style={{
+                      padding: '6px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)',
+                      background: newCoordEmail.trim() ? 'color-mix(in srgb, var(--color-accent) 10%, transparent)' : 'var(--color-bg)',
+                      color: newCoordEmail.trim() ? 'var(--color-accent)' : 'var(--color-text-3)',
+                      fontWeight: 700, cursor: newCoordEmail.trim() ? 'pointer' : 'default', fontFamily: 'inherit',
+                    }}
+                  >Add</button>
+                </div>
+                {coordEmails.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                    {coordEmails.map(email => (
+                      <span key={email} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '2px 6px 2px 10px', borderRadius: 'var(--radius-sm)',
+                        background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)',
+                        fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)',
+                      }}>
+                        {email}
+                        <button
+                          onClick={() => setCoordEmails(prev => prev.filter(x => x !== email))}
+                          title="Remove"
+                          style={{ background: 'none', border: 'none', color: 'var(--color-text-3)', cursor: 'pointer', fontSize: 'var(--fs-md)', lineHeight: 1, padding: 0 }}
+                        >&times;</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -5673,6 +5775,15 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
             Add
           </button>
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={newAgencyInvite}
+            onChange={e => setNewAgencyInvite(e.target.checked)}
+            style={{ cursor: 'pointer' }}
+          />
+          Send this group a calendar invite (.ics) when a PPR is approved
+        </label>
       </div>
 
       {/* ── AMOPS reply-to email ─────────────────────────────── */}

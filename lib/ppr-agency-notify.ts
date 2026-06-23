@@ -56,6 +56,21 @@ function validReplyTo(raw: string | null | undefined): string | undefined {
   return trimmed
 }
 
+/** Case-insensitive de-dupe, preserving first-seen casing. A coordinator
+ *  who is both a Glidepath member and a manually-added external email
+ *  should only be emailed once. */
+function dedupeEmails(emails: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const e of emails) {
+    const k = e.trim().toLowerCase()
+    if (!k || seen.has(k)) continue
+    seen.add(k)
+    out.push(e.trim())
+  }
+  return out
+}
+
 const OUTCOME_LABEL: Record<AgencyNotifyOutcome, string> = {
   approved: 'APPROVED',
   denied: 'DENIED',
@@ -180,8 +195,12 @@ export async function notifyCoordinatingAgencies(args: {
   /** When provided (non-empty), scope recipients to these agencies instead of
    *  deriving from the entry's coordination rows. Used by send-ppr-update. */
   agencyIds?: string[]
+  /** Calendar invite (.ics) to attach — only to agencies whose
+   *  send_calendar_invite flag is on, and only on the 'approved' outcome.
+   *  Built by the approval route, which has the columns/notes for the body. */
+  inviteAttachment?: { filename: string; content: Buffer; contentType: string }
 }): Promise<{ sent: number; skipped: number; reason?: string }> {
-  const { reader, resend, entry, base, outcome, reason, changes, currentDetails } = args
+  const { reader, resend, entry, base, outcome, reason, changes, currentDetails, inviteAttachment } = args
 
   // 1. Determine the agency set: explicit (update dialog) or derived from coord rows.
   let agencyIds: string[]
@@ -211,14 +230,16 @@ export async function notifyCoordinatingAgencies(args: {
     return { sent: 0, skipped: 0, reason: 'no_coordinating_agencies' }
   }
 
-  // 2. Resolve agency names (subject/body) and members (recipients).
+  // 2. Resolve agency names (subject/body), members (recipients), and the
+  //    per-agency calendar-invite opt-in.
   const { data: agencies } = await reader
     .from('ppr_agencies')
-    .select('id, agency_name')
+    .select('id, agency_name, send_calendar_invite')
     .in('id', agencyIds)
 
-  const agencyMap = new Map<string, string>(
-    ((agencies ?? []) as { id: string; agency_name: string }[]).map((a) => [a.id, a.agency_name]),
+  const agencyMap = new Map<string, { name: string; sendInvite: boolean }>(
+    ((agencies ?? []) as { id: string; agency_name: string; send_calendar_invite: boolean }[])
+      .map((a) => [a.id, { name: a.agency_name, sendInvite: !!a.send_calendar_invite }]),
   )
 
   // ppr_agency_members isn't in the generated types — same any-cast shape
@@ -239,6 +260,20 @@ export async function notifyCoordinatingAgencies(args: {
     recipientsByAgency.set(aid, list)
   }
 
+  // Union manually-added external emails (recipients with no Glidepath account).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: extEmails } = await (reader as any)
+    .from('ppr_agency_emails')
+    .select('agency_id, email')
+    .in('agency_id', agencyIds)
+  for (const row of (extEmails || []) as { agency_id: string; email: string | null }[]) {
+    const email = (row.email || '').trim()
+    if (!email) continue
+    const list = recipientsByAgency.get(row.agency_id) ?? []
+    list.push(email)
+    recipientsByAgency.set(row.agency_id, list)
+  }
+
   const fromLabel = `${base.name} AMOPS <info@glidepathops.com>`
   const replyTo = validReplyTo(base.amops_email)
 
@@ -247,8 +282,9 @@ export async function notifyCoordinatingAgencies(args: {
   let skipped = 0
 
   for (const aid of agencyIds) {
-    const recipients = recipientsByAgency.get(aid) ?? []
-    const agencyName = agencyMap.get(aid) ?? 'Unknown agency'
+    const recipients = dedupeEmails(recipientsByAgency.get(aid) ?? [])
+    const agencyMeta = agencyMap.get(aid)
+    const agencyName = agencyMeta?.name ?? 'Unknown agency'
     if (recipients.length === 0) {
       skipped += 1
       continue
@@ -257,6 +293,10 @@ export async function notifyCoordinatingAgencies(args: {
     const { subject, html, text } = buildAgencyEmail({
       base, entry, agencyName, outcome, reason, changes, currentDetails,
     })
+
+    // Attach the calendar invite only on approval, only for groups that
+    // opted in via Base Setup → PPR coordinating agencies.
+    const attachInvite = outcome === 'approved' && inviteAttachment && agencyMeta?.sendInvite
 
     try {
       const { error } = await resend.emails.send({
@@ -267,6 +307,7 @@ export async function notifyCoordinatingAgencies(args: {
         subject,
         html,
         text,
+        attachments: attachInvite ? [inviteAttachment] : undefined,
       })
       if (error) {
         console.error(`[notifyCoordinatingAgencies] Resend error for agency ${aid} (${outcome}):`, error.message)

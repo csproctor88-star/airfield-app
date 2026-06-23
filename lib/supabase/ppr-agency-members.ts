@@ -70,6 +70,53 @@ export async function setAgencyMembers(
   return { ok: true }
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** External (non-Glidepath-account) email recipients for one agency. */
+export async function fetchAgencyExternalEmails(agencyId: string): Promise<string[]> {
+  const supabase = db()
+  if (!supabase) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('ppr_agency_emails')
+    .select('email')
+    .eq('agency_id', agencyId)
+    .order('email', { ascending: true })
+  if (error || !data) return []
+  return (data as { email: string }[]).map((r) => r.email).filter(Boolean)
+}
+
+/** Bulk overwrite an agency's external email list. Emails are trimmed,
+ *  lowercased, de-duped, and shape-validated; invalid entries are dropped. */
+export async function setAgencyExternalEmails(
+  agencyId: string,
+  baseId: string,
+  emails: string[],
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+
+  const cleaned = Array.from(
+    new Set(
+      emails
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => EMAIL_RE.test(e)),
+    ),
+  )
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any
+  const { error: delErr } = await sb.from('ppr_agency_emails').delete().eq('agency_id', agencyId)
+  if (delErr) return { ok: false, error: friendlyError(delErr.message) }
+
+  if (cleaned.length === 0) return { ok: true }
+
+  const rows = cleaned.map((email) => ({ agency_id: agencyId, base_id: baseId, email }))
+  const { error: insErr } = await sb.from('ppr_agency_emails').insert(rows)
+  if (insErr) return { ok: false, error: friendlyError(insErr.message) }
+  return { ok: true }
+}
+
 /** Returns the list of base members usable as a coordinator picker. */
 export async function fetchPprCoordinatorPicker(baseId: string): Promise<{ user_id: string; name: string; rank: string | null; email: string; role: string }[]> {
   const supabase = db()
@@ -139,15 +186,27 @@ export async function fetchAgencyCoordinatorCounts(
 ): Promise<Record<string, number>> {
   const supabase = db()
   if (!supabase) return {}
+  const counts: Record<string, number> = {}
+
   const { data } = await supabase
     .from('ppr_agency_members')
     .select('agency_id')
     .eq('base_id', baseId)
-
-  const counts: Record<string, number> = {}
   for (const row of (data || []) as { agency_id: string }[]) {
     counts[row.agency_id] = (counts[row.agency_id] || 0) + 1
   }
+
+  // External emails also count as recipients — an agency with only
+  // manually-added emails should NOT show the "no coordinators" warning.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: ext } = await (supabase as any)
+    .from('ppr_agency_emails')
+    .select('agency_id')
+    .eq('base_id', baseId)
+  for (const row of (ext || []) as { agency_id: string }[]) {
+    counts[row.agency_id] = (counts[row.agency_id] || 0) + 1
+  }
+
   return counts
 }
 

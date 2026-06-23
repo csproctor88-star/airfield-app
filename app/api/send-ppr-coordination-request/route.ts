@@ -28,6 +28,20 @@ function validReplyTo(raw: string | null | undefined): string | undefined {
   return trimmed
 }
 
+/** Case-insensitive de-dupe so a coordinator who is both a Glidepath
+ *  member and a manually-added external email is only emailed once. */
+function dedupeEmails(emails: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const e of emails) {
+    const k = e.trim().toLowerCase()
+    if (!k || seen.has(k)) continue
+    seen.add(k)
+    out.push(e.trim())
+  }
+  return out
+}
+
 /**
  * Coordination-request email — fired by triagePprEntry when a PPR is
  * routed to a set of agencies. Authenticated; any user with
@@ -134,6 +148,20 @@ export async function POST(request: Request) {
       recipientsByAgency.set(aid, list)
     }
 
+    // Union manually-added external emails (recipients with no Glidepath account).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: extEmails } = await (reader as any)
+      .from('ppr_agency_emails')
+      .select('agency_id, email')
+      .in('agency_id', agencyIds)
+    for (const row of (extEmails || []) as { agency_id: string; email: string | null }[]) {
+      const email = (row.email || '').trim()
+      if (!email) continue
+      const list = recipientsByAgency.get(row.agency_id) ?? []
+      list.push(email)
+      recipientsByAgency.set(row.agency_id, list)
+    }
+
     const valuesHtml = colRows
       .map((c) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,7 +191,7 @@ export async function POST(request: Request) {
     const skipped: { agency_id: string; reason: string }[] = []
 
     for (const aid of agencyIds) {
-      const recipients = recipientsByAgency.get(aid) ?? []
+      const recipients = dedupeEmails(recipientsByAgency.get(aid) ?? [])
       const agencyName = agencyMap.get(aid) ?? 'Unknown agency'
       if (recipients.length === 0) {
         skipped.push({ agency_id: aid, reason: 'no_coordinators' })

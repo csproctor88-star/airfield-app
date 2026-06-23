@@ -5,8 +5,9 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
-import { formatPprColumnValue } from '@/lib/supabase/ppr'
+import { formatPprColumnValue, isSummaryColumn } from '@/lib/supabase/ppr'
 import { notifyCoordinatingAgencies } from '@/lib/ppr-agency-notify'
+import { buildPprInvite } from '@/lib/ppr-ics'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -94,23 +95,18 @@ export async function POST(request: Request) {
 
     const { data: base } = await reader
       .from('bases')
-      .select('name, amops_email')
+      .select('name, amops_email, icao')
       .eq('id', entry.base_id)
-      .single<{ name: string; amops_email: string | null }>()
+      .single<{ name: string; amops_email: string | null; icao: string | null }>()
 
     if (!base) {
       return NextResponse.json({ error: 'Base not found' }, { status: 404 })
     }
 
-    // Internal-create PPRs (no public requester) skip the requester
-    // email but STILL notify the coordinating agencies below if any
-    // coord rows exist on the entry.
-    if (entry.requester_email) {
-    // Pull human-readable column names for the email body. We fetch
-    // column_type + info_text so we can split the rendering: regular
-    // columns get the value table, info_only columns get rendered as
-    // their own boxed section so the requester sees airfield hours,
-    // restrictions, etc. on the approval too.
+    // Columns drive both the requester email body and the calendar-invite
+    // descriptor — fetched once regardless of whether there's a public
+    // requester (internal PPRs still notify coordinating agencies, and an
+    // opted-in group can want the invite even for an internal PPR).
     const { data: columns } = await reader
       .from('ppr_columns')
       .select('id, column_name, column_type, info_text, sort_order')
@@ -119,6 +115,39 @@ export async function POST(request: Request) {
 
     const colRows: { id: string; column_name: string; column_type: string; info_text: string | null }[] =
       ((columns ?? []) as { id: string; column_name: string; column_type: string; info_text: string | null }[]) || []
+
+    // Calendar invites, built once. Guarded — a build failure must never
+    // block the emails. REQUEST (Accept/Decline, requester = attendee) →
+    // the requester's email; PUBLISH (add-to-calendar, no attendee) →
+    // opted-in coordinating groups via notifyCoordinatingAgencies.
+    const descriptor = colRows
+      .filter((c) => isSummaryColumn(c.column_name))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((c) => formatPprColumnValue(c as any, (entry.column_values || {})[c.id]))
+      .filter(Boolean)
+      .join(' • ') || (entry.requester_name ?? 'Transient aircraft')
+    let requesterInvite: { filename: string; content: Buffer; contentType: string } | undefined
+    let agencyInvite: { filename: string; content: Buffer; contentType: string } | undefined
+    try {
+      const common = {
+        entryId: entry.id, pprNumber: entry.ppr_number, baseName: base.name,
+        baseIcao: base.icao, arrivalDate: entry.arrival_date, summary: descriptor,
+        requesterName: entry.requester_name, organizerEmail: 'info@glidepathops.com',
+        amopsEmail: base.amops_email, notes: entry.notes, dtstamp: new Date(),
+      }
+      if (entry.requester_email) {
+        const inv = buildPprInvite({ ...common, requesterEmail: entry.requester_email, method: 'REQUEST' })
+        requesterInvite = { filename: inv.filename, content: inv.content, contentType: inv.contentType }
+      }
+      const pub = buildPprInvite({ ...common, method: 'PUBLISH' })
+      agencyInvite = { filename: pub.filename, content: pub.content, contentType: pub.contentType }
+    } catch (e) {
+      console.error('[send-ppr-approval] invite build failed:', e)
+    }
+
+    // Internal-create PPRs (no public requester) skip the requester email
+    // but STILL notify the coordinating agencies below.
+    if (entry.requester_email) {
 
     const valuesHtml = colRows
       .filter((c) => c.column_type !== 'info_only')
@@ -155,6 +184,7 @@ export async function POST(request: Request) {
       to: entry.requester_email,
       replyTo,
       cc: replyTo ? [replyTo] : undefined,
+      attachments: requesterInvite ? [requesterInvite] : undefined,
       subject: `${base.name} PPR APPROVED — ${entry.ppr_number}`,
       html: `
         <p>Hello ${safeName},</p>
@@ -195,6 +225,7 @@ export async function POST(request: Request) {
       },
       base: { name: base.name, amops_email: base.amops_email },
       outcome: 'approved',
+      inviteAttachment: agencyInvite,
     })
 
     return NextResponse.json({ success: true, agencies: agencyResult })
