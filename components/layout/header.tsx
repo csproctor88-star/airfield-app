@@ -11,7 +11,7 @@ import {
   PENDING_PHOTOS_CHANGED_EVENT,
   countPendingPhotosForCurrentUser,
 } from '@/lib/sync/pending-photos'
-import { fetchPprEntriesForDate, isActivePpr } from '@/lib/supabase/ppr'
+import { fetchPprEntriesOnField, isActivePpr } from '@/lib/supabase/ppr'
 import { QueueInspector } from '@/components/sync/queue-inspector'
 import { PanelLeftOpen, ChevronDown } from 'lucide-react'
 
@@ -146,10 +146,10 @@ export function Header() {
         } catch {
           today = new Date().toISOString().slice(0, 10)
         }
-        const entries = await fetchPprEntriesForDate(installationId, today)
+        const entries = await fetchPprEntriesOnField(installationId, today)
         // Count active PPRs only — denied/canceled requests aren't on the
-        // field, so they don't belong in the "PPRs today" chip (matches the
-        // airfield status board panel).
+        // field, so they don't belong in the on-field chip (matches the
+        // Transient Aircraft board on the airfield status page).
         if (!cancelled) setTodayPprCount(entries.filter((e) => isActivePpr(e.status)).length)
       } catch { /* silent — header chip; no toast */ }
     }
@@ -380,7 +380,7 @@ export function Header() {
           }}>
             <div className="hero-summary" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {advCount > 0 && opsChip(`${advCount} Advisor${advCount === 1 ? 'y' : 'ies'}`, 'var(--color-warning)')}
-              {todayPprCount > 0 && opsChip(`${todayPprCount} PPR${todayPprCount === 1 ? '' : 's'} Today`, 'var(--color-accent)')}
+              {todayPprCount > 0 && opsChip(`${todayPprCount} PPR${todayPprCount === 1 ? '' : 's'} On Field`, 'var(--color-accent)')}
             </div>
             <div style={{
               display: 'flex', alignItems: 'baseline', gap: 8,

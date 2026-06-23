@@ -58,6 +58,8 @@ function pprEntry(over: Partial<PprEntry>): PprEntry {
     denial_reason: null,
     cancellation_reason: null,
     public_submission: false,
+    departed_at: null,
+    departed_by: null,
     ...over,
   }
 }

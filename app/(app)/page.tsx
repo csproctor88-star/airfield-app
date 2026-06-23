@@ -8,7 +8,7 @@ import { fetchNavaidStatuses, type NavaidStatus } from '@/lib/supabase/navaids'
 import { getWriteQueue } from '@/lib/sync/write-queue'
 import { enqueueNavaidStatus } from '@/lib/navaid-status-write'
 import { fetchCustomStatusBoards, fetchAllCustomStatusItems, updateCustomStatusItem, type CustomStatusBoard, type CustomStatusItem } from '@/lib/supabase/custom-status'
-import { fetchPprEntriesForDate, fetchPprColumns, formatPprColumnValue, isActivePpr, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
+import { fetchPprEntriesOnField, fetchPprColumns, formatPprColumnValue, isActivePpr, markPprDeparted, type PprEntry, type PprColumn } from '@/lib/supabase/ppr'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
 import { useDashboard } from '@/lib/dashboard-context'
 import { useInstallation } from '@/lib/installation-context'
@@ -89,6 +89,8 @@ export default function HomePage() {
   // without the full key. Full-write holders trivially also qualify.
   const canEditRscBwc =
     canWriteAirfieldStatus || has(PERM.AIRFIELD_STATUS_WRITE_RSC_BWC_ONLY)
+  // Mark a transient aircraft departed (removes it from the board).
+  const canWritePpr = has(PERM.PPR_WRITE)
   const showArffCat = (() => {
     const cfg = (currentInstallation as unknown as { arff_config?: { show_cat_dropdown?: boolean } } | null)?.arff_config
     return cfg?.show_cat_dropdown !== false  // default true
@@ -300,18 +302,18 @@ export default function HomePage() {
     await supabase.from('bases').update({ status_labels: updated } as any).eq('id', installationId)
   }
 
-  // --- Load today's PPRs ---
-  // Show every active PPR for the day — approved plus any in-progress stage
-  // (triage / coordination / awaiting approval). Denied and canceled requests
-  // aren't on the field, so they're filtered out (see isActivePpr). The status
-  // pill renders the actual stage, so an awaiting-approval PPR is visibly
-  // distinct from an approved one.
+  // --- Load on-field (transient) PPRs ---
+  // Show every active PPR that has arrived (arrival_date <= today) and
+  // hasn't been marked departed — approved plus any in-progress stage
+  // (triage / coordination / awaiting approval). Denied and canceled
+  // requests aren't on the field, so they're filtered out (isActivePpr).
+  // The status pill renders the actual stage, so an awaiting-approval PPR
+  // is visibly distinct from an approved one. A PPR stays here until staff
+  // hit "Departed" — it no longer drops off automatically at day rollover.
   //
-  // "Today" here means today **in base local time** — operators read
-  // this panel for what's landing on their field today, not what's
-  // happening on the UTC calendar. en-CA returns YYYY-MM-DD which
-  // matches the storage shape of `arrival_date` directly. Falls back
-  // to UTC if the installation timezone is somehow missing.
+  // "Today" means today **in base local time** (en-CA → YYYY-MM-DD,
+  // matching the storage shape of `arrival_date`), falling back to UTC if
+  // the installation timezone is somehow missing.
   const baseTimezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || 'UTC'
   const loadTodayPprs = useCallback(async () => {
     if (!installationId) { setTodayPprs([]); setPprColumns([]); return }
@@ -322,7 +324,7 @@ export default function HomePage() {
       today = new Date().toISOString().slice(0, 10)
     }
     const [entries, cols] = await Promise.all([
-      fetchPprEntriesForDate(installationId, today),
+      fetchPprEntriesOnField(installationId, today),
       fetchPprColumns(installationId),
     ])
     setTodayPprs(entries.filter((e) => isActivePpr(e.status)))
@@ -330,6 +332,20 @@ export default function HomePage() {
   }, [installationId, baseTimezone])
 
   useEffect(() => { loadTodayPprs() }, [loadTodayPprs])
+
+  const handleDeparted = useCallback(async (entry: PprEntry) => {
+    if (!installationId) return
+    if (!window.confirm(`Mark PPR ${entry.ppr_number} as departed?\n\nIt will leave the Transient Aircraft board. You can restore it from the PPR log.`)) return
+    const res = await markPprDeparted(entry.id, installationId)
+    if (res.ok) {
+      toast.success(`PPR ${entry.ppr_number} marked departed`)
+      loadTodayPprs()
+      // Nudge the header "on field" chip to recount.
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:write-committed'))
+    } else {
+      toast.error(res.error || 'Could not mark departed')
+    }
+  }, [installationId, loadTodayPprs])
 
   useEffect(() => { refreshStatus() }, [refreshStatus])
 
@@ -2760,7 +2776,7 @@ export default function HomePage() {
                 fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)',
                 textTransform: 'uppercase', letterSpacing: '0.08em',
               }}>
-                Prior Permission Required
+                Transient Aircraft (PPR)
                 <span style={{ color: 'var(--color-text-3)', fontWeight: 600, marginLeft: 8 }}>
                   · {todayPprs.length}
                 </span>
@@ -2774,7 +2790,7 @@ export default function HomePage() {
             </div>
             {todayPprs.length === 0 ? (
               <div className="card" style={{ padding: 12, textAlign: 'center' }}>
-                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No PPRs for today</span>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No transient aircraft on the field</span>
               </div>
             ) : (
               <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
@@ -2787,6 +2803,7 @@ export default function HomePage() {
                       {summaryCols.map(col => (
                         <th key={col.id} style={ppPanelTh}>{col.column_name}</th>
                       ))}
+                      {canWritePpr && <th style={ppPanelTh}></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -2828,6 +2845,26 @@ export default function HomePage() {
                               </td>
                             )
                           })}
+                          {canWritePpr && (
+                            <td style={ppPanelTd}>
+                              {!canceled && (
+                                <button
+                                  onClick={() => handleDeparted(entry)}
+                                  title="Mark departed \u2014 removes this aircraft from the board"
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    padding: '3px 10px', borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+                                    color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
+                                    fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                                    textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  Departed
+                                </button>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       )
                     })}

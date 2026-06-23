@@ -131,6 +131,13 @@ export type PprEntry = {
   denial_reason: string | null
   cancellation_reason: string | null
   public_submission: boolean
+  /**
+   * Set when staff mark a transient aircraft as departed. NULL = still
+   * on the field. Orthogonal to `status` (a departed PPR is still
+   * `approved`); this only governs the Transient Aircraft board.
+   */
+  departed_at: string | null
+  departed_by: string | null
 }
 
 export type PprCoordination = {
@@ -279,6 +286,72 @@ export async function fetchPprEntries(baseId: string, dateFrom?: string, dateTo?
 
 export async function fetchPprEntriesForDate(baseId: string, date: string): Promise<PprEntry[]> {
   return fetchPprEntries(baseId, date, date)
+}
+
+/**
+ * Drives the Transient Aircraft board on the dashboard and the header
+ * chip. A PPR is ADDED to the board on its arrival day (arrival_date <=
+ * today) and then REMAINS until staff mark it departed (departed_at IS
+ * NULL) — it never auto-drops at day rollover. `arrival_date <= today`
+ * stays true once the arrival day arrives, so only the Departed mark
+ * removes it. Callers still filter `isActivePpr` to drop denied/canceled.
+ * `today` is a YYYY-MM-DD string in base-local time.
+ */
+export async function fetchPprEntriesOnField(baseId: string, today: string): Promise<PprEntry[]> {
+  const supabase = db()
+  if (!supabase) return []
+  const { data } = await supabase
+    .from('ppr_entries')
+    .select('*')
+    .eq('base_id', baseId)
+    .lte('arrival_date', today)
+    .is('departed_at', null)
+    .order('arrival_date', { ascending: true })
+    .order('created_at', { ascending: true })
+  return (data || []) as PprEntry[]
+}
+
+/** Mark a transient aircraft as departed — removes it from the board. */
+export async function markPprDeparted(entryId: string, baseId: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const { data, error } = await supabase
+    .from('ppr_entries')
+    .update({ departed_at: new Date().toISOString(), departed_by: user.id, updated_by: user.id })
+    .eq('id', entryId)
+    .select('ppr_number')
+    .single()
+  if (error) return { ok: false, error: friendlyError(error.message) }
+
+  logActivity(
+    'updated',
+    'ppr_entry',
+    entryId,
+    `PPR ${(data as { ppr_number?: string } | null)?.ppr_number ?? ''} DEPARTED`.trim(),
+    { details: 'Marked departed — removed from Transient Aircraft board' },
+    baseId,
+  )
+  return { ok: true }
+}
+
+/** Undo a departed mark — returns the aircraft to the Transient board. */
+export async function clearPprDeparted(entryId: string, baseId: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('ppr_entries')
+    .update({ departed_at: null, departed_by: null, updated_by: user.id })
+    .eq('id', entryId)
+  if (error) return { ok: false, error: friendlyError(error.message) }
+
+  logActivity('updated', 'ppr_entry', entryId, 'PPR returned to field', { details: 'Departed mark cleared' }, baseId)
+  return { ok: true }
 }
 
 /**
@@ -1057,6 +1130,148 @@ export async function denyPprEntry(input: {
     } catch (e) {
       console.error('[denyPprEntry] denial email fetch threw:', e)
     }
+  }
+
+  return { ok: true }
+}
+
+/**
+ * Re-open a DENIED PPR for coordination. A denial isn't always final —
+ * circumstances change and AMOPS may reconsider. This flips a denied
+ * entry back to pending_coordination and (re)issues coordination rows
+ * for the chosen agencies.
+ *
+ * Handles both denial origins: denied-at-triage (no coordination rows
+ * ever existed → all selected agencies are inserted fresh) and
+ * denied-after-coordination (rows exist → the selected agencies are
+ * reset to pending; agencies not re-selected keep their standing
+ * decision as history).
+ *
+ * The prior denial reason + prior coordination outcomes are snapshotted
+ * into the remarks thread first, so the audit trail survives the reset.
+ * No requester email — agencies get the standard coordination-request
+ * notice; the requester only hears back on the eventual decision.
+ *
+ * Gated on `ppr:approve` at the UI; RLS still enforces ppr:write
+ * (entry update) + ppr:coordinate (row reset) + ppr:triage/write
+ * (row insert), all held by the approval-authority roles.
+ */
+export async function reopenPprEntry(input: {
+  entryId: string
+  baseId: string
+  agencyIds: string[]
+}): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  if (input.agencyIds.length === 0) {
+    return { ok: false, error: 'Select at least one agency to coordinate with' }
+  }
+
+  const { data: entry } = await supabase
+    .from('ppr_entries')
+    .select('id, status, ppr_number, denial_reason')
+    .eq('id', input.entryId)
+    .single<{ id: string; status: PprStatus; ppr_number: string; denial_reason: string | null }>()
+  if (!entry) return { ok: false, error: 'Entry not found' }
+  if (entry.status !== 'denied') {
+    return { ok: false, error: `Only a denied PPR can be re-opened (status is "${entry.status}")` }
+  }
+
+  const nowIso = new Date().toISOString()
+
+  // Snapshot prior coordination outcomes into the remarks thread BEFORE
+  // resetting the rows, so a concur/non-concur from the prior round
+  // isn't silently lost when its row flips back to pending.
+  const { data: priorCoords } = await supabase
+    .from('ppr_coordination')
+    .select('agency_id, agency_name, status')
+    .eq('entry_id', input.entryId)
+  const priorList = (priorCoords || []) as { agency_id: string | null; agency_name: string; status: string }[]
+  const priorSummary = priorList.length > 0
+    ? priorList.map((c) => `${c.agency_name}: ${c.status === 'concur' ? 'CONCUR' : c.status === 'non_concur' ? 'NON-CONCUR' : 'pending'}`).join(', ')
+    : 'none'
+  await supabase.from('ppr_remarks').insert({
+    entry_id: input.entryId,
+    base_id: input.baseId,
+    remark: `[Re-opened from Denied] Prior denial reason: ${entry.denial_reason || '(none)'}. Prior coordination: ${priorSummary}.`,
+    created_by: user.id,
+  })
+
+  // Split selected agencies into those already on the entry (reset to
+  // pending) and brand-new ones (insert).
+  const existingIds = new Set(
+    priorList.map((c) => c.agency_id).filter((id): id is string => Boolean(id)),
+  )
+  const toReset = input.agencyIds.filter((id) => existingIds.has(id))
+  const toInsert = input.agencyIds.filter((id) => !existingIds.has(id))
+
+  if (toReset.length > 0) {
+    const { error: resetErr } = await supabase
+      .from('ppr_coordination')
+      .update({ status: 'pending', comment: null, coordinated_by: null, coordinated_at: null })
+      .eq('entry_id', input.entryId)
+      .in('agency_id', toReset)
+    if (resetErr) return { ok: false, error: friendlyError(resetErr.message) }
+  }
+
+  if (toInsert.length > 0) {
+    const { data: agencies } = await supabase
+      .from('ppr_agencies')
+      .select('id, agency_name')
+      .in('id', toInsert)
+    const rows = ((agencies || []) as { id: string; agency_name: string }[]).map((a) => ({
+      entry_id: input.entryId,
+      agency_id: a.id,
+      agency_name: a.agency_name,
+      status: 'pending' as const,
+    }))
+    if (rows.length > 0) {
+      const { error: insErr } = await supabase.from('ppr_coordination').insert(rows)
+      if (insErr) return { ok: false, error: friendlyError(insErr.message) }
+    }
+  }
+
+  // Flip the entry back into coordination. Clear the denial fields — the
+  // PPR is no longer denied; the prior reason now lives in the remark
+  // above. Re-stamp triaged_by/at to reflect this re-routing.
+  const { error: updErr } = await supabase
+    .from('ppr_entries')
+    .update({
+      status: 'pending_coordination',
+      denial_reason: null,
+      approval_user_id: null,
+      approval_at: null,
+      triaged_by: user.id,
+      triaged_at: nowIso,
+      updated_by: user.id,
+    })
+    .eq('id', input.entryId)
+    .eq('status', 'denied') // idempotent guard against a double-submit
+  if (updErr) return { ok: false, error: friendlyError(updErr.message) }
+
+  logActivity(
+    'updated',
+    'ppr_entry',
+    input.entryId,
+    `PPR ${entry.ppr_number} RE-OPENED`,
+    { details: `Re-opened from Denied; routed to ${input.agencyIds.length} agency(ies) for coordination` },
+    input.baseId,
+  )
+
+  // Best-effort coordination-request email to the chosen agencies'
+  // coordinators — same pattern as triagePprEntry.
+  try {
+    await fetch('/api/send-ppr-coordination-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId: input.entryId, agencyIds: input.agencyIds }),
+    })
+  } catch (e) {
+    console.error('reopenPprEntry email send failed:', e)
   }
 
   return { ok: true }

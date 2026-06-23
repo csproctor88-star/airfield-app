@@ -129,6 +129,7 @@ describe('migrated generators render without errors', () => {
         status: 'approved', requester_name: null, requester_email: null, requester_phone: null,
         triaged_by: null, triaged_at: null, approval_user_id: null, approval_at: null,
         denial_reason: null, cancellation_reason: null, public_submission: false,
+        departed_at: null, departed_by: null,
       }],
       dateFrom: '2026-04-15',
       dateTo: '2026-04-15',

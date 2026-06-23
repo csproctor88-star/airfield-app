@@ -16,6 +16,9 @@ import {
   coordinatePprEntry,
   approvePprEntry,
   denyPprEntry,
+  reopenPprEntry,
+  markPprDeparted,
+  clearPprDeparted,
   fetchPprCoordinationForEntries,
   fetchPendingTriageCount,
   fetchPendingApprovalCount,
@@ -25,6 +28,7 @@ import {
   cancelPprEntry,
   addPprCoordinationAgencies,
   isSummaryColumn,
+  isActivePpr,
   formatPprColumnValue,
   type PprColumn,
   type PprEntry,
@@ -44,6 +48,7 @@ import {
   Inbox, MailQuestion, Clock, CheckCircle2, XCircle, Hourglass,
   CheckCircle, AlertTriangle, AlertCircle,
   Route, Check, CheckSquare, Bookmark, Link as LinkIcon,
+  List, Calendar as CalendarIcon, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 
 type StatusFilter = 'all' | 'pending_amops_triage' | 'pending_coordination' | 'pending_amops_approval' | 'approved' | 'denied' | 'canceled'
@@ -56,6 +61,14 @@ const STATUS_META: Record<PprStatus, { label: string; bg: string; fg: string; bo
   approved:                { label: 'Approved',           bg: 'rgba(34,197,94,0.10)',  fg: 'var(--color-green)', border: 'rgba(34,197,94,0.4)' },
   denied:                  { label: 'Denied',             bg: 'rgba(220,38,38,0.10)',  fg: 'var(--color-danger)', border: 'rgba(220,38,38,0.4)' },
   canceled:                { label: 'Canceled',           bg: 'rgba(148,163,184,0.10)', fg: '#94a3b8', border: 'rgba(148,163,184,0.4)' },
+}
+
+// Local-time YYYY-MM-DD. Used for the calendar's month-boundary fetch
+// window and cell keys — NOT toISOString(), which is UTC and can shift
+// the day across the date line. arrival_date is a plain DATE, so cells
+// and the fetch range must both reason in local calendar days.
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default function PprPage() {
@@ -84,7 +97,21 @@ export default function PprPage() {
   const today = new Date().toISOString().slice(0, 10)
   const [dateFrom, setDateFrom] = useState(today)
   const [dateTo, setDateTo] = useState(today)
-  const [dateMode, setDateMode] = useState<'today' | '7d' | '30d' | 'custom'>('today')
+  // 'all' (the default) = today and forward, every status, no upper
+  // bound. The other modes stay forward-looking windows.
+  const [dateMode, setDateMode] = useState<'all' | 'today' | '7d' | '30d' | 'custom'>('all')
+
+  // View mode — Log (table) vs Calendar (month grid). Calendar shows the
+  // displayed month's active + pending PPRs; clicking one opens the same
+  // detail card the Log uses.
+  const [viewMode, setViewMode] = useState<'log' | 'calendar'>('log')
+  // First-of-month anchor for the calendar's displayed month.
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
+  // Day whose "all PPRs" popover is open (date string), or null.
+  const [calDayOpen, setCalDayOpen] = useState<string | null>(null)
 
   // Filter chips
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -139,6 +166,11 @@ export default function PprPage() {
   // Approve / Deny modal
   const [decideEntry, setDecideEntry] = useState<PprEntry | null>(null)
   const [denyReason, setDenyReason] = useState('')
+
+  // Re-open (denied → coordination) modal
+  const [reopenEntry, setReopenEntry] = useState<PprEntry | null>(null)
+  const [reopenAgencyIds, setReopenAgencyIds] = useState<string[]>([])
+  const [reopenBusy, setReopenBusy] = useState(false)
   const [decideBusy, setDecideBusy] = useState(false)
 
   // Detail card modal — opened by clicking a row, shows full info
@@ -278,8 +310,20 @@ export default function PprPage() {
     || statusFilter === 'pending_coordination'
     || statusFilter === 'pending_amops_approval'
     || agencyFilter !== null
-  const effectiveFrom = ignoreDateFilter ? undefined : dateFrom
-  const effectiveTo = ignoreDateFilter ? undefined : dateTo
+
+  // Calendar mode fetches exactly the displayed month and takes
+  // precedence over both the Log's date chips and the pending-queue
+  // override — switching to Calendar always shows that month. In Log
+  // mode: 'all' = today→forward (open-ended upper bound); pending
+  // queues drop the date window entirely (existing behavior).
+  const calFrom = ymd(calMonth)
+  const calTo = ymd(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0))
+  const effectiveFrom = viewMode === 'calendar'
+    ? calFrom
+    : ignoreDateFilter ? undefined : dateFrom
+  const effectiveTo = viewMode === 'calendar'
+    ? calTo
+    : (ignoreDateFilter || dateMode === 'all') ? undefined : dateTo
 
   const loadData = useCallback(async () => {
     if (!installationId) return
@@ -400,7 +444,9 @@ export default function PprPage() {
   useEffect(() => {
     const now = new Date()
     const todayStr = now.toISOString().slice(0, 10)
-    if (dateMode === 'today') {
+    if (dateMode === 'today' || dateMode === 'all') {
+      // 'all' anchors the lower bound at today; effectiveTo is forced
+      // undefined elsewhere, so the upper bound stays open.
       setDateFrom(todayStr)
       setDateTo(todayStr)
     } else if (dateMode === '7d') {
@@ -439,7 +485,7 @@ export default function PprPage() {
     return rows
   }, [entries, statusFilter, agencyFilter, coordsByEntry, searchQuery])
 
-  const dateActive = dateMode !== 'today'
+  const dateActive = dateMode !== 'all'
   const activeFilterCount =
     (statusFilter !== 'all' ? 1 : 0) +
     (agencyFilter ? 1 : 0) +
@@ -448,7 +494,7 @@ export default function PprPage() {
   const clearAllFilters = () => {
     setStatusFilter('all')
     setAgencyFilter(null)
-    setDateMode('today')
+    setDateMode('all')
     setSearchQuery('')
   }
 
@@ -499,6 +545,58 @@ export default function PprPage() {
     () => dataColumns.filter((c) => isSummaryColumn(c.column_name)),
     [dataColumns],
   )
+
+  // ── Calendar view derived data ────────────────────────────────────
+  // Only active + pending PPRs land on the calendar (isActivePpr already
+  // excludes denied + canceled). The shared status/agency/search filters
+  // still apply via filteredEntries.
+  const calendarEntries = useMemo(
+    () => filteredEntries.filter((e) => isActivePpr(e.status)),
+    [filteredEntries],
+  )
+  const calByDate = useMemo(() => {
+    const m: Record<string, PprEntry[]> = {}
+    for (const e of calendarEntries) {
+      (m[e.arrival_date] ??= []).push(e)
+    }
+    return m
+  }, [calendarEntries])
+  // Month matrix: leading blanks to the first weekday, one cell per day,
+  // trailing blanks to fill the final week row.
+  const calCells = useMemo(() => {
+    const year = calMonth.getFullYear()
+    const month = calMonth.getMonth()
+    const firstWeekday = new Date(year, month, 1).getDay()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const cells: Array<{ date: string; day: number } | null> = []
+    for (let i = 0; i < firstWeekday; i++) cells.push(null)
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ date: ymd(new Date(year, month, d)), day: d })
+    }
+    while (cells.length % 7 !== 0) cells.push(null)
+    return cells
+  }, [calMonth])
+  const monthLabel = useMemo(
+    () => calMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
+    [calMonth],
+  )
+  const shiftMonth = useCallback((delta: number) => {
+    setCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1))
+  }, [])
+  // Chip label: first non-empty summary column (Callsign / Aircraft),
+  // else the requester name, else the PPR number.
+  const chipLabel = useCallback((e: PprEntry): string => {
+    for (const col of summaryColumns) {
+      const raw = (e.column_values || {})[col.id]
+      if (raw && String(raw).trim()) {
+        return formatPprColumnValue(col, raw, { tz: baseTimezone })
+      }
+    }
+    return e.requester_name || e.ppr_number
+  }, [summaryColumns, baseTimezone])
+  // Local-day key for the calendar's "today" highlight (cells use local
+  // ymd(); the page's `today` is UTC and can disagree in the evening).
+  const todayKey = ymd(new Date())
 
   // Copy the public PPR request URL to clipboard. Prefers the short
   // ICAO-based URL when the base has an ICAO; falls back to the
@@ -850,6 +948,64 @@ export default function PprPage() {
     }
   }
 
+  // Re-open a denied PPR for coordination. Pre-checks the agencies that
+  // were previously on the entry (if any), so the common case is one click.
+  const openReopen = (entry: PprEntry) => {
+    const prior = (coordsByEntry[entry.id] ?? [])
+      .map((c) => c.agency_id)
+      .filter((id): id is string => Boolean(id))
+    setReopenAgencyIds(prior)
+    setReopenEntry(entry)
+  }
+  const submitReopen = async () => {
+    if (!reopenEntry || !installationId) return
+    if (reopenAgencyIds.length === 0) {
+      toast.error('Select at least one agency to coordinate with')
+      return
+    }
+    setReopenBusy(true)
+    const res = await reopenPprEntry({
+      entryId: reopenEntry.id,
+      baseId: installationId,
+      agencyIds: reopenAgencyIds,
+    })
+    setReopenBusy(false)
+    if (res.ok) {
+      toast.success(`PPR ${reopenEntry.ppr_number} re-opened for coordination`)
+      // The detail card (where Re-open is triggered) shows the now-stale
+      // denied state — close it so the user sees the refreshed row.
+      if (detailEntry?.id === reopenEntry.id) setDetailEntry(null)
+      setReopenEntry(null)
+      loadData()
+    } else {
+      toast.error(res.error || 'Re-open failed')
+    }
+  }
+
+  // Departed / On-field toggle (Transient Aircraft board membership).
+  const handleDeparted = async (entry: PprEntry) => {
+    if (!installationId) return
+    const res = await markPprDeparted(entry.id, installationId)
+    if (res.ok) {
+      toast.success(`PPR ${entry.ppr_number} marked departed`)
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:write-committed'))
+      loadData()
+    } else {
+      toast.error(res.error || 'Could not mark departed')
+    }
+  }
+  const handleUndepart = async (entry: PprEntry) => {
+    if (!installationId) return
+    const res = await clearPprDeparted(entry.id, installationId)
+    if (res.ok) {
+      toast.success(`PPR ${entry.ppr_number} returned to field`)
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('glidepath:write-committed'))
+      loadData()
+    } else {
+      toast.error(res.error || 'Could not update')
+    }
+  }
+
   const noColumns = columns.length === 0
 
   // Per-row affordances. Anyone with the relevant permission gets
@@ -866,6 +1022,19 @@ export default function PprPage() {
     }
     if (canApprove && entry.status === 'pending_amops_approval') {
       acts.push({ label: 'Decide', color: 'var(--color-amber)', onClick: () => openDecide(entry) })
+    }
+    // A denial isn't always final — let approval authority re-open it
+    // back into coordination.
+    if (canApprove && entry.status === 'denied') {
+      acts.push({ label: 'Re-open', color: 'var(--color-green)', onClick: () => openReopen(entry) })
+    }
+    // Transient Aircraft board membership — active, not-yet-departed PPRs
+    // can be marked departed; departed ones can be returned to the field.
+    if (canWrite && isActivePpr(entry.status) && !entry.departed_at) {
+      acts.push({ label: 'Departed', color: 'var(--color-text-3)', onClick: () => handleDeparted(entry) })
+    }
+    if (canWrite && entry.departed_at) {
+      acts.push({ label: 'On Field', color: 'var(--color-accent)', onClick: () => handleUndepart(entry) })
     }
     if (canWrite) {
       acts.push({ label: 'Edit', color: 'var(--color-accent)', onClick: () => handleEdit(entry) })
@@ -1047,6 +1216,25 @@ export default function PprPage() {
             }}
           />
         </div>
+        {/* Log | Calendar view toggle. */}
+        <div style={{ display: 'inline-flex', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', overflow: 'hidden', flexShrink: 0 }}>
+          {(['log', 'calendar'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => setViewMode(m)}
+              title={m === 'log' ? 'Log view' : 'Calendar view'}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '8px 12px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                background: viewMode === m ? 'color-mix(in srgb, var(--color-accent) 12%, transparent)' : 'var(--color-bg-surface)',
+                color: viewMode === m ? 'var(--color-accent)' : 'var(--color-text-3)',
+              }}
+            >
+              {m === 'log' ? <><List size={14} /> Log</> : <><CalendarIcon size={14} /> Calendar</>}
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => setFiltersOpen(o => !o)}
           style={{
@@ -1118,21 +1306,25 @@ export default function PprPage() {
                 Date Range
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {(['today', '7d', '30d', 'custom'] as const).map(mode => (
+                {(['all', 'today', '7d', '30d', 'custom'] as const).map(mode => {
+                  const disabled = ignoreDateFilter || viewMode === 'calendar'
+                  return (
                   <button
                     key={mode}
                     onClick={() => setDateMode(mode)}
-                    disabled={ignoreDateFilter}
-                    title={ignoreDateFilter ? 'Date range is ignored when viewing pending queues' : undefined}
+                    disabled={disabled}
+                    title={viewMode === 'calendar' ? 'Calendar shows the selected month'
+                      : ignoreDateFilter ? 'Date range is ignored when viewing pending queues' : undefined}
                     style={{
                       ...chipStyle(dateMode === mode),
-                      opacity: ignoreDateFilter ? 0.4 : 1,
-                      cursor: ignoreDateFilter ? 'not-allowed' : 'pointer',
+                      opacity: disabled ? 0.4 : 1,
+                      cursor: disabled ? 'not-allowed' : 'pointer',
                     }}
                   >
-                    {mode === 'today' ? 'Today' : mode === '7d' ? 'Next 7d' : mode === '30d' ? 'Next 30d' : 'Custom'}
+                    {mode === 'all' ? 'All' : mode === 'today' ? 'Today' : mode === '7d' ? 'Next 7d' : mode === '30d' ? 'Next 30d' : 'Custom'}
                   </button>
-                ))}
+                  )
+                })}
               </div>
               {dateMode === 'custom' && !ignoreDateFilter && (
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8 }}>
@@ -1200,8 +1392,8 @@ export default function PprPage() {
           )}
           {dateActive && (
             <ActiveFilterChip
-              label={`Date: ${dateMode === '7d' ? 'Next 7d' : dateMode === '30d' ? 'Next 30d' : 'Custom'}`}
-              onClear={() => setDateMode('today')}
+              label={`Date: ${dateMode === 'today' ? 'Today' : dateMode === '7d' ? 'Next 7d' : dateMode === '30d' ? 'Next 30d' : 'Custom'}`}
+              onClear={() => setDateMode('all')}
             />
           )}
           <button
@@ -1218,8 +1410,156 @@ export default function PprPage() {
         </div>
       )}
 
-      {/* PPR Table */}
-      {loading ? (
+      {/* ── Calendar view ───────────────────────────────────────── */}
+      {viewMode === 'calendar' ? (
+        <div data-tour="ppr-calendar">
+          {/* Month nav */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 10 }}>
+            <button
+              onClick={() => shiftMonth(-1)}
+              aria-label="Previous month"
+              style={calNavBtnStyle}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div style={{ minWidth: 180, textAlign: 'center', fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--color-text-1)' }}>
+              {monthLabel}
+            </div>
+            <button
+              onClick={() => shiftMonth(1)}
+              aria-label="Next month"
+              style={calNavBtnStyle}
+            >
+              <ChevronRight size={18} />
+            </button>
+            <button
+              onClick={() => setCalMonth(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })}
+              style={{
+                marginLeft: 4, padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+                color: 'var(--color-text-2)', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--fs-2xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}
+            >
+              Today
+            </button>
+          </div>
+
+          {/* Weekday header */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+              <div key={d} style={{ textAlign: 'center', fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 0' }}>
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Day grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, opacity: loading ? 0.5 : 1 }}>
+            {calCells.map((cell, i) => {
+              if (!cell) return <div key={`b${i}`} style={{ minHeight: 92, borderRadius: 'var(--radius-sm)', background: 'transparent' }} />
+              const dayEntries = calByDate[cell.date] ?? []
+              const shown = dayEntries.slice(0, 3)
+              const overflow = dayEntries.length - shown.length
+              const isToday = cell.date === todayKey
+              return (
+                <div
+                  key={cell.date}
+                  style={{
+                    minHeight: 92, padding: 4, borderRadius: 'var(--radius-sm)',
+                    border: `1px solid ${isToday ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                    background: 'var(--color-bg-surface)',
+                    display: 'flex', flexDirection: 'column', gap: 3,
+                  }}
+                >
+                  <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: isToday ? 'var(--color-accent)' : 'var(--color-text-3)', textAlign: 'right', lineHeight: 1 }}>
+                    {cell.day}
+                  </div>
+                  {shown.map(e => {
+                    const meta = STATUS_META[e.status] ?? STATUS_META.approved
+                    return (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => setDetailEntry(e)}
+                        title={`${e.ppr_number} — ${meta.label}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 4, width: '100%',
+                          padding: '2px 4px', borderRadius: 4, border: `1px solid ${meta.border}`,
+                          background: meta.bg, cursor: 'pointer', fontFamily: 'inherit',
+                          fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-1)',
+                          textAlign: 'left', overflow: 'hidden',
+                        }}
+                      >
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: meta.fg, flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chipLabel(e)}</span>
+                      </button>
+                    )
+                  })}
+                  {overflow > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCalDayOpen(cell.date)}
+                      style={{
+                        background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+                        color: 'var(--color-accent)', textAlign: 'left',
+                      }}
+                    >
+                      +{overflow} more
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {!loading && calendarEntries.length === 0 && (
+            <p style={{ textAlign: 'center', color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 12 }}>
+              No active or pending PPRs in {monthLabel}.
+            </p>
+          )}
+
+          {/* Day popover — full list for a day with overflow. */}
+          {calDayOpen && (
+            <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setCalDayOpen(null) }}>
+              <div onClick={e => e.stopPropagation()} style={{ ...modalCardStyle, maxWidth: 420 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <h3 style={{ margin: 0, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)' }}>
+                    {formatZuluDate(calDayOpen + 'T00:00:00Z')}
+                  </h3>
+                  <button onClick={() => setCalDayOpen(null)} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-3)' }}>
+                    <X size={18} />
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(calByDate[calDayOpen] ?? []).map(e => {
+                    const meta = STATUS_META[e.status] ?? STATUS_META.approved
+                    return (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => { setCalDayOpen(null); setDetailEntry(e) }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                          padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+                          cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: meta.fg, flexShrink: 0 }} />
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-accent)', fontSize: 'var(--fs-xs)' }}>{e.ppr_number}</span>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)' }}>{chipLabel(e)}</span>
+                        <span style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: meta.fg, textTransform: 'uppercase' }}>{meta.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
             <thead>
@@ -1949,6 +2289,91 @@ export default function PprPage() {
         </div>
       )}
 
+      {/* Re-open modal — denied → coordination. */}
+      {reopenEntry && (
+        <div className="modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setReopenEntry(null) }}>
+          <div onClick={e => e.stopPropagation()} style={modalCardStyle}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
+              Re-open PPR {reopenEntry.ppr_number}
+            </h3>
+            <p style={{ margin: '0 0 12px', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+              This denied PPR will return to <strong>In Coordination</strong>. Pick which agencies must (re)coordinate — the prior denial reason and any earlier coordination are preserved in the remarks thread. The requester isn&apos;t emailed until the next decision.
+            </p>
+
+            <SubmittedSummary entry={reopenEntry} columns={columns} />
+
+            {(() => {
+              const orphans = reopenAgencyIds.filter((id) => (agencyCoordCounts[id] ?? 0) === 0)
+              const orphanNames = orphans
+                .map((id) => agencies.find((a) => a.id === id)?.agency_name)
+                .filter(Boolean) as string[]
+              return (
+                <div style={{ margin: '12px 0' }}>
+                  <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6 }}>
+                    Coordinating agencies:
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {agencies.length === 0 ? (
+                      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                        No agencies configured. Add them in Base Setup → PPR.
+                      </span>
+                    ) : agencies.map((a) => {
+                      const selected = reopenAgencyIds.includes(a.id)
+                      const noCoords = (agencyCoordCounts[a.id] ?? 0) === 0
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setReopenAgencyIds(selected ? reopenAgencyIds.filter((id) => id !== a.id) : [...reopenAgencyIds, a.id])}
+                          style={chipBtn(selected)}
+                          title={noCoords ? 'No coordinators assigned — email will be skipped for this agency' : undefined}
+                        >
+                          {a.agency_name}
+                          {noCoords && <AlertTriangle size={12} color="var(--color-warning, #f59e0b)" style={{ marginLeft: 6, verticalAlign: '-2px' }} />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {orphanNames.length > 0 && (
+                    <div style={{
+                      marginTop: 8, padding: '8px 10px',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid var(--color-warning, #f59e0b)',
+                      borderRadius: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)',
+                      display: 'flex', alignItems: 'flex-start', gap: 8,
+                    }}>
+                      <AlertCircle size={14} color="var(--color-warning, #f59e0b)" style={{ flexShrink: 0, marginTop: 1 }} />
+                      <span>
+                        <strong>No coordinators</strong> for {orphanNames.join(', ')}. The coordination-request email will be skipped for {orphanNames.length === 1 ? 'this agency' : 'these agencies'}; assign coordinators in Base Setup → PPR Columns or notify them out-of-band.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setReopenEntry(null)} style={cancelBtnStyle}>Cancel</button>
+              <button
+                onClick={submitReopen}
+                disabled={reopenBusy || reopenAgencyIds.length === 0}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '6px 16px', borderRadius: 4, border: 'none',
+                  background: (reopenBusy || reopenAgencyIds.length === 0) ? 'var(--color-border)' : 'var(--color-success)',
+                  color: '#fff',
+                  cursor: (reopenBusy || reopenAgencyIds.length === 0) ? 'not-allowed' : 'pointer',
+                  fontWeight: 700, fontFamily: 'inherit',
+                }}
+              >
+                <Route size={14} />
+                {reopenBusy ? 'Re-opening…' : 'Re-open for Coordination'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Detail card — opened by clicking a row in the table. Houses
           all dynamic-column data, coordination history, audit info,
           and every action that's currently allowed for this entry.
@@ -2182,6 +2607,7 @@ export default function PprPage() {
                   ...(detailEntry.approval_at ? [{ label: 'Approved At', value: formatZuluDateTime(detailEntry.approval_at) }] : []),
                   ...(detailEntry.denial_reason ? [{ label: 'Denial Reason', value: detailEntry.denial_reason }] : []),
                   ...(detailEntry.cancellation_reason ? [{ label: 'Cancellation Reason', value: detailEntry.cancellation_reason }] : []),
+                  ...(detailEntry.departed_at ? [{ label: 'Departed At', value: formatZuluDateTime(detailEntry.departed_at) }] : []),
                   ...(detailEntry.created_at ? [{ label: 'Submitted At', value: formatZuluDateTime(detailEntry.created_at) }] : []),
                 ]}
               />
@@ -2598,6 +3024,13 @@ function chipStyle(active: boolean): React.CSSProperties {
     cursor: 'pointer', fontFamily: 'inherit',
     textTransform: 'uppercase', letterSpacing: '0.04em',
   }
+}
+
+const calNavBtnStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+  color: 'var(--color-text-2)', cursor: 'pointer',
 }
 
 function chipBtn(selected: boolean): React.CSSProperties {
