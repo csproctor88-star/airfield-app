@@ -7,8 +7,9 @@
 ## Summary
 
 A new standalone **Read File** module at `/read-file`. Managers (Airfield
-Manager / NAMT roles + Base Admin) upload documents that every member at the
-base must read and acknowledge ("read and initial"). The module mirrors the
+Manager / NAMT roles + Base Admin) upload documents that the base's operational
+users (AFM, NAMO, AMOPS, Base Admin) must read and acknowledge ("read and
+initial"). The module mirrors the
 AMTR Files tab for upload/storage and the QRC monthly-review for the
 acknowledge-and-report mechanics. Users who have not acknowledged an active file
 at its current version see a **red action-required badge** on the `/read-file`
@@ -37,7 +38,7 @@ This implements the standard USAF **read-and-initial continuity file** concept.
 | Decision | Choice |
 |---|---|
 | Placement | Standalone top-level nav module `/read-file` |
-| Required audience | All users with base access (every `base_members` row) |
+| Required audience | Operational roles only — `airfield_manager`, `namo`, `amops`, `base_admin`, `sys_admin` (the QRC `REVIEWER_ROLES` set). Read-only / ATC / safety viewers are NOT tracked. |
 | Recurrence | Once per file; re-sign when the file is replaced (version bump) |
 | Sign method | One-click "I have reviewed this file" → records user, timestamp, operating initials |
 | Airport modes | Available in **both** USAF and civilian (Part 139) modes |
@@ -50,12 +51,23 @@ New matrix keys (mirror the AMTR grant structure in
 `2026052000_amtr_permissions.sql`):
 
 - **`read_file:view`** — open the module, view files, acknowledge. Granted to
-  **all roles** (everyone must read & sign).
+  the **operational roles only**: `airfield_manager`, `namo`, `amops`,
+  `base_admin`, `sys_admin`. These are exactly the users who must read & sign,
+  and the only users who see the module / badge. (Read-only / ATC / safety
+  roles are intentionally NOT granted — they have no read-file obligation.)
 - **`read_file:manage`** — add/replace/archive files + run the report. Granted
-  to `airfield_manager`, `namo`, `base_admin`, `sys_admin`.
+  to `airfield_manager`, `namo`, `base_admin`, `sys_admin` (AMOPS gets view +
+  sign, not manage — parallels their AMTR access).
 
 Mirror both keys in `lib/permissions.ts` (`PERM.READ_FILE_VIEW`,
 `PERM.READ_FILE_MANAGE`).
+
+**Required-reader set.** The "who is outstanding" / badge / report audience is
+the set of `base_members` whose `role` is in
+`['airfield_manager', 'namo', 'amops', 'base_admin', 'sys_admin']` — identical
+to QRC's `REVIEWER_ROLES` (`lib/supabase/qrc-reviews.ts`). Defensive fold-in:
+anyone outside this set who somehow has an ack row still appears in the report
+(matches the QRC consolidated-report behavior), but they never drive the badge.
 
 ## Data Model
 
@@ -93,10 +105,12 @@ Mirror both keys in `lib/permissions.ts` (`PERM.READ_FILE_VIEW`,
   CASCADE.
 
 ### Outstanding logic
-For a user at a base: active (`is_archived = false`) `read_files` for which **no**
+For a user **in the required-reader set** at a base: active
+(`is_archived = false`) `read_files` for which **no**
 `read_file_acknowledgments` row exists matching `(read_file_id, user_id,
 acknowledged_version = read_files.version)`. The badge count is the size of that
-set.
+set. Users outside the required set (read-only/ATC/safety) never see the module,
+so the count is moot for them; the `read_file:view` grant already excludes them.
 
 ## RLS (matrix helpers only)
 
@@ -174,11 +188,13 @@ update succeeds.
 - Data via `lib/supabase/read-files.ts`:
   - all active files at the base,
   - all acks at the base (current + historical versions),
-  - all base members with profile fields (name, rank, operating_initials) —
-    two-step query like `fetchAllReviewsForBase` / `fetchEligibleReviewers`.
+  - the required-reader roster — `base_members` in the required-reader roles
+    with profile fields (name, rank, operating_initials) — two-step query like
+    `fetchAllReviewsForBase` / `fetchEligibleReviewers`.
 - Layout: per active file — title, version, upload date — then a table of every
-  base member marked `Reviewed ({initials} · {date})` for the current version, or
-  **OUTSTANDING**; per-file and overall summary counts.
+  required-reader marked `Reviewed ({initials} · {date})` for the current
+  version, or **OUTSTANDING**; per-file and overall summary counts. (Acks from
+  users outside the required set still render, per the defensive fold-in.)
 - Button on `/read-file`, gated on `read_file:manage`.
 
 ## Module registration
@@ -221,7 +237,8 @@ regen deferred — access new tables via `as any` (the `qrc-reviews.ts` pattern)
 
 - **enabled_modules backfill** — existing bases won't see the module until the
   backfill migration runs (known systemic gap).
-- **Base member count for "Y"** — define "all members" as active `base_members`
-  rows; excludes deactivated accounts. Confirm during implementation whether any
-  role (e.g. pure read-only viewers) should be excluded from the required set —
-  current decision: everyone with base access is required.
+- **Required-reader count for "Y"** — active `base_members` rows whose `role` is
+  in the required-reader set (`airfield_manager`, `namo`, `amops`, `base_admin`,
+  `sys_admin`); excludes deactivated accounts and all read-only/ATC/safety
+  viewers. Reuse / parallel `REVIEWER_ROLES` from `qrc-reviews.ts` so the two
+  modules stay in sync.
