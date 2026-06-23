@@ -95,6 +95,10 @@ export const PERM = {
   AMTR_MANAGE:                          'amtr:manage',
   AMTR_EXPORT:                          'amtr:export',
 
+  // Read File — read-and-initial continuity file (USAF + civilian)
+  READ_FILE_VIEW:                       'read_file:view',
+  READ_FILE_MANAGE:                     'read_file:manage',
+
   // SMS — Safety Management System (Part 139 §139.401-415)
   SMS_READ:                             'sms:read',
   SMS_WRITE:                            'sms:write',
