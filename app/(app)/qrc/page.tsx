@@ -58,6 +58,11 @@ const PILL = {
     border: 'color-mix(in srgb, var(--color-success) 35%, transparent)',
     color: 'var(--color-success)',
   },
+  revised: {
+    bg: 'color-mix(in srgb, var(--color-amber) 14%, var(--color-bg-surface))',
+    border: 'color-mix(in srgb, var(--color-amber) 40%, transparent)',
+    color: 'var(--color-amber)',
+  },
 } as const
 
 function zuluNow(): string {
@@ -311,6 +316,13 @@ export default function QrcPage() {
                       </>
                     )}
                   </div>
+                  {/* Per-user revised-since-your-review marker (amber) — this
+                      QRC changed since you last signed off, mid-cycle. */}
+                  {monthlyReviews.getStatus(tmpl).state === 'updated' && (
+                    <div style={{ marginTop: 8 }}>
+                      <StatusPill kind="revised">Revised — review needed</StatusPill>
+                    </div>
+                  )}
                 </button>
               )
             })}

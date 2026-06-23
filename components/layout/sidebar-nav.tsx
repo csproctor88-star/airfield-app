@@ -456,6 +456,21 @@ export function SidebarNav() {
               {badgeCounts.qrc > 9 ? '9+' : badgeCounts.qrc}
             </span>
           )}
+          {/* QRC revised-since-review dot — amber, only when no active QRC is
+              running (red active execution takes priority). Routine "this QRC
+              changed since you reviewed it" signal. */}
+          {href === '/qrc' && badgeCounts.qrc === 0 && badgeCounts.qrcRevised > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-warning)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(245,158,11,0.5)',
+            }}>
+              {badgeCounts.qrcRevised > 9 ? '9+' : badgeCounts.qrcRevised}
+            </span>
+          )}
           {/* Discrepancies pending-verification dot — work_completed_awaiting_verification rows
               waiting for AMOPS final close. Same suppression rules as PPR/QRC. */}
           {href === '/discrepancies' && badgeCounts.discrepancies > 0 && !active && (
@@ -513,6 +528,11 @@ export function SidebarNav() {
         {isOpen && href === '/qrc' && badgeCounts.qrc > 0 && !active && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {badgeCounts.qrc} active
+          </span>
+        )}
+        {isOpen && href === '/qrc' && badgeCounts.qrc === 0 && badgeCounts.qrcRevised > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-warning)', marginLeft: 'auto' }}>
+            {badgeCounts.qrcRevised} revised
           </span>
         )}
         {isOpen && href === '/discrepancies' && badgeCounts.discrepancies > 0 && !active && (
@@ -605,7 +625,8 @@ export function SidebarNav() {
     const sectionDisc = section.items.includes('/discrepancies') ? badgeCounts.discrepancies : 0
     const sectionAmtr = section.items.includes('/amtr') ? badgeCounts.amtr : 0
     const sectionReadFile = section.items.includes('/read-file') ? badgeCounts.readFile : 0
-    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr + sectionReadFile
+    const sectionQrcRevised = section.items.includes('/qrc') ? badgeCounts.qrcRevised : 0
+    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr + sectionReadFile + sectionQrcRevised
 
     // Dot color matches the contributor (so it reads the same as the module's
     // own nav dot): red for PPR/QRC action, amber for AMTR training action,
@@ -614,7 +635,7 @@ export function SidebarNav() {
     let sectionDotColor = 'var(--color-danger)'
     let sectionDotGlow = '0 0 6px rgba(239,68,68,0.5)'
     if (sectionPpr === 0 && sectionQrc === 0 && sectionReadFile === 0) {
-      if (sectionAmtr > 0) {
+      if (sectionAmtr > 0 || sectionQrcRevised > 0) {
         sectionDotColor = 'var(--color-warning)'
         sectionDotGlow = '0 0 6px rgba(245,158,11,0.5)'
       } else if (sectionDisc > 0) {

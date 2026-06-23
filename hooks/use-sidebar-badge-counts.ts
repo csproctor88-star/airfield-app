@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchPendingTriageCount, fetchPendingApprovalCount } from '@/lib/supabase/ppr'
 import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-members'
 import { fetchActiveQrcCount } from '@/lib/supabase/qrc'
+import { fetchRevisedQrcCount } from '@/lib/supabase/qrc-reviews'
 import { fetchPendingVerificationCount } from '@/lib/supabase/discrepancies'
 import { fetchAmtrNotificationCount } from '@/lib/supabase/amtr'
 import { fetchUnacknowledgedReadFileCount } from '@/lib/supabase/read-files'
@@ -43,6 +44,7 @@ export function useSidebarBadgeCounts() {
   const [pprApproval, setPprApproval] = useState(0)
   const [pprCoord, setPprCoord] = useState(0)
   const [qrcActive, setQrcActive] = useState(0)
+  const [qrcRevised, setQrcRevised] = useState(0)
   const [discrepanciesPendingVerification, setDiscrepanciesPendingVerification] = useState(0)
   const [amtrNotifications, setAmtrNotifications] = useState(0)
   const [readFileOutstanding, setReadFileOutstanding] = useState(0)
@@ -82,6 +84,13 @@ export function useSidebarBadgeCounts() {
       tasks.push(fetchActiveQrcCount(installationId).then(setQrcActive))
     } else {
       setQrcActive(0)
+    }
+    // Revised-since-review (mid-cycle QRC revisions) → amber dot. Gated on
+    // qrc:execute (the reviewer permission), since only reviewers re-review.
+    if (has(PERM.QRC_EXECUTE)) {
+      tasks.push(fetchRevisedQrcCount(installationId).then(setQrcRevised))
+    } else {
+      setQrcRevised(0)
     }
     if (has(PERM.DISCREPANCIES_CLOSE)) {
       tasks.push(
@@ -139,6 +148,16 @@ export function useSidebarBadgeCounts() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'qrc_executions', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'qrc_templates', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'qrc_monthly_reviews', filter: `base_id=eq.${installationId}` },
         () => refresh(),
       )
       .on(
@@ -222,7 +241,8 @@ export function useSidebarBadgeCounts() {
   const discrepancies = discrepanciesPendingVerification
   const amtr = amtrNotifications
   const readFile = readFileOutstanding
-  const total = ppr + qrc + discrepancies + amtr + readFile
+  const qrcReviseCount = qrcRevised
+  const total = ppr + qrc + discrepancies + amtr + readFile + qrcReviseCount
 
-  return { ppr, qrc, discrepancies, amtr, readFile, total }
+  return { ppr, qrc, qrcRevised: qrcReviseCount, discrepancies, amtr, readFile, total }
 }

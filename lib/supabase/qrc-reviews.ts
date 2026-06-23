@@ -1,5 +1,7 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import { fetchQrcTemplates } from './qrc'
+import { getMonthlyReviewStatus } from '@/lib/qrc/monthly-review-status'
 import type { QrcMonthlyReview } from './types'
 
 // ─────────────────────────────────────────────────────────────
@@ -206,4 +208,40 @@ export async function markReviewed(
 
   if (error) return { data: null, error: friendlyError(error.message) }
   return { data: data as QrcMonthlyReview, error: null }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Revised-since-review signal (mid-cycle QRC revisions).
+//
+// Counts active templates the current user has reviewed before but whose
+// template.updated_at is newer than that review — i.e. getMonthlyReviewStatus
+// === 'updated'. This is interval-independent (the 'updated' branch fires
+// before the overdue check), so the count is the same monthly or quarterly.
+// Drives the amber /qrc sidebar dot.
+// ─────────────────────────────────────────────────────────────
+
+/** Pure: how many active templates are revised-since-the-user's-review. */
+export function countRevised(
+  templates: { id: string; updated_at: string | null; is_active: boolean }[],
+  latestReviewByTemplate: Map<string, QrcMonthlyReview>,
+): number {
+  let n = 0
+  for (const t of templates) {
+    if (!t.is_active) continue
+    const review = latestReviewByTemplate.get(t.id) ?? null
+    // '' is treated as "no update" by getMonthlyReviewStatus (falsy → epoch 0).
+    if (getMonthlyReviewStatus({ updated_at: t.updated_at ?? '' }, review).state === 'updated') n += 1
+  }
+  return n
+}
+
+/** Count of active QRCs revised since the signed-in user last reviewed them. */
+export async function fetchRevisedQrcCount(baseId: string | null | undefined): Promise<number> {
+  if (!baseId) return 0
+  const [templates, reviews] = await Promise.all([
+    fetchQrcTemplates(baseId),
+    fetchUserReviews(baseId),
+  ])
+  const byTemplate = new Map<string, QrcMonthlyReview>(reviews.map(r => [r.template_id, r]))
+  return countRevised(templates, byTemplate)
 }
