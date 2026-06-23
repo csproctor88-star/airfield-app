@@ -151,7 +151,7 @@ export async function fetchActivityLog(options: {
       return {
         data: fallback.map((r: Record<string, unknown>) => ({
           ...r,
-          user_name: 'Unknown',
+          user_name: (r as { user_id?: string | null }).user_id ? 'Unknown' : 'System',
           user_rank: null,
           user_role: null,
           user_edipi: null,
@@ -169,7 +169,7 @@ export async function fetchActivityLog(options: {
     return {
       data: data.map((r: Record<string, unknown>) => ({
         ...r,
-        user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+        user_name: (r as { user_id?: string | null }).user_id ? ((r.profiles as { name?: string } | null)?.name || 'Unknown') : 'System',
         user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
         user_role: (r.profiles as { role?: string } | null)?.role || null,
         user_edipi: (r.profiles as { edipi?: string } | null)?.edipi || null,
@@ -267,7 +267,7 @@ export async function fetchActivityLogPage(options: {
 
   const rows = ((data || []) as Record<string, unknown>[]).map((r) => ({
     ...r,
-    user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+    user_name: (r as { user_id?: string | null }).user_id ? ((r.profiles as { name?: string } | null)?.name || 'Unknown') : 'System',
     user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
     user_role: (r.profiles as { role?: string } | null)?.role || null,
     user_edipi: (r.profiles as { edipi?: string } | null)?.edipi || null,
@@ -319,7 +319,7 @@ export async function fetchActivityLogForExport(options: {
     for (const r of data as Record<string, unknown>[]) {
       all.push({
         ...r,
-        user_name: (r.profiles as { name?: string } | null)?.name || 'Unknown',
+        user_name: (r as { user_id?: string | null }).user_id ? ((r.profiles as { name?: string } | null)?.name || 'Unknown') : 'System',
         user_rank: (r.profiles as { rank?: string } | null)?.rank || null,
         user_role: (r.profiles as { role?: string } | null)?.role || null,
         user_edipi: (r.profiles as { edipi?: string } | null)?.edipi || null,
@@ -363,7 +363,7 @@ export async function fetchDashboardActivity(baseId: string | null, limit = 30):
     entity_display_id: r.entity_display_id,
     metadata: r.metadata || null,
     created_at: r.created_at,
-    user_name: r.profiles?.name || 'Unknown',
+    user_name: r.user_id ? (r.profiles?.name || 'Unknown') : 'System',
     user_rank: r.profiles?.rank || null,
     user_role: r.profiles?.role || null,
     user_edipi: r.profiles?.edipi || null,
