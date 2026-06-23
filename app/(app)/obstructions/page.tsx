@@ -4,7 +4,7 @@ import { Suspense, useState, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
-import { ArrowLeft, AlertTriangle, History, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, History, AlertCircle, CheckCircle2, Copy } from 'lucide-react'
 import UseMyLocationButton from '@/components/ui/use-my-location-button'
 import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
@@ -58,6 +58,23 @@ export default function ObstructionsPage() {
       <ObstructionsContent />
     </Suspense>
   )
+}
+
+// Build the obstacle NOTAM coordinate string: DDMMSS{N|S}DDDMMSS{E|W}.
+// Degrees-minutes-seconds, seconds truncated (not rounded), matching the FAA
+// obstacle-NOTAM convention.
+//   42.60522, -82.82047  ->  "423618N0824913W"
+function toNotamCoordString(lat: number, lon: number): string {
+  const fmt = (dec: number, degPad: number, pos: string, neg: string) => {
+    const dir = dec >= 0 ? pos : neg
+    const abs = Math.abs(dec)
+    const d = Math.floor(abs)
+    const minFloat = (abs - d) * 60
+    const m = Math.floor(minFloat)
+    const s = Math.floor((minFloat - m) * 60)
+    return `${String(d).padStart(degPad, '0')}${String(m).padStart(2, '0')}${String(s).padStart(2, '0')}${dir}`
+  }
+  return `${fmt(lat, 2, 'N', 'S')}${fmt(lon, 3, 'E', 'W')}`
 }
 
 function ObstructionsContent() {
@@ -590,29 +607,65 @@ function ObstructionsContent() {
                   : (runways[pointInfo.closestRunwayIndex]?.end2_designator ?? '19')})
               </div>
             </div>
-            {/* NOTAM-ready: NM distance and bearing from nearest threshold */}
+            {/* NOTAM-ready: full obstacle NOTAM, copy-ready */}
             {(() => {
+              const notamString = toNotamCoordString(pointInfo.point.lat, pointInfo.point.lon)
+
+              // Distance/bearing measured from the nearest runway threshold (as
+              // the tool computed before). The NOTAM still references the base
+              // ICAO per published-NOTAM convention.
               const rwy = runways[pointInfo.closestRunwayIndex]
-              if (!rwy) return null
               const thresholdCoord = pointInfo.nearerEnd === 'end1'
-                ? { lat: rwy.end1_latitude ?? 0, lon: rwy.end1_longitude ?? 0 }
-                : { lat: rwy.end2_latitude ?? 0, lon: rwy.end2_longitude ?? 0 }
-              const designator = pointInfo.nearerEnd === 'end1'
-                ? (rwy.end1_designator ?? '01')
-                : (rwy.end2_designator ?? '19')
+                ? { lat: rwy?.end1_latitude ?? pointInfo.point.lat, lon: rwy?.end1_longitude ?? pointInfo.point.lon }
+                : { lat: rwy?.end2_latitude ?? pointInfo.point.lat, lon: rwy?.end2_longitude ?? pointInfo.point.lon }
               const nmDist = pointInfo.distFromThreshold / 6076.12
               const brg = bearing(thresholdCoord, pointInfo.point)
-              const cardinalDir = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(brg / 22.5) % 16]
+              const cardinal8 = ['NORTH', 'NORTHEAST', 'EAST', 'SOUTHEAST', 'SOUTH', 'SOUTHWEST', 'WEST', 'NORTHWEST'][Math.round(brg / 45) % 8]
+              const icao = (currentInstallation?.icao || '').toUpperCase()
+
+              const heightNum = parseFloat(height)
+              const aglFt = Number.isFinite(heightNum) ? heightNum : 0
+              const groundMsl = pointInfo.groundElevMSL ?? airfieldElevMSL
+              const mslFt = Math.round(groundMsl + aglFt)
+
+              const typeText = description.trim().toUpperCase()
+              const obstacleLine = `OBSTACLE${typeText ? ' ' + typeText : ''} ${notamString}`
+              const distLine = ` (${nmDist.toFixed(2)}NM ${cardinal8}${icao ? ' ' + icao : ''}) ${mslFt}FT MSL`
+              const aglLine = ` (${Math.round(aglFt)}FT AGL)`
+              const notamFullText = `${obstacleLine}\n${distLine}\n${aglLine}`
+
               return (
                 <div style={{
                   padding: '8px 10px', borderRadius: 'var(--radius-sm)',
                   background: 'color-mix(in srgb, var(--color-cyan) 6%, transparent)',
                   border: '1px solid color-mix(in srgb, var(--color-cyan) 25%, transparent)',
                 }}>
-                  <span style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700 }}>NOTAM Reference</span>
-                  <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 4, lineHeight: 1.5 }}>
-                    {nmDist.toFixed(2)} NM {cardinalDir} ({brg.toFixed(0)}°) from RWY {designator} threshold
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700 }}>NOTAM Reference</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(notamFullText)
+                          .then(() => toast.success('NOTAM reference copied'))
+                          .catch(() => toast.error('Copy failed'))
+                      }}
+                      title="Copy NOTAM reference"
+                      aria-label="Copy NOTAM reference"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        padding: 6, borderRadius: 'var(--radius-md)',
+                        border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+                        background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+                        color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      <Copy size={15} />
+                    </button>
                   </div>
+                  <pre style={{
+                    color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)',
+                    marginTop: 6, marginBottom: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}>{notamFullText}</pre>
                 </div>
               )
             })()}
