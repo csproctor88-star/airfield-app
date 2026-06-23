@@ -25,6 +25,7 @@ export type ModuleKey =
   | 'aep'
   | 'field_conditions'
   | 'whmp'
+  | 'read_file'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -305,6 +306,16 @@ export const MODULES: ModuleDef[] = [
     setupSteps: [],
     defaultEnabled: true,
     appliesTo: ['faa_part139'],
+  },
+  {
+    key: 'read_file',
+    label: 'Read File',
+    category: 'compliance',
+    description: 'Read-and-initial continuity file — leadership uploads documents that airfield management personnel must read and acknowledge, with a per-version audit trail and a compliance report.',
+    useCase: 'Distribute OIs, policy letters, and read-and-initial items to airfield management personnel and track who has reviewed each one.',
+    hrefs: ['/read-file'],
+    setupSteps: [],
+    defaultEnabled: true,
   },
 ]
 

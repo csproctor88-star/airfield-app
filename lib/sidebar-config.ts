@@ -70,6 +70,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   // hides it on civilian bases) and gated by `amtr:view`, which is held only by
   // Airfield Manager / NAMO / Base Admin / AMOPS / sys_admin.
   { name: 'Training Records', href: '/amtr', iconName: 'Award' },
+  { name: 'Read File', href: '/read-file', iconName: 'ClipboardCheck' },
   { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
   { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
   { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin' },
@@ -113,7 +114,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       collapsed: true,
       // /ces stays here but renders only for ces:view holders (CES role +
       // sys_admin); base-admins / Airfield Managers don't hold the key.
-      items: ['/discrepancies', '/infrastructure', '/waivers', '/daily-reviews', '/parking', '/obstructions', '/amtr', '/ces'],
+      items: ['/discrepancies', '/infrastructure', '/waivers', '/daily-reviews', '/parking', '/obstructions', '/amtr', '/read-file', '/ces'],
     },
     {
       label: 'Safety Management System',
