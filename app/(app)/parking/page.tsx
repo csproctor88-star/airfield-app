@@ -1290,7 +1290,7 @@ export default function ParkingPage() {
         const c = spotCenter(spot)
         marker.setPosition({ lat: c.lat, lng: c.lon })
         marker.setLabel(visibleLayers.labels ? {
-          text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
+          text: `${spot.spot_name || spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
           color: '#FFFFFF',
           fontSize: '11px',
           fontWeight: 'bold',
@@ -1389,7 +1389,7 @@ export default function ParkingPage() {
           } as google.maps.Icon,
           zIndex: 10,
           label: visibleLayers.labels ? {
-            text: `${spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
+            text: `${spot.spot_name || spot.aircraft_name || 'Aircraft'}${spot.tail_number ? '\n' + spot.tail_number : ''}`,
             color: '#FFFFFF',
             fontSize: '11px',
             fontWeight: 'bold',
