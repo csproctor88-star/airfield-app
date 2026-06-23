@@ -1,4 +1,12 @@
 {
+  "A321": {
+    "base_name": "A321",
+    "display_name": "A321-200",
+    "category": "commercial",
+    "filename": "a321.svg",
+    "path": "/aircraft_silhouettes/a321.svg",
+    "source_shape": "A321.svg"
+  },
   "707": {
     "base_name": "707",
     "display_name": "707-120B",
