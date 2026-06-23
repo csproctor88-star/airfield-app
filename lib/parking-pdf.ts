@@ -160,7 +160,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
 
       autoTable(doc, {
         startY: y,
-        head: [['Spot', 'Aircraft', 'Tail #', 'Hdg', 'Nose Coordinates']],
+        head: [['Aircraft Label', 'Aircraft', 'Tail #', 'Hdg', 'Nose Coordinates']],
         body: spotRows,
         margin: { left: margin, right: margin },
         styles: { fontSize: 7, cellPadding: 1.5 },
