@@ -10,6 +10,7 @@ import { fetchPendingCoordinationCountForUser } from '@/lib/supabase/ppr-agency-
 import { fetchActiveQrcCount } from '@/lib/supabase/qrc'
 import { fetchPendingVerificationCount } from '@/lib/supabase/discrepancies'
 import { fetchAmtrNotificationCount } from '@/lib/supabase/amtr'
+import { fetchUnacknowledgedReadFileCount } from '@/lib/supabase/read-files'
 
 /**
  * Per-module pending-action counts for sidebar badges.
@@ -44,6 +45,7 @@ export function useSidebarBadgeCounts() {
   const [qrcActive, setQrcActive] = useState(0)
   const [discrepanciesPendingVerification, setDiscrepanciesPendingVerification] = useState(0)
   const [amtrNotifications, setAmtrNotifications] = useState(0)
+  const [readFileOutstanding, setReadFileOutstanding] = useState(0)
 
   const refresh = useCallback(async () => {
     if (!installationId || !permsLoaded) return
@@ -92,6 +94,11 @@ export function useSidebarBadgeCounts() {
       tasks.push(fetchAmtrNotificationCount().then(setAmtrNotifications))
     } else {
       setAmtrNotifications(0)
+    }
+    if (has(PERM.READ_FILE_VIEW)) {
+      tasks.push(fetchUnacknowledgedReadFileCount(installationId).then(setReadFileOutstanding))
+    } else {
+      setReadFileOutstanding(0)
     }
     await Promise.all(tasks)
   }, [installationId, has, permsLoaded])
@@ -142,6 +149,16 @@ export function useSidebarBadgeCounts() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'amtr_notifications' },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'read_files', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'read_file_acknowledgments', filter: `base_id=eq.${installationId}` },
         () => refresh(),
       )
       .subscribe((status) => {
@@ -204,7 +221,8 @@ export function useSidebarBadgeCounts() {
   const qrc = qrcActive
   const discrepancies = discrepanciesPendingVerification
   const amtr = amtrNotifications
-  const total = ppr + qrc + discrepancies + amtr
+  const readFile = readFileOutstanding
+  const total = ppr + qrc + discrepancies + amtr + readFile
 
-  return { ppr, qrc, discrepancies, amtr, total }
+  return { ppr, qrc, discrepancies, amtr, readFile, total }
 }

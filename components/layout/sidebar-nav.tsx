@@ -119,6 +119,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/feedback':          'feedback:view',
   '/contractors':       'contractors:view',
   '/amtr':              'amtr:view',
+  '/read-file':         'read_file:view',
   '/ces':               'ces:view',
   '/discrepancies':     'discrepancies:view',
   '/obstructions':      'obstructions:view',
@@ -483,6 +484,20 @@ export function SidebarNav() {
               {badgeCounts.amtr > 9 ? '9+' : badgeCounts.amtr}
             </span>
           )}
+          {/* Read File outstanding dot — active files the current user hasn't
+              acknowledged at the current version. Red: action-required. */}
+          {href === '/read-file' && badgeCounts.readFile > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {badgeCounts.readFile > 9 ? '9+' : badgeCounts.readFile}
+            </span>
+          )}
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
@@ -508,6 +523,11 @@ export function SidebarNav() {
         {isOpen && href === '/amtr' && badgeCounts.amtr > 0 && !active && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-warning)', marginLeft: 'auto' }}>
             {badgeCounts.amtr} to action
+          </span>
+        )}
+        {isOpen && href === '/read-file' && badgeCounts.readFile > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+            {badgeCounts.readFile} to review
           </span>
         )}
       </Link>
@@ -584,7 +604,8 @@ export function SidebarNav() {
     const sectionQrc = section.items.includes('/qrc') ? badgeCounts.qrc : 0
     const sectionDisc = section.items.includes('/discrepancies') ? badgeCounts.discrepancies : 0
     const sectionAmtr = section.items.includes('/amtr') ? badgeCounts.amtr : 0
-    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr
+    const sectionReadFile = section.items.includes('/read-file') ? badgeCounts.readFile : 0
+    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr + sectionReadFile
 
     // Dot color matches the contributor (so it reads the same as the module's
     // own nav dot): red for PPR/QRC action, amber for AMTR training action,
@@ -592,7 +613,7 @@ export function SidebarNav() {
     // when a section mixes them.
     let sectionDotColor = 'var(--color-danger)'
     let sectionDotGlow = '0 0 6px rgba(239,68,68,0.5)'
-    if (sectionPpr === 0 && sectionQrc === 0) {
+    if (sectionPpr === 0 && sectionQrc === 0 && sectionReadFile === 0) {
       if (sectionAmtr > 0) {
         sectionDotColor = 'var(--color-warning)'
         sectionDotGlow = '0 0 6px rgba(245,158,11,0.5)'
