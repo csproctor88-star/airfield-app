@@ -91,11 +91,17 @@ export function buildPprInvite(input: {
    * coordinating groups who just want the visit on their calendar.
    */
   method?: 'REQUEST' | 'PUBLISH'
+  /**
+   * Ordered label/value lines rendered into the event DESCRIPTION so the
+   * calendar item carries the same PPR info as the emails (arrival date,
+   * requester contact, every column value). Built by the route.
+   */
+  details?: { label: string; value: string }[]
 }): PprInviteAttachment {
   const {
     entryId, pprNumber, baseName, baseIcao, arrivalDate, summary,
     requesterName, requesterEmail, organizerEmail, amopsEmail, notes,
-    dtstamp, sequence = 0, method = 'REQUEST',
+    dtstamp, sequence = 0, method = 'REQUEST', details = [],
   } = input
 
   // All-day end date is exclusive → arrival + 1 day.
@@ -106,11 +112,11 @@ export function buildPprInvite(input: {
   const locationText = baseIcao ? `${baseName} (${baseIcao})` : baseName
   const summaryText = `PPR ${pprNumber} — ${summary} @ ${baseName}`
   const descriptionText = [
-    'Prior Permission Required approved.',
+    'Prior Permission Required — APPROVED',
     `PPR #: ${pprNumber}`,
-    requesterName ? `Requester: ${requesterName}` : null,
+    ...details.map((d) => `${d.label}: ${d.value}`),
     notes ? `Notes: ${notes}` : null,
-    amopsEmail ? `AMOPS: ${amopsEmail}` : null,
+    amopsEmail ? `AMOPS contact: ${amopsEmail}` : null,
   ].filter(Boolean).join('\n')
 
   const lines: (string | null)[] = [

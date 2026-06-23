@@ -55,12 +55,27 @@ describe('buildPprInvite', () => {
     expect(ics).toContain('PARTSTAT=NEEDS-ACTION')
   })
 
-  it('escapes TEXT values and folds the description newlines', () => {
-    const ics = icsText({ notes: 'line; with, commas' })
+  it('escapes TEXT values and renders the description as one folded property', () => {
+    const unfold = (s: string) => s.replace(/\r\n /g, '')
+    const ics = unfold(icsText({ notes: 'line; with, commas' }))
     // ; and , escaped inside DESCRIPTION
     expect(ics).toContain('line\\; with\\, commas')
     // multi-line description joined with literal \n
-    expect(ics).toMatch(/DESCRIPTION:Prior Permission Required approved\.\\nPPR #/)
+    expect(ics).toContain('DESCRIPTION:Prior Permission Required — APPROVED\\nPPR #:')
+  })
+
+  it('renders the details list (arrival, requester, columns) into DESCRIPTION', () => {
+    const unfold = (s: string) => s.replace(/\r\n /g, '')
+    const ics = unfold(icsText({ details: [
+      { label: 'Arrival date', value: '2026-06-25' },
+      { label: 'Requester', value: 'Jane Pilot — jane@x.mil — 555-1234' },
+      { label: 'Callsign', value: 'REACH123' },
+      { label: 'Aircraft Type', value: 'C-17' },
+    ] }))
+    expect(ics).toContain('Arrival date: 2026-06-25')
+    expect(ics).toContain('Requester: Jane Pilot')
+    expect(ics).toContain('Callsign: REACH123')
+    expect(ics).toContain('Aircraft Type: C-17')
   })
 
   it('omits the attendee line when there is no requester email', () => {

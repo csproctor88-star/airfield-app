@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     const reader = serviceKey ? createServiceClient(url, serviceKey) : sb
     const { data: entry, error: entryErr } = await reader
       .from('ppr_entries')
-      .select('id, base_id, ppr_number, status, requester_name, requester_email, arrival_date, column_values, notes')
+      .select('id, base_id, ppr_number, status, requester_name, requester_email, requester_phone, arrival_date, column_values, notes')
       .eq('id', entryId)
       .single<{
         id: string
@@ -81,6 +81,7 @@ export async function POST(request: Request) {
         status: string
         requester_name: string | null
         requester_email: string | null
+        requester_phone: string | null
         arrival_date: string
         column_values: Record<string, string> | null
         notes: string | null
@@ -129,11 +130,27 @@ export async function POST(request: Request) {
     let requesterInvite: { filename: string; content: Buffer; contentType: string } | undefined
     let agencyInvite: { filename: string; content: Buffer; contentType: string } | undefined
     try {
+      // Full PPR detail for the event body — mirrors the email content so
+      // the calendar item shows everything: arrival date, requester
+      // contact, and every column value (formatted like the slim Log / PDF).
+      const inviteDetails: { label: string; value: string }[] = [
+        { label: 'Arrival date', value: entry.arrival_date },
+      ]
+      const requesterLine = [entry.requester_name, entry.requester_email, entry.requester_phone]
+        .filter(Boolean).join(' — ')
+      if (requesterLine) inviteDetails.push({ label: 'Requester', value: requesterLine })
+      for (const c of colRows.filter((c) => c.column_type !== 'info_only')) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const v = formatPprColumnValue(c as any, (entry.column_values || {})[c.id])
+        if (v) inviteDetails.push({ label: c.column_name, value: v })
+      }
+
       const common = {
         entryId: entry.id, pprNumber: entry.ppr_number, baseName: base.name,
         baseIcao: base.icao, arrivalDate: entry.arrival_date, summary: descriptor,
         requesterName: entry.requester_name, organizerEmail: 'info@glidepathops.com',
         amopsEmail: base.amops_email, notes: entry.notes, dtstamp: new Date(),
+        details: inviteDetails,
       }
       if (entry.requester_email) {
         const inv = buildPprInvite({ ...common, requesterEmail: entry.requester_email, method: 'REQUEST' })
