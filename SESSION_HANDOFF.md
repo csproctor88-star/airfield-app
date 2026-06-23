@@ -1,160 +1,168 @@
 # Session Handoff
 
-**Date:** 2026-06-22
-**Branch:** `main` — pushed to origin, in sync (`54272518`). Still v2.34.0 (no bump).
+**Date:** 2026-06-23
+**Branch:** `main` — pushed to origin, in sync (`ce390a9b`). Still v2.34.0 (no bump).
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **877 pass / 91 files**.
-**HEAD:** `54272518`
+`npx vitest run` ✓ **887 pass / 93 files**.
+**HEAD:** `ce390a9b`
 
 ---
 
 ## What shipped this session
 
-A PPR-module feature batch — six user-facing capabilities across four commits,
-all building on the existing PPR coordination/lifecycle. The theme is everyday
-transient-aircraft usability (a calendar view, a "who's on the field" board) and
-closing notification gaps (re-open denials, calendar invites, external
-recipients, coordination reminders). No new permission keys; all writes still go
-through the existing matrix RLS. One small inter-session photos follow-up
-(`d8fd52c8`) also landed since the last handoff.
+A broad session across five modules. The headline is a brand-new **Read File**
+module (read-and-initial continuity files), plus a **PPR info-only recipient**
+type and a **QRC revised-since-review** amber notification. Along the way a
+genuine data-integrity bug surfaced and was fixed: the QRC quarterly-review
+report was dropping real reviewers because it read a stale legacy role column.
+Smaller wins: parking aircraft-label display + an A321-200 airframe, and a full
+obstacle-NOTAM generator in the obstruction tool.
 
-A standing constraint to remember from this session: **the user owns Vercel
-promotion** — don't add "promote" / "verify on the promoted build" action items.
-The email + `.ics` paths only run where `RESEND_API_KEY` is set (Vercel), so the
-Outlook/`.mil` rendering is simply something the user will eyeball whenever a
-build is next live — not a task to assign.
+### Parking: aircraft label on map + PDF, "Spot" → "Aircraft Label" (`fe3c4cf6`, `c3239d90`)
 
-### Calendar view, re-open denied, transient/departed board (`2571a290`)
+The parking map marker and the html2canvas PDF capture were built from the
+aircraft *type* (`aircraft_name`); both now prefer the user-entered **Aircraft
+Label** (`spot_name`), falling back to type only when blank. The PDF detail
+table's first column header was renamed "Spot" → "Aircraft Label" to match the
+data it already showed.
 
-- **Calendar month view on `/ppr`.** A `Log | Calendar` toggle adds a hand-rolled
-  `grid-cols-7` month grid (no calendar dependency) keyed on `arrival_date`
-  (date-only → no timezone math). Active + pending arrivals render as
-  status-dot chips that open the existing detail card; a "+N more" day popover
-  handles busy days. The Log's date filter default changed from "today" to a new
-  **"All"** chip — today and forward, every status, open-ended upper bound (the
-  existing `ignoreDateFilter` plumbing already supported the undefined upper
-  bound). Month-only by design.
-- **Re-open a denied PPR back into coordination** (`ppr:approve`). A denial isn't
-  always final; the new `reopenPprEntry` guards `status='denied'`, snapshots the
-  prior denial reason + prior coordination outcomes into `ppr_remarks` *before*
-  resetting rows (so audit survives), then flips to `pending_coordination` via an
-  agency picker (reset existing rows to pending, insert new ones), clears the
-  denial fields, and fires the coordination-request email. Works for both denial
-  origins (denied-at-triage with no rows, or denied-after-coordination).
-- **Transient Aircraft (PPR) board.** The dashboard panel (was "Prior Permission
-  Required", renamed "Transient Aircraft (PPR)") and the header chip now show a
-  PPR from its **arrival day until staff mark it Departed** — it no longer drops
-  off at day rollover. New `departed_at` / `departed_by` on `ppr_entries`
-  (orthogonal to `status`); a "Departed" button on the board + `/ppr`
-  (reversible via "On Field"). Both surfaces share `fetchPprEntriesOnField`
-  (`arrival_date <= today AND departed_at IS NULL`, callers filter `isActivePpr`).
-  Migration `2026062017` adds the columns and backfills every pre-today PPR as
-  departed so the board didn't flood with history on rollout.
+### Obstructions: full obstacle NOTAM in the NOTAM Reference card (`6a11f554`)
 
-### Approval calendar invite + per-agency toggle + external emails (`fc73676c`)
+The NOTAM Reference block now renders a copy-ready, multi-line obstacle NOTAM
+that live-updates with the form:
 
-- **`.ics` calendar invite on approval.** New `lib/ppr-ics.ts` is a pure,
-  dependency-free RFC 5545 builder (CRLF endings, 75-octet byte-aware folding,
-  TEXT escaping, stable per-PPR `UID`) — **no Microsoft/Graph API, no auth**, it
-  just rides the existing Resend attachment path. `METHOD:REQUEST` (Accept/
-  Decline, requester = `ATTENDEE`) on the requester's approval email;
-  `METHOD:PUBLISH` (add-to-calendar, no RSVP) for coordinating groups. All-day
-  event on the arrival date; organizer = `info@glidepathops.com` (matches the
-  SMTP From, which is what makes REQUEST render as a real invite).
-- **Per-agency `send_calendar_invite` toggle** (migration `2026062018`, default
-  **off**) in Base Setup → PPR coordinating agencies — a create-time checkbox + a
-  per-row "Invite" toggle. Only opted-in groups get the `.ics` attached to their
-  approval notification.
-- **`ppr_agency_emails` table** (migration `2026062019`, RLS mirrors
-  `ppr_agency_members`) — manually add external email recipients (a Fire Chief,
-  contractor POC, tenant unit) with no Glidepath account, in the agency
-  Coordinators modal. Unioned + de-duped (case-insensitive) into **both** send
-  paths (`notifyCoordinatingAgencies` and `send-ppr-coordination-request`), so
-  external addresses get coordination/approval/denial/cancel/update emails *and*
-  the `.ics` if the group is invite-toggled. They also count toward the "no
-  coordinators — emails won't fire" warning.
+```
+OBSTACLE POLE 423618N0824913W
+ (0.88NM SOUTHEAST KMTC) 705FT MSL
+ (125FT AGL)
+```
 
-### Full PPR detail in the invite body (`b42c3a48`)
+Coordinates are degrees-minutes-**seconds** (`DDMMSS{N|S}DDDMMSS{E|W}`, seconds
+truncated, matching the FAA obstacle-NOTAM convention — confirmed against a
+user-supplied real NOTAM). `OBSTACLE <TYPE>` is the description field uppercased;
+distance/bearing is from the nearest runway threshold (as the tool already
+computed) rendered as NM + 8-point cardinal word + base ICAO; MSL = ground elev +
+entered AGL; AGL = the height field. Single copy-icon button copies the whole
+thing.
 
-The `.ics` `DESCRIPTION` now mirrors the coordination email so clicking the
-calendar event shows everything: arrival date, full requester contact (name —
-email — phone), every column value (formatted via `formatPprColumnValue`, so
-time columns read as HHMM Z), notes, and AMOPS contact. Applies to both the
-requester (REQUEST) and coordinating-group (PUBLISH) invites. Added
-`requester_phone` to the approval route's entry lookup. Info-only static blocks
-are excluded, matching the coordination email.
+### Read File module (`bafca1a3` … `6fd68040`, `4111f1c5`, `c910a9e1`)
 
-### Remind pending coordinating agencies (`54272518`)
+New standalone `/read-file` module — the digital USAF read-and-initial
+continuity file. Managers (Airfield Manager / NAMT / Base Admin) upload
+documents; the operational roles must read and acknowledge each (one-click +
+operating-initials snapshot). Acknowledgments are **version-stamped**: a manager
+"Replace" bumps `read_files.version`, which re-triggers everyone (same idea as
+QRC's review snapshot). A **red** sidebar badge counts files the current user
+hasn't acknowledged at the current version; a manager PDF report lists, per file,
+who reviewed (initials + date) vs who's outstanding. Reuses the AMTR Files
+storage pattern (private bucket, path-scoped RLS, signed URLs) and the QRC
+monthly-review report shape. Required-reader audience = the QRC `REVIEWER_ROLES`
+set (AFM/NAMO/AMOPS/Base Admin/sys_admin), gated by `read_file:view`.
 
-A **"Remind"** action (`ppr:triage`) on PPRs still `pending_coordination` resends
-the coordination request to *only* the agencies whose row is still `pending` —
-already-responded agencies are skipped. Confirms first (anti-double-send), reuses
-the full coordination-request pipeline (external emails + dedup), and carries a
-new `reminder` flag on the route that switches subject + intro to reminder
-wording ("coordination still needed" / "still awaiting coordination from you").
+Two review-found fixes landed before merge: `replaceReadFile` got an
+**optimistic version lock** (concurrent replaces no longer clobber each other's
+`storage_path`), and the ack-insert RLS policy now **server-validates
+`acknowledged_version`** against the file's current version (a `read_file:view`
+user could otherwise pre-ack a future version via a raw PostgREST insert).
 
-### Inter-session: photos public-URL follow-up (`d8fd52c8`)
+### Role-drift fix: reports/labels read `profiles.role`, not `base_members.role` (`bf30fb4b`, `3e130b1a`)
 
-Routed remaining hand-constructed public photo URLs through the `/api/photos`
-proxy — a follow-up to the H-5 proxy conversion that missed some hand-built
-`…/object/public/photos/…` strings. Advances the H-5 "rewrite legacy URLs"
-prerequisite for the still-staged bucket-private flip (`2026062015`).
+**The surprising one.** A user (Erik Greer, AMOPS in User Management) was missing
+from the QRC quarterly review report. Root cause: two role stores had drifted.
+`profiles.role` is authoritative — it's what `user_has_permission` reads and what
+User Management edits — while `base_members.role` is a **legacy per-base column**
+that gets written `read_only` on base-grant and never re-synced. At Selfridge, 12
+operational members were stored `read_only` on `base_members` despite correct
+`profiles.role`. The QRC report's `fetchEligibleReviewers` (and the Read File
+roster `fetchReadFileReviewers`) filtered on the stale column, silently dropping
+them. Fixed both to resolve role from `profiles.role` (using `base_members` only
+for membership). Follow-up `3e130b1a` did the same for the cosmetic readers that
+*display* a role label — `fetchInstallationMembers` (training compliance/roster
+pages + data export) and `fetchPprCoordinatorPicker`. The admin user-detail modal
+selects `base_members.role` but never renders it, so it was left. No data was
+changed — User Management settings were already correct.
+
+### PPR: info-only recipient groups (`9f44017a`, `2777b9de`)
+
+A `ppr_agencies` row flagged `notify_only` is an **information-only recipient**:
+it receives the final approval email (+ `.ics` if its invite toggle is on) on
+every approved PPR, but it is NOT a coordinating agency — hidden from the per-PPR
+coordinator picker (`fetchPprAgencies(..., coordinatingOnly=true)`), never gets a
+`ppr_coordination` row, never concurs, never gates approval. The approval route
+calls a new `notifyInfoOnlyRecipients()` (resolves active `notify_only` groups by
+base, not from coord rows) with info-only email wording (`buildAgencyEmail`
+`infoOnly` flag). Base Setup → PPR now splits into **Coordinating Agencies** and
+**Info-Only Recipients** with a per-row type toggle and a create-time checkbox.
+This replaces the user's workaround (a coordinating agency they had to select on
+every PPR just to receive the approval email).
+
+### QRC: amber revised-since-review notification (`4f5ae42b` spec, `ce390a9b` impl)
+
+Surfaces the existing per-user `getMonthlyReviewStatus === 'updated'` signal
+(template revised since the user's last review) proactively in **amber**: a dot
+on the `/qrc` sidebar entry and a "Revised — review needed" pill on the affected
+QRC card in the Available tab. Red active-execution dot takes priority over
+amber. Gated on `qrc:execute`; realtime on `qrc_templates` +
+`qrc_monthly_reviews`. `countRevised`/`fetchRevisedQrcCount` are
+interval-independent (the 'updated' branch fires before the overdue check).
+Amber (not green/red) was chosen deliberately — it matches AMTR's "routine action
+owed" tier and avoids both the green="done" and red="active execution"
+collisions. **Note:** this was spec'd mid-session, then deferred while PPR work
+happened; the implementation only landed after the user reported the dot missing.
 
 ---
 
 ## Migrations status
 
+All this session's migrations were applied to the linked DB via
+`npx supabase db query --linked --file …` and verified (column / policy / bucket
+counts) during the session.
+
 | File | Applied | What |
 |---|---|---|
-| `2026062013_pentest_remediation_v2.sql` | ✅ live | carry — C-2 trigger + `sign_daily_review_slot` RPC |
-| `2026062014_daily_reviews_lockdown.sql` | ✅ live | REVOKE direct `daily_reviews` INSERT/UPDATE — applied (confirmed by user) |
-| `2026062015_photos_bucket_private.sql` | ✅ live | base-scoped SELECT policy + photos bucket flipped private — applied (confirmed by user) |
-| `2026062016_grant_ae_aep_write.sql` | ✅ live | carry — `accountable_executive` → `aep:write` |
-| `2026062017_ppr_departed.sql` | ✅ live | `ppr_entries.departed_at/departed_by` + backfill pre-today PPRs as departed |
-| `2026062018_ppr_agency_calendar_invite.sql` | ✅ live | `ppr_agencies.send_calendar_invite` (default false) |
-| `2026062019_ppr_agency_emails.sql` | ✅ live | `ppr_agency_emails` table + RLS (external recipients) |
-
-This session's three PPR migrations (`2026062017–19`) were each applied to the
-linked DB via `npx supabase db query --linked --file …` and verified (column /
-table / policy counts). The two carried security migrations (`14`/`15`) have
-since been applied (confirmed by the user) — the `daily_reviews` lockdown and the
-photos-bucket-private flip are now live, closing out the pentest remediation's
-deploy-gated tail.
+| `2026062100_read_file_permissions.sql` | ✅ live | `read_file:view` / `read_file:manage` keys + role grants |
+| `2026062101_read_file_tables.sql` | ✅ live | `read_files` + `read_file_acknowledgments` + RLS |
+| `2026062102_read_file_storage.sql` | ✅ live | private `read-files` bucket + storage RLS |
+| `2026062103_read_file_enable_module.sql` | ✅ live | backfill `read_file` into `enabled_modules` (0 bases missing after) |
+| `2026062104_read_file_ack_version_check.sql` | ✅ live | ack insert policy pins `acknowledged_version` = file's current version |
+| `2026062300_ppr_agency_notify_only.sql` | ✅ live | `ppr_agencies.notify_only` (default false) |
 
 ---
 
 ## Bugs fixed during the session
 
-None in shipped code — this was a feature batch. One mid-build course-correction
-worth noting: the transient board first dropped the date filter entirely
-("show regardless of day"), then was corrected to keep `arrival_date <= today` as
-the *add* trigger while `departed_at` is the only *removal* — i.e. a PPR joins on
-arrival day and stays until Departed. Test fixtures in three files
-(`c2imera-export`, `export-rich-modules`, `pdf-utils`) gained the new
-`departed_at`/`departed_by` `PprEntry` fields.
+| Symptom | Root cause | Commit |
+|---|---|---|
+| AMOPS member missing from QRC quarterly review report | report read stale `base_members.role` (`read_only`) instead of authoritative `profiles.role` | `bf30fb4b` |
+| Wrong role label on training pages / data export / PPR coordinator picker | same `base_members.role` drift in display readers | `3e130b1a` |
+| (review-found) Read File ack could record a version the file isn't at | ack-insert RLS didn't validate `acknowledged_version` | `c910a9e1` |
+| (review-found) concurrent Read File replace could clobber `storage_path` | update had no version guard | `4111f1c5` |
 
 ---
 
 ## Lessons from this session
 
-- **`.ics` invites need no external API.** RFC 5545 text + a Resend attachment
-  covers it. `METHOD:REQUEST` (with `ORGANIZER` = the sending address) gives the
-  requester a real Accept/Decline; `METHOD:PUBLISH` gives coordinating groups a
-  plain add-to-calendar. The one unknown is whether a given `.mil` tenant's
-  Defender renders the REQUEST RSVP cleanly — only a real send shows that; the
-  one-line fallback is `PUBLISH` for everyone.
-- **PPR email recipients live in two paths AND two tables.** Any new recipient
-  source must be unioned into both `lib/ppr-agency-notify.ts`
-  (`notifyCoordinatingAgencies`) and `app/api/send-ppr-coordination-request`, and
-  now spans `ppr_agency_members` (accounts) + `ppr_agency_emails` (external).
-  De-dupe case-insensitively or a person on both lists gets two emails.
-- **Transient board membership is `arrival_date <= today AND departed_at IS NULL`
-  + `isActivePpr`.** Date is the join trigger, the Departed button is the only
-  removal. The rollout backfill (mark pre-today PPRs departed) is what kept the
-  board from showing months of history on day one.
-- **No new Vercel config for any of this.** Same `RESEND_API_KEY` + verified
-  sending domain; the three migrations went straight to the DB. New email
-  surfaces (`.ics`, external recipients) needed zero env changes.
+- **`profiles.role` is the single authoritative role; `base_members.role` is
+  legacy/vestigial.** `user_has_permission` and User Management both use
+  `profiles.role`. Any code that needs a user's role must read `profiles.role`;
+  treat `base_members` as a membership link only. The role column there drifts to
+  `read_only` fleet-wide. Saved as a feedback memory.
+- **`lib/pdf-utils.ts` helpers take a positional `y`, not an options object** —
+  `drawBaseHeader(ctx, y, opts)`, `drawReportTitle(ctx, y, opts)`,
+  `drawStatBox(ctx, y, items[])`, `drawFooter(ctx)` (no `generatedBy`),
+  `tableStyles(ctx)`. Mirror `lib/qrc-monthly-review-pdf.ts` exactly; the Read
+  File plan assumed an options API and had to be corrected at the call site.
+- **`getMonthlyReviewStatus` 'updated' is interval-independent** — the
+  template-changed branch fires before the overdue check, so a revised-count is
+  the same monthly or quarterly.
+- **A spec is not an implementation.** The QRC amber feature was designed and
+  the spec committed; "commit push" committed the *spec*, then PPR work followed
+  and the implementation was skipped until the user noticed. When a design is
+  approved, confirm explicitly whether to implement now or stop at the spec.
+- **Provided SVGs need cleaning before use as silhouettes.** The A321 SVG was an
+  Inkscape multi-view export with a hidden 358 KB reference raster; extracting
+  just the outline path (→ 3.7 KB) and exposing `fill`/`stroke` as attributes is
+  what the parking renderer's recolor + auto-tighten expects.
 
 ---
 
@@ -162,14 +170,16 @@ arrival day and stays until Departed. Test fixtures in three files
 
 | Item | Severity | Notes |
 |---|---|---|
-| Photos now private — watch for stale public URLs | Low | `2026062015` flipped the bucket private and `d8fd52c8` rewrote hand-built URLs; if any AEP/WHMP/§139-training/obstruction row still holds an old `…/object/public/photos/…` string it will 404. Spot-check galleries/PDFs if a missing image is reported. |
-| `types.ts` not regenerated for new PPR schema | Med | New — `departed_at`/`departed_by`, `send_calendar_invite`, and `ppr_agency_emails` are queried via `as any` casts / untyped client. Regen with the other deferred types. |
-| `base-config/setup/page.tsx` keeps growing | Med | Carried + worse — the PPR agencies UI (toggle + external-email modal) added more to an already ~6k-LOC file. Extraction still deferred. |
+| `base_members.role` is stale fleet-wide | Low | Nothing authoritative reads it anymore (permissions + all reports/labels now use `profiles.role`). Harmless unless a *new* reader is added against it. Could be backfilled/retired later; not required. |
+| `types.ts` not regenerated for new schema | Med | Carried + worse — `read_files`/`read_file_acknowledgments`, `ppr_agencies.notify_only`, plus prior PPR cols, all queried via `as any`. Regen as a batch. |
+| `base-config/setup/page.tsx` keeps growing | Med | Carried + worse — the PPR Info-Only Recipients UI (`renderAgencyRow` + two sections) added more to an already ~6k-LOC file (69 kB First Load). Extraction still deferred. |
+| Read File storage non-UUID path → 500 | Low | A crafted direct-API upload path whose first segment isn't a UUID throws a Postgres cast error (500, no escalation). Matches the existing AMTR bucket convention; left as-is by user decision. |
+| PPR info-only double-email edge case | Info | If the same address is in both a coordinating agency (selected on a PPR) and an info-only group, it gets two approval emails (different framing). Accepted by design; cross-group dedupe available if wanted. |
 | Lower-severity pentest items not done | Med | Carried — L-2 send-ppr authz, M-2 kiosk session, M-3 anon-RPC rate limiting, I-3 constant-time CRON, Next.js 14.2→15. See `docs/security/Pentest_Audit_Fable5_2026-06-11.md` §5. |
-| `send-ppr-coordination-request` has no explicit permission gate | Low | New — the route authenticates the caller but relies on UI gating (`ppr:triage`) rather than checking the permission server-side; matches the pre-existing triage flow. Harden alongside L-2. |
+| `send-ppr-coordination-request` has no explicit permission gate | Low | Carried — relies on UI gating (`ppr:triage`); harden alongside L-2. |
 | CSP is report-only | Low | Carried — promote to enforcing after monitoring. |
-| `scn` missing on 26 USAF bases | Med | Carried — frozen `enabled_modules`. |
-| New `defaultEnabled` modules don't reach existing bases | Med | Carried — null-only fallback in `lib/installation-context.tsx`. |
+| `scn` missing on 26 USAF bases | Med | Carried — frozen `enabled_modules`. (Read File's backfill fixed `read_file` everywhere but `scn` is still gapped.) |
+| New `defaultEnabled` modules don't reach existing bases | Med | Carried — null-only fallback in `lib/installation-context.tsx`; Read File worked around it with an explicit backfill migration each time. |
 | usr-analytics privacy disclosure | Med | Carried — no user-facing line. |
 | Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
 
@@ -177,25 +187,26 @@ arrival day and stays until Departed. Test fixtures in three files
 
 ## Next session tasks
 
-The PPR module work is complete, committed, and pushed — **no required PPR next
-step** — and with `2026062014`/`2026062015` now applied, the pentest
-remediation's deploy-gated tail is closed too. What remains is light:
+No required next step — everything started this session is shipped, committed,
+pushed, and (for migrations) applied live. Pick up wherever the user wants.
 
-1. **Set `NEXT_PUBLIC_SITE_URL`** in Vercel to the canonical domain so reset/email
-   links stop pointing at vercel.app.
-2. **PPR email/`.ics` eyeball, whenever a build is next live** (informational, not
-   a required task — emails only send with `RESEND_API_KEY`): approval invite
-   renders in Outlook and carries the full PPR detail; per-agency invite toggle
-   gates correctly; external-email delivery; coordination reminder wording.
+Informational, not required:
+
+1. **Eyeball emails on the next live build** (only send where `RESEND_API_KEY` is
+   set): PPR **info-only** approval email + `.ics` framing; QRC amber dot in the
+   live sidebar; Read File approval/report surfaces.
+2. **`NEXT_PUBLIC_SITE_URL`** in Vercel → canonical domain so reset/email links
+   stop pointing at vercel.app (carried, user-owned).
 
 ### Long-running carryover (bandwidth-permitting)
-- Lower-severity pentest items (L-2 + the new server-side gate on
+- Lower-severity pentest items (L-2 + server-side gate on
   `send-ppr-coordination-request`, M-2, M-3, I-3, Next.js upgrade).
-- `types.ts` regen (now includes the new PPR columns/table); `base-config/setup`
+- `types.ts` regen (now covers Read File + `notify_only`); `base-config/setup`
   extraction.
-- `scn` `enabled_modules` backfill + the systemic fallback fix; usr-analytics
-  privacy copy.
-- Independent human review of the pentest fixes — user-owned, deferred.
+- `scn` `enabled_modules` backfill + the systemic null-only fallback fix;
+  usr-analytics privacy copy.
+- `base_members.role` data backfill / column retirement (low priority, nothing
+  reads it).
 
 ---
 
@@ -204,13 +215,19 @@ remediation's deploy-gated tail is closed too. What remains is light:
 ```
 Build: npm run build — compiled successfully.
 TypeScript clean (npx tsc --noEmit exit 0).
-Tests: 877 pass / 91 files (npx vitest run) — incl. new tests/ppr-ics.test.ts (11).
+Tests: 887 pass / 93 files (npx vitest run) — incl. new tests/read-files.test.ts
+       (6) and tests/qrc-revised.test.ts (4).
 
-New file this session:
-  lib/ppr-ics.ts            — RFC 5545 .ics invite generator (pure, no API)
-Changed route (heaviest this session):
-  /ppr                      ~23 kB First Load (calendar grid + re-open + departed
-                            + remind modals/actions)
+New routes/files this session:
+  /read-file                12.8 kB First Load 327 kB  — Read File module page
+  lib/read-file-review-pdf.ts, lib/supabase/read-files.ts
+
+Changed routes (First Load JS):
+  /parking                  48.2 kB / 425 kB   (aircraft label + A321)
+  /qrc                      21.4 kB / 349 kB   (amber revised dot + card pill)
+  /ppr                      24.2 kB / 195 kB   (coordinator picker filter)
+  /obstructions             14.2 kB / 191 kB   (full NOTAM generator)
+  /base-config/setup        69.1 kB / 288 kB   (PPR info-only recipients UI)
 First Load JS shared        91.6 kB
 Middleware                  74.6 kB
 ```
@@ -221,6 +238,7 @@ Middleware                  74.6 kB
 
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-06-23 | Read File module (read-and-initial continuity file: upload, acknowledge, version-stamped re-sign, red badge, compliance PDF — migrations `2026062100–04`); PPR info-only recipient groups (`2026062300`); QRC revised-since-review amber notification; role-drift fix (reports/labels read `profiles.role` not stale `base_members.role`); parking aircraft-label display + A321-200 airframe; full obstacle-NOTAM generator |
 | **Unreleased** | 2026-06-22 | PPR module batch: calendar month view + "All" log default; re-open denied PPRs into coordination; Transient Aircraft (PPR) board with a Departed button (`2026062017`); approval `.ics` calendar invite (REQUEST/PUBLISH, full PPR detail); per-agency invite toggle (`2026062018`); external (non-account) agency email recipients (`2026062019`); remind-pending-agencies action |
 | **Unreleased** | 2026-06-11 | Pentest remediation: closed self-escalation to sys_admin (`2026062013`) + daily-review forgery RPC, installations IDOR, email-route authz, invite password, map XSS, photo-read auth proxy (H-5), middleware/CSP/header hardening; AE granted `aep:write` (`2026062016`); forgot-password email + discrepancy-PDF layout fixes |
 | **Unreleased** | 2026-06-10 | Brand-logo refresh (theme-aware login/sidebar + new PWA/favicon icons); Daily Reviews gains date-range filtering, an Outstanding section, a certification-log PDF, drops the unused per-review email flow |
@@ -233,23 +251,25 @@ Middleware                  74.6 kB
 ## Key docs / files touched this session
 
 ### New files
-- `lib/ppr-ics.ts` — RFC 5545 `.ics` invite generator (REQUEST/PUBLISH, all-day,
-  detail body); `tests/ppr-ics.test.ts`.
-- `supabase/migrations/2026062017_ppr_departed.sql`,
-  `…2026062018_ppr_agency_calendar_invite.sql`,
-  `…2026062019_ppr_agency_emails.sql`.
+- `app/(app)/read-file/page.tsx`, `lib/supabase/read-files.ts`,
+  `lib/read-file-review-pdf.ts`, `tests/read-files.test.ts` — Read File module.
+- `tests/qrc-revised.test.ts` — `countRevised` unit tests.
+- `supabase/migrations/2026062100–04` (Read File), `2026062300` (PPR notify_only).
+- `public/aircraft_silhouettes/a321.svg` + `commercial_aircraft.json` /
+  `aircraft_silhouette_manifest.json` entries (A321-200).
+- Specs/plan under `docs/superpowers/` for Read File + QRC + PPR info-only.
 
 ### Modified files
-- `app/(app)/ppr/page.tsx` — calendar view, re-open modal, departed/on-field +
-  remind actions.
-- `app/(app)/page.tsx`, `components/layout/header.tsx` — Transient board + on-field
-  chip (`fetchPprEntriesOnField`).
-- `lib/supabase/ppr.ts` — `reopenPprEntry`, `markPprDeparted`/`clearPprDeparted`,
-  `fetchPprEntriesOnField`, `departed_*` fields.
-- `lib/supabase/ppr-agencies.ts`, `lib/supabase/ppr-agency-members.ts` —
-  `send_calendar_invite`, external-email fetch/set + counts.
-- `lib/ppr-agency-notify.ts`, `app/api/send-ppr-approval/route.ts`,
-  `app/api/send-ppr-coordination-request/route.ts` — invite attach, external-email
-  union + dedup, reminder flag, full-detail invite body.
-- `app/(app)/base-config/setup/page.tsx` — agency invite toggle + external-email
-  modal section.
+- `lib/supabase/qrc-reviews.ts` — `profiles.role` roster fix +
+  `countRevised`/`fetchRevisedQrcCount`.
+- `lib/supabase/read-files.ts` — roster `profiles.role` fix, replace version lock.
+- `lib/supabase/installations.ts`, `lib/supabase/ppr-agency-members.ts` — role
+  labels from `profiles.role`.
+- `lib/supabase/ppr-agencies.ts`, `lib/ppr-agency-notify.ts`,
+  `app/api/send-ppr-approval/route.ts`, `app/(app)/ppr/page.tsx`,
+  `app/(app)/base-config/setup/page.tsx` — PPR info-only recipients.
+- `hooks/use-sidebar-badge-counts.ts`, `components/layout/sidebar-nav.tsx` —
+  Read File red badge + QRC amber badge.
+- `app/(app)/qrc/page.tsx` — amber `revised` pill on Available cards.
+- `app/(app)/parking/page.tsx`, `lib/parking-pdf.ts` — aircraft label.
+- `app/(app)/obstructions/page.tsx` — full obstacle NOTAM.
