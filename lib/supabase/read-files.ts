@@ -240,19 +240,26 @@ export async function replaceReadFile(
   })
   if (upErr) return { error: friendlyError(upErr.message) }
 
+  // Optimistic-lock on the version we read: if another manager replaced the
+  // same file first, 0 rows update and we bail without clobbering their write.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
-  const { error } = await sb.from('read_files').update({
+  const { data, error } = await sb.from('read_files').update({
     storage_path: path,
     file_name: file.name,
     mime_type: file.type || null,
     file_size_bytes: file.size,
     version: row.version + 1,
     updated_at: new Date().toISOString(),
-  }).eq('id', row.id)
+  }).eq('id', row.id).eq('version', row.version).select('id')
   if (error) {
     await supabase.storage.from(READ_FILES_BUCKET).remove([path])
     return { error: friendlyError(error.message) }
+  }
+  if (!data || data.length === 0) {
+    // Stale version — someone else replaced it first. Remove our upload.
+    await supabase.storage.from(READ_FILES_BUCKET).remove([path])
+    return { error: 'This file was just updated by someone else. Reload and try again.' }
   }
   // Best-effort cleanup of the superseded object.
   if (row.storage_path) await supabase.storage.from(READ_FILES_BUCKET).remove([row.storage_path])
