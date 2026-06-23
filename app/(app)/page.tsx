@@ -20,6 +20,7 @@ import { RSC_CONDITIONS, BWC_OPTIONS, RCR_CONDITION_TYPES, CONTRACTOR_STATUS_CON
 import { fetchActiveContractors, updateContractor, createContractor, type ContractorRow } from '@/lib/supabase/contractors'
 import { DEMO_CONTRACTORS } from '@/lib/demo-data'
 import { formatZuluDate, formatZuluTime, formatZuluDateTime } from '@/lib/utils'
+import { resolveAdvisoryWindow } from '@/lib/advisory-window'
 import LoginActivityDialog from '@/components/login-activity-dialog'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import {
@@ -1175,7 +1176,14 @@ export default function HomePage() {
                 onClick={async () => {
                   if (advisoryDraftText.trim()) {
                     const effStart = advisoryDraftStart ? advisoryDraftStart + 'Z' : null
-                    const effEnd = (!advisoryDraftUfn && advisoryDraftEnd) ? advisoryDraftEnd + 'Z' : null
+                    let effEnd: string | null = null
+                    if (!advisoryDraftUfn && advisoryDraftEnd) {
+                      const { effEnd: normEnd, error: winErr } = resolveAdvisoryWindow(
+                        advisoryDraftStart || null, advisoryDraftEnd, new Date(),
+                      )
+                      if (winErr) { toast.error(winErr); return }
+                      effEnd = normEnd ? normEnd + 'Z' : null
+                    }
                     const startLabel = effStart ? formatZuluTime(new Date(effStart)) + 'Z' : 'Now'
                     const endLabel = effEnd ? formatZuluTime(new Date(effEnd)) + 'Z' : 'UFN'
                     const effSuffix = ` — EFF ${startLabel}–${endLabel}`
