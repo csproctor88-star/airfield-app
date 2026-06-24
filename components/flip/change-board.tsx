@@ -8,9 +8,10 @@ import { fetchFlipChanges, fetchFlipRoleAssignments, fetchFlipTextSections, fetc
 import { ChangeCard } from '@/components/flip/change-card'
 import { CoordinateModal } from '@/components/flip/coordinate-modal'
 import { EditableSection } from '@/components/flip/editable-section'
+import { ChangeReport } from '@/components/flip/change-report'
 
 export function ChangeBoard({ baseId, canWrite }: { baseId: string; canWrite: boolean }) {
-  const [sub, setSub] = useState<'board' | 'directions'>('board')
+  const [sub, setSub] = useState<'board' | 'directions' | 'report'>('board')
   const [changes, setChanges] = useState<FlipChange[]>([])
   const [isAfm, setIsAfm] = useState(false)
   const [isCustodian, setIsCustodian] = useState(false)
@@ -52,6 +53,7 @@ export function ChangeBoard({ baseId, canWrite }: { baseId: string; canWrite: bo
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <button onClick={() => setSub('board')} style={{ padding: '6px 14px', borderRadius: 999, border: '1px solid var(--color-border)', background: sub === 'board' ? 'var(--color-accent)' : 'var(--color-bg-surface)', color: sub === 'board' ? '#fff' : 'var(--color-text-1)', cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>Change Board</button>
         <button onClick={() => setSub('directions')} style={{ padding: '6px 14px', borderRadius: 999, border: '1px solid var(--color-border)', background: sub === 'directions' ? 'var(--color-accent)' : 'var(--color-bg-surface)', color: sub === 'directions' ? '#fff' : 'var(--color-text-1)', cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>Directions</button>
+        <button onClick={() => setSub('report')} style={{ padding: '6px 14px', borderRadius: 999, border: '1px solid var(--color-border)', background: sub === 'report' ? 'var(--color-accent)' : 'var(--color-bg-surface)', color: sub === 'report' ? '#fff' : 'var(--color-text-1)', cursor: 'pointer', fontSize: 'var(--fs-sm)' }}>Report</button>
         {sub === 'board' && canWrite && isCustodian && (
           <button onClick={() => setModal(true)} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 999, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 'var(--fs-sm)' }}><Plus size={14} /> Coordinate New Change</button>
         )}
@@ -60,6 +62,8 @@ export function ChangeBoard({ baseId, canWrite }: { baseId: string; canWrite: bo
       {sub === 'directions' ? (
         <EditableSection title="Directions" value={directions} placeholder="No directions entered. Click Edit to add guidance for coordinating non-procedural FLIP changes (§2.5.2.18.2.2.2)." canEdit={canWrite}
           onSave={async (next) => { const r = await saveFlipTextSection(baseId, 'change_directions', next); if (!r.error) setDirections(next); return r }} minHeight={180} />
+      ) : sub === 'report' ? (
+        <ChangeReport changes={changes} />
       ) : (
         STAGES.map(({ stage, label }) => {
           const items = byStage(stage)
