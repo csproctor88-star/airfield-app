@@ -24,6 +24,7 @@ export type ModuleKey =
   | 'training_part139'
   | 'aep'
   | 'field_conditions'
+  | 'flip'
   | 'whmp'
   | 'read_file'
 
@@ -251,6 +252,17 @@ export const MODULES: ModuleDef[] = [
     setupSteps: [],
     defaultEnabled: true,
     appliesTo: ['usaf'],
+  },
+  {
+    key: 'flip',
+    label: 'FLIP Management',
+    category: 'compliance',
+    description: 'Electronic FLIPs Continuity Binder (DAFMAN 13-204V2 §2.5.2.18): account overview, local FLIP list, reference library, non-procedural FLIP change coordination with AFM approval, and documented FLIP edition reviews with sequential Custodian→NAMO→AFM sign-off.',
+    useCase: 'Units with an appointed primary/alternate FLIPs manager tracking FLIP products, edition reviews, and non-procedural changes.',
+    hrefs: ['/flip'],
+    setupSteps: [],
+    defaultEnabled: false,
+    appliesTo: ['usaf', 'faa_part139'],
   },
   {
     key: 'sms',

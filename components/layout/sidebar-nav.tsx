@@ -119,6 +119,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/feedback':          'feedback:view',
   '/contractors':       'contractors:view',
   '/amtr':              'amtr:view',
+  '/flip':              'flip:view',
   '/read-file':         'read_file:view',
   '/ces':               'ces:view',
   '/discrepancies':     'discrepancies:view',
