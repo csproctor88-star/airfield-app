@@ -35,7 +35,6 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
   const [flipTitle, setFlipTitle] = useState('')
   const [notam, setNotam] = useState('')          // selected notam_number, '' (none), or OTHER
   const [notamManual, setNotamManual] = useState('')
-  const [details, setDetails] = useState('')
   const [refDocPage, setRefDocPage] = useState('')
   const [cat, setCat] = useState<Record<CatKey, { on: boolean; text: string }>>(EMPTY_CATS)
   const [remarks, setRemarks] = useState('')
@@ -88,7 +87,7 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
 
   if (!open) return null
 
-  const reset = () => { setFlipTitle(''); setNotam(''); setNotamManual(''); setDetails(''); setRefDocPage(''); setCat(EMPTY_CATS); setRemarks('') }
+  const reset = () => { setFlipTitle(''); setNotam(''); setNotamManual(''); setRefDocPage(''); setCat(EMPTY_CATS); setRemarks('') }
 
   const toggleCat = (key: CatKey) => setCat((prev) => ({ ...prev, [key]: { on: !prev[key].on, text: prev[key].on ? '' : prev[key].text } }))
   const setCatText = (key: CatKey, text: string) => setCat((prev) => ({ ...prev, [key]: { ...prev[key], text } }))
@@ -100,7 +99,7 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
     const notamValue = notam === OTHER ? notamManual.trim() : (notam || '')
     setBusy(true)
     const { error } = await createFlipChange({
-      baseId, flipTitle: flipTitle.trim(), notam: notamValue, details: details.trim(), name: name.trim(), remarks: remarks.trim(),
+      baseId, flipTitle: flipTitle.trim(), notam: notamValue, name: name.trim(), remarks: remarks.trim(),
       referenceDocPage: refDocPage.trim() || null,
       additions: catValue('additions'), deletions: catValue('deletions'),
       revisionsFrom: catValue('revisions_from'), revisionsTo: catValue('revisions_to'),
@@ -173,12 +172,6 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Details */}
-          <div>
-            <label style={label}>Details</label>
-            <textarea style={{ ...field, minHeight: 90, resize: 'both' }} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Describe the proposed change…" />
           </div>
 
           {/* Remarks — recorded on the "Coordinated" step of the history */}

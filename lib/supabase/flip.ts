@@ -130,7 +130,7 @@ export async function fetchFlipChanges(baseId: string): Promise<FlipChange[]> {
   return (data ?? []) as FlipChange[]
 }
 export async function createFlipChange(input: {
-  baseId: string; flipTitle: string; notam: string; details: string; name: string; remarks?: string
+  baseId: string; flipTitle: string; notam: string; name: string; details?: string; remarks?: string
   referenceDocPage?: string | null; additions?: string | null; deletions?: string | null
   revisionsFrom?: string | null; revisionsTo?: string | null
 }): Promise<{ error: string | null }> {
