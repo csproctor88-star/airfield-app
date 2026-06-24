@@ -14,6 +14,18 @@ type NotamFeedItem = { status?: string; notam_number?: string; title?: string }
 
 const OTHER = '__other__'
 
+type CatKey = 'additions' | 'deletions' | 'revisions_from' | 'revisions_to'
+const CATEGORIES: { key: CatKey; label: string }[] = [
+  { key: 'additions', label: 'Additions' },
+  { key: 'deletions', label: 'Deletions' },
+  { key: 'revisions_from', label: 'Revisions From' },
+  { key: 'revisions_to', label: 'Revisions To' },
+]
+const EMPTY_CATS: Record<CatKey, { on: boolean; text: string }> = {
+  additions: { on: false, text: '' }, deletions: { on: false, text: '' },
+  revisions_from: { on: false, text: '' }, revisions_to: { on: false, text: '' },
+}
+
 export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: {
   baseId: string; flipList: FlipListItem[]; open: boolean; onClose: () => void; onCreated: () => void
 }) {
@@ -24,6 +36,8 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
   const [notam, setNotam] = useState('')          // selected notam_number, '' (none), or OTHER
   const [notamManual, setNotamManual] = useState('')
   const [details, setDetails] = useState('')
+  const [refDocPage, setRefDocPage] = useState('')
+  const [cat, setCat] = useState<Record<CatKey, { on: boolean; text: string }>>(EMPTY_CATS)
   const [remarks, setRemarks] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -74,14 +88,23 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
 
   if (!open) return null
 
-  const reset = () => { setFlipTitle(''); setNotam(''); setNotamManual(''); setDetails(''); setRemarks('') }
+  const reset = () => { setFlipTitle(''); setNotam(''); setNotamManual(''); setDetails(''); setRefDocPage(''); setCat(EMPTY_CATS); setRemarks('') }
+
+  const toggleCat = (key: CatKey) => setCat((prev) => ({ ...prev, [key]: { on: !prev[key].on, text: prev[key].on ? '' : prev[key].text } }))
+  const setCatText = (key: CatKey, text: string) => setCat((prev) => ({ ...prev, [key]: { ...prev[key], text } }))
+  const catValue = (key: CatKey) => (cat[key].on ? (cat[key].text.trim() || null) : null)
 
   const submit = async () => {
     if (!flipTitle.trim()) { toast.error('FLIP Title is required.'); return }
     if (!name.trim()) { toast.error('Could not resolve your name/rank from your profile — set your name in your profile first.'); return }
     const notamValue = notam === OTHER ? notamManual.trim() : (notam || '')
     setBusy(true)
-    const { error } = await createFlipChange({ baseId, flipTitle: flipTitle.trim(), notam: notamValue, details: details.trim(), name: name.trim(), remarks: remarks.trim() })
+    const { error } = await createFlipChange({
+      baseId, flipTitle: flipTitle.trim(), notam: notamValue, details: details.trim(), name: name.trim(), remarks: remarks.trim(),
+      referenceDocPage: refDocPage.trim() || null,
+      additions: catValue('additions'), deletions: catValue('deletions'),
+      revisionsFrom: catValue('revisions_from'), revisionsTo: catValue('revisions_to'),
+    })
     setBusy(false)
     if (error) { toast.error(error); return }
     reset()
@@ -128,16 +151,40 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
             )}
           </div>
 
+          {/* Reference Document & Page — source data being submitted to the FAA */}
+          <div>
+            <label style={label}>Reference Document &amp; Page</label>
+            <input style={field} value={refDocPage} onChange={(e) => setRefDocPage(e.target.value)} placeholder="e.g., AP/1 p. 412; AFD entry" />
+          </div>
+
+          {/* Change content — FAA submission categories; each checkbox toggles its field */}
+          <div>
+            <label style={label}>Change Content</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {CATEGORIES.map(({ key, label: l }) => (
+                <div key={key}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)', cursor: 'pointer', color: 'var(--color-text-1)' }}>
+                    <input type="checkbox" checked={cat[key].on} onChange={() => toggleCat(key)} style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--color-accent)' }} />
+                    {l}
+                  </label>
+                  {cat[key].on && (
+                    <textarea style={{ ...field, marginTop: 6, minHeight: 60, resize: 'both' }} value={cat[key].text} onChange={(e) => setCatText(key, e.target.value)} placeholder={`${l}…`} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Details */}
           <div>
             <label style={label}>Details</label>
-            <textarea style={{ ...field, minHeight: 90, resize: 'vertical' }} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Describe the proposed change…" />
+            <textarea style={{ ...field, minHeight: 90, resize: 'both' }} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Describe the proposed change…" />
           </div>
 
           {/* Remarks — recorded on the "Coordinated" step of the history */}
           <div>
             <label style={label}>Remarks (optional)</label>
-            <textarea style={{ ...field, minHeight: 56, resize: 'vertical' }} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Coordination remarks for the history…" />
+            <textarea style={{ ...field, minHeight: 56, resize: 'both' }} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Coordination remarks for the history…" />
           </div>
 
           {/* Name / Rank — auto-imported from the signing user's profile */}

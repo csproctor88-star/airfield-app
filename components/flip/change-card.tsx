@@ -153,6 +153,15 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
       </div>
       {open && (
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-inset)' }}>
+          {(c.reference_doc_page || c.additions || c.deletions || c.revisions_from || c.revisions_to) && (
+            <div style={{ fontSize: 'var(--fs-sm)', marginBottom: 12, display: 'grid', gap: 6 }}>
+              {c.reference_doc_page && <div><strong>Reference Doc &amp; Page:</strong> {c.reference_doc_page}</div>}
+              {c.additions && <div><strong>Additions:</strong> <span style={{ whiteSpace: 'pre-wrap' }}>{c.additions}</span></div>}
+              {c.deletions && <div><strong>Deletions:</strong> <span style={{ whiteSpace: 'pre-wrap' }}>{c.deletions}</span></div>}
+              {c.revisions_from && <div><strong>Revisions From:</strong> <span style={{ whiteSpace: 'pre-wrap' }}>{c.revisions_from}</span></div>}
+              {c.revisions_to && <div><strong>Revisions To:</strong> <span style={{ whiteSpace: 'pre-wrap' }}>{c.revisions_to}</span></div>}
+            </div>
+          )}
           {c.details && <p style={{ fontSize: 'var(--fs-sm)', marginBottom: 12 }}>{c.details}</p>}
 
           {/* Coordination stage actions */}

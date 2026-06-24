@@ -18,6 +18,8 @@ export type FlipReference = { id: string; base_id: string; title: string; file_t
 export type FlipStage = 'coordination' | 'submitted' | 'completed'
 export type FlipChange = {
   id: string; base_id: string; flip_title: string; notam: string | null; details: string | null
+  reference_doc_page: string | null
+  additions: string | null; deletions: string | null; revisions_from: string | null; revisions_to: string | null
   submitted_by_name: string; submitted_by_user: string | null
   stage: FlipStage; rejected: boolean
   afm_approved_by: string | null; afm_approved_at: string | null
@@ -127,12 +129,19 @@ export async function fetchFlipChanges(baseId: string): Promise<FlipChange[]> {
   if (error) { console.error('fetchFlipChanges:', error.message); return [] }
   return (data ?? []) as FlipChange[]
 }
-export async function createFlipChange(input: { baseId: string; flipTitle: string; notam: string; details: string; name: string; remarks?: string }): Promise<{ error: string | null }> {
+export async function createFlipChange(input: {
+  baseId: string; flipTitle: string; notam: string; details: string; name: string; remarks?: string
+  referenceDocPage?: string | null; additions?: string | null; deletions?: string | null
+  revisionsFrom?: string | null; revisionsTo?: string | null
+}): Promise<{ error: string | null }> {
   const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
   const { data: { user } } = await supabase.auth.getUser()
   const { data: row, error } = await supabase.from('flip_changes').insert({
     base_id: input.baseId, flip_title: input.flipTitle, notam: input.notam || null,
     details: input.details || null, submitted_by_name: input.name, submitted_by_user: user?.id ?? null,
+    reference_doc_page: input.referenceDocPage || null,
+    additions: input.additions || null, deletions: input.deletions || null,
+    revisions_from: input.revisionsFrom || null, revisions_to: input.revisionsTo || null,
   } as never).select('id').single()
   if (error || !row) return { error: friendlyError(error?.message ?? 'Failed to coordinate change') }
   // Seed the coordination history with the create event + its remark.
