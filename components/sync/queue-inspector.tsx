@@ -31,6 +31,7 @@ const TYPE_LABELS: Record<WriteType, string> = {
   waiver_create: 'Waiver create',
   waiver_update: 'Waiver update',
   daily_review_sign: 'Daily review sign',
+  flip_review_sign: 'FLIP review sign',
   photo_upload: 'Photo upload',
   airfield_status_update: 'Airfield status update',
   navaid_status_update: 'NAVAID board status',

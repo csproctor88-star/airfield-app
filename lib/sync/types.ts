@@ -26,6 +26,7 @@ export type WriteType =
   | 'waiver_create'
   | 'waiver_update'
   | 'daily_review_sign'
+  | 'flip_review_sign'
   | 'photo_upload'
   | 'airfield_status_update'
   | 'navaid_status_update'

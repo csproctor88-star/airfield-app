@@ -30,6 +30,8 @@ import {
   signDailyReview,
   type DailyReviewRow,
 } from '@/lib/supabase/daily-reviews'
+import { signFlipReviewDirect, type FlipSignoff } from '@/lib/supabase/flip'
+import type { FlipSignSlot } from '@/lib/flip/roles'
 import { updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { updateNavaidStatus } from '@/lib/supabase/navaids'
 import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
@@ -154,6 +156,23 @@ const dailyReviewSignHandler: WriteHandler<
   }
   const { data, error } = await signDailyReview(payload)
   if (error) throwForStructuredError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
+// flip_review_sign
+// ---------------------------------------------------------------------------
+
+export type FlipReviewSignPayload = { reviewId: string; slot: FlipSignSlot }
+export type FlipReviewSignResult = FlipSignoff | null
+
+const flipReviewSignHandler: WriteHandler<FlipReviewSignPayload, FlipReviewSignResult> = async (
+  payload,
+) => {
+  const { data, error } = await signFlipReviewDirect(payload.reviewId, payload.slot)
+  // The RPC already enforces sequence + permanence; a server-side rejection
+  // (already signed / out of order) is a conflict, not a transient error.
+  if (error) throw new ConflictError(error)
   return data
 }
 
@@ -344,6 +363,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('check_file', checkFileHandler)
   queue.registerHandler('acsi_submit', acsiSubmitHandler)
   queue.registerHandler('daily_review_sign', dailyReviewSignHandler)
+  queue.registerHandler('flip_review_sign', flipReviewSignHandler)
   queue.registerHandler('airfield_status_update', airfieldStatusUpdateHandler)
   queue.registerHandler('navaid_status_update', navaidStatusUpdateHandler)
   queue.registerHandler(
@@ -365,6 +385,7 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   check_file: checkFileHandler,
   acsi_submit: acsiSubmitHandler,
   daily_review_sign: dailyReviewSignHandler,
+  flip_review_sign: flipReviewSignHandler,
   airfield_status_update: airfieldStatusUpdateHandler,
   navaid_status_update: navaidStatusUpdateHandler,
   infrastructure_feature_status_update: infrastructureFeatureStatusUpdateHandler,
