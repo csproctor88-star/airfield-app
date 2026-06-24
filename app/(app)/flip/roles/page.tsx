@@ -9,23 +9,24 @@ import {
   fetchFlipRoleAssignments, addFlipRole, removeFlipRole, type FlipRoleAssignment,
 } from '@/lib/supabase/flip'
 import { FLIP_ROLES, FLIP_ROLE_LABELS, type FlipRole } from '@/lib/flip/roles'
+import { isFlipEligibleRole } from '@/lib/flip/roster-roles'
 
-type Member = { user_id: string; full_name: string }
+type Member = { user_id: string; full_name: string; role: string | null }
 
 const thStyle: React.CSSProperties = { padding: '8px 12px', fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }
 const tdStyle: React.CSSProperties = { padding: '8px 12px' }
 
 // Base members come from `base_members` joined to `profiles` for display
-// names — the same source the PPR coordinator picker uses
-// (lib/supabase/ppr-agency-members.ts → fetchPprCoordinatorPicker). The
-// display name is built from profiles.name (there is no `full_name` column),
-// prefixed with the member's rank when present.
+// names + the authoritative `profiles.role`. Only airfield-management
+// leadership + admins are shown (isFlipEligibleRole) — not every base
+// member — mirroring how AMTR scopes its roster. The display name is built
+// from profiles.name (there is no `full_name` column), prefixed with rank.
 async function fetchBaseMembers(baseId: string): Promise<Member[]> {
   const supabase = createClient()
   if (!supabase) return []
   const { data, error } = await supabase
     .from('base_members')
-    .select('user_id, profiles:user_id(name, rank)')
+    .select('user_id, profiles:user_id(name, rank, role)')
     .eq('base_id', baseId)
   if (error || !data) {
     if (error) console.error('fetchBaseMembers:', error.message)
@@ -33,15 +34,16 @@ async function fetchBaseMembers(baseId: string): Promise<Member[]> {
   }
   return (data as Record<string, unknown>[])
     .map((row) => {
-      const prof = row.profiles as { name?: string; rank?: string } | null
+      const prof = row.profiles as { name?: string; rank?: string; role?: string } | null
       const name = prof?.name?.trim() || '(no name)'
       const rank = prof?.rank?.trim()
       return {
         user_id: row.user_id as string,
+        role: prof?.role ?? null,
         full_name: rank ? `${rank} ${name}` : name,
       }
     })
-    .filter((m) => m.user_id)
+    .filter((m) => m.user_id && isFlipEligibleRole(m.role))
 }
 
 export default function FlipRolesPage() {
@@ -97,7 +99,7 @@ export default function FlipRolesPage() {
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <h1 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, marginBottom: 4, color: 'var(--color-text-1)' }}>FLIP Role Assignments</h1>
       <p style={{ color: 'var(--color-text-2)', fontSize: 'var(--fs-sm)', marginBottom: 16 }}>
-        Assign FLIP roles per person. A user may hold multiple roles. Per DAFMAN 13-204V2 §2.5.2.18, appoint a primary and alternate FLIP custodian.
+        Assign FLIP roles per person. A user may hold multiple roles. Per DAFMAN 13-204V2 §2.5.2.18, appoint a primary and alternate FLIP custodian. Only airfield-management leadership and administrators are listed.
       </p>
       <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search members…"
         style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)', color: 'var(--color-text-1)', width: 260 }} />
@@ -127,7 +129,7 @@ export default function FlipRolesPage() {
               </tr>
             ))}
             {filteredMembers.length === 0 && (
-              <tr><td colSpan={FLIP_ROLES.length + 1} style={{ ...tdStyle, color: 'var(--color-text-3)' }}>No members.</td></tr>
+              <tr><td colSpan={FLIP_ROLES.length + 1} style={{ ...tdStyle, color: 'var(--color-text-3)' }}>No eligible airfield-management members at this base.</td></tr>
             )}
           </tbody>
         </table>
