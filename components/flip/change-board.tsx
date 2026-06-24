@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { fetchFlipChanges, fetchFlipRoleAssignments, fetchFlipTextSections, saveFlipTextSection, type FlipChange } from '@/lib/supabase/flip'
+import { fetchFlipChanges, fetchFlipRoleAssignments, fetchFlipTextSections, fetchFlipList, saveFlipTextSection, type FlipChange, type FlipListItem } from '@/lib/supabase/flip'
 import { ChangeCard } from '@/components/flip/change-card'
 import { CoordinateModal } from '@/components/flip/coordinate-modal'
 import { EditableSection } from '@/components/flip/editable-section'
@@ -15,19 +15,21 @@ export function ChangeBoard({ baseId, canWrite }: { baseId: string; canWrite: bo
   const [isAfm, setIsAfm] = useState(false)
   const [isCustodian, setIsCustodian] = useState(false)
   const [directions, setDirections] = useState('')
+  const [flipList, setFlipList] = useState<FlipListItem[]>([])
   const [modal, setModal] = useState(false)
 
   const load = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } }
-    const [ch, roles, secs] = await Promise.all([
-      fetchFlipChanges(baseId), fetchFlipRoleAssignments(baseId), fetchFlipTextSections(baseId),
+    const [ch, roles, secs, list] = await Promise.all([
+      fetchFlipChanges(baseId), fetchFlipRoleAssignments(baseId), fetchFlipTextSections(baseId), fetchFlipList(baseId),
     ])
     setChanges(ch)
     const mine = roles.filter((r) => r.user_id === user?.id).map((r) => r.role)
     setIsAfm(mine.includes('afm'))
     setIsCustodian(mine.includes('custodian') || mine.includes('alternate'))
     setDirections(secs.find((s) => s.section_key === 'change_directions')?.content ?? '')
+    setFlipList(list)
   }, [baseId])
 
   useEffect(() => { load() }, [load])
@@ -67,7 +69,7 @@ export function ChangeBoard({ baseId, canWrite }: { baseId: string; canWrite: bo
         })
       )}
 
-      <CoordinateModal baseId={baseId} open={modal} onClose={() => setModal(false)} onCreated={load} />
+      <CoordinateModal baseId={baseId} flipList={flipList} open={modal} onClose={() => setModal(false)} onCreated={load} />
     </>
   )
 }
