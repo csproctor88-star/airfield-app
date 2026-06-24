@@ -1,131 +1,146 @@
 # Session Handoff
 
-**Date:** 2026-06-23
-**Branch:** `main` — pushed to origin, in sync (`ce390a9b`). Still v2.34.0 (no bump).
+**Date:** 2026-06-24
+**Branch:** `main` — pushed to origin, in sync (`680e995d`). Still v2.34.0 (no bump).
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **887 pass / 93 files**.
-**HEAD:** `ce390a9b`
+`npx vitest run` ✓ **908 pass / 95 files**.
+**HEAD:** `680e995d`
 
 ---
 
 ## What shipped this session
 
-A broad session across five modules. The headline is a brand-new **Read File**
-module (read-and-initial continuity files), plus a **PPR info-only recipient**
-type and a **QRC revised-since-review** amber notification. Along the way a
-genuine data-integrity bug surfaced and was fixed: the QRC quarterly-review
-report was dropping real reviewers because it read a stale legacy role column.
-Smaller wins: parking aircraft-label display + an A321-200 airframe, and a full
-obstacle-NOTAM generator in the obstruction tool.
+One module, end to end: **FLIP Management** (`/flip`) — the electronic
+equivalent of the DAFMAN 13-204V2 §2.5.2.18 *FLIPs Continuity Binder*. It was
+brainstormed into a committed spec + plan, built task-by-task via
+subagent-driven development (Phase-1 + final reviews, both APPROVED), then
+iterated through ~8 rounds of user-driven UX refinement. 29 commits
+(`1db6ae49` → `c4ba7dad`), 7 migrations (`2026062304`–`2026062402`, all applied
++ verified live), dual-mode (`appliesTo: ['usaf','faa_part139']`),
+`defaultEnabled: false`.
 
-### Parking: aircraft label on map + PDF, "Spot" → "Aircraft Label" (`fe3c4cf6`, `c3239d90`)
+### Module foundation + 3 pages (`1db6ae49` … `bac88e4f`)
 
-The parking map marker and the html2canvas PDF capture were built from the
-aircraft *type* (`aircraft_name`); both now prefer the user-entered **Aircraft
-Label** (`spot_name`), falling back to type only when blank. The PDF detail
-table's first column header was renamed "Spot" → "Aircraft Label" to match the
-data it already showed.
+Spec + plan under `docs/superpowers/`. The shape mirrors AMTR + the existing
+CRUD modules:
 
-### Obstructions: full obstacle NOTAM in the NOTAM Reference card (`6a11f554`)
+- **Two-layer authz.** Global matrix keys `flip:view|write|manage|export`
+  (`2026062304`) gate module/admin/export. A per-module `flip_role_assignments`
+  table (`2026062305`, roles `custodian`/`alternate`/`namo`/`afm`, multiple per
+  user) gates who acts inside a record — exactly AMTR's pattern. Admin matrix at
+  `/flip/roles`.
+- **8 tables + RLS** (`2026062305`) via the matrix helpers only
+  (`user_has_base_access` + `user_has_permission`). `flip_review_signoffs` is
+  SELECT-only to clients; all signature writes go through the RPC.
+- **`flip_sign_review` RPC** (`2026062307`, `SECURITY DEFINER`) enforces the
+  sequential **Custodian → NAMO → AFM** review sign-off: derives signer from
+  `auth.uid()`, checks role-per-slot, enforces order + permanence. Mirrors the
+  pure logic in `lib/flip/roles.ts` (unit-tested, `tests/flip-roles.test.ts`,
+  15 cases). Signing routes through the offline write queue
+  (`flip_review_sign` handler, registered in `lib/sync/handlers.ts`).
+- **Private `flip` storage bucket** (`2026062306`) + authenticated
+  `/api/flip-file` proxy (mirrors `/api/photos`). Path `<base_id>/<kind>/<uuid>`.
+- **Home** (Account Overview + References), **FLIP Changes** (3-stage pipeline),
+  **FLIP Reviews** (dropdown-only review modal sourced from the Local FLIP List,
+  discrepancy toggle + reg-required `date_corrected`, sequential sign-off, signed
+  PDF via `lib/flip-pdf.ts`). Help & Training section added (`bac88e4f`).
+- Built on Glidepath theme tokens (prototype navy/gold discarded).
 
-The NOTAM Reference block now renders a copy-ready, multi-line obstacle NOTAM
-that live-updates with the form:
+### Roles matrix scoped to airfield-management roles (`d5aafb84`)
 
-```
-OBSTACLE POLE 423618N0824913W
- (0.88NM SOUTHEAST KMTC) 705FT MSL
- (125FT AGL)
-```
+The `/flip/roles` matrix listed every base member. Now it lists only users whose
+authoritative `profiles.role` is an airfield-management leadership/admin role —
+AFM, NAMO, AMOPS, Base Admin, sys_admin, plus civilian parallels
+(`accountable_executive`, `ops_supervisor`) — i.e. exactly the holders of
+`flip:write`/`flip:manage`. New `lib/flip/roster-roles.ts` (`isFlipEligibleRole`),
+mirroring `lib/amtr/roster-roles.ts`. Reads `profiles.role`, not the stale
+`base_members.role`.
 
-Coordinates are degrees-minutes-**seconds** (`DDMMSS{N|S}DDDMMSS{E|W}`, seconds
-truncated, matching the FAA obstacle-NOTAM convention — confirmed against a
-user-supplied real NOTAM). `OBSTACLE <TYPE>` is the description field uppercased;
-distance/bearing is from the nearest runway threshold (as the tool already
-computed) rendered as NM + 8-point cardinal word + base ICAO; MSL = ground elev +
-entered AGL; AGL = the height field. Single copy-icon button copies the whole
-thing.
+### Nav entry moved to Admin (`65759c53`)
 
-### Read File module (`bafca1a3` … `6fd68040`, `4111f1c5`, `c910a9e1`)
+`/flip` relocated from "Airfield Management" to the **Admin** section in the
+default sidebar config and added to the More tab's Admin group. Both surfaces
+already gate it on `flip:view` + `isModuleEnabled`, so it appears only when the
+module is enabled for the base.
 
-New standalone `/read-file` module — the digital USAF read-and-initial
-continuity file. Managers (Airfield Manager / NAMT / Base Admin) upload
-documents; the operational roles must read and acknowledge each (one-click +
-operating-initials snapshot). Acknowledgments are **version-stamped**: a manager
-"Replace" bumps `read_files.version`, which re-triggers everyone (same idea as
-QRC's review snapshot). A **red** sidebar badge counts files the current user
-hasn't acknowledged at the current version; a manager PDF report lists, per file,
-who reviewed (initials + date) vs who's outstanding. Reuses the AMTR Files
-storage pattern (private bucket, path-scoped RLS, signed URLs) and the QRC
-monthly-review report shape. Required-reader audience = the QRC `REVIEWER_ROLES`
-set (AFM/NAMO/AMOPS/Base Admin/sys_admin), gated by `read_file:view`.
+### Coordinate Change dialog (`bc23580a`, `c4ba7dad`, `680e995d`)
 
-Two review-found fixes landed before merge: `replaceReadFile` got an
-**optimistic version lock** (concurrent replaces no longer clobber each other's
-`storage_path`), and the ack-insert RLS policy now **server-validates
-`acknowledged_version`** against the file's current version (a `read_file:view`
-user could otherwise pre-ack a future version via a raw PostgREST insert).
+Three input upgrades + the FAA-format structure:
 
-### Role-drift fix: reports/labels read `profiles.role`, not `base_members.role` (`bf30fb4b`, `3e130b1a`)
+- **FLIP Title** is a dropdown sourced from the Local FLIP List (empty → amber
+  guard, same as the review modal).
+- **NOTAM** is a dropdown of the base's current active NOTAMs pulled live from
+  `/api/notams/sync?icao=…` (there is no NOTAM table — the feed is the only
+  source), with an "Other (enter manually)" fallback (a change may *initiate*
+  NOTAM action per §2.5.2.18.2.2.4, so the NOTAM may not be in the feed yet).
+- **Name / Rank** auto-imports from the signing user's profile (`rank` + `name`,
+  email fallback), read-only — no manual entry. `submitted_by_user` still stamps
+  `auth.uid()`.
+- **FAA-format fields** (`c4ba7dad`, cols in `2026062402`): a *Reference Document
+  & Page* field, plus four checkboxes — Additions / Deletions / Revisions From /
+  Revisions To — each toggling its own drag-resizable (`resize: both`) text
+  field. Surfaced on the change card's expanded body.
+- **Details field removed** (`680e995d`) as redundant with the category boxes +
+  Remarks. `details` stays a nullable column (older changes still display
+  theirs); it's now optional in `createFlipChange`.
 
-**The surprising one.** A user (Erik Greer, AMOPS in User Management) was missing
-from the QRC quarterly review report. Root cause: two role stores had drifted.
-`profiles.role` is authoritative — it's what `user_has_permission` reads and what
-User Management edits — while `base_members.role` is a **legacy per-base column**
-that gets written `read_only` on base-grant and never re-synced. At Selfridge, 12
-operational members were stored `read_only` on `base_members` despite correct
-`profiles.role`. The QRC report's `fetchEligibleReviewers` (and the Read File
-roster `fetchReadFileReviewers`) filtered on the stale column, silently dropping
-them. Fixed both to resolve role from `profiles.role` (using `base_members` only
-for membership). Follow-up `3e130b1a` did the same for the cosmetic readers that
-*display* a role label — `fetchInstallationMembers` (training compliance/roster
-pages + data export) and `fetchPprCoordinatorPicker`. The admin user-detail modal
-selects `base_members.role` but never renders it, so it was left. No data was
-changed — User Management settings were already correct.
+### Change workflow: roles, dates, history, remarks (`d1ee5b7f`, `e74e8db5`)
 
-### PPR: info-only recipient groups (`9f44017a`, `2777b9de`)
+- **Publish/Reject opened up.** Primary/Alternate Custodian and NAMO can now Mark
+  Published / Reject (AFM stays the coordination-stage approval authority). RLS
+  already permitted any `flip:write` holder — this is the matching UI gate.
+- **Date chaining + clearing.** Creation → Processed → Published: each input is
+  disabled until the prior has a value; clearing an upstream date cascades to
+  clear downstream ones; clearing now works (empty → NULL).
+- **Coordination History** (`2026062400`, append-only `flip_change_events`):
+  who/when timeline for coordinated / processed / afm_approved / published /
+  rejected, rendered per change card.
+- **Standardized remarks** (`e74e8db5`): every lifecycle step captures a remark
+  through the same prompt — a Remarks field on the Coordinate modal
+  (coordinated), and Processing is now an explicit **Mark Processed** action
+  (appears once a Processed Date is set) instead of a silent auto-log.
+  Approve/Publish/Reject keep their panel; **Reject requires remarks**. Publish
+  keeps operating-initials capture (§2.5.2.18.2.2.8) in the same panel.
 
-A `ppr_agencies` row flagged `notify_only` is an **information-only recipient**:
-it receives the final approval email (+ `.ics` if its invite toggle is on) on
-every approved PPR, but it is NOT a coordinating agency — hidden from the per-PPR
-coordinator picker (`fetchPprAgencies(..., coordinatingOnly=true)`), never gets a
-`ppr_coordination` row, never concurs, never gates approval. The approval route
-calls a new `notifyInfoOnlyRecipients()` (resolves active `notify_only` groups by
-base, not from coord rows) with info-only email wording (`buildAgencyEmail`
-`infoOnly` flag). Base Setup → PPR now splits into **Coordinating Agencies** and
-**Info-Only Recipients** with a per-row type toggle and a create-time checkbox.
-This replaces the user's workaround (a coordinating agency they had to select on
-every PPR just to receive the approval email).
+### Uploaded change PDF is openable (`22fc5c55`)
 
-### QRC: amber revised-since-review notification (`4f5ae42b` spec, `ce390a9b` impl)
+The submitted-change PDF was rendered inside the upload `<label>`, so clicking it
+reopened the file picker. Now an uploaded PDF is an openable link (opens via the
+proxy in a new tab) with a separate "Replace" control; the upload dropzone shows
+only when no file exists.
 
-Surfaces the existing per-user `getMonthlyReviewStatus === 'updated'` signal
-(template revised since the user's last review) proactively in **amber**: a dot
-on the `/qrc` sidebar entry and a "Revised — review needed" pill on the affected
-QRC card in the Available tab. Red active-execution dot takes priority over
-amber. Gated on `qrc:execute`; realtime on `qrc_templates` +
-`qrc_monthly_reviews`. `countRevised`/`fetchRevisedQrcCount` are
-interval-independent (the 'updated' branch fires before the overdue check).
-Amber (not green/red) was chosen deliberately — it matches AMTR's "routine action
-owed" tier and avoids both the green="done" and red="active execution"
-collisions. **Note:** this was spec'd mid-session, then deferred while PPR work
-happened; the implementation only landed after the user reported the dot missing.
+### Structured Appointment Letter (`997483e6`)
+
+Replaced the free-text "Current Appointment Letter" section with a structured one
+(`2026062401`, `flip_appointment`, one row per base): upload the actual letter
+file (PDF/DOCX → `flip` bucket, openable via proxy) + designate custodians — a
+Primary plus addable Alternates (custodians stored as JSONB) + optional notes.
+
+### Spec-compliance fix caught in review (`154e64b1`)
+
+The final review flagged that submitted-stage date/PDF entry was visible to any
+`flip:write` user; spec §4.3 reserves it for custodian/alternate. Gated on
+`isCustodian` (also resolved an unused-prop warning). Publish/Reject stay
+role-gated separately.
 
 ---
 
 ## Migrations status
 
-All this session's migrations were applied to the linked DB via
-`npx supabase db query --linked --file …` and verified (column / policy / bucket
-counts) during the session.
+All applied to the linked DB and verified this session.
 
 | File | Applied | What |
 |---|---|---|
-| `2026062100_read_file_permissions.sql` | ✅ live | `read_file:view` / `read_file:manage` keys + role grants |
-| `2026062101_read_file_tables.sql` | ✅ live | `read_files` + `read_file_acknowledgments` + RLS |
-| `2026062102_read_file_storage.sql` | ✅ live | private `read-files` bucket + storage RLS |
-| `2026062103_read_file_enable_module.sql` | ✅ live | backfill `read_file` into `enabled_modules` (0 bases missing after) |
-| `2026062104_read_file_ack_version_check.sql` | ✅ live | ack insert policy pins `acknowledged_version` = file's current version |
-| `2026062300_ppr_agency_notify_only.sql` | ✅ live | `ppr_agencies.notify_only` (default false) |
+| `2026062304_flip_permissions.sql` | ✅ live | `flip:*` keys + role grants (incl. civilian parallels) |
+| `2026062305_flip_management.sql` | ✅ live | 8 module tables + RLS via matrix helpers |
+| `2026062306_flip_storage_bucket.sql` | ✅ live | private `flip` bucket + storage RLS (base = path segment 1) |
+| `2026062307_flip_sign_rpc.sql` | ✅ live | `flip_sign_review` sequential signing RPC + EXECUTE grant |
+| `2026062400_flip_change_events.sql` | ✅ live | append-only coordination-history table |
+| `2026062401_flip_appointment.sql` | ✅ live | appointment letter (file + custodians JSONB + notes) |
+| `2026062402_flip_change_faa_fields.sql` | ✅ live | FAA columns on `flip_changes` (ref doc/page + 4 categories) |
+
+No pg_cron involvement; the two live cron jobs (`wwa-expiry-sweep`,
+`sms-spi-nightly`) are unaffected.
 
 ---
 
@@ -133,36 +148,36 @@ counts) during the session.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| AMOPS member missing from QRC quarterly review report | report read stale `base_members.role` (`read_only`) instead of authoritative `profiles.role` | `bf30fb4b` |
-| Wrong role label on training pages / data export / PPR coordinator picker | same `base_members.role` drift in display readers | `3e130b1a` |
-| (review-found) Read File ack could record a version the file isn't at | ack-insert RLS didn't validate `acknowledged_version` | `c910a9e1` |
-| (review-found) concurrent Read File replace could clobber `storage_path` | update had no version guard | `4111f1c5` |
+| Uploaded change PDF reopens the file picker instead of opening | filename rendered inside the upload `<label>` wrapping the hidden input | `22fc5c55` |
+| Published Date settable with Creation Date empty (out-of-order dates) | date inputs were independent, no chaining | `d1ee5b7f` |
+| Roles matrix listed every base member, not just AM staff | queried `base_members` with no role filter | `d5aafb84` |
+| (review-found) non-custodians saw submitted-stage date/PDF entry | stage check alone, no `isCustodian` gate | `154e64b1` |
 
 ---
 
 ## Lessons from this session
 
-- **`profiles.role` is the single authoritative role; `base_members.role` is
-  legacy/vestigial.** `user_has_permission` and User Management both use
-  `profiles.role`. Any code that needs a user's role must read `profiles.role`;
-  treat `base_members` as a membership link only. The role column there drifts to
-  `read_only` fleet-wide. Saved as a feedback memory.
-- **`lib/pdf-utils.ts` helpers take a positional `y`, not an options object** —
-  `drawBaseHeader(ctx, y, opts)`, `drawReportTitle(ctx, y, opts)`,
-  `drawStatBox(ctx, y, items[])`, `drawFooter(ctx)` (no `generatedBy`),
-  `tableStyles(ctx)`. Mirror `lib/qrc-monthly-review-pdf.ts` exactly; the Read
-  File plan assumed an options API and had to be corrected at the call site.
-- **`getMonthlyReviewStatus` 'updated' is interval-independent** — the
-  template-changed branch fires before the overdue check, so a revised-count is
-  the same monthly or quarterly.
-- **A spec is not an implementation.** The QRC amber feature was designed and
-  the spec committed; "commit push" committed the *spec*, then PPR work followed
-  and the implementation was skipped until the user noticed. When a design is
-  approved, confirm explicitly whether to implement now or stop at the spec.
-- **Provided SVGs need cleaning before use as silhouettes.** The A321 SVG was an
-  Inkscape multi-view export with a hidden 358 KB reference raster; extracting
-  just the outline path (→ 3.7 KB) and exposing `fill`/`stroke` as attributes is
-  what the parking renderer's recolor + auto-tighten expects.
+- **`profiles` display column is `name` (+ separate `rank`), not `full_name`.**
+  An early subagent assumed `full_name` and had to correct against
+  `app/(app)/users/page.tsx`. Build `rank + ' ' + name` for display.
+- **Theme token names that bit subagents repeatedly:** card surface is
+  `--color-bg-surface` (not `--color-surface`); inset/recessed is
+  `--color-bg-inset` (not `--color-surface-2`); semantic blue is `--color-blue`
+  (there is no `--color-info`); status tokens are `--color-warning/success/danger`.
+  When unsure, grep `app/globals.css` rather than guess.
+- **`WriteType` lives in `lib/sync/types.ts`**, not `write-queue.ts` (which
+  re-exports). Adding a write type also requires updating the exhaustive
+  `TYPE_LABELS` map in `components/sync/queue-inspector.tsx` or the build fails.
+- **NOTAMs have no table** — they come live from `/api/notams/sync?icao=…`. Any
+  feature wanting "current NOTAMs" must fetch the feed and tolerate it being
+  empty/unreachable (keep a manual fallback).
+- **`npx supabase db query --linked --file <(echo …)` process substitution fails
+  on this git-bash shell** (`/proc/<pid>/fd/...` not found). Write a real temp
+  `.sql` file and pass that. The file-based migration apply works fine.
+- **The `permissions` seed table has no `applies_to` column in the INSERT** (just
+  `key,label,category,description` + `ON CONFLICT (key)`); `role_permissions` is
+  `(role, permission_key)` + `ON CONFLICT … DO NOTHING`. Civilian roles
+  `accountable_executive`/`ops_supervisor` are valid grant targets.
 
 ---
 
@@ -170,16 +185,20 @@ counts) during the session.
 
 | Item | Severity | Notes |
 |---|---|---|
-| `base_members.role` is stale fleet-wide | Low | Nothing authoritative reads it anymore (permissions + all reports/labels now use `profiles.role`). Harmless unless a *new* reader is added against it. Could be backfilled/retired later; not required. |
-| `types.ts` not regenerated for new schema | Med | Carried + worse — `read_files`/`read_file_acknowledgments`, `ppr_agencies.notify_only`, plus prior PPR cols, all queried via `as any`. Regen as a batch. |
-| `base-config/setup/page.tsx` keeps growing | Med | Carried + worse — the PPR Info-Only Recipients UI (`renderAgencyRow` + two sections) added more to an already ~6k-LOC file (69 kB First Load). Extraction still deferred. |
-| Read File storage non-UUID path → 500 | Low | A crafted direct-API upload path whose first segment isn't a UUID throws a Postgres cast error (500, no escalation). Matches the existing AMTR bucket convention; left as-is by user decision. |
-| PPR info-only double-email edge case | Info | If the same address is in both a coordinating agency (selected on a PPR) and an info-only group, it gets two approval emails (different framing). Accepted by design; cross-group dedupe available if wanted. |
-| Lower-severity pentest items not done | Med | Carried — L-2 send-ppr authz, M-2 kiosk session, M-3 anon-RPC rate limiting, I-3 constant-time CRON, Next.js 14.2→15. See `docs/security/Pentest_Audit_Fable5_2026-06-11.md` §5. |
-| `send-ppr-coordination-request` has no explicit permission gate | Low | Carried — relies on UI gating (`ppr:triage`); harden alongside L-2. |
+| FLIP help content lives in `app/(app)/help/page.tsx`, not `lib/training/modules.ts` | Low | New — FLIP renders as a Help tab but won't appear as a searchable Module card or in the Module Reference PDF until ported into the `MODULES` registry. |
+| FLIP never live-smoke-tested | Med | New — verified via tsc/vitest/build + code review only. No human run-through (enable on a base → assign roles → coordinate/approve/publish → review/sign → export). |
+| Old free-text `appt_letter` `section_key` now unused | Info | New — the CHECK still allows it; harmless. The Appointment Letter UI is `flip_appointment`-backed now. |
+| `types.ts` not regenerated for recent schema | Med | Carried — all FLIP tables go through the untyped `db()` client via `as never`/`as`; regen as a batch. |
+| pg_cron jobs depend on the extension staying enabled | Med | Carried — a DB *restore* may not replay migrations; re-enable `pg_cron` or both crons silently stop. |
+| `base_members.role` is stale fleet-wide | Low | Carried — nothing authoritative reads it; permissions/reports/`isFlipEligibleRole` use `profiles.role`. |
+| `base-config/setup/page.tsx` keeps growing | Med | Carried — ~6k LOC; extraction deferred. |
+| Read File storage non-UUID path → 500 | Low | Carried — crafted direct-API path; left by user decision. |
+| PPR info-only double-email edge case | Info | Carried — same address in coordinating + info-only group gets two emails. Accepted. |
+| Lower-severity pentest items not done | Med | Carried — L-2 send-ppr authz, M-2 kiosk session, M-3 anon-RPC rate limiting, I-3 constant-time CRON, Next.js 14.2→15. `docs/security/Pentest_Audit_Fable5_2026-06-11.md` §5. |
+| `send-ppr-coordination-request` has no explicit permission gate | Low | Carried — relies on UI gating; harden with L-2. |
 | CSP is report-only | Low | Carried — promote to enforcing after monitoring. |
-| `scn` missing on 26 USAF bases | Med | Carried — frozen `enabled_modules`. (Read File's backfill fixed `read_file` everywhere but `scn` is still gapped.) |
-| New `defaultEnabled` modules don't reach existing bases | Med | Carried — null-only fallback in `lib/installation-context.tsx`; Read File worked around it with an explicit backfill migration each time. |
+| `scn` missing on 26 USAF bases | Med | Carried — frozen `enabled_modules`. |
+| New `defaultEnabled` modules don't reach existing bases | Med | Carried — FLIP is `defaultEnabled: false` so it's invisible until enabled per base in setup; same null-only fallback in `lib/installation-context.tsx`. |
 | usr-analytics privacy disclosure | Med | Carried — no user-facing line. |
 | Test-account fixtures live in prod | Info | Carried — `__TEST_RLS__` bases + `rls-*@glidepath-rls-test.com`. |
 
@@ -187,26 +206,29 @@ counts) during the session.
 
 ## Next session tasks
 
-No required next step — everything started this session is shipped, committed,
-pushed, and (for migrations) applied live. Pick up wherever the user wants.
+No required next step — the FLIP Management module is feature-complete for now
+(user called it), committed, pushed, and all 7 migrations are live and verified.
+Pick up wherever the user wants.
 
 Informational, not required:
 
-1. **Eyeball emails on the next live build** (only send where `RESEND_API_KEY` is
-   set): PPR **info-only** approval email + `.ics` framing; QRC amber dot in the
-   live sidebar; Read File approval/report surfaces.
-2. **`NEXT_PUBLIC_SITE_URL`** in Vercel → canonical domain so reset/email links
-   stop pointing at vercel.app (carried, user-owned).
+1. **Enable FLIP per base.** It's `defaultEnabled: false`, so it won't appear in
+   any base's nav until turned on in the base-setup wizard. Migrations are
+   additive and already live.
+2. **Live manual smoke test of FLIP** before promoting — the one verification
+   step not yet done (see tech debt).
+3. **Optionally port the FLIP Help content** from `help/page.tsx` into the
+   `lib/training/modules.ts` `MODULES` registry so it becomes a searchable Module
+   card + flows into the Module Reference PDF.
 
 ### Long-running carryover (bandwidth-permitting)
 - Lower-severity pentest items (L-2 + server-side gate on
   `send-ppr-coordination-request`, M-2, M-3, I-3, Next.js upgrade).
-- `types.ts` regen (now covers Read File + `notify_only`); `base-config/setup`
+- `types.ts` regen (now also covers the FLIP tables); `base-config/setup`
   extraction.
 - `scn` `enabled_modules` backfill + the systemic null-only fallback fix;
   usr-analytics privacy copy.
-- `base_members.role` data backfill / column retirement (low priority, nothing
-  reads it).
+- `base_members.role` data backfill / column retirement (low priority).
 
 ---
 
@@ -215,19 +237,12 @@ Informational, not required:
 ```
 Build: npm run build — compiled successfully.
 TypeScript clean (npx tsc --noEmit exit 0).
-Tests: 887 pass / 93 files (npx vitest run) — incl. new tests/read-files.test.ts
-       (6) and tests/qrc-revised.test.ts (4).
+Tests: 908 pass / 95 files (npx vitest run) — incl. tests/flip-roles.test.ts (15).
 
-New routes/files this session:
-  /read-file                12.8 kB First Load 327 kB  — Read File module page
-  lib/read-file-review-pdf.ts, lib/supabase/read-files.ts
-
-Changed routes (First Load JS):
-  /parking                  48.2 kB / 425 kB   (aircraft label + A321)
-  /qrc                      21.4 kB / 349 kB   (amber revised dot + card pill)
-  /ppr                      24.2 kB / 195 kB   (coordinator picker filter)
-  /obstructions             14.2 kB / 191 kB   (full NOTAM generator)
-  /base-config/setup        69.1 kB / 288 kB   (PPR info-only recipients UI)
+New routes (First Load JS):
+  /flip                     16.0 kB / 346 kB   (Home + Changes + Reviews tabs)
+  /flip/roles                1.9 kB / 172 kB   (roles admin matrix)
+  /api/flip-file               0 B             (authenticated download proxy)
 First Load JS shared        91.6 kB
 Middleware                  74.6 kB
 ```
@@ -238,11 +253,11 @@ Middleware                  74.6 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-23 | Read File module (read-and-initial continuity file: upload, acknowledge, version-stamped re-sign, red badge, compliance PDF — migrations `2026062100–04`); PPR info-only recipient groups (`2026062300`); QRC revised-since-review amber notification; role-drift fix (reports/labels read `profiles.role` not stale `base_members.role`); parking aircraft-label display + A321-200 airframe; full obstacle-NOTAM generator |
-| **Unreleased** | 2026-06-22 | PPR module batch: calendar month view + "All" log default; re-open denied PPRs into coordination; Transient Aircraft (PPR) board with a Departed button (`2026062017`); approval `.ics` calendar invite (REQUEST/PUBLISH, full PPR detail); per-agency invite toggle (`2026062018`); external (non-account) agency email recipients (`2026062019`); remind-pending-agencies action |
-| **Unreleased** | 2026-06-11 | Pentest remediation: closed self-escalation to sys_admin (`2026062013`) + daily-review forgery RPC, installations IDOR, email-route authz, invite password, map XSS, photo-read auth proxy (H-5), middleware/CSP/header hardening; AE granted `aep:write` (`2026062016`); forgot-password email + discrepancy-PDF layout fixes |
-| **Unreleased** | 2026-06-10 | Brand-logo refresh (theme-aware login/sidebar + new PWA/favicon icons); Daily Reviews gains date-range filtering, an Outstanding section, a certification-log PDF, drops the unused per-review email flow |
-| **Unreleased** | 2026-06-07 | RLS/authorization pentest remediation round 1 (`2026062011`/`2026062012`), offline write queue scoped per-user, no-base saves toast |
+| **Unreleased** | 2026-06-24 | FLIP Management module (`/flip`, dual-mode, `defaultEnabled:false`): electronic FLIPs Continuity Binder per DAFMAN 13-204V2 §2.5.2.18 — Account Overview + structured Appointment Letter (file + custodians), Local FLIP List, References; FLIP Changes pipeline (FAA-format coordinate dialog, NOTAM-feed + FLIP-list dropdowns, auto name/rank, role-gated publish/reject, chained dates, coordination-history timeline with standardized remarks, openable PDFs); FLIP Reviews with sequential Custodian→NAMO→AFM sign-off + signed PDF; AMTR-style per-module roles admin; migrations `2026062304`–`2026062402` |
+| **Unreleased** | 2026-06-23 | WWA expiration moved server-side (pg_cron `wwa-expiry-sweep`; dialog overnight/past guard; "System" actor labels — `2026062301–02`); enabled `pg_cron`; revived dormant `sms-spi-nightly` + backfilled June (`2026062303`) |
+| **Unreleased** | 2026-06-23 | Read File module (`2026062100–04`); PPR info-only recipient groups (`2026062300`); QRC revised-since-review notification; role-drift fix (read `profiles.role`); parking aircraft-label display + A321-200; obstacle-NOTAM generator |
+| **Unreleased** | 2026-06-22 | PPR module batch: calendar month view; re-open denied PPRs into coordination; Transient Aircraft board (`2026062017`); approval `.ics` invite + per-agency toggle (`2026062018`); external agency recipients (`2026062019`); remind-pending-agencies |
+| **Unreleased** | 2026-06-11 | Pentest remediation: self-escalation close (`2026062013`), daily-review forgery RPC, installations IDOR, email-route authz, invite password, map XSS, photo-read auth proxy (H-5), middleware/CSP/header hardening; AE granted `aep:write` (`2026062016`); forgot-password email + discrepancy-PDF fixes |
 | **v2.34.0** | 2026-06-01 | Help & Training covers every module + airport-type gating; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination + notify; Records Export; grouped What's New |
 | v2.33.0 | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes |
 
@@ -251,25 +266,21 @@ Middleware                  74.6 kB
 ## Key docs / files touched this session
 
 ### New files
-- `app/(app)/read-file/page.tsx`, `lib/supabase/read-files.ts`,
-  `lib/read-file-review-pdf.ts`, `tests/read-files.test.ts` — Read File module.
-- `tests/qrc-revised.test.ts` — `countRevised` unit tests.
-- `supabase/migrations/2026062100–04` (Read File), `2026062300` (PPR notify_only).
-- `public/aircraft_silhouettes/a321.svg` + `commercial_aircraft.json` /
-  `aircraft_silhouette_manifest.json` entries (A321-200).
-- Specs/plan under `docs/superpowers/` for Read File + QRC + PPR info-only.
+- `docs/superpowers/specs/2026-06-23-flip-management-design.md`,
+  `docs/superpowers/plans/2026-06-23-flip-management.md` — spec + 18-task plan.
+- `lib/flip/roles.ts`, `lib/flip/roster-roles.ts`, `tests/flip-roles.test.ts`.
+- `lib/supabase/flip.ts`, `lib/supabase/flip-storage.ts`,
+  `app/api/flip-file/route.ts`, `lib/flip-pdf.ts`.
+- `app/(app)/flip/page.tsx`, `app/(app)/flip/roles/page.tsx`.
+- `components/flip/` — `editable-section`, `flip-list-panel`, `references-panel`,
+  `appointment-letter-section`, `change-board`, `change-card`, `coordinate-modal`,
+  `document-review-modal`, `review-signoff`, `reviews-panel`.
+- `supabase/migrations/2026062304`–`2026062402` (7 files).
 
 ### Modified files
-- `lib/supabase/qrc-reviews.ts` — `profiles.role` roster fix +
-  `countRevised`/`fetchRevisedQrcCount`.
-- `lib/supabase/read-files.ts` — roster `profiles.role` fix, replace version lock.
-- `lib/supabase/installations.ts`, `lib/supabase/ppr-agency-members.ts` — role
-  labels from `profiles.role`.
-- `lib/supabase/ppr-agencies.ts`, `lib/ppr-agency-notify.ts`,
-  `app/api/send-ppr-approval/route.ts`, `app/(app)/ppr/page.tsx`,
-  `app/(app)/base-config/setup/page.tsx` — PPR info-only recipients.
-- `hooks/use-sidebar-badge-counts.ts`, `components/layout/sidebar-nav.tsx` —
-  Read File red badge + QRC amber badge.
-- `app/(app)/qrc/page.tsx` — amber `revised` pill on Available cards.
-- `app/(app)/parking/page.tsx`, `lib/parking-pdf.ts` — aircraft label.
-- `app/(app)/obstructions/page.tsx` — full obstacle NOTAM.
+- `lib/permissions.ts` (`PERM.FLIP_*`), `lib/modules-config.ts` (module entry +
+  `ModuleKey`), `lib/sidebar-config.ts` + `components/layout/sidebar-nav.tsx`
+  (nav under Admin), `app/(app)/more/page.tsx` (More-tab Admin entry).
+- `lib/sync/types.ts` + `lib/sync/handlers.ts` +
+  `components/sync/queue-inspector.tsx` (`flip_review_sign` write handler).
+- `app/(app)/help/page.tsx` (FLIP Help tab).
