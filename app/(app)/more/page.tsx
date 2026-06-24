@@ -10,7 +10,7 @@ import {
   ClipboardCheck, ClipboardList, Bird, FileSignature, HardHat,
   AlertTriangle, MapPin, Lightbulb, PlaneLanding, Plane, Library,
   Clock, CalendarCheck, FileText, TrendingUp, GraduationCap,
-  BookOpen, Users, Award, Settings as SettingsIcon,
+  BookOpen, BookMarked, Users, Award, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
   type LucideIcon,
@@ -112,6 +112,9 @@ const refItems: ModuleItem[] = [
 const adminItems: ModuleItem[] = [
   { name: 'Activity Log', icon: Clock, color: 'var(--color-success)', href: '/recent-activity' },
   { name: 'Customer Feedback', icon: MessageSquare, color: 'var(--color-accent)', href: '/feedback' },
+  // Gated to flip:view (airfield-management leadership + admins) via HREF_PERMISSION,
+  // and to bases with the FLIP module enabled via isModuleEnabled.
+  { name: 'FLIP Management', icon: BookMarked, color: 'var(--color-purple)', href: '/flip' },
   { name: 'User Management', icon: Users, color: 'var(--color-text-3)', href: '/users', adminOnly: true },
   { name: 'Base Configuration', icon: SlidersHorizontal, color: 'var(--color-cyan)', href: '/base-config' },
 ]
@@ -312,6 +315,7 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
   '/users':          PERM.USERS_VIEW,
   '/feedback':       PERM.FEEDBACK_VIEW,
   '/amtr':           PERM.AMTR_VIEW,
+  '/flip':           PERM.FLIP_VIEW,
   '/read-file':      PERM.READ_FILE_VIEW,
   '/ces':            PERM.CES_VIEW,
 }

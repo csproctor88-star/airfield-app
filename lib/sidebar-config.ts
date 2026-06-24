@@ -115,7 +115,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       collapsed: true,
       // /ces stays here but renders only for ces:view holders (CES role +
       // sys_admin); base-admins / Airfield Managers don't hold the key.
-      items: ['/discrepancies', '/infrastructure', '/waivers', '/daily-reviews', '/parking', '/obstructions', '/amtr', '/flip', '/read-file', '/ces'],
+      items: ['/discrepancies', '/infrastructure', '/waivers', '/daily-reviews', '/parking', '/obstructions', '/amtr', '/read-file', '/ces'],
     },
     {
       label: 'Safety Management System',
@@ -140,7 +140,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       label: 'Admin',
       collapsed: true,
-      items: ['/recent-activity', '/feedback', '/users', '/base-config'],
+      items: ['/recent-activity', '/feedback', '/flip', '/users', '/base-config'],
     },
   ],
 }
