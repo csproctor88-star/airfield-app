@@ -2,7 +2,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, CircleCheck, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, CircleCheck, X, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   updateFlipChange, approveFlipChange, logFlipChangeEvent,
@@ -173,14 +173,31 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
                   {dateInput(c.published_date, 'published_date', 'Published Date', !c.processed_date)}
                 </div>
               )}
-              {canEditDates ? (
-                <label style={{ display: 'block', border: '2px dashed var(--color-border)', borderRadius: 8, padding: 12, textAlign: 'center', cursor: 'pointer', fontSize: 'var(--fs-sm)', color: c.pdf_filename ? 'var(--color-success)' : 'var(--color-text-3)', marginBottom: 10 }}>
-                  {c.pdf_filename ?? 'Upload submitted change PDF'}
-                  <input type="file" accept=".pdf" onChange={onPdf} style={{ display: 'none' }} />
-                </label>
-              ) : c.pdf_storage_path ? (
-                <div style={{ marginBottom: 10 }}><a href={flipFileUrl(c.pdf_storage_path)} target="_blank" rel="noreferrer" style={{ color: 'var(--color-accent)', fontSize: 'var(--fs-sm)' }}>{c.pdf_filename ?? 'Download PDF'}</a></div>
-              ) : null}
+              {(c.pdf_storage_path || canEditDates) && (
+                <div style={{ marginBottom: 10 }}>
+                  {c.pdf_storage_path ? (
+                    // Uploaded PDF: openable link (opens via the authenticated
+                    // proxy in a new tab) + a separate Replace control for editors.
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, border: '1px solid var(--color-border)', borderRadius: 8, background: 'var(--color-bg-surface)' }}>
+                      <FileText size={18} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
+                      <a href={flipFileUrl(c.pdf_storage_path)} target="_blank" rel="noreferrer" style={{ flex: 1, color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.pdf_filename ?? 'Submitted change PDF'}
+                      </a>
+                      {canEditDates && (
+                        <label style={{ flexShrink: 0, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                          Replace
+                          <input type="file" accept=".pdf" onChange={onPdf} style={{ display: 'none' }} />
+                        </label>
+                      )}
+                    </div>
+                  ) : (
+                    <label style={{ display: 'block', border: '2px dashed var(--color-border)', borderRadius: 8, padding: 12, textAlign: 'center', cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>
+                      Upload submitted change PDF
+                      <input type="file" accept=".pdf" onChange={onPdf} style={{ display: 'none' }} />
+                    </label>
+                  )}
+                </div>
+              )}
 
               {!actionMode && canPublishReject && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
