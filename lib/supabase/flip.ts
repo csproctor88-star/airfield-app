@@ -39,6 +39,11 @@ export type FlipSignoff = {
   afm_signed_by: string | null; afm_signed_at: string | null
 }
 export type FlipRoleAssignment = { id: string; base_id: string; user_id: string; role: FlipRole; created_at: string }
+export type FlipChangeEventType = 'coordinated' | 'afm_approved' | 'processed' | 'published' | 'rejected'
+export type FlipChangeEvent = {
+  id: string; change_id: string; base_id: string; event_type: FlipChangeEventType
+  actor_user_id: string | null; actor_name: string | null; remarks: string | null; created_at: string
+}
 
 // ===== Text sections =====
 export async function fetchFlipTextSections(baseId: string): Promise<FlipTextSection[]> {
@@ -102,11 +107,17 @@ export async function fetchFlipChanges(baseId: string): Promise<FlipChange[]> {
 export async function createFlipChange(input: { baseId: string; flipTitle: string; notam: string; details: string; name: string }): Promise<{ error: string | null }> {
   const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
   const { data: { user } } = await supabase.auth.getUser()
-  const { error } = await supabase.from('flip_changes').insert({
+  const { data: row, error } = await supabase.from('flip_changes').insert({
     base_id: input.baseId, flip_title: input.flipTitle, notam: input.notam || null,
     details: input.details || null, submitted_by_name: input.name, submitted_by_user: user?.id ?? null,
+  } as never).select('id').single()
+  if (error || !row) return { error: friendlyError(error?.message ?? 'Failed to coordinate change') }
+  // Seed the coordination history with the create event.
+  await supabase.from('flip_change_events').insert({
+    change_id: (row as { id: string }).id, base_id: input.baseId, event_type: 'coordinated',
+    actor_user_id: user?.id ?? null, actor_name: input.name, remarks: null,
   } as never)
-  return { error: error ? friendlyError(error.message) : null }
+  return { error: null }
 }
 export async function updateFlipChange(id: string, patch: Partial<FlipChange>): Promise<{ error: string | null }> {
   const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
@@ -119,6 +130,33 @@ export async function approveFlipChange(id: string): Promise<{ error: string | n
   const { error } = await supabase.from('flip_changes').update({
     stage: 'submitted', afm_approved_by: user?.id ?? null, afm_approved_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   } as never).eq('id', id)
+  return { error: error ? friendlyError(error.message) : null }
+}
+
+// ===== Change history (coordination timeline) =====
+/** Resolve the current user's display name (rank + name) for history snapshots. */
+async function resolveActorName(supabase: SupabaseClient, userId: string | undefined): Promise<string | null> {
+  if (!userId) return null
+  const { data } = await supabase.from('profiles').select('name, rank').eq('id', userId).single()
+  const p = data as { name?: string; rank?: string } | null
+  const nm = p?.name?.trim() || ''
+  const rk = p?.rank?.trim() || ''
+  return rk && nm ? `${rk} ${nm}` : (nm || null)
+}
+export async function fetchFlipChangeEvents(baseId: string): Promise<FlipChangeEvent[]> {
+  const supabase = db(); if (!supabase) return []
+  const { data, error } = await supabase.from('flip_change_events').select('*').eq('base_id', baseId).order('created_at', { ascending: true })
+  if (error) { console.error('fetchFlipChangeEvents:', error.message); return [] }
+  return (data ?? []) as FlipChangeEvent[]
+}
+export async function logFlipChangeEvent(input: { changeId: string; baseId: string; eventType: FlipChangeEventType; remarks?: string | null }): Promise<{ error: string | null }> {
+  const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
+  const { data: { user } } = await supabase.auth.getUser()
+  const actorName = await resolveActorName(supabase, user?.id)
+  const { error } = await supabase.from('flip_change_events').insert({
+    change_id: input.changeId, base_id: input.baseId, event_type: input.eventType,
+    actor_user_id: user?.id ?? null, actor_name: actorName, remarks: input.remarks?.trim() || null,
+  } as never)
   return { error: error ? friendlyError(error.message) : null }
 }
 
