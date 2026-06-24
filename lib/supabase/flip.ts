@@ -44,6 +44,11 @@ export type FlipChangeEvent = {
   id: string; change_id: string; base_id: string; event_type: FlipChangeEventType
   actor_user_id: string | null; actor_name: string | null; remarks: string | null; created_at: string
 }
+export type FlipCustodian = { name: string; role: 'primary' | 'alternate' }
+export type FlipAppointment = {
+  id: string; base_id: string; file_path: string | null; file_name: string | null
+  custodians: FlipCustodian[]; notes: string | null; updated_at: string; updated_by: string | null
+}
 
 // ===== Text sections =====
 export async function fetchFlipTextSections(baseId: string): Promise<FlipTextSection[]> {
@@ -94,6 +99,24 @@ export async function addFlipReference(input: { baseId: string; title: string; f
 export async function removeFlipReference(id: string): Promise<{ error: string | null }> {
   const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
   const { error } = await supabase.from('flip_references').delete().eq('id', id)
+  return { error: error ? friendlyError(error.message) : null }
+}
+
+// ===== Appointment letter =====
+export async function fetchFlipAppointment(baseId: string): Promise<FlipAppointment | null> {
+  const supabase = db(); if (!supabase) return null
+  const { data, error } = await supabase.from('flip_appointment').select('*').eq('base_id', baseId).maybeSingle()
+  if (error) { console.error('fetchFlipAppointment:', error.message); return null }
+  return (data as FlipAppointment) ?? null
+}
+export async function saveFlipAppointment(baseId: string, input: { filePath: string | null; fileName: string | null; custodians: FlipCustodian[]; notes: string | null }): Promise<{ error: string | null }> {
+  const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error } = await supabase.from('flip_appointment').upsert({
+    base_id: baseId, file_path: input.filePath, file_name: input.fileName,
+    custodians: input.custodians, notes: input.notes,
+    updated_at: new Date().toISOString(), updated_by: user?.id ?? null,
+  } as never, { onConflict: 'base_id' })
   return { error: error ? friendlyError(error.message) : null }
 }
 

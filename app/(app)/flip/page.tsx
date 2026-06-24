@@ -6,11 +6,12 @@ import { Settings } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
-  fetchFlipTextSections, saveFlipTextSection, fetchFlipList, fetchFlipReferences,
-  type FlipTextSection, type FlipSectionKey, type FlipListItem, type FlipReference,
+  fetchFlipTextSections, saveFlipTextSection, fetchFlipList, fetchFlipReferences, fetchFlipAppointment,
+  type FlipTextSection, type FlipSectionKey, type FlipListItem, type FlipReference, type FlipAppointment,
 } from '@/lib/supabase/flip'
 import { EditableSection } from '@/components/flip/editable-section'
 import { FlipListPanel } from '@/components/flip/flip-list-panel'
+import { AppointmentLetterSection } from '@/components/flip/appointment-letter-section'
 import { ReferencesPanel } from '@/components/flip/references-panel'
 import { ChangeBoard } from '@/components/flip/change-board'
 import { ReviewsPanel } from '@/components/flip/reviews-panel'
@@ -18,9 +19,10 @@ import { ReviewsPanel } from '@/components/flip/reviews-panel'
 type Tab = 'home' | 'changes' | 'reviews'
 type HomeSub = 'overview' | 'references'
 
+// Current Appointment Letter is rendered by AppointmentLetterSection (file
+// upload + custodian fields), not as a plain text section.
 const SECTION_META: { key: FlipSectionKey; title: string; placeholder: string }[] = [
   { key: 'acct_info', title: 'Account Information', placeholder: 'No account information entered. Click Edit to add details.' },
-  { key: 'appt_letter', title: 'Current Appointment Letter', placeholder: 'No appointment letter details entered. Click Edit to add.' },
   { key: 'ordering', title: 'Ordering Process (IAW AFI 11-201)', placeholder: 'No ordering process information entered. Click Edit to add.' },
   { key: 'responsibilities', title: 'FLIP Manager Responsibilities', placeholder: 'No responsibilities listed. Click Edit to add.' },
 ]
@@ -36,15 +38,16 @@ export default function FlipPage() {
   const [sections, setSections] = useState<Record<string, string>>({})
   const [list, setList] = useState<FlipListItem[]>([])
   const [refs, setRefs] = useState<FlipReference[]>([])
+  const [appointment, setAppointment] = useState<FlipAppointment | null>(null)
 
   const loadHome = useCallback(async () => {
     if (!installationId) return
-    const [s, l, r] = await Promise.all([
-      fetchFlipTextSections(installationId), fetchFlipList(installationId), fetchFlipReferences(installationId),
+    const [s, l, r, appt] = await Promise.all([
+      fetchFlipTextSections(installationId), fetchFlipList(installationId), fetchFlipReferences(installationId), fetchFlipAppointment(installationId),
     ])
     const map: Record<string, string> = {}
     s.forEach((row: FlipTextSection) => { map[row.section_key] = row.content })
-    setSections(map); setList(l); setRefs(r)
+    setSections(map); setList(l); setRefs(r); setAppointment(appt)
   }, [installationId])
 
   useEffect(() => { loadHome() }, [loadHome])
@@ -86,6 +89,7 @@ export default function FlipPage() {
             <>
               <EditableSection title={SECTION_META[0].title} value={sections[SECTION_META[0].key] ?? ''} placeholder={SECTION_META[0].placeholder} canEdit={canWrite} onSave={saveSection(SECTION_META[0].key)} />
               {installationId && <FlipListPanel baseId={installationId} items={list} canEdit={canWrite} onChange={loadHome} />}
+              {installationId && <AppointmentLetterSection baseId={installationId} appointment={appointment} canEdit={canWrite} onChange={loadHome} />}
               {SECTION_META.slice(1).map((m) => (
                 <EditableSection key={m.key} title={m.title} value={sections[m.key] ?? ''} placeholder={m.placeholder} canEdit={canWrite} onSave={saveSection(m.key)} />
               ))}

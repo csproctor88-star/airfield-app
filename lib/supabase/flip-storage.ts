@@ -17,7 +17,7 @@ function extOf(name: string): string {
  * Returns the storage path (no bucket prefix) for DB persistence.
  */
 export async function uploadFlipFile(
-  baseId: string, kind: 'references' | 'changes', file: File,
+  baseId: string, kind: 'references' | 'changes' | 'appointment', file: File,
 ): Promise<{ path: string | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { path: null, error: 'Supabase not configured' }
