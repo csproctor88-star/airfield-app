@@ -1,10 +1,10 @@
 # Session Handoff
 
 **Date:** 2026-06-24
-**Branch:** `main` — pushed to origin, in sync (`680e995d`). Still v2.34.0 (no bump).
+**Branch:** `main` — pushed to origin, in sync (`395365c1`). Still v2.34.0 (no bump).
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
 `npx vitest run` ✓ **908 pass / 95 files**.
-**HEAD:** `680e995d`
+**HEAD:** `395365c1`
 
 ---
 
@@ -101,6 +101,18 @@ Three input upgrades + the FAA-format structure:
   (appears once a Processed Date is set) instead of a silent auto-log.
   Approve/Publish/Reject keep their panel; **Reject requires remarks**. Publish
   keeps operating-initials capture (§2.5.2.18.2.2.8) in the same panel.
+
+### Changes Report + PDF export (`395365c1`)
+
+New **Report** view under FLIP Changes (third pill beside Change Board /
+Directions): a single-screen table of all coordinated changes — FLIP Title,
+content categories, Reference Doc & Page, NOTAM, Status, Submitted By,
+Coordinated + Published dates. Click-to-sort headers (FLIP title, status,
+submitter, coordinated date); filters for FLIP, status, and change-content
+category (Additions/Deletions/Revisions From/To). **Export PDF** renders the
+filtered/sorted view to a landscape report (`lib/flip-changes-pdf.ts` →
+`{doc, filename}`) with base header + filter summary. Reads existing
+`flip_changes` — no schema change.
 
 ### Uploaded change PDF is openable (`22fc5c55`)
 
@@ -240,7 +252,7 @@ TypeScript clean (npx tsc --noEmit exit 0).
 Tests: 908 pass / 95 files (npx vitest run) — incl. tests/flip-roles.test.ts (15).
 
 New routes (First Load JS):
-  /flip                     16.0 kB / 346 kB   (Home + Changes + Reviews tabs)
+  /flip                     17.6 kB / 348 kB   (Home + Changes [+ Report] + Reviews)
   /flip/roles                1.9 kB / 172 kB   (roles admin matrix)
   /api/flip-file               0 B             (authenticated download proxy)
 First Load JS shared        91.6 kB
@@ -253,7 +265,7 @@ Middleware                  74.6 kB
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-24 | FLIP Management module (`/flip`, dual-mode, `defaultEnabled:false`): electronic FLIPs Continuity Binder per DAFMAN 13-204V2 §2.5.2.18 — Account Overview + structured Appointment Letter (file + custodians), Local FLIP List, References; FLIP Changes pipeline (FAA-format coordinate dialog, NOTAM-feed + FLIP-list dropdowns, auto name/rank, role-gated publish/reject, chained dates, coordination-history timeline with standardized remarks, openable PDFs); FLIP Reviews with sequential Custodian→NAMO→AFM sign-off + signed PDF; AMTR-style per-module roles admin; migrations `2026062304`–`2026062402` |
+| **Unreleased** | 2026-06-24 | FLIP Management module (`/flip`, dual-mode, `defaultEnabled:false`): electronic FLIPs Continuity Binder per DAFMAN 13-204V2 §2.5.2.18 — Account Overview + structured Appointment Letter (file + custodians), Local FLIP List, References; FLIP Changes pipeline (FAA-format coordinate dialog, NOTAM-feed + FLIP-list dropdowns, auto name/rank, role-gated publish/reject, chained dates, coordination-history timeline with standardized remarks, openable PDFs); FLIP Reviews with sequential Custodian→NAMO→AFM sign-off + signed PDF; sortable/filterable Changes Report + landscape PDF export; AMTR-style per-module roles admin; migrations `2026062304`–`2026062402` |
 | **Unreleased** | 2026-06-23 | WWA expiration moved server-side (pg_cron `wwa-expiry-sweep`; dialog overnight/past guard; "System" actor labels — `2026062301–02`); enabled `pg_cron`; revived dormant `sms-spi-nightly` + backfilled June (`2026062303`) |
 | **Unreleased** | 2026-06-23 | Read File module (`2026062100–04`); PPR info-only recipient groups (`2026062300`); QRC revised-since-review notification; role-drift fix (read `profiles.role`); parking aircraft-label display + A321-200; obstacle-NOTAM generator |
 | **Unreleased** | 2026-06-22 | PPR module batch: calendar month view; re-open denied PPRs into coordination; Transient Aircraft board (`2026062017`); approval `.ics` invite + per-agency toggle (`2026062018`); external agency recipients (`2026062019`); remind-pending-agencies |
@@ -270,11 +282,11 @@ Middleware                  74.6 kB
   `docs/superpowers/plans/2026-06-23-flip-management.md` — spec + 18-task plan.
 - `lib/flip/roles.ts`, `lib/flip/roster-roles.ts`, `tests/flip-roles.test.ts`.
 - `lib/supabase/flip.ts`, `lib/supabase/flip-storage.ts`,
-  `app/api/flip-file/route.ts`, `lib/flip-pdf.ts`.
+  `app/api/flip-file/route.ts`, `lib/flip-pdf.ts`, `lib/flip-changes-pdf.ts`.
 - `app/(app)/flip/page.tsx`, `app/(app)/flip/roles/page.tsx`.
 - `components/flip/` — `editable-section`, `flip-list-panel`, `references-panel`,
   `appointment-letter-section`, `change-board`, `change-card`, `coordinate-modal`,
-  `document-review-modal`, `review-signoff`, `reviews-panel`.
+  `change-report`, `document-review-modal`, `review-signoff`, `reviews-panel`.
 - `supabase/migrations/2026062304`–`2026062402` (7 files).
 
 ### Modified files
