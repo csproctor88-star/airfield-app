@@ -95,6 +95,12 @@ export const PERM = {
   AMTR_MANAGE:                          'amtr:manage',
   AMTR_EXPORT:                          'amtr:export',
 
+  // FLIP Management
+  FLIP_VIEW:                            'flip:view',
+  FLIP_WRITE:                           'flip:write',
+  FLIP_MANAGE:                          'flip:manage',
+  FLIP_EXPORT:                          'flip:export',
+
   // Read File — read-and-initial continuity file (USAF + civilian)
   READ_FILE_VIEW:                       'read_file:view',
   READ_FILE_MANAGE:                     'read_file:manage',
