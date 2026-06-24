@@ -104,7 +104,7 @@ export async function fetchFlipChanges(baseId: string): Promise<FlipChange[]> {
   if (error) { console.error('fetchFlipChanges:', error.message); return [] }
   return (data ?? []) as FlipChange[]
 }
-export async function createFlipChange(input: { baseId: string; flipTitle: string; notam: string; details: string; name: string }): Promise<{ error: string | null }> {
+export async function createFlipChange(input: { baseId: string; flipTitle: string; notam: string; details: string; name: string; remarks?: string }): Promise<{ error: string | null }> {
   const supabase = db(); if (!supabase) return { error: 'Supabase not configured' }
   const { data: { user } } = await supabase.auth.getUser()
   const { data: row, error } = await supabase.from('flip_changes').insert({
@@ -112,10 +112,10 @@ export async function createFlipChange(input: { baseId: string; flipTitle: strin
     details: input.details || null, submitted_by_name: input.name, submitted_by_user: user?.id ?? null,
   } as never).select('id').single()
   if (error || !row) return { error: friendlyError(error?.message ?? 'Failed to coordinate change') }
-  // Seed the coordination history with the create event.
+  // Seed the coordination history with the create event + its remark.
   await supabase.from('flip_change_events').insert({
     change_id: (row as { id: string }).id, base_id: input.baseId, event_type: 'coordinated',
-    actor_user_id: user?.id ?? null, actor_name: input.name, remarks: null,
+    actor_user_id: user?.id ?? null, actor_name: input.name, remarks: input.remarks?.trim() || null,
   } as never)
   return { error: null }
 }

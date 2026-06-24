@@ -24,6 +24,7 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
   const [notam, setNotam] = useState('')          // selected notam_number, '' (none), or OTHER
   const [notamManual, setNotamManual] = useState('')
   const [details, setDetails] = useState('')
+  const [remarks, setRemarks] = useState('')
   const [busy, setBusy] = useState(false)
 
   const [name, setName] = useState('')            // resolved name/rank of the signing user
@@ -73,14 +74,14 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
 
   if (!open) return null
 
-  const reset = () => { setFlipTitle(''); setNotam(''); setNotamManual(''); setDetails('') }
+  const reset = () => { setFlipTitle(''); setNotam(''); setNotamManual(''); setDetails(''); setRemarks('') }
 
   const submit = async () => {
     if (!flipTitle.trim()) { toast.error('FLIP Title is required.'); return }
     if (!name.trim()) { toast.error('Could not resolve your name/rank from your profile — set your name in your profile first.'); return }
     const notamValue = notam === OTHER ? notamManual.trim() : (notam || '')
     setBusy(true)
-    const { error } = await createFlipChange({ baseId, flipTitle: flipTitle.trim(), notam: notamValue, details: details.trim(), name: name.trim() })
+    const { error } = await createFlipChange({ baseId, flipTitle: flipTitle.trim(), notam: notamValue, details: details.trim(), name: name.trim(), remarks: remarks.trim() })
     setBusy(false)
     if (error) { toast.error(error); return }
     reset()
@@ -131,6 +132,12 @@ export function CoordinateModal({ baseId, flipList, open, onClose, onCreated }: 
           <div>
             <label style={label}>Details</label>
             <textarea style={{ ...field, minHeight: 90, resize: 'vertical' }} value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Describe the proposed change…" />
+          </div>
+
+          {/* Remarks — recorded on the "Coordinated" step of the history */}
+          <div>
+            <label style={label}>Remarks (optional)</label>
+            <textarea style={{ ...field, minHeight: 56, resize: 'vertical' }} value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Coordination remarks for the history…" />
           </div>
 
           {/* Name / Rank — auto-imported from the signing user's profile */}

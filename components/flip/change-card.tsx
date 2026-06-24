@@ -26,7 +26,7 @@ const EVENT_COLOR: Record<FlipChangeEventType, string> = {
   coordinated: 'var(--color-warning)', afm_approved: 'var(--color-blue)', processed: 'var(--color-blue)', published: 'var(--color-success)', rejected: 'var(--color-danger)',
 }
 
-type ActionMode = null | 'approve' | 'publish' | 'reject'
+type ActionMode = null | 'approve' | 'process' | 'publish' | 'reject'
 
 export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseId, events, onChange }: {
   change: FlipChange; isAfm: boolean; isCustodian: boolean; isNamo: boolean; canWrite: boolean
@@ -47,6 +47,7 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
   const canEditDates = canWrite && isCustodian
 
   const myEvents = events.filter((e) => e.change_id === c.id)
+  const hasProcessedEvent = myEvents.some((e) => e.event_type === 'processed')
 
   const setDate = async (field: 'creation_date' | 'processed_date' | 'published_date', value: string) => {
     const v = value || null
@@ -56,13 +57,8 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
       if (field === 'creation_date') patch = { creation_date: null, processed_date: null, published_date: null }
       else if (field === 'processed_date') patch = { processed_date: null, published_date: null }
     }
-    const wasProcessedEmpty = !c.processed_date
     const { error } = await updateFlipChange(c.id, patch)
     if (error) { toast.error(error); return }
-    // Record who/when first processed it (empty → value transition).
-    if (field === 'processed_date' && v && wasProcessedEmpty) {
-      await logFlipChangeEvent({ changeId: c.id, baseId, eventType: 'processed' })
-    }
     onChange()
   }
 
@@ -83,12 +79,15 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
   const confirmAction = async () => {
     if (!actionMode) return
     if (actionMode === 'reject' && !remarks.trim()) { toast.error('Remarks are required to reject a change.'); return }
+    if (actionMode === 'process' && !c.processed_date) { toast.error('Enter a Processed Date first.'); return }
     if (actionMode === 'publish' && (!c.creation_date || !c.published_date)) { toast.error('Creation and Published dates are required to publish.'); return }
     setBusy(true)
     let err: string | null = null
     if (actionMode === 'approve') {
       err = (await approveFlipChange(c.id)).error
       if (!err) err = (await logFlipChangeEvent({ changeId: c.id, baseId, eventType: 'afm_approved', remarks })).error
+    } else if (actionMode === 'process') {
+      err = (await logFlipChangeEvent({ changeId: c.id, baseId, eventType: 'processed', remarks })).error
     } else if (actionMode === 'publish') {
       err = (await updateFlipChange(c.id, { stage: 'completed', posted_initials: initials.trim() || null, posted_date: c.posted_date ?? new Date().toISOString().slice(0, 10) })).error
       if (!err) err = (await logFlipChangeEvent({ changeId: c.id, baseId, eventType: 'published', remarks })).error
@@ -98,7 +97,7 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
     }
     setBusy(false)
     if (err) { toast.error(err); return }
-    const msg = actionMode === 'reject' ? 'Change rejected' : actionMode === 'publish' ? 'Marked published' : 'Approved — moved to Submitted'
+    const msg = actionMode === 'reject' ? 'Change rejected' : actionMode === 'publish' ? 'Marked published' : actionMode === 'process' ? 'Processing recorded' : 'Approved — moved to Submitted'
     setActionMode(null); setRemarks('')
     onChange(); toast.success(msg)
   }
@@ -133,7 +132,7 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button onClick={confirmAction} disabled={busy || (actionMode === 'reject' && !remarks.trim())}
           style={{ ...btnPrimary, opacity: (busy || (actionMode === 'reject' && !remarks.trim())) ? 0.6 : 1 }}>
-          {actionMode === 'reject' ? 'Confirm Reject' : actionMode === 'publish' ? 'Confirm Publish' : 'Confirm Approval'}
+          {actionMode === 'reject' ? 'Confirm Reject' : actionMode === 'publish' ? 'Confirm Publish' : actionMode === 'process' ? 'Confirm Processed' : 'Confirm Approval'}
         </button>
         <button onClick={cancelAction} style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)' }}>Cancel</button>
       </div>
@@ -184,7 +183,8 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
               ) : null}
 
               {!actionMode && canPublishReject && (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {c.processed_date && !hasProcessedEvent && <button onClick={() => startAction('process')} disabled={busy} style={btnPrimary}><CircleCheck size={14} /> Mark Processed</button>}
                   <button onClick={() => startAction('publish')} disabled={busy} style={btnPrimary}><CircleCheck size={14} /> Mark Published</button>
                   <button onClick={() => startAction('reject')} disabled={busy} style={btnDanger}><X size={14} /> Reject</button>
                 </div>
