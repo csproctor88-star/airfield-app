@@ -61,7 +61,7 @@ export function ChangeBoard({ baseId, canWrite }: { baseId: string; canWrite: bo
             <div key={stage} style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-text-3)', marginBottom: 8 }}>{label} · {items.length}</div>
               {items.length === 0 ? <p style={{ color: 'var(--color-text-3)', fontStyle: 'italic', fontSize: 'var(--fs-sm)' }}>No changes.</p>
-                : items.map((c) => <ChangeCard key={c.id} change={c} isAfm={isAfm} canWrite={canWrite} baseId={baseId} onChange={load} />)}
+                : items.map((c) => <ChangeCard key={c.id} change={c} isAfm={isAfm} isCustodian={isCustodian} canWrite={canWrite} baseId={baseId} onChange={load} />)}
             </div>
           )
         })

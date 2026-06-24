@@ -15,8 +15,8 @@ function badgeLabel(c: FlipChange): string {
   return { coordination: 'Awaiting AFM Approval', submitted: 'Submitted / Awaiting Publication', completed: 'Published' }[c.stage]
 }
 
-export function ChangeCard({ change, isAfm, canWrite, baseId, onChange }: {
-  change: FlipChange; isAfm: boolean; canWrite: boolean; baseId: string; onChange: () => void
+export function ChangeCard({ change, isAfm, isCustodian, canWrite, baseId, onChange }: {
+  change: FlipChange; isAfm: boolean; isCustodian: boolean; canWrite: boolean; baseId: string; onChange: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -79,15 +79,19 @@ export function ChangeCard({ change, isAfm, canWrite, baseId, onChange }: {
 
           {c.stage === 'submitted' && !c.rejected && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-                {dateInput(c.creation_date, (v) => setField({ creation_date: v }), 'Creation Date')}
-                {dateInput(c.processed_date, (v) => setField({ processed_date: v }), 'Processed Date')}
-                {dateInput(c.published_date, (v) => setField({ published_date: v }), 'Published Date')}
-              </div>
-              <label style={{ display: 'block', border: '2px dashed var(--color-border)', borderRadius: 8, padding: 12, textAlign: 'center', cursor: 'pointer', fontSize: 'var(--fs-sm)', color: c.pdf_filename ? 'var(--color-success)' : 'var(--color-text-3)', marginBottom: 10 }}>
-                {c.pdf_filename ?? 'Upload submitted change PDF'}
-                <input type="file" accept=".pdf" onChange={onPdf} style={{ display: 'none' }} />
-              </label>
+              {canWrite && isCustodian && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    {dateInput(c.creation_date, (v) => setField({ creation_date: v }), 'Creation Date')}
+                    {dateInput(c.processed_date, (v) => setField({ processed_date: v }), 'Processed Date')}
+                    {dateInput(c.published_date, (v) => setField({ published_date: v }), 'Published Date')}
+                  </div>
+                  <label style={{ display: 'block', border: '2px dashed var(--color-border)', borderRadius: 8, padding: 12, textAlign: 'center', cursor: 'pointer', fontSize: 'var(--fs-sm)', color: c.pdf_filename ? 'var(--color-success)' : 'var(--color-text-3)', marginBottom: 10 }}>
+                    {c.pdf_filename ?? 'Upload submitted change PDF'}
+                    <input type="file" accept=".pdf" onChange={onPdf} style={{ display: 'none' }} />
+                  </label>
+                </>
+              )}
               {isAfm && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={publish} disabled={busy} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--color-accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 'var(--fs-sm)' }}><CircleCheck size={14} /> Mark Published</button>
