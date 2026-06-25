@@ -21,6 +21,7 @@ import {
   type SidebarConfig,
   type SidebarSection,
 } from '@/lib/sidebar-config'
+import { searchRegistry } from '@/lib/nav-search'
 import {
   Home,
   LayoutDashboard,
@@ -61,6 +62,7 @@ import {
   RotateCcw,
   Check,
   X,
+  Search,
   ArrowUp,
   ArrowDown,
   LogOut,
@@ -166,6 +168,7 @@ export function SidebarNav() {
   const [editMode, setEditMode] = useState(false)
   const [editConfig, setEditConfig] = useState<SidebarConfig>(DEFAULT_SIDEBAR_CONFIG)
   const [saving, setSaving] = useState(false)
+  const [query, setQuery] = useState('')
 
   // Drag state
   const dragItem = useRef<{ href: string; fromSection: number; fromIndex: number; fromPinned: boolean } | null>(null)
@@ -856,6 +859,15 @@ export function SidebarNav() {
   // with the matrix naturally filtering to just their :view hrefs.
   const activeConfig = config
 
+  // Search is only available when the sidebar is expanded (the collapsed icon
+  // rail has no room for the input). Results re-use isItemVisible so search
+  // never surfaces a page the user can't already reach.
+  const trimmedQuery = query.trim()
+  const inSearchMode = isOpen && trimmedQuery !== ''
+  const searchResults = inSearchMode
+    ? searchRegistry(trimmedQuery).filter(def => def.href !== '/settings' && isItemVisible(def.href))
+    : []
+
   return (
     <nav className={`sidebar-drawer${isOpen ? '' : ' sidebar-collapsed'}`} data-tour="sidebar">
       {/* Header with logo + collapse toggle.
@@ -907,38 +919,104 @@ export function SidebarNav() {
         )}
       </div>
 
+      {/* Search filter — only when expanded. Typing replaces the grouped tree
+          with a flat ranked list of matching destinations. */}
+      {isOpen && (
+        <div style={{ padding: '8px 12px 4px' }} data-tour="sidebar-search">
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search
+              size={14}
+              style={{ position: 'absolute', left: 10, color: 'var(--color-text-4)', pointerEvents: 'none' }}
+            />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') { setQuery('') }
+                else if (e.key === 'Enter' && searchResults.length > 0) { router.push(searchResults[0].href) }
+              }}
+              placeholder="Search navigation…"
+              aria-label="Search navigation"
+              style={{
+                width: '100%',
+                padding: query ? '7px 28px 7px 30px' : '7px 10px 7px 30px',
+                background: 'var(--color-bg-inset)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--color-text-1)',
+                fontSize: 'var(--fs-sm)',
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                title="Clear search"
+                aria-label="Clear search"
+                style={{
+                  position: 'absolute', right: 6,
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-text-3)', padding: 4,
+                  display: 'flex', alignItems: 'center',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Navigation items */}
       <div style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-        {/* Pinned items — /settings is always rendered flat at the bottom
-            of the nav list instead, so exclude it here even if a saved
-            config still has it pinned at the top. */}
-        <div data-tour="sidebar-pinned">
-          {activeConfig.pinned.filter(href => href !== '/settings').filter(href => isItemVisible(href)).map(href => renderNavItem(href))}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
-
-        {/* Grouped sections. /settings always renders flat at the bottom,
-            so we filter it out of any sections carried over from older
-            saved configs to avoid rendering it twice. */}
-        {activeConfig.sections.map((section) => {
-          const visibleItems = section.items
-            .filter(href => href !== '/settings')
-            .filter(href => isItemVisible(href))
-          if (visibleItems.length === 0) return null
-
-          return (
-            <div key={section.label}>
-              {renderGroupHeader(section)}
-              {(openGroups[section.label] ?? false) && visibleItems.map(href => renderNavItem(href, true))}
+        {inSearchMode ? (
+          /* Flat ranked search results — no group headers, no indentation. */
+          searchResults.length > 0 ? (
+            searchResults.map(def => renderNavItem(def.href))
+          ) : (
+            <div style={{
+              padding: '12px 20px', fontSize: 'var(--fs-sm)',
+              color: 'var(--color-text-4)', fontStyle: 'italic',
+            }}>
+              No matches for “{trimmedQuery}”
             </div>
           )
-        })}
+        ) : (
+          <>
+            {/* Pinned items — /settings is always rendered flat at the bottom
+                of the nav list instead, so exclude it here even if a saved
+                config still has it pinned at the top. */}
+            <div data-tour="sidebar-pinned">
+              {activeConfig.pinned.filter(href => href !== '/settings').filter(href => isItemVisible(href)).map(href => renderNavItem(href))}
+            </div>
 
-        {/* Settings — always pinned at the bottom of the nav list, flat (no group). */}
-        <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
-        {renderNavItem('/settings')}
+            {/* Divider */}
+            <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
+
+            {/* Grouped sections. /settings always renders flat at the bottom,
+                so we filter it out of any sections carried over from older
+                saved configs to avoid rendering it twice. */}
+            {activeConfig.sections.map((section) => {
+              const visibleItems = section.items
+                .filter(href => href !== '/settings')
+                .filter(href => isItemVisible(href))
+              if (visibleItems.length === 0) return null
+
+              return (
+                <div key={section.label}>
+                  {renderGroupHeader(section)}
+                  {(openGroups[section.label] ?? false) && visibleItems.map(href => renderNavItem(href, true))}
+                </div>
+              )
+            })}
+
+            {/* Settings — always pinned at the bottom of the nav list, flat (no group). */}
+            <div style={{ height: 1, background: 'var(--color-border)', margin: '6px 16px' }} />
+            {renderNavItem('/settings')}
+          </>
+        )}
       </div>
 
       {/* Edit button + Sign Out at bottom */}

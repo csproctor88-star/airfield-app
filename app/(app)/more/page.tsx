@@ -13,8 +13,11 @@ import {
   BookOpen, BookMarked, Users, Award, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
+  Search, X,
   type LucideIcon,
 } from 'lucide-react'
+import { NAV_ITEM_MAP } from '@/lib/sidebar-config'
+import { scoreNavMatch } from '@/lib/nav-search'
 import ContactSupport from '@/components/ui/contact-support'
 import { useInstallation } from '@/lib/installation-context'
 import { isModuleEnabled } from '@/lib/modules-config'
@@ -280,6 +283,53 @@ function CollapsibleGroup({ label, icon, items, defaultOpen, badgeFor }: { label
   )
 }
 
+function SearchBox({ value, onChange, onEnter }: { value: string; onChange: (v: string) => void; onEnter: () => void }) {
+  return (
+    <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-border)' }}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <Search size={16} style={{ position: 'absolute', left: 12, color: 'var(--color-text-4)', pointerEvents: 'none' }} />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onChange('')
+            else if (e.key === 'Enter') onEnter()
+          }}
+          placeholder="Search…"
+          aria-label="Search navigation"
+          style={{
+            width: '100%',
+            padding: value ? '10px 36px 10px 36px' : '10px 12px 10px 36px',
+            background: 'var(--color-bg-inset)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            color: 'var(--color-text-1)',
+            fontSize: 'var(--fs-md)',
+            fontFamily: 'inherit',
+            outline: 'none',
+          }}
+        />
+        {value && (
+          <button
+            onClick={() => onChange('')}
+            title="Clear search"
+            aria-label="Clear search"
+            style={{
+              position: 'absolute', right: 8,
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--color-text-3)', padding: 4,
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function SignOutButton() {
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
@@ -321,11 +371,14 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
 }
 
 export default function MorePage() {
+  const router = useRouter()
   const { enabledModules, currentInstallation } = useInstallation()
   const airportType = currentInstallation?.airport_type ?? null
   const { has, loaded: permsLoaded } = usePermissions()
   const badgeCounts = useSidebarBadgeCounts()
   const expiringNotamCount = useExpiringNotamCount()
+  const [query, setQuery] = useState('')
+  const trimmedQuery = query.trim()
 
   const badgeFor = (href: string): number => {
     if (href === '/qrc') return badgeCounts.qrc
@@ -348,6 +401,38 @@ export default function MorePage() {
     })
   }
 
+  // Flat ranked search over every destination, then run through the same
+  // filterItems gate so permission/module/airport-type rules apply exactly as
+  // the grouped view does — search never surfaces an inaccessible page.
+  function searchAcross(items: ModuleItem[]): ModuleItem[] {
+    if (!trimmedQuery) return []
+    const ranked = items
+      .map(item => ({ item, score: scoreNavMatch(trimmedQuery, item.name, NAV_ITEM_MAP.get(item.href)?.keywords) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ item }) => item)
+    return filterItems(ranked)
+  }
+
+  const ALL_MORE_ITEMS: ModuleItem[] = [
+    ...pinnedItems, ...opsItems, ...mgmtItems, ...smsItems,
+    ...training139Items, ...aepItems, ...refItems, ...adminItems, ...settingsItems,
+  ]
+  const searchResults = searchAcross(ALL_MORE_ITEMS)
+
+  function renderSearchResults(results: ModuleItem[]) {
+    if (results.length === 0) {
+      return (
+        <div style={{ padding: '16px', fontSize: 'var(--fs-md)', color: 'var(--color-text-4)', fontStyle: 'italic' }}>
+          No matches for “{trimmedQuery}”
+        </div>
+      )
+    }
+    return results.map(item => (
+      <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
+    ))
+  }
+
   // CES users get a simplified flat More page (no collapsible groups).
   // Identify them by the ces:view permission, which only the CES role
   // preset grants.
@@ -365,9 +450,16 @@ export default function MorePage() {
           background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-lg)', marginBottom: 12, overflow: 'hidden',
         }}>
-          {cesItems.map(item => (
-            <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
-          ))}
+          <SearchBox
+            value={query}
+            onChange={setQuery}
+            onEnter={() => { const r = searchAcross(cesItems); if (r[0]) router.push(r[0].href) }}
+          />
+          {trimmedQuery
+            ? renderSearchResults(searchAcross(cesItems))
+            : cesItems.map(item => (
+                <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
+              ))}
         </div>
         <ContactSupport
         style={{
@@ -395,38 +487,51 @@ export default function MorePage() {
         marginBottom: 12,
         overflow: 'hidden',
       }}>
-        {/* Pinned items */}
-        <div data-tour="more-pinned">
-          {pinnedItems.map(item => (
-            <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
-          ))}
-        </div>
+        {/* Search filter — typing replaces the grouped menu with a flat ranked list. */}
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          onEnter={() => { if (searchResults[0]) router.push(searchResults[0].href) }}
+        />
 
-        {/* Daily Operations */}
-        <CollapsibleGroup label="Daily Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen badgeFor={badgeFor} />
+        {trimmedQuery ? (
+          renderSearchResults(searchResults)
+        ) : (
+          <>
+            {/* Pinned items */}
+            <div data-tour="more-pinned">
+              {pinnedItems.map(item => (
+                <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
+              ))}
+            </div>
 
-        {/* Airfield Management */}
-        <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} badgeFor={badgeFor} />
+            {/* Daily Operations */}
+            <CollapsibleGroup label="Daily Operations" icon={Wrench} items={filterItems(opsItems)} defaultOpen badgeFor={badgeFor} />
 
-        {/* Safety Management System (civilian only — filterItems hides on USAF) */}
-        <CollapsibleGroup label="Safety Management System" icon={ShieldAlert} items={filterItems(smsItems)} badgeFor={badgeFor} />
+            {/* Airfield Management */}
+            <CollapsibleGroup label="Airfield Management" icon={FolderOpen} items={filterItems(mgmtItems)} badgeFor={badgeFor} />
 
-        {/* §139.303 Training & Compliance (civilian only — same gating as SMS) */}
-        <CollapsibleGroup label="Training & Compliance" icon={GraduationCap} items={filterItems(training139Items)} badgeFor={badgeFor} />
+            {/* Safety Management System (civilian only — filterItems hides on USAF) */}
+            <CollapsibleGroup label="Safety Management System" icon={ShieldAlert} items={filterItems(smsItems)} badgeFor={badgeFor} />
 
-        {/* Airport Emergency Plan (civilian only — same gating as SMS) */}
-        <CollapsibleGroup label="Airport Emergency Plan" icon={ShieldAlert} items={filterItems(aepItems)} badgeFor={badgeFor} />
+            {/* §139.303 Training & Compliance (civilian only — same gating as SMS) */}
+            <CollapsibleGroup label="Training & Compliance" icon={GraduationCap} items={filterItems(training139Items)} badgeFor={badgeFor} />
 
-        {/* Reference */}
-        <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} badgeFor={badgeFor} />
+            {/* Airport Emergency Plan (civilian only — same gating as SMS) */}
+            <CollapsibleGroup label="Airport Emergency Plan" icon={ShieldAlert} items={filterItems(aepItems)} badgeFor={badgeFor} />
 
-        {/* Admin */}
-        <CollapsibleGroup label="Admin" icon={Shield} items={filterItems(adminItems)} badgeFor={badgeFor} />
+            {/* Reference */}
+            <CollapsibleGroup label="Reference" icon={Library} items={filterItems(refItems)} badgeFor={badgeFor} />
 
-        {/* Settings — flat at the bottom, no collapsible wrapper */}
-        {filterItems(settingsItems).map(item => (
-          <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
-        ))}
+            {/* Admin */}
+            <CollapsibleGroup label="Admin" icon={Shield} items={filterItems(adminItems)} badgeFor={badgeFor} />
+
+            {/* Settings — flat at the bottom, no collapsible wrapper */}
+            {filterItems(settingsItems).map(item => (
+              <NavItem key={item.href} item={item} badgeCount={badgeFor(item.href)} />
+            ))}
+          </>
+        )}
       </div>
 
       <ContactSupport

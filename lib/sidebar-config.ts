@@ -19,39 +19,44 @@ export type NavItemDef = {
   name: string
   href: string
   iconName: string   // lucide icon name — resolved in sidebar component
+  keywords?: string[]  // search aliases (acronyms, regs, synonyms) — see lib/nav-search.ts
 }
 
 export const ALL_NAV_ITEMS: NavItemDef[] = [
-  { name: 'Airfield Status', href: '/', iconName: 'Home' },
-  { name: 'Dashboard', href: '/dashboard', iconName: 'LayoutDashboard' },
-  { name: 'Events Log', href: '/activity', iconName: 'Activity' },
-  { name: 'Activity Log', href: '/recent-activity', iconName: 'History' },
-  { name: 'QRC', href: '/qrc', iconName: 'Zap' },
-  { name: 'Secondary Crash Net', href: '/scn', iconName: 'Radio' },
-  { name: 'Shift Checklist', href: '/shift-checklist', iconName: 'ListChecks' },
-  { name: 'Daily Reviews', href: '/daily-reviews', iconName: 'ClipboardPen' },
-  { name: 'Airfield Checks', href: '/checks', iconName: 'ClipboardCheck' },
-  { name: 'All Inspections', href: '/inspections/all', iconName: 'ClipboardList' },
-  { name: 'Wildlife / BASH', href: '/wildlife', iconName: 'Bird' },
-  { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen' },
-  { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare' },
-  { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat' },
+  { name: 'Airfield Status', href: '/', iconName: 'Home', keywords: ['home', 'status board'] },
+  { name: 'Dashboard', href: '/dashboard', iconName: 'LayoutDashboard', keywords: ['kpi', 'metrics'] },
+  { name: 'Events Log', href: '/activity', iconName: 'Activity', keywords: ['AF Form 3616', 'log'] },
+  { name: 'Activity Log', href: '/recent-activity', iconName: 'History', keywords: ['audit', 'history'] },
+  { name: 'QRC', href: '/qrc', iconName: 'Zap', keywords: ['emergency', 'checklist', 'contingency', 'quick reaction'] },
+  { name: 'Secondary Crash Net', href: '/scn', iconName: 'Radio', keywords: ['SCN', 'crash net'] },
+  { name: 'Shift Checklist', href: '/shift-checklist', iconName: 'ListChecks', keywords: ['shift change', 'turnover'] },
+  { name: 'Daily Reviews', href: '/daily-reviews', iconName: 'ClipboardPen', keywords: ['sign off', 'shift review'] },
+  { name: 'Airfield Checks', href: '/checks', iconName: 'ClipboardCheck', keywords: ['FOD check', 'inspection'] },
+  { name: 'All Inspections', href: '/inspections/all', iconName: 'ClipboardList', keywords: ['joint', 'construction', 'monthly'] },
+  { name: 'Wildlife / BASH', href: '/wildlife', iconName: 'Bird', keywords: ['bird', 'strike', 'hazard', 'BASH'] },
+  { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen', keywords: ['prior permission', 'transient', 'PPR'] },
+  { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare', keywords: ['survey', 'comments'] },
+  { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat', keywords: ['contractor', 'escort', 'AF Form 483'] },
   // Field Conditions / TALPA — civilian Part 139 only (modules-config
   // `appliesTo: ['faa_part139']` filters this from USAF sidebars). Lives
   // under Operations since ops staff use it daily during winter / wet ops.
-  { name: 'Field Conditions',  href: '/field-conditions', iconName: 'CloudSnow' },
+  { name: 'Field Conditions',  href: '/field-conditions', iconName: 'CloudSnow', keywords: ['TALPA', 'RCR', 'runway condition', 'snow'] },
   // Wildlife Hazard Management Plan — civilian Part 139 only.
   // Sits under Operations next to /wildlife since that module's
   // sightings + strikes data feeds the annual assessment narrative.
-  { name: 'Wildlife / WHMP',   href: '/wildlife/whmp', iconName: 'ClipboardCheck' },
+  { name: 'Wildlife / WHMP',   href: '/wildlife/whmp', iconName: 'ClipboardCheck', keywords: ['wildlife hazard management plan'] },
   // SMS — civilian Part 139 only; the modules-config `appliesTo: ['faa_part139']`
   // filter hides this from USAF sidebars at render time.
-  { name: 'Safety Management', href: '/sms', iconName: 'ShieldAlert' },
-  { name: 'Hazard Register',   href: '/sms/hazards', iconName: 'AlertTriangle' },
-  { name: 'Safety Indicators', href: '/sms/spis', iconName: 'TrendingUp' },
-  { name: 'Safety Reports',    href: '/sms/reports', iconName: 'MessageSquareWarning' },
-  { name: 'SMS Audits',        href: '/sms/audits', iconName: 'ClipboardCheck' },
-  { name: 'Management of Change', href: '/sms/moc', iconName: 'GitBranch' },
+  { name: 'Safety Management', href: '/sms', iconName: 'ShieldAlert', keywords: ['SMS', 'safety'] },
+  // Safety Policy is a /more-only destination (reached from the SMS dashboard on
+  // desktop); registered here so nav search can find it. Not added to any sidebar
+  // section, so it doesn't change the sidebar layout.
+  { name: 'Safety Policy',     href: '/sms/policy', iconName: 'FileText', keywords: ['SMS', 'policy'] },
+  { name: 'Hazard Register',   href: '/sms/hazards', iconName: 'AlertTriangle', keywords: ['SMS', 'risk'] },
+  { name: 'Safety Indicators', href: '/sms/spis', iconName: 'TrendingUp', keywords: ['SMS', 'SPI'] },
+  { name: 'Safety Reports',    href: '/sms/reports', iconName: 'MessageSquareWarning', keywords: ['SMS', 'hazard report'] },
+  { name: 'SMS Audits',        href: '/sms/audits', iconName: 'ClipboardCheck', keywords: ['SMS'] },
+  { name: 'Management of Change', href: '/sms/moc', iconName: 'GitBranch', keywords: ['SMS', 'MOC'] },
   // §139.303 Training — civilian Part 139 only (modules-config
   // `appliesTo: ['faa_part139']` filters this from USAF sidebars).
   { name: 'Training Overview', href: '/training', iconName: 'GraduationCap' },
@@ -61,33 +66,33 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   // Airport Emergency Plan — civilian Part 139 only (modules-config
   // `appliesTo: ['faa_part139']` filters this from USAF sidebars). On
   // civilian bases this replaces the SCN entry.
-  { name: 'Emergency Plan',     href: '/aep',              iconName: 'ShieldAlert' },
-  { name: 'AEP Document',       href: '/aep/plan',         iconName: 'FileText' },
-  { name: 'Response Agencies',  href: '/aep/agencies',     iconName: 'Users' },
-  { name: 'AEP Comms Checks',   href: '/aep/comms-checks', iconName: 'Radio' },
-  { name: 'AEP Drills',         href: '/aep/drills',       iconName: 'Siren' },
+  { name: 'Emergency Plan',     href: '/aep',              iconName: 'ShieldAlert', keywords: ['AEP', 'emergency'] },
+  { name: 'AEP Document',       href: '/aep/plan',         iconName: 'FileText', keywords: ['AEP'] },
+  { name: 'Response Agencies',  href: '/aep/agencies',     iconName: 'Users', keywords: ['AEP', 'mutual aid'] },
+  { name: 'AEP Comms Checks',   href: '/aep/comms-checks', iconName: 'Radio', keywords: ['AEP'] },
+  { name: 'AEP Drills',         href: '/aep/drills',       iconName: 'Siren', keywords: ['AEP', 'exercise'] },
   // Training Records (AMTR) — USAF-only (modules-config `appliesTo: ['usaf']`
   // hides it on civilian bases) and gated by `amtr:view`, which is held only by
   // Airfield Manager / NAMO / Base Admin / AMOPS / sys_admin.
-  { name: 'Training Records', href: '/amtr', iconName: 'Award' },
-  { name: 'FLIP Management', href: '/flip', iconName: 'BookMarked' },
-  { name: 'Read File', href: '/read-file', iconName: 'ClipboardCheck' },
-  { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench' },
-  { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle' },
-  { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin' },
-  { name: 'Waivers', href: '/waivers', iconName: 'Shield' },
-  { name: 'Visual NAVAIDs', href: '/infrastructure', iconName: 'Lightbulb' },
-  { name: 'Aircraft Parking', href: '/parking', iconName: 'PlaneLanding' },
-  { name: 'Aircraft Database', href: '/aircraft', iconName: 'Plane' },
-  { name: 'Reference Library', href: '/regulations', iconName: 'BookOpen' },
-  { name: 'NOTAMs', href: '/notams', iconName: 'FileText' },
-  { name: 'Reports & Analytics', href: '/reports', iconName: 'BarChart3' },
-  { name: 'Settings', href: '/settings', iconName: 'Settings' },
+  { name: 'Training Records', href: '/amtr', iconName: 'Award', keywords: ['AMTR', 'currency', 'qualification'] },
+  { name: 'FLIP Management', href: '/flip', iconName: 'BookMarked', keywords: ['continuity binder', 'publications'] },
+  { name: 'Read File', href: '/read-file', iconName: 'ClipboardCheck', keywords: ['acknowledge', 'read and initial'] },
+  { name: 'CES Work Orders', href: '/ces', iconName: 'Wrench', keywords: ['civil engineering', 'work order'] },
+  { name: 'Discrepancies', href: '/discrepancies', iconName: 'AlertTriangle', keywords: ['deficiency', 'AF Form 332'] },
+  { name: 'Obstruction Eval Tool', href: '/obstructions', iconName: 'MapPin', keywords: ['OET', 'UFC', 'imaginary surface'] },
+  { name: 'Waivers', href: '/waivers', iconName: 'Shield', keywords: ['AF Form 505', 'airfield waiver'] },
+  { name: 'Visual NAVAIDs', href: '/infrastructure', iconName: 'Lightbulb', keywords: ['lights', 'lighting', 'PAPI', 'VASI', 'navaid', 'outage'] },
+  { name: 'Aircraft Parking', href: '/parking', iconName: 'PlaneLanding', keywords: ['ramp', 'apron', 'clearance'] },
+  { name: 'Aircraft Database', href: '/aircraft', iconName: 'Plane', keywords: ['airframe', 'wingspan'] },
+  { name: 'Reference Library', href: '/regulations', iconName: 'BookOpen', keywords: ['regs', 'AFI', 'DAFMAN', 'UFC'] },
+  { name: 'NOTAMs', href: '/notams', iconName: 'FileText', keywords: ['notice to airmen'] },
+  { name: 'Reports & Analytics', href: '/reports', iconName: 'BarChart3', keywords: ['analytics', 'trends', 'aging'] },
+  { name: 'Settings', href: '/settings', iconName: 'Settings', keywords: ['preferences', 'profile'] },
   // PDF Library (/library) is intentionally NOT a nav item — it lives only on
   // the Settings page, gated sys-admin-only by `library:view`.
-  { name: 'User Management', href: '/users', iconName: 'Users' },
-  { name: 'Glidepath Training', href: '/help', iconName: 'GraduationCap' },
-  { name: 'Base Configuration', href: '/base-config', iconName: 'SlidersHorizontal' },
+  { name: 'User Management', href: '/users', iconName: 'Users', keywords: ['accounts', 'roles', 'invite'] },
+  { name: 'Glidepath Training', href: '/help', iconName: 'GraduationCap', keywords: ['help', 'how to', 'guide', 'support'] },
+  { name: 'Base Configuration', href: '/base-config', iconName: 'SlidersHorizontal', keywords: ['setup', 'wizard', 'modules'] },
 ]
 
 export const NAV_ITEM_MAP = new Map(ALL_NAV_ITEMS.map(i => [i.href, i]))
