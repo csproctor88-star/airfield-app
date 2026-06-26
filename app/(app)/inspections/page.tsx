@@ -16,6 +16,7 @@ import {
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { fetchInspections, createInspection, saveInspectionDraft, fetchDailyGroup, getInspectorName, deleteInspection, type InspectionRow } from '@/lib/supabase/inspections'
+import { pickTodaysInspection } from '@/lib/inspection-status'
 import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import type {
   InspectionFilePayload,
@@ -921,8 +922,23 @@ export default function InspectionsPage() {
 
   // ── Begin new inspection of a specific type ──
   const handleBeginNew = async (type: FormType) => {
-    // Hard guard: refuse to create if one already exists for today
-    const existingToday = type === 'airfield' ? todayAirfield : todayLighting
+    // Hard guard: refuse to create if one already exists for today. Check the
+    // in-memory list first (fast), then re-verify against the DB. The offline
+    // write queue made Begin persist an in_progress row immediately, so if the
+    // guard runs before history has loaded it would otherwise miss an existing
+    // inspection and create a duplicate. Re-fetching closes that race online;
+    // offline falls back to the in-memory result (the DB unique index is the
+    // backstop there).
+    let existingToday = type === 'airfield' ? todayAirfield : todayLighting
+    if (!existingToday) {
+      try {
+        const fresh = await fetchInspections(installationId)
+        if (fresh.length) setLiveInspections(fresh)
+        existingToday = pickTodaysInspection(fresh, type, todayStr)
+      } catch {
+        // Offline / fetch failed — fall back to the in-memory guard result.
+      }
+    }
     if (existingToday) {
       setBlockedInfo({
         type,
@@ -971,14 +987,24 @@ export default function InspectionsPage() {
       }
     }
     const oiStr = oi ? `/${oi}` : ''
-    logActivity(
-      'started',
-      'inspection',
-      installationId || crypto.randomUUID(),
-      undefined,
-      { details: `AFLD3${oiStr} is on the airfield for the ${label}` },
-      installationId,
-    )
+    // Route the "on the airfield / started" entry through the offline queue
+    // (like the completion entry) so an inspection begun offline still gets a
+    // log when the queue drains — a direct insert would be silently lost,
+    // leaving an in_progress row with no start entry.
+    const startActivity: ActivityLogInsertPayload = {
+      action: 'started',
+      entity_type: 'inspection',
+      entity_id: draftId,
+      entity_display_id: undefined,
+      metadata: { details: `AFLD3${oiStr} is on the airfield for the ${label}` },
+      baseId: installationId,
+      createdAt: new Date().toISOString(),
+    }
+    void getWriteQueue()
+      .enqueueOrExecute('activity_log_insert', startActivity, { baseId: installationId || '', userId: '' })
+      .catch(() => {
+        // Non-blocking: the inspection still proceeds locally.
+      })
 
     // Save initial draft to DB so it persists across devices. Routed
     // through the offline queue with the pre-allocated id — when offline
@@ -1939,25 +1965,23 @@ export default function InspectionsPage() {
     return `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`
   }, [currentInstallation?.timezone])
 
-  // Find today's airfield inspection (any status)
-  const todayAirfield = useMemo(() => {
-    return liveInspections.find(i =>
-      i.inspection_type === 'airfield' &&
-      i.inspection_date === todayStr
-    ) || null
-  }, [liveInspections, todayStr])
+  // Find today's airfield inspection. A completed inspection wins over a later
+  // in-progress draft so a stray duplicate can't make a finished day look
+  // "in progress" / unlocked again (see lib/inspection-status.ts).
+  const todayAirfield = useMemo(
+    () => pickTodaysInspection(liveInspections, 'airfield', todayStr),
+    [liveInspections, todayStr],
+  )
 
   const todayAirfieldFiled = todayAirfield?.status === 'completed'
   const todayAirfieldInProgress = todayAirfield?.status === 'in_progress'
   const todayAirfieldByOther = todayAirfieldInProgress && todayAirfield?.inspector_id !== currentUserId
 
-  // Find today's lighting inspection (any status)
-  const todayLighting = useMemo(() => {
-    return liveInspections.find(i =>
-      i.inspection_type === 'lighting' &&
-      i.inspection_date === todayStr
-    ) || null
-  }, [liveInspections, todayStr])
+  // Find today's lighting inspection (completed wins over a later draft).
+  const todayLighting = useMemo(
+    () => pickTodaysInspection(liveInspections, 'lighting', todayStr),
+    [liveInspections, todayStr],
+  )
 
   const todayLightingFiled = todayLighting?.status === 'completed'
   const todayLightingInProgress = todayLighting?.status === 'in_progress'
