@@ -271,7 +271,10 @@ export function SidebarNav() {
     // app has a corresponding `*:view` key in HREF_TO_VIEW_PERM;
     // hide the item if the user doesn't hold that key.
     const requiredPerm = HREF_TO_VIEW_PERM[href]
-    if (requiredPerm && permsLoaded && !has(requiredPerm)) return false
+    // While the matrix is still loading, hide permission-gated items rather than
+    // showing them and removing them once it resolves (a misleading flash). They
+    // appear once the permission is confirmed.
+    if (requiredPerm && (!permsLoaded || !has(requiredPerm))) return false
 
     // Base-level module-on-off toggle (independent of role), plus
     // airport_type filter — civilian bases hide USAF-only modules

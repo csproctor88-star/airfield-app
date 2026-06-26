@@ -389,14 +389,20 @@ export default function MorePage() {
   }
 
   function filterItems(items: ModuleItem[]) {
-    if (!permsLoaded) return items.filter(m => !m.adminOnly && !m.sysAdminOnly)
     return items.filter(m => {
-      const perm = HREF_PERMISSION[m.href]
-      if (perm && !has(perm)) return false
-      // Remaining items: module-toggle gate only (permission gate is
-      // subsumed by the sidebar matrix now). airport_type filter hides
-      // USAF-only modules (AMTR, SCN, ACSI) on civilian bases.
+      // Module/airport gate is known at render time (installation context gates
+      // the app on `loaded`), so apply it ALWAYS — even before permissions
+      // resolve. This stops civilian-only modules (WHMP, Field Conditions) from
+      // flashing on USAF bases during the perms-loading window.
       if (!isModuleEnabled(m.href, enabledModules, airportType)) return false
+      const perm = HREF_PERMISSION[m.href]
+      // While permissions are still loading, hide gated/admin items rather than
+      // showing them and removing them once the matrix resolves (which gives a
+      // false picture of the user's access). They appear once confirmed.
+      if (perm || m.adminOnly || m.sysAdminOnly) {
+        if (!permsLoaded) return false
+        if (perm && !has(perm)) return false
+      }
       return true
     })
   }

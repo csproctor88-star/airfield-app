@@ -215,15 +215,73 @@ async function fetchPermissionsForCurrentUser(): Promise<Set<string>> {
   return resolveEffectivePermissions(roleKeys, overrides ?? [])
 }
 
+// ── Stale-while-revalidate cache ───────────────────────────
+// The matrix rarely changes within a session, but the DB fetch is a multi-hop
+// waterfall (getUser → profile → role_permissions + overrides) that's slow on
+// older devices — long enough that the nav renders before gating resolves and
+// briefly shows the wrong items. Cache the resolved keys per-user (memory +
+// localStorage) so warm loads hydrate instantly, then revalidate in the
+// background. Keyed by user id, so one user can never read another's cache.
+const PERMS_CACHE_PREFIX = 'glidepath_perms_v1_'
+let permsMemoryCache: { userId: string; perms: Set<string> } | null = null
+
+async function currentUserId(): Promise<string | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+  // getSession reads the local session (no network round-trip), unlike getUser.
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user?.id ?? null
+}
+
+function readCachedPermissions(userId: string): Set<string> | null {
+  if (permsMemoryCache && permsMemoryCache.userId === userId) return permsMemoryCache.perms
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(PERMS_CACHE_PREFIX + userId) : null
+    if (!raw) return null
+    const set = new Set<string>(JSON.parse(raw) as string[])
+    permsMemoryCache = { userId, perms: set }
+    return set
+  } catch {
+    return null
+  }
+}
+
+function writeCachedPermissions(userId: string, perms: Set<string>) {
+  permsMemoryCache = { userId, perms }
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(PERMS_CACHE_PREFIX + userId, JSON.stringify(Array.from(perms)))
+    }
+  } catch {
+    // Quota / unavailable — non-fatal; the in-memory cache still serves.
+  }
+}
+
 // ── React hook ─────────────────────────────────────────────
 export function usePermissions() {
   const [perms, setPerms] = useState<Set<string> | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    fetchPermissionsForCurrentUser().then((s) => {
-      if (!cancelled) setPerms(s)
+    let revalidated = false
+
+    // Fast path: hydrate from the per-user cache so gating is correct on first
+    // paint instead of flashing while the DB waterfall runs.
+    currentUserId().then((uid) => {
+      if (cancelled || revalidated || !uid) return
+      const cached = readCachedPermissions(uid)
+      if (cached && !revalidated) setPerms(cached)
     })
+
+    // Authoritative path: fetch from the DB, update the UI, refresh the cache.
+    fetchPermissionsForCurrentUser().then(async (s) => {
+      if (cancelled) return
+      revalidated = true
+      setPerms(s)
+      const uid = await currentUserId()
+      if (uid) writeCachedPermissions(uid, s)
+    })
+
     return () => { cancelled = true }
   }, [])
 
