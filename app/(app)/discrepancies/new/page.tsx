@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
-import { getDiscrepancyStatusOptions } from '@/lib/airport-mode'
 import { uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
@@ -39,8 +38,7 @@ const InfraFeaturePicker = dynamic(
 
 export default function NewDiscrepancyPage() {
   const router = useRouter()
-  const { installationId, currentInstallation, areas: installationAreas, facilities, ceShops, typeShopMap } = useInstallation()
-  const statusOptions = getDiscrepancyStatusOptions(currentInstallation)
+  const { installationId, areas: installationAreas, facilities, ceShops, typeShopMap } = useInstallation()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [photos, setPhotos] = useState<{ file: File; url: string; name: string }[]>([])
@@ -88,7 +86,9 @@ export default function NewDiscrepancyPage() {
     longitude: null as number | null,
   })
 
-  // Auto-assign shop when types change — use per-base typeShopMap first, fall back to defaultShop
+  // Auto-assign shop when types change — use per-base typeShopMap first, fall
+  // back to defaultShop. This only sets "Assigned to"; the status always starts
+  // at "Submitted to AFM" on creation — AFM triages before routing to CES.
   useEffect(() => {
     if (selectedTypes.length === 0) return
     for (const typeVal of selectedTypes) {
@@ -96,24 +96,20 @@ export default function NewDiscrepancyPage() {
       const mapped = typeShopMap[typeVal]
       if (mapped && ceShops.includes(mapped)) {
         setAssignedShop(mapped)
-        setFormData(p => ({ ...p, current_status: 'submitted_to_ces' }))
         return
       }
       // 2. Fall back to hardcoded defaultShop with fuzzy matching
       const typeDef = DISCREPANCY_TYPES.find(t => t.value === typeVal)
       if (!typeDef?.defaultShop) continue
       const defaultLower = typeDef.defaultShop.toLowerCase()
-      const isCes = defaultLower.includes('ce ')
       const exact = ceShops.find(s => s === typeDef.defaultShop)
       if (exact) {
         setAssignedShop(exact)
-        if (isCes) setFormData(p => ({ ...p, current_status: 'submitted_to_ces' }))
         return
       }
       const partial = ceShops.find(s => s.toLowerCase().includes(defaultLower) || defaultLower.includes(s.toLowerCase()))
       if (partial) {
         setAssignedShop(partial)
-        if (isCes) setFormData(p => ({ ...p, current_status: 'submitted_to_ces' }))
         return
       }
     }
@@ -364,9 +360,15 @@ export default function NewDiscrepancyPage() {
 
         <div style={{ marginBottom: 12 }}>
           <span className="section-label">Current Status</span>
-          <select className="input-dark" value={formData.current_status} onChange={(e) => setFormData((p) => ({ ...p, current_status: e.target.value }))}>
-            {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {/* Locked at creation — every new discrepancy starts at "Submitted to
+              AFM"; AFM triages before it routes onward. */}
+          <select className="input-dark" value="submitted_to_afm" disabled
+            style={{ opacity: 0.7, cursor: 'not-allowed' }}>
+            <option value="submitted_to_afm">Submitted to AFM</option>
           </select>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            New discrepancies always start at “Submitted to AFM”.
+          </div>
         </div>
 
         <div style={{ marginBottom: 12 }}>
