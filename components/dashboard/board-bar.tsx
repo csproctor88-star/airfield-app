@@ -1,31 +1,135 @@
 'use client'
-import { Pencil, Plus, Check } from 'lucide-react'
+import { Pencil, Plus, Check, Share2, Trash2, PenLine } from 'lucide-react'
 
-export function BoardBar({
-  boardName, editing, onToggleEdit, onAddWidget,
-}: {
-  boardName: string
+export interface BoardSummary {
+  id: string
+  name: string
+  scope: 'personal' | 'shared'
+  role_template: string | null
+}
+
+export interface BoardBarProps {
+  boards: BoardSummary[]
+  activeId: string | null
+  onSwitch: (id: string) => void
   editing: boolean
   onToggleEdit: () => void
   onAddWidget: () => void
-}) {
+  onNewBoard: () => void
+  onRenameBoard: () => void
+  onDeleteBoard: () => void
+  canDeleteActive: boolean
+  onShareControls?: () => void
+}
+
+export function BoardBar({
+  boards, activeId, onSwitch, editing, onToggleEdit, onAddWidget,
+  onNewBoard, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls,
+}: BoardBarProps) {
   const btn: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+    display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
     borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit',
     fontSize: 'var(--fs-sm)', fontWeight: 600, border: '1px solid var(--color-border)',
     background: 'var(--color-bg-surface)', color: 'var(--color-text-1)',
+    whiteSpace: 'nowrap' as const,
   }
+  const accentBtn: React.CSSProperties = {
+    ...btn,
+    borderColor: 'color-mix(in srgb, var(--color-accent) 40%, transparent)',
+  }
+  const dangerBtn: React.CSSProperties = {
+    ...btn,
+    color: 'var(--color-danger, #ef4444)',
+    borderColor: 'color-mix(in srgb, var(--color-danger, #ef4444) 30%, transparent)',
+  }
+  const disabledBtn: React.CSSProperties = {
+    ...dangerBtn,
+    opacity: 0.4,
+    cursor: 'not-allowed',
+  }
+
+  const personal = boards.filter(b => b.scope === 'personal')
+  const shared = boards.filter(b => b.scope === 'shared')
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, minHeight: 36 }}>
-      <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>{boardName}</span>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {editing && (
-          <button style={{ ...btn, borderColor: 'color-mix(in srgb, var(--color-accent) 40%, transparent)' }} onClick={onAddWidget}>
-            <Plus size={15} strokeWidth={2.5} /> Add Widget
-          </button>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+      minHeight: 36, flexWrap: 'wrap',
+    }}>
+      {/* Board selector */}
+      <select
+        value={activeId ?? ''}
+        onChange={e => onSwitch(e.target.value)}
+        style={{
+          padding: '5px 8px',
+          borderRadius: 'var(--radius-md)',
+          border: '1px solid var(--color-border)',
+          background: 'var(--color-bg-surface)',
+          color: 'var(--color-text-1)',
+          fontFamily: 'inherit',
+          fontSize: 'var(--fs-sm)',
+          fontWeight: 600,
+          cursor: 'pointer',
+          minWidth: 140,
+          maxWidth: 240,
+        }}
+      >
+        {personal.length > 0 && (
+          <optgroup label="Personal">
+            {personal.map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </optgroup>
         )}
+        {shared.length > 0 && (
+          <optgroup label="Shared">
+            {shared.map(b => (
+              <option key={b.id} value={b.id}>
+                {b.name}{b.role_template ? ' ★' : ''}
+              </option>
+            ))}
+          </optgroup>
+        )}
+      </select>
+
+      {/* New board */}
+      <button style={btn} onClick={onNewBoard} title="New board">
+        <Plus size={14} strokeWidth={2.5} /> New
+      </button>
+
+      {/* Edit controls */}
+      {editing && (
+        <>
+          <button style={accentBtn} onClick={onAddWidget}>
+            <Plus size={14} strokeWidth={2.5} /> Add Widget
+          </button>
+          <button style={btn} onClick={onRenameBoard} title="Rename board">
+            <PenLine size={14} strokeWidth={2.5} /> Rename
+          </button>
+          <button
+            style={canDeleteActive ? dangerBtn : disabledBtn}
+            onClick={canDeleteActive ? onDeleteBoard : undefined}
+            disabled={!canDeleteActive}
+            title={canDeleteActive ? 'Delete board' : 'Cannot delete your default board'}
+          >
+            <Trash2 size={14} strokeWidth={2.5} /> Delete
+          </button>
+        </>
+      )}
+
+      {/* Share controls (permission-gated by parent) */}
+      {onShareControls && (
+        <button style={btn} onClick={onShareControls} title="Share / template settings">
+          <Share2 size={14} strokeWidth={2.5} /> Share
+        </button>
+      )}
+
+      {/* Edit / Done toggle — pushed right */}
+      <div style={{ marginLeft: 'auto' }}>
         <button style={btn} onClick={onToggleEdit}>
-          {editing ? <><Check size={15} strokeWidth={2.5} /> Done</> : <><Pencil size={15} strokeWidth={2.5} /> Edit</>}
+          {editing
+            ? <><Check size={14} strokeWidth={2.5} /> Done</>
+            : <><Pencil size={14} strokeWidth={2.5} /> Edit</>}
         </button>
       </div>
     </div>
