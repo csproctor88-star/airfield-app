@@ -90,4 +90,4 @@ export function getWidgetDef(type: string): WidgetDef | undefined {
   return WIDGETS[type]
 }
 
-export const ALL_WIDGET_METAS = Object.values(WIDGETS).map(({ Component, ...meta }) => meta)
+export const ALL_WIDGET_METAS = Object.values(WIDGETS).map(({ Component, ConfigForm, ...meta }) => meta)

@@ -156,22 +156,24 @@ export function AnalyticsConfigForm({ config, onSave, onCancel }: WidgetConfigPr
   }
 
   // Debounced preview
+  const filterKey = JSON.stringify(filterValues)
   useEffect(() => {
     if (!installationId) return
     const spec = buildSpec()
     if (!spec) { setPreviewResult(null); setPreviewState('idle'); return }
 
+    let cancelled = false
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       setPreviewState('loading')
       runQuery(spec, installationId)
-        .then(r => { setPreviewResult(r); setPreviewState('idle') })
-        .catch(() => setPreviewState('error'))
+        .then(r => { if (!cancelled) { setPreviewResult(r); setPreviewState('idle') } })
+        .catch(() => { if (!cancelled) setPreviewState('error') })
     }, 400)
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    return () => { cancelled = true; if (debounceRef.current) clearTimeout(debounceRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataset, measure, groupBy, chart, timePreset, JSON.stringify(filterValues), installationId])
+  }, [dataset, measure, groupBy, chart, timePreset, filterKey, installationId])
 
   const handleSave = () => {
     const spec = buildSpec()
