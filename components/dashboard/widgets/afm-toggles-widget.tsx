@@ -169,8 +169,8 @@ export function AfmTogglesWidget() {
                 }}
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
-                  cursor: 'pointer', border: '1px solid rgba(239,68,68,0.4)',
-                  background: 'rgba(239,68,68,0.15)', color: 'var(--color-danger)', fontFamily: 'inherit',
+                  cursor: 'pointer', border: '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)',
+                  background: 'color-mix(in srgb, var(--color-danger) 15%, transparent)', color: 'var(--color-danger)', fontFamily: 'inherit',
                 }}
               >Activate</button>
               <button onClick={() => setShowOoo(false)} style={{ ...cancelBtn }}>Cancel</button>
@@ -204,7 +204,7 @@ export function AfmTogglesWidget() {
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-success)',
-                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)', fontFamily: 'inherit',
+                  background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)', fontFamily: 'inherit',
                 }}
               >Deactivate</button>
               <button onClick={() => setShowOooDeactivate(false)} style={{ ...cancelBtn }}>Cancel</button>
@@ -303,7 +303,7 @@ export function AfmTogglesWidget() {
                 style={{
                   flex: 1, padding: '10px 0', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-md)', fontWeight: 700,
                   cursor: 'pointer', border: '1px solid var(--color-success)',
-                  background: 'rgba(34,197,94,0.15)', color: 'var(--color-success)', fontFamily: 'inherit',
+                  background: 'color-mix(in srgb, var(--color-success) 15%, transparent)', color: 'var(--color-success)', fontFamily: 'inherit',
                 }}
               >Deactivate</button>
               <button onClick={() => setShowClosedDeactivate(false)} style={{ ...cancelBtn }}>Cancel</button>

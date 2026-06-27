@@ -6,23 +6,26 @@ import { useInstallation } from '@/lib/installation-context'
 import { fetchPprEntriesForDate, isActivePpr, type PprEntry } from '@/lib/supabase/ppr'
 import { Plane } from 'lucide-react'
 
-function todayLocal(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 export function PprTodayWidget() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const [rows, setRows] = useState<PprEntry[]>([])
   const [loading, setLoading] = useState(true)
 
+  const tz = currentInstallation?.timezone || 'UTC'
+
   useEffect(() => {
     if (!installationId) return
-    const today = todayLocal()
+    let today: string
+    try {
+      today = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date())
+    } catch {
+      today = new Date().toISOString().slice(0, 10)
+    }
     fetchPprEntriesForDate(installationId, today).then((data) => {
       setRows(data.filter((e) => isActivePpr(e.status)))
       setLoading(false)
     })
-  }, [installationId])
+  }, [installationId, tz])
 
   const preview = rows.slice(0, 4)
 

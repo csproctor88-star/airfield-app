@@ -16,14 +16,13 @@ export function LastCheckWidget() {
 
   const load = useCallback(async () => {
     const supabase = createClient()
-    if (!supabase) return
-    let q = supabase
+    if (!supabase || !installationId) return
+    const { data } = await supabase
       .from('airfield_checks')
       .select('check_type, completed_at')
+      .eq('base_id', installationId)
       .order('completed_at', { ascending: false })
       .limit(1)
-    if (installationId) q = q.eq('base_id', installationId)
-    const { data } = await q
     const raw = data?.[0]?.check_type ?? null
     setLabel(
       raw

@@ -48,9 +48,8 @@ export function NotamsWidget() {
 
   useEffect(() => { load() }, [load])
 
-  const active = notams.filter((n) => n.status === 'active')
-  const soon = active.filter((n) => expiresSoon(n.effective_end))
-  const preview = active.slice(0, 4)
+  const soon = notams.filter((n) => expiresSoon(n.effective_end))
+  const preview = notams.slice(0, 4)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -73,15 +72,15 @@ export function NotamsWidget() {
         <span style={{
           marginLeft: 'auto',
           fontSize: 'var(--fs-lg)', fontWeight: 800,
-          color: active.length > 0 ? 'var(--color-cyan)' : 'var(--color-text-3)',
+          color: notams.length > 0 ? 'var(--color-cyan)' : 'var(--color-text-3)',
         }}>
-          {loading ? '…' : active.length}
+          {loading ? '…' : notams.length}
         </span>
       </div>
 
       {/* NOTAM list */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {!loading && active.length === 0 && (
+        {!loading && notams.length === 0 && (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No active NOTAMs</div>
         )}
         {preview.map((n) => (
@@ -110,9 +109,9 @@ export function NotamsWidget() {
             </span>
           </div>
         ))}
-        {active.length > 4 && (
+        {notams.length > 4 && (
           <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', paddingTop: 4 }}>
-            +{active.length - 4} more
+            +{notams.length - 4} more
           </div>
         )}
       </div>

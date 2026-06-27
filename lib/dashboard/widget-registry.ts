@@ -42,5 +42,4 @@ export function listAvailableWidgets(
   )
 }
 
-// The concrete registry (type → WidgetDef) is assembled in
-// lib/dashboard/registry.tsx (a later task) once widget components exist.
+// The concrete registry (type → WidgetDef) is assembled in lib/dashboard/registry.tsx.
