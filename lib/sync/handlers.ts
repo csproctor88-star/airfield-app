@@ -347,6 +347,22 @@ const activityLogInsertHandler: WriteHandler<ActivityLogInsertPayload, null> = a
 }
 
 // ---------------------------------------------------------------------------
+// dashboard_board_update
+// ---------------------------------------------------------------------------
+
+export interface DashboardBoardUpdatePayload {
+  id: string
+  layout: import('@/lib/dashboard/layout').WidgetInstance[]
+}
+
+async function dashboardBoardUpdateHandler(p: DashboardBoardUpdatePayload): Promise<null> {
+  const { updateBoardLayout } = await import('@/lib/supabase/dashboard-boards')
+  const { error } = await updateBoardLayout(p.id, p.layout)
+  if (error) throw new Error(error)
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -374,6 +390,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('activity_log_insert', activityLogInsertHandler)
   queue.registerHandler('discrepancy_create', discrepancyCreateHandler)
   queue.registerHandler('inspection_save_draft', inspectionSaveDraftHandler)
+  queue.registerHandler('dashboard_board_update', dashboardBoardUpdateHandler)
 }
 
 /**
@@ -393,4 +410,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   activity_log_insert: activityLogInsertHandler,
   discrepancy_create: discrepancyCreateHandler,
   inspection_save_draft: inspectionSaveDraftHandler,
+  dashboard_board_update: dashboardBoardUpdateHandler,
 }

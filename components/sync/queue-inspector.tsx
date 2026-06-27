@@ -39,6 +39,7 @@ const TYPE_LABELS: Record<WriteType, string> = {
   outage_event_create: 'Outage event',
   activity_log_insert: 'Events log entry',
   inspection_save_draft: 'Inspection draft',
+  dashboard_board_update: 'Dashboard layout save',
 }
 
 const STATUS_COLORS: Record<QueueStatus, { bg: string; fg: string; label: string }> = {
