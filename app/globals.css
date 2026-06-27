@@ -1464,6 +1464,11 @@ html, body {
   --color-logo-end: #2C6FAA;
 }
 
+/* Dashboard is full-bleed: opt out of the 1400px .app-content cap. */
+.app-content:has(.dashboard-fullbleed) {
+  max-width: none;
+}
+
 /* Login wordmark — swap by [data-theme] (set pre-hydration) rather than React
    state, so the correct logo paints during SSR with no hydration mismatch. */
 .gp-login-logo {
