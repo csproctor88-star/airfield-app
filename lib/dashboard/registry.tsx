@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3 } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -12,6 +12,7 @@ import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-wid
 import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
+import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -82,6 +83,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     ConfigForm: LinksConfigForm,
   },
   'embed': { type: 'embed', kind: 'embed', title: 'Web Embed', description: 'Embed an external website', icon: Globe, defaultSize: { w: 4, h: 4 }, minSize: { w: 2, h: 3 }, Component: (p) => <EmbedWidget config={p.config} />, ConfigForm: EmbedConfigForm },
+  'analytics': { type: 'analytics', kind: 'analytics', title: 'Analytics', description: 'A custom chart you build from your data', icon: BarChart3, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 }, Component: (p) => <AnalyticsWidget config={p.config} />, ConfigForm: AnalyticsConfigForm },
 }
 
 export function getWidgetDef(type: string): WidgetDef | undefined {
