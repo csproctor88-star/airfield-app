@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2 } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -10,6 +10,7 @@ import { NotamsWidget } from '@/components/dashboard/widgets/notams-widget'
 import { PprTodayWidget } from '@/components/dashboard/widgets/ppr-today-widget'
 import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-widget'
 import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
+import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -71,6 +72,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
     description: 'Module launcher tiles',
     icon: LayoutGrid, defaultSize: { w: 4, h: 2 }, minSize: { w: 2, h: 1 },
     Component: (p) => <QuickActionsWidget config={p.config} />,
+  },
+  'links': {
+    type: 'links', kind: 'links', title: 'Links',
+    description: 'A list of bookmarks that open in a new tab',
+    icon: Link2, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
+    Component: (p) => <LinksWidget config={p.config} />,
+    ConfigForm: LinksConfigForm,
   },
 }
 
