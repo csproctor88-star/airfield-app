@@ -1,13 +1,14 @@
 'use client'
-import { X } from 'lucide-react'
+import { Settings2, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 export function WidgetFrame({
-  title, editing, onRemove, children,
+  title, editing, onRemove, onConfigure, children,
 }: {
   title: string
   editing: boolean
   onRemove?: () => void
+  onConfigure?: () => void
   children: ReactNode
 }) {
   return (
@@ -24,13 +25,25 @@ export function WidgetFrame({
           fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.06em',
           textTransform: 'uppercase', color: 'var(--color-text-3)',
         }}>{title}</span>
-        {editing && onRemove && (
-          <button onClick={onRemove} aria-label={`Remove ${title}`} style={{
-            display: 'flex', border: 'none', background: 'transparent',
-            cursor: 'pointer', color: 'var(--color-text-3)', padding: 2,
-          }}>
-            <X size={14} strokeWidth={2.5} />
-          </button>
+        {editing && (onConfigure || onRemove) && (
+          <div style={{ display: 'flex', gap: 2 }}>
+            {onConfigure && (
+              <button onClick={onConfigure} aria-label={`Configure ${title}`} style={{
+                display: 'flex', border: 'none', background: 'transparent',
+                cursor: 'pointer', color: 'var(--color-text-3)', padding: 2,
+              }}>
+                <Settings2 size={14} strokeWidth={2.5} />
+              </button>
+            )}
+            {onRemove && (
+              <button onClick={onRemove} aria-label={`Remove ${title}`} style={{
+                display: 'flex', border: 'none', background: 'transparent',
+                cursor: 'pointer', color: 'var(--color-text-3)', padding: 2,
+              }}>
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>

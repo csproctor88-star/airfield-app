@@ -104,7 +104,7 @@ export default function DashboardPage() {
           Your dashboard is empty. {editing ? 'Use "Add Widget" to get started.' : 'Tap Edit, then Add Widget.'}
         </div>
       ) : (
-        <WidgetGrid widgets={widgets} editing={editing} onLayoutChange={onLayoutChange} onRemove={onRemove} />
+        <WidgetGrid widgets={widgets} editing={editing} onLayoutChange={onLayoutChange} onRemove={onRemove} onConfigure={() => {}} />
       )}
       {showPalette && <WidgetPalette onAdd={onAdd} onClose={() => setShowPalette(false)} />}
     </div>

@@ -14,12 +14,13 @@ const COLS = { lg: 12, md: 8, sm: 1 }
 const BREAKPOINTS = { lg: 996, md: 600, sm: 0 }
 
 export function WidgetGrid({
-  widgets, editing, onLayoutChange, onRemove,
+  widgets, editing, onLayoutChange, onRemove, onConfigure,
 }: {
   widgets: WidgetInstance[]
   editing: boolean
   onLayoutChange: (next: WidgetInstance[]) => void
   onRemove: (id: string) => void
+  onConfigure: (id: string) => void
 }) {
   const rglLayout: Layout[] = widgets.map(w => {
     const def = getWidgetDef(w.type)
@@ -51,7 +52,12 @@ export function WidgetGrid({
         const def = getWidgetDef(w.type)
         return (
           <div key={w.i}>
-            <WidgetFrame title={def?.title ?? 'Unavailable'} editing={editing} onRemove={() => onRemove(w.i)}>
+            <WidgetFrame
+              title={def?.title ?? 'Unavailable'}
+              editing={editing}
+              onRemove={() => onRemove(w.i)}
+              onConfigure={def?.ConfigForm ? () => onConfigure(w.i) : undefined}
+            >
               {def ? <def.Component config={w.config} editing={editing} />
                    : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This widget is unavailable.</div>}
             </WidgetFrame>
