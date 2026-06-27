@@ -220,6 +220,7 @@ const nextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.mapbox.com https://*.tiles.mapbox.com",
               "worker-src 'self' blob:",
+              "frame-src 'self' https:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "object-src 'none'",

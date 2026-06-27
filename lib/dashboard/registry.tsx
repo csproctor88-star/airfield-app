@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2 } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -11,6 +11,7 @@ import { PprTodayWidget } from '@/components/dashboard/widgets/ppr-today-widget'
 import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-widget'
 import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
+import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -80,6 +81,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: (p) => <LinksWidget config={p.config} />,
     ConfigForm: LinksConfigForm,
   },
+  'embed': { type: 'embed', kind: 'embed', title: 'Web Embed', description: 'Embed an external website', icon: Globe, defaultSize: { w: 4, h: 4 }, minSize: { w: 2, h: 3 }, Component: (p) => <EmbedWidget config={p.config} />, ConfigForm: EmbedConfigForm },
 }
 
 export function getWidgetDef(type: string): WidgetDef | undefined {
