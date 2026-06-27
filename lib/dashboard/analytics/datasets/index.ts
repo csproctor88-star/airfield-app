@@ -1,8 +1,20 @@
 import type { Dataset, QuerySpec, AggregateResult } from '@/lib/dashboard/analytics/types'
 import { aggregate, applyFilters } from '@/lib/dashboard/analytics/aggregate'
 import { discrepanciesDataset } from './discrepancies'
+import { inspectionsDataset } from './inspections'
+import { checksDataset } from './checks'
+import { wildlifeDataset } from './wildlife'
+import { pprDataset } from './ppr'
+import { feedbackDataset } from './feedback'
 
-export const DATASETS: Dataset[] = [discrepanciesDataset]
+export const DATASETS: Dataset[] = [
+  discrepanciesDataset,
+  inspectionsDataset,
+  checksDataset,
+  wildlifeDataset,
+  pprDataset,
+  feedbackDataset,
+]
 
 export function getDataset(key: string): Dataset | undefined {
   return DATASETS.find(d => d.key === key)
