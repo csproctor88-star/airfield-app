@@ -121,15 +121,16 @@ export default function DashboardPage() {
     if (!installationId) return
     const list = await fetchBoards(installationId)
     setBoards(list)
-    if (switchTo) {
-      const found = list.find(b => b.id === switchTo)
-      if (found) {
-        setActiveId(found.id)
-        setWidgets(found.layout.length ? found.layout : [])
-        setEditing(false)
-      }
+    const nextId =
+      (switchTo && list.some(b => b.id === switchTo)) ? switchTo
+      : (activeId && list.some(b => b.id === activeId)) ? activeId
+      : (list[0]?.id ?? null)
+    if (nextId !== activeId) {
+      setActiveId(nextId)
+      const found = list.find(b => b.id === nextId)
+      setWidgets(found ? found.layout : [])
     }
-  }, [installationId])
+  }, [installationId, activeId])
 
   // Load user + boards on base change.
   useEffect(() => {
@@ -178,6 +179,7 @@ export default function DashboardPage() {
   const onSwitch = useCallback((id: string) => {
     const board = boards.find(b => b.id === id)
     if (!board) return
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null }
     setActiveId(id)
     setWidgets(board.layout.length ? board.layout : [])
     setEditing(false)
@@ -196,14 +198,15 @@ export default function DashboardPage() {
   const onAdd = useCallback((type: string) => {
     const def = getWidgetDef(type)
     if (!def) return
+    const bottomY = widgets.reduce((m, w) => Math.max(m, w.y + w.h), 0)
     setWidgets(prev => {
       const next = [
         ...prev,
-        { i: uuid(), type, config: {}, x: 0, y: Infinity as unknown as number, w: def.defaultSize.w, h: def.defaultSize.h },
+        { i: uuid(), type, config: {}, x: 0, y: bottomY, w: def.defaultSize.w, h: def.defaultSize.h },
       ]
       persist(next); return next
     })
-  }, [persist])
+  }, [persist, widgets])
 
   const isEmpty = useMemo(() => widgets.length === 0, [widgets])
 
