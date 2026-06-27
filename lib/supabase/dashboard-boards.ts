@@ -81,6 +81,21 @@ export async function updateBoardLayout(
   return { error: error ? friendlyError(error) : null }
 }
 
+export async function updateBoard(
+  id: string,
+  patch: Partial<Pick<DashboardBoardRow, 'name' | 'scope' | 'role_template'>>,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Offline' }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any
+  const { error } = await sb
+    .from('dashboard_boards')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  return { error: error ? friendlyError(error) : null }
+}
+
 export async function deleteBoard(id: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Offline' }
@@ -98,8 +113,11 @@ export async function getOrCreateDefaultBoard(
   const boards = await fetchBoards(baseId)
   const mine = boards.find(b => b.owner_id === userId && b.is_default)
   if (mine) return mine
+  const { currentUserRole, seedLayoutFromTemplate } = await import('@/lib/dashboard/board-templates')
+  const role = await currentUserRole(userId)
+  const seeded = seedLayoutFromTemplate(boards, role)
   const { data } = await createBoard({
-    base_id: baseId, owner_id: userId, name: 'My Dashboard', is_default: true, layout: [],
+    base_id: baseId, owner_id: userId, name: 'My Dashboard', is_default: true, layout: seeded,
   })
   return data
 }
