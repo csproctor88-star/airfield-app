@@ -128,6 +128,8 @@ export const PERM = {
 
   // Reporting / activity
   DASHBOARD_VIEW:                       'dashboard:view',
+  DASHBOARD_PUBLISH_SHARED:             'dashboard:publish-shared',
+  DASHBOARD_MANAGE_TEMPLATES:           'dashboard:manage-templates',
   REPORTS_VIEW:                         'reports:view',
   REPORTS_EXPORT:                       'reports:export',
   ACTIVITY_LOG_VIEW:                    'activity_log:view',
