@@ -21,9 +21,16 @@ export interface WidgetProps {
   editing: boolean
 }
 
+export interface WidgetConfigProps {
+  config: Record<string, unknown>
+  onSave: (config: Record<string, unknown>) => void
+  onCancel: () => void
+}
+
 /** Full definition = metadata + the React component that renders it. */
 export interface WidgetDef extends WidgetMeta {
   Component: ComponentType<WidgetProps>
+  ConfigForm?: ComponentType<WidgetConfigProps>
 }
 
 /**
