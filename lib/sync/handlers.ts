@@ -358,7 +358,7 @@ export interface DashboardBoardUpdatePayload {
 async function dashboardBoardUpdateHandler(p: DashboardBoardUpdatePayload): Promise<null> {
   const { updateBoardLayout } = await import('@/lib/supabase/dashboard-boards')
   const { error } = await updateBoardLayout(p.id, p.layout)
-  if (error) throw new Error(error)
+  if (error) throwForStructuredError(error)
   return null
 }
 

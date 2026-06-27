@@ -15,6 +15,10 @@ interface NotamRow {
   effective_end: string
 }
 
+// Module-level throttle cache: prevents re-hitting the FAA endpoint more than
+// once per 60 seconds for a given ICAO, protecting against rapid remounts.
+const lastSync = new Map<string, { at: number; rows: NotamRow[] }>()
+
 /** Returns true if NOTAM expires within 24 hours */
 function expiresSoon(end: string): boolean {
   if (!end || end.toUpperCase() === 'PERM') return false
@@ -36,11 +40,19 @@ export function NotamsWidget() {
   const load = useCallback(async () => {
     const supabase = createClient()
     if (!icao || !supabase) { setLoading(false); return }
+    // Throttle: serve cached rows if fetched within the last 60 seconds.
+    const cached = lastSync.get(icao)
+    if (cached && Date.now() - cached.at < 60_000) {
+      setNotams(cached.rows)
+      setLoading(false)
+      return
+    }
     try {
       const res = await fetch(`/api/notams/sync?icao=${encodeURIComponent(icao)}`)
       if (!res.ok) { setLoading(false); return }
       const data = await res.json()
       const active: NotamRow[] = (data.notams || []).filter((n: NotamRow) => n.status === 'active')
+      lastSync.set(icao, { at: Date.now(), rows: active })
       setNotams(active)
     } catch { /* silently fail */ }
     setLoading(false)

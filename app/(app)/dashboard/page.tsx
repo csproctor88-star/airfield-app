@@ -9,7 +9,7 @@ import { WidgetPalette } from '@/components/dashboard/widget-palette'
 import { getOrCreateDefaultBoard } from '@/lib/supabase/dashboard-boards'
 import { saveBoardLayout } from '@/lib/dashboard-board-write'
 import { getWidgetDef } from '@/lib/dashboard/registry'
-import type { WidgetInstance } from '@/lib/dashboard/layout'
+import { validateLayout, type WidgetInstance } from '@/lib/dashboard/layout'
 import { toast } from 'sonner'
 
 // Sensible starter layout for a brand-new board.
@@ -36,6 +36,11 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Clear any pending debounced save on unmount to prevent post-unmount toasts.
+  useEffect(() => {
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  }, [])
+
   // Load user + default board.
   useEffect(() => {
     if (!installationId) return
@@ -61,7 +66,7 @@ export default function DashboardPage() {
     if (!boardId || !installationId || !userId) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
-      saveBoardLayout({ boardId, layout: next, baseId: installationId, userId })
+      saveBoardLayout({ boardId, layout: validateLayout(next), baseId: installationId, userId })
         .catch(() => toast.error('Could not save dashboard layout'))
     }, 800)
   }, [boardId, installationId, userId])
