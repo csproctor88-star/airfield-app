@@ -1,6 +1,22 @@
 import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap, StickyNote } from 'lucide-react'
-import type { WidgetDef } from '@/lib/dashboard/widget-registry'
+import type { WidgetDef, WidgetMeta } from '@/lib/dashboard/widget-registry'
 import { TitleConfigForm } from '@/components/dashboard/table/title-config-form'
+import { TableWidget } from '@/components/dashboard/table/table-widget'
+import { TableConfigForm } from '@/components/dashboard/table/table-config-form'
+import type { TableWidgetDescriptor } from '@/lib/dashboard/table/types'
+
+/** Build a table-kind WidgetDef from metadata + a descriptor. */
+function tableWidget<Row>(
+  meta: Omit<WidgetMeta, 'kind'>,
+  descriptor: TableWidgetDescriptor<Row>,
+): WidgetDef {
+  return {
+    ...meta,
+    kind: 'table',
+    Component: (p) => <TableWidget descriptor={descriptor} config={p.config} />,
+    ConfigForm: (p) => <TableConfigForm {...p} descriptor={descriptor} />,
+  }
+}
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { OpenDiscrepanciesWidget } from '@/components/dashboard/widgets/open-discrepancies-widget'
