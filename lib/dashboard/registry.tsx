@@ -1,5 +1,6 @@
 import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap, StickyNote } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
+import { TitleConfigForm } from '@/components/dashboard/table/title-config-form'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { OpenDiscrepanciesWidget } from '@/components/dashboard/widgets/open-discrepancies-widget'
@@ -32,6 +33,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     description: "Today's airfield + lighting inspections",
     icon: ClipboardList, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     Component: () => <InspectionStatusWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'open-discrepancies': {
     type: 'open-discrepancies', kind: 'native', title: 'Open Discrepancies',
@@ -39,12 +41,14 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: AlertTriangle, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.DISCREPANCIES_VIEW,
     Component: () => <OpenDiscrepanciesWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'last-check': {
     type: 'last-check', kind: 'native', title: 'Last Check',
     description: 'Most recent completed check',
     icon: Clock, defaultSize: { w: 3, h: 1 }, minSize: { w: 2, h: 1 },
     Component: () => <LastCheckWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'personnel': {
     type: 'personnel', kind: 'native', title: 'Personnel on Airfield',
@@ -52,6 +56,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: HardHat, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
     moduleHref: '/contractors',
     Component: () => <PersonnelWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'shift-checklist': {
     type: 'shift-checklist', kind: 'native', title: 'Shift Checklist',
@@ -59,6 +64,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: ListChecks, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 1 },
     moduleHref: '/shift-checklist',
     Component: () => <ShiftChecklistWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'notams': {
     type: 'notams', kind: 'native', title: 'Active NOTAMs',
@@ -66,6 +72,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: Radio, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     moduleHref: '/notams',
     Component: () => <NotamsWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'ppr-today': {
     type: 'ppr-today', kind: 'native', title: 'PPR Today',
@@ -73,6 +80,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: Plane, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
     moduleHref: '/ppr',
     Component: () => <PprTodayWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'afm-toggles': {
     type: 'afm-toggles', kind: 'native', title: 'AFM Status',
@@ -80,12 +88,14 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: DoorOpen, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 1 },
     permission: PERM.AIRFIELD_STATUS_WRITE,
     Component: () => <AfmTogglesWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'quick-actions': {
     type: 'quick-actions', kind: 'native', title: 'Quick Actions',
     description: 'Module launcher tiles',
     icon: LayoutGrid, defaultSize: { w: 4, h: 2 }, minSize: { w: 2, h: 1 },
     Component: (p) => <QuickActionsWidget config={p.config} />,
+    ConfigForm: TitleConfigForm,
   },
   'links': {
     type: 'links', kind: 'links', title: 'Links',
@@ -103,6 +113,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.ACTIVITY_LOG_VIEW,
     moduleHref: '/activity',
     Component: () => <EventsLogWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'wildlife': {
     type: 'wildlife', kind: 'native', title: 'BASH / Wildlife',
@@ -111,6 +122,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.WILDLIFE_VIEW,
     moduleHref: '/wildlife',
     Component: () => <WildlifeWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'waivers': {
     type: 'waivers', kind: 'native', title: 'Waivers',
@@ -119,6 +131,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.WAIVERS_VIEW,
     moduleHref: '/waivers',
     Component: () => <WaiversWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'users': {
     type: 'users', kind: 'native', title: 'User Management',
@@ -126,6 +139,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: Users, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     permission: PERM.USERS_MANAGE,
     Component: () => <UsersWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'ces': {
     type: 'ces', kind: 'native', title: 'CES Work Orders',
@@ -134,6 +148,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.CES_VIEW,
     moduleHref: '/ces',
     Component: () => <CesWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'daily-reviews': {
     type: 'daily-reviews', kind: 'native', title: 'Daily Reviews',
@@ -142,6 +157,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.DAILY_REVIEWS_VIEW,
     moduleHref: '/daily-reviews',
     Component: () => <DailyReviewsWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'infrastructure': {
     type: 'infrastructure', kind: 'native', title: 'Infrastructure Status',
@@ -150,6 +166,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.INFRASTRUCTURE_VIEW,
     moduleHref: '/infrastructure',
     Component: () => <InfrastructureWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'field-conditions': {
     type: 'field-conditions', kind: 'native', title: 'Field Conditions',
@@ -158,6 +175,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.FIELD_CONDITIONS_READ,
     moduleHref: '/field-conditions',
     Component: () => <FieldConditionsWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'feedback': {
     type: 'feedback', kind: 'native', title: 'Customer Feedback',
@@ -166,6 +184,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.FEEDBACK_VIEW,
     moduleHref: '/feedback',
     Component: () => <FeedbackWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'amtr': {
     type: 'amtr', kind: 'native', title: 'AMTR Training',
@@ -174,6 +193,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
     Component: () => <AmtrWidget />,
+    ConfigForm: TitleConfigForm,
   },
   'notes': {
     type: 'notes', kind: 'native', title: 'Notes',
@@ -187,6 +207,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     description: 'Current Zulu and local time',
     icon: Clock, defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 1 },
     Component: () => <ClockWidget />,
+    ConfigForm: TitleConfigForm,
   },
 }
 
