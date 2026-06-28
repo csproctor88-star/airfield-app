@@ -26,6 +26,9 @@ import { waiversDescriptor } from '@/lib/dashboard/table/descriptors/waivers'
 import { notamsDescriptor } from '@/lib/dashboard/table/descriptors/notams'
 import { dailyReviewsDescriptor } from '@/lib/dashboard/table/descriptors/daily-reviews'
 import { eventsLogDescriptor } from '@/lib/dashboard/table/descriptors/events-log'
+import { wildlifeDescriptor } from '@/lib/dashboard/table/descriptors/wildlife'
+import { usersDescriptor } from '@/lib/dashboard/table/descriptors/users'
+import { amtrDescriptor } from '@/lib/dashboard/table/descriptors/amtr'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
@@ -34,12 +37,9 @@ import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
-import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
-import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
 import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
-import { AmtrWidget } from '@/components/dashboard/widgets/amtr-widget'
 import { NotesWidget, NotesConfigForm } from '@/components/dashboard/widgets/notes-widget'
 import { ClockWidget } from '@/components/dashboard/widgets/clock-widget'
 
@@ -120,15 +120,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.ACTIVITY_LOG_VIEW,
     moduleHref: '/activity',
   }, eventsLogDescriptor),
-  'wildlife': {
-    type: 'wildlife', kind: 'native', title: 'BASH / Wildlife',
+  'wildlife': tableWidget({
+    type: 'wildlife', title: 'BASH / Wildlife',
     description: 'Sightings and strikes in the last 30 days',
     icon: Bird, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     permission: PERM.WILDLIFE_VIEW,
     moduleHref: '/wildlife',
-    Component: () => <WildlifeWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, wildlifeDescriptor),
   'waivers': tableWidget({
     type: 'waivers', title: 'Waivers',
     description: 'Active waivers and upcoming expirations',
@@ -136,14 +134,12 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.WAIVERS_VIEW,
     moduleHref: '/waivers',
   }, waiversDescriptor),
-  'users': {
-    type: 'users', kind: 'native', title: 'User Management',
+  'users': tableWidget({
+    type: 'users', title: 'User Management',
     description: 'Users at this base and pending approvals',
     icon: Users, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     permission: PERM.USERS_MANAGE,
-    Component: () => <UsersWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, usersDescriptor),
   'ces': tableWidget({
     type: 'ces', title: 'CES Work Orders',
     description: 'Open discrepancies routed to Civil Engineering',
@@ -185,15 +181,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <FeedbackWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'amtr': {
-    type: 'amtr', kind: 'native', title: 'AMTR Training',
-    description: 'Airfield Management Training Record — member count by status',
-    icon: GraduationCap, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+  'amtr': tableWidget({
+    type: 'amtr', title: 'AMTR Training',
+    description: 'Airfield Management Training Record — currency status by member',
+    icon: GraduationCap, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
-    Component: () => <AmtrWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, amtrDescriptor),
   'notes': {
     type: 'notes', kind: 'native', title: 'Notes',
     description: 'A free-form sticky note',
