@@ -73,8 +73,13 @@ export const inspectionsDataset: Dataset = {
     return rawRows.map(r => {
       // Compute duration_minutes using the same clamped logic as analytics-data.ts:
       //   start = started_at ?? created_at (fallback for legacy rows)
-      //   clamp: >=1 min and <1440 min (24 h); outside that range → null (excluded from avg)
-      let duration_minutes: number | null = null
+      //   clamp: >=1 min and <1440 min (24 h); outside that range → undefined
+      //
+      // We use undefined (not null) so aggregate.ts's Number.isFinite filter
+      // correctly excludes missing durations from the avg:
+      //   Number(undefined) = NaN → Number.isFinite(NaN) = false → skipped.
+      //   Number(null) = 0       → Number.isFinite(0)   = true  → would corrupt avg.
+      let duration_minutes: number | undefined = undefined
       if (r.filed_at) {
         const start = r.started_at ?? r.created_at
         const mins = (new Date(r.filed_at).getTime() - new Date(start).getTime()) / 60000
@@ -88,7 +93,7 @@ export const inspectionsDataset: Dataset = {
         status: r.status,
         inspection_date: r.inspection_date,
         created_at: r.created_at,
-        duration_minutes,
+        ...(duration_minutes !== undefined ? { duration_minutes } : {}),
       } as Record<string, unknown>
     })
   },
