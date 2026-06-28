@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
-export type WidgetKind = 'native' | 'links' | 'embed' | 'analytics'
+export type WidgetKind = 'native' | 'links' | 'embed' | 'analytics' | 'table'
 
 /** Pure metadata — no React, so registry filtering is unit-testable. */
 export interface WidgetMeta {
