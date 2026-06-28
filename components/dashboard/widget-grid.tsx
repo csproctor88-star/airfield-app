@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useRef } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import type ReactGridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
@@ -24,7 +24,12 @@ export function WidgetGrid({
   onConfigure: (id: string) => void
   onWidgetConfigChange: (id: string, config: Record<string, unknown>) => void
 }) {
-  const [breakpoint, setBreakpoint] = useState<string>('lg')
+  // A ref (not state) because react-grid-layout fires onBreakpointChange and
+  // onLayoutChange synchronously back-to-back on the crossing tick; a state
+  // value would still be the previous breakpoint inside handleChange's closure,
+  // letting a collapsed md/sm layout overwrite the saved lg layout. A ref is
+  // updated synchronously and read live.
+  const breakpointRef = useRef<string>('lg')
 
   const rglLayout: Layout[] = widgets.map(w => {
     const def = getWidgetDef(w.type)
@@ -33,7 +38,7 @@ export function WidgetGrid({
 
   function handleChange(current: Layout[]) {
     // Only persist the lg (desktop canonical) layout — md/sm are just reflows
-    if (breakpoint !== 'lg') return
+    if (breakpointRef.current !== 'lg') return
     const byId = new Map(current.map(l => [l.i, l]))
     onLayoutChange(widgets.map(w => {
       const l = byId.get(w.i)
@@ -51,7 +56,7 @@ export function WidgetGrid({
       margin={[12, 12]}
       isDraggable={editing}
       isResizable={editing}
-      onBreakpointChange={(bp) => setBreakpoint(bp)}
+      onBreakpointChange={(bp) => { breakpointRef.current = bp }}
       onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
       draggableCancel="a,button"
     >
