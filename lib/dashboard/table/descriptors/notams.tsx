@@ -46,13 +46,10 @@ export const notamsDescriptor: TableWidgetDescriptor<NotamRow> = {
   columns: [
     { key: 'notam_number', label: 'NOTAM', accessor: r => r.notam_number, mono: true, defaultVisible: true },
     { key: 'text', label: 'Text', accessor: r => r.full_text || r.title, mono: true, defaultVisible: true },
-    { key: 'source', label: 'Source', accessor: r => r.source.toUpperCase() },
     { key: 'effective_end', label: 'Valid until', accessor: r => r.effective_end, defaultVisible: true },
   ],
+  // /notams is an FAA-feed-only module — there is no "local" source, so no source filter.
   filters: [
-    { key: 'source', label: 'Source', kind: 'enum-multi',
-      options: [{ value: 'faa', label: 'FAA' }, { value: 'local', label: 'Local' }],
-      predicate: (r, sel) => (sel as string[]).includes(r.source) },
     { key: 'expiring', label: 'Expiring ≤24h', kind: 'enum-multi',
       options: [{ value: 'yes', label: 'Expiring soon' }],
       predicate: r => expiresSoon(r.effective_end) },
