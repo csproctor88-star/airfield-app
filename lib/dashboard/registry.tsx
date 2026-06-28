@@ -21,6 +21,7 @@ import { PERM } from '@/lib/permissions'
 import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discrepancies'
 import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel'
 import { pprDescriptor } from '@/lib/dashboard/table/descriptors/ppr'
+import { cesDescriptor } from '@/lib/dashboard/table/descriptors/ces'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
@@ -34,7 +35,6 @@ import { EventsLogWidget } from '@/components/dashboard/widgets/events-log-widge
 import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
 import { WaiversWidget } from '@/components/dashboard/widgets/waivers-widget'
 import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
-import { CesWidget } from '@/components/dashboard/widgets/ces-widget'
 import { DailyReviewsWidget } from '@/components/dashboard/widgets/daily-reviews-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
 import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
@@ -150,15 +150,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <UsersWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'ces': {
-    type: 'ces', kind: 'native', title: 'CES Work Orders',
+  'ces': tableWidget({
+    type: 'ces', title: 'CES Work Orders',
     description: 'Open discrepancies routed to Civil Engineering',
     icon: Wrench, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.CES_VIEW,
     moduleHref: '/ces',
-    Component: () => <CesWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, cesDescriptor),
   'daily-reviews': {
     type: 'daily-reviews', kind: 'native', title: 'Daily Reviews',
     description: 'Shift sign-off queue for the last 7 days',
