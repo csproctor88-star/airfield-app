@@ -3,6 +3,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { fetchActivityLogPage, type ActivityEntry } from '@/lib/supabase/activity-queries'
 import { formatZuluTime } from '@/lib/utils'
 import { formatAction, buildDetailsString } from '@/lib/activity-format'
+import { moduleLabel } from '@/lib/activity-labels'
 import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
 const EXCLUDE = ['ppr_coordination', 'ppr_agency']
@@ -27,7 +28,8 @@ export const eventsLogDescriptor: TableWidgetDescriptor<ActivityEntry> = {
     { key: 'label', label: 'Event', accessor: labelFor, defaultVisible: true },
     { key: 'oi', label: 'OI', accessor: e => e.user_operating_initials ?? '—', mono: true },
     { key: 'time', label: 'Zulu', accessor: e => `${formatZuluTime(e.created_at)}Z`, mono: true, defaultVisible: true },
-    { key: 'entity_type', label: 'Type', accessor: e => e.entity_type },
+    { key: 'entity_type', label: 'Type', accessor: e => e.entity_type, format: v => moduleLabel(v as string) },
+    { key: 'entity_display_id', label: 'Entity', accessor: e => e.entity_display_id ?? '—' },
   ],
   filters: [
     { key: 'entity_type', label: 'Entity type', kind: 'text',

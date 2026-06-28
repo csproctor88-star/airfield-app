@@ -4,6 +4,7 @@ import { fetchWaivers, type WaiverRow } from '@/lib/supabase/waivers'
 import { formatZuluDate } from '@/lib/utils'
 import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
+const titleCase = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const ACTIVE = new Set(['active', 'approved'])
 function daysToExpiry(iso: string | null): number | null {
   if (!iso) return null
@@ -24,14 +25,14 @@ function useRows(_c: TableWidgetConfig) {
 export const waiversDescriptor: TableWidgetDescriptor<WaiverRow> = {
   columns: [
     { key: 'waiver_number', label: 'Waiver #', accessor: r => r.waiver_number, mono: true, defaultVisible: true },
-    { key: 'classification', label: 'Class', accessor: r => r.classification, defaultVisible: true },
-    { key: 'status', label: 'Status', accessor: r => r.status, defaultVisible: true },
+    { key: 'classification', label: 'Class', accessor: r => r.classification, format: v => titleCase(v as string), defaultVisible: true },
+    { key: 'status', label: 'Status', accessor: r => r.status, format: v => titleCase(v as string), defaultVisible: true },
     { key: 'expiration_date', label: 'Expires', accessor: r => r.expiration_date,
       format: v => v ? formatZuluDate(v as string) : '—', defaultVisible: true },
   ],
   filters: [
     { key: 'status', label: 'Status', kind: 'status', defaultSelected: ['active', 'approved'],
-      options: ['active', 'approved', 'draft', 'pending', 'expired', 'cancelled'].map(s => ({ value: s, label: s })),
+      options: ['active', 'approved', 'draft', 'pending', 'expired', 'cancelled'].map(s => ({ value: s, label: titleCase(s) })),
       predicate: (r, sel) => (sel as string[]).includes(r.status) },
     { key: 'classification', label: 'Classification', kind: 'text',
       predicate: (r, sel) => r.classification.toLowerCase().includes((sel as string).toLowerCase()) },
