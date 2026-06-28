@@ -1,14 +1,71 @@
 # Session Handoff
 
 **Date:** 2026-06-28
-**Branch:** `main` — committed locally. **NOT yet pushed** this session (21 Phase-4 commits + 1 fix sit ahead of origin's `cb77e406`). Push when ready.
+**Branch:** `main` — Phase 4 (through `2634ab79`) is **pushed**. The widget-enhancement
+batch below (`c413cac7`…`5233dde1`, 19 commits) is **committed locally but NOT pushed**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully, 113 pages),
 `npx vitest run` ✓ **978 pass / 107 files**.
-**HEAD:** `58454942`
+**HEAD:** `5233dde1`
 
 ---
 
-## What shipped this session
+## Widget-enhancement batch (post-Phase-4, from user feedback + screenshots)
+
+A large review-driven pass over the dashboard widgets, built in three phases via
+subagent implement→review loops (the reviews caught real bugs — all fixed). **Not
+live-smoke-tested; not pushed.**
+
+**Phase 1 — bug fixes + polish + table fundamentals**
+- **Resize-collapse bug fixed**: window reflow no longer overwrites the saved desktop
+  layout (`widget-grid.tsx` persists only the `lg` breakpoint, read from a **ref** —
+  a `useState` was one render stale on the crossing tick and a review caught it).
+- **PPR "Any Time" fixed**: the `0000-01-01` sentinel was an invalid Postgres date;
+  `all` scope now passes no date bounds.
+- **Human-readable Status/Type** in Discrepancies (CURRENT_STATUS_OPTIONS), Events Log
+  (`moduleLabel`), Waivers (title-case) — no more `submitted_to_afm`/`manual`/`active`.
+- **Reliable row deep-link**: replaced invalid nested-`<Link>` table HTML with
+  `router.push` on row click (this is why Waivers rows didn't navigate).
+- **Uniform column alignment** (`ColumnDef.align`; text left, numerics right).
+- **Notes "Add note"** inline button (added an `onConfigChange` self-config path on
+  `WidgetProps` so widgets can persist their own config inline through the offline queue).
+- **Events Log Entity** column (selectable).
+- **Column sort** (click header ▲/▼) + **per-widget search** + **resizable columns**
+  (drag handles, widths persisted in config via `normalizeTableConfig`).
+
+**Phase 2 — richer widgets**
+- **BASH/Wildlife**: recent sightings+strikes list (merged) with detail dialog.
+- **User Management**: base roster table, status badges, deep-link to `/users` (no
+  per-user route exists; humanized role labels — no snake_case).
+- **Daily Reviews**: row opens the existing `SignModal` to **sign a slot** from the
+  widget — via a new generic `custom` row mode on the table framework (reuses the
+  proven events-hash/shiftCount/permission logic; no reinvention).
+- **Infrastructure**: per-system selector (bespoke widget) showing a chosen lighting
+  system's lights, light count, and outage count via `calculateSystemHealth`.
+- **AMTR**: roster **currency** table (Current / N due soon / N overdue) replicating
+  the AMTR page's `dueStatus`/`perMember` derivation; deep-link to `/amtr/[id]`.
+
+**Phase 3 — new features**
+- **Custom Quick Actions**: config form to pick enabled modules + add custom buttons
+  (label + in-app route or external URL + icon).
+- **Links**: per-link descriptions + a search box.
+- **Analytics**: added an **avg inspection duration** measure (real "time analytic";
+  the inspections dataset with a month dimension already existed).
+- **Five report-summary widgets** (Discrepancy Report, Trends, Aging, Lighting, Daily
+  Ops) — live headline numbers from each report's existing summary function + a "View
+  report →" link.
+- **Multi-timezone Zulu clock** (add/remove clocks inline).
+
+### Known follow-ups from this batch (all Low, non-blocking)
+- Header alignment is uniform-by-rule (text left / numeric right), **not centered** —
+  the user asked for "center"; flip the `ColumnDef.align` default if they prefer it.
+- Detail-dialog actions still don't optimistically update the row (refresh on next fetch).
+- Daily Ops report widget uses a 30-day window (1-day was near-empty) — labeled as such.
+- Daily Reviews still counts a fixed 5 slots regardless of base shift count (carried).
+- `report-*` widgets aren't in the descriptor invariants test (they're native widgets).
+
+---
+
+## What shipped previously this session (Phase 4)
 
 **Phase 4 — Configurable Native Widgets.** The dashboard's eight list-style
 widgets are now user-configurable through one shared, declarative **table
