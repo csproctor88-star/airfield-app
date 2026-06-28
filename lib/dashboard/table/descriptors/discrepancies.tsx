@@ -36,7 +36,7 @@ export const discrepanciesDescriptor: TableWidgetDescriptor<DiscrepancyRow> = {
     { key: 'type', label: 'Type', accessor: r => r.type, format: v => TYPE_LABEL.get(v as string) ?? (v as string) },
     { key: 'current_status', label: 'Status', accessor: r => r.current_status ?? r.status, format: v => fmtCurrentStatus(v), defaultVisible: true },
     { key: 'assigned_shop', label: 'Shop', accessor: r => r.assigned_shop ?? '—', defaultVisible: true },
-    { key: 'age', label: 'Age', accessor: r => r.created_at, format: v => ageDays(v as string), mono: true, defaultVisible: true },
+    { key: 'age', label: 'Age', accessor: r => r.created_at, format: v => ageDays(v as string), mono: true, align: 'right', defaultVisible: true },
     { key: 'location_text', label: 'Location', accessor: r => r.location_text },
     { key: 'work_order_number', label: 'WO #', accessor: r => r.work_order_number ?? '—', mono: true },
     { key: 'reporter', label: 'Reporter', accessor: r => formatReporter(r.reporter) },

@@ -23,7 +23,7 @@ function useRows(_c: TableWidgetConfig) {
 export const dailyReviewsDescriptor: TableWidgetDescriptor<DailyReviewRow> = {
   columns: [
     { key: 'review_date', label: 'Date', accessor: r => r.review_date, format: v => fmtDate(v as string), mono: true, defaultVisible: true },
-    { key: 'pending', label: 'Pending', accessor: r => pendingSlots(r), format: v => `${v} slot${v === 1 ? '' : 's'}`, defaultVisible: true },
+    { key: 'pending', label: 'Pending', accessor: r => pendingSlots(r), format: v => `${v} slot${v === 1 ? '' : 's'}`, align: 'right', defaultVisible: true },
     { key: 'certified', label: 'Certified', accessor: r => r.fully_certified_at ? 'Yes' : 'No', defaultVisible: true },
   ],
   filters: [

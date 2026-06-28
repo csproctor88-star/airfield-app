@@ -31,7 +31,7 @@ export const cesDescriptor: TableWidgetDescriptor<DiscrepancyRow> = {
     { key: 'current_status', label: 'Status', accessor: r => r.current_status ?? '—',
       format: v => CES_LABEL[v as string] ?? (v as string), defaultVisible: true },
     { key: 'assigned_shop', label: 'Shop', accessor: r => r.assigned_shop ?? '—', defaultVisible: true },
-    { key: 'age', label: 'Age', accessor: r => r.created_at, format: v => ageDays(v as string), mono: true, defaultVisible: true },
+    { key: 'age', label: 'Age', accessor: r => r.created_at, format: v => ageDays(v as string), mono: true, align: 'right', defaultVisible: true },
     { key: 'display_id', label: 'ID', accessor: r => r.display_id, mono: true },
     { key: 'work_order_number', label: 'WO #', accessor: r => r.work_order_number ?? '—', mono: true },
   ],
