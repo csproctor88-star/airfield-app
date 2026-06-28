@@ -19,9 +19,9 @@ function tableWidget<Row>(
 }
 import { PERM } from '@/lib/permissions'
 import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discrepancies'
+import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
-import { PersonnelWidget } from '@/components/dashboard/widgets/personnel-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
 import { NotamsWidget } from '@/components/dashboard/widgets/notams-widget'
 import { PprTodayWidget } from '@/components/dashboard/widgets/ppr-today-widget'
@@ -64,14 +64,12 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <LastCheckWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'personnel': {
-    type: 'personnel', kind: 'native', title: 'Personnel on Airfield',
-    description: 'Active personnel now',
-    icon: HardHat, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
+  'personnel': tableWidget({
+    type: 'personnel', title: 'Personnel on Airfield',
+    description: 'Active personnel now', icon: HardHat,
+    defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     moduleHref: '/contractors',
-    Component: () => <PersonnelWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, personnelDescriptor),
   'shift-checklist': {
     type: 'shift-checklist', kind: 'native', title: 'Shift Checklist',
     description: "Today's checklist progress",
