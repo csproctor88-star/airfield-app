@@ -37,13 +37,13 @@ function usePprColumns(): ColumnDef<PprEntry>[] {
   ], [baseCols])
 }
 
-function dateRange(scope: string, tz: string): { start: string; end: string } {
+function dateRange(scope: string, tz: string): { start?: string; end?: string } {
   const fmt = (d: Date) => {
     try { return new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d) }
     catch { return d.toISOString().slice(0, 10) }
   }
   const today = fmt(new Date())
-  if (scope === 'all') return { start: '0000-01-01', end: '9999-12-31' }
+  if (scope === 'all') return {} // no bounds — fetchPprEntries skips undefined args
   if (scope === 'upcoming-7d') {
     const week = new Date(Date.now() + 7 * 86_400_000)
     return { start: today, end: fmt(week) }
