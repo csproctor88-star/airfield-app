@@ -363,6 +363,42 @@ async function dashboardBoardUpdateHandler(p: DashboardBoardUpdatePayload): Prom
 }
 
 // ---------------------------------------------------------------------------
+// ppr_depart
+// ---------------------------------------------------------------------------
+
+export interface PprDepartPayload {
+  entryId: string
+  baseId: string
+  depart: boolean
+}
+
+export async function pprDepartHandler(p: PprDepartPayload): Promise<null> {
+  const { markPprDeparted, clearPprDeparted } = await import('@/lib/supabase/ppr')
+  const res = p.depart
+    ? await markPprDeparted(p.entryId, p.baseId)
+    : await clearPprDeparted(p.entryId, p.baseId)
+  if (!res.ok) throwForStructuredError(res.error ?? 'PPR departure update failed')
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// contractor_status_update
+// ---------------------------------------------------------------------------
+
+export interface ContractorStatusUpdatePayload {
+  id: string
+  baseId: string
+  status: 'active' | 'completed'
+}
+
+export async function contractorStatusUpdateHandler(p: ContractorStatusUpdatePayload): Promise<null> {
+  const { updateContractor } = await import('@/lib/supabase/contractors')
+  const { error } = await updateContractor(p.id, { status: p.status })
+  if (error) throwForStructuredError(error)
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -391,6 +427,8 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('discrepancy_create', discrepancyCreateHandler)
   queue.registerHandler('inspection_save_draft', inspectionSaveDraftHandler)
   queue.registerHandler('dashboard_board_update', dashboardBoardUpdateHandler)
+  queue.registerHandler('ppr_depart', pprDepartHandler)
+  queue.registerHandler('contractor_status_update', contractorStatusUpdateHandler)
 }
 
 /**
@@ -411,4 +449,6 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   discrepancy_create: discrepancyCreateHandler,
   inspection_save_draft: inspectionSaveDraftHandler,
   dashboard_board_update: dashboardBoardUpdateHandler,
+  ppr_depart: pprDepartHandler,
+  contractor_status_update: contractorStatusUpdateHandler,
 }
