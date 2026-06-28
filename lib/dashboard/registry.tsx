@@ -33,7 +33,7 @@ import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspectio
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
 import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-widget'
-import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
+import { QuickActionsWidget, QuickActionsConfigForm } from '@/components/dashboard/widgets/quick-actions-widget'
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
@@ -102,7 +102,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     description: 'Module launcher tiles',
     icon: LayoutGrid, defaultSize: { w: 4, h: 2 }, minSize: { w: 2, h: 1 },
     Component: (p) => <QuickActionsWidget config={p.config} />,
-    ConfigForm: TitleConfigForm,
+    ConfigForm: QuickActionsConfigForm,
   },
   'links': {
     type: 'links', kind: 'links', title: 'Links',
