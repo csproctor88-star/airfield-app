@@ -160,7 +160,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: RadioTower, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.INFRASTRUCTURE_VIEW,
     moduleHref: '/infrastructure',
-    Component: () => <InfrastructureWidget />,
+    Component: (p) => <InfrastructureWidget config={p.config} editing={p.editing} onConfigChange={p.onConfigChange} />,
     ConfigForm: TitleConfigForm,
   },
   'field-conditions': {
