@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap, StickyNote } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -23,6 +23,8 @@ import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastruct
 import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
 import { AmtrWidget } from '@/components/dashboard/widgets/amtr-widget'
+import { NotesWidget, NotesConfigForm } from '@/components/dashboard/widgets/notes-widget'
+import { ClockWidget } from '@/components/dashboard/widgets/clock-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -172,6 +174,19 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
     Component: () => <AmtrWidget />,
+  },
+  'notes': {
+    type: 'notes', kind: 'native', title: 'Notes',
+    description: 'A free-form sticky note',
+    icon: StickyNote, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 1 },
+    Component: (p) => <NotesWidget config={p.config} />,
+    ConfigForm: NotesConfigForm,
+  },
+  'clock': {
+    type: 'clock', kind: 'native', title: 'Zulu Clock',
+    description: 'Current Zulu and local time',
+    icon: Clock, defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 1 },
+    Component: () => <ClockWidget />,
   },
 }
 
