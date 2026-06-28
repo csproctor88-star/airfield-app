@@ -25,6 +25,7 @@ import { cesDescriptor } from '@/lib/dashboard/table/descriptors/ces'
 import { waiversDescriptor } from '@/lib/dashboard/table/descriptors/waivers'
 import { notamsDescriptor } from '@/lib/dashboard/table/descriptors/notams'
 import { dailyReviewsDescriptor } from '@/lib/dashboard/table/descriptors/daily-reviews'
+import { eventsLogDescriptor } from '@/lib/dashboard/table/descriptors/events-log'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
@@ -33,7 +34,6 @@ import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
-import { EventsLogWidget } from '@/components/dashboard/widgets/events-log-widget'
 import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
 import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
@@ -113,15 +113,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'embed': { type: 'embed', kind: 'embed', title: 'Web Embed', description: 'Embed an external website', icon: Globe, defaultSize: { w: 4, h: 4 }, minSize: { w: 2, h: 3 }, Component: (p) => <EmbedWidget config={p.config} />, ConfigForm: EmbedConfigForm },
   'analytics': { type: 'analytics', kind: 'analytics', title: 'Analytics', description: 'A custom chart you build from your data', icon: BarChart3, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 }, Component: (p) => <AnalyticsWidget config={p.config} />, ConfigForm: AnalyticsConfigForm },
-  'events-log': {
-    type: 'events-log', kind: 'native', title: 'Events Log',
+  'events-log': tableWidget({
+    type: 'events-log', title: 'Events Log',
     description: 'Recent activity log entries (AF Form 3616)',
     icon: ScrollText, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.ACTIVITY_LOG_VIEW,
     moduleHref: '/activity',
-    Component: () => <EventsLogWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, eventsLogDescriptor),
   'wildlife': {
     type: 'wildlife', kind: 'native', title: 'BASH / Wildlife',
     description: 'Sightings and strikes in the last 30 days',
