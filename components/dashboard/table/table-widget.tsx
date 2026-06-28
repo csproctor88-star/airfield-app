@@ -103,7 +103,7 @@ export function TableWidget<Row>({
 
   function onRowClick(row: Row) {
     const b = descriptor.row
-    if (b.mode === 'detail' || b.mode === 'detail+actions') setDetailRow(row)
+    if (b.mode === 'detail' || b.mode === 'detail+actions' || b.mode === 'custom') setDetailRow(row)
   }
 
   // ── Column resize ─────────────────────────────────────────────────────────
@@ -316,7 +316,7 @@ export function TableWidget<Row>({
                     </tr>
                   )
                 }
-                const clickable = b.mode === 'detail' || b.mode === 'detail+actions'
+                const clickable = b.mode === 'detail' || b.mode === 'detail+actions' || b.mode === 'custom'
                 return (
                   <tr key={ri} onClick={clickable ? () => onRowClick(row) : undefined}
                     style={{ cursor: clickable ? 'pointer' : 'default' }}>{cells}</tr>
@@ -345,6 +345,12 @@ export function TableWidget<Row>({
           onClose={() => setDetailRow(null)}
           onActed={() => toast.success('Saved.')}
         />
+      )}
+      {detailRow && descriptor.row.mode === 'custom' && (
+        descriptor.row.render(detailRow, {
+          onClose: () => setDetailRow(null),
+          onActed: () => setDetailRow(null),
+        })
       )}
     </div>
   )

@@ -1,7 +1,14 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchRecentReviews, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
-import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
+import { createClient } from '@/lib/supabase/client'
+import {
+  fetchRecentReviews,
+  type DailyReviewRow,
+} from '@/lib/supabase/daily-reviews'
+import type { TableWidgetDescriptor, TableWidgetConfig, CustomRowCtx } from '@/lib/dashboard/table/types'
+import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 const SLOTS = ['day_amsl', 'swing_amsl', 'mid_amsl', 'namo', 'afm'] as const
 function pendingSlots(r: DailyReviewRow): number {
@@ -20,6 +27,64 @@ function useRows(_c: TableWidgetConfig) {
   return { rows, loading }
 }
 
+/**
+ * Inner component that mounts the existing SignModal with the same props
+ * the daily-reviews page passes. Hooks are only allowed inside components,
+ * not in the descriptor's render() callback, so we isolate them here.
+ */
+function DailyReviewWidgetSignModal({
+  row,
+  ctx,
+}: {
+  row: DailyReviewRow
+  ctx: CustomRowCtx
+}) {
+  const { installationId, currentInstallation } = useInstallation()
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState('')
+
+  // Same auth + profile fetch as the daily-reviews page
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return
+      setUserId(data.user.id)
+      supabase.from('profiles').select('name').eq('id', data.user.id).single().then(({ data: profile }) => {
+        if (profile) setUserName((profile as { name?: string }).name || '')
+      })
+    })
+  }, [])
+
+  if (!installationId) return null
+
+  // Derive the same values the page reads from currentInstallation
+  const shiftCount = (currentInstallation as { shift_count?: number } | null)?.shift_count ?? 2
+  const baseName = currentInstallation?.name || ''
+  const baseIcao = (currentInstallation as { icao?: string | null } | null)?.icao || null
+  const timezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || null
+  const resetTime = (currentInstallation as { checklist_reset_time?: string | null } | null)?.checklist_reset_time || null
+
+  if (!userId) return null
+
+  return (
+    <DailyReviewSignModal
+      open={true}
+      onClose={ctx.onClose}
+      baseId={installationId}
+      baseName={baseName}
+      baseIcao={baseIcao}
+      shiftCount={shiftCount}
+      reviewDate={row.review_date}
+      timezone={timezone}
+      resetTime={resetTime}
+      userId={userId}
+      userName={userName}
+      onSigned={ctx.onActed}
+    />
+  )
+}
+
 export const dailyReviewsDescriptor: TableWidgetDescriptor<DailyReviewRow> = {
   columns: [
     { key: 'review_date', label: 'Date', accessor: r => r.review_date, format: v => fmtDate(v as string), mono: true, defaultVisible: true },
@@ -35,7 +100,10 @@ export const dailyReviewsDescriptor: TableWidgetDescriptor<DailyReviewRow> = {
         return (isCert && s.includes('certified')) || (!isCert && s.includes('pending'))
       } },
   ],
-  row: { mode: 'deeplink', href: () => '/daily-reviews' },
+  row: {
+    mode: 'custom',
+    render: (row, ctx) => <DailyReviewWidgetSignModal row={row} ctx={ctx} />,
+  },
   summary: rows => [{ count: rows.filter(r => r.fully_certified_at == null).length, label: 'pending', tone: 'warning' }],
   footerHref: '/daily-reviews',
   useRows,
