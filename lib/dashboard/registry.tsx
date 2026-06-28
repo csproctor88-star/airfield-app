@@ -22,6 +22,7 @@ import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discr
 import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel'
 import { pprDescriptor } from '@/lib/dashboard/table/descriptors/ppr'
 import { cesDescriptor } from '@/lib/dashboard/table/descriptors/ces'
+import { waiversDescriptor } from '@/lib/dashboard/table/descriptors/waivers'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
@@ -33,7 +34,6 @@ import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/emb
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
 import { EventsLogWidget } from '@/components/dashboard/widgets/events-log-widget'
 import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
-import { WaiversWidget } from '@/components/dashboard/widgets/waivers-widget'
 import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
 import { DailyReviewsWidget } from '@/components/dashboard/widgets/daily-reviews-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
@@ -133,15 +133,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <WildlifeWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'waivers': {
-    type: 'waivers', kind: 'native', title: 'Waivers',
+  'waivers': tableWidget({
+    type: 'waivers', title: 'Waivers',
     description: 'Active waivers and upcoming expirations',
     icon: ShieldCheck, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.WAIVERS_VIEW,
     moduleHref: '/waivers',
-    Component: () => <WaiversWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, waiversDescriptor),
   'users': {
     type: 'users', kind: 'native', title: 'User Management',
     description: 'Users at this base and pending approvals',
