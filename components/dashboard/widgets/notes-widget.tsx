@@ -1,27 +1,129 @@
 'use client'
 import { useState } from 'react'
-import type { WidgetConfigProps } from '@/lib/dashboard/widget-registry'
+import type { WidgetProps, WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 
 type NotesConfig = { title?: string; text?: string }
 
-export function NotesWidget({ config }: { config: Record<string, unknown> }) {
+export function NotesWidget({ config, onConfigChange }: WidgetProps) {
   const c = config as NotesConfig
-  if (!c.text?.trim()) {
-    return (
-      <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', fontStyle: 'italic' }}>
-        Empty note. Edit this widget to add text.
-      </div>
-    )
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  function handleSave() {
+    const existing = c.text?.trim() ?? ''
+    const appended = draft.trim()
+    if (!appended) { setAdding(false); setDraft(''); return }
+    const newText = existing ? `${existing}\n${appended}` : appended
+    onConfigChange?.({ ...config, text: newText })
+    setAdding(false)
+    setDraft('')
   }
+
+  function handleCancel() {
+    setAdding(false)
+    setDraft('')
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    boxSizing: 'border-box',
+    padding: '6px 8px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-bg-input, var(--color-bg-surface))',
+    color: 'var(--color-text-1)',
+    fontSize: 'var(--fs-sm)',
+    fontFamily: 'inherit',
+    resize: 'vertical',
+    lineHeight: 1.5,
+  }
+
   return (
-    <div style={{
-      color: 'var(--color-text-1)',
-      fontSize: 'var(--fs-sm)',
-      lineHeight: 1.6,
-      whiteSpace: 'pre-wrap',
-      wordBreak: 'break-word',
-    }}>
-      {c.text}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 6 }}>
+      {/* Note text */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {!c.text?.trim() && !adding ? (
+          <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', fontStyle: 'italic' }}>
+            Empty note. Use the ＋ button below or the gear to add text.
+          </div>
+        ) : (
+          <div style={{
+            color: 'var(--color-text-1)',
+            fontSize: 'var(--fs-sm)',
+            lineHeight: 1.6,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}>
+            {c.text}
+          </div>
+        )}
+      </div>
+
+      {/* Inline add area */}
+      {adding ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <textarea
+            autoFocus
+            rows={3}
+            style={inputStyle}
+            placeholder="Add a note…"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={handleSave}
+              style={{
+                flex: 1,
+                padding: '5px 0',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                cursor: 'pointer',
+                background: 'var(--color-accent)',
+                color: '#fff',
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                fontSize: 'var(--fs-xs)',
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={handleCancel}
+              style={{
+                flex: 1,
+                padding: '5px 0',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--color-border)',
+                cursor: 'pointer',
+                background: 'transparent',
+                color: 'var(--color-text-2)',
+                fontFamily: 'inherit',
+                fontSize: 'var(--fs-xs)',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          style={{
+            alignSelf: 'flex-start',
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            cursor: 'pointer',
+            background: 'transparent',
+            color: 'var(--color-text-3)',
+            fontFamily: 'inherit',
+            fontSize: 'var(--fs-xs)',
+          }}
+        >
+          ＋ Add note
+        </button>
+      )}
     </div>
   )
 }

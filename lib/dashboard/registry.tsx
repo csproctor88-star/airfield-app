@@ -198,7 +198,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     type: 'notes', kind: 'native', title: 'Notes',
     description: 'A free-form sticky note',
     icon: StickyNote, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 1 },
-    Component: (p) => <NotesWidget config={p.config} />,
+    Component: (p) => <NotesWidget config={p.config} editing={p.editing} onConfigChange={p.onConfigChange} />,
     ConfigForm: NotesConfigForm,
   },
   'clock': {
