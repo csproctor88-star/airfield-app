@@ -23,10 +23,10 @@ import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel
 import { pprDescriptor } from '@/lib/dashboard/table/descriptors/ppr'
 import { cesDescriptor } from '@/lib/dashboard/table/descriptors/ces'
 import { waiversDescriptor } from '@/lib/dashboard/table/descriptors/waivers'
+import { notamsDescriptor } from '@/lib/dashboard/table/descriptors/notams'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
-import { NotamsWidget } from '@/components/dashboard/widgets/notams-widget'
 import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-widget'
 import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
@@ -78,14 +78,12 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <ShiftChecklistWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'notams': {
-    type: 'notams', kind: 'native', title: 'Active NOTAMs',
+  'notams': tableWidget({
+    type: 'notams', title: 'Active NOTAMs',
     description: 'Current NOTAMs',
     icon: Radio, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     moduleHref: '/notams',
-    Component: () => <NotamsWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, notamsDescriptor),
   'ppr-today': tableWidget({
     type: 'ppr-today', title: 'PPR', description: 'PPR arrivals',
     icon: Plane, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
