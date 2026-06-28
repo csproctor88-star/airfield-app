@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap, StickyNote } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap, StickyNote, TrendingUp, Lightbulb } from 'lucide-react'
 import type { WidgetDef, WidgetMeta } from '@/lib/dashboard/widget-registry'
 import { TitleConfigForm } from '@/components/dashboard/table/title-config-form'
 import { TableWidget } from '@/components/dashboard/table/table-widget'
@@ -42,6 +42,11 @@ import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-cond
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
 import { NotesWidget, NotesConfigForm } from '@/components/dashboard/widgets/notes-widget'
 import { ClockWidget } from '@/components/dashboard/widgets/clock-widget'
+import { ReportDiscrepanciesWidget } from '@/components/dashboard/widgets/report-discrepancies-widget'
+import { ReportTrendsWidget } from '@/components/dashboard/widgets/report-trends-widget'
+import { ReportAgingWidget } from '@/components/dashboard/widgets/report-aging-widget'
+import { ReportLightingWidget } from '@/components/dashboard/widgets/report-lighting-widget'
+import { ReportDailyWidget } from '@/components/dashboard/widgets/report-daily-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -200,6 +205,50 @@ export const WIDGETS: Record<string, WidgetDef> = {
     description: 'Current Zulu and local time — add multiple timezones',
     icon: Clock, defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 1 },
     Component: (p) => <ClockWidget config={p.config} editing={p.editing} onConfigChange={p.onConfigChange} />,
+    ConfigForm: TitleConfigForm,
+  },
+  'report-discrepancies': {
+    type: 'report-discrepancies', kind: 'native', title: 'Discrepancy Report',
+    description: 'Open discrepancy count, aging, and top shop at a glance',
+    icon: AlertTriangle, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.DISCREPANCIES_VIEW,
+    moduleHref: '/discrepancies',
+    Component: () => <ReportDiscrepanciesWidget />,
+    ConfigForm: TitleConfigForm,
+  },
+  'report-trends': {
+    type: 'report-trends', kind: 'native', title: 'Discrepancy Trends',
+    description: 'Opened, closed, and net discrepancies over the last 30 days',
+    icon: TrendingUp, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.DISCREPANCIES_VIEW,
+    moduleHref: '/discrepancies',
+    Component: () => <ReportTrendsWidget />,
+    ConfigForm: TitleConfigForm,
+  },
+  'report-aging': {
+    type: 'report-aging', kind: 'native', title: 'Aging Discrepancies',
+    description: 'Oldest open discrepancies and 90+ day count',
+    icon: Clock, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.DISCREPANCIES_VIEW,
+    moduleHref: '/discrepancies',
+    Component: () => <ReportAgingWidget />,
+    ConfigForm: TitleConfigForm,
+  },
+  'report-lighting': {
+    type: 'report-lighting', kind: 'native', title: 'Lighting Report',
+    description: 'Total lighting features, inoperative count, and operational %',
+    icon: Lightbulb, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.INFRASTRUCTURE_VIEW,
+    moduleHref: '/infrastructure',
+    Component: () => <ReportLightingWidget />,
+    ConfigForm: TitleConfigForm,
+  },
+  'report-daily': {
+    type: 'report-daily', kind: 'native', title: 'Daily Operations',
+    description: 'Inspections, checks, and new discrepancies over the last 30 days',
+    icon: ClipboardList, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.INSPECTIONS_VIEW,
+    Component: () => <ReportDailyWidget />,
     ConfigForm: TitleConfigForm,
   },
 }
