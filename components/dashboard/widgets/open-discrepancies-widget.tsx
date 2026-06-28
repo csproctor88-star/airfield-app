@@ -29,7 +29,7 @@ export function OpenDiscrepanciesWidget() {
         <span style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{rows.length}</span>
       </div>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {rows.slice(0, 12).map(r => (
+        {rows.map(r => (
           <Link key={r.id} href={`/discrepancies/${r.id}`} style={{
             display: 'flex', justifyContent: 'space-between', gap: 8, padding: '4px 0',
             borderBottom: '1px solid var(--color-border)', textDecoration: 'none',

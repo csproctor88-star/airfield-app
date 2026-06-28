@@ -19,8 +19,6 @@ export function PersonnelWidget() {
     })
   }, [installationId])
 
-  const preview = rows.slice(0, 4)
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Count header */}
@@ -39,11 +37,11 @@ export function PersonnelWidget() {
       </div>
 
       {/* Row list */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflow: 'auto' }}>
         {!loading && rows.length === 0 && (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No active personnel</div>
         )}
-        {preview.map((r) => (
+        {rows.map((r) => (
           <div key={r.id} style={{
             fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)',
             borderBottom: '1px solid var(--color-border)',
@@ -58,11 +56,6 @@ export function PersonnelWidget() {
             )}
           </div>
         ))}
-        {rows.length > 4 && (
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', paddingTop: 4 }}>
-            +{rows.length - 4} more
-          </div>
-        )}
       </div>
 
       {/* Footer link */}

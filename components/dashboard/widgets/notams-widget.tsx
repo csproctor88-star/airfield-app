@@ -12,6 +12,8 @@ interface NotamRow {
   source: 'faa' | 'local'
   status: 'active' | 'expired'
   title: string
+  full_text?: string
+  effective_start?: string
   effective_end: string
 }
 
@@ -61,7 +63,6 @@ export function NotamsWidget() {
   useEffect(() => { load() }, [load])
 
   const soon = notams.filter((n) => expiresSoon(n.effective_end))
-  const preview = notams.slice(0, 4)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -91,41 +92,56 @@ export function NotamsWidget() {
       </div>
 
       {/* NOTAM list */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflow: 'auto' }}>
         {!loading && notams.length === 0 && (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No active NOTAMs</div>
         )}
-        {preview.map((n) => (
+        {notams.map((n) => (
           <div key={n.id} style={{
-            fontSize: 'var(--fs-sm)',
             borderBottom: '1px solid var(--color-border)',
-            padding: '4px 0',
-            display: 'flex', alignItems: 'center', gap: 6,
-            overflow: 'hidden',
+            padding: '6px 0',
           }}>
-            {expiresSoon(n.effective_end) && (
-              <AlertCircle size={12} color="var(--color-warning)" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+            {/* Number line */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {expiresSoon(n.effective_end) && (
+                <AlertCircle size={12} color="var(--color-warning)" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+              )}
+              <span style={{
+                fontFamily: 'var(--font-family-mono)', fontSize: 'var(--fs-2xs)',
+                color: n.source === 'faa' ? 'var(--color-cyan)' : 'var(--color-purple)',
+                fontWeight: 700,
+              }}>
+                {n.notam_number}
+              </span>
+            </div>
+            {/* Verbiage */}
+            {(n.full_text || n.title) && (
+              <div style={{
+                fontSize: 'var(--fs-2xs)', color: 'var(--color-text-2)',
+                marginTop: 2,
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                fontFamily: 'var(--font-family-mono)',
+                lineHeight: 1.4,
+              }}>
+                {n.full_text || n.title}
+              </div>
             )}
-            <span style={{
-              fontFamily: 'var(--font-family-mono)', fontSize: 'var(--fs-2xs)',
-              color: n.source === 'faa' ? 'var(--color-cyan)' : 'var(--color-purple)',
-              fontWeight: 700, flexShrink: 0,
-            }}>
-              {n.notam_number}
-            </span>
-            <span style={{
-              color: 'var(--color-text-2)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-              {n.title}
-            </span>
+            {/* Valid window */}
+            {(n.effective_start || n.effective_end) && (
+              <div style={{
+                fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+                marginTop: 3,
+              }}>
+                {n.effective_start && n.effective_end
+                  ? `${n.effective_start} – ${n.effective_end}`
+                  : n.effective_end || n.effective_start}
+              </div>
+            )}
           </div>
         ))}
-        {notams.length > 4 && (
-          <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', paddingTop: 4 }}>
-            +{notams.length - 4} more
-          </div>
-        )}
       </div>
 
       {/* Footer */}

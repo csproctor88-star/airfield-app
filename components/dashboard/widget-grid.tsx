@@ -53,7 +53,7 @@ export function WidgetGrid({
         return (
           <div key={w.i}>
             <WidgetFrame
-              title={def?.title ?? 'Unavailable'}
+              title={((w.config?.title as string) || '').trim() || def?.title || 'Unavailable'}
               editing={editing}
               onRemove={() => onRemove(w.i)}
               onConfigure={def?.ConfigForm ? () => onConfigure(w.i) : undefined}
