@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3 } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -13,6 +13,10 @@ import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
+import { EventsLogWidget } from '@/components/dashboard/widgets/events-log-widget'
+import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
+import { WaiversWidget } from '@/components/dashboard/widgets/waivers-widget'
+import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -84,6 +88,37 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'embed': { type: 'embed', kind: 'embed', title: 'Web Embed', description: 'Embed an external website', icon: Globe, defaultSize: { w: 4, h: 4 }, minSize: { w: 2, h: 3 }, Component: (p) => <EmbedWidget config={p.config} />, ConfigForm: EmbedConfigForm },
   'analytics': { type: 'analytics', kind: 'analytics', title: 'Analytics', description: 'A custom chart you build from your data', icon: BarChart3, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 }, Component: (p) => <AnalyticsWidget config={p.config} />, ConfigForm: AnalyticsConfigForm },
+  'events-log': {
+    type: 'events-log', kind: 'native', title: 'Events Log',
+    description: 'Recent activity log entries (AF Form 3616)',
+    icon: ScrollText, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
+    permission: PERM.ACTIVITY_LOG_VIEW,
+    moduleHref: '/activity',
+    Component: () => <EventsLogWidget />,
+  },
+  'wildlife': {
+    type: 'wildlife', kind: 'native', title: 'BASH / Wildlife',
+    description: 'Sightings and strikes in the last 30 days',
+    icon: Bird, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.WILDLIFE_VIEW,
+    moduleHref: '/wildlife',
+    Component: () => <WildlifeWidget />,
+  },
+  'waivers': {
+    type: 'waivers', kind: 'native', title: 'Waivers',
+    description: 'Active waivers and upcoming expirations',
+    icon: ShieldCheck, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
+    permission: PERM.WAIVERS_VIEW,
+    moduleHref: '/waivers',
+    Component: () => <WaiversWidget />,
+  },
+  'users': {
+    type: 'users', kind: 'native', title: 'User Management',
+    description: 'Users at this base and pending approvals',
+    icon: Users, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.USERS_MANAGE,
+    Component: () => <UsersWidget />,
+  },
 }
 
 export function getWidgetDef(type: string): WidgetDef | undefined {
