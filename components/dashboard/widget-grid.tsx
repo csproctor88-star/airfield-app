@@ -58,7 +58,7 @@ export function WidgetGrid({
       isResizable={editing}
       onBreakpointChange={(bp) => { breakpointRef.current = bp }}
       onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
-      draggableCancel="a,button"
+      draggableCancel="a,button,.wt-col-resize"
     >
       {widgets.map(w => {
         const def = getWidgetDef(w.type)

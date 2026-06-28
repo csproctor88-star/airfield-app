@@ -62,6 +62,7 @@ export interface TableWidgetConfig {
   columns?: string[]
   filters?: Record<string, string[] | string>
   extras?: Record<string, string>
+  columnWidths?: Record<string, number>
 }
 
 export interface TableWidgetDescriptor<Row> {

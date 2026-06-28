@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -34,9 +34,15 @@ function sortRows<Row>(rows: Row[], sort: SortState, visibleCols: ColumnDef<Row>
   })
 }
 
+const MIN_COL_WIDTH = 48
+
 export function TableWidget<Row>({
-  descriptor, config,
-}: { descriptor: TableWidgetDescriptor<Row>; config: Record<string, unknown> }) {
+  descriptor, config, onConfigChange,
+}: {
+  descriptor: TableWidgetDescriptor<Row>
+  config: Record<string, unknown>
+  onConfigChange?: (config: Record<string, unknown>) => void
+}) {
   const { installationId } = useInstallation()
   const { has } = usePermissions()
   const router = useRouter()
@@ -100,6 +106,76 @@ export function TableWidget<Row>({
     if (b.mode === 'detail' || b.mode === 'detail+actions') setDetailRow(row)
   }
 
+  // ── Column resize ─────────────────────────────────────────────────────────
+  // Refs to each <th> so we can read rendered widths without layout thrash
+  const thRefs = useRef<Map<string, HTMLTableCellElement>>(new Map())
+
+  // Live override during an active drag: { colKey → currentWidth }
+  const [dragWidths, setDragWidths] = useState<Record<string, number>>({})
+  const dragState = useRef<{
+    key: string
+    startX: number
+    startWidth: number
+  } | null>(null)
+
+  // Merged column widths: persisted overrides + live drag override
+  const mergedWidths: Record<string, number> = useMemo(() => {
+    return { ...(cfg.columnWidths ?? {}), ...dragWidths }
+  }, [cfg.columnWidths, dragWidths])
+
+  // Only use fixed layout when at least one width is stored
+  const hasPersistedWidths = Object.keys(cfg.columnWidths ?? {}).length > 0
+  const isDragging = Object.keys(dragWidths).length > 0
+  const useFixedLayout = hasPersistedWidths || isDragging
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, colKey: string) => {
+    e.stopPropagation()
+    e.preventDefault()
+
+    const th = thRefs.current.get(colKey)
+    const startWidth = th ? th.getBoundingClientRect().width : (mergedWidths[colKey] ?? 140)
+
+    dragState.current = { key: colKey, startX: e.clientX, startWidth }
+    // seed dragWidths with all current rendered widths so the table doesn't jump
+    const snapshot: Record<string, number> = {}
+    for (const col of visibleCols) {
+      const el = thRefs.current.get(col.key)
+      snapshot[col.key] = el ? el.getBoundingClientRect().width : (mergedWidths[col.key] ?? 140)
+    }
+    setDragWidths(snapshot)
+
+    function onMouseMove(me: MouseEvent) {
+      const ds = dragState.current
+      if (!ds) return
+      const delta = me.clientX - ds.startX
+      const newWidth = Math.max(MIN_COL_WIDTH, ds.startWidth + delta)
+      setDragWidths(prev => ({ ...prev, [ds.key]: newWidth }))
+    }
+
+    function onMouseUp(me: MouseEvent) {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      const ds = dragState.current
+      if (!ds) return
+      const delta = me.clientX - ds.startX
+      const finalWidth = Math.max(MIN_COL_WIDTH, ds.startWidth + delta)
+      dragState.current = null
+      setDragWidths({})
+      if (onConfigChange) {
+        onConfigChange({
+          ...config,
+          columnWidths: {
+            ...(cfg.columnWidths ?? {}),
+            [ds.key]: finalWidth,
+          },
+        })
+      }
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }, [visibleCols, mergedWidths, cfg.columnWidths, config, onConfigChange])
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {summary.length > 0 && (
@@ -138,7 +214,19 @@ export function TableWidget<Row>({
           <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '6px 0' }}>Nothing to show.</div>
         )}
         {!loading && displayRows.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-sm)' }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            fontSize: 'var(--fs-sm)',
+            tableLayout: useFixedLayout ? 'fixed' : undefined,
+          }}>
+            {useFixedLayout && (
+              <colgroup>
+                {visibleCols.map(c => (
+                  <col key={c.key} style={{ width: mergedWidths[c.key] ?? 140 }} />
+                ))}
+              </colgroup>
+            )}
             <thead>
               <tr>
                 {visibleCols.map(c => {
@@ -147,10 +235,15 @@ export function TableWidget<Row>({
                   return (
                     <th
                       key={c.key}
+                      ref={el => {
+                        if (el) thRefs.current.set(c.key, el)
+                        else thRefs.current.delete(c.key)
+                      }}
                       onClick={() => handleHeaderClick(c.key)}
                       style={{
+                        position: 'relative',
                         textAlign: align,
-                        padding: '2px 6px 4px 0',
+                        padding: '2px 16px 4px 0',
                         fontSize: 'var(--fs-2xs)',
                         color: isActive ? 'var(--color-text-1)' : 'var(--color-text-3)',
                         textTransform: 'uppercase',
@@ -159,6 +252,8 @@ export function TableWidget<Row>({
                         cursor: 'pointer',
                         userSelect: 'none',
                         whiteSpace: 'nowrap',
+                        overflow: useFixedLayout ? 'hidden' : undefined,
+                        textOverflow: useFixedLayout ? 'ellipsis' : undefined,
                       }}
                     >
                       {c.label}
@@ -167,6 +262,23 @@ export function TableWidget<Row>({
                           {sort?.dir === 'asc' ? '▲' : '▼'}
                         </span>
                       )}
+                      {/* Resize handle */}
+                      <span
+                        className="wt-col-resize"
+                        onMouseDown={e => handleResizeMouseDown(e, c.key)}
+                        onClick={e => { e.stopPropagation(); e.preventDefault() }}
+                        style={{
+                          position: 'absolute',
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 5,
+                          cursor: 'col-resize',
+                          zIndex: 1,
+                          // Subtle visual hint on hover via inline style — theme-neutral
+                          background: 'transparent',
+                        }}
+                      />
                     </th>
                   )
                 })}
@@ -185,7 +297,7 @@ export function TableWidget<Row>({
                       color: 'var(--color-text-1)',
                       borderBottom: '1px solid var(--color-border)',
                       fontFamily: c.mono ? 'var(--font-family-mono)' : undefined,
-                      maxWidth: 180,
+                      maxWidth: useFixedLayout ? undefined : 180,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',

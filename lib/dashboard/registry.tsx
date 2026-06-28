@@ -13,7 +13,7 @@ function tableWidget<Row>(
   return {
     ...meta,
     kind: 'table',
-    Component: (p) => <TableWidget descriptor={descriptor} config={p.config} />,
+    Component: (p) => <TableWidget descriptor={descriptor} config={p.config} onConfigChange={p.onConfigChange} />,
     ConfigForm: (p) => <TableConfigForm {...p} descriptor={descriptor} />,
   }
 }

@@ -37,10 +37,21 @@ export function normalizeTableConfig<Row>(
     extras[e.key] = e.options.some(o => o.value === v) ? (v as string) : e.default
   }
 
+  // Pass columnWidths through, keeping only entries for known column keys
+  let columnWidths: Record<string, number> | undefined
+  if (r.columnWidths && typeof r.columnWidths === 'object') {
+    const filtered: Record<string, number> = {}
+    for (const [k, v] of Object.entries(r.columnWidths)) {
+      if (known.has(k) && typeof v === 'number' && v > 0) filtered[k] = v
+    }
+    if (Object.keys(filtered).length) columnWidths = filtered
+  }
+
   return {
     title: typeof r.title === 'string' && r.title.trim() ? r.title : undefined,
     columns: columns && columns.length ? columns : undefined,
     filters: Object.keys(filters).length ? filters : undefined,
     extras: Object.keys(extras).length ? extras : undefined,
+    columnWidths,
   }
 }
