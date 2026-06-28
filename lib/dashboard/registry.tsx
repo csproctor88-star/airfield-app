@@ -24,6 +24,7 @@ import { pprDescriptor } from '@/lib/dashboard/table/descriptors/ppr'
 import { cesDescriptor } from '@/lib/dashboard/table/descriptors/ces'
 import { waiversDescriptor } from '@/lib/dashboard/table/descriptors/waivers'
 import { notamsDescriptor } from '@/lib/dashboard/table/descriptors/notams'
+import { dailyReviewsDescriptor } from '@/lib/dashboard/table/descriptors/daily-reviews'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
@@ -35,7 +36,6 @@ import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/wid
 import { EventsLogWidget } from '@/components/dashboard/widgets/events-log-widget'
 import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
 import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
-import { DailyReviewsWidget } from '@/components/dashboard/widgets/daily-reviews-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
 import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
@@ -153,15 +153,13 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.CES_VIEW,
     moduleHref: '/ces',
   }, cesDescriptor),
-  'daily-reviews': {
-    type: 'daily-reviews', kind: 'native', title: 'Daily Reviews',
+  'daily-reviews': tableWidget({
+    type: 'daily-reviews', title: 'Daily Reviews',
     description: 'Shift sign-off queue for the last 7 days',
     icon: CheckSquare, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     permission: PERM.DAILY_REVIEWS_VIEW,
     moduleHref: '/daily-reviews',
-    Component: () => <DailyReviewsWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, dailyReviewsDescriptor),
   'infrastructure': {
     type: 'infrastructure', kind: 'native', title: 'Infrastructure Status',
     description: 'Visual NAVAID / airfield lighting operational status',
