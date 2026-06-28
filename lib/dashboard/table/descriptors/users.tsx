@@ -23,7 +23,9 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 function roleLabel(role: string): string {
-  return ROLE_LABELS[role] ?? role
+  // Known roles use the curated label; any unmapped role is humanized (never
+  // rendered as raw snake_case) per feedback_no_snake_case_prose.md.
+  return ROLE_LABELS[role] ?? role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 // ── Profile row type ─────────────────────────────────────────
