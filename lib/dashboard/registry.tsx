@@ -1,4 +1,4 @@
-import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users } from 'lucide-react'
+import { ClipboardList, AlertTriangle, Clock, HardHat, ListChecks, Radio, Plane, DoorOpen, LayoutGrid, Link2, Globe, BarChart3, ScrollText, Bird, ShieldCheck, Users, Wrench, CheckSquare, RadioTower, CloudSnow, MessageSquare, GraduationCap } from 'lucide-react'
 import type { WidgetDef } from '@/lib/dashboard/widget-registry'
 import { PERM } from '@/lib/permissions'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -17,6 +17,12 @@ import { EventsLogWidget } from '@/components/dashboard/widgets/events-log-widge
 import { WildlifeWidget } from '@/components/dashboard/widgets/wildlife-widget'
 import { WaiversWidget } from '@/components/dashboard/widgets/waivers-widget'
 import { UsersWidget } from '@/components/dashboard/widgets/users-widget'
+import { CesWidget } from '@/components/dashboard/widgets/ces-widget'
+import { DailyReviewsWidget } from '@/components/dashboard/widgets/daily-reviews-widget'
+import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
+import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
+import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
+import { AmtrWidget } from '@/components/dashboard/widgets/amtr-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -118,6 +124,54 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: Users, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     permission: PERM.USERS_MANAGE,
     Component: () => <UsersWidget />,
+  },
+  'ces': {
+    type: 'ces', kind: 'native', title: 'CES Work Orders',
+    description: 'Open discrepancies routed to Civil Engineering',
+    icon: Wrench, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
+    permission: PERM.CES_VIEW,
+    moduleHref: '/ces',
+    Component: () => <CesWidget />,
+  },
+  'daily-reviews': {
+    type: 'daily-reviews', kind: 'native', title: 'Daily Reviews',
+    description: 'Shift sign-off queue for the last 7 days',
+    icon: CheckSquare, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.DAILY_REVIEWS_VIEW,
+    moduleHref: '/daily-reviews',
+    Component: () => <DailyReviewsWidget />,
+  },
+  'infrastructure': {
+    type: 'infrastructure', kind: 'native', title: 'Infrastructure Status',
+    description: 'Visual NAVAID / airfield lighting operational status',
+    icon: RadioTower, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
+    permission: PERM.INFRASTRUCTURE_VIEW,
+    moduleHref: '/infrastructure',
+    Component: () => <InfrastructureWidget />,
+  },
+  'field-conditions': {
+    type: 'field-conditions', kind: 'native', title: 'Field Conditions',
+    description: 'Active runway condition reports (RwyCC / FICON)',
+    icon: CloudSnow, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
+    permission: PERM.FIELD_CONDITIONS_READ,
+    moduleHref: '/field-conditions',
+    Component: () => <FieldConditionsWidget />,
+  },
+  'feedback': {
+    type: 'feedback', kind: 'native', title: 'Customer Feedback',
+    description: 'Submission count and average rating (last 30 days)',
+    icon: MessageSquare, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.FEEDBACK_VIEW,
+    moduleHref: '/feedback',
+    Component: () => <FeedbackWidget />,
+  },
+  'amtr': {
+    type: 'amtr', kind: 'native', title: 'AMTR Training',
+    description: 'Airfield Management Training Record — member count by status',
+    icon: GraduationCap, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
+    permission: PERM.AMTR_VIEW,
+    moduleHref: '/amtr',
+    Component: () => <AmtrWidget />,
   },
 }
 
