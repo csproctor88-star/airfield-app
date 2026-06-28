@@ -197,9 +197,9 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'clock': {
     type: 'clock', kind: 'native', title: 'Zulu Clock',
-    description: 'Current Zulu and local time',
+    description: 'Current Zulu and local time — add multiple timezones',
     icon: Clock, defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 1 },
-    Component: () => <ClockWidget />,
+    Component: (p) => <ClockWidget config={p.config} editing={p.editing} onConfigChange={p.onConfigChange} />,
     ConfigForm: TitleConfigForm,
   },
 }
