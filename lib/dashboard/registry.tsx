@@ -20,11 +20,11 @@ function tableWidget<Row>(
 import { PERM } from '@/lib/permissions'
 import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discrepancies'
 import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel'
+import { pprDescriptor } from '@/lib/dashboard/table/descriptors/ppr'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
 import { NotamsWidget } from '@/components/dashboard/widgets/notams-widget'
-import { PprTodayWidget } from '@/components/dashboard/widgets/ppr-today-widget'
 import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-widget'
 import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
@@ -86,14 +86,11 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <NotamsWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'ppr-today': {
-    type: 'ppr-today', kind: 'native', title: 'PPR Today',
-    description: "Today's arrivals",
-    icon: Plane, defaultSize: { w: 3, h: 3 }, minSize: { w: 2, h: 2 },
+  'ppr-today': tableWidget({
+    type: 'ppr-today', title: 'PPR', description: 'PPR arrivals',
+    icon: Plane, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     moduleHref: '/ppr',
-    Component: () => <PprTodayWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, pprDescriptor),
   'afm-toggles': {
     type: 'afm-toggles', kind: 'native', title: 'AFM Status',
     description: 'Out of Office / Close Airfield',
