@@ -18,8 +18,8 @@ function tableWidget<Row>(
   }
 }
 import { PERM } from '@/lib/permissions'
+import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discrepancies'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
-import { OpenDiscrepanciesWidget } from '@/components/dashboard/widgets/open-discrepancies-widget'
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { PersonnelWidget } from '@/components/dashboard/widgets/personnel-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
@@ -51,14 +51,12 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <InspectionStatusWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'open-discrepancies': {
-    type: 'open-discrepancies', kind: 'native', title: 'Open Discrepancies',
-    description: 'Live open discrepancy list',
-    icon: AlertTriangle, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
+  'open-discrepancies': tableWidget({
+    type: 'open-discrepancies', title: 'Open Discrepancies',
+    description: 'Live discrepancy list', icon: AlertTriangle,
+    defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.DISCREPANCIES_VIEW,
-    Component: () => <OpenDiscrepanciesWidget />,
-    ConfigForm: TitleConfigForm,
-  },
+  }, discrepanciesDescriptor),
   'last-check': {
     type: 'last-check', kind: 'native', title: 'Last Check',
     description: 'Most recent completed check',
