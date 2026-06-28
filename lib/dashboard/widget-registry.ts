@@ -19,6 +19,7 @@ export interface WidgetMeta {
 export interface WidgetProps {
   config: Record<string, unknown>
   editing: boolean
+  onConfigChange?: (config: Record<string, unknown>) => void
 }
 
 export interface WidgetConfigProps {

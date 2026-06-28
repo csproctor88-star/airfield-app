@@ -191,6 +191,14 @@ export default function DashboardPage() {
     setWidgets(next); persist(next)
   }, [persist])
 
+  const onWidgetConfigChange = useCallback((id: string, config: Record<string, unknown>) => {
+    setWidgets(prev => {
+      const next = updateWidgetConfig(prev, id, config)
+      persist(next)
+      return next
+    })
+  }, [persist])
+
   const onRemove = useCallback((id: string) => {
     setWidgets(prev => { const next = prev.filter(w => w.i !== id); persist(next); return next })
   }, [persist])
@@ -351,6 +359,7 @@ export default function DashboardPage() {
           onLayoutChange={onLayoutChange}
           onRemove={onRemove}
           onConfigure={(id) => setConfiguringId(id)}
+          onWidgetConfigChange={onWidgetConfigChange}
         />
       )}
 
