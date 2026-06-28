@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchContractors, type ContractorRow } from '@/lib/supabase/contractors'
-import { updateContractorStatus } from '@/lib/dashboard/row-actions'
-import { PERM } from '@/lib/permissions'
 import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
 function useRows(_config: TableWidgetConfig) {
@@ -35,27 +33,8 @@ export const personnelDescriptor: TableWidgetDescriptor<ContractorRow> = {
       options: [{ value: 'active', label: 'Active' }, { value: 'completed', label: 'Completed' }],
       predicate: (r, sel) => (sel as string[]).includes(r.status) },
   ],
-  row: {
-    mode: 'detail+actions',
-    title: r => r.company_name,
-    fields: [
-      { label: 'Contact', value: r => r.contact_name ?? '—' },
-      { label: 'Location', value: r => r.location },
-      { label: 'Work', value: r => r.work_description },
-      { label: 'Status', value: r => r.status },
-      { label: 'Start', value: r => r.start_date },
-      { label: 'End', value: r => r.end_date ?? '—' },
-      { label: 'Radio', value: r => r.radio_number ?? '—' },
-      { label: 'Flag', value: r => r.flag_number ?? '—' },
-      { label: 'Callsign', value: r => r.callsign ?? '—' },
-      { label: 'Phone', value: r => r.contact_phone ?? '—' },
-    ],
-    actions: [
-      { key: 'complete', label: () => 'Mark Completed', permission: PERM.CONTRACTORS_WRITE,
-        visible: r => r.status === 'active',
-        run: (r, ctx) => updateContractorStatus(r.id, 'completed', ctx) },
-    ],
-  },
+  // Row click opens Personnel on Airfield, where status changes and full detail live.
+  row: { mode: 'deeplink', href: () => '/contractors' },
   footerHref: '/contractors',
   useRows,
 }

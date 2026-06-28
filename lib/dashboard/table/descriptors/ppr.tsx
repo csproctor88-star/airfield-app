@@ -4,8 +4,6 @@ import {
   fetchPprColumns, fetchPprEntries, isActivePpr,
   type PprColumn, type PprEntry,
 } from '@/lib/supabase/ppr'
-import { departPpr } from '@/lib/dashboard/row-actions'
-import { PERM } from '@/lib/permissions'
 import type { ColumnDef, TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
 const SYSTEM_COLUMNS: ColumnDef<PprEntry>[] = [
@@ -90,24 +88,8 @@ export const pprDescriptor: TableWidgetDescriptor<PprEntry> = {
         { value: 'all', label: 'All' },
       ] },
   ],
-  row: {
-    mode: 'detail+actions',
-    title: r => `PPR ${r.ppr_number}`,
-    fields: [
-      { label: 'Status', value: r => r.status },
-      { label: 'Arrival', value: r => r.arrival_date },
-      { label: 'Requester', value: r => r.requester_name ?? '—' },
-      { label: 'Email', value: r => r.requester_email ?? '—' },
-      { label: 'Phone', value: r => r.requester_phone ?? '—' },
-      { label: 'Notes', value: r => r.notes ?? '—', hideWhenEmpty: true },
-      { label: 'Departed', value: r => r.departed_at ?? 'Not departed' },
-    ],
-    actions: [
-      { key: 'depart', permission: PERM.PPR_WRITE,
-        label: r => r.departed_at ? 'Clear Departure' : 'Mark Departed',
-        run: (r, ctx) => departPpr(r.id, !r.departed_at, ctx) },
-    ],
-  },
+  // Row click opens the PPR Log, where departures and full detail are handled.
+  row: { mode: 'deeplink', href: () => '/ppr' },
   footerHref: '/ppr',
   useRows,
 }

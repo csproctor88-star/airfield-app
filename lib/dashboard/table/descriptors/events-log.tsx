@@ -35,17 +35,8 @@ export const eventsLogDescriptor: TableWidgetDescriptor<ActivityEntry> = {
     { key: 'entity_type', label: 'Entity type', kind: 'text',
       predicate: (e, sel) => e.entity_type.toLowerCase().includes((sel as string).toLowerCase()) },
   ],
-  row: {
-    mode: 'detail',
-    title: e => formatAction(e.action, e.entity_type, e.entity_display_id ?? undefined, e.metadata),
-    fields: [
-      { label: 'Action', value: e => e.action },
-      { label: 'Entity', value: e => `${e.entity_type}${e.entity_display_id ? ` · ${e.entity_display_id}` : ''}` },
-      { label: 'Operating initials', value: e => e.user_operating_initials ?? '—' },
-      { label: 'Detail', value: e => labelFor(e) },
-      { label: 'Time', value: e => `${formatZuluTime(e.created_at)}Z` },
-    ],
-  },
+  // Row click opens the full Events Log.
+  row: { mode: 'deeplink', href: () => '/activity' },
   footerHref: '/activity',
   useRows,
 }

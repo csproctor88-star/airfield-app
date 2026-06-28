@@ -93,25 +93,8 @@ export const wildlifeDescriptor: TableWidgetDescriptor<WildlifeRow> = {
       predicate: (r, sel) => (sel as string[]).includes(r.kind),
     },
   ],
-  row: {
-    mode: 'detail',
-    title: r => `${r.kind} ${r.display_id}`,
-    fields: [
-      { label: 'Type', value: r => r.kind },
-      { label: 'Species', value: r => r.species },
-      { label: 'When', value: r => r.when },
-      { label: 'Location', value: r => r.location },
-      { label: 'Qty', value: r => String(r.qty) },
-      // Sighting-specific extras
-      { label: 'Behavior', value: r => r.kind === 'Sighting' ? ((r.raw as WildlifeSightingRow).behavior ?? '—') : null, hideWhenEmpty: true },
-      { label: 'Action Taken', value: r => r.kind === 'Sighting' ? ((r.raw as WildlifeSightingRow).action_taken ?? '—') : null, hideWhenEmpty: true },
-      // Strike-specific extras
-      { label: 'Aircraft Type', value: r => r.kind === 'Strike' ? ((r.raw as WildlifeStrikeRow).aircraft_type ?? '—') : null, hideWhenEmpty: true },
-      { label: 'Damage Level', value: r => r.kind === 'Strike' ? ((r.raw as WildlifeStrikeRow).damage_level ?? '—') : null, hideWhenEmpty: true },
-      { label: 'Phase of Flight', value: r => r.kind === 'Strike' ? ((r.raw as WildlifeStrikeRow).phase_of_flight ?? '—') : null, hideWhenEmpty: true },
-      { label: 'Notes', value: r => (r.raw as WildlifeSightingRow | WildlifeStrikeRow).notes ?? '—', hideWhenEmpty: true },
-    ],
-  },
+  // Row click opens the Wildlife / BASH module for full detail.
+  row: { mode: 'deeplink', href: () => '/wildlife' },
   summary: rows => {
     const sightings = rows.filter(r => r.kind === 'Sighting').length
     const strikes = rows.filter(r => r.kind === 'Strike').length
