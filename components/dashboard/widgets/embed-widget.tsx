@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import type { WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 
@@ -13,39 +13,43 @@ function normUrl(u: string): string {
 export function EmbedWidget({ config }: { config: Record<string, unknown> }) {
   const c = config as EmbedConfig
   const url = normUrl(c.url ?? '')
-  const [loaded, setLoaded] = useState(false)
-  const [refused, setRefused] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    setLoaded(false); setRefused(false)
-    if (!url) return
-    timer.current = setTimeout(() => { setRefused(true) }, 4000)
-    return () => { if (timer.current) clearTimeout(timer.current) }
-  }, [url])
 
   if (!url) {
     return <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>No URL set. Edit this widget to add a website.</div>
   }
-  if (refused && !loaded) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
-        <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This site can&rsquo;t be embedded.</div>
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{
-          display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-accent)', fontWeight: 600,
-          fontSize: 'var(--fs-sm)', textDecoration: 'none',
-        }}><ExternalLink size={14} /> Open in new tab</a>
-      </div>
-    )
-  }
+
+  // Cross-origin frame-blocking (X-Frame-Options / frame-ancestors) cannot be
+  // detected reliably from JS — a blocked iframe still fires onLoad with a blank
+  // page. So we always surface a persistent "Open" escape hatch in the header;
+  // if the iframe renders blank, the site refuses embedding and the link works.
+  let host = url
+  try { host = new URL(url).hostname } catch { /* keep raw url */ }
+
   return (
-    <iframe
-      src={url}
-      title={c.title || 'Embedded site'}
-      onLoad={() => { setLoaded(true); if (timer.current) clearTimeout(timer.current) }}
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-      style={{ width: '100%', height: '100%', border: 'none', borderRadius: 'var(--radius-sm)' }}
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+        paddingBottom: 6, flexShrink: 0,
+      }}>
+        <span style={{
+          fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{c.title || host}</span>
+        <a href={url} target="_blank" rel="noopener noreferrer" title="Open in new tab" style={{
+          display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+          color: 'var(--color-accent)', fontSize: 'var(--fs-2xs)', fontWeight: 600, textDecoration: 'none',
+        }}><ExternalLink size={13} /> Open</a>
+      </div>
+      <iframe
+        src={url}
+        title={c.title || 'Embedded site'}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        style={{
+          width: '100%', flex: 1, border: 'none', borderRadius: 'var(--radius-sm)',
+          background: 'var(--color-bg-inset)',
+        }}
+      />
+    </div>
   )
 }
 
