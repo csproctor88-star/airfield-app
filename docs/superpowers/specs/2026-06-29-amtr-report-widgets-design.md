@@ -48,7 +48,9 @@ Decision (from brainstorming):
 ### 1. AMTR — Currency (existing, retitled)
 Keep `amtrDescriptor` exactly as-is. Only change: the registry title becomes
 `AMTR — Currency` (was `AMTR Training`). The type key stays `amtr` so **boards
-already using it keep working** — only the displayed label changes.
+already using it keep working** — only the displayed label changes. It already
+deep-links each row to `/amtr/<memberId>` (`row: { mode: 'deeplink', href: r =>
+`/amtr/${r.id}` }`) — the pattern the other table reports below reuse.
 
 ### 2. AMTR — Unit KPIs (new native summary widget)
 A small KPI-tile widget matching the existing report-summary widgets
@@ -56,7 +58,8 @@ A small KPI-tile widget matching the existing report-summary widgets
 `buildUnitKpis` (`lib/amtr/rollup.ts`):
 - **Members**, **Required tasks**, **Complete**, **Due soon**, **Overdue**.
 - Tones: Overdue → `bad` (red), Due soon → `warn` (amber), Complete → `ok` (green).
-- Footer link to `/amtr`.
+- **No per-row deep-link** (it's a summary card, no rows). Whole-widget footer
+  link to `/amtr` (roster) — or `/amtr/reports` if you prefer the reports view.
 
 ### 3. AMTR — Overdue Training (new table descriptor)
 **One row per overdue item** (member × overdue 1098/RAT task), so a manager sees
@@ -68,7 +71,8 @@ exactly who owes what.
 - Source: `fetchAmtrMembers` + `fetchAmtrByBase('amtr_1098_progress')` +
   `fetchAmtrByBase('amtr_rat_progress')`, classified by `dueStatus(...) === 'overdue'`
   (RAT-exempt member statuses excluded via `ratApplies`).
-- Row deep-links to `/amtr` (member record).
+- **Row deep-links** to `/amtr/<memberId>` (the member's record), via
+  `row: { mode: 'deeplink', href: r => `/amtr/${r.memberId}` }`.
 
 ### 4. AMTR — Due Soon (30 days) (new table descriptor)
 Same shape as Overdue Training, but `dueStatus(...) === 'due_soon'` (within
@@ -77,6 +81,7 @@ Same shape as Overdue Training, but `dueStatus(...) === 'due_soon'` (within
 - Columns: Member, Grade, Item, Type, Due date, **Days until due** (numeric/mono).
 - Filter: Type. Default sort: Days until due, ascending.
 - Summary line: `N due within 30 days`.
+- **Row deep-links** to `/amtr/<memberId>` (same mechanism as Overdue Training).
 
 ### 5. AMTR — Inspection Status (new table descriptor)
 **One row per member**, summarizing the member's **latest completed** monthly
@@ -91,7 +96,8 @@ record self-inspection.
   appear as *Never inspected*. The exact "findings count" field on
   `amtr_inspections` is resolved in the implementation plan (the row stores the
   filled checklist + results).
-- Row deep-links to `/amtr` (member record).
+- **Row deep-links** to `/amtr/<memberId>` (or `/amtr/<memberId>/inspect` to open
+  the member's inspection directly — both routes exist).
 
 ## Architecture
 
@@ -118,7 +124,11 @@ Each new table report = a `TableWidgetDescriptor` (`lib/dashboard/table/
 descriptors/amtr-*.tsx`) with its own `useRows`, `columns`, optional `filters`,
 and `summary`. This gives columns/sort/search/filter/resize/color tint for free,
 identical to every other list widget. Registered via the existing
-`tableWidget(meta, descriptor)` helper.
+`tableWidget(meta, descriptor)` helper. Each sets
+`row: { mode: 'deeplink', href: r => `/amtr/${r.memberId}` }` so a clicked row
+jumps to that member's record — the same row-deep-link mechanism the Currency
+widget already uses. (Unit KPIs, being a summary card with no rows, uses only a
+`footerHref`.)
 
 ### Native KPI widget
 `components/dashboard/widgets/amtr-kpis-widget.tsx` — a native component modeled
