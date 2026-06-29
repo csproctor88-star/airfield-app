@@ -235,6 +235,15 @@ export default function DashboardPage() {
   // The active board row.
   const activeBoard = useMemo(() => boards.find(b => b.id === activeId) ?? null, [boards, activeId])
 
+  // Block entering Edit on a shared board the user can't publish; point them to Duplicate.
+  const onToggleEdit = useCallback(() => {
+    if (!editing && activeBoard?.scope === 'shared' && !canPublishShared) {
+      toast('Shared dashboards can only be edited by an admin. Use Duplicate to make your own editable copy.')
+      return
+    }
+    setEditing(e => !e)
+  }, [editing, activeBoard, canPublishShared])
+
   // Cannot delete if it's the user's own default personal board.
   const canDeleteActive = useMemo(() => {
     if (!activeBoard || !userId) return false
@@ -396,7 +405,7 @@ export default function DashboardPage() {
         activeId={activeId}
         onSwitch={onSwitch}
         editing={editing}
-        onToggleEdit={() => setEditing(e => !e)}
+        onToggleEdit={onToggleEdit}
         onAddWidget={() => setShowPalette(true)}
         onNewBoard={() => openModal('new', '')}
         onDuplicate={handleDuplicateBoard}
