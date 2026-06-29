@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
@@ -71,7 +72,9 @@ function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export default function PprPage() {
+function PprContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const baseTimezone = (currentInstallation as { timezone?: string | null } | null)?.timezone || 'UTC'
   const { has: hasPerm } = usePermissions()
@@ -416,6 +419,23 @@ export default function PprPage() {
       cancelled = true
     }
   }, [detailEntry])
+
+  // Deep-link: ?detail=<entry-id> → auto-open the full detail dialog.
+  // Fires once per param value (tracked via ref) so it doesn't re-open
+  // on every render or back-nav after the param is cleared.
+  const handledDetailParam = useRef<string | null>(null)
+  useEffect(() => {
+    const paramId = searchParams.get('detail')
+    if (!paramId || loading || entries.length === 0) return
+    if (handledDetailParam.current === paramId) return
+    handledDetailParam.current = paramId
+    const entry = entries.find(e => e.id === paramId)
+    if (entry && !detailEntry) {
+      setDetailEntry(entry)
+    }
+    // Clear the param from the URL so back-nav doesn't re-open the dialog.
+    router.replace('/ppr')
+  }, [searchParams, entries, loading, detailEntry, router])
 
   async function handleAddRemark() {
     if (!detailEntry || !installationId) return
@@ -2744,6 +2764,14 @@ export default function PprPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function PprPage() {
+  return (
+    <Suspense>
+      <PprContent />
+    </Suspense>
   )
 }
 
