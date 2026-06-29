@@ -24,10 +24,12 @@ function useAllDueItems(): { all: DueItemRow[]; loading: boolean } {
       fetchAmtrByBase<ProgRatRow>('amtr_rat_progress', installationId, 'member_id'),
       fetchAmtrByBase<Catalog1098Row>('amtr_1098_catalog', installationId),
       fetchAmtrByBase<CatalogRatRow>('amtr_rat_catalog', installationId),
-    ]).then(([members, p1098, pRat, cat1098, catRat]) => {
-      setAll(buildDueItemRows(members, p1098, pRat, cat1098, catRat))
-      setLoading(false)
-    })
+    ])
+      .then(([members, p1098, pRat, cat1098, catRat]) => {
+        setAll(buildDueItemRows(members, p1098, pRat, cat1098, catRat))
+      })
+      .catch(() => { /* fetch helpers already return [] on Supabase errors; clear the spinner on any unexpected throw */ })
+      .finally(() => setLoading(false))
   }, [installationId])
 
   return { all, loading }

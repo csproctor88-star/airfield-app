@@ -5,7 +5,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { fetchAmtrMembers } from '@/lib/supabase/amtr'
 import { fetchAmtrInspections } from '@/lib/supabase/amtr-inspections'
 import { latestInspectionPerMember, type InspectionRow } from '@/lib/amtr/report-rows'
-import type { TableWidgetDescriptor } from '@/lib/dashboard/table/types'
+import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
 function resultBadge(v: unknown): React.ReactNode {
   const row = v as InspectionRow
@@ -18,7 +18,7 @@ function resultBadge(v: unknown): React.ReactNode {
   return <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Clean</span>
 }
 
-function useRows() {
+function useRows(_c: TableWidgetConfig) {
   const { installationId } = useInstallation()
   const [rows, setRows] = useState<InspectionRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,10 +29,12 @@ function useRows() {
     Promise.all([
       fetchAmtrMembers(installationId),
       fetchAmtrInspections(installationId),
-    ]).then(([members, inspections]) => {
-      setRows(latestInspectionPerMember(members, inspections))
-      setLoading(false)
-    })
+    ])
+      .then(([members, inspections]) => {
+        setRows(latestInspectionPerMember(members, inspections))
+      })
+      .catch(() => { /* fetch helpers already return [] on Supabase errors; clear the spinner on any unexpected throw */ })
+      .finally(() => setLoading(false))
   }, [installationId])
 
   return { rows, loading }
