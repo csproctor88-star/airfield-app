@@ -282,16 +282,23 @@ export default function DashboardPage() {
   }
 
   // Duplicate the active board into a personal copy the user can edit.
+  const duplicatingRef = useRef(false)
   const handleDuplicateBoard = async () => {
     if (!activeBoard || !installationId || !userId) return
-    const name = `${activeBoard.name} (copy)`
-    const { data, error } = await createBoard({
-      base_id: installationId, owner_id: userId, name, scope: 'personal',
-      layout: validateLayout(widgets),
-    })
-    if (error) { toast.error(error); return }
-    toast.success(`Duplicated to "${name}"`)
-    await refreshBoards(data?.id)
+    if (duplicatingRef.current) return
+    duplicatingRef.current = true
+    try {
+      const name = `${activeBoard.name} (copy)`
+      const { data, error } = await createBoard({
+        base_id: installationId, owner_id: userId, name, scope: 'personal',
+        layout: validateLayout(widgets),
+      })
+      if (error) { toast.error(error); return }
+      toast.success(`Duplicated to "${name}"`)
+      await refreshBoards(data?.id)
+    } finally {
+      duplicatingRef.current = false
+    }
   }
 
   // Rename active board
