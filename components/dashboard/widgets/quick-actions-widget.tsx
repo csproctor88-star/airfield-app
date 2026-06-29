@@ -61,6 +61,37 @@ const DEFAULT_TILES: TileDef[] = [
   { label: 'BASH',            Icon: Bird,           iconColor: 'var(--color-orange)',            href: '/wildlife' },
 ]
 
+// ── Tile resolution (renders ANY selected module, not only the 8 defaults) ────
+// Map from module primary href → icon color (matches DEFAULT_TILES where applicable)
+const HREF_ICON_COLOR: Record<string, string> = {
+  '/checks':         'var(--color-accent)',
+  '/discrepancies':  'var(--color-danger)',
+  '/discrepancies/new': 'var(--color-danger)',
+  '/contractors':    'var(--color-warning)',
+  '/shift-checklist': 'var(--color-accent-secondary)',
+  '/qrc':            'var(--color-warning)',
+  '/scn':            'var(--color-accent)',
+  '/ppr':            'var(--color-accent)',
+  '/wildlife':       'var(--color-orange)',
+}
+
+const DEFAULT_TILE_MAP = new Map(DEFAULT_TILES.map((t) => [t.href, t]))
+
+/** Resolve a selected href to a renderable tile — a default tile if it's one of
+ *  the 8 defaults, otherwise from its nav item (label + icon). null = unknown href. */
+function resolveTile(href: string): TileDef | null {
+  const def = DEFAULT_TILE_MAP.get(href)
+  if (def) return def
+  const navItem = NAV_ITEM_MAP.get(href)
+  if (!navItem) return null
+  return {
+    label: navItem.name,
+    Icon: resolveIcon(navItem.iconName),
+    iconColor: HREF_ICON_COLOR[href] ?? 'var(--color-text-2)',
+    href,
+  }
+}
+
 // ── Widget ─────────────────────────────────────────────────────────────────────
 export function QuickActionsWidget({ config }: Pick<WidgetProps, 'config'>) {
   const { enabledModules, currentInstallation } = useInstallation()
@@ -68,11 +99,13 @@ export function QuickActionsWidget({ config }: Pick<WidgetProps, 'config'>) {
   const router = useRouter()
   const c = config as QuickActionsConfig
 
-  // Module tiles: if config.tiles specified, use that allowlist; otherwise defaults
-  const allowList = Array.isArray(c.tiles) ? new Set(c.tiles) : null
-
-  const tiles = DEFAULT_TILES.filter((t) => {
-    if (allowList && !allowList.has(t.href)) return false
+  // Module tiles: if config.tiles is set, render exactly those (resolving ANY
+  // selected module, in the user's chosen order); otherwise show the default set.
+  const selectedHrefs = Array.isArray(c.tiles) ? c.tiles : null
+  const tiles: TileDef[] = (selectedHrefs
+    ? selectedHrefs.map(resolveTile).filter((t): t is TileDef => t !== null)
+    : DEFAULT_TILES
+  ).filter((t) => {
     const checkHref = t.href === '/discrepancies/new' ? '/discrepancies' : t.href
     return isModuleEnabled(checkHref, enabledModules, airportType)
   })
@@ -174,19 +207,6 @@ const CUSTOM_ICON_OPTIONS: { value: string; label: string }[] = [
   { value: 'Wrench',       label: 'CES / Maintenance' },
   { value: 'Zap',          label: 'QRC / Emergency' },
 ]
-
-// Map from module primary href → icon color (matches DEFAULT_TILES where applicable)
-const HREF_ICON_COLOR: Record<string, string> = {
-  '/checks':         'var(--color-accent)',
-  '/discrepancies':  'var(--color-danger)',
-  '/discrepancies/new': 'var(--color-danger)',
-  '/contractors':    'var(--color-warning)',
-  '/shift-checklist': 'var(--color-accent-secondary)',
-  '/qrc':            'var(--color-warning)',
-  '/scn':            'var(--color-accent)',
-  '/ppr':            'var(--color-accent)',
-  '/wildlife':       'var(--color-orange)',
-}
 
 export function QuickActionsConfigForm({ config, onSave, onCancel }: WidgetConfigProps) {
   const { enabledModules, currentInstallation } = useInstallation()
