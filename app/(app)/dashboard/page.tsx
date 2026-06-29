@@ -14,7 +14,7 @@ import {
 import { saveBoardLayout } from '@/lib/dashboard-board-write'
 import { updateWidgetConfig } from '@/lib/dashboard/widget-config'
 import { getWidgetDef } from '@/lib/dashboard/registry'
-import { validateLayout, type WidgetInstance } from '@/lib/dashboard/layout'
+import { validateLayout, appendWidgetToLayout, type WidgetInstance } from '@/lib/dashboard/layout'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { USER_ROLES } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -319,6 +319,34 @@ export default function DashboardPage() {
     }
   }
 
+  // Copy a single widget (with its config) onto one of the user's boards.
+  const copyWidgetToBoard = async (widget: WidgetInstance, target: string) => {
+    if (!installationId || !userId) return
+    if (target === '__new__') {
+      const name = 'New dashboard'
+      const layout = appendWidgetToLayout([], widget, uuid())
+      const { error } = await createBoard({
+        base_id: installationId, owner_id: userId, name, scope: 'personal', layout,
+      })
+      if (error) { toast.error(error); return }
+      toast.success(`Copied to new dashboard "${name}"`)
+      await refreshBoards()
+      return
+    }
+    const dest = boards.find(b => b.id === target)
+    if (!dest) return
+    const nextLayout = appendWidgetToLayout(dest.layout, widget, uuid())
+    if (target === activeId) {
+      setWidgets(nextLayout); persist(nextLayout)
+    } else {
+      try {
+        await saveBoardLayout({ boardId: target, layout: validateLayout(nextLayout), baseId: installationId, userId })
+      } catch { toast.error('Could not copy the widget'); return }
+    }
+    toast.success(`Copied to "${dest.name}"`)
+    await refreshBoards()
+  }
+
   // Rename active board
   const handleRenameBoard = async () => {
     const name = modalInput.trim()
@@ -399,6 +427,12 @@ export default function DashboardPage() {
     [boards],
   )
 
+  // Personal boards the user can copy a widget into.
+  const copyBoards = useMemo(
+    () => boards.filter(b => b.owner_id === userId).map(b => ({ id: b.id, name: b.name })),
+    [boards, userId],
+  )
+
   // Widget being configured
   const configuringWidget = useMemo(
     () => (configuringId ? widgets.find(w => w.i === configuringId) ?? null : null),
@@ -437,6 +471,8 @@ export default function DashboardPage() {
           onRemove={onRemove}
           onConfigure={(id) => setConfiguringId(id)}
           onWidgetConfigChange={onWidgetConfigChange}
+          copyBoards={copyBoards}
+          onCopyWidget={copyWidgetToBoard}
         />
       )}
 

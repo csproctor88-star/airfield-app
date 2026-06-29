@@ -15,7 +15,7 @@ const COLS = { lg: 12, md: 8, sm: 1 }
 const BREAKPOINTS = { lg: 996, md: 600, sm: 0 }
 
 export function WidgetGrid({
-  widgets, editing, onLayoutChange, onRemove, onConfigure, onWidgetConfigChange,
+  widgets, editing, onLayoutChange, onRemove, onConfigure, onWidgetConfigChange, copyBoards, onCopyWidget,
 }: {
   widgets: WidgetInstance[]
   editing: boolean
@@ -23,6 +23,8 @@ export function WidgetGrid({
   onRemove: (id: string) => void
   onConfigure: (id: string) => void
   onWidgetConfigChange: (id: string, config: Record<string, unknown>) => void
+  copyBoards: { id: string; name: string }[]
+  onCopyWidget: (widget: WidgetInstance, target: string) => void
 }) {
   // A ref (not state) because react-grid-layout fires onBreakpointChange and
   // onLayoutChange synchronously back-to-back on the crossing tick; a state
@@ -71,6 +73,8 @@ export function WidgetGrid({
               onConfigure={def?.ConfigForm ? () => onConfigure(w.i) : undefined}
               color={(w.config?.color as string) || undefined}
               onSetColor={(c) => onWidgetConfigChange(w.i, { ...w.config, color: c })}
+              copyTargets={copyBoards}
+              onCopyTo={(target) => onCopyWidget(w, target)}
             >
               {def ? <def.Component config={w.config} editing={editing} onConfigChange={(c) => onWidgetConfigChange(w.i, c)} />
                    : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This widget is unavailable.</div>}
