@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { ExternalLink, Plus, Trash2, Search } from 'lucide-react'
+import { ExternalLink, Plus, Trash2, Search, GripVertical } from 'lucide-react'
 import type { WidgetConfigProps } from '@/lib/dashboard/widget-registry'
+import { moveItem } from '@/lib/dashboard/array-move'
 
 type LinkRow = { label: string; url: string; description?: string }
 type LinksConfig = { title?: string; links?: LinkRow[] }
@@ -90,6 +91,8 @@ export function LinksConfigForm({ config, onSave, onCancel }: WidgetConfigProps)
   const [rows, setRows] = useState<LinkRow[]>(
     Array.isArray(c.links) && c.links.length ? c.links : [{ label: '', url: '', description: '' }]
   )
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
 
   const input: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 'var(--radius-md)',
@@ -103,8 +106,18 @@ export function LinksConfigForm({ config, onSave, onCancel }: WidgetConfigProps)
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input style={input} placeholder="Widget title (optional)" value={title} onChange={e => setTitle(e.target.value)} />
       {rows.map((r, i) => (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6, borderBottom: '1px solid var(--color-border)' }}>
+        <div
+          key={i}
+          onDragOver={(e) => { e.preventDefault(); if (overIdx !== i) setOverIdx(i) }}
+          onDrop={() => { if (dragIdx !== null) setRows(rs => moveItem(rs, dragIdx, i)); setDragIdx(null); setOverIdx(null) }}
+          style={{
+            display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6, borderBottom: '1px solid var(--color-border)',
+            borderTop: overIdx === i && dragIdx !== null && dragIdx !== i ? '2px solid var(--color-accent)' : undefined,
+            opacity: dragIdx === i ? 0.4 : 1,
+          }}
+        >
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span draggable onDragStart={() => setDragIdx(i)} onDragEnd={() => { setDragIdx(null); setOverIdx(null) }} title="Drag to reorder" style={{ cursor: 'move', userSelect: 'none', color: 'var(--color-text-3)', display: 'flex', flexShrink: 0, alignItems: 'center' }}><GripVertical size={15} /></span>
             <input style={{ ...input, flex: '0 0 35%' }} placeholder="Label" value={r.label} onChange={e => setRow(i, { label: e.target.value })} />
             <input style={{ ...input, flex: 1 }} placeholder="https://…" value={r.url} onChange={e => setRow(i, { url: e.target.value })} />
             <button onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} aria-label="Remove link" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-3)', flexShrink: 0 }}>
