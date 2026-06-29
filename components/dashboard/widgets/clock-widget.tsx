@@ -149,48 +149,80 @@ export function ClockWidget({ config, editing, onConfigChange }: WidgetProps) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, height: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      {/* Equal-slice grid — one row per zone */}
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: `repeat(${zones.length}, 1fr)`,
+        flex: 1,
+        minHeight: 0,
+      }}>
         {zones.map((z, i) => {
           const isZulu = z.tz === 'UTC' || z.tz === 'Etc/UTC'
           return (
             <div key={i} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-              padding: '3px 0',
-              borderBottom: i < zones.length - 1 ? '1px solid var(--color-border)' : undefined,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textAlign: 'center', position: 'relative',
+              borderTop: i > 0 ? '1px solid var(--color-border)' : undefined,
+              padding: '2px 0',
             }}>
-              <span style={{
-                fontSize: 'var(--fs-xs)',
-                color: 'var(--color-text-3)',
-                flexShrink: 0,
-                minWidth: 0,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                maxWidth: '40%',
-              }}>{z.label}</span>
-              <span style={{
+              {/* Zone label */}
+              <div style={{
+                fontSize: 'var(--fs-2xs)',
+                color: isZulu ? 'var(--color-text-2)' : 'var(--color-text-3)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontWeight: isZulu ? 600 : 400,
+                lineHeight: 1.2,
+              }}>{z.label}</div>
+
+              {/* Large time */}
+              <div style={{
                 fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-                fontSize: isZulu ? 'var(--fs-base)' : 'var(--fs-sm)',
-                fontWeight: isZulu ? 700 : 500,
-                color: isZulu ? 'var(--color-text-1)' : 'var(--color-text-2)',
+                fontSize: 'var(--fs-xl)',
+                fontWeight: 700,
                 letterSpacing: '0.04em',
-                flexShrink: 0,
+                color: isZulu ? 'var(--color-text-1)' : 'var(--color-text-2)',
+                lineHeight: 1.1,
               }}>
                 {now ? formatInTz(now, z.tz) : '—'}
-                {isZulu && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginLeft: 2 }}>Z</span>}
-              </span>
+                {isZulu && (
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginLeft: 3 }}>Z</span>
+                )}
+              </div>
+
+              {/* Zulu date (primary only) */}
+              {isZulu && (
+                <div style={{
+                  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+                  fontSize: 'var(--fs-xs)',
+                  color: 'var(--color-text-3)',
+                  letterSpacing: '0.03em',
+                  lineHeight: 1.2,
+                }}>
+                  {now ? formatZuluDate(now) : '—'}
+                </div>
+              )}
+
+              {/* Remove button (editing only) */}
               {editing && (
                 <button
                   onClick={() => removeZone(i)}
                   aria-label={`Remove ${z.label}`}
-                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-3)', padding: 0, flexShrink: 0 }}
+                  style={{
+                    position: 'absolute', top: 4, right: 4,
+                    border: 'none', background: 'transparent', cursor: 'pointer',
+                    color: 'var(--color-text-3)', padding: 0,
+                  }}
                 >
-                  <X size={12} />
+                  <X size={11} />
                 </button>
               )}
             </div>
           )
         })}
       </div>
+
       {editing && onConfigChange && (
         <AddClockForm
           showAdd={showAdd} setShowAdd={setShowAdd}

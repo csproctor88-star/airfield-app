@@ -26,7 +26,7 @@ export function EmbedWidget({ config }: { config: Record<string, unknown> }) {
   try { host = new URL(url).hostname } catch { /* keep raw url */ }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
         paddingBottom: 6, flexShrink: 0,
@@ -45,8 +45,8 @@ export function EmbedWidget({ config }: { config: Record<string, unknown> }) {
         title={c.title || 'Embedded site'}
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         style={{
-          width: '100%', flex: 1, border: 'none', borderRadius: 'var(--radius-sm)',
-          background: 'var(--color-bg-inset)',
+          width: '100%', flex: 1, minHeight: 0, height: '100%', border: 'none',
+          borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-inset)',
         }}
       />
     </div>
