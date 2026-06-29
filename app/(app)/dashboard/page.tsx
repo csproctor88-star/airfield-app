@@ -335,7 +335,10 @@ export default function DashboardPage() {
     }
     const dest = boards.find(b => b.id === target)
     if (!dest) return
-    const nextLayout = appendWidgetToLayout(dest.layout, widget, uuid())
+    // For the active board, the live `widgets` state is the source of truth
+    // (it may hold unsaved moves or a copy still inside the 800ms persist debounce);
+    // for other boards, read their persisted layout from `boards`.
+    const nextLayout = appendWidgetToLayout(target === activeId ? widgets : dest.layout, widget, uuid())
     if (target === activeId) {
       setWidgets(nextLayout); persist(nextLayout)
     } else {
