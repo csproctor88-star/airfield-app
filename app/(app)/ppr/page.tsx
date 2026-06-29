@@ -28,6 +28,7 @@ import {
   addPprRemark,
   cancelPprEntry,
   addPprCoordinationAgencies,
+  fetchPprEntryById,
   isSummaryColumn,
   isActivePpr,
   formatPprColumnValue,
@@ -421,21 +422,23 @@ function PprContent() {
   }, [detailEntry])
 
   // Deep-link: ?detail=<entry-id> → auto-open the full detail dialog.
-  // Fires once per param value (tracked via ref) so it doesn't re-open
-  // on every render or back-nav after the param is cleared.
+  // Fires once per param value (tracked via ref). Falls back to a
+  // single-entry fetch when the entry is outside the loaded date range.
   const handledDetailParam = useRef<string | null>(null)
   useEffect(() => {
     const paramId = searchParams.get('detail')
-    if (!paramId || loading || entries.length === 0) return
+    if (!paramId || loading) return
     if (handledDetailParam.current === paramId) return
     handledDetailParam.current = paramId
-    const entry = entries.find(e => e.id === paramId)
-    if (entry && !detailEntry) {
-      setDetailEntry(entry)
-    }
-    // Clear the param from the URL so back-nav doesn't re-open the dialog.
-    router.replace('/ppr')
-  }, [searchParams, entries, loading, detailEntry, router])
+    let cancelled = false
+    ;(async () => {
+      let entry = entries.find(e => e.id === paramId) ?? null
+      if (!entry) entry = await fetchPprEntryById(paramId)
+      if (!cancelled && entry) setDetailEntry(entry)
+      if (!cancelled) router.replace('/ppr')
+    })()
+    return () => { cancelled = true }
+  }, [searchParams, entries, loading, router])
 
   async function handleAddRemark() {
     if (!detailEntry || !installationId) return

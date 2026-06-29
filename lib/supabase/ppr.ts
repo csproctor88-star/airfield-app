@@ -266,6 +266,18 @@ export async function deletePprColumn(id: string): Promise<boolean> {
 
 // ── Entries CRUD ──
 
+export async function fetchPprEntryById(id: string): Promise<PprEntry | null> {
+  const supabase = db()
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('ppr_entries')
+    .select('*')
+    .eq('id', id)
+    .single()
+  if (error || !data) return null
+  return data as PprEntry
+}
+
 export async function fetchPprEntries(baseId: string, dateFrom?: string, dateTo?: string): Promise<PprEntry[]> {
   const supabase = db()
   if (!supabase) return []

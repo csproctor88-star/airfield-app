@@ -41,9 +41,11 @@ interface Props {
   onTemplatesSaved?: (templates: TemplateCategory[]) => void
   /** ICAO code for NOTAM lookup auto-fill */
   icao?: string | null
+  /** When true the modal card expands to near-full-screen (96vw × 92vh) */
+  fullScreen?: boolean
 }
 
-export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, customTemplates, onTemplatesSaved, icao }: Props) {
+export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, customTemplates, onTemplatesSaved, icao, fullScreen }: Props) {
   const { currentInstallation } = useInstallation()
   const airportType = getAirportType(currentInstallation)
   // Filter categories by airport_type: civilian Part 139 bases drop
@@ -317,7 +319,10 @@ export function TemplatePicker({ onSubmit, onClose, isAdmin, installationId, cus
     >
       <div
         className="card"
-        style={{ width: '100%', maxWidth: 720, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        style={fullScreen
+          ? { width: '96vw', height: '92vh', maxWidth: 'none', maxHeight: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+          : { width: '100%', maxWidth: 720, maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+        }
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
