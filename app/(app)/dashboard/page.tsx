@@ -116,6 +116,20 @@ export default function DashboardPage() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [])
 
+  // The dashboard is a tall, full-bleed grid; browsers restore the previous
+  // scroll position on reload/return, opening it mid-page. Force it to the top
+  // on mount, with a follow-up tick after the async board/widget load reflows.
+  useEffect(() => {
+    const toTop = () => {
+      document.querySelector('.app-content')?.scrollTo({ top: 0 })
+      window.scrollTo({ top: 0 })
+    }
+    toTop()
+    const raf = requestAnimationFrame(toTop)
+    const timer = setTimeout(toTop, 150)
+    return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
+  }, [])
+
   // Helper: refresh boards list, optionally switch to a specific id.
   const refreshBoards = useCallback(async (switchTo?: string) => {
     if (!installationId) return
