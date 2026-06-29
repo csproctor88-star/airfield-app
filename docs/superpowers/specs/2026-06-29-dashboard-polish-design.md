@@ -19,7 +19,6 @@ Three independent dashboard refinements from user testing (screenshots in
 
 ## Out of scope (YAGNI)
 
-- Drag-and-drop link reordering (up/down buttons suffice).
 - Per-report column/filter customization inside the consolidated AMTR widget
   (report picker only; existing column config on legacy instances is still honored
   at render — see below).
@@ -54,20 +53,26 @@ Each widget is verified visually after the change (Task-level manual check).
 
 ---
 
-## Feature B — Reorder links in the Links widget
+## Feature B — Drag-and-drop link reorder in the Links widget
 
 **Where:** `LinksConfigForm` (in `components/dashboard/widgets/links-widget.tsx`),
 the row editor that already maps `rows` with Label/URL/Description inputs + a Trash
 remove button.
 
-**Change:** each row gets **▲ (move up)** and **▼ (move down)** buttons beside the
-remove button. ▲ is disabled on the first row, ▼ on the last. They reorder the local
-`rows` array; the existing **Save** persists the new order into `config.links`
-(order is already preserved on save — the widget renders `links` in array order).
+**Change:** each row becomes **drag-to-reorder** via a grip handle (lucide
+`GripVertical`), reusing the codebase's existing native HTML5 drag pattern from the
+AMTR catalog editors (e.g. `components/amtr/simple-catalog-editor.tsx`,
+`milestone-catalog-editor.tsx`). The row is `draggable`; `onDragStart` records the
+source index, `onDragOver` (preventDefault to allow drop) marks the hovered index,
+and `onDrop` reorders the local `rows`. The existing **Save** persists the new order
+into `config.links` (the widget renders `links` in array order). No new dependency.
 
 **Pure helper (unit-tested):** `moveItem(arr, from, to)` in `lib/dashboard/array-move.ts`
-— returns a new array with the element moved (no mutation; out-of-range `to` is a
-no-op). Reused by the up/down handlers.
+— returns a new array with the element moved (no mutation; out-of-range indices are a
+no-op). Backs the drop handler (`moveItem(rows, dragIndex, dropIndex)`).
+
+Note: native HTML5 DnD is mouse/desktop-oriented (the dashboard config is used on
+desktop/tablet); touch-drag is not a goal here.
 
 ---
 
@@ -76,27 +81,84 @@ no-op). Reused by the up/down handlers.
 **Goal:** the palette shows a single **"AMTR"** entry; the user picks which report it
 shows in the gear.
 
+### Reports (9 total)
+
+| `report` value | Label | Render | Scope | Status |
+|---|---|---|---|---|
+| `currency` | Currency | `amtrDescriptor` (table) | unit | exists |
+| `kpis` | Unit KPIs | `AmtrKpisWidget` (native) | unit | exists |
+| `overdue` | Overdue Training | `amtrOverdueDescriptor` (table) | unit | exists |
+| `due-soon` | Due Soon (30 days) | `amtrDueSoonDescriptor` (table) | unit | exists |
+| `inspections` | Inspection Status | `amtrInspectionsDescriptor` (table) | unit | exists |
+| `my-training` | My Training Record | `amtrMyTrainingDescriptor` (table) | **self** | new |
+| `progress` | Training Progress | `amtrProgressDescriptor` (table) | unit | new |
+| `compliance` | Task Compliance | `amtrComplianceDescriptor` (table) | unit | new |
+| `pending-signatures` | Pending Signatures | `amtrPendingSignaturesDescriptor` (table) | **self** | new |
+
 ### The consolidated widget
 New file `components/dashboard/widgets/amtr-widget.tsx` exporting:
 
-- A report map:
+- A report map of the eight **table** reports → their descriptors:
   ```
   const AMTR_REPORTS = {
-    currency:    amtrDescriptor,
-    overdue:     amtrOverdueDescriptor,
-    'due-soon':  amtrDueSoonDescriptor,
-    inspections: amtrInspectionsDescriptor,
+    currency: amtrDescriptor, overdue: amtrOverdueDescriptor,
+    'due-soon': amtrDueSoonDescriptor, inspections: amtrInspectionsDescriptor,
+    'my-training': amtrMyTrainingDescriptor, progress: amtrProgressDescriptor,
+    compliance: amtrComplianceDescriptor, 'pending-signatures': amtrPendingSignaturesDescriptor,
   }  // 'kpis' is the one native (non-table) report
   ```
 - `AmtrWidget(props: WidgetProps)` — reads `report = props.config.report ?? 'currency'`;
   if `'kpis'` renders `<AmtrKpisWidget />`; otherwise renders
   `<TableWidget descriptor={AMTR_REPORTS[report] ?? amtrDescriptor} config={props.config} onConfigChange={props.onConfigChange} />`.
+  Unknown/missing `report` falls back to `amtrDescriptor` (Currency).
 - `AmtrReportConfigForm({ config, onSave, onCancel })` — a Title text input + a
-  **Report** `<select>` (Currency · Unit KPIs · Overdue Training · Due Soon (30 days)
-  · Inspection Status) + Save/Cancel. **Save preserves existing config**:
-  `onSave({ ...config, title: title.trim() || undefined, report })` — so a legacy
-  Currency instance's saved `columns`/`filters` survive a config save, and are still
-  honored at render by `TableWidget`.
+  **Report** `<select>` listing all nine labels above + Save/Cancel. **Save preserves
+  existing config**: `onSave({ ...config, title: title.trim() || undefined, report })`
+  — so a legacy Currency instance's saved `columns`/`filters` survive a config save,
+  and are still honored at render by `TableWidget`.
+
+### Four new report descriptors
+
+Each is a `TableWidgetDescriptor` (`lib/dashboard/table/descriptors/`), reusing the
+existing pure helpers (`buildDueItemRows`, `buildMemberRollup`, `complianceCounts`)
+and the `/amtr/reports` fetch logic. New pure assembly logic goes in
+`lib/amtr/report-rows.ts` (next to the existing builders) and is unit-tested.
+
+1. **`amtr-my-training.tsx` → `amtrMyTrainingDescriptor`** (self). `useRows` fetches
+   members + 1098 + RAT progress + the two catalogs (same as `amtr-due-items`),
+   resolves the signed-in user via `createClient().auth.getUser()` → finds the member
+   with `member.user_id === user.id`, then `buildDueItemRows(...)` filtered to that
+   member and to `status ∈ {overdue, due_soon}`. Columns: Item, Type, Due, Status
+   (badge), Days. Row deep-links to `/amtr/<myMemberId>`. Empty state when the user
+   has no AMTR member record ("No training record for your account."). Summary:
+   `N outstanding`.
+
+2. **`amtr-progress.tsx` → `amtrProgressDescriptor`** (unit). `useRows` replicates the
+   `/amtr/reports` rollup: fetch the JQS catalog (count `kind === 'item'` = required),
+   each member's JQS progress (done), the formal catalog + formal progress, then
+   `buildMemberRollup(...)` per member. Columns: Member, Grade, JQS % (mono), Formal %
+   (mono), Overdue (count). Row deep-links to `/amtr/<memberId>`. Summary:
+   `N members · avg JQS X%`. The per-member assembly (counts → `buildMemberRollup`)
+   is a pure `buildProgressRows(...)` helper, unit-tested.
+
+3. **`amtr-compliance.tsx` → `amtrComplianceDescriptor`** (unit). `useRows` fetches the
+   recurring tasks (1098 + RAT catalogs) + all members' progress, and for each task
+   runs `complianceCounts(items, applicableCount)`. Columns: Task, Frequency, Current
+   (`done/total`), % (mono, right). No row deep-link (task-level); `footerHref: '/amtr/reports'`.
+   Summary: `N tasks`. The per-task assembly is a pure `buildTaskComplianceRows(...)`
+   helper, unit-tested.
+
+4. **`amtr-pending-signatures.tsx` → `amtrPendingSignaturesDescriptor`** (self).
+   `useRows` calls `fetchAmtrNotifications()` (already RLS-scoped to the signed-in
+   user) and keeps `kind ∈ {signature_required, trainer_signature_required}` with
+   `dismissed_at == null`. Columns: Item (from notification `body`), Awaiting (kind →
+   "trainee" / "trainer or certifier" label), When (created date). Row deep-links to
+   `/amtr/<member_id>` (the notification carries `member_id`). Empty state: "No
+   signatures awaiting you." Summary: `N awaiting your signature`.
+
+All four are gated by the consolidated widget's `amtr:view`. The two **self** reports
+show only the signed-in user's own data and are therefore privacy-safe for every
+AMTR-record holder.
 
 ### Registry changes (`lib/dashboard/registry.tsx`)
 - Replace the current `'amtr'` table entry with the consolidated native widget:
@@ -136,14 +198,23 @@ New file `components/dashboard/widgets/amtr-widget.tsx` exporting:
 |---|---|
 | `lib/dashboard/array-move.ts` (new) | pure `moveItem(arr, from, to)` |
 | `tests/dashboard-array-move.test.ts` (new) | unit tests for `moveItem` |
-| `components/dashboard/widgets/links-widget.tsx` | ▲/▼ reorder in `LinksConfigForm` |
+| `components/dashboard/widgets/links-widget.tsx` | drag-and-drop reorder in `LinksConfigForm` |
 | `components/dashboard/widgets/amtr-widget.tsx` (new) | `AmtrWidget` + `AmtrReportConfigForm` + report map |
+| `lib/dashboard/table/descriptors/amtr-my-training.tsx` (new) | `amtrMyTrainingDescriptor` (self) |
+| `lib/dashboard/table/descriptors/amtr-progress.tsx` (new) | `amtrProgressDescriptor` |
+| `lib/dashboard/table/descriptors/amtr-compliance.tsx` (new) | `amtrComplianceDescriptor` |
+| `lib/dashboard/table/descriptors/amtr-pending-signatures.tsx` (new) | `amtrPendingSignaturesDescriptor` (self) |
+| `lib/amtr/report-rows.ts` | add pure `buildProgressRows` + `buildTaskComplianceRows` (+ types) |
+| `tests/amtr-report-rows.test.ts` | unit tests for the two new builders |
 | `lib/dashboard/widget-registry.ts` | add `hidden?: boolean` to `WidgetMeta`; filter `hidden` in the palette list |
 | `lib/dashboard/registry.tsx` | consolidated `amtr` entry; `hidden: true` on the 4 AMTR keys; import the new widget |
 | `components/dashboard/widgets/amtr-kpis-widget.tsx`, `last-check-widget.tsx`, `report-{discrepancies,trends,aging,lighting,daily}-widget.tsx`, `inspection-status-widget.tsx`, `feedback-widget.tsx` | center metric content |
 
-No migration. The `amtr-due-items.tsx` / `amtr-inspections.tsx` descriptors and the
-`amtr-kpis-widget` component are reused as-is by the consolidated widget.
+No migration. The existing `amtr-due-items.tsx` / `amtr-inspections.tsx` descriptors,
+the `amtr-kpis-widget` component, and the `buildDueItemRows` / `buildMemberRollup` /
+`complianceCounts` pure helpers are reused by the consolidated widget and the new
+descriptors. The `/amtr/reports` page is the reference for the progress + compliance
+fetch shapes.
 
 ## Error handling
 
@@ -155,12 +226,18 @@ No migration. The `amtr-due-items.tsx` / `amtr-inspections.tsx` descriptors and 
 
 ## Testing
 
-- **Unit:** `moveItem(arr, from, to)` — moves up, moves down, first/last no-op,
-  out-of-range no-op, does not mutate input.
+- **Unit:** `moveItem(arr, from, to)` — moves up, moves down, first/last/out-of-range
+  no-op, no input mutation. `buildProgressRows` — % math via `buildMemberRollup`,
+  member ordering, zero-required guard. `buildTaskComplianceRows` — per-task
+  current/total + %, RAT-exempt applicability, empty-task list.
+- **Descriptor invariants:** extend `tests/dashboard-table-descriptors.test.ts` to
+  cover the four new static descriptors (unique column keys, default columns).
 - **Build gate:** `npx tsc --noEmit` + `npm run build` green; full `npx vitest run`.
-- **Manual smoke (after deploy):** the 9 tiles read centered; Links ▲/▼ reorder and
-  persist; the palette shows ONE "AMTR" entry; adding it + switching the Report
-  dropdown renders each of the five reports; an existing Currency `amtr` widget and
+- **Manual smoke (after deploy):** the 9 tiles read centered; Links rows drag-reorder
+  and persist; the palette shows ONE "AMTR" entry; adding it + switching the Report
+  dropdown renders all **nine** reports — including **My Training Record** (your own
+  outstanding items) and **Pending Signatures** (your own) scoped to you, **Training
+  Progress** and **Task Compliance** unit-wide; an existing Currency `amtr` widget and
   any previously-added `amtr-overdue`/etc. instance still render.
 
 ## Risks / notes
