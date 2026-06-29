@@ -288,9 +288,12 @@ export default function DashboardPage() {
     setModalBusy(true)
     const { data, error } = await createBoard({
       base_id: installationId, owner_id: null, name, scope: 'shared',
+      // Copy the current dashboard's widgets into the shared board, so sharing
+      // publishes what the user built rather than creating an empty board.
+      layout: validateLayout(widgets),
     })
     if (error) { toast.error(error); setModalBusy(false); return }
-    toast.success(`Shared board "${name}" created`)
+    toast.success(`Shared board "${name}" created with ${widgets.length} widget${widgets.length === 1 ? '' : 's'}`)
     closeModal()
     await refreshBoards(data?.id)
   }
