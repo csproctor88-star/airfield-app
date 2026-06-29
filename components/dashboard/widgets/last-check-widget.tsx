@@ -59,7 +59,7 @@ export function LastCheckWidget() {
   return (
     <Link
       href="/checks"
-      style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, height: '100%' }}
+      style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, height: '100%' }}
     >
       <Clock size={20} color={hasData ? 'var(--color-accent)' : 'var(--color-text-3)'} strokeWidth={2.25} />
       <div>

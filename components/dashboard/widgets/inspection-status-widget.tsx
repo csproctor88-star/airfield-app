@@ -45,7 +45,7 @@ export function InspectionStatusWidget() {
   }
 
   return (
-    <Link href="/inspections" style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href="/inspections" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
       {row('Airfield Inspection', af, Sunrise)}
       {row('Lighting Inspection', lt, Moon)}
     </Link>

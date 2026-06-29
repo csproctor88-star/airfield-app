@@ -36,7 +36,7 @@ export function ReportAgingWidget() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', gap: 20, marginBottom: 8, alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: 20, marginBottom: 8, alignItems: 'flex-end', justifyContent: 'center' }}>
         <div>
           <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Open</div>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
@@ -59,7 +59,7 @@ export function ReportAgingWidget() {
         )}
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
         {!loading && summary && summary.total === 0 && (
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No open discrepancies.</div>
         )}

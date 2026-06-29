@@ -46,7 +46,7 @@ export function AmtrKpisWidget() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end', flex: 1 }}>
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
         <Tile label="Members" value={loading ? '…' : k.members} />
         <Tile label="Required" value={loading ? '…' : k.requiredTasks} />
         <Tile label="Complete" value={loading ? '…' : k.complete} color={k.complete > 0 ? 'var(--color-success)' : undefined} />
