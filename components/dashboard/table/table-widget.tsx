@@ -46,12 +46,13 @@ export function TableWidget<Row>({
     [config, descriptor, allColumns],
   )
 
-  const { rows, loading } = descriptor.useRows(cfg)
-  const filtered = useMemo(() => applyFilters(rows, cfg, descriptor.filters), [rows, cfg, descriptor.filters])
-  const visibleCols = useMemo(() => resolveVisibleColumns(allColumns, cfg.columns), [allColumns, cfg.columns])
-
+  const [reloadNonce, setReloadNonce] = useState(0)
   const [sort, setSort] = useState<SortState>(null)
   const [search, setSearch] = useState('')
+
+  const { rows, loading } = descriptor.useRows(cfg, reloadNonce)
+  const filtered = useMemo(() => applyFilters(rows, cfg, descriptor.filters), [rows, cfg, descriptor.filters])
+  const visibleCols = useMemo(() => resolveVisibleColumns(allColumns, cfg.columns), [allColumns, cfg.columns])
 
   const summary = descriptor.summary?.(filtered) ?? []
 
@@ -167,6 +168,11 @@ export function TableWidget<Row>({
             </span>
           ))}
         </div>
+      )}
+
+      {/* Optional Toolbar (e.g. quick-add button) */}
+      {descriptor.Toolbar && (
+        <descriptor.Toolbar reload={() => setReloadNonce(n => n + 1)} />
       )}
 
       {/* Search box */}

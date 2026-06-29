@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 export interface ColumnDef<Row> {
   key: string
@@ -53,5 +53,6 @@ export interface TableWidgetDescriptor<Row> {
   footerHref?: string
   newHref?: string
   summary?: (rows: Row[]) => SummaryStat[]
-  useRows: (config: TableWidgetConfig) => { rows: Row[]; loading: boolean }
+  useRows: (config: TableWidgetConfig, reloadNonce?: number) => { rows: Row[]; loading: boolean }
+  Toolbar?: ComponentType<{ reload: () => void }>
 }
