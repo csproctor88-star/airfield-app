@@ -1,5 +1,5 @@
 'use client'
-import { Pencil, Plus, Check, Share2, Trash2, PenLine, Star } from 'lucide-react'
+import { Pencil, Plus, Check, Share2, Trash2, PenLine, Star, Copy } from 'lucide-react'
 
 export interface BoardSummary {
   id: string
@@ -16,6 +16,7 @@ export interface BoardBarProps {
   onToggleEdit: () => void
   onAddWidget: () => void
   onNewBoard: () => void
+  onDuplicate: () => void
   onRenameBoard: () => void
   onDeleteBoard: () => void
   canDeleteActive: boolean
@@ -26,7 +27,7 @@ export interface BoardBarProps {
 
 export function BoardBar({
   boards, activeId, onSwitch, editing, onToggleEdit, onAddWidget,
-  onNewBoard, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls, onSetDefault,
+  onNewBoard, onDuplicate, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls, onSetDefault,
 }: BoardBarProps) {
   const btn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
@@ -97,6 +98,11 @@ export function BoardBar({
       {/* New board */}
       <button style={btn} onClick={onNewBoard} title="New board">
         <Plus size={14} strokeWidth={2.5} /> New
+      </button>
+
+      {/* Duplicate active board → personal copy (always available) */}
+      <button style={btn} onClick={onDuplicate} title="Duplicate this dashboard to your own">
+        <Copy size={14} strokeWidth={2.5} /> Duplicate
       </button>
 
       {/* Edit controls */}
