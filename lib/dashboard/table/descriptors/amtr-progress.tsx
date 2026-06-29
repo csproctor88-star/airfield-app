@@ -19,7 +19,7 @@ function useRows(): { rows: ProgressRow[]; loading: boolean } {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!installationId) return
+    if (!installationId) { setLoading(false); return }
     let cancelled = false
     setLoading(true)
     Promise.all([

@@ -28,7 +28,7 @@ function useRows(): { rows: DueItemRow[]; loading: boolean } {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!installationId) return
+    if (!installationId) { setLoading(false); return }
     let cancelled = false
     setLoading(true)
     ;(async () => {
