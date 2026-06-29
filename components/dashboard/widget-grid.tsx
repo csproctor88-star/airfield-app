@@ -62,6 +62,7 @@ export function WidgetGrid({
   // letting a collapsed md/sm layout overwrite the wrong device slot. A ref is
   // updated synchronously and read live.
   const breakpointRef = useRef<string>('lg')
+  const justCrossedRef = useRef(false)
 
   const toRgl = (ws: WidgetInstance[]): Layout[] => ws.map(w => {
     const def = getWidgetDef(w.type)
@@ -74,13 +75,25 @@ export function WidgetGrid({
     ...(boardLayout.sm ? { sm: toRgl(boardLayout.sm) } : {}),
   }
 
+  function samePositions(a: WidgetInstance[], b: WidgetInstance[] | undefined): boolean {
+    if (!b || a.length !== b.length) return false
+    const m = new Map(b.map(w => [w.i, w]))
+    return a.every(w => { const o = m.get(w.i); return !!o && o.x === w.x && o.y === w.y && o.w === w.w && o.h === w.h })
+  }
+
   function handleChange(current: Layout[]) {
+    // Ignore the reflow react-grid-layout emits right after a breakpoint cross —
+    // it's not a user drag, and would otherwise persist an auto-derived layout.
+    if (justCrossedRef.current) { justCrossedRef.current = false; return }
     const byId = new Map(current.map(l => [l.i, l]))
     const next = boardLayout.lg.map(c => {
       const l = byId.get(c.i)
       return l ? { ...c, x: l.x, y: l.y, w: l.w, h: l.h } : c
     })
-    onDeviceLayoutChange(breakpointRef.current as DeviceClass, next)
+    const device = breakpointRef.current as DeviceClass
+    const currentArr = device === 'lg' ? boardLayout.lg : device === 'md' ? boardLayout.md : boardLayout.sm
+    if (samePositions(next, currentArr)) return   // no real change — don't dirty / write
+    onDeviceLayoutChange(device, next)
   }
 
   return (
@@ -94,7 +107,7 @@ export function WidgetGrid({
       isDraggable={editing}
       isResizable={editing}
       resizeHandles={['nw', 'ne', 'sw', 'se']}
-      onBreakpointChange={(bp) => { breakpointRef.current = bp }}
+      onBreakpointChange={(bp) => { breakpointRef.current = bp; justCrossedRef.current = true }}
       onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
       draggableCancel="a,button,.wt-col-resize"
     >

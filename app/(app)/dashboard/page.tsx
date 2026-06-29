@@ -15,7 +15,7 @@ import { saveBoardLayout } from '@/lib/dashboard-board-write'
 import { updateWidgetConfig } from '@/lib/dashboard/widget-config'
 import { getWidgetDef } from '@/lib/dashboard/registry'
 import {
-  validateLayout, appendWidgetToLayout, appendWidgetToBoardLayout,
+  appendWidgetToLayout, appendWidgetToBoardLayout,
   reconcileBoardLayout,
   type WidgetInstance, type BoardLayout, type DeviceClass,
 } from '@/lib/dashboard/layout'
