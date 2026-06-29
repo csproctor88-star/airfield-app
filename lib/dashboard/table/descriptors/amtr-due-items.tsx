@@ -57,7 +57,11 @@ function useOverdueRows() {
   const { all, loading } = useAllDueItems()
   const rows = all
     .filter(r => r.status === 'overdue')
-    .sort((a, b) => (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0)) // most overdue first
+    .sort((a, b) =>
+      (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0) ||
+      a.memberName.localeCompare(b.memberName) ||
+      a.itemName.localeCompare(b.itemName)
+    ) // most overdue first, then by member, then item
   return { rows, loading }
 }
 
@@ -73,7 +77,7 @@ export const amtrOverdueDescriptor: TableWidgetDescriptor<DueItemRow> = {
     { count: distinctMembers(rows), label: 'members' },
   ],
   footerHref: '/amtr',
-  useRows: () => useOverdueRows(),
+  useRows: useOverdueRows,
 }
 
 // ── Due Soon (next 30 days) ──────────────────────────────────────
@@ -81,7 +85,11 @@ function useDueSoonRows() {
   const { all, loading } = useAllDueItems()
   const rows = all
     .filter(r => r.status === 'due_soon')
-    .sort((a, b) => (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0)) // soonest first
+    .sort((a, b) =>
+      (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0) ||
+      a.memberName.localeCompare(b.memberName) ||
+      a.itemName.localeCompare(b.itemName)
+    ) // soonest first, then by member, then item
   return { rows, loading }
 }
 
@@ -97,5 +105,5 @@ export const amtrDueSoonDescriptor: TableWidgetDescriptor<DueItemRow> = {
     { count: distinctMembers(rows), label: 'members' },
   ],
   footerHref: '/amtr',
-  useRows: () => useDueSoonRows(),
+  useRows: useDueSoonRows,
 }
