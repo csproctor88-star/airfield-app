@@ -141,13 +141,15 @@ export function TableWidget<Row>({
       dragState.current = null
       setDragWidths({})
       if (onConfigChange) {
-        onConfigChange({
-          ...config,
-          columnWidths: {
-            ...(cfg.columnWidths ?? {}),
-            [ds.key]: finalWidth,
-          },
-        })
+        // Persist every visible column's current rendered width so that
+        // switching to fixed layout doesn't snap un-touched columns to 140px.
+        const finalWidths: Record<string, number> = { ...(cfg.columnWidths ?? {}) }
+        for (const col of visibleCols) {
+          const el = thRefs.current.get(col.key)
+          if (el) finalWidths[col.key] = Math.round(el.getBoundingClientRect().width)
+        }
+        finalWidths[ds.key] = Math.round(finalWidth)
+        onConfigChange({ ...config, columnWidths: finalWidths })
       }
     }
 
@@ -220,7 +222,14 @@ export function TableWidget<Row>({
                       }}
                       onClick={() => handleHeaderClick(c.key)}
                       style={{
-                        position: 'relative',
+                        // sticky so the header row stays visible while the body scrolls;
+                        // position:sticky establishes the containing block for the
+                        // absolute resize handle child, so the handle still sits on the
+                        // right edge correctly.
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 2,
+                        background: 'var(--color-bg-surface)',
                         textAlign: align,
                         padding: '2px 16px 4px 0',
                         fontSize: 'var(--fs-2xs)',
@@ -276,10 +285,14 @@ export function TableWidget<Row>({
                       color: 'var(--color-text-1)',
                       borderBottom: '1px solid var(--color-border)',
                       fontFamily: c.mono ? 'var(--font-family-mono)' : undefined,
+                      // When fixed layout is active (columns have been resized) wrap
+                      // content so it stays readable at the chosen width.
+                      // When auto layout, keep the original nowrap+ellipsis behaviour.
                       maxWidth: useFixedLayout ? undefined : 180,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      overflow: useFixedLayout ? 'visible' : 'hidden',
+                      textOverflow: useFixedLayout ? undefined : 'ellipsis',
+                      whiteSpace: useFixedLayout ? 'normal' : 'nowrap',
+                      wordBreak: useFixedLayout ? 'break-word' : undefined,
                     }}>{content}</td>
                   )
                 })
@@ -288,6 +301,7 @@ export function TableWidget<Row>({
                   return (
                     <tr
                       key={ri}
+                      className="wt-row-link"
                       onClick={() => router.push(b.href(row))}
                       style={{ cursor: 'pointer' }}
                     >

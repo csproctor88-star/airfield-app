@@ -1482,3 +1482,9 @@ html, body {
 .gp-login-logo--dark { display: none; }
 [data-theme='dark'] .gp-login-logo--light { display: none; }
 [data-theme='dark'] .gp-login-logo--dark { display: block; }
+
+/* ── Dashboard table widget ─────────────────────────────────────── */
+/* Clickable (deep-link) rows get a pointer + tinted hover so users
+   know the row is interactive. Non-deeplink rows get no hover. */
+.wt-row-link { cursor: pointer; transition: background-color 0.12s ease; }
+.wt-row-link:hover td { background: color-mix(in srgb, var(--color-accent) 9%, transparent); }
