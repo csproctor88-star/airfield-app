@@ -238,10 +238,19 @@ export default function DashboardPage() {
   // Block entering Edit on a shared board the user can't publish; point them to Duplicate.
   const onToggleEdit = useCallback(() => {
     if (!editing && activeBoard?.scope === 'shared' && !canPublishShared) {
-      toast('Shared dashboards can only be edited by an admin. Use Duplicate to make your own editable copy.')
+      toast('Shared dashboards can only be edited by an admin. Use Duplicate to make your own editable copy.', { id: 'shared-edit-guard' })
       return
     }
     setEditing(e => !e)
+  }, [editing, activeBoard, canPublishShared])
+
+  // Safety net: if the active board becomes shared and the user can't publish,
+  // drop out of Edit mode (covers landing on a shared board via refreshBoards,
+  // not just the explicit onToggleEdit click).
+  useEffect(() => {
+    if (editing && activeBoard?.scope === 'shared' && !canPublishShared) {
+      setEditing(false)
+    }
   }, [editing, activeBoard, canPublishShared])
 
   // Cannot delete if it's the user's own default personal board.
