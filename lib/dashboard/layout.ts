@@ -55,6 +55,7 @@ export function appendWidgetToLayout(
   const placed: WidgetInstance = {
     ...source,
     i: newId,
+    // config is typed non-optional, but unvalidated DB rows can bypass the type — guard before cloning
     config: structuredClone(source.config ?? {}),
     x: 0,
     y: bottomY,
