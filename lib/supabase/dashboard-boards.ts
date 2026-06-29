@@ -74,11 +74,21 @@ export async function updateBoardLayout(
   if (!supabase) return { error: 'Offline' }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
-  const { error } = await sb
+  // .select() so we can detect a 0-row update. RLS denies the write *silently*
+  // (no error, 0 rows updated) when the board isn't writable by this user —
+  // e.g. a shared board they lack `dashboard:publish-shared` for. Without this
+  // check the layout change is lost with no feedback; surface it as a real error
+  // so the caller shows a "couldn't save" toast instead of silent data loss.
+  const { data, error } = await sb
     .from('dashboard_boards')
     .update({ layout, updated_at: new Date().toISOString() })
     .eq('id', id)
-  return { error: error ? friendlyError(error) : null }
+    .select('id')
+  if (error) return { error: friendlyError(error) }
+  if (!Array.isArray(data) || data.length === 0) {
+    return { error: "Couldn't save — you don't have permission to edit this dashboard." }
+  }
+  return { error: null }
 }
 
 export async function updateBoard(

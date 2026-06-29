@@ -186,7 +186,7 @@ export default function DashboardPage() {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       saveBoardLayout({ boardId: activeId, layout: validateLayout(next), baseId: installationId, userId })
-        .catch(() => toast.error('Could not save dashboard layout'))
+        .catch((e) => toast.error(e instanceof Error && e.message ? e.message : 'Could not save dashboard layout'))
     }, 800)
   }, [activeId, installationId, userId])
 
@@ -274,7 +274,9 @@ export default function DashboardPage() {
 
   const openModal = (kind: ModalKind, prefill = '') => {
     setModalInput(prefill)
-    setShareNewName('')
+    // Sharing a personal board converts it (keeps its name); prefill so the user
+    // doesn't have to retype it.
+    setShareNewName(kind === 'share' && activeBoard?.scope === 'personal' ? (activeBoard?.name ?? '') : '')
     if (activeBoard?.role_template) {
       setShareTemplate(activeBoard.role_template)
     } else {
@@ -389,6 +391,9 @@ export default function DashboardPage() {
     const name = shareNewName.trim()
     if (!name || !installationId) return
     setModalBusy(true)
+    // Capture whether we're converting a personal board the user owns *before*
+    // the async work, so a board switch can't change it mid-flight.
+    const convertFrom = (activeBoard?.scope === 'personal' && activeBoard.owner_id === userId) ? activeId : null
     const { data, error } = await createBoard({
       base_id: installationId, owner_id: null, name, scope: 'shared',
       // Copy the current dashboard's widgets into the shared board, so sharing
@@ -396,7 +401,15 @@ export default function DashboardPage() {
       layout: validateLayout(widgets),
     })
     if (error) { toast.error(error); setModalBusy(false); return }
-    toast.success(`Shared board "${name}" created with ${widgets.length} widget${widgets.length === 1 ? '' : 's'}`)
+    // Convert: remove the personal original so the board appears only under
+    // "Shared". (RLS blocks an in-place owner_id flip, so we create-then-delete.)
+    if (convertFrom) {
+      const del = await deleteBoard(convertFrom)
+      if (del.error) {
+        toast.error(`Shared "${name}" created, but couldn't remove the personal copy: ${del.error}`)
+      }
+    }
+    toast.success(convertFrom ? `"${name}" is now a shared dashboard` : `Shared board "${name}" created with ${widgets.length} widget${widgets.length === 1 ? '' : 's'}`)
     closeModal()
     await refreshBoards(data?.id)
   }
@@ -542,7 +555,9 @@ export default function DashboardPage() {
       {modalKind === 'share' && (
         <SimpleModal title="Shared Boards" onClose={closeModal}>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 12 }}>
-            Create a new shared board visible to all users at this base.
+            {activeBoard?.scope === 'personal'
+              ? 'Make this dashboard shared. It moves out of your Personal list and becomes visible to everyone at this base.'
+              : 'Create a new shared board visible to all users at this base.'}
           </div>
           <input
             style={inputStyle}
@@ -558,7 +573,9 @@ export default function DashboardPage() {
               onClick={handleCreateShared}
               disabled={!shareNewName.trim() || modalBusy}
             >
-              {modalBusy ? 'Creating…' : 'Create Shared Board'}
+              {activeBoard?.scope === 'personal'
+                ? (modalBusy ? 'Converting…' : 'Convert to Shared')
+                : (modalBusy ? 'Creating…' : 'Create Shared Board')}
             </button>
           </div>
 
