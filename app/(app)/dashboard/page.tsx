@@ -9,7 +9,7 @@ import { WidgetPalette } from '@/components/dashboard/widget-palette'
 import { WidgetConfigModal } from '@/components/dashboard/widget-config-modal'
 import {
   getOrCreateDefaultBoard, fetchBoards, createBoard, updateBoard,
-  deleteBoard, type DashboardBoardRow,
+  deleteBoard, setDefaultBoard, type DashboardBoardRow,
 } from '@/lib/supabase/dashboard-boards'
 import { saveBoardLayout } from '@/lib/dashboard-board-write'
 import { updateWidgetConfig } from '@/lib/dashboard/widget-config'
@@ -227,6 +227,17 @@ export default function DashboardPage() {
     return !(activeBoard.owner_id === userId && activeBoard.is_default)
   }, [activeBoard, userId])
 
+  // "Set as Default" is eligible when the active board is personal, owned by this user,
+  // and is not already the default.
+  const canSetDefault = useMemo(() => {
+    if (!activeBoard || !userId) return false
+    return (
+      activeBoard.scope === 'personal' &&
+      activeBoard.owner_id === userId &&
+      !activeBoard.is_default
+    )
+  }, [activeBoard, userId])
+
   // ── Modal handlers ───────────────────────────────────────────────────────
 
   const openModal = (kind: ModalKind, prefill = '') => {
@@ -279,6 +290,15 @@ export default function DashboardPage() {
     // Switch to user's default personal board.
     const myDefault = boards.find(b => b.owner_id === userId && b.is_default && b.id !== activeId)
     await refreshBoards(myDefault?.id)
+  }
+
+  // Set active board as the user's default personal board
+  const handleSetDefault = async () => {
+    if (!activeId || !installationId || !userId) return
+    const { error } = await setDefaultBoard(activeId, installationId, userId)
+    if (error) { toast.error(error); return }
+    toast.success('Set as default dashboard')
+    await refreshBoards(activeId)
   }
 
   // Create shared board (from share modal)
@@ -349,6 +369,7 @@ export default function DashboardPage() {
         onDeleteBoard={handleDeleteBoard}
         canDeleteActive={canDeleteActive}
         onShareControls={canPublishShared ? () => openModal('share') : undefined}
+        onSetDefault={canSetDefault ? handleSetDefault : undefined}
       />
 
       {isEmpty ? (

@@ -105,6 +105,35 @@ export async function deleteBoard(id: string): Promise<{ error: string | null }>
   return { error: error ? friendlyError(error) : null }
 }
 
+/**
+ * Set a personal board as the user's default at this base.
+ * Clears is_default on all other owned boards at the base first,
+ * then sets it on the target board.
+ */
+export async function setDefaultBoard(
+  boardId: string,
+  baseId: string,
+  userId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Offline' }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any
+  // Step 1: clear is_default for all of this user's boards at this base.
+  const { error: clearError } = await sb
+    .from('dashboard_boards')
+    .update({ is_default: false, updated_at: new Date().toISOString() })
+    .eq('owner_id', userId)
+    .eq('base_id', baseId)
+  if (clearError) return { error: friendlyError(clearError) }
+  // Step 2: set is_default on the target board.
+  const { error: setError } = await sb
+    .from('dashboard_boards')
+    .update({ is_default: true, updated_at: new Date().toISOString() })
+    .eq('id', boardId)
+  return { error: setError ? friendlyError(setError) : null }
+}
+
 /** The caller's default personal board, creating an empty one on first visit. */
 export async function getOrCreateDefaultBoard(
   baseId: string,

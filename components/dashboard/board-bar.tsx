@@ -1,5 +1,5 @@
 'use client'
-import { Pencil, Plus, Check, Share2, Trash2, PenLine } from 'lucide-react'
+import { Pencil, Plus, Check, Share2, Trash2, PenLine, Star } from 'lucide-react'
 
 export interface BoardSummary {
   id: string
@@ -20,11 +20,13 @@ export interface BoardBarProps {
   onDeleteBoard: () => void
   canDeleteActive: boolean
   onShareControls?: () => void
+  /** Called when user wants to mark the active personal board as default. Omit to hide the control. */
+  onSetDefault?: () => void
 }
 
 export function BoardBar({
   boards, activeId, onSwitch, editing, onToggleEdit, onAddWidget,
-  onNewBoard, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls,
+  onNewBoard, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls, onSetDefault,
 }: BoardBarProps) {
   const btn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
@@ -121,6 +123,13 @@ export function BoardBar({
       {onShareControls && (
         <button style={btn} onClick={onShareControls} title="Share / template settings">
           <Share2 size={14} strokeWidth={2.5} /> Share
+        </button>
+      )}
+
+      {/* Set as default — only shown for personal boards that aren't already default */}
+      {onSetDefault && (
+        <button style={btn} onClick={onSetDefault} title="Set as your default dashboard">
+          <Star size={14} strokeWidth={2.5} /> Set as Default
         </button>
       )}
 
