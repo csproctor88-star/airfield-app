@@ -156,9 +156,24 @@ module enabled (existing `moduleHref: '/amtr'` enablement filter).
 - `npx tsc --noEmit` + `npm run build` green before commit.
 
 ## Risks / notes
-- **Inspection "findings" field**: the precise column on `amtr_inspections` that
-  yields a findings count is confirmed during implementation; the design assumes
-  the completed inspection row carries enough to render Clean vs `N findings`.
+- **Inspection "findings" count = `gap_count`** (resolved during implementation).
+  `amtr_inspections` persists `gap_count` equal to `no_count` (both are the count
+  of "no" answers — see `lib/supabase/amtr-inspections.ts`), so the widget reports
+  a single `gap_count`, matching the `/amtr/reports` page and the 623A completion
+  summary. (An early cut summed `no_count + gap_count` and double-counted; fixed.)
+- **Latest inspection = latest *completed*** (intentional divergence). The widget's
+  `latestInspectionPerMember` ignores drafts and shows each member's latest
+  `status='completed'` inspection, so a member whose only/most-recent inspection is
+  an in-progress draft reads as *Never inspected*. This is the correct semantic for
+  a compliance **status** report (a draft is not a finished inspection). It
+  intentionally differs from `/amtr/reports`, which shows the latest inspection of
+  *any* status with a draft/completed pill.
+- **Per-widget fetch fan-out** (accepted; follow-up candidate). The design floated a
+  single shared `useAmtrRollupData`; the build shares one fetch only between Overdue
+  and Due Soon (`useAllDueItems`). Currency, KPIs, and the due-item widgets each
+  fetch members + 1098/RAT independently, so a board with all of them issues the
+  member/progress queries 3–4× on load. One-shot per mount (not polling); fine for a
+  first cut, shareable later if it matters.
 - **Per-item vs per-member rows** for Overdue/Due Soon: chosen per-item for
   actionability. If a manager prefers a per-member roll-up, that's a column/filter
   preset, not a redesign.
