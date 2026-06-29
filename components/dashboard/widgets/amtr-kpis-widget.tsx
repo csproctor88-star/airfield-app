@@ -49,7 +49,7 @@ export function AmtrKpisWidget() {
       <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end', flex: 1 }}>
         <Tile label="Members" value={loading ? '…' : k.members} />
         <Tile label="Required" value={loading ? '…' : k.requiredTasks} />
-        <Tile label="Complete" value={loading ? '…' : k.complete} color="var(--color-success)" />
+        <Tile label="Complete" value={loading ? '…' : k.complete} color={k.complete > 0 ? 'var(--color-success)' : undefined} />
         <Tile label="Due Soon" value={loading ? '…' : k.dueSoon} color={k.dueSoon > 0 ? 'var(--color-warning)' : undefined} />
         <Tile label="Overdue" value={loading ? '…' : k.overdue} color={k.overdue > 0 ? 'var(--color-danger)' : undefined} />
       </div>
