@@ -39,3 +39,25 @@ export function validateLayout(raw: unknown): WidgetInstance[] {
   }
   return out
 }
+
+/**
+ * Return a new layout with `source` copied onto the end: a fresh `newId`, a
+ * deep-copied `config`, placed at x:0 below all existing widgets. Pure — the
+ * input `layout` is not mutated and `newId` is injected so callers stay
+ * deterministic/testable.
+ */
+export function appendWidgetToLayout(
+  layout: WidgetInstance[],
+  source: WidgetInstance,
+  newId: string,
+): WidgetInstance[] {
+  const bottomY = layout.reduce((m, w) => Math.max(m, w.y + w.h), 0)
+  const placed: WidgetInstance = {
+    ...source,
+    i: newId,
+    config: structuredClone(source.config ?? {}),
+    x: 0,
+    y: bottomY,
+  }
+  return [...layout, placed]
+}
