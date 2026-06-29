@@ -69,6 +69,8 @@ export function WidgetGrid({
               editing={editing}
               onRemove={() => onRemove(w.i)}
               onConfigure={def?.ConfigForm ? () => onConfigure(w.i) : undefined}
+              color={(w.config?.color as string) || undefined}
+              onSetColor={(c) => onWidgetConfigChange(w.i, { ...w.config, color: c })}
             >
               {def ? <def.Component config={w.config} editing={editing} onConfigChange={(c) => onWidgetConfigChange(w.i, c)} />
                    : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This widget is unavailable.</div>}
