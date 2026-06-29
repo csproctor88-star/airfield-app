@@ -28,7 +28,6 @@ import { dailyReviewsDescriptor } from '@/lib/dashboard/table/descriptors/daily-
 import { eventsLogDescriptor } from '@/lib/dashboard/table/descriptors/events-log'
 import { wildlifeDescriptor } from '@/lib/dashboard/table/descriptors/wildlife'
 import { usersDescriptor } from '@/lib/dashboard/table/descriptors/users'
-import { amtrDescriptor } from '@/lib/dashboard/table/descriptors/amtr'
 import { amtrOverdueDescriptor, amtrDueSoonDescriptor } from '@/lib/dashboard/table/descriptors/amtr-due-items'
 import { amtrInspectionsDescriptor } from '@/lib/dashboard/table/descriptors/amtr-inspections'
 import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspection-status-widget'
@@ -50,6 +49,7 @@ import { ReportAgingWidget } from '@/components/dashboard/widgets/report-aging-w
 import { ReportLightingWidget } from '@/components/dashboard/widgets/report-lighting-widget'
 import { ReportDailyWidget } from '@/components/dashboard/widgets/report-daily-widget'
 import { AmtrKpisWidget } from '@/components/dashboard/widgets/amtr-kpis-widget'
+import { AmtrWidget, AmtrReportConfigForm } from '@/components/dashboard/widgets/amtr-widget'
 
 export const WIDGETS: Record<string, WidgetDef> = {
   'inspection-status': {
@@ -189,19 +189,22 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: () => <FeedbackWidget />,
     ConfigForm: TitleConfigForm,
   },
-  'amtr': tableWidget({
-    type: 'amtr', title: 'AMTR — Currency',
-    description: 'Airfield Management Training Record — currency status by member',
+  'amtr': {
+    type: 'amtr', kind: 'native', title: 'AMTR',
+    description: 'Airfield Management Training Record — pick a report',
     icon: GraduationCap, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
-  }, amtrDescriptor),
+    Component: (p) => <AmtrWidget {...p} />,
+    ConfigForm: AmtrReportConfigForm,
+  },
   'amtr-kpis': {
     type: 'amtr-kpis', kind: 'native', title: 'AMTR — Unit KPIs',
     description: 'Members, required tasks, complete, due soon, and overdue at a glance',
     icon: TrendingUp, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 2 },
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
+    hidden: true,
     Component: () => <AmtrKpisWidget />,
     ConfigForm: TitleConfigForm,
   },
@@ -211,6 +214,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: AlertTriangle, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
+    hidden: true,
   }, amtrOverdueDescriptor),
   'amtr-due-soon': tableWidget({
     type: 'amtr-due-soon', title: 'AMTR — Due Soon (30 days)',
@@ -218,6 +222,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: Clock, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
+    hidden: true,
   }, amtrDueSoonDescriptor),
   'amtr-inspections': tableWidget({
     type: 'amtr-inspections', title: 'AMTR — Inspection Status',
@@ -225,6 +230,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: ShieldCheck, defaultSize: { w: 4, h: 3 }, minSize: { w: 2, h: 2 },
     permission: PERM.AMTR_VIEW,
     moduleHref: '/amtr',
+    hidden: true,
   }, amtrInspectionsDescriptor),
   'notes': {
     type: 'notes', kind: 'native', title: 'Notes',

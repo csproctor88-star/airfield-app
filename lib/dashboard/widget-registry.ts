@@ -13,6 +13,7 @@ export interface WidgetMeta {
   minSize: { w: number; h: number }
   permission?: string     // PERM key gate
   moduleHref?: string     // module gate via isModuleEnabled
+  hidden?: boolean        // exclude from the "add widget" palette (still renders for existing instances)
   icon?: LucideIcon
 }
 
@@ -46,7 +47,8 @@ export function listAvailableWidgets(
 ): WidgetMeta[] {
   return metas.filter(m =>
     (!m.permission || has(m.permission)) &&
-    (!m.moduleHref || moduleEnabled(m.moduleHref)),
+    (!m.moduleHref || moduleEnabled(m.moduleHref)) &&
+    !m.hidden,
   )
 }
 
