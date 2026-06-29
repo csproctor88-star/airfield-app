@@ -6,7 +6,7 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { WidgetFrame } from './widget-frame'
 import { getWidgetDef } from '@/lib/dashboard/registry'
-import type { WidgetInstance } from '@/lib/dashboard/layout'
+import type { WidgetInstance, BoardLayout, DeviceClass } from '@/lib/dashboard/layout'
 
 type Layout = ReactGridLayout.Layout
 
@@ -45,11 +45,11 @@ const DashboardWidget = memo(function DashboardWidget(p: DashboardWidgetProps) {
 })
 
 export function WidgetGrid({
-  widgets, editing, onLayoutChange, onRemove, onConfigure, onWidgetConfigChange, copyBoards, onCopyWidget,
+  boardLayout, editing, onDeviceLayoutChange, onRemove, onConfigure, onWidgetConfigChange, copyBoards, onCopyWidget,
 }: {
-  widgets: WidgetInstance[]
+  boardLayout: BoardLayout
   editing: boolean
-  onLayoutChange: (next: WidgetInstance[]) => void
+  onDeviceLayoutChange: (device: DeviceClass, layout: WidgetInstance[]) => void
   onRemove: (id: string) => void
   onConfigure: (id: string) => void
   onWidgetConfigChange: (id: string, config: Record<string, unknown>) => void
@@ -59,29 +59,34 @@ export function WidgetGrid({
   // A ref (not state) because react-grid-layout fires onBreakpointChange and
   // onLayoutChange synchronously back-to-back on the crossing tick; a state
   // value would still be the previous breakpoint inside handleChange's closure,
-  // letting a collapsed md/sm layout overwrite the saved lg layout. A ref is
+  // letting a collapsed md/sm layout overwrite the wrong device slot. A ref is
   // updated synchronously and read live.
   const breakpointRef = useRef<string>('lg')
 
-  const rglLayout: Layout[] = widgets.map(w => {
+  const toRgl = (ws: WidgetInstance[]): Layout[] => ws.map(w => {
     const def = getWidgetDef(w.type)
     return { i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, minW: def?.minSize.w ?? 1, minH: def?.minSize.h ?? 1 }
   })
 
+  const layouts: ReactGridLayout.Layouts = {
+    lg: toRgl(boardLayout.lg),
+    ...(boardLayout.md ? { md: toRgl(boardLayout.md) } : {}),
+    ...(boardLayout.sm ? { sm: toRgl(boardLayout.sm) } : {}),
+  }
+
   function handleChange(current: Layout[]) {
-    // Only persist the lg (desktop canonical) layout — md/sm are just reflows
-    if (breakpointRef.current !== 'lg') return
     const byId = new Map(current.map(l => [l.i, l]))
-    onLayoutChange(widgets.map(w => {
-      const l = byId.get(w.i)
-      return l ? { ...w, x: l.x, y: l.y, w: l.w, h: l.h } : w
-    }))
+    const next = boardLayout.lg.map(c => {
+      const l = byId.get(c.i)
+      return l ? { ...c, x: l.x, y: l.y, w: l.w, h: l.h } : c
+    })
+    onDeviceLayoutChange(breakpointRef.current as DeviceClass, next)
   }
 
   return (
     <ResponsiveGrid
       className="dashboard-grid"
-      layouts={{ lg: rglLayout }}
+      layouts={layouts}
       breakpoints={BREAKPOINTS}
       cols={COLS}
       rowHeight={80}
@@ -93,7 +98,7 @@ export function WidgetGrid({
       onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
       draggableCancel="a,button,.wt-col-resize"
     >
-      {widgets.map(w => (
+      {boardLayout.lg.map(w => (
         <div key={w.i}>
           <DashboardWidget
             id={w.i} type={w.type} config={w.config} editing={editing}

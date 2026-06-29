@@ -14,7 +14,11 @@ import {
 import { saveBoardLayout } from '@/lib/dashboard-board-write'
 import { updateWidgetConfig } from '@/lib/dashboard/widget-config'
 import { getWidgetDef } from '@/lib/dashboard/registry'
-import { validateLayout, appendWidgetToLayout, type WidgetInstance } from '@/lib/dashboard/layout'
+import {
+  validateLayout, appendWidgetToLayout, appendWidgetToBoardLayout,
+  reconcileBoardLayout,
+  type WidgetInstance, type BoardLayout, type DeviceClass,
+} from '@/lib/dashboard/layout'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { USER_ROLES } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -97,6 +101,8 @@ export default function DashboardPage() {
   const [boards, setBoards] = useState<DashboardBoardRow[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [widgets, setWidgets] = useState<WidgetInstance[]>([])
+  const [mdWidgets, setMdWidgets] = useState<WidgetInstance[] | undefined>(undefined)
+  const [smWidgets, setSmWidgets] = useState<WidgetInstance[] | undefined>(undefined)
   const [editing, setEditing] = useState(false)
   const [showPalette, setShowPalette] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
@@ -109,16 +115,29 @@ export default function DashboardPage() {
   const [shareTemplate, setShareTemplate] = useState<string>('')
   const [modalBusy, setModalBusy] = useState(false)
 
-  // Latest unsaved layout, staged during edit and written on Done / flush.
-  const pendingRef = useRef<{ boardId: string; baseId: string; userId: string; layout: WidgetInstance[] } | null>(null)
+  // Derive the board layout — always reconciled so md/sm stay aligned to lg's
+  // widget set automatically (add/remove/config only need to touch widgets/lg).
+  const boardLayout = useMemo(
+    () => reconcileBoardLayout({ lg: widgets, md: mdWidgets, sm: smWidgets }),
+    [widgets, mdWidgets, smWidgets],
+  )
 
+  // Dirty-tracked snapshot ref + flush. Edits batch and save once on Done /
+  // board switch / unmount. Never persist on every change.
+  const saveRef = useRef<{ boardId: string; layout: BoardLayout } | null>(null)
+  const dirtyRef = useRef(false)
+  useEffect(() => {
+    if (activeId) saveRef.current = { boardId: activeId, layout: boardLayout }
+  }, [activeId, boardLayout])
+  const markDirty = useCallback(() => { dirtyRef.current = true }, [])
   const flushSave = useCallback(() => {
-    const p = pendingRef.current
-    pendingRef.current = null
-    if (!p) return
-    saveBoardLayout({ boardId: p.boardId, layout: { lg: validateLayout(p.layout) }, baseId: p.baseId, userId: p.userId })
+    if (!dirtyRef.current) return
+    dirtyRef.current = false
+    const snap = saveRef.current
+    if (!snap || !installationId || !userId) return
+    saveBoardLayout({ boardId: snap.boardId, layout: snap.layout, baseId: installationId, userId })
       .catch((e) => toast.error(e instanceof Error && e.message ? e.message : 'Could not save dashboard layout'))
-  }, [])
+  }, [installationId, userId])
 
   // Flush any staged edits on unmount.
   useEffect(() => flushSave, [flushSave])
@@ -150,6 +169,9 @@ export default function DashboardPage() {
       setActiveId(nextId)
       const found = list.find(b => b.id === nextId)
       setWidgets(found ? found.layout.lg : [])
+      setMdWidgets(found?.layout.md)
+      setSmWidgets(found?.layout.sm)
+      dirtyRef.current = false
     }
   }, [installationId, activeId])
 
@@ -183,15 +205,13 @@ export default function DashboardPage() {
         const isEmpty = initial.layout.lg.length === 0
         const isMyDefault = initial.owner_id === uid && initial.is_default
         setWidgets(isEmpty && isMyDefault ? DEFAULT_LAYOUT : initial.layout.lg)
+        setMdWidgets(initial.layout.md)
+        setSmWidgets(initial.layout.sm)
+        dirtyRef.current = false
       }
     })()
     return () => { cancelled = true }
   }, [installationId])
-
-  const persist = useCallback((next: WidgetInstance[]) => {
-    if (!activeId || !installationId || !userId) return
-    pendingRef.current = { boardId: activeId, baseId: installationId, userId, layout: next }
-  }, [activeId, installationId, userId])
 
   const onSwitch = useCallback((id: string) => {
     const board = boards.find(b => b.id === id)
@@ -199,26 +219,34 @@ export default function DashboardPage() {
     flushSave()
     setActiveId(id)
     setWidgets(board.layout.lg.length ? board.layout.lg : [])
+    setMdWidgets(board.layout.md)
+    setSmWidgets(board.layout.sm)
+    dirtyRef.current = false
     setEditing(false)
     setShowPalette(false)
     setConfiguringId(null)
   }, [boards, flushSave])
 
-  const onLayoutChange = useCallback((next: WidgetInstance[]) => {
-    setWidgets(next); persist(next)
-  }, [persist])
+  // Per-device edit handler — every breakpoint persists to its own device slot.
+  const onDeviceLayoutChange = useCallback((device: DeviceClass, layout: WidgetInstance[]) => {
+    if (device === 'lg') setWidgets(layout)
+    else if (device === 'md') setMdWidgets(layout)
+    else setSmWidgets(layout)
+    markDirty()
+  }, [markDirty])
 
   const onWidgetConfigChange = useCallback((id: string, config: Record<string, unknown>) => {
     setWidgets(prev => {
       const next = updateWidgetConfig(prev, id, config)
-      persist(next)
+      markDirty()
       return next
     })
-  }, [persist])
+  }, [markDirty])
 
   const onRemove = useCallback((id: string) => {
-    setWidgets(prev => { const next = prev.filter(w => w.i !== id); persist(next); return next })
-  }, [persist])
+    setWidgets(prev => prev.filter(w => w.i !== id))
+    markDirty()
+  }, [markDirty])
 
   const onAdd = useCallback((type: string) => {
     const def = getWidgetDef(type)
@@ -229,9 +257,9 @@ export default function DashboardPage() {
         ...prev,
         { i: uuid(), type, config: {}, x: 0, y: bottomY, w: def.defaultSize.w, h: def.defaultSize.h },
       ]
-      persist(next); return next
+      markDirty(); return next
     })
-  }, [persist, widgets])
+  }, [markDirty, widgets])
 
   const isEmpty = useMemo(() => widgets.length === 0, [widgets])
 
@@ -315,7 +343,7 @@ export default function DashboardPage() {
       const name = `${activeBoard.name} (copy)`
       const { data, error } = await createBoard({
         base_id: installationId, owner_id: userId, name, scope: 'personal',
-        layout: { lg: validateLayout(widgets) },
+        layout: boardLayout,
       })
       if (error) { toast.error(error); return }
       toast.success(`Duplicated to "${name}"`)
@@ -332,7 +360,7 @@ export default function DashboardPage() {
       const name = 'New dashboard'
       const { error } = await createBoard({
         base_id: installationId, owner_id: userId, name, scope: 'personal',
-        layout: { lg: appendWidgetToLayout([], widget, uuid()) },
+        layout: appendWidgetToBoardLayout({ lg: [] }, widget, uuid()),
       })
       if (error) { toast.error(error); return }
       toast.success(`Copied to new dashboard "${name}"`)
@@ -341,15 +369,13 @@ export default function DashboardPage() {
     }
     const dest = boards.find(b => b.id === target)
     if (!dest) return
-    // For the active board, the live `widgets` state is the source of truth
-    // (it may hold unsaved moves or a copy still inside the 800ms persist debounce);
-    // for other boards, read their persisted layout from `boards`.
-    const nextLg = appendWidgetToLayout(target === activeId ? widgets : dest.layout.lg, widget, uuid())
     if (target === activeId) {
-      setWidgets(nextLg); persist(nextLg)
+      setWidgets(appendWidgetToLayout(widgets, widget, uuid()))
+      markDirty()
     } else {
+      const nextBl = appendWidgetToBoardLayout(dest.layout, widget, uuid())
       try {
-        await saveBoardLayout({ boardId: target, layout: { lg: validateLayout(nextLg) }, baseId: installationId, userId })
+        await saveBoardLayout({ boardId: target, layout: nextBl, baseId: installationId, userId })
       } catch { toast.error('Could not copy the widget'); return }
     }
     toast.success(`Copied to "${dest.name}"`)
@@ -400,9 +426,8 @@ export default function DashboardPage() {
     const convertFrom = (activeBoard?.scope === 'personal' && activeBoard.owner_id === userId) ? activeId : null
     const { data, error } = await createBoard({
       base_id: installationId, owner_id: null, name, scope: 'shared',
-      // Copy the current dashboard's widgets into the shared board, so sharing
-      // publishes what the user built rather than creating an empty board.
-      layout: { lg: validateLayout(widgets) },
+      // Copy the current dashboard's full layout (all device breakpoints) into the shared board.
+      layout: boardLayout,
     })
     if (error) { toast.error(error); setModalBusy(false); return }
     // Convert: remove the personal original so the board appears only under
@@ -435,11 +460,11 @@ export default function DashboardPage() {
     if (!configuringId) return
     setWidgets(prev => {
       const next = updateWidgetConfig(prev, configuringId, config)
-      persist(next)
+      markDirty()
       return next
     })
     setConfiguringId(null)
-  }, [configuringId, persist])
+  }, [configuringId, markDirty])
 
   // Build BoardSummary list for BoardBar.
   const boardSummaries: BoardSummary[] = useMemo(
@@ -485,9 +510,9 @@ export default function DashboardPage() {
         </div>
       ) : (
         <WidgetGrid
-          widgets={widgets}
+          boardLayout={boardLayout}
           editing={editing}
-          onLayoutChange={onLayoutChange}
+          onDeviceLayoutChange={onDeviceLayoutChange}
           onRemove={onRemove}
           onConfigure={(id) => setConfiguringId(id)}
           onWidgetConfigChange={onWidgetConfigChange}
