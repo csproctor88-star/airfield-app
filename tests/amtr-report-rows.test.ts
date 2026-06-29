@@ -39,6 +39,12 @@ describe('buildDueItemRows', () => {
     const p1098 = [{ member_id: 'ghost', catalog_id: 'c1', next_due: '2026-06-01', last_completed: null }]
     expect(buildDueItemRows(members, p1098, [], cat1098, catRat, TODAY)).toHaveLength(0)
   })
+
+  it('uses em-dash fallback when catalog id is not found', () => {
+    const p1098 = [{ member_id: 'm1', catalog_id: 'unknown', next_due: '2026-09-01', last_completed: null }]
+    const rows = buildDueItemRows(members, p1098, [], cat1098, catRat, TODAY)
+    expect(rows[0].itemName).toBe('—')
+  })
 })
 
 describe('latestInspectionPerMember', () => {

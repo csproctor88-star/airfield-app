@@ -112,7 +112,8 @@ export function latestInspectionPerMember(
     const insp = latest.get(m.id)
     const findings = insp ? insp.no_count + insp.gap_count : 0
     return {
-      id: m.id, memberId: m.id, memberName: m.full_name, grade: m.grade,
+      id: m.id, // one row per member — member ID is the stable row key
+      memberId: m.id, memberName: m.full_name, grade: m.grade,
       lastDate: insp?.inspection_date ?? null,
       result: !insp ? 'none' : findings > 0 ? 'findings' : 'clean',
       findings,
