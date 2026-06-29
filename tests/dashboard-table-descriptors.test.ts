@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discrepancies'
 import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel'
+import { amtrOverdueDescriptor, amtrDueSoonDescriptor } from '@/lib/dashboard/table/descriptors/amtr-due-items'
 import { PERM } from '@/lib/permissions'
 
 const PERM_VALUES = new Set<string>(Object.values(PERM))
 const staticDescriptors = [
   { name: 'discrepancies', d: discrepanciesDescriptor },
   { name: 'personnel', d: personnelDescriptor },
+  { name: 'amtr-overdue', d: amtrOverdueDescriptor },
+  { name: 'amtr-due-soon', d: amtrDueSoonDescriptor },
 ]
 
 describe('table descriptors', () => {
