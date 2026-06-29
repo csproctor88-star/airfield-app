@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { dueStatus, ratApplies, parseDate, daysBetween, type DueStatus } from './status'
+import type { MemberRollup, ComplianceCounts } from './rollup'
 
 export type AmtrMemberLite = { id: string; full_name: string; grade: string | null; status: string }
 export type Prog1098Row = { member_id: string; catalog_id: string; next_due: string | null; last_completed: string | null }
@@ -120,4 +121,55 @@ export function latestInspectionPerMember(
       inspector: insp?.completed_by_name ?? null,
     }
   })
+}
+
+// ─────────────────────────────────────────────────────────────
+// Training Progress + Task Compliance report rows — feed the two
+// new dashboard reports. Pure mappers over rollup/compliance shapes.
+// ─────────────────────────────────────────────────────────────
+
+export type ProgressRow = {
+  id: string
+  memberId: string
+  memberName: string
+  grade: string | null
+  jqsPct: number
+  formalPct: number
+  overdue: number
+}
+
+/** One row per member rollup, preserving order, for the Training Progress report. */
+export function buildProgressRows(rollups: MemberRollup[]): ProgressRow[] {
+  return rollups.map(r => ({
+    id: r.memberId,
+    memberId: r.memberId,
+    memberName: r.name,
+    grade: r.grade,
+    jqsPct: r.jqsPct,
+    formalPct: r.formalPct,
+    overdue: r.overdueCount,
+  }))
+}
+
+export type TaskComplianceRow = {
+  id: string
+  name: string
+  freq: string
+  current: number
+  total: number
+  pct: number
+}
+
+/** One row per recurring task, for the Task Compliance report. */
+export function buildTaskComplianceRows(
+  tasks: { id: string; name: string; freq: string; counts: ComplianceCounts }[],
+): TaskComplianceRow[] {
+  return tasks.map(t => ({
+    id: t.id,
+    name: t.name,
+    freq: t.freq,
+    current: t.counts.complete,
+    total: t.counts.required,
+    pct: t.counts.pct,
+  }))
 }

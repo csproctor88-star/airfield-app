@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildDueItemRows, latestInspectionPerMember } from '@/lib/amtr/report-rows'
+import { buildDueItemRows, latestInspectionPerMember, buildProgressRows, buildTaskComplianceRows } from '@/lib/amtr/report-rows'
+import type { MemberRollup, ComplianceCounts } from '@/lib/amtr/rollup'
 
 const TODAY = new Date('2026-06-29T00:00:00Z')
 const members = [
@@ -70,5 +71,61 @@ describe('latestInspectionPerMember', () => {
     const rows = latestInspectionPerMember([members[1]], inspections)
     expect(rows[0].result).toBe('none')
     expect(rows[0].lastDate).toBeNull()
+  })
+})
+
+const rollup = (over: Partial<MemberRollup>): MemberRollup => ({
+  memberId: 'm1', name: 'Alpha, A', grade: 'MSgt', status: 'Active',
+  jqsRequired: 10, jqsDone: 8, jqsPct: 80,
+  formalRequired: 4, formalDone: 4, formalPct: 100,
+  overdueCount: 0, dueSoonCount: 0, lastUpdated: '2026-06-01',
+  ...over,
+})
+
+describe('buildProgressRows', () => {
+  it('maps rollup fields and preserves member order', () => {
+    const rollups: MemberRollup[] = [
+      rollup({ memberId: 'm1', name: 'Alpha, A', grade: 'MSgt', jqsPct: 80, formalPct: 100, overdueCount: 2 }),
+      rollup({ memberId: 'm2', name: 'Bravo, B', grade: null, jqsPct: 0, formalPct: 50, overdueCount: 0 }),
+      rollup({ memberId: 'm3', name: 'Charlie, C', grade: 'SSgt', jqsPct: 45, formalPct: 0, overdueCount: 5 }),
+    ]
+    const rows = buildProgressRows(rollups)
+    expect(rows).toHaveLength(3)
+    expect(rows.map(r => r.memberId)).toEqual(['m1', 'm2', 'm3'])
+    expect(rows[0]).toEqual({
+      id: 'm1', memberId: 'm1', memberName: 'Alpha, A', grade: 'MSgt',
+      jqsPct: 80, formalPct: 100, overdue: 2,
+    })
+    expect(rows[1]).toEqual({
+      id: 'm2', memberId: 'm2', memberName: 'Bravo, B', grade: null,
+      jqsPct: 0, formalPct: 50, overdue: 0,
+    })
+    expect(rows[2].memberName).toBe('Charlie, C')
+    expect(rows[2].overdue).toBe(5)
+  })
+
+  it('returns [] for empty input', () => {
+    expect(buildProgressRows([])).toEqual([])
+  })
+})
+
+describe('buildTaskComplianceRows', () => {
+  const cc = (over: Partial<ComplianceCounts>): ComplianceCounts => ({
+    required: 10, complete: 7, dueSoon: 1, overdue: 2, pct: 70, ...over,
+  })
+
+  it('maps task + counts into report rows', () => {
+    const tasks = [
+      { id: 't1', name: 'Self-Inspection Program', freq: 'Monthly', counts: cc({ required: 10, complete: 7, pct: 70 }) },
+      { id: 't2', name: 'OPSEC Awareness', freq: 'Annual', counts: cc({ required: 4, complete: 4, pct: 100 }) },
+    ]
+    const rows = buildTaskComplianceRows(tasks)
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toEqual({ id: 't1', name: 'Self-Inspection Program', freq: 'Monthly', current: 7, total: 10, pct: 70 })
+    expect(rows[1]).toEqual({ id: 't2', name: 'OPSEC Awareness', freq: 'Annual', current: 4, total: 4, pct: 100 })
+  })
+
+  it('returns [] for empty input', () => {
+    expect(buildTaskComplianceRows([])).toEqual([])
   })
 })
