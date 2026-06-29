@@ -21,10 +21,5 @@ describe('table descriptors', () => {
     it(`${name}: has at least one default column`, () => {
       expect((d.columns ?? []).some(c => c.defaultVisible)).toBe(true)
     })
-    it(`${name}: detail+actions reference real PERM keys`, () => {
-      if (d.row.mode === 'detail+actions') {
-        for (const a of d.row.actions) expect(PERM_VALUES.has(a.permission)).toBe(true)
-      }
-    })
   }
 })

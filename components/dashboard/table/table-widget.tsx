@@ -1,16 +1,11 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { useInstallation } from '@/lib/installation-context'
-import { createClient } from '@/lib/supabase/client'
-import { usePermissions } from '@/lib/permissions'
-import type { TableWidgetConfig, TableWidgetDescriptor, RowActionCtx, ColumnDef } from '@/lib/dashboard/table/types'
+import type { TableWidgetConfig, TableWidgetDescriptor, ColumnDef } from '@/lib/dashboard/table/types'
 import { resolveVisibleColumns } from '@/lib/dashboard/table/columns'
 import { applyFilters } from '@/lib/dashboard/table/filtering'
 import { normalizeTableConfig } from '@/lib/dashboard/table/config'
-import { RowDetailDialog } from './row-detail-dialog'
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 
@@ -43,8 +38,6 @@ export function TableWidget<Row>({
   config: Record<string, unknown>
   onConfigChange?: (config: Record<string, unknown>) => void
 }) {
-  const { installationId } = useInstallation()
-  const { has } = usePermissions()
   const router = useRouter()
 
   const allColumns: ColumnDef<Row>[] = descriptor.useColumns ? descriptor.useColumns() : (descriptor.columns ?? [])
@@ -57,15 +50,6 @@ export function TableWidget<Row>({
   const filtered = useMemo(() => applyFilters(rows, cfg, descriptor.filters), [rows, cfg, descriptor.filters])
   const visibleCols = useMemo(() => resolveVisibleColumns(allColumns, cfg.columns), [allColumns, cfg.columns])
 
-  const [userId, setUserId] = useState<string | null>(null)
-  useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null))
-  }, [])
-  const ctx: RowActionCtx | null = installationId && userId ? { baseId: installationId, userId } : null
-
-  const [detailRow, setDetailRow] = useState<Row | null>(null)
   const [sort, setSort] = useState<SortState>(null)
   const [search, setSearch] = useState('')
 
@@ -99,11 +83,6 @@ export function TableWidget<Row>({
       if (prev.dir === 'asc') return { key, dir: 'desc' }
       return null
     })
-  }
-
-  function onRowClick(row: Row) {
-    const b = descriptor.row
-    if (b.mode === 'detail' || b.mode === 'detail+actions' || b.mode === 'custom') setDetailRow(row)
   }
 
   // ── Column resize ─────────────────────────────────────────────────────────
@@ -316,10 +295,8 @@ export function TableWidget<Row>({
                     </tr>
                   )
                 }
-                const clickable = b.mode === 'detail' || b.mode === 'detail+actions' || b.mode === 'custom'
                 return (
-                  <tr key={ri} onClick={clickable ? () => onRowClick(row) : undefined}
-                    style={{ cursor: clickable ? 'pointer' : 'default' }}>{cells}</tr>
+                  <tr key={ri} style={{ cursor: 'default' }}>{cells}</tr>
                 )
               })}
             </tbody>
@@ -334,24 +311,6 @@ export function TableWidget<Row>({
         </div>
       )}
 
-      {detailRow && (descriptor.row.mode === 'detail' || descriptor.row.mode === 'detail+actions') && (
-        <RowDetailDialog
-          row={detailRow}
-          title={descriptor.row.title(detailRow)}
-          fields={descriptor.row.fields}
-          actions={descriptor.row.mode === 'detail+actions' ? descriptor.row.actions : undefined}
-          ctx={ctx}
-          has={has}
-          onClose={() => setDetailRow(null)}
-          onActed={() => toast.success('Saved.')}
-        />
-      )}
-      {detailRow && descriptor.row.mode === 'custom' && (
-        descriptor.row.render(detailRow, {
-          onClose: () => setDetailRow(null),
-          onActed: () => setDetailRow(null),
-        })
-      )}
     </div>
   )
 }

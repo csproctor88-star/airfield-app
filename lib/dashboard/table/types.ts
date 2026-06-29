@@ -1,10 +1,5 @@
 import type { ReactNode } from 'react'
 
-export interface CustomRowCtx {
-  onClose: () => void
-  onActed: () => void
-}
-
 export interface ColumnDef<Row> {
   key: string
   label: string
@@ -31,31 +26,9 @@ export interface ExtraConfigDef {
   default: string
 }
 
-export interface DetailField<Row> {
-  label: string
-  value: (row: Row) => ReactNode
-  hideWhenEmpty?: boolean
-}
-
-export interface RowActionCtx {
-  baseId: string
-  userId: string
-}
-
-export interface RowAction<Row> {
-  key: string
-  label: (row: Row) => string
-  permission: string
-  visible?: (row: Row) => boolean
-  run: (row: Row, ctx: RowActionCtx) => Promise<void>
-}
-
 export type RowBehavior<Row> =
   | { mode: 'none' }
   | { mode: 'deeplink'; href: (row: Row) => string }
-  | { mode: 'detail'; title: (row: Row) => string; fields: DetailField<Row>[] }
-  | { mode: 'detail+actions'; title: (row: Row) => string; fields: DetailField<Row>[]; actions: RowAction<Row>[] }
-  | { mode: 'custom'; render: (row: Row, ctx: CustomRowCtx) => ReactNode }
 
 export interface SummaryStat {
   count: number

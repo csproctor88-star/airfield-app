@@ -640,41 +640,6 @@ describe('discrepancy_create handler', () => {
   })
 })
 
-import { pprDepartHandler, contractorStatusUpdateHandler } from '@/lib/sync/handlers'
-import * as pprMod from '@/lib/supabase/ppr'
-import * as contractorMod from '@/lib/supabase/contractors'
-
-afterEach(() => vi.restoreAllMocks())
-
-describe('pprDepartHandler', () => {
-  it('calls markPprDeparted when depart=true and resolves null', async () => {
-    const spy = vi.spyOn(pprMod, 'markPprDeparted').mockResolvedValue({ ok: true })
-    await expect(pprDepartHandler({ entryId: 'e1', baseId: 'b1', depart: true })).resolves.toBeNull()
-    expect(spy).toHaveBeenCalledWith('e1', 'b1')
-  })
-  it('calls clearPprDeparted when depart=false', async () => {
-    const spy = vi.spyOn(pprMod, 'clearPprDeparted').mockResolvedValue({ ok: true })
-    await pprDepartHandler({ entryId: 'e1', baseId: 'b1', depart: false })
-    expect(spy).toHaveBeenCalledWith('e1', 'b1')
-  })
-  it('throws (terminal) when the write fails', async () => {
-    vi.spyOn(pprMod, 'markPprDeparted').mockResolvedValue({ ok: false, error: 'denied' })
-    await expect(pprDepartHandler({ entryId: 'e1', baseId: 'b1', depart: true })).rejects.toThrow('denied')
-  })
-})
-
-describe('contractorStatusUpdateHandler', () => {
-  it('calls updateContractor with the status and resolves null', async () => {
-    const spy = vi.spyOn(contractorMod, 'updateContractor').mockResolvedValue({ data: { id: 'c1' } as never, error: null })
-    await expect(contractorStatusUpdateHandler({ id: 'c1', baseId: 'b1', status: 'completed' })).resolves.toBeNull()
-    expect(spy).toHaveBeenCalledWith('c1', { status: 'completed' })
-  })
-  it('throws (terminal) when update returns an error', async () => {
-    vi.spyOn(contractorMod, 'updateContractor').mockResolvedValue({ data: null, error: 'nope' })
-    await expect(contractorStatusUpdateHandler({ id: 'c1', baseId: 'b1', status: 'completed' })).rejects.toThrow('nope')
-  })
-})
-
 describe('registerAllHandlers + queue end-to-end', () => {
   it('inspection: queues a transient failure and drains it once the next attempt succeeds', async () => {
     const storage = new MemoryStorage()
