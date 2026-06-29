@@ -62,3 +62,50 @@ export function appendWidgetToLayout(
   }
   return [...layout, placed]
 }
+
+// ---------------------------------------------------------------------------
+// Multi-breakpoint board layout helpers
+// ---------------------------------------------------------------------------
+
+export type DeviceClass = 'lg' | 'md' | 'sm'
+export type BoardLayout = { lg: WidgetInstance[]; md?: WidgetInstance[]; sm?: WidgetInstance[] }
+
+/** Ensure md/sm contain exactly lg's widget set: keep each variant widget's
+ *  position where present, append lg widgets missing from the variant, drop
+ *  stale ids. lg is canonical (set + config). Absent variants stay undefined. */
+export function reconcileBoardLayout(bl: BoardLayout): BoardLayout {
+  const fix = (variant: WidgetInstance[] | undefined): WidgetInstance[] | undefined => {
+    if (!variant) return undefined
+    const byId = new Map(variant.map(v => [v.i, v]))
+    return bl.lg.map(c => {
+      const v = byId.get(c.i)
+      return v ? { ...c, x: v.x, y: v.y, w: v.w, h: v.h } : { ...c }
+    })
+  }
+  return { lg: bl.lg, md: fix(bl.md), sm: fix(bl.sm) }
+}
+
+/** Normalize raw stored JSON into a BoardLayout. Legacy flat arrays → { lg }. */
+export function validateBoardLayout(raw: unknown): BoardLayout {
+  if (Array.isArray(raw)) return { lg: validateLayout(raw) }
+  if (raw && typeof raw === 'object') {
+    const r = raw as Record<string, unknown>
+    if (Array.isArray(r.lg)) {
+      return reconcileBoardLayout({
+        lg: validateLayout(r.lg),
+        md: Array.isArray(r.md) ? validateLayout(r.md) : undefined,
+        sm: Array.isArray(r.sm) ? validateLayout(r.sm) : undefined,
+      })
+    }
+  }
+  return { lg: [] }
+}
+
+/** Append a copied widget (new id, deep-copied config) to every present device array. */
+export function appendWidgetToBoardLayout(bl: BoardLayout, source: WidgetInstance, newId: string): BoardLayout {
+  return {
+    lg: appendWidgetToLayout(bl.lg, source, newId),
+    md: bl.md ? appendWidgetToLayout(bl.md, source, newId) : undefined,
+    sm: bl.sm ? appendWidgetToLayout(bl.sm, source, newId) : undefined,
+  }
+}
