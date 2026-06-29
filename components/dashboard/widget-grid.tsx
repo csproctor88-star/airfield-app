@@ -38,11 +38,7 @@ export function WidgetGrid({
     return { i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, minW: def?.minSize.w ?? 1, minH: def?.minSize.h ?? 1 }
   })
 
-  // Commit the layout only when a drag/resize finishes (mouse-up), not on every
-  // intermediate onLayoutChange tick during the gesture. Updating state mid-drag
-  // re-renders every widget on each tick, which is choppy on slow hardware/
-  // networks; committing once on release keeps the drag smooth and writes once.
-  function commitLayout(current: Layout[]) {
+  function handleChange(current: Layout[]) {
     // Only persist the lg (desktop canonical) layout — md/sm are just reflows
     if (breakpointRef.current !== 'lg') return
     const byId = new Map(current.map(l => [l.i, l]))
@@ -63,8 +59,7 @@ export function WidgetGrid({
       isDraggable={editing}
       isResizable={editing}
       onBreakpointChange={(bp) => { breakpointRef.current = bp }}
-      onDragStop={(cur) => { if (editing) commitLayout(cur) }}
-      onResizeStop={(cur) => { if (editing) commitLayout(cur) }}
+      onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
       draggableCancel="a,button,.wt-col-resize"
     >
       {widgets.map(w => {
