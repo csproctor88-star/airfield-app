@@ -109,12 +109,19 @@ export default function DashboardPage() {
   const [shareTemplate, setShareTemplate] = useState<string>('')
   const [modalBusy, setModalBusy] = useState(false)
 
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Latest unsaved layout, staged during edit and written on Done / flush.
+  const pendingRef = useRef<{ boardId: string; baseId: string; userId: string; layout: WidgetInstance[] } | null>(null)
 
-  // Clear pending save on unmount.
-  useEffect(() => {
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
+  const flushSave = useCallback(() => {
+    const p = pendingRef.current
+    pendingRef.current = null
+    if (!p) return
+    saveBoardLayout({ boardId: p.boardId, layout: validateLayout(p.layout), baseId: p.baseId, userId: p.userId })
+      .catch((e) => toast.error(e instanceof Error && e.message ? e.message : 'Could not save dashboard layout'))
   }, [])
+
+  // Flush any staged edits on unmount.
+  useEffect(() => flushSave, [flushSave])
 
   // The dashboard is a tall, full-bleed grid; browsers restore the previous
   // scroll position on reload/return, opening it mid-page. Force it to the top
@@ -183,23 +190,19 @@ export default function DashboardPage() {
 
   const persist = useCallback((next: WidgetInstance[]) => {
     if (!activeId || !installationId || !userId) return
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => {
-      saveBoardLayout({ boardId: activeId, layout: validateLayout(next), baseId: installationId, userId })
-        .catch((e) => toast.error(e instanceof Error && e.message ? e.message : 'Could not save dashboard layout'))
-    }, 800)
+    pendingRef.current = { boardId: activeId, baseId: installationId, userId, layout: next }
   }, [activeId, installationId, userId])
 
   const onSwitch = useCallback((id: string) => {
     const board = boards.find(b => b.id === id)
     if (!board) return
-    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null }
+    flushSave()
     setActiveId(id)
     setWidgets(board.layout.length ? board.layout : [])
     setEditing(false)
     setShowPalette(false)
     setConfiguringId(null)
-  }, [boards])
+  }, [boards, flushSave])
 
   const onLayoutChange = useCallback((next: WidgetInstance[]) => {
     setWidgets(next); persist(next)
@@ -241,8 +244,9 @@ export default function DashboardPage() {
       toast('Shared dashboards can only be edited by an admin. Use Duplicate to make your own editable copy.', { id: 'shared-edit-guard' })
       return
     }
+    if (editing) flushSave()
     setEditing(e => !e)
-  }, [editing, activeBoard, canPublishShared])
+  }, [editing, activeBoard, canPublishShared, flushSave])
 
   // Safety net: if the active board becomes shared and the user can't publish,
   // drop out of Edit mode (covers landing on a shared board via refreshBoards,
