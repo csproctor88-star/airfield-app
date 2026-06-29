@@ -1,11 +1,12 @@
 # Session Handoff
 
 **Date:** 2026-06-28
-**Branch:** `main` — Phase 4 (through `2634ab79`) is **pushed**. The widget-enhancement
-batch below (`c413cac7`…`5233dde1`, 19 commits) is **committed locally but NOT pushed**.
+**Branch:** `main` — Phase 4 + the widget batch through `1075fc14` are **pushed**. Two
+follow-up commits (`4a8e8154` deep-link reversal, `28e128bb` dead-code strip) are
+**committed locally; push status per the last exchange**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully, 113 pages),
-`npx vitest run` ✓ **978 pass / 107 files**.
-**HEAD:** `5233dde1`
+`npx vitest run` ✓ **971 pass** (was 978; 7 obsolete handler/descriptor tests removed with the strip).
+**HEAD:** `28e128bb`
 
 ---
 
@@ -13,7 +14,18 @@ batch below (`c413cac7`…`5233dde1`, 19 commits) is **committed locally but NOT
 
 A large review-driven pass over the dashboard widgets, built in three phases via
 subagent implement→review loops (the reviews caught real bugs — all fixed). **Not
-live-smoke-tested; not pushed.**
+live-smoke-tested.**
+
+> **Later decision (this session): in-dashboard detail/action dialogs were removed.**
+> The generic detail dialogs (and the Daily Review sign modal) rendered truncated inside
+> the grid, so PPR, Personnel, Wildlife, Events Log, and Daily Reviews rows now **deep-link
+> to their module** where full-size detail/actions live (`4a8e8154`). The orphaned plumbing
+> was then **stripped** (`28e128bb`): deleted `RowDetailDialog` + `row-actions.ts`, removed
+> the `detail`/`detail+actions`/`custom` `RowBehavior` modes, and removed the `ppr_depart` /
+> `contractor_status_update` offline-queue ops + their tests. `WidgetProps.onConfigChange`
+> (inline self-config for Notes/Quick Actions/Infrastructure/Clock) was **kept**. So the
+> Phase 2 descriptions below of PPR/Personnel detail dialogs and Daily-Reviews sign-from-widget
+> are **superseded** — those are deep-links now.
 
 **Phase 1 — bug fixes + polish + table fundamentals**
 - **Resize-collapse bug fixed**: window reflow no longer overwrites the saved desktop
