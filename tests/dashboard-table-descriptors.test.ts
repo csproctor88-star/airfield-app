@@ -5,6 +5,8 @@ import { amtrOverdueDescriptor, amtrDueSoonDescriptor } from '@/lib/dashboard/ta
 import { amtrInspectionsDescriptor } from '@/lib/dashboard/table/descriptors/amtr-inspections'
 import { amtrMyTrainingDescriptor } from '@/lib/dashboard/table/descriptors/amtr-my-training'
 import { amtrPendingSignaturesDescriptor } from '@/lib/dashboard/table/descriptors/amtr-pending-signatures'
+import { amtrProgressDescriptor } from '@/lib/dashboard/table/descriptors/amtr-progress'
+import { amtrComplianceDescriptor } from '@/lib/dashboard/table/descriptors/amtr-compliance'
 import { PERM } from '@/lib/permissions'
 
 const PERM_VALUES = new Set<string>(Object.values(PERM))
@@ -16,6 +18,8 @@ const staticDescriptors = [
   { name: 'amtr-inspections', d: amtrInspectionsDescriptor },
   { name: 'amtr-my-training', d: amtrMyTrainingDescriptor },
   { name: 'amtr-pending-signatures', d: amtrPendingSignaturesDescriptor },
+  { name: 'amtr-progress', d: amtrProgressDescriptor },
+  { name: 'amtr-compliance', d: amtrComplianceDescriptor },
 ]
 
 describe('table descriptors', () => {
