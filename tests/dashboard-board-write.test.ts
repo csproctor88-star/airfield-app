@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { saveBoardLayout } from '@/lib/dashboard-board-write'
-import type { WidgetInstance } from '@/lib/dashboard/layout'
+import type { WidgetInstance, BoardLayout } from '@/lib/dashboard/layout'
 
-const layout: WidgetInstance[] = [{ i: 'a', type: 'last-check', config: {}, x: 0, y: 0, w: 3, h: 2 }]
+const widget: WidgetInstance = { i: 'a', type: 'last-check', config: {}, x: 0, y: 0, w: 3, h: 2 }
+const layout: BoardLayout = { lg: [widget] }
 
 describe('saveBoardLayout', () => {
   it('enqueues a dashboard_board_update with the board id + layout', async () => {

@@ -1,10 +1,10 @@
 import { getWriteQueue, type WriteQueue } from '@/lib/sync/write-queue'
 import type { DashboardBoardUpdatePayload } from '@/lib/sync/handlers'
-import type { WidgetInstance } from '@/lib/dashboard/layout'
+import type { BoardLayout } from '@/lib/dashboard/layout'
 
 export interface SaveBoardLayoutInput {
   boardId: string
-  layout: WidgetInstance[]
+  layout: BoardLayout
   baseId: string
   userId: string
 }

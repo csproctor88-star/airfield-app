@@ -116,7 +116,7 @@ export default function DashboardPage() {
     const p = pendingRef.current
     pendingRef.current = null
     if (!p) return
-    saveBoardLayout({ boardId: p.boardId, layout: validateLayout(p.layout), baseId: p.baseId, userId: p.userId })
+    saveBoardLayout({ boardId: p.boardId, layout: { lg: validateLayout(p.layout) }, baseId: p.baseId, userId: p.userId })
       .catch((e) => toast.error(e instanceof Error && e.message ? e.message : 'Could not save dashboard layout'))
   }, [])
 
@@ -149,7 +149,7 @@ export default function DashboardPage() {
     if (nextId !== activeId) {
       setActiveId(nextId)
       const found = list.find(b => b.id === nextId)
-      setWidgets(found ? found.layout : [])
+      setWidgets(found ? found.layout.lg : [])
     }
   }, [installationId, activeId])
 
@@ -180,9 +180,9 @@ export default function DashboardPage() {
       if (initial) {
         setActiveId(initial.id)
         // Show DEFAULT_LAYOUT only for user's own new/empty default board.
-        const isEmpty = initial.layout.length === 0
+        const isEmpty = initial.layout.lg.length === 0
         const isMyDefault = initial.owner_id === uid && initial.is_default
-        setWidgets(isEmpty && isMyDefault ? DEFAULT_LAYOUT : initial.layout)
+        setWidgets(isEmpty && isMyDefault ? DEFAULT_LAYOUT : initial.layout.lg)
       }
     })()
     return () => { cancelled = true }
@@ -198,7 +198,7 @@ export default function DashboardPage() {
     if (!board) return
     flushSave()
     setActiveId(id)
-    setWidgets(board.layout.length ? board.layout : [])
+    setWidgets(board.layout.lg.length ? board.layout.lg : [])
     setEditing(false)
     setShowPalette(false)
     setConfiguringId(null)
@@ -315,7 +315,7 @@ export default function DashboardPage() {
       const name = `${activeBoard.name} (copy)`
       const { data, error } = await createBoard({
         base_id: installationId, owner_id: userId, name, scope: 'personal',
-        layout: validateLayout(widgets),
+        layout: { lg: validateLayout(widgets) },
       })
       if (error) { toast.error(error); return }
       toast.success(`Duplicated to "${name}"`)
@@ -330,9 +330,9 @@ export default function DashboardPage() {
     if (!installationId || !userId) return
     if (target === '__new__') {
       const name = 'New dashboard'
-      const layout = appendWidgetToLayout([], widget, uuid())
       const { error } = await createBoard({
-        base_id: installationId, owner_id: userId, name, scope: 'personal', layout,
+        base_id: installationId, owner_id: userId, name, scope: 'personal',
+        layout: { lg: appendWidgetToLayout([], widget, uuid()) },
       })
       if (error) { toast.error(error); return }
       toast.success(`Copied to new dashboard "${name}"`)
@@ -344,12 +344,12 @@ export default function DashboardPage() {
     // For the active board, the live `widgets` state is the source of truth
     // (it may hold unsaved moves or a copy still inside the 800ms persist debounce);
     // for other boards, read their persisted layout from `boards`.
-    const nextLayout = appendWidgetToLayout(target === activeId ? widgets : dest.layout, widget, uuid())
+    const nextLg = appendWidgetToLayout(target === activeId ? widgets : dest.layout.lg, widget, uuid())
     if (target === activeId) {
-      setWidgets(nextLayout); persist(nextLayout)
+      setWidgets(nextLg); persist(nextLg)
     } else {
       try {
-        await saveBoardLayout({ boardId: target, layout: validateLayout(nextLayout), baseId: installationId, userId })
+        await saveBoardLayout({ boardId: target, layout: { lg: validateLayout(nextLg) }, baseId: installationId, userId })
       } catch { toast.error('Could not copy the widget'); return }
     }
     toast.success(`Copied to "${dest.name}"`)
@@ -402,7 +402,7 @@ export default function DashboardPage() {
       base_id: installationId, owner_id: null, name, scope: 'shared',
       // Copy the current dashboard's widgets into the shared board, so sharing
       // publishes what the user built rather than creating an empty board.
-      layout: validateLayout(widgets),
+      layout: { lg: validateLayout(widgets) },
     })
     if (error) { toast.error(error); setModalBusy(false); return }
     // Convert: remove the personal original so the board appears only under

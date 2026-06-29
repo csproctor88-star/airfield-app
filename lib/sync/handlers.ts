@@ -352,7 +352,7 @@ const activityLogInsertHandler: WriteHandler<ActivityLogInsertPayload, null> = a
 
 export interface DashboardBoardUpdatePayload {
   id: string
-  layout: import('@/lib/dashboard/layout').WidgetInstance[]
+  layout: import('@/lib/dashboard/layout').BoardLayout
 }
 
 async function dashboardBoardUpdateHandler(p: DashboardBoardUpdatePayload): Promise<null> {

@@ -1,6 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
-import { validateLayout, type WidgetInstance } from '@/lib/dashboard/layout'
+import { validateBoardLayout, type BoardLayout } from '@/lib/dashboard/layout'
 
 // New tables are not yet in the generated Database type — cast the client
 // to `any` for these calls (the lib/supabase/read-files.ts pattern).
@@ -13,13 +13,13 @@ export type DashboardBoardRow = {
   name: string
   is_default: boolean
   role_template: string | null
-  layout: WidgetInstance[]
+  layout: BoardLayout
   created_at: string
   updated_at: string
 }
 
 function hydrate(row: Record<string, any>): DashboardBoardRow {
-  return { ...row, layout: validateLayout(row.layout) } as DashboardBoardRow
+  return { ...row, layout: validateBoardLayout(row.layout) } as DashboardBoardRow
 }
 
 /** All boards visible to the caller at a base (own personal + shared). RLS-scoped. */
@@ -43,7 +43,7 @@ export async function createBoard(input: {
   name?: string
   scope?: 'personal' | 'shared'
   is_default?: boolean
-  layout?: WidgetInstance[]
+  layout?: BoardLayout
 }): Promise<{ data: DashboardBoardRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Offline' }
@@ -57,7 +57,7 @@ export async function createBoard(input: {
       name: input.name ?? 'My Dashboard',
       scope: input.scope ?? 'personal',
       is_default: input.is_default ?? false,
-      layout: input.layout ?? [],
+      layout: input.layout ?? { lg: [] },
     })
     .select('*')
     .single()
@@ -68,7 +68,7 @@ export async function createBoard(input: {
 /** Direct layout update (online path). The offline-aware caller is in lib/dashboard-board-write.ts. */
 export async function updateBoardLayout(
   id: string,
-  layout: WidgetInstance[],
+  layout: BoardLayout,
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Offline' }
