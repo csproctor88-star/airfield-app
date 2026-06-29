@@ -110,7 +110,7 @@ export function latestInspectionPerMember(
   }
   return members.map(m => {
     const insp = latest.get(m.id)
-    const findings = insp ? insp.no_count + insp.gap_count : 0
+    const findings = insp ? insp.gap_count : 0
     return {
       id: m.id, // one row per member — member ID is the stable row key
       memberId: m.id, memberName: m.full_name, grade: m.grade,

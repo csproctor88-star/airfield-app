@@ -57,14 +57,14 @@ describe('latestInspectionPerMember', () => {
     const rows = latestInspectionPerMember([members[0]], inspections)
     expect(rows).toHaveLength(1)
     expect(rows[0].lastDate).toBe('2026-06-15')   // ignores the later draft
-    expect(rows[0].result).toBe('clean')           // no_count+gap_count === 0
+    expect(rows[0].result).toBe('clean')           // gap_count === 0
     expect(rows[0].findings).toBe(0)
     expect(rows[0].inspector).toBe('SSgt Dee')
   })
   it('reports findings count when present', () => {
     const rows = latestInspectionPerMember([members[0]], [inspections[0]])
     expect(rows[0].result).toBe('findings')
-    expect(rows[0].findings).toBe(2)
+    expect(rows[0].findings).toBe(1)
   })
   it('marks members with no completed inspection as none', () => {
     const rows = latestInspectionPerMember([members[1]], inspections)
