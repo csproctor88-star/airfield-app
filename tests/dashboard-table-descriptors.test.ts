@@ -3,6 +3,8 @@ import { discrepanciesDescriptor } from '@/lib/dashboard/table/descriptors/discr
 import { personnelDescriptor } from '@/lib/dashboard/table/descriptors/personnel'
 import { amtrOverdueDescriptor, amtrDueSoonDescriptor } from '@/lib/dashboard/table/descriptors/amtr-due-items'
 import { amtrInspectionsDescriptor } from '@/lib/dashboard/table/descriptors/amtr-inspections'
+import { amtrMyTrainingDescriptor } from '@/lib/dashboard/table/descriptors/amtr-my-training'
+import { amtrPendingSignaturesDescriptor } from '@/lib/dashboard/table/descriptors/amtr-pending-signatures'
 import { PERM } from '@/lib/permissions'
 
 const PERM_VALUES = new Set<string>(Object.values(PERM))
@@ -12,6 +14,8 @@ const staticDescriptors = [
   { name: 'amtr-overdue', d: amtrOverdueDescriptor },
   { name: 'amtr-due-soon', d: amtrDueSoonDescriptor },
   { name: 'amtr-inspections', d: amtrInspectionsDescriptor },
+  { name: 'amtr-my-training', d: amtrMyTrainingDescriptor },
+  { name: 'amtr-pending-signatures', d: amtrPendingSignaturesDescriptor },
 ]
 
 describe('table descriptors', () => {
