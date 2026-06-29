@@ -88,6 +88,7 @@ export function WidgetGrid({
       margin={[12, 12]}
       isDraggable={editing}
       isResizable={editing}
+      resizeHandles={['nw', 'ne', 'sw', 'se']}
       onBreakpointChange={(bp) => { breakpointRef.current = bp }}
       onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
       draggableCancel="a,button,.wt-col-resize"

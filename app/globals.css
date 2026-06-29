@@ -1488,3 +1488,14 @@ html, body {
    know the row is interactive. Non-deeplink rows get no hover. */
 .wt-row-link { cursor: pointer; transition: background-color 0.12s ease; }
 .wt-row-link:hover td { background: color-mix(in srgb, var(--color-accent) 9%, transparent); }
+
+/* Dashboard widget resize handles — visible on all four corners in edit mode */
+.dashboard-grid .react-resizable-handle {
+  width: 16px;
+  height: 16px;
+  z-index: 3;
+}
+.dashboard-grid .react-resizable-handle::after {
+  border-color: var(--color-accent);
+  opacity: 0.85;
+}
