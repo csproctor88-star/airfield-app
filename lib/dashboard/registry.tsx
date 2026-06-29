@@ -95,7 +95,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     moduleHref: '/ppr',
   }, pprDescriptor),
   'afm-toggles': {
-    type: 'afm-toggles', kind: 'native', title: 'AFM Status',
+    type: 'afm-toggles', kind: 'native', title: 'AMOPS Status',
     description: 'Out of Office / Close Airfield',
     icon: DoorOpen, defaultSize: { w: 3, h: 2 }, minSize: { w: 2, h: 1 },
     permission: PERM.AIRFIELD_STATUS_WRITE,
