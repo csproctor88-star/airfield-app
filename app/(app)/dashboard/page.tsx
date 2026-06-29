@@ -492,7 +492,10 @@ export default function DashboardPage() {
           onConfigure={(id) => setConfiguringId(id)}
           onWidgetConfigChange={onWidgetConfigChange}
           copyBoards={copyBoards}
-          onCopyWidget={copyWidgetToBoard}
+          onCopyWidget={(id, target) => {
+            const w = widgets.find(x => x.i === id)
+            if (w) copyWidgetToBoard(w, target)
+          }}
         />
       )}
 

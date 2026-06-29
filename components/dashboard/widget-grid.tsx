@@ -1,5 +1,5 @@
 'use client'
-import { useRef } from 'react'
+import { useRef, memo } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import type ReactGridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
@@ -14,6 +14,36 @@ const ResponsiveGrid = WidthProvider(Responsive)
 const COLS = { lg: 12, md: 8, sm: 1 }
 const BREAKPOINTS = { lg: 996, md: 600, sm: 0 }
 
+type DashboardWidgetProps = {
+  id: string
+  type: string
+  config: Record<string, unknown>
+  editing: boolean
+  copyBoards: { id: string; name: string }[]
+  onRemove: (id: string) => void
+  onConfigure: (id: string) => void
+  onWidgetConfigChange: (id: string, config: Record<string, unknown>) => void
+  onCopyWidget: (id: string, target: string) => void
+}
+const DashboardWidget = memo(function DashboardWidget(p: DashboardWidgetProps) {
+  const def = getWidgetDef(p.type)
+  return (
+    <WidgetFrame
+      title={((p.config?.title as string) || '').trim() || def?.title || 'Unavailable'}
+      editing={p.editing}
+      onRemove={() => p.onRemove(p.id)}
+      onConfigure={def?.ConfigForm ? () => p.onConfigure(p.id) : undefined}
+      color={(p.config?.color as string) || undefined}
+      onSetColor={(c) => p.onWidgetConfigChange(p.id, { ...p.config, color: c })}
+      copyTargets={p.copyBoards}
+      onCopyTo={(target) => p.onCopyWidget(p.id, target)}
+    >
+      {def ? <def.Component config={p.config} editing={p.editing} onConfigChange={(c) => p.onWidgetConfigChange(p.id, c)} />
+           : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This widget is unavailable.</div>}
+    </WidgetFrame>
+  )
+})
+
 export function WidgetGrid({
   widgets, editing, onLayoutChange, onRemove, onConfigure, onWidgetConfigChange, copyBoards, onCopyWidget,
 }: {
@@ -24,7 +54,7 @@ export function WidgetGrid({
   onConfigure: (id: string) => void
   onWidgetConfigChange: (id: string, config: Record<string, unknown>) => void
   copyBoards: { id: string; name: string }[]
-  onCopyWidget: (widget: WidgetInstance, target: string) => void
+  onCopyWidget: (id: string, target: string) => void
 }) {
   // A ref (not state) because react-grid-layout fires onBreakpointChange and
   // onLayoutChange synchronously back-to-back on the crossing tick; a state
@@ -62,26 +92,16 @@ export function WidgetGrid({
       onLayoutChange={(cur) => { if (editing) handleChange(cur) }}
       draggableCancel="a,button,.wt-col-resize"
     >
-      {widgets.map(w => {
-        const def = getWidgetDef(w.type)
-        return (
-          <div key={w.i}>
-            <WidgetFrame
-              title={((w.config?.title as string) || '').trim() || def?.title || 'Unavailable'}
-              editing={editing}
-              onRemove={() => onRemove(w.i)}
-              onConfigure={def?.ConfigForm ? () => onConfigure(w.i) : undefined}
-              color={(w.config?.color as string) || undefined}
-              onSetColor={(c) => onWidgetConfigChange(w.i, { ...w.config, color: c })}
-              copyTargets={copyBoards}
-              onCopyTo={(target) => onCopyWidget(w, target)}
-            >
-              {def ? <def.Component config={w.config} editing={editing} onConfigChange={(c) => onWidgetConfigChange(w.i, c)} />
-                   : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This widget is unavailable.</div>}
-            </WidgetFrame>
-          </div>
-        )
-      })}
+      {widgets.map(w => (
+        <div key={w.i}>
+          <DashboardWidget
+            id={w.i} type={w.type} config={w.config} editing={editing}
+            copyBoards={copyBoards}
+            onRemove={onRemove} onConfigure={onConfigure}
+            onWidgetConfigChange={onWidgetConfigChange} onCopyWidget={onCopyWidget}
+          />
+        </div>
+      ))}
     </ResponsiveGrid>
   )
 }
