@@ -10,28 +10,12 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
-import { formatAction, buildDetailsString, actionColor as getActionColor } from '@/lib/activity-format'
+import { formatAction, buildDetailsString, actionColor as getActionColor, entityLink as getEntityLink } from '@/lib/activity-format'
 import { fetchRecentReviews, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
 import { usePermissions } from '@/lib/permissions'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
-
-function getEntityLink(entityType: string, entityId: string | null): string | null {
-  if (!entityId) return null
-  switch (entityType) {
-    case 'discrepancy': return `/discrepancies/${entityId}`
-    case 'check': return `/checks/${entityId}`
-    case 'airfield_check': return `/checks/${entityId}`
-    case 'inspection': return `/inspections/${entityId}`
-    case 'obstruction_evaluation': return `/obstructions`
-    case 'qrc': return `/qrc?exec=${entityId}`
-    case 'wildlife_sighting': return `/wildlife`
-    case 'wildlife_strike': return `/wildlife`
-    case 'parking_plan': return `/parking`
-    default: return null
-  }
-}
 
 /**
  * Day-group date formatter — "Today / Yesterday / Wed, May 1" with a

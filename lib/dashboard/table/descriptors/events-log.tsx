@@ -8,7 +8,8 @@ import { loadCustomActivityTemplates } from '@/lib/supabase/activity-templates'
 import type { TemplateCategory } from '@/lib/activity-templates'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluTime } from '@/lib/utils'
-import { formatAction, buildDetailsString, actionColor } from '@/lib/activity-format'
+import Link from 'next/link'
+import { formatAction, buildDetailsString, actionColor, entityLink } from '@/lib/activity-format'
 import { moduleLabel } from '@/lib/activity-labels'
 import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
@@ -249,7 +250,16 @@ export const eventsLogDescriptor: TableWidgetDescriptor<ActivityEntry> = {
     { key: 'time', label: 'Zulu', accessor: e => `${formatZuluTime(e.created_at)}Z`, mono: true, defaultVisible: true },
     { key: 'oi', label: 'OI', accessor: e => e.user_operating_initials ?? '—', mono: true, defaultVisible: true },
     { key: 'entity_type', label: 'Type', accessor: e => e.entity_type, format: v => moduleLabel(v as string) },
-    { key: 'entity_display_id', label: 'Entity', accessor: e => e.entity_display_id ?? '—' },
+    {
+      key: 'entity_display_id', label: 'Entity', accessor: e => e.entity_display_id ?? '—',
+      format: (v, e) => {
+        const href = entityLink(e.entity_type, e.entity_id)
+        const text = (v as string) || '—'
+        if (!href || text === '—') return text
+        // Stop the click from also firing the row's deep-link to /activity.
+        return <Link href={href} onClick={ev => ev.stopPropagation()} style={{ color: 'var(--color-cyan)', textDecoration: 'none' }}>{text}</Link>
+      },
+    },
   ],
   filters: [
     { key: 'entity_type', label: 'Entity type', kind: 'text',

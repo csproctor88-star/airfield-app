@@ -29,6 +29,24 @@ export function actionColor(action: string, entityType: string): string {
   }
 }
 
+/** Deep-link target for an activity entry's entity, or null when none applies.
+ *  Shared by the Events Log page and the dashboard Events Log widget. */
+export function entityLink(entityType: string, entityId: string | null): string | null {
+  if (!entityId) return null
+  switch (entityType) {
+    case 'discrepancy': return `/discrepancies/${entityId}`
+    case 'check': return `/checks/${entityId}`
+    case 'airfield_check': return `/checks/${entityId}`
+    case 'inspection': return `/inspections/${entityId}`
+    case 'obstruction_evaluation': return `/obstructions`
+    case 'qrc': return `/qrc?exec=${entityId}`
+    case 'wildlife_sighting': return `/wildlife`
+    case 'wildlife_strike': return `/wildlife`
+    case 'parking_plan': return `/parking`
+    default: return null
+  }
+}
+
 const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   'Inspections/Checks': 'Logged Inspection/Check',
   'AMOPS Reporting': 'Logged AMOPS Report',
