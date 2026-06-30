@@ -121,8 +121,9 @@ export function dueStatus(
       // next_due → such an item is correctly overdue once the date passes.
       return completed && daysBetween(due, completed) >= 0 ? 'complete' : 'overdue'
     }
+    if (completed) return 'complete'   // current cycle satisfied; next due is in the future
     if (delta <= DUE_SOON_DAYS) return 'due_soon'
-    return completed ? 'complete' : 'upcoming'
+    return 'upcoming'
   }
   return completed ? 'complete' : 'upcoming'
 }

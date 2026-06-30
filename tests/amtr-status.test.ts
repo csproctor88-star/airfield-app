@@ -85,6 +85,14 @@ describe('AMTR status engine', () => {
     it('with neither due nor completion is upcoming', () => {
       expect(dueStatus({}, today)).toBe('upcoming')
     })
+    it('a completed item whose next due is within the due-soon window reads complete (not due_soon)', () => {
+      // Regression guard: a freshly-completed Monthly item (next due ~30 days out)
+      // must show Complete, not Due Soon. Locks the loosened invariant.
+      expect(dueStatus({ dueDate: '2026-06-10', completedDate: '2026-05-10' }, today)).toBe('complete')
+    })
+    it('an uncompleted item within the due-soon window still reads due_soon', () => {
+      expect(dueStatus({ dueDate: '2026-06-10' }, today)).toBe('due_soon')
+    })
   })
 
   describe('ratApplies', () => {
