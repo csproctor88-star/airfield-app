@@ -4,7 +4,7 @@
 **Branch:** `main` — **pushed, in sync with origin**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
 `npx vitest run` ✓ **1087 pass / 118 files** (was 1068 / 114).
-**HEAD:** `71cc4c7b` — sysadmin seed toggle for custom 803 sections.
+**HEAD:** `71be68c1` — report pages consume the shared discrepancy report views.
 
 Long session: dashboard widget batches A/B/C → Status Board widget → the DAF 803
 manager-addable-sections trilogy (add/rename/delete → export fix → sysadmin seed
@@ -99,6 +99,17 @@ Sheet names are Excel-legal (31-char) + deduped via `customSheetName`. (Driven b
 the 797-style requirement the user showed — a custom section that needs to live as
 an 803.)
 
+### Report pages consume the shared discrepancy report views (`71be68c1`)
+Killed the duplication flagged below: the Trends/Aging/Discrepancy report *pages*
+each kept their own inline copy of the render extracted into `TrendsReportView`/
+`AgingReportView`/`OpenReportView` for the widgets. Pages now render the shared
+components (net −312 lines). `OpenReportView` gained an optional `filterLabel`
+prop (preserves the page's active-filter caption); `AgingReportView`'s tier/shop
+filter state is now **optionally controlled** (`active*`/`on*Change` props, falls
+back to internal state for the widget) so the aging page drives it controlled and
+reuses the shared `filterAging` helper for its filtered PDF export. tsc/build/
+vitest green.
+
 ### Sysadmin "Seed to new bases" toggle for custom 803 sections (`71cc4c7b`)
 A **system-admin-only** checkbox on each custom 803 section in the catalog editor.
 When enabled, the section **and its tasks** are copied into any base seeded
@@ -151,7 +162,6 @@ migrations.** (`2026063000` auto-key backfill was applied in the prior session.)
 
 | Item | Severity | Notes |
 |---|---|---|
-| Discrepancy report **views duplicated** | low | `Trends/Aging/OpenReportView` are consumed by the widgets; the three report *pages* still embed their own copies — migrate pages onto the shared components. |
 | Whole session **not live-smoke-tested** | med | Verified via tsc/build/vitest only. Checklist below. |
 | Confirm **FQ definition** (carried over) | low | Training Progress FQ = JQS 100% AND Formal 100%; does 1098/797 factor in? |
 | Selfridge **1098 duplicate rows** (carried over) | low | Data cleanup in AMTR, not code. |
@@ -164,9 +174,9 @@ migrations.** (`2026063000` auto-key backfill was applied in the prior session.)
 No required next step — pick up wherever the user wants. Candidate work if idle:
 
 - **Live smoke test** the 803-section trilogy and dashboard batches on the preview
-  (checklist below).
-- **Migrate the 3 discrepancy report pages** onto the shared `*ReportView`
-  components to kill the duplication.
+  (checklist below). Also exercise the three report pages (Trends/Aging/
+  Discrepancy) after the shared-view refactor — confirm aging's tier/shop
+  cross-filter still drives the filtered PDF export.
 
 ### Long-running carryover (bandwidth-permitting)
 - FQ-definition confirmation; Selfridge 1098 duplicate-row cleanup; inspection PDF
@@ -220,7 +230,7 @@ Notable First Load JS:
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-30 | DAF 803 manager-addable sections (add/rename/delete) + own-sheet export + sysadmin seed-to-new-bases toggle; Status Board dashboard widget; dashboard batches A/B/C (analytics fixes, clock/notes/minimize/board-persistence, Events Log links, wildlife species + inspections analytics, full discrepancy report-view widgets). |
+| **Unreleased** | 2026-06-30 | DAF 803 manager-addable sections (add/rename/delete) + own-sheet export + sysadmin seed-to-new-bases toggle; Status Board dashboard widget; dashboard batches A/B/C (analytics fixes, clock/notes/minimize/board-persistence, Events Log links, wildlife species + inspections analytics, full discrepancy report-view widgets); report pages refactored onto the shared `*ReportView` components (−312 lines). |
 | **Unreleased** | 2026-06-30 | AMTR record-inspection + 1098: scan rule 6.3/6.4 grade only the current-year catalog (fixes prior-year rows shown as missing) + period-aware months, editable discrepancy detail + corrective action, template-driven auto 623a entry, Cert Official sign auto-completes a 1098 item. |
 | **Unreleased** | 2026-06-29 | Airfield Lighting widget family; dashboard round 2 (finer 24/40 grid, per-user default boards, AMTR Training Progress redesign, touch reorder, NOTAM wrap, settle scroll-to-top). |
 | **Unreleased** | 2026-06-29 | Dashboard polish round 1: centered metric tiles; AMTR consolidated into one 9-report widget; Links drag/tap reorder. |
