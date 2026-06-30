@@ -119,10 +119,29 @@ export async function deleteBoard(id: string): Promise<{ error: string | null }>
   return { error: error ? friendlyError(error) : null }
 }
 
+/** The board the user has chosen as their default at this base, or null. */
+export async function getUserDefaultBoardId(
+  baseId: string,
+  userId: string,
+): Promise<string | null> {
+  const supabase = createClient()
+  if (!supabase) return null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any
+  const { data, error } = await sb
+    .from('dashboard_user_defaults')
+    .select('board_id')
+    .eq('user_id', userId)
+    .eq('base_id', baseId)
+    .maybeSingle()
+  if (error) { console.error('getUserDefaultBoardId', error); return null }
+  return (data?.board_id as string) ?? null
+}
+
 /**
- * Set a personal board as the user's default at this base.
- * Clears is_default on all other owned boards at the base first,
- * then sets it on the target board.
+ * Set ANY board (personal or shared) as the caller's default at this base.
+ * Stored per-user in dashboard_user_defaults, so it never affects other users
+ * and can point at a shared board.
  */
 export async function setDefaultBoard(
   boardId: string,
@@ -133,28 +152,40 @@ export async function setDefaultBoard(
   if (!supabase) return { error: 'Offline' }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
-  // Step 1: clear is_default for all of this user's boards at this base.
-  const { error: clearError } = await sb
-    .from('dashboard_boards')
-    .update({ is_default: false, updated_at: new Date().toISOString() })
-    .eq('owner_id', userId)
-    .eq('base_id', baseId)
-  if (clearError) return { error: friendlyError(clearError) }
-  // Step 2: set is_default on the target board.
-  const { error: setError } = await sb
-    .from('dashboard_boards')
-    .update({ is_default: true, updated_at: new Date().toISOString() })
-    .eq('id', boardId)
-  return { error: setError ? friendlyError(setError) : null }
+  const { data, error } = await sb
+    .from('dashboard_user_defaults')
+    .upsert(
+      { user_id: userId, base_id: baseId, board_id: boardId, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,base_id' },
+    )
+    .select('board_id')
+  if (error) return { error: friendlyError(error) }
+  if (!Array.isArray(data) || data.length === 0) {
+    return { error: "Couldn't set default — please try again." }
+  }
+  return { error: null }
 }
 
-/** The caller's default personal board, creating an empty one on first visit. */
+/**
+ * The caller's default board at this base. Resolution order:
+ * 1) the per-user default (any board, incl. shared) if it's still visible;
+ * 2) a legacy personal board still flagged is_default (pre-migration fallback);
+ * 3) the caller's first personal board;
+ * 4) otherwise seed a new personal board from the role template and record it.
+ */
 export async function getOrCreateDefaultBoard(
   baseId: string,
   userId: string,
 ): Promise<DashboardBoardRow | null> {
   const boards = await fetchBoards(baseId)
-  const mine = boards.find(b => b.owner_id === userId && b.is_default)
+  const defaultId = await getUserDefaultBoardId(baseId, userId)
+  if (defaultId) {
+    const chosen = boards.find(b => b.id === defaultId)
+    if (chosen) return chosen
+  }
+  const legacy = boards.find(b => b.owner_id === userId && b.is_default)
+  if (legacy) return legacy
+  const mine = boards.find(b => b.owner_id === userId)
   if (mine) return mine
   const { currentUserRole, seedLayoutFromTemplate } = await import('@/lib/dashboard/board-templates')
   const role = await currentUserRole(userId)
@@ -162,5 +193,6 @@ export async function getOrCreateDefaultBoard(
   const { data } = await createBoard({
     base_id: baseId, owner_id: userId, name: 'My Dashboard', is_default: true, layout: seeded,
   })
+  if (data) await setDefaultBoard(data.id, baseId, userId)
   return data
 }

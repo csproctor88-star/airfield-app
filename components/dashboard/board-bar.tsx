@@ -21,13 +21,15 @@ export interface BoardBarProps {
   onDeleteBoard: () => void
   canDeleteActive: boolean
   onShareControls?: () => void
-  /** Called when user wants to mark the active personal board as default. Omit to hide the control. */
+  /** Called when user wants to mark the active board as their default. Omit to hide the control. */
   onSetDefault?: () => void
+  /** The board the user has chosen as their default (any board, incl. shared). */
+  defaultBoardId?: string | null
 }
 
 export function BoardBar({
   boards, activeId, onSwitch, editing, onToggleEdit, onAddWidget,
-  onNewBoard, onDuplicate, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls, onSetDefault,
+  onNewBoard, onDuplicate, onRenameBoard, onDeleteBoard, canDeleteActive, onShareControls, onSetDefault, defaultBoardId,
 }: BoardBarProps) {
   const btn: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
@@ -80,7 +82,7 @@ export function BoardBar({
         {personal.length > 0 && (
           <optgroup label="Personal">
             {personal.map(b => (
-              <option key={b.id} value={b.id}>{b.name}</option>
+              <option key={b.id} value={b.id}>{b.name}{b.id === defaultBoardId ? ' ✓' : ''}</option>
             ))}
           </optgroup>
         )}
@@ -88,7 +90,7 @@ export function BoardBar({
           <optgroup label="Shared">
             {shared.map(b => (
               <option key={b.id} value={b.id}>
-                {b.name}{b.role_template ? ' ★' : ''}
+                {b.name}{b.role_template ? ' ★' : ''}{b.id === defaultBoardId ? ' ✓' : ''}
               </option>
             ))}
           </optgroup>
@@ -118,7 +120,7 @@ export function BoardBar({
             style={canDeleteActive ? dangerBtn : disabledBtn}
             onClick={canDeleteActive ? onDeleteBoard : undefined}
             disabled={!canDeleteActive}
-            title={canDeleteActive ? 'Delete board' : 'Cannot delete your default board'}
+            title={canDeleteActive ? 'Delete board' : "You can't delete this shared board"}
           >
             <Trash2 size={14} strokeWidth={2.5} /> Delete
           </button>

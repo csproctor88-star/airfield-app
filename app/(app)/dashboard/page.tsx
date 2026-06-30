@@ -9,7 +9,7 @@ import { WidgetPalette } from '@/components/dashboard/widget-palette'
 import { WidgetConfigModal } from '@/components/dashboard/widget-config-modal'
 import {
   getOrCreateDefaultBoard, fetchBoards, createBoard, updateBoard,
-  deleteBoard, setDefaultBoard, type DashboardBoardRow,
+  deleteBoard, setDefaultBoard, getUserDefaultBoardId, type DashboardBoardRow,
 } from '@/lib/supabase/dashboard-boards'
 import { saveBoardLayout } from '@/lib/dashboard-board-write'
 import { updateWidgetConfig } from '@/lib/dashboard/widget-config'
@@ -107,6 +107,8 @@ export default function DashboardPage() {
   const [showPalette, setShowPalette] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [configuringId, setConfiguringId] = useState<string | null>(null)
+  // The user's chosen default board (any board, incl. shared) at this base.
+  const [defaultBoardId, setDefaultBoardId] = useState<string | null>(null)
 
   // modal state
   const [modalKind, setModalKind] = useState<ModalKind>(null)
@@ -185,6 +187,7 @@ export default function DashboardPage() {
     if (!installationId) return
     const list = await fetchBoards(installationId)
     setBoards(list)
+    if (userId) setDefaultBoardId(await getUserDefaultBoardId(installationId, userId))
     const nextId =
       (switchTo && list.some(b => b.id === switchTo)) ? switchTo
       : (activeId && list.some(b => b.id === activeId)) ? activeId
@@ -197,7 +200,7 @@ export default function DashboardPage() {
       setSmWidgets(found?.layout.sm)
       dirtyRef.current = false
     }
-  }, [installationId, activeId])
+  }, [installationId, activeId, userId])
 
   // Load user + boards on base change.
   useEffect(() => {
@@ -219,15 +222,18 @@ export default function DashboardPage() {
       if (cancelled) return
       setBoards(list)
 
-      // Pick initial active board: user's default personal first, then any personal, then first.
-      const myDefault = list.find(b => b.owner_id === uid && b.is_default)
+      // Pick initial active board: user's chosen default (any board) first, then any personal, then first.
+      const defId = await getUserDefaultBoardId(installationId, uid)
+      if (cancelled) return
+      setDefaultBoardId(defId)
+      const myDefault = (defId && list.find(b => b.id === defId)) || null
       const firstPersonal = list.find(b => b.owner_id === uid)
       const initial = myDefault ?? firstPersonal ?? list[0] ?? null
       if (initial) {
         setActiveId(initial.id)
-        // Show DEFAULT_LAYOUT only for user's own new/empty default board.
+        // Show DEFAULT_LAYOUT only for the user's own new/empty default board.
         const isEmpty = initial.layout.lg.length === 0
-        const isMyDefault = initial.owner_id === uid && initial.is_default
+        const isMyDefault = initial.owner_id === uid && initial.id === defId
         setWidgets(isEmpty && isMyDefault ? DEFAULT_LAYOUT : initial.layout.lg)
         setMdWidgets(initial.layout.md)
         setSmWidgets(initial.layout.sm)
@@ -309,22 +315,19 @@ export default function DashboardPage() {
     }
   }, [editing, activeBoard, canPublishShared])
 
-  // Cannot delete if it's the user's own default personal board.
+  // Delete: a personal board by its owner (even if it's their default — the
+  // default just falls back on next load); a shared board only by a publisher.
   const canDeleteActive = useMemo(() => {
     if (!activeBoard || !userId) return false
-    return !(activeBoard.owner_id === userId && activeBoard.is_default)
-  }, [activeBoard, userId])
+    return activeBoard.scope === 'personal' ? activeBoard.owner_id === userId : canPublishShared
+  }, [activeBoard, userId, canPublishShared])
 
-  // "Set as Default" is eligible when the active board is personal, owned by this user,
-  // and is not already the default.
+  // "Set as Default" is eligible for ANY board (personal or shared) that isn't
+  // already the user's default.
   const canSetDefault = useMemo(() => {
     if (!activeBoard || !userId) return false
-    return (
-      activeBoard.scope === 'personal' &&
-      activeBoard.owner_id === userId &&
-      !activeBoard.is_default
-    )
-  }, [activeBoard, userId])
+    return activeBoard.id !== defaultBoardId
+  }, [activeBoard, userId, defaultBoardId])
 
   // ── Modal handlers ───────────────────────────────────────────────────────
 
@@ -426,16 +429,18 @@ export default function DashboardPage() {
     const { error } = await deleteBoard(activeId)
     if (error) { toast.error(error); return }
     toast.success('Board deleted')
-    // Switch to user's default personal board.
-    const myDefault = boards.find(b => b.owner_id === userId && b.is_default && b.id !== activeId)
-    await refreshBoards(myDefault?.id)
+    // Deleting the board cascades away any default row pointing at it; switch to
+    // the remaining default if it wasn't the one deleted, else the first board.
+    const nextId = defaultBoardId && defaultBoardId !== activeId ? defaultBoardId : undefined
+    await refreshBoards(nextId)
   }
 
-  // Set active board as the user's default personal board
+  // Set the active board (any board, incl. shared) as the user's default.
   const handleSetDefault = async () => {
     if (!activeId || !installationId || !userId) return
     const { error } = await setDefaultBoard(activeId, installationId, userId)
     if (error) { toast.error(error); return }
+    setDefaultBoardId(activeId)
     toast.success('Set as default dashboard')
     await refreshBoards(activeId)
   }
@@ -526,6 +531,7 @@ export default function DashboardPage() {
         canDeleteActive={canDeleteActive}
         onShareControls={canPublishShared ? () => openModal('share') : undefined}
         onSetDefault={canSetDefault ? handleSetDefault : undefined}
+        defaultBoardId={defaultBoardId}
       />
 
       {isEmpty ? (
