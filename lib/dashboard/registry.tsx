@@ -39,6 +39,7 @@ import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/lin
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
+import { LightingWidget, LightingConfigForm } from '@/components/dashboard/widgets/lighting-widget'
 import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
 import { NotesWidget, NotesConfigForm } from '@/components/dashboard/widgets/notes-widget'
@@ -168,8 +169,19 @@ export const WIDGETS: Record<string, WidgetDef> = {
     icon: RadioTower, defaultSize: { w: 6, h: 6 }, minSize: { w: 4, h: 4 },
     permission: PERM.INFRASTRUCTURE_VIEW,
     moduleHref: '/infrastructure',
+    hidden: true,
     Component: (p) => <InfrastructureWidget config={p.config} editing={p.editing} onConfigChange={p.onConfigChange} />,
     ConfigForm: TitleConfigForm,
+  },
+  'lighting': {
+    type: 'lighting', kind: 'native', title: 'Airfield Lighting',
+    description: 'Lighting health for a runway/taxiway/apron area, a system, or a light type',
+    defaultSize: { w: 8, h: 8 }, minSize: { w: 6, h: 6 },
+    permission: PERM.INFRASTRUCTURE_VIEW,
+    moduleHref: '/infrastructure',
+    icon: Lightbulb,
+    Component: (p) => <LightingWidget {...p} />,
+    ConfigForm: LightingConfigForm,
   },
   'field-conditions': {
     type: 'field-conditions', kind: 'native', title: 'Field Conditions',
