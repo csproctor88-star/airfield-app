@@ -13,17 +13,34 @@ describe('validateBoardLayout', () => {
     expect(bl.lg.map(x => x.i)).toEqual(['a', 'b'])
     expect(bl.md).toBeUndefined()
     expect(bl.sm).toBeUndefined()
+    expect(bl.gridScale).toBe(2)   // tagged at current scale
   })
   it('reads an object shape with lg/md/sm', () => {
+    // Legacy (untagged) input → coordinates doubled into the current grid scale.
     const bl = validateBoardLayout({ lg: [w('a')], md: [w('a', 1, 1)], sm: [w('a', 0, 5)] })
     expect(bl.lg[0].i).toBe('a')
-    expect(bl.md?.[0].x).toBe(1)
-    expect(bl.sm?.[0].y).toBe(5)
+    expect(bl.md?.[0].x).toBe(2)        // 1 × 2
+    expect(bl.sm?.[0].y).toBe(10)       // 5 × 2 (sm scales y/h only)
+    expect(bl.gridScale).toBe(2)
   })
   it('returns { lg: [] } for junk', () => {
-    expect(validateBoardLayout(null)).toEqual({ lg: [] })
-    expect(validateBoardLayout(42)).toEqual({ lg: [] })
-    expect(validateBoardLayout({ nope: 1 })).toEqual({ lg: [] })
+    expect(validateBoardLayout(null)).toEqual({ lg: [], gridScale: 2 })
+    expect(validateBoardLayout(42)).toEqual({ lg: [], gridScale: 2 })
+    expect(validateBoardLayout({ nope: 1 })).toEqual({ lg: [], gridScale: 2 })
+  })
+  it('doubles x/y/w/h of a legacy (untagged) input and tags gridScale: 2', () => {
+    const bl = validateBoardLayout({ lg: [w('a', 3, 4)], sm: [w('a', 0, 5)] })
+    expect(bl.lg[0]).toMatchObject({ i: 'a', x: 6, y: 8, w: 4, h: 4 })   // all ×2
+    // sm collapses to a single column: x→0, w→1; y/h doubled.
+    expect(bl.sm?.[0]).toMatchObject({ i: 'a', x: 0, y: 10, w: 1, h: 4 })
+    expect(bl.gridScale).toBe(2)
+  })
+  it('passes an already-scaled input through unchanged (idempotent — no double scaling)', () => {
+    const input = { lg: [w('a', 6, 8)], md: [w('a', 2, 2)], gridScale: 2 }
+    const bl = validateBoardLayout(input)
+    expect(bl.lg[0]).toMatchObject({ i: 'a', x: 6, y: 8, w: 2, h: 2 })   // unchanged
+    expect(bl.md?.[0]).toMatchObject({ i: 'a', x: 2, y: 2, w: 2, h: 2 })
+    expect(bl.gridScale).toBe(2)
   })
 })
 

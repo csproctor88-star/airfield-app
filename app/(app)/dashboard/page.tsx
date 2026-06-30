@@ -25,10 +25,10 @@ import { toast } from 'sonner'
 
 // Sensible starter layout for a brand-new board.
 const DEFAULT_LAYOUT: WidgetInstance[] = [
-  { i: 'w-insp', type: 'inspection-status', config: {}, x: 0, y: 0, w: 3, h: 2 },
-  { i: 'w-disc', type: 'open-discrepancies', config: {}, x: 3, y: 0, w: 5, h: 3 },
-  { i: 'w-last', type: 'last-check', config: {}, x: 8, y: 0, w: 4, h: 1 },
-  { i: 'w-shift', type: 'shift-checklist', config: {}, x: 8, y: 1, w: 4, h: 2 },
+  { i: 'w-insp', type: 'inspection-status', config: {}, x: 0, y: 0, w: 6, h: 4 },
+  { i: 'w-disc', type: 'open-discrepancies', config: {}, x: 6, y: 0, w: 10, h: 6 },
+  { i: 'w-last', type: 'last-check', config: {}, x: 16, y: 0, w: 8, h: 2 },
+  { i: 'w-shift', type: 'shift-checklist', config: {}, x: 16, y: 2, w: 8, h: 4 },
 ]
 
 function uuid(): string {

@@ -11,7 +11,7 @@ import type { WidgetInstance, BoardLayout, DeviceClass } from '@/lib/dashboard/l
 type Layout = ReactGridLayout.Layout
 
 const ResponsiveGrid = WidthProvider(Responsive)
-const COLS = { lg: 12, md: 8, sm: 1 }
+const COLS = { lg: 24, md: 16, sm: 1 }
 const BREAKPOINTS = { lg: 996, md: 600, sm: 0 }
 
 type DashboardWidgetProps = {
@@ -102,8 +102,8 @@ export function WidgetGrid({
       layouts={layouts}
       breakpoints={BREAKPOINTS}
       cols={COLS}
-      rowHeight={80}
-      margin={[12, 12]}
+      rowHeight={40}
+      margin={[6, 6]}
       isDraggable={editing}
       isResizable={editing}
       resizeHandles={['nw', 'ne', 'sw', 'se']}
