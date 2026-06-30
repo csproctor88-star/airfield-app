@@ -1489,6 +1489,23 @@ html, body {
 .wt-row-link { cursor: pointer; transition: background-color 0.12s ease; }
 .wt-row-link:hover td { background: color-mix(in srgb, var(--color-accent) 9%, transparent); }
 
+/* Column resize handles: the wide span is the hit area; the ::after is the
+   visible divider line. On hover it brightens to the accent colour so the
+   resize affordance is discoverable. */
+.wt-col-resize { position: absolute; }
+.wt-col-resize::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 20%; bottom: 20%;
+  width: 1px;
+  background: var(--color-border);
+}
+.wt-col-resize:hover::after {
+  background: var(--color-accent);
+  width: 2px;
+  top: 0; bottom: 0;
+}
+
 /* Dashboard widget resize handles — visible on all four corners in edit mode */
 .dashboard-grid .react-resizable-handle {
   width: 16px;

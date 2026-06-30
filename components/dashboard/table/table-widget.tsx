@@ -216,7 +216,7 @@ export function TableWidget<Row>({
             )}
             <thead>
               <tr>
-                {visibleCols.map(c => {
+                {visibleCols.map((c, idx) => {
                   const isActive = sort?.key === c.key
                   const align = c.align ?? 'left'
                   return (
@@ -248,6 +248,7 @@ export function TableWidget<Row>({
                         whiteSpace: 'nowrap',
                         overflow: useFixedLayout ? 'hidden' : undefined,
                         textOverflow: useFixedLayout ? 'ellipsis' : undefined,
+                        borderRight: idx === visibleCols.length - 1 ? undefined : '1px solid var(--color-border)',
                       }}
                     >
                       {c.label}
@@ -266,7 +267,7 @@ export function TableWidget<Row>({
                           right: 0,
                           top: 0,
                           bottom: 0,
-                          width: 5,
+                          width: 7,
                           cursor: 'col-resize',
                           zIndex: 1,
                           // Subtle visual hint on hover via inline style — theme-neutral
