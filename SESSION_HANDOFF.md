@@ -3,7 +3,7 @@
 **Date:** 2026-06-30
 **Branch:** `main` — **pushed, in sync with origin**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **1056 pass / 114 files** (was 1032 / 112).
+`npx vitest run` ✓ **1068 pass / 114 files** (was 1032 / 112).
 **HEAD:** the AMTR inspection + 1098 completion series (see below).
 
 AMTR record-inspection + 1098 changes, brainstormed → spec → plan → implemented in 8
@@ -17,6 +17,29 @@ Plan: `docs/superpowers/plans/2026-06-30-amtr-inspection-changes.md`
 ---
 
 ## What shipped today (end state — read first)
+
+### 0b. New inspection auto-checks batch (3 items) + 6.4 fix (debugged from real PDF)
+After promotion, the "28 missing" persisted — traced via the real exported inspection
+(CTR Eaton) to **rule 6.4** (`1098_catalog_fields`), the sibling of 6.3 with the **same
+all-years bug** (it flagged the 28 prior-year 2025 rows, which are all missing
+`score_or_hours`). Fixed by extracting the current-year 1098 catalog slice **once** and
+sharing it between 6.3 and 6.4 (`lib/amtr/inspection-engine.ts`). 6.3 was already correct.
+
+Then added **three new auto-checks** (spec + plan under `docs/superpowers/{specs,plans}/
+2026-06-30-amtr-inspection-autochecks*`), scope chosen against live data:
+- **4.2 `transcribe_reason`** — if any rows transcribed, require a "Records Transcribed"
+  623A entry; `na` otherwise.
+- **3.1 `formal_pme_dates`** — now **N/A for Contractor/Civilian/Separated** (PME is
+  military-only); fixes contractors flagged for missing BMT/Apprentice dates.
+- **2.3 `skill_levels_attained`** — flags when a member hasn't attained the skill
+  level(s) their **DAFSC** requires (matching level + below); reuses `skillLevelFromName`;
+  `na` for civilian/unparseable DAFSC. (Reframed from a date-check — skill levels/SEIs
+  store no dates, only attained Yes/No.)
+- Migration `2026063000_amtr_checklist_autokeys_batch2.sql` backfills `auto_key` on
+  existing checklists (2.3, 4.2) — **applied to the linked DB** (3 bases each).
+- **Excluded as data-blocked** (would false-flag): 2.2/2.4 date-checks (no dates stored),
+  4.3/4.11 upgrade evals (no reliable in-upgrade signal — `tsc` mostly null), 8.2
+  milestones-started (no start date column).
 
 ### 0. Follow-up fix — rule 6.3 grades only the CURRENT year (real prod root cause)
 - **Reported after promotion:** completed 1098 items (due 2027) still showed as
@@ -83,8 +106,11 @@ Plan: `docs/superpowers/plans/2026-06-30-amtr-inspection-changes.md`
 
 ## Migrations status
 
-**None this session.** Everything rides in existing JSONB (`amtr_inspections.items`)
-and existing 1098 columns. No pending migrations.
+**One, already applied:** `2026063000_amtr_checklist_autokeys_batch2.sql` — backfills
+`amtr_inspection_checklist.auto_key` for items 2.3 (`skill_levels_attained`) and 4.2
+(`transcribe_reason`) on existing bases. Applied to the linked prod DB via
+`db query --linked --file` (3 bases each, verified). Additive, NULL-only. No pending
+migrations. Everything else rides in existing JSONB (`amtr_inspections.items`) / columns.
 
 ---
 
