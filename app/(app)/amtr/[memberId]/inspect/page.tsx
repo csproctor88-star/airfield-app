@@ -11,7 +11,7 @@ import {
 } from '@/lib/supabase/amtr'
 import {
   fetchAmtrInspectionsByMember, saveAmtrInspectionDraft, completeAmtrInspection, reopenAmtrInspection,
-  type InspectionItemResponse,
+  normalizeInspectionItem, type InspectionItemResponse,
 } from '@/lib/supabase/amtr-inspections'
 import { runInspectionScan, highestSkillLevel } from '@/lib/amtr/inspection-engine'
 import { DEFAULT_INSPECTION_CHECKLIST } from '@/lib/amtr/inspection-checklist'
@@ -146,12 +146,24 @@ export default function AmtrInspectPage() {
     const built: InspectionItemResponse[] = cl.filter((r) => r.kind === 'item').map((r) => {
       const s = r.auto_key ? scan[r.auto_key as keyof typeof scan] : undefined
       const ex = prior.get(r.item_number)
+      const findings = s?.findings ?? []
+      if (ex) {
+        return normalizeInspectionItem({
+          item_number: r.item_number,
+          status: ex.status,
+          auto: s?.auto ?? null,
+          findings,                                   // refresh auto findings
+          detail: ex.detail ?? findings.join(' · '),  // keep an edited detail; else reseed
+          correctiveAction: ex.correctiveAction ?? ex.note ?? '',
+        })
+      }
       return {
         item_number: r.item_number,
-        status: ex ? ex.status : (s?.auto ?? null),
+        status: s?.auto ?? null,
         auto: s?.auto ?? null,
-        findings: s?.findings ?? [],
-        note: ex?.note ?? '',
+        findings,
+        detail: findings.join(' · '),
+        correctiveAction: '',
       }
     })
     setItems(built)
@@ -183,8 +195,8 @@ export default function AmtrInspectPage() {
       queueSave(next, notes); return next
     })
   }
-  const setItemNote = (item_number: string, note: string) => {
-    setItems((prev) => { const next = prev.map((it) => it.item_number === item_number ? { ...it, note } : it); queueSave(next, notes); return next })
+  const setItemField = (item_number: string, field: 'detail' | 'correctiveAction', value: string) => {
+    setItems((prev) => { const next = prev.map((it) => it.item_number === item_number ? { ...it, [field]: value } : it); queueSave(next, notes); return next })
   }
 
   const itemByNum = useMemo(() => new Map(items.map((it) => [it.item_number, it])), [items])
@@ -360,8 +372,16 @@ export default function AmtrInspectPage() {
                         <span style={{ flex: 1, fontSize: 'var(--fs-sm)' }}>{it.label}</span>
                         <TriState value={resp?.status ?? null} disabled={status === 'completed' || !canWrite} onChange={(v) => setItemStatus(it.item_number, v)} />
                       </div>
-                      {resp && resp.findings.length > 0 && (
-                        <div style={{ marginLeft: 42, marginTop: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-warning)' }}>⚠ {resp.findings.join(' · ')}</div>
+                      {resp && (resp.detail !== undefined || resp.findings.length > 0) && (
+                        <div style={{ marginLeft: 42, marginTop: 6 }}>
+                          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', marginBottom: 2 }}>⚠ Findings</div>
+                          <textarea className="input-dark" rows={2}
+                            placeholder="Finding detail…"
+                            style={{ width: '100%', resize: 'vertical', fontSize: 'var(--fs-xs)' }}
+                            value={resp.detail ?? resp.findings.join(' · ')}
+                            disabled={status === 'completed' || !canWrite}
+                            onChange={(e) => setItemField(it.item_number, 'detail', e.target.value)} />
+                        </div>
                       )}
                       {resp && resp.auto != null && (
                         <div style={{ marginLeft: 42, marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>auto-suggested: {resp.auto.toUpperCase()}</div>
@@ -370,21 +390,24 @@ export default function AmtrInspectPage() {
                         <div style={{ marginLeft: 42, marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>manual review — no automated check for this item</div>
                       )}
                       {(() => {
-                        const showComment = resp?.status === 'no' || !!resp?.note || commentOpen.has(it.item_number)
-                        if (!showComment) {
+                        const showCa = resp?.status === 'no' || !!resp?.correctiveAction || commentOpen.has(it.item_number)
+                        if (!showCa) {
                           return (status !== 'completed' && canWrite) ? (
                             <button onClick={() => setCommentOpen((p) => { const n = new Set(p); n.add(it.item_number); return n })}
                               style={{ marginLeft: 42, marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 'var(--fs-xs)', fontFamily: 'inherit' }}>
-                              + Add comment
+                              + Add corrective action
                             </button>
                           ) : null
                         }
                         return (
-                          <textarea className="input-dark" rows={2}
-                            placeholder={resp?.status === 'no' ? 'Reason / corrective action for this finding…' : 'Comment…'}
-                            style={{ marginLeft: 42, marginTop: 6, width: 'calc(100% - 42px)', resize: 'vertical', fontSize: 'var(--fs-xs)' }}
-                            value={resp?.note ?? ''} disabled={status === 'completed' || !canWrite}
-                            onChange={(e) => setItemNote(it.item_number, e.target.value)} />
+                          <div style={{ marginLeft: 42, marginTop: 6 }}>
+                            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 2 }}>Corrective Action</div>
+                            <textarea className="input-dark" rows={2}
+                              placeholder="Corrective action taken / planned…"
+                              style={{ width: '100%', resize: 'vertical', fontSize: 'var(--fs-xs)' }}
+                              value={resp?.correctiveAction ?? ''} disabled={status === 'completed' || !canWrite}
+                              onChange={(e) => setItemField(it.item_number, 'correctiveAction', e.target.value)} />
+                          </div>
                         )
                       })()}
                     </div>
