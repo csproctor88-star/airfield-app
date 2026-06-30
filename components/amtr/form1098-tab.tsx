@@ -273,38 +273,27 @@ export function Form1098Tab(props: {
     if (error) { toast.error(error); return '' }
     return String(data?.id ?? '')
   }
-  const setField = async (catId: string, freq: string, field: string, value: string) => {
-    const existing = progByCat.get(catId)
-    const patch: Row = { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, [field]: value || null }
-    if (field === 'last_completed') {
-      // Manual override wins until the user explicitly clears it (per
-      // feedback_due_date_override semantics). Only recompute next_due
-      // automatically if the row has no manual override flag.
-      if (!existing?.next_due_manual) {
-        patch.next_due = computeNextDue(value, freq)
-      }
-    }
-    if (field === 'next_due') {
-      // Manual edit of the due date flips the override flag so that
-      // future last_completed edits won't overwrite it.
-      patch.next_due_manual = !!value
-    }
-    const { error } = await upsertAmtrRow('amtr_1098_progress', patch, { onConflict: 'member_id,catalog_id,year_label' })
+  // Mark a 1098 item complete: stamp last_completed, recompute next_due from
+  // frequency (clearing any manual override), and seed next year's row when the
+  // computed due lands in a later, already-open catalog year. Does NOT reload —
+  // the caller decides when to refresh.
+  const completeItem = async (catId: string, freq: string, completedDate: string) => {
+    const value = completedDate || ''
+    const nextDue = value ? computeNextDue(value, freq) : null
+    const { error } = await upsertAmtrRow(
+      'amtr_1098_progress',
+      { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year,
+        last_completed: value || null, next_due: nextDue, next_due_manual: false },
+      { onConflict: 'member_id,catalog_id,year_label' },
+    )
     if (error) { toast.error(error); return }
-    // Auto-rollover: completing a task whose next due lands in a later
-    // year seeds that task on the next year's 1098 for THIS member —
-    // but only if the admin has already opened that year (its catalog
-    // already has a row for the task). When next year is NOT open,
-    // the next_due is still recorded on the current year's row (above);
-    // it'll materialize into next year's progress later, when the admin
-    // opens the year via +Add Year (which calls materializeRollovers).
-    //
-    // Rationale: the catalog is base-shared. Auto-cloning a catalog
-    // into next year used to make that year visible to every member —
-    // including ones with no actual data there — which was confusing.
-    // See migration 2026061401 for the cleanup of those phantom rows.
-    const nextDue = (patch.next_due as string | undefined) ?? (existing?.next_due as string | undefined)
-    if (field === 'last_completed' && value && nextDue) {
+    // Auto-rollover: completing a task whose next due lands in a later year
+    // seeds that task on the next year's 1098 for THIS member — but only if the
+    // admin has already opened that year (its catalog has a row for the task).
+    // When next year is NOT open, the next_due is still recorded on the current
+    // year's row; it materializes later via +Add Year (materializeRollovers).
+    // See migration 2026061401 for the phantom-row cleanup rationale.
+    if (value && nextDue) {
       const nextYear = String(new Date(`${String(nextDue).slice(0, 10)}T00:00:00Z`).getUTCFullYear())
       if (Number(nextYear) > Number(year)) {
         const thisYearCat = yearCatalog.find((c) => String(c.id) === catId)
@@ -327,6 +316,24 @@ export function Form1098Tab(props: {
         }
       }
     }
+  }
+  const setField = async (catId: string, freq: string, field: string, value: string) => {
+    // A completion date always recomputes the due date (clearing any manual
+    // override) and runs the rollover — completing should never require a
+    // manual due-date edit afterward.
+    if (field === 'last_completed') {
+      await completeItem(catId, freq, value)
+      onChange()
+      return
+    }
+    const patch: Row = { base_id: installationId, member_id: memberId, catalog_id: catId, year_label: year, [field]: value || null }
+    if (field === 'next_due') {
+      // Manual edit of the due date flips the override flag; the next completion
+      // (via completeItem) clears it again.
+      patch.next_due_manual = !!value
+    }
+    const { error } = await upsertAmtrRow('amtr_1098_progress', patch, { onConflict: 'member_id,catalog_id,year_label' })
+    if (error) { toast.error(error); return }
     onChange()
   }
   // Clear a manual due-date override and recompute from last_completed +
@@ -456,6 +463,13 @@ export function Form1098Tab(props: {
                   onSign={async () => {
                     const rid = await ensure(catId); if (!rid) return
                     await sign('amtr_1098_progress', rid, slot, async () => {
+                      if (slot === 'certifier') {
+                        // Cert Official sign-off = the item is officially complete.
+                        // Stamp the completion (preserving an already-entered real
+                        // date; else today) and roll the due date forward.
+                        const today = new Date().toISOString().slice(0, 10)
+                        await completeItem(catId, freq, (p?.last_completed as string) || today)
+                      }
                       if (slot !== 'trainee' && member.user_id) {
                         const draft: NotificationDraft = buildSignoff(member.full_name, slot as AmtrRole, 'DAF 1098', String(c.task), catId, '1098')
                         await createAmtrNotification({ base_id: installationId, recipient_user_id: member.user_id, member_id: memberId, ...draft })
