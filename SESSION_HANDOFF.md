@@ -3,7 +3,7 @@
 **Date:** 2026-06-30
 **Branch:** `main` — **pushed, in sync with origin**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **1054 pass / 114 files** (was 1032 / 112; +22 tests, +2 files).
+`npx vitest run` ✓ **1056 pass / 114 files** (was 1032 / 112).
 **HEAD:** the AMTR inspection + 1098 completion series (see below).
 
 AMTR record-inspection + 1098 changes, brainstormed → spec → plan → implemented in 8
@@ -17,6 +17,23 @@ Plan: `docs/superpowers/plans/2026-06-30-amtr-inspection-changes.md`
 ---
 
 ## What shipped today (end state — read first)
+
+### 0. Follow-up fix — rule 6.3 grades only the CURRENT year (real prod root cause)
+- **Reported after promotion:** completed 1098 items (due 2027) still showed as
+  "missing record." Root cause (verified against prod base `…0001`): the 1098
+  catalog is **per-year**, and rule 6.3 enumerated **every** `year_label`. The base
+  had 28 rows for **2025** and 28 for **2026**; the member worked 2026, so all 28
+  **2025** rows (same task names, no progress for this member) were flagged. The
+  shared names made completed items look flagged. The "28 missing" matched the 2025
+  count exactly.
+- **Fix** (`lib/amtr/inspection-engine.ts` rule 6.3): grade only the **current
+  calendar year's** catalog (matching the 1098 tab's `currentYear = getUTCFullYear()`
+  view), with a fallback to the latest non-future year when the current year isn't
+  open; legacy rows with no `year_label` count as current. The period-elapsed gate
+  (#1 below) is retained for within-year months. Two regression tests added.
+- Note: the earlier period-gate (#1) was correct for *future months within* the
+  current year, but did **not** catch *prior years* (a 2025 Annual item is
+  "elapsed") — hence this second fix. Both are needed.
 
 ### 1. Period-aware records-inspection scan (no future-month false positives)
 - Scan rule **6.3** (`1098_all_documented`, `lib/amtr/inspection-engine.ts`) was a pure
@@ -104,7 +121,7 @@ and existing 1098 columns. No pending migrations.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-30 | AMTR record-inspection + 1098: period-aware scan (no future-month false positives), editable discrepancy detail + corrective action, template-driven auto 623a entry, Cert Official sign auto-completes a 1098 item (+ dueStatus Complete-when-completed fix). |
+| **Unreleased** | 2026-06-30 | AMTR record-inspection + 1098: scan rule 6.3 grades only the current-year catalog (fixes prior-year rows shown as missing) + period-aware months, editable discrepancy detail + corrective action, template-driven auto 623a entry, Cert Official sign auto-completes a 1098 item (+ dueStatus Complete-when-completed fix). |
 | **Unreleased** | 2026-06-29 | Airfield Lighting widget family; dashboard round 2 (finer 24/40 grid, per-user default boards, AMTR Training Progress redesign, touch reorder, NOTAM wrap, settle scroll-to-top). |
 | **Unreleased** | 2026-06-29 | Dashboard polish round 1: centered metric tiles; AMTR consolidated into one 9-report widget; Links drag/tap reorder. |
 | **Unreleased** | 2026-06-28 | Dashboard widget refinement run on Phase 4. |
