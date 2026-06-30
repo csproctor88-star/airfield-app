@@ -11,7 +11,7 @@ import formalCourses from './data/formal-courses.json'
 import ratCourses from './data/rat-courses.json'
 import milestones from './data/milestones.json'
 import { DEFAULT_INSPECTION_CHECKLIST } from './inspection-checklist'
-import { DEFAULT_623A_ENTRY_TYPES, bundled623aCommentTemplates } from './reference-data'
+import { DEFAULT_623A_ENTRY_TYPES, bundled623aCommentTemplates, DAF803_SECTIONS } from './reference-data'
 import std803 from './data/std-803.json'
 import {
   insertAmtrRows, countAmtrRows, fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, setAmtrCatalogVersion,
@@ -21,6 +21,7 @@ import {
 export const CATALOG_VERSION = '2026.06 (1C7X1)'
 
 const STD_803 = std803 as Record<string, unknown>[]
+const STD_803_SECTIONS: Record<string, unknown>[] = DAF803_SECTIONS.map((s, i) => ({ section_key: s.key, label: s.label, builtin: true, sort_order: i }))
 
 const INSPECTION_CHECKLIST = DEFAULT_INSPECTION_CHECKLIST.map((r, i) => ({
   kind: r.kind, label: r.label, item_number: r.item_number, auto_key: r.auto_key ?? null, sort_order: i,
@@ -89,6 +90,7 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
     { table: 'amtr_623a_entry_types', rows: ENTRY_TYPES_623A },
     { table: 'amtr_623a_comment_templates', rows: COMMENT_TEMPLATES_623A },
     { table: 'amtr_803_catalog', rows: STD_803 },
+    { table: 'amtr_803_sections', rows: STD_803_SECTIONS },
     { table: 'amtr_qual_catalog', rows: QUAL_CATALOG },
   ]
   const currentYearStr = String(new Date().getUTCFullYear())

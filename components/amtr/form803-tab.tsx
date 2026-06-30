@@ -6,7 +6,7 @@ import { upsertAmtrRow, deleteAmtrRow, fetchAmtrByBase, insertAmtrRows, type Amt
 import { canSignSlot, canReopen, type SignSlot } from '@/lib/amtr/roles'
 import { type TranscribeRow } from '@/lib/amtr/transcribe'
 import { useBulkTranscribe, TranscribeBar } from '@/components/amtr/transcribe-bar'
-import { DAF803_SECTIONS } from '@/lib/amtr/reference-data'
+import { resolveSections } from '@/lib/amtr/form803-sections'
 import { SignCell } from '@/components/amtr/signable'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -27,10 +27,11 @@ const SECTION_NOTES: Record<string, string> = {
 }
 
 export function Form803Tab(props: {
-  rows: Row[]; canWrite: boolean; canEnterData: boolean; installationId: string; memberId: string
+  rows: Row[]; sections: Row[]; canWrite: boolean; canEnterData: boolean; installationId: string; memberId: string
   member: AmtrMember; myRoles: AmtrRole[]; isOwn: boolean; sign: SignFn; reopen: ReopenFn; onChange: () => void
 }) {
-  const { rows, canWrite, canEnterData, installationId, memberId, myRoles, isOwn, sign, reopen, onChange } = props
+  const { rows, sections, canWrite, canEnterData, installationId, memberId, myRoles, isOwn, sign, reopen, onChange } = props
+  const sectionList = resolveSections(sections)
   const [section, setSection] = useState<string>('apprenticeGrad')
   const [catalog, setCatalog] = useState<Row[]>([])
   const reopenAllowed = canReopen(myRoles)
@@ -80,7 +81,7 @@ export function Form803Tab(props: {
     <div>
       <h2 style={{ margin: '0 0 10px', fontSize: 18 }}>DAF Form 803 — Report of Task Performance</h2>
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
-        {DAF803_SECTIONS.map((s) => {
+        {sectionList.map((s) => {
           const count = rows.filter((r) => r.section === s.key).length
           const active = section === s.key
           return (
@@ -92,9 +93,11 @@ export function Form803Tab(props: {
           )
         })}
       </div>
-      <div style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', borderLeft: '3px solid var(--color-accent)', background: 'var(--color-bg-inset)' }}>
-        {SECTION_NOTES[section]}
-      </div>
+      {SECTION_NOTES[section] && (
+        <div style={{ padding: '10px 12px', marginBottom: 12, borderRadius: 8, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', borderLeft: '3px solid var(--color-accent)', background: 'var(--color-bg-inset)' }}>
+          {SECTION_NOTES[section]}
+        </div>
+      )}
       {(canEnterData || (canWrite && tx.txSlots.length > 0)) && (
         <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {canEnterData && <Btn variant="primary" onClick={addRow}>+ Add task evaluation</Btn>}

@@ -58,6 +58,7 @@ export default function AmtrRolesPage() {
   const [catCommentTemplates, setCatCommentTemplates] = useState<Row[]>([])
   const [catMilestone, setCatMilestone] = useState<Row[]>([])
   const [cat803, setCat803] = useState<Row[]>([])
+  const [cat803Sections, setCat803Sections] = useState<Row[]>([])
   const [catQual, setCatQual] = useState<Row[]>([])
 
   const load = useCallback(async () => {
@@ -69,7 +70,7 @@ export default function AmtrRolesPage() {
     if (!initialLoaded.current) setLoading(true)
     // Roster mirrors the base's assigned users — pull in any new ones.
     await syncAmtrRosterFromBase(installationId)
-    const [a, mem, c1098, y1098, crat, cjqs, cinsp, cet, cctpl, cmile, c803, cqual, ver] = await Promise.all([
+    const [a, mem, c1098, y1098, crat, cjqs, cinsp, cet, cctpl, cmile, c803, c803sec, cqual, ver] = await Promise.all([
       fetchAmtrRoleAssignments(installationId),
       fetchAmtrMembers(installationId),
       fetchAmtrByBase<Row>('amtr_1098_catalog', installationId),
@@ -81,10 +82,11 @@ export default function AmtrRolesPage() {
       fetchAmtrByBase<Row>('amtr_623a_comment_templates', installationId),
       fetchAmtrByBase<Row>('amtr_milestone_catalog', installationId),
       fetchAmtrByBase<Row>('amtr_803_catalog', installationId),
+      fetchAmtrByBase<Row>('amtr_803_sections', installationId),
       fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
       fetchAmtrCatalogVersion(installationId),
     ])
-    setAssignments(a); setMembers(mem); setCat1098(c1098); setYears1098(y1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatCommentTemplates(cctpl); setCatMilestone(cmile); setCat803(c803); setCatQual(cqual); setCatalogVersion(ver)
+    setAssignments(a); setMembers(mem); setCat1098(c1098); setYears1098(y1098); setCatRat(crat); setCatJqs(cjqs); setCatInsp(cinsp); setCatEntryTypes(cet); setCatCommentTemplates(cctpl); setCatMilestone(cmile); setCat803(c803); setCat803Sections(c803sec); setCatQual(cqual); setCatalogVersion(ver)
     initialLoaded.current = true
     setLoading(false)
   }, [installationId])
@@ -468,7 +470,7 @@ export default function AmtrRolesPage() {
             <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginTop: 0 }}>
               The standard required 803 task evaluations (STS items) per upgrade section. A member&apos;s 803 tab can one-click populate from this list. Edit, reorder, add, or remove items per section.
             </p>
-            <Form803CatalogEditor catalog={cat803} installationId={installationId!} onChange={load} />
+            <Form803CatalogEditor catalog={cat803} sections={cat803Sections} installationId={installationId!} onChange={load} />
           </CollapsibleCard>
 
           {/* 623A entry types */}

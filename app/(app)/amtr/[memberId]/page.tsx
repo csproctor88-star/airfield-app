@@ -83,6 +83,7 @@ export default function AmtrMemberPage() {
   const [formalCat, setFormalCat] = useState<Row[]>([])
   const [formalProg, setFormalProg] = useState<Row[]>([])
   const [items803, setItems803] = useState<Row[]>([])
+  const [sections803, setSections803] = useState<Row[]>([])
   const [mileCat, setMileCat] = useState<Row[]>([])
   const [mileProg, setMileProg] = useState<Row[]>([])
 
@@ -151,6 +152,7 @@ export default function AmtrMemberPage() {
       setFormalProg(await fetchAmtrByMember('amtr_formal_progress', memberId))
     } else if (tab === '803') {
       setItems803(await fetchAmtrByMember('amtr_803', memberId, 'sort_order'))
+      setSections803(await fetchAmtrByBase('amtr_803_sections', installationId))
     } else if (tab === 'milestones') {
       setMileCat(await fetchAmtrByBase('amtr_milestone_catalog', installationId))
       setMileProg(await fetchAmtrByMember('amtr_milestone_progress', memberId))
@@ -493,7 +495,7 @@ export default function AmtrMemberPage() {
       )}
 
       {tab === '803' && (
-        <Form803Tab rows={items803} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
+        <Form803Tab rows={items803} sections={sections803} canWrite={canWrite} canEnterData={dataEntryAllowed} installationId={installationId!}
           memberId={memberId} member={member} myRoles={signingRoles} isOwn={isOwn} sign={sign} reopen={reopen} onChange={loadTab} />
       )}
 

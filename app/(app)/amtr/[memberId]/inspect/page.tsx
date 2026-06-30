@@ -458,7 +458,7 @@ function RecordPanel({ tab, member, memberId, installationId, data, myUserId }: 
     case '1098': return <Form1098Tab catalog={data.r1098Cat ?? []} progress={data.r1098Prog ?? []} installationId={installationId} memberId={memberId} member={member} canManage={false} highlightItem={null} {...base} />
     case '623a': return <Form623aTab entries={data.e623a ?? []} installationId={installationId} memberId={memberId} member={member} effRole={null} highlightItem={null} {...base} />
     case '797': return <Form797Tab items={data.items797 ?? []} installationId={installationId} memberId={memberId} member={member} myUserId={myUserId} highlightItem={null} {...base} />
-    case '803': return <Form803Tab rows={data.items803 ?? []} installationId={installationId} memberId={memberId} member={member} {...base} />
+    case '803': return <Form803Tab rows={data.items803 ?? []} sections={[]} installationId={installationId} memberId={memberId} member={member} {...base} />
     case 'milestones': return <MilestonesTab catalog={data.mileCat ?? []} progress={data.mileProg ?? []} canEnterData={false} installationId={installationId} memberId={memberId} onChange={noop} />
     case 'formal': return <FormalTab catalog={data.formalCat ?? []} progress={data.formalProg ?? []} canEnterData={false} canManage={false} installationId={installationId} memberId={memberId} onChange={noop} />
     case 'rat': return <RatTab catalog={data.ratCat ?? []} progress={data.ratProg ?? []} canWrite={false} canManage={false} memberId={memberId} installationId={installationId} member={member} onChange={noop} highlightItem={null} />
