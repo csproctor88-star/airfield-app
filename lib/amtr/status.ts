@@ -49,11 +49,59 @@ export function computeNextDue(
   return d.toISOString().slice(0, 10)
 }
 
+const MONTH_NAMES = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+]
+
+/** Calendar month 1–12 parsed from a task label, or null when none present. */
+export function parseTaskMonth(task: string | null | undefined): number | null {
+  if (!task) return null
+  const lower = task.toLowerCase()
+  for (let i = 0; i < MONTH_NAMES.length; i++) {
+    if (new RegExp(`\\b${MONTH_NAMES[i]}\\b`).test(lower)) return i + 1
+  }
+  return null
+}
+
+/** Last calendar day of {year}-{month} (1-based) as YYYY-MM-DD. */
+function monthEndIso(year: number, month: number): string {
+  // Date.UTC month is 0-based; day 0 → last day of the prior 0-based month,
+  // which is the last day of the 1-based `month`.
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
+}
+
+const YEAR_RECURRENCES = new Set(['Quarterly', 'Semi-Annual', 'Annual', 'Biennial', 'Triennial'])
+
+/**
+ * Whether a recurring catalog item's period has fully elapsed as of `today`
+ * (YYYY-MM-DD) — i.e. we now *expect* a documented record. Monthly items use
+ * their named month within `year_label`; other recognized recurrences use the
+ * year. Items whose period can't be derived (renamed monthly rows, unknown /
+ * As Required frequency) return true so the scan keeps a strict presence check.
+ */
+export function recurringPeriodElapsed(
+  item: { task?: string | null; frequency?: string | null; year_label?: string | null },
+  today: string,
+): boolean {
+  const year = Number(String(item.year_label ?? '').slice(0, 4)) || Number(today.slice(0, 4))
+  const freq = item.frequency ?? ''
+  if (freq === 'Monthly') {
+    const month = parseTaskMonth(item.task)
+    if (month == null) return true            // renamed row → strict fallback
+    return monthEndIso(year, month) < today   // month fully elapsed
+  }
+  if (YEAR_RECURRENCES.has(freq)) {
+    return `${year}-12-31` < today
+  }
+  return true                                 // unknown / As Required → strict
+}
+
 /**
  * Status of a tracked item.
  * - complete: has a completion date and is not past its due date
  * - overdue: due date is before today
- * - due_soon: due within DUE_SOON_DAYS
+ * - due_soon: due within DUE_SOON_DAYS and not yet completed for this cycle
  * - upcoming: due further out, or no due date
  */
 export function dueStatus(

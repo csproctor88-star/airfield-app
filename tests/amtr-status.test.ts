@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeNextDue, dueStatus, ratApplies, complianceTone, statusTone,
+  parseTaskMonth, recurringPeriodElapsed,
 } from '@/lib/amtr/status'
 
 describe('AMTR status engine', () => {
@@ -17,6 +18,43 @@ describe('AMTR status engine', () => {
     it('returns null for As Required / unknown', () => {
       expect(computeNextDue('2026-01-01', 'As Required')).toBeNull()
       expect(computeNextDue(null, 'Annual')).toBeNull()
+    })
+  })
+
+  describe('parseTaskMonth', () => {
+    it('parses a full month name anywhere in the task', () => {
+      expect(parseTaskMonth('June Monthly Proficiency Test')).toBe(6)
+      expect(parseTaskMonth('December Monthly Proficiency Test')).toBe(12)
+    })
+    it('is case-insensitive', () => {
+      expect(parseTaskMonth('january monthly proficiency test')).toBe(1)
+    })
+    it('returns null when no month is present', () => {
+      expect(parseTaskMonth('Airfield Driving')).toBeNull()
+      expect(parseTaskMonth('')).toBeNull()
+      expect(parseTaskMonth(null)).toBeNull()
+    })
+  })
+
+  describe('recurringPeriodElapsed', () => {
+    it('Monthly: a fully-elapsed past month is elapsed', () => {
+      expect(recurringPeriodElapsed({ task: 'May Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' }, '2026-06-30')).toBe(true)
+    })
+    it('Monthly: the current month is NOT elapsed', () => {
+      expect(recurringPeriodElapsed({ task: 'June Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' }, '2026-06-30')).toBe(false)
+    })
+    it('Monthly: a future month is NOT elapsed', () => {
+      expect(recurringPeriodElapsed({ task: 'September Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' }, '2026-06-30')).toBe(false)
+    })
+    it('Monthly with an unparseable name falls back to elapsed=true (strict presence check)', () => {
+      expect(recurringPeriodElapsed({ task: 'Recurring Prof Test #4', frequency: 'Monthly', year_label: '2026' }, '2026-06-30')).toBe(true)
+    })
+    it('Annual: the current year is NOT elapsed, a past year is', () => {
+      expect(recurringPeriodElapsed({ task: 'AFFSA Annual', frequency: 'Annual', year_label: '2026' }, '2026-06-30')).toBe(false)
+      expect(recurringPeriodElapsed({ task: 'AFFSA Annual', frequency: 'Annual', year_label: '2025' }, '2026-06-30')).toBe(true)
+    })
+    it('unknown / As Required falls back to elapsed=true (strict)', () => {
+      expect(recurringPeriodElapsed({ task: 'X', frequency: 'As Required', year_label: '2026' }, '2026-06-30')).toBe(true)
     })
   })
 
