@@ -128,100 +128,55 @@ export function ClockWidget({ config, editing, onConfigChange }: WidgetProps) {
     setShowAdd(false)
   }
 
-  // Default: no zones configured — show original layout
-  if (zones.length === 0) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ flex: 1 }}>
-          <DefaultClock now={now} />
-        </div>
-        {editing && onConfigChange && (
-          <AddClockForm
-            showAdd={showAdd} setShowAdd={setShowAdd}
-            addLabel={addLabel} setAddLabel={setAddLabel}
-            addTz={addTz} setAddTz={setAddTz}
-            selectOptions={selectOptions}
-            onAdd={addZone}
-          />
-        )}
-      </div>
-    )
-  }
+  // Zulu is always the prominent primary block; any added zones (excluding a
+  // redundant UTC entry) render as a compact strip beneath it — within the one
+  // widget, never taking over the primary display.
+  const extraZones = zones
+    .map((z, i) => ({ z, i }))
+    .filter(({ z }) => z.tz !== 'UTC' && z.tz !== 'Etc/UTC')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      {/* Equal-slice grid — one row per zone */}
-      <div style={{
-        display: 'grid',
-        gridTemplateRows: `repeat(${zones.length}, 1fr)`,
-        flex: 1,
-        minHeight: 0,
-      }}>
-        {zones.map((z, i) => {
-          const isZulu = z.tz === 'UTC' || z.tz === 'Etc/UTC'
-          return (
+      {/* Primary Zulu + date + local — always shown */}
+      <div style={{ flex: extraZones.length ? '0 0 auto' : 1, minHeight: 0, paddingBottom: extraZones.length ? 8 : 0 }}>
+        <DefaultClock now={now} />
+      </div>
+
+      {/* Added timezones — compact, wrapping strip */}
+      {extraZones.length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'flex-start',
+          gap: '6px 16px', flex: 1, minHeight: 0, overflow: 'auto',
+          borderTop: '1px solid var(--color-border)', paddingTop: 8,
+        }}>
+          {extraZones.map(({ z, i }) => (
             <div key={i} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              textAlign: 'center', position: 'relative',
-              borderTop: i > 0 ? '1px solid var(--color-border)' : undefined,
-              padding: '2px 0',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative',
+              minWidth: 60, padding: editing ? '0 12px 0 0' : 0,
             }}>
-              {/* Zone label */}
-              <div style={{
-                fontSize: 'var(--fs-2xs)',
-                color: isZulu ? 'var(--color-text-2)' : 'var(--color-text-3)',
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                fontWeight: isZulu ? 600 : 400,
-                lineHeight: 1.2,
-              }}>{z.label}</div>
-
-              {/* Large time */}
-              <div style={{
-                fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-                fontSize: 'var(--fs-xl)',
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                color: isZulu ? 'var(--color-text-1)' : 'var(--color-text-2)',
-                lineHeight: 1.1,
-              }}>
-                {now ? formatInTz(now, z.tz) : '—'}
-                {isZulu && (
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginLeft: 3 }}>Z</span>
-                )}
-              </div>
-
-              {/* Zulu date (primary only) */}
-              {isZulu && (
-                <div style={{
-                  fontFamily: 'var(--font-mono, ui-monospace, monospace)',
-                  fontSize: 'var(--fs-xs)',
-                  color: 'var(--color-text-3)',
-                  letterSpacing: '0.03em',
-                  lineHeight: 1.2,
-                }}>
-                  {now ? formatZuluDate(now) : '—'}
-                </div>
-              )}
-
-              {/* Remove button (editing only) */}
+              <span style={{
+                fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+                textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.3,
+              }}>{z.label}</span>
+              <span style={{
+                fontFamily: 'var(--font-mono, ui-monospace, monospace)', fontSize: 'var(--fs-md)',
+                fontWeight: 700, color: 'var(--color-text-2)', letterSpacing: '0.03em', lineHeight: 1.1,
+              }}>{now ? formatInTz(now, z.tz) : '—'}</span>
               {editing && (
                 <button
                   onClick={() => removeZone(i)}
                   aria-label={`Remove ${z.label}`}
                   style={{
-                    position: 'absolute', top: 4, right: 4,
+                    position: 'absolute', top: -2, right: -2,
                     border: 'none', background: 'transparent', cursor: 'pointer',
                     color: 'var(--color-text-3)', padding: 0,
                   }}
-                >
-                  <X size={11} />
-                </button>
+                ><X size={11} /></button>
               )}
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       {editing && onConfigChange && (
         <AddClockForm
