@@ -1,93 +1,73 @@
 # Session Handoff
 
-**Date:** 2026-06-29
-**Branch:** `main` — **pushed, in sync with origin** through `ab7cc71f`.
+**Date:** 2026-06-30
+**Branch:** `main` — **pushed, in sync with origin**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **1032 pass / 112 files**.
-**HEAD:** `ab7cc71f`
+`npx vitest run` ✓ **1054 pass / 114 files** (was 1032 / 112; +22 tests, +2 files).
+**HEAD:** the AMTR inspection + 1098 completion series (see below).
 
-Long dashboard-focused session, three arcs: (1) a polish round on the widget grid, (2) a
-feedback-driven round 2 incl. a finer grid + per-user default boards, and (3) a net-new
-**Airfield Lighting** widget family. **One DB migration this session** (`dashboard_user_defaults`,
-already applied to the linked prod DB — see Migrations). Everything else rides in existing JSONB.
-**Not live-smoke-tested** — promote `ab7cc71f` and exercise on the preview.
+AMTR record-inspection + 1098 changes, brainstormed → spec → plan → implemented in 8
+tasks. **No DB migration** — inspection `items` is JSONB and the new fields are
+additive. **Not live-smoke-tested** — promote and exercise on the preview (checklist
+at the bottom).
+
+Spec: `docs/superpowers/specs/2026-06-30-amtr-inspection-changes-design.md`
+Plan: `docs/superpowers/plans/2026-06-30-amtr-inspection-changes.md`
 
 ---
 
 ## What shipped today (end state — read first)
 
-### Arc 1 — Dashboard polish round 1
-- **9 metric tiles centered** (report-* + feedback + amtr-kpis + last-check + inspection-status).
-- **Links widget reorder** (drag grip + tap ▲/▼).
-- **AMTR consolidated into ONE "AMTR" widget** with a 9-report dropdown: Currency, Unit KPIs,
-  Overdue, Due Soon, Inspections (the old 5) **+ My Training Record, Training Progress, Task
-  Compliance, Pending Signatures** (4 new). `components/dashboard/widgets/amtr-widget.tsx` +
-  descriptors under `lib/dashboard/table/descriptors/amtr-*`. The 4 old split AMTR entries are
-  `hidden` in the palette (still render existing instances).
+### 1. Period-aware records-inspection scan (no future-month false positives)
+- Scan rule **6.3** (`1098_all_documented`, `lib/amtr/inspection-engine.ts`) was a pure
+  presence check that flagged not-yet-occurred months (e.g. Sep–Dec in June) as
+  "missing record." It now only flags items whose **period has fully elapsed**.
+- New pures in `lib/amtr/status.ts`: `parseTaskMonth` (month name → 1–12) and
+  `recurringPeriodElapsed(item, today)`. Monthly items use their named month within
+  `year_label`; annual/other recurrences use the year. **Renamed/unparseable monthly
+  rows and unknown frequencies keep the strict presence check** (per your call).
+- Current month and future months are never flagged; fully-elapsed past months still are.
 
-### Arc 2 — Dashboard polish round 2
-- **Long table cells wrap** as readable blocks via a per-column `wrap` flag (NOTAM text).
-- **Visible column dividers + discoverable resize handles** (`table-widget.tsx` + `globals.css`
-  `.wt-col-resize::after`), and header/cell padding so titles clear the dividers.
-- **Settle-based scroll-to-top** — replaced the fixed-150ms hack with a load-keyed effect
-  (immediate + 2 rAFs + first grid ResizeObserver + 300ms fallback) targeting `.app-content`.
-- **AMTR Training Progress redesign** — one row per member: **Member · FQ · JQS% · 1098% · 797% ·
-  Formal%**. FQ is derived = **JQS 100% AND Formal 100%** (⚠ pending user confirmation).
-- **Finer grid: 24 cols / 40px rows** (was 12 / 80). Migrated **at read time**, not via SQL:
-  `lib/dashboard/layout.ts` `validateBoardLayout` doubles any layout lacking `gridScale:2` once
-  and tags it; `createBoard`/`updateBoardLayout` stamp `gridScale:2`. Idempotent, back-compat
-  (old code ignores the tag). Registry `defaultSize`/`minSize` and `DEFAULT_LAYOUT` were ×2.
-- **Per-user default boards** — new table `dashboard_user_defaults` is the source of truth for
-  "my default" (any board, **including shared**). `dashboard_boards.is_default` is now a legacy
-  fallback only. "Set as Default" works on shared boards; **deleting your default is allowed**
-  (cascades + re-resolves). Data layer: `getUserDefaultBoardId` / rewritten `setDefaultBoard`
-  (upsert) / `getOrCreateDefaultBoard`. Board picker marks the default with ✓.
-- **Column reorder** in the table-widget gear (`table-config-form.tsx`): drag grip **and** tap
-  ▲/▼. **HTML5 `draggable` does not fire on touch (iPad)** — the ▲/▼ buttons are the universal
-  path; same ▲/▼ added to the Links reorder. Gear-save now spreads existing config (no longer
-  wipes column widths / color).
+### 2. Editable discrepancies (Findings + Corrective Action)
+- `InspectionItemResponse` gains `detail?` (editable finding text, seeded from the auto
+  findings) and `correctiveAction?` (renamed from `note`); `normalizeInspectionItem`
+  handles back-compat for older saved inspections.
+- Inspect page (`app/(app)/amtr/[memberId]/inspect/page.tsx`): the read-only `⚠`
+  findings line is now an **editable Findings textarea**, plus a labelled **Corrective
+  Action** textarea (auto-shown on a No). Both autosave; both lock once completed.
+- The archived inspection PDF (`lib/amtr-inspection-pdf.ts`) now shows the edited
+  detail + corrective action.
 
-### Arc 3 — Airfield Lighting widget family
-Spec/plan in `docs/superpowers/{specs,plans}/2026-06-29-airfield-lighting-*`.
-- **Shared area module** `lib/infrastructure/areas.ts` (`resolveArea`, `buildFullRunwaysSet`,
-  `areaSortKey`, `listAreas`, `systemsForArea`) extracted from `infrastructure/page.tsx` (page is
-  the regression check); unit-tested.
-- **"Airfield Lighting" widget** (`lighting-widget.tsx`, key `lighting`) scoped **By Area / By
-  System / By Type** — covers runway/taxiway/apron areas, a specific system, and stadium/
-  obstruction-by-type. Renders systems → components (uniform `name · count · status-dot` columns)
-  → out lights, with **A3.1 compliance action tags** (NOTAM/Notify CE/…) on exceedance. All math
-  reuses `lib/outage-rules.ts`. Old system-scoped `infrastructure` widget is `hidden`.
-- **"Lighting Status" widget** (`lighting-status-widget.tsx`, key `lighting-status`) reuses
-  `components/infrastructure/system-health-panel.tsx` — the Visual NAVAIDs category roll-up
-  (Runway/Taxiway/Approach/Signage/Other). Full-width default for the top of a lighting board.
-- **"Add a widget for every area"** moved out of the palette into the Airfield Lighting widget
-  (edit mode), wired via `components/dashboard/dashboard-actions.tsx` context. Old `report-lighting`
-  "Lighting Report" widget is `hidden`.
+### 3. Template-driven auto 623a entry on completion
+- `completeAmtrInspection` previously wrote a generic `"N gap(s) noted."` line.
+- New pure `lib/amtr/inspection-623a.ts` → `buildInspection623aComment` composes the
+  NAMT/Certifier comment from the **recordsInspection DAFMAN template** header/cite +
+  per-discrepancy `item number — detail` and `Corrective Action:` lines. Zero gaps →
+  `"No discrepancies noted."` Still `entry_type: 'Monthly Training Records Inspection'`
+  (satisfies scan rule 4.12).
+
+### 4. 1098 early completion on Cert Official signature
+- Root cause: signing only stamped initials; due-advance lived only in the manual
+  `last_completed` edit, behind a `next_due_manual` guard, and uncontrolled inputs
+  needed a refresh.
+- `form1098-tab.tsx`: extracted `completeItem(catId, freq, completedDate)` (stamps
+  completion, **always recomputes** `next_due`, clears the manual override, runs the
+  later-year rollover). **Cert Official sign-off now auto-completes** the item
+  (preserving an already-entered real date; else today) — status flips to Complete
+  with no refresh (the parent `sign` reloads after `onSigned`). The existing auto-623a
+  dialog on certifier sign is unchanged. Manual Last Completed edits also always
+  recompute now.
+- `dueStatus` tweak (`lib/amtr/status.ts`): a completed item whose next due is within
+  the 30-day window now reads **Complete**, not Due Soon (so a freshly-completed
+  Monthly item shows Complete). Regression-guard test added. Shared by RAT/reports/
+  notifications — full suite re-run, no regressions.
 
 ---
 
 ## Migrations status
 
-**One this session, already applied:** `supabase/migrations/2026062900_dashboard_user_defaults.sql`
-— `dashboard_user_defaults(user_id, base_id, board_id, PK(user_id,base_id))`, `board_id`
-ON DELETE CASCADE, RLS pinned to `auth.uid()`, backfilled from `is_default` (9 rows). **Applied to
-the linked prod DB via `npx supabase db query --linked --file`.** No pending migrations. The grid
-finer-scale is NOT a migration (read-time only).
-
----
-
-## Key non-obvious facts (also saved as memories)
-
-- **Grid scale invariant** ([[project_dashboard_grid_scale]]): any NEW `createBoard` caller must
-  pass a **new-scale** layout; the write boundary stamps `gridScale:2` without re-scaling.
-- **Per-user defaults** ([[project_dashboard_user_defaults]]): `dashboard_user_defaults` is SoT;
-  `is_default` is legacy fallback.
-- **Lighting has NO FK to runway/taxiway** ([[project_lighting_area_grouping]]): an "area" is
-  `lighting_systems.runway_or_taxiway` grouped via `lib/infrastructure/areas.ts`. Stadium/
-  obstruction lights are `system_type` values, not areas.
-- **HTML5 `draggable` is mouse-only** — touch/iPad needs tap buttons or pointer events.
-- **Outage/health is computed live** by `lib/outage-rules.ts` (`calculateSystemHealth`,
-  `OutageStatus`, `getAlertTier`), never stored.
+**None this session.** Everything rides in existing JSONB (`amtr_inspections.items`)
+and existing 1098 columns. No pending migrations.
 
 ---
 
@@ -95,36 +75,28 @@ finer-scale is NOT a migration (read-time only).
 
 | Item | Notes |
 |---|---|
-| **Confirm FQ definition** | Training Progress FQ = JQS 100% AND Formal 100%. User to confirm whether 1098/797 should factor in. |
-| **Selfridge 1098 catalog has duplicate rows** | Data issue at base `…0001` (≈a dozen task names twice). The Task Compliance widget faithfully shows them. Cleanup belongs in the AMTR module, not widget code. |
-| **Lighting area-builder polish (optional)** | Currently appends one `lighting` tile per area at the bottom. Could also drop a `lighting-status` tile at top and/or lay tiles in a tidy grid in the same tap. |
-| **"By type" board builder (optional)** | Mirror the per-area builder for system types. |
-| **Live lighting polling (optional)** | Widgets load on mount / scope change; no realtime refresh. |
-| **Whole session not live-smoke-tested** | Verified via tsc/build/vitest + per-task reviews only. |
+| **Whole session not live-smoke-tested** | Verified via tsc/build/vitest only. |
+| **Confirm FQ definition** (carried over) | Training Progress FQ = JQS 100% AND Formal 100%; does 1098/797 factor in? |
+| **Selfridge 1098 duplicate rows** (carried over) | Data cleanup in the AMTR module, not widget/scan code. |
+| **Inspection PDF** | Now shows detail + corrective action; layout not visually re-reviewed. |
 
 ---
 
 ## Live smoke test after promotion
 
-- **Centering / tables:** 9 tiles centered; NOTAM text wraps; column dividers + resize handles
-  visible; gear column reorder via ▲/▼ on iPad; dashboard opens scrolled to top on slow network.
-- **Grid:** existing boards look unchanged; resizing has 2× finer steps both axes.
-- **Default boards:** set the shared AMOPS board as default; delete the leftover personal AMOPS
-  copy; ✓ marks the default in the picker.
-- **AMTR:** one "AMTR" palette widget; all 9 reports render (esp. self-scoped My Training +
-  Pending Signatures); Training Progress shows FQ + JQS/1098/797/Formal %.
-- **Lighting:** add "Airfield Lighting", try all 3 scopes (numbers match `/infrastructure`); an
-  exceeded component shows action tags; add "Lighting Status" (category tiles match the NAVAIDs
-  bar); edit-mode "✚ Add a widget for every area" builds one tile per area; old "Infrastructure
-  Status" / "Lighting Report" gone from the palette but existing instances still render.
-
----
-
-## Next session tasks
-
-No required next step — everything is committed, pushed, build-verified, and the one migration is
-applied. User owns Vercel promotion. Pick up from the **Open follow-ups** table (FQ confirmation
-and the Selfridge catalog-dup cleanup are the two with real user impact).
+- **Scan:** open a member's record inspection mid-year → 6.3 "missing record"
+  findings list past months only (no current/future months); a past month with no
+  record still appears; a member with everything documented for elapsed periods reads Yes.
+- **Editable discrepancies:** edit a finding's detail and fill its Corrective Action;
+  leave and reopen the draft → both persist.
+- **623a entry:** complete the inspection → open the generated "Monthly Training
+  Records Inspection" 623a → NAMT comment shows the template header, item numbers,
+  edited detail, and corrective actions; a clean record reads "No discrepancies noted."
+- **1098 completion:** Cert Official-sign a recurring item that's not yet due → Last
+  Completed stamps, Due rolls forward by frequency, status flips to **Complete** with
+  no page refresh; a freshly-completed Monthly item reads Complete (not Due Soon).
+- **Manual date:** type a Last Completed date on another item → Due recomputes
+  immediately, even if a manual due override had been set.
 
 ---
 
@@ -132,9 +104,9 @@ and the Selfridge catalog-dup cleanup are the two with real user impact).
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-29 | Airfield Lighting widget family (By Area/System/Type + Lighting Status roll-up + in-widget area builder); dashboard round 2: finer 24/40 grid (read-time migration), per-user default boards (`dashboard_user_defaults`, applied), AMTR Training Progress redesign, touch-friendly column/link reorder, NOTAM wrap, settle scroll-to-top, visible column dividers. |
+| **Unreleased** | 2026-06-30 | AMTR record-inspection + 1098: period-aware scan (no future-month false positives), editable discrepancy detail + corrective action, template-driven auto 623a entry, Cert Official sign auto-completes a 1098 item (+ dueStatus Complete-when-completed fix). |
+| **Unreleased** | 2026-06-29 | Airfield Lighting widget family; dashboard round 2 (finer 24/40 grid, per-user default boards, AMTR Training Progress redesign, touch reorder, NOTAM wrap, settle scroll-to-top). |
 | **Unreleased** | 2026-06-29 | Dashboard polish round 1: centered metric tiles; AMTR consolidated into one 9-report widget; Links drag/tap reorder. |
-| **Unreleased** | 2026-06-28 | Dashboard widget refinement run on Phase 4: per-column resize/wrap/sticky/sort/search, deep-link rows, per-widget color, share-copies-widgets, opens-at-top. |
-| **Unreleased** | 2026-06-27 | Phase 4 Configurable Native Widgets + customizable widget-grid dashboard (`dashboard_boards` + RLS, 24 widgets). |
+| **Unreleased** | 2026-06-28 | Dashboard widget refinement run on Phase 4. |
+| **Unreleased** | 2026-06-27 | Phase 4 Configurable Native Widgets + customizable widget-grid dashboard. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
-| **v2.33.0** | 2026-05-02 | Glidepath Training rebuilt, permission-matrix overhaul, PPR module, offline reads + writes. |
