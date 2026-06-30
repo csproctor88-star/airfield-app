@@ -17,6 +17,7 @@ export const wildlifeDataset: Dataset = {
   dimensions: [
     { key: 'record_type', label: 'Type' },
     { key: 'species_group', label: 'Species Group' },
+    { key: 'species_common', label: 'Species' },
     { key: 'month', label: 'Month' },
   ],
   measures: [
