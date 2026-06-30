@@ -7,6 +7,7 @@ import { BoardBar, type BoardSummary } from '@/components/dashboard/board-bar'
 import { WidgetGrid } from '@/components/dashboard/widget-grid'
 import { WidgetPalette } from '@/components/dashboard/widget-palette'
 import { WidgetConfigModal } from '@/components/dashboard/widget-config-modal'
+import { DashboardActionsProvider } from '@/components/dashboard/dashboard-actions'
 import {
   getOrCreateDefaultBoard, fetchBoards, createBoard, updateBoard,
   deleteBoard, setDefaultBoard, getUserDefaultBoardId, type DashboardBoardRow,
@@ -315,6 +316,14 @@ export default function DashboardPage() {
     toast.success(`Added ${areas.length} lighting widget${areas.length === 1 ? '' : 's'}`)
   }, [installationId, markDirty])
 
+  // Board-level actions exposed to widgets via context (e.g. the Airfield
+  // Lighting widget's "add one per area" button). Gated to infra viewers.
+  const canViewInfra = has(PERM.INFRASTRUCTURE_VIEW)
+  const dashboardActions = useMemo(
+    () => ({ addLightingAreas: canViewInfra ? onAddLightingArea : undefined }),
+    [canViewInfra, onAddLightingArea],
+  )
+
   const isEmpty = useMemo(() => widgets.length === 0, [widgets])
 
   // The active board row.
@@ -563,26 +572,27 @@ export default function DashboardPage() {
           Your dashboard is empty. {editing ? 'Use "Add Widget" to get started.' : 'Tap Edit, then Add Widget.'}
         </div>
       ) : (
-        <WidgetGrid
-          boardLayout={boardLayout}
-          editing={editing}
-          onDeviceLayoutChange={onDeviceLayoutChange}
-          onRemove={onRemove}
-          onConfigure={(id) => setConfiguringId(id)}
-          onWidgetConfigChange={onWidgetConfigChange}
-          copyBoards={copyBoards}
-          onCopyWidget={(id, target) => {
-            const w = widgets.find(x => x.i === id)
-            if (w) copyWidgetToBoard(w, target)
-          }}
-        />
+        <DashboardActionsProvider value={dashboardActions}>
+          <WidgetGrid
+            boardLayout={boardLayout}
+            editing={editing}
+            onDeviceLayoutChange={onDeviceLayoutChange}
+            onRemove={onRemove}
+            onConfigure={(id) => setConfiguringId(id)}
+            onWidgetConfigChange={onWidgetConfigChange}
+            copyBoards={copyBoards}
+            onCopyWidget={(id, target) => {
+              const w = widgets.find(x => x.i === id)
+              if (w) copyWidgetToBoard(w, target)
+            }}
+          />
+        </DashboardActionsProvider>
       )}
 
       {showPalette && (
         <WidgetPalette
           onAdd={onAdd}
           onClose={() => setShowPalette(false)}
-          onAddLightingArea={has(PERM.INFRASTRUCTURE_VIEW) ? onAddLightingArea : undefined}
         />
       )}
 

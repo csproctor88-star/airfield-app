@@ -40,6 +40,7 @@ import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/emb
 import { AnalyticsWidget, AnalyticsConfigForm } from '@/components/dashboard/widgets/analytics-widget'
 import { InfrastructureWidget } from '@/components/dashboard/widgets/infrastructure-widget'
 import { LightingWidget, LightingConfigForm } from '@/components/dashboard/widgets/lighting-widget'
+import { LightingStatusWidget } from '@/components/dashboard/widgets/lighting-status-widget'
 import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-conditions-widget'
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
 import { NotesWidget, NotesConfigForm } from '@/components/dashboard/widgets/notes-widget'
@@ -183,6 +184,16 @@ export const WIDGETS: Record<string, WidgetDef> = {
     Component: (p) => <LightingWidget {...p} />,
     ConfigForm: LightingConfigForm,
   },
+  'lighting-status': {
+    type: 'lighting-status', kind: 'native', title: 'Lighting Status',
+    description: 'Airfield-wide lighting status by category (Runway, Taxiway, Approach, Signage, Other)',
+    defaultSize: { w: 24, h: 5 }, minSize: { w: 10, h: 3 },
+    permission: PERM.INFRASTRUCTURE_VIEW,
+    moduleHref: '/infrastructure',
+    icon: Lightbulb,
+    Component: (p) => <LightingStatusWidget {...p} />,
+    ConfigForm: TitleConfigForm,
+  },
   'field-conditions': {
     type: 'field-conditions', kind: 'native', title: 'Field Conditions',
     description: 'Active runway condition reports (RwyCC / FICON)',
@@ -289,6 +300,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
     type: 'report-lighting', kind: 'native', title: 'Lighting Report',
     description: 'Total lighting features, inoperative count, and operational %',
     icon: Lightbulb, defaultSize: { w: 6, h: 4 }, minSize: { w: 4, h: 4 },
+    hidden: true,
     permission: PERM.INFRASTRUCTURE_VIEW,
     moduleHref: '/infrastructure',
     Component: () => <ReportLightingWidget />,

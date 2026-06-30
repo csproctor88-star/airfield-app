@@ -17,6 +17,7 @@ import {
   type OutageStatus,
 } from '@/lib/outage-rules'
 import { listAreas, systemsForArea } from '@/lib/infrastructure/areas'
+import { useDashboardActions } from '@/components/dashboard/dashboard-actions'
 import type { LightingSystem, LightingSystemComponent, InfrastructureFeature } from '@/lib/supabase/types'
 import type { WidgetProps, WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 
@@ -74,6 +75,7 @@ function actionTags(c: OutageStatus): string[] {
 
 export function LightingWidget(props: WidgetProps) {
   const { installationId } = useInstallation()
+  const { addLightingAreas } = useDashboardActions()
 
   const scope = (props.config.scope as LightingScope) ?? 'area'
   const value = props.config.value as string | undefined
@@ -216,6 +218,24 @@ export function LightingWidget(props: WidgetProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Edit-mode helper: one-tap build a lighting board (one widget per area). */}
+      {props.editing && addLightingAreas && (
+        <button
+          onClick={() => addLightingAreas()}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            width: '100%', boxSizing: 'border-box', marginBottom: 8, padding: '6px 8px',
+            borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 'var(--fs-2xs)', fontWeight: 700,
+            background: 'color-mix(in srgb, var(--color-accent) 8%, transparent)',
+            border: '1px solid var(--color-accent)', color: 'var(--color-accent)',
+          }}
+          title="Add one Airfield Lighting widget for every runway, taxiway & apron"
+        >
+          ✚ Add a widget for every area
+        </button>
+      )}
+
       {/* Summary line */}
       {!loading && value && systemRows.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
