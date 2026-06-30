@@ -7,6 +7,7 @@ export interface ColumnDef<Row> {
   format?: (v: unknown, row: Row) => ReactNode
   defaultVisible?: boolean
   mono?: boolean
+  wrap?: boolean
   align?: 'left' | 'right' | 'center'
 }
 

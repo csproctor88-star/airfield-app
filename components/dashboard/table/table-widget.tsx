@@ -284,22 +284,38 @@ export function TableWidget<Row>({
                   const raw = c.accessor(row)
                   const content = c.format ? c.format(raw, row) : (raw as React.ReactNode) ?? '—'
                   const align = c.align ?? 'left'
+                  const wrap = c.wrap === true
+                  const baseStyle: React.CSSProperties = {
+                    textAlign: align,
+                    padding: '4px 6px 4px 0',
+                    color: 'var(--color-text-1)',
+                    borderBottom: '1px solid var(--color-border)',
+                    fontFamily: c.mono ? 'var(--font-family-mono)' : undefined,
+                  }
+                  const layoutStyle: React.CSSProperties = wrap
+                    ? {
+                        // Wrap-flagged columns always render as multi-line blocks,
+                        // regardless of fixed/auto layout.
+                        whiteSpace: 'normal',
+                        overflow: 'visible',
+                        textOverflow: undefined,
+                        wordBreak: 'break-word',
+                        verticalAlign: 'top',
+                        lineHeight: 1.35,
+                        maxWidth: useFixedLayout ? undefined : 320,
+                      }
+                    : {
+                        // When fixed layout is active (columns have been resized) wrap
+                        // content so it stays readable at the chosen width.
+                        // When auto layout, keep the original nowrap+ellipsis behaviour.
+                        maxWidth: useFixedLayout ? undefined : 180,
+                        overflow: useFixedLayout ? 'visible' : 'hidden',
+                        textOverflow: useFixedLayout ? undefined : 'ellipsis',
+                        whiteSpace: useFixedLayout ? 'normal' : 'nowrap',
+                        wordBreak: useFixedLayout ? 'break-word' : undefined,
+                      }
                   return (
-                    <td key={c.key} style={{
-                      textAlign: align,
-                      padding: '4px 6px 4px 0',
-                      color: 'var(--color-text-1)',
-                      borderBottom: '1px solid var(--color-border)',
-                      fontFamily: c.mono ? 'var(--font-family-mono)' : undefined,
-                      // When fixed layout is active (columns have been resized) wrap
-                      // content so it stays readable at the chosen width.
-                      // When auto layout, keep the original nowrap+ellipsis behaviour.
-                      maxWidth: useFixedLayout ? undefined : 180,
-                      overflow: useFixedLayout ? 'visible' : 'hidden',
-                      textOverflow: useFixedLayout ? undefined : 'ellipsis',
-                      whiteSpace: useFixedLayout ? 'normal' : 'nowrap',
-                      wordBreak: useFixedLayout ? 'break-word' : undefined,
-                    }}>{content}</td>
+                    <td key={c.key} style={{ ...baseStyle, ...layoutStyle }}>{content}</td>
                   )
                 })
                 const b = descriptor.row

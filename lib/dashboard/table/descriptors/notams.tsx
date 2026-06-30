@@ -45,7 +45,7 @@ function useRows(_c: TableWidgetConfig) {
 export const notamsDescriptor: TableWidgetDescriptor<NotamRow> = {
   columns: [
     { key: 'notam_number', label: 'NOTAM', accessor: r => r.notam_number, mono: true, defaultVisible: true },
-    { key: 'text', label: 'Text', accessor: r => r.full_text || r.title, mono: true, defaultVisible: true },
+    { key: 'text', label: 'Text', accessor: r => r.full_text || r.title, mono: true, wrap: true, defaultVisible: true },
     { key: 'effective_end', label: 'Valid until', accessor: r => r.effective_end, defaultVisible: true },
   ],
   // /notams is an FAA-feed-only module — there is no "local" source, so no source filter.
