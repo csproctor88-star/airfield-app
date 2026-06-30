@@ -2,6 +2,7 @@ import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { upsertAmtrRow } from './amtr'
+import { buildInspection623aComment } from '@/lib/amtr/inspection-623a'
 
 // amtr_inspections / amtr_inspection_checklist aren't in the generated
 // Database type — route through an untyped client (RLS gates writes).
@@ -122,7 +123,11 @@ export async function completeAmtrInspection(input: {
 
   // Auto-create the 623A entry documenting the inspection (checklist item 4.12).
   let created623aId: string | null = null
-  const summary = `Monthly training records inspection completed${input.completed_by_name ? ` by ${input.completed_by_name}` : ''}. ${c.gap_count} gap(s) noted.`
+  const summary = buildInspection623aComment({
+    inspectionDate: input.inspection_date,
+    inspectorName: input.completed_by_name,
+    items: input.items,
+  })
   const { data: e623a } = await upsertAmtrRow('amtr_623a', {
     base_id: input.base_id, member_id: input.member_id, form_date: input.inspection_date,
     entry_type: 'Monthly Training Records Inspection', namt_comment: summary,
