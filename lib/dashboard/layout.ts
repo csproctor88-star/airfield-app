@@ -68,7 +68,23 @@ export function appendWidgetToLayout(
 // ---------------------------------------------------------------------------
 
 export type DeviceClass = 'lg' | 'md' | 'sm'
-export type BoardLayout = { lg: WidgetInstance[]; md?: WidgetInstance[]; sm?: WidgetInstance[] }
+export type BoardLayout = { lg: WidgetInstance[]; md?: WidgetInstance[]; sm?: WidgetInstance[]; gridScale?: number }
+
+/**
+ * Current grid scale. The grid moved from 12 cols / 80px rows to 24 cols / 40px
+ * rows (finer sizing on both axes). Layouts stored before that change are on the
+ * old (×1) scale; we detect the absence of `gridScale === GRID_SCALE` and double
+ * each widget's x/y/w/h once on read (sm stays single-column, so only y/h scale).
+ * Write boundaries stamp `gridScale: GRID_SCALE`, so this is idempotent and the
+ * old code (which ignores the marker) keeps rendering pre-migration boards 1:1.
+ */
+export const GRID_SCALE = 2
+
+function scaleWidget(w: WidgetInstance, scaleXW: boolean): WidgetInstance {
+  return scaleXW
+    ? { ...w, x: w.x * GRID_SCALE, y: w.y * GRID_SCALE, w: w.w * GRID_SCALE, h: w.h * GRID_SCALE }
+    : { ...w, x: 0, y: w.y * GRID_SCALE, w: 1, h: w.h * GRID_SCALE }
+}
 
 /** Ensure md/sm contain exactly lg's widget set: keep each variant widget's
  *  position where present, append lg widgets missing from the variant, drop
@@ -82,23 +98,40 @@ export function reconcileBoardLayout(bl: BoardLayout): BoardLayout {
       return v ? { ...c, x: v.x, y: v.y, w: v.w, h: v.h } : { ...c }
     })
   }
-  return { lg: bl.lg, md: fix(bl.md), sm: fix(bl.sm) }
+  return { lg: bl.lg, md: fix(bl.md), sm: fix(bl.sm), gridScale: bl.gridScale }
 }
 
-/** Normalize raw stored JSON into a BoardLayout. Legacy flat arrays → { lg }. */
+/**
+ * Normalize raw stored JSON into a BoardLayout. Legacy flat arrays → { lg }.
+ * Boards not yet on the current grid scale are doubled once (see GRID_SCALE) and
+ * tagged, so every BoardLayout returned here is on the current scale.
+ */
 export function validateBoardLayout(raw: unknown): BoardLayout {
-  if (Array.isArray(raw)) return { lg: validateLayout(raw) }
-  if (raw && typeof raw === 'object') {
+  const isObj = !!raw && typeof raw === 'object' && !Array.isArray(raw)
+  const alreadyScaled = isObj && (raw as Record<string, unknown>).gridScale === GRID_SCALE
+
+  let bl: BoardLayout
+  if (Array.isArray(raw)) {
+    bl = { lg: validateLayout(raw) }
+  } else if (isObj && Array.isArray((raw as Record<string, unknown>).lg)) {
     const r = raw as Record<string, unknown>
-    if (Array.isArray(r.lg)) {
-      return reconcileBoardLayout({
-        lg: validateLayout(r.lg),
-        md: Array.isArray(r.md) ? validateLayout(r.md) : undefined,
-        sm: Array.isArray(r.sm) ? validateLayout(r.sm) : undefined,
-      })
-    }
+    bl = reconcileBoardLayout({
+      lg: validateLayout(r.lg),
+      md: Array.isArray(r.md) ? validateLayout(r.md) : undefined,
+      sm: Array.isArray(r.sm) ? validateLayout(r.sm) : undefined,
+    })
+  } else {
+    bl = { lg: [] }
   }
-  return { lg: [] }
+
+  if (alreadyScaled) return { ...bl, gridScale: GRID_SCALE }
+  // Legacy (old grid) → scale once into the current grid and tag.
+  return {
+    lg: bl.lg.map(w => scaleWidget(w, true)),
+    md: bl.md ? bl.md.map(w => scaleWidget(w, true)) : undefined,
+    sm: bl.sm ? bl.sm.map(w => scaleWidget(w, false)) : undefined,
+    gridScale: GRID_SCALE,
+  }
 }
 
 /** Append a copied widget (new id, deep-copied config) to every present device array. */
@@ -107,5 +140,6 @@ export function appendWidgetToBoardLayout(bl: BoardLayout, source: WidgetInstanc
     lg: appendWidgetToLayout(bl.lg, source, newId),
     md: bl.md ? appendWidgetToLayout(bl.md, source, newId) : undefined,
     sm: bl.sm ? appendWidgetToLayout(bl.sm, source, newId) : undefined,
+    gridScale: bl.gridScale,
   }
 }

@@ -1,6 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
-import { validateBoardLayout, type BoardLayout } from '@/lib/dashboard/layout'
+import { validateBoardLayout, GRID_SCALE, type BoardLayout } from '@/lib/dashboard/layout'
 
 // New tables are not yet in the generated Database type — cast the client
 // to `any` for these calls (the lib/supabase/read-files.ts pattern).
@@ -57,7 +57,9 @@ export async function createBoard(input: {
       name: input.name ?? 'My Dashboard',
       scope: input.scope ?? 'personal',
       is_default: input.is_default ?? false,
-      layout: input.layout ?? { lg: [] },
+      // Stamp the current grid scale: callers build layouts from registry/template
+      // defaults that are already on the current scale, so mark (don't re-scale).
+      layout: { ...(input.layout ?? { lg: [] }), gridScale: GRID_SCALE },
     })
     .select('*')
     .single()
@@ -81,7 +83,9 @@ export async function updateBoardLayout(
   // so the caller shows a "couldn't save" toast instead of silent data loss.
   const { data, error } = await sb
     .from('dashboard_boards')
-    .update({ layout, updated_at: new Date().toISOString() })
+    // Stamp the current grid scale on every write: the in-memory layout has
+    // already been normalized to the current scale by validateBoardLayout on read.
+    .update({ layout: { ...layout, gridScale: GRID_SCALE }, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('id')
   if (error) return { error: friendlyError(error) }
