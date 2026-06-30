@@ -142,19 +142,43 @@ export default function DashboardPage() {
   // Flush any staged edits on unmount.
   useEffect(() => flushSave, [flushSave])
 
-  // The dashboard is a tall, full-bleed grid; browsers restore the previous
-  // scroll position on reload/return, opening it mid-page. Force it to the top
-  // on mount, with a follow-up tick after the async board/widget load reflows.
+  // The dashboard is a tall, full-bleed grid in <main className="app-content">
+  // (the real scroll container, not window); browsers restore the previous
+  // scroll position on reload/return, opening it mid-page. A fixed timeout
+  // can't win the race because the board/widgets load asynchronously and the
+  // react-grid-layout grid reflows afterward. Instead, settle-based: once the
+  // board has loaded (activeId set), scroll to top across several settle points
+  // (immediate, two rAFs, first grid resize, 300ms fallback) so the async grid
+  // reflow can't leave the page scrolled mid-way.
   useEffect(() => {
+    if (!activeId) return
     const toTop = () => {
       document.querySelector('.app-content')?.scrollTo({ top: 0 })
       window.scrollTo({ top: 0 })
     }
     toTop()
-    const raf = requestAnimationFrame(toTop)
-    const timer = setTimeout(toTop, 150)
-    return () => { cancelAnimationFrame(raf); clearTimeout(timer) }
-  }, [])
+    const r1 = requestAnimationFrame(toTop)
+    let r2Inner = 0
+    const r2 = requestAnimationFrame(() => { r2Inner = requestAnimationFrame(toTop) })
+    let observer: ResizeObserver | null = null
+    const grid = document.querySelector('.dashboard-grid')
+    if (grid && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        toTop()
+        observer?.disconnect()
+        observer = null
+      })
+      observer.observe(grid)
+    }
+    const t = setTimeout(toTop, 300)
+    return () => {
+      cancelAnimationFrame(r1)
+      cancelAnimationFrame(r2)
+      cancelAnimationFrame(r2Inner)
+      observer?.disconnect()
+      clearTimeout(t)
+    }
+  }, [activeId])
 
   // Helper: refresh boards list, optionally switch to a specific id.
   const refreshBoards = useCallback(async (switchTo?: string) => {

@@ -9,6 +9,8 @@ export function ScrollToTop() {
 
   useEffect(() => {
     window.scrollTo(0, 0)
+    // The real scroll container is <main className="app-content">, not window.
+    document.querySelector('.app-content')?.scrollTo(0, 0)
   }, [pathname])
 
   return null
