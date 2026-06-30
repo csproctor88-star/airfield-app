@@ -10,28 +10,12 @@ import { logManualEntry, updateActivityEntry, deleteActivityEntry } from '@/lib/
 import { createClient } from '@/lib/supabase/client'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluDate } from '@/lib/utils'
-import { formatAction, buildDetailsString } from '@/lib/activity-format'
+import { formatAction, buildDetailsString, actionColor as getActionColor } from '@/lib/activity-format'
 import { fetchRecentReviews, canUserSignSlot, requiredSlotsForShifts, getEffectiveReviewDate, type DailyReviewRow } from '@/lib/supabase/daily-reviews'
 import { usePermissions } from '@/lib/permissions'
 import DailyReviewSignModal from '@/components/daily-reviews/sign-modal'
 
 type PeriodPreset = 'today' | '7d' | '30d' | 'custom'
-
-function getActionColor(action: string, entityType: string): string {
-  if (entityType === 'manual') return 'var(--color-text-2)'
-  if (action === 'completed' || action === 'filed') return 'var(--color-green)'
-  if (action === 'deleted' || action === 'cancelled') return 'var(--color-red)'
-  switch (entityType) {
-    case 'check': case 'airfield_check': return 'var(--color-cyan)'
-    case 'inspection': case 'acsi_inspection': return 'var(--color-cyan)'
-    case 'discrepancy': return 'var(--color-warning)'
-    case 'qrc': return 'var(--color-purple)'
-    case 'wildlife_sighting': case 'wildlife_strike': return 'var(--color-orange)'
-    case 'airfield_status': case 'navaid_status': return 'var(--color-blue)'
-    case 'contractor': return 'var(--color-text-2)'
-    default: return 'var(--color-text-2)'
-  }
-}
 
 function getEntityLink(entityType: string, entityId: string | null): string | null {
   if (!entityId) return null

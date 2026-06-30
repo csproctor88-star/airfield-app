@@ -8,7 +8,7 @@ import { loadCustomActivityTemplates } from '@/lib/supabase/activity-templates'
 import type { TemplateCategory } from '@/lib/activity-templates'
 import { TemplatePicker } from '@/components/ui/template-picker'
 import { formatZuluTime } from '@/lib/utils'
-import { formatAction, buildDetailsString } from '@/lib/activity-format'
+import { formatAction, buildDetailsString, actionColor } from '@/lib/activity-format'
 import { moduleLabel } from '@/lib/activity-labels'
 import type { TableWidgetDescriptor, TableWidgetConfig } from '@/lib/dashboard/table/types'
 
@@ -235,10 +235,19 @@ function EventsLogToolbar({ reload }: { reload: () => void }) {
 }
 
 export const eventsLogDescriptor: TableWidgetDescriptor<ActivityEntry> = {
+  // Mirrors the main Events Log columns: a color-coded Action, the Details
+  // string, Zulu time, OI, and the entity type/id. (Entity links + inline edit
+  // come with the "real module views in widgets" work.)
   columns: [
-    { key: 'label', label: 'Event', accessor: labelFor, defaultVisible: true },
-    { key: 'oi', label: 'OI', accessor: e => e.user_operating_initials ?? '—', mono: true },
+    {
+      key: 'action', label: 'Action',
+      accessor: e => formatAction(e.action, e.entity_type, e.entity_display_id ?? undefined, e.metadata),
+      format: (v, e) => <span style={{ color: actionColor(e.action, e.entity_type), fontWeight: 600 }}>{v as string}</span>,
+      defaultVisible: true,
+    },
+    { key: 'label', label: 'Details', accessor: labelFor, wrap: true, defaultVisible: true },
     { key: 'time', label: 'Zulu', accessor: e => `${formatZuluTime(e.created_at)}Z`, mono: true, defaultVisible: true },
+    { key: 'oi', label: 'OI', accessor: e => e.user_operating_initials ?? '—', mono: true, defaultVisible: true },
     { key: 'entity_type', label: 'Type', accessor: e => e.entity_type, format: v => moduleLabel(v as string) },
     { key: 'entity_display_id', label: 'Entity', accessor: e => e.entity_display_id ?? '—' },
   ],

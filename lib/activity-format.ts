@@ -11,6 +11,24 @@
 import { moduleLabel } from '@/lib/activity-labels'
 import type { ActivityEntry, EntityDetails } from '@/lib/supabase/activity-queries'
 
+/** Color for an action verb, by action + entity type — shared by the Events Log
+ *  page and the dashboard Events Log widget so they color-code identically. */
+export function actionColor(action: string, entityType: string): string {
+  if (entityType === 'manual') return 'var(--color-text-2)'
+  if (action === 'completed' || action === 'filed') return 'var(--color-green)'
+  if (action === 'deleted' || action === 'cancelled') return 'var(--color-red)'
+  switch (entityType) {
+    case 'check': case 'airfield_check': return 'var(--color-cyan)'
+    case 'inspection': case 'acsi_inspection': return 'var(--color-cyan)'
+    case 'discrepancy': return 'var(--color-warning)'
+    case 'qrc': return 'var(--color-purple)'
+    case 'wildlife_sighting': case 'wildlife_strike': return 'var(--color-orange)'
+    case 'airfield_status': case 'navaid_status': return 'var(--color-blue)'
+    case 'contractor': return 'var(--color-text-2)'
+    default: return 'var(--color-text-2)'
+  }
+}
+
 const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
   'Inspections/Checks': 'Logged Inspection/Check',
   'AMOPS Reporting': 'Logged AMOPS Report',
