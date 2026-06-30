@@ -2,6 +2,25 @@ import type { Dataset } from '@/lib/dashboard/analytics/types'
 import { timePresetSince } from '@/lib/dashboard/analytics/aggregate'
 import { createClient } from '@/lib/supabase/client'
 
+/** Derive the analytics fields for one inspection row. Pure (no I/O) so the
+ *  pass/fail + discrepancy classification is unit-testable. Pass/fail only
+ *  applies to completed inspections; "discrepancies found" is the failed_count>0
+ *  proxy (discrepancies.inspection_id is not populated today). */
+export function deriveInspectionFields(row: {
+  status?: string | null
+  failed_count?: number | null
+  completed_by_name?: string | null
+  inspector_name?: string | null
+}): { inspector: string; result: 'pass' | 'fail' | 'in_progress'; found_discrepancies: 'yes' | 'no' } {
+  const failed = Number(row.failed_count ?? 0)
+  const completed = row.status === 'completed'
+  return {
+    inspector: row.completed_by_name || row.inspector_name || '—',
+    result: completed ? (failed > 0 ? 'fail' : 'pass') : 'in_progress',
+    found_discrepancies: failed > 0 ? 'yes' : 'no',
+  }
+}
+
 export const inspectionsDataset: Dataset = {
   key: 'inspections',
   label: 'Inspections',
@@ -11,6 +30,9 @@ export const inspectionsDataset: Dataset = {
   dimensions: [
     { key: 'inspection_type', label: 'Type' },
     { key: 'status', label: 'Status' },
+    { key: 'inspector', label: 'Completed By' },
+    { key: 'result', label: 'Result' },
+    { key: 'found_discrepancies', label: 'Discrepancies Found' },
     { key: 'month', label: 'Month' },
   ],
   measures: [
@@ -36,6 +58,23 @@ export const inspectionsDataset: Dataset = {
         { value: 'completed', label: 'Completed' },
       ],
     },
+    {
+      field: 'result',
+      label: 'Result',
+      options: [
+        { value: 'pass', label: 'Pass' },
+        { value: 'fail', label: 'Fail' },
+        { value: 'in_progress', label: 'In Progress' },
+      ],
+    },
+    {
+      field: 'found_discrepancies',
+      label: 'Discrepancies Found',
+      options: [
+        { value: 'yes', label: 'Found' },
+        { value: 'no', label: 'None' },
+      ],
+    },
   ],
   async fetchRows(baseId, timePreset) {
     const supabase = createClient()
@@ -43,7 +82,7 @@ export const inspectionsDataset: Dataset = {
 
     let query = supabase
       .from('inspections')
-      .select('id, inspection_type, status, inspection_date, started_at, filed_at, created_at')
+      .select('id, inspection_type, status, inspection_date, started_at, filed_at, created_at, passed_count, failed_count, na_count, completed_by_name, inspector_name')
       .eq('base_id', baseId)
       .order('created_at', { ascending: false })
 
@@ -68,6 +107,9 @@ export const inspectionsDataset: Dataset = {
       started_at: string | null
       filed_at: string | null
       created_at: string
+      failed_count: number | null
+      completed_by_name: string | null
+      inspector_name: string | null
     }[]
 
     return rawRows.map(r => {
@@ -93,6 +135,7 @@ export const inspectionsDataset: Dataset = {
         status: r.status,
         inspection_date: r.inspection_date,
         created_at: r.created_at,
+        ...deriveInspectionFields(r),
         ...(duration_minutes !== undefined ? { duration_minutes } : {}),
       } as Record<string, unknown>
     })
