@@ -274,16 +274,16 @@ flips immediately. If reload latency is visible, apply an optimistic local patch
 **4d. Completion logging.** Satisfied by the existing certifier `signed_by` /
 `signed_at` stamp + the auto-623a dialog entry. No new audit mechanism.
 
-### Open decision — Monthly status display (`dueStatus`)
+### Decided — Monthly status display (`dueStatus`)
 
 For Monthly items, `next_due = last_completed + 1 month` is ~28–31 days out.
 `dueStatus` returns `due_soon` whenever the due is within `DUE_SOON_DAYS` (30),
 **even when completed** (`status.ts:76`). So a freshly-completed monthly item may
 read "Due Soon" instead of "Complete."
 
-**Recommended fix:** prefer `complete` when a completion satisfies the current
-cycle. Change `dueStatus` so that, when `due` is in the future and a `completedDate`
-exists, it returns `complete` rather than `due_soon`:
+**Decision (confirmed): ship the fix.** Prefer `complete` when a completion
+satisfies the current cycle. Change `dueStatus` so that, when `due` is in the
+future and a `completedDate` exists, it returns `complete` rather than `due_soon`:
 
 ```ts
 if (due) {
@@ -299,9 +299,8 @@ if (due) {
 notification reconciliation. This changes the meaning of "due soon" for recurring
 items: a completed item no longer warns until its next due actually passes. Net
 effect aligns with the "completed = Complete" expectation but suppresses the early
-"next cycle coming up" nudge. **This is the one decision to confirm at review** —
-ship the `dueStatus` change, or leave it and accept that monthly items read "Due
-Soon" right after completion.
+"next cycle coming up" nudge. Add a regression-guard test locking this completed-
+future-due → `complete` invariant so the loosened rule doesn't silently revert.
 
 ---
 
@@ -313,7 +312,7 @@ Soon" right after completion.
 3. **Part 3** — `buildInspection623aComment` + wire into `completeAmtrInspection`.
    Depends on Part 2's `detail`/`correctiveAction` fields.
 4. **Part 4** — certifier-sign completion + manual recompute + no-refresh
-   (+ optional `dueStatus` tweak pending the open decision).
+   + the `dueStatus` completed-future-due fix (with regression-guard test).
 
 Each phase is independently buildable and review-gated.
 
