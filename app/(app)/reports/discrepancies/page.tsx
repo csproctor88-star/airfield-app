@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Download, Mail, Loader2, Filter } from 'lucide-react'
-import { fetchOpenDiscrepanciesData, formatDiscrepancyType, type OpenDiscrepanciesData, type DiscrepancyReportFilters } from '@/lib/reports/open-discrepancies-data'
+import { fetchOpenDiscrepanciesData, type OpenDiscrepanciesData, type DiscrepancyReportFilters } from '@/lib/reports/open-discrepancies-data'
 import { generateOpenDiscrepanciesPdf } from '@/lib/reports/open-discrepancies-pdf'
+import { OpenReportView } from '@/components/reports/open-report-view'
 import { getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
@@ -294,45 +295,11 @@ export default function DiscrepancyReportPage() {
 
       {!loading && data && summary && (
         <>
-          {/* Count + filter label */}
-          <div className="card" style={{ padding: 14, marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{summary.total}</span>
-              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>discrepancies</span>
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-              {filterLabel}
-            </div>
-            {summary.agingOver30 > 0 && (
-              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 600, marginTop: 4 }}>
-                {summary.agingOver30} open &gt; 30 days
-              </div>
-            )}
-          </div>
-
-          {/* Summary lines */}
-          <div className="card" style={{ padding: 14, marginBottom: 10, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-            {Object.entries(summary.byArea).length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-3)', marginRight: 6 }}>By Area:</span>
-                {Object.entries(summary.byArea).sort((a, b) => b[1] - a[1]).map(([area, count]) => `${area} (${count})`).join(', ')}
-              </div>
-            )}
-            {Object.entries(summary.byType).length > 0 && (
-              <div style={{ marginBottom: 6 }}>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-3)', marginRight: 6 }}>By Type:</span>
-                {Object.entries(summary.byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => `${formatDiscrepancyType(type)} (${count})`).join(', ')}
-              </div>
-            )}
-            {Object.entries(summary.byShop).length > 0 && (
-              <div>
-                <span style={{ fontWeight: 700, color: 'var(--color-text-3)', marginRight: 6 }}>By Shop:</span>
-                {Object.entries(summary.byShop).sort((a, b) => b[1] - a[1]).map(([shop, count]) => `${shop} (${count})`).join(', ')}
-              </div>
-            )}
-          </div>
+          {/* Results — shared with the dashboard Discrepancy Report widget */}
+          <OpenReportView data={data} filterLabel={filterLabel} />
 
           {/* Export Buttons */}
+          <div style={{ height: 10 }} />
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={handleExportPdf}

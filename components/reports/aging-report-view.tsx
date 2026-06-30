@@ -41,9 +41,28 @@ export function filterAging(
 }
 
 // Interactive aging view — tier/shop badge grids cross-filter the per-tier list.
-export function AgingReportView({ data }: { data: AgingDiscrepanciesData }) {
-  const [activeTierLabel, setActiveTierLabel] = useState<string | null>(null)
-  const [activeShop, setActiveShop] = useState<string | null>(null)
+// Filter state is uncontrolled by default (used by the dashboard widget). The
+// report page drives it controlled via the `active*`/`on*Change` props so its
+// PDF export can mirror the same filtered view.
+export function AgingReportView({
+  data,
+  activeTierLabel: controlledTier,
+  activeShop: controlledShop,
+  onTierChange,
+  onShopChange,
+}: {
+  data: AgingDiscrepanciesData
+  activeTierLabel?: string | null
+  activeShop?: string | null
+  onTierChange?: (v: string | null) => void
+  onShopChange?: (v: string | null) => void
+}) {
+  const [internalTier, setInternalTier] = useState<string | null>(null)
+  const [internalShop, setInternalShop] = useState<string | null>(null)
+  const activeTierLabel = controlledTier !== undefined ? controlledTier : internalTier
+  const activeShop = controlledShop !== undefined ? controlledShop : internalShop
+  const setActiveTierLabel = (v: string | null) => (onTierChange ?? setInternalTier)(v)
+  const setActiveShop = (v: string | null) => (onShopChange ?? setInternalShop)(v)
 
   const filtered = useMemo(() => filterAging(data, activeTierLabel, activeShop), [data, activeTierLabel, activeShop])
   const hasFilters = activeTierLabel !== null || activeShop !== null

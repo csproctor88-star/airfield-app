@@ -7,7 +7,9 @@ const sortDesc = (rec: Record<string, number>) => Object.entries(rec).sort((a, b
 // Presentational discrepancy-report view — the results body of
 // app/(app)/reports/discrepancies/page.tsx: total + aging callout + By Area /
 // By Type / By Shop breakdowns. No fetching, no filter card, no export.
-export function OpenReportView({ data }: { data: OpenDiscrepanciesData }) {
+// `filterLabel` (optional) renders the active-filter caption the report page
+// shows under the count; the dashboard widget omits it.
+export function OpenReportView({ data, filterLabel }: { data: OpenDiscrepanciesData; filterLabel?: string }) {
   const { summary } = data
   return (
     <div>
@@ -17,6 +19,9 @@ export function OpenReportView({ data }: { data: OpenDiscrepanciesData }) {
           <span style={{ fontSize: 'var(--fs-3xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>{summary.total}</span>
           <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>discrepancies</span>
         </div>
+        {filterLabel && (
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>{filterLabel}</div>
+        )}
         {summary.agingOver30 > 0 && (
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 600, marginTop: 4 }}>
             {summary.agingOver30} open &gt; 30 days
