@@ -48,6 +48,7 @@ import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { submitDiscrepancyFanout } from '@/lib/discrepancy-write'
 import { createOutageEvent, fetchOutageEventsForBase, type EnrichedOutageEvent } from '@/lib/supabase/outage-events'
 import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
+import { resolveArea, buildFullRunwaysSet, areaSortKey } from '@/lib/infrastructure/areas'
 import { calculateAllSystemHealth, calculateComponentOutage, getAlertTier, type SystemHealth, type OutageStatus, type AlertTier } from '@/lib/outage-rules'
 import { createClient } from '@/lib/supabase/client'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
@@ -624,27 +625,10 @@ export default function InfrastructureMapPage() {
     const areas: AreaGroup[] = []
 
     // Build a set of full runway names (contain "/") to merge partials into
-    const fullRunways = new Set<string>()
-    for (const sys of systems) {
-      const rt = sys.runway_or_taxiway?.toUpperCase() || ''
-      if (rt.startsWith('RWY') && rt.includes('/')) fullRunways.add(sys.runway_or_taxiway!)
-    }
-
-    const resolveArea = (rwy: string | null): string => {
-      if (!rwy) return 'General'
-      // Check if this is a partial runway ref (e.g. "RWY 01", "19") that matches a full runway
-      const upper = rwy.toUpperCase().replace(/^RWY\s*/, '')
-      for (const full of Array.from(fullRunways)) {
-        const fullUpper = full.toUpperCase().replace(/^RWY\s*/, '')
-        // "01" matches "01/19", "19" matches "01/19"
-        const ends = fullUpper.split('/')
-        if (ends.some(e => e.trim() === upper.trim())) return full
-      }
-      return rwy
-    }
+    const fullRunways = buildFullRunwaysSet(systems)
 
     for (const sys of systems) {
-      const areaLabel = resolveArea(sys.runway_or_taxiway)
+      const areaLabel = resolveArea(sys.runway_or_taxiway, fullRunways)
       const areaKey = areaLabel.toUpperCase()
       let area = areaMap.get(areaKey)
       if (!area) {
@@ -656,20 +640,9 @@ export default function InfrastructureMapPage() {
       area.totalCount += sys.totalCount
     }
     // Sort areas by airfield precedence: runways first, then taxiways, then named areas, misc/general last
-    const areaOrder = (label: string): number => {
-      const u = label.toUpperCase()
-      if (u.startsWith('RWY')) {
-        // Full runway (e.g. "RWY 01/19") before single-end (e.g. "RWY 01")
-        if (u.includes('/')) return 100
-        return 200
-      }
-      if (u.startsWith('TWY')) return 300
-      if (u === 'GENERAL' || u === 'MISCELLANEOUS') return 900
-      return 500 // named areas (ramps, hammerheads, etc.)
-    }
     areas.sort((a, b) => {
-      const oa = areaOrder(a.label)
-      const ob = areaOrder(b.label)
+      const oa = areaSortKey(a.label)
+      const ob = areaSortKey(b.label)
       if (oa !== ob) return oa - ob
       return a.label.localeCompare(b.label, undefined, { numeric: true })
     })
