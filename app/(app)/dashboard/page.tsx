@@ -118,6 +118,17 @@ export default function DashboardPage() {
   const [shareTemplate, setShareTemplate] = useState<string>('')
   const [modalBusy, setModalBusy] = useState(false)
 
+  // Keep the active board in the URL (?board=<id>) so navigating into a module
+  // and pressing Back returns to the same board instead of resetting to the
+  // default. replaceState (not router push) avoids history spam and a remount.
+  const syncBoardUrl = useCallback((id: string | null) => {
+    if (typeof window === 'undefined' || !id) return
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('board') === id) return
+    url.searchParams.set('board', id)
+    window.history.replaceState(window.history.state, '', url.toString())
+  }, [])
+
   // Derive the board layout — always reconciled so md/sm stay aligned to lg's
   // widget set automatically (add/remove/config only need to touch widgets/lg).
   const boardLayout = useMemo(
@@ -195,13 +206,14 @@ export default function DashboardPage() {
       : (list[0]?.id ?? null)
     if (nextId !== activeId) {
       setActiveId(nextId)
+      syncBoardUrl(nextId)
       const found = list.find(b => b.id === nextId)
       setWidgets(found ? found.layout.lg : [])
       setMdWidgets(found?.layout.md)
       setSmWidgets(found?.layout.sm)
       dirtyRef.current = false
     }
-  }, [installationId, activeId, userId])
+  }, [installationId, activeId, userId, syncBoardUrl])
 
   // Load user + boards on base change.
   useEffect(() => {
@@ -229,9 +241,14 @@ export default function DashboardPage() {
       setDefaultBoardId(defId)
       const myDefault = (defId && list.find(b => b.id === defId)) || null
       const firstPersonal = list.find(b => b.owner_id === uid)
-      const initial = myDefault ?? firstPersonal ?? list[0] ?? null
+      // Prefer a board named in the URL (?board=<id>) — set when returning from a
+      // module via Back — over the user's default, so they land where they left.
+      const urlBoardId = new URLSearchParams(window.location.search).get('board')
+      const urlBoard = urlBoardId ? list.find(b => b.id === urlBoardId) : null
+      const initial = urlBoard ?? myDefault ?? firstPersonal ?? list[0] ?? null
       if (initial) {
         setActiveId(initial.id)
+        syncBoardUrl(initial.id)
         // Show DEFAULT_LAYOUT only for the user's own new/empty default board.
         const isEmpty = initial.layout.lg.length === 0
         const isMyDefault = initial.owner_id === uid && initial.id === defId
@@ -242,6 +259,7 @@ export default function DashboardPage() {
       }
     })()
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId])
 
   const onSwitch = useCallback((id: string) => {
@@ -249,6 +267,7 @@ export default function DashboardPage() {
     if (!board) return
     flushSave()
     setActiveId(id)
+    syncBoardUrl(id)
     setWidgets(board.layout.lg.length ? board.layout.lg : [])
     setMdWidgets(board.layout.md)
     setSmWidgets(board.layout.sm)
@@ -256,7 +275,7 @@ export default function DashboardPage() {
     setEditing(false)
     setShowPalette(false)
     setConfiguringId(null)
-  }, [boards, flushSave])
+  }, [boards, flushSave, syncBoardUrl])
 
   // Per-device edit handler — every breakpoint persists to its own device slot.
   const onDeviceLayoutChange = useCallback((device: DeviceClass, layout: WidgetInstance[]) => {
