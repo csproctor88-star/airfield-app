@@ -52,7 +52,7 @@ async function loadTemplate(): Promise<ExcelJS.Workbook> {
 }
 
 async function fetchRecordData(installationId: string, memberId: string) {
-  const [jqsCat, jqsProg, qualCat, qualProg, items797, items803, r1098Cat, r1098Prog, ratCat, ratProg, e623a] = await Promise.all([
+  const [jqsCat, jqsProg, qualCat, qualProg, items797, items803, r1098Cat, r1098Prog, ratCat, ratProg, e623a, sections803] = await Promise.all([
     fetchAmtrByBase<Row>('amtr_jqs_catalog', installationId),
     fetchAmtrByMember<Row>('amtr_jqs_progress', memberId),
     fetchAmtrByBase<Row>('amtr_qual_catalog', installationId),
@@ -64,8 +64,9 @@ async function fetchRecordData(installationId: string, memberId: string) {
     fetchAmtrByBase<Row>('amtr_rat_catalog', installationId),
     fetchAmtrByMember<Row>('amtr_rat_progress', memberId),
     fetchAmtrByMember<Row>('amtr_623a', memberId, 'form_date'),
+    fetchAmtrByBase<Row>('amtr_803_sections', installationId),
   ])
-  return { jqsCat, jqsProg, qualCat, qualProg, items797, items803, r1098Cat, r1098Prog, ratCat, ratProg, e623a }
+  return { jqsCat, jqsProg, qualCat, qualProg, items797, items803, r1098Cat, r1098Prog, ratCat, ratProg, e623a, sections803 }
 }
 
 // ── Generic flat-table writer ──────────────────────────────
@@ -277,6 +278,38 @@ const SECTION_SHEET: Record<string, string> = {
   fiveLevel: 'DAF Form 803 (5-Level)', sevenLevel: 'DAF Form 803 (7-Level)', afm: 'DAF Form 803 (AFM)',
 }
 
+// Deep-copy a built-in 803 sheet's skeleton (column widths, row heights, cell
+// values + styles, merges) into a brand-new sheet, so a manager-added custom
+// section gets its own 803-format tab. Clone from a *pristine* built-in sheet
+// (before the built-in fill loop runs); fill803 then clears the sample block and
+// writes the custom section's evaluations. Drawings/images aren't copied (the
+// 803 form sheets carry none).
+function clone803Sheet(wb: ExcelJS.Workbook, src: WS, dstName: string): WS {
+  const dst = wb.addWorksheet(dstName)
+  for (let i = 1; i <= 14; i++) { const w = src.getColumn(i).width; if (w) dst.getColumn(i).width = w }
+  src.eachRow({ includeEmpty: true }, (row, rn) => {
+    const dr = dst.getRow(rn)
+    if (row.height) dr.height = row.height
+    row.eachCell({ includeEmpty: true }, (cell, cn) => {
+      const dc = dr.getCell(cn)
+      dc.value = cell.value as ExcelJS.CellValue
+      dc.style = cloneStyle(cell.style)
+    })
+  })
+  for (const m of (src.model.merges || [])) dst.mergeCells(m)
+  return dst
+}
+
+/** Build a unique, Excel-legal sheet name for a custom 803 section. */
+function customSheetName(label: string, used: Set<string>): string {
+  const safe = String(label || 'Custom').replace(/[[\]:*?/\\]/g, '').trim() || 'Custom'
+  let name = `DAF Form 803 (${safe})`.slice(0, 31)
+  let n = 2
+  while (used.has(name)) name = `${name.slice(0, 28)} ${n++}`.slice(0, 31)
+  used.add(name)
+  return name
+}
+
 function downloadBuffer(buf: ArrayBuffer, filename: string) {
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const url = URL.createObjectURL(blob)
@@ -306,8 +339,29 @@ export async function exportAmtrRecord(installationId: string, member: AmtrMembe
   fill797(wb.getWorksheet('DAF Form 797'), data.items797)
   fill623a(ws623a, data.e623a)
   fillRat(wb.getWorksheet('Ready Airman Training'), data.ratCat, data.ratProg)
+  // Custom (manager-added) 803 sections get their own cloned 803 sheet. Clone
+  // from a pristine built-in sheet BEFORE the built-in fill loop, so each clone
+  // starts from a single sample block.
+  const builtinKeys = new Set(Object.keys(SECTION_SHEET))
+  const customSecs = data.sections803.filter((s) => s.builtin !== true && !builtinKeys.has(String(s.section_key)))
+  const customSheets: { key: string; ws: WS }[] = []
+  if (customSecs.length) {
+    const srcSheet = Object.values(SECTION_SHEET).map((n) => wb.getWorksheet(n)).find(Boolean)
+    if (srcSheet) {
+      const used = new Set(wb.worksheets.map((w) => w.name))
+      for (const sec of customSecs) {
+        const name = customSheetName(String(sec.label ?? sec.section_key), used)
+        customSheets.push({ key: String(sec.section_key), ws: clone803Sheet(wb, srcSheet, name) })
+      }
+    }
+  }
+  // Built-in 803 sections → their template sheets.
   for (const [section, sheet] of Object.entries(SECTION_SHEET)) {
     fill803(wb.getWorksheet(sheet), data.items803.filter((r) => r.section === section))
+  }
+  // Custom 803 sections → their cloned sheets.
+  for (const { key, ws } of customSheets) {
+    fill803(ws, data.items803.filter((r) => String(r.section) === key))
   }
 
   const buf = await wb.xlsx.writeBuffer()
