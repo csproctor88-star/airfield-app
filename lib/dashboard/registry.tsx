@@ -176,7 +176,7 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'lighting': {
     type: 'lighting', kind: 'native', title: 'Airfield Lighting',
-    description: 'Lighting health for a runway/taxiway/apron area, a system, or a light type',
+    description: 'Lighting health by area, system, or light type — or the airfield-wide status roll-up',
     defaultSize: { w: 8, h: 8 }, minSize: { w: 6, h: 6 },
     permission: PERM.INFRASTRUCTURE_VIEW,
     moduleHref: '/infrastructure',
@@ -185,12 +185,15 @@ export const WIDGETS: Record<string, WidgetDef> = {
     ConfigForm: LightingConfigForm,
   },
   'lighting-status': {
+    // Folded into the Airfield Lighting widget (scope = 'status'); hidden from the
+    // palette but still renders for any existing instances.
     type: 'lighting-status', kind: 'native', title: 'Lighting Status',
     description: 'Airfield-wide lighting status by category (Runway, Taxiway, Approach, Signage, Other)',
     defaultSize: { w: 24, h: 5 }, minSize: { w: 10, h: 3 },
     permission: PERM.INFRASTRUCTURE_VIEW,
     moduleHref: '/infrastructure',
     icon: Lightbulb,
+    hidden: true,
     Component: (p) => <LightingStatusWidget {...p} />,
     ConfigForm: TitleConfigForm,
   },

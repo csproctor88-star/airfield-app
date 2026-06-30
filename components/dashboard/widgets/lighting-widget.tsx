@@ -18,10 +18,11 @@ import {
 } from '@/lib/outage-rules'
 import { listAreas, systemsForArea } from '@/lib/infrastructure/areas'
 import { useDashboardActions } from '@/components/dashboard/dashboard-actions'
+import { LightingStatusWidget } from './lighting-status-widget'
 import type { LightingSystem, LightingSystemComponent, InfrastructureFeature } from '@/lib/supabase/types'
 import type { WidgetProps, WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 
-type LightingScope = 'area' | 'system' | 'type'
+type LightingScope = 'area' | 'system' | 'type' | 'status'
 
 const TIER_RANK: Record<AlertTier, number> = { green: 0, yellow: 1, red: 2, black: 3 }
 
@@ -216,6 +217,20 @@ export function LightingWidget(props: WidgetProps) {
     )
   }
 
+  // Status scope: the airfield-wide category roll-up (formerly its own widget).
+  if (scope === 'status') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          <LightingStatusWidget {...props} />
+        </div>
+        <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
+          <Link href="/infrastructure" style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-cyan)', textDecoration: 'none' }}>View infra →</Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Edit-mode helper: one-tap build a lighting board (one widget per area). */}
@@ -318,9 +333,11 @@ export function LightingConfigForm({ config, onSave, onCancel }: WidgetConfigPro
       setValue(areas[0])
     } else if (next === 'system') {
       setValue(systems[0]?.id)
-    } else {
+    } else if (next === 'type') {
       const firstType = systems.find(s => s.system_type)?.system_type
       setValue(firstType)
+    } else {
+      setValue(undefined)   // status — airfield-wide roll-up, no value to select
     }
   }
 
@@ -337,6 +354,7 @@ export function LightingConfigForm({ config, onSave, onCancel }: WidgetConfigPro
     { value: 'area', label: 'Area' },
     { value: 'system', label: 'System' },
     { value: 'type', label: 'Type' },
+    { value: 'status', label: 'Status' },
   ]
 
   return (
@@ -368,15 +386,22 @@ export function LightingConfigForm({ config, onSave, onCancel }: WidgetConfigPro
         </div>
       </div>
 
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={label}>{scope === 'area' ? 'Area' : scope === 'system' ? 'System' : 'System Type'}</span>
-        <select style={input} value={value ?? ''} onChange={e => setValue(e.target.value)}>
-          {options.length === 0 && <option value="">No options</option>}
-          {options.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </label>
+      {scope !== 'status' && (
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={label}>{scope === 'area' ? 'Area' : scope === 'system' ? 'System' : 'System Type'}</span>
+          <select style={input} value={value ?? ''} onChange={e => setValue(e.target.value)}>
+            {options.length === 0 && <option value="">No options</option>}
+            {options.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {scope === 'status' && (
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+          Airfield-wide lighting status by category (Runway / Taxiway / Approach / Signage / Other).
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
         <button onClick={() => onSave({ ...config, title: title.trim() || undefined, scope, value })}
