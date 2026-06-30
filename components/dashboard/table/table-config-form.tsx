@@ -1,6 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
 import type { WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 import type { TableWidgetConfig, TableWidgetDescriptor, ColumnDef } from '@/lib/dashboard/table/types'
 import { normalizeTableConfig } from '@/lib/dashboard/table/config'
@@ -39,6 +39,11 @@ export function TableConfigForm<Row>({
   function toggleColumn(key: string) {
     setColumnItems(prev => prev.map(it => it.key === key ? { ...it, visible: !it.visible } : it))
   }
+  // Touch-friendly reorder (HTML5 drag doesn't fire on touch devices).
+  function moveColumn(from: number, to: number) {
+    if (to < 0 || to >= columnItems.length) return
+    setColumnItems(prev => moveItem(prev, from, to))
+  }
   function toggleEnum(fk: string, val: string) {
     setFilters(prev => {
       const cur = Array.isArray(prev[fk]) ? (prev[fk] as string[]) : []
@@ -64,7 +69,7 @@ export function TableConfigForm<Row>({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <input style={box} placeholder="Widget title (optional)" value={title} onChange={e => setTitle(e.target.value)} />
 
-      <div style={section}>Columns <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--color-text-3)' }}>— drag to reorder, check to show</span></div>
+      <div style={section}>Columns <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--color-text-3)' }}>— reorder with ▲▼ (or drag), check to show</span></div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {columnItems.map((it, i) => (
           <div
@@ -82,11 +87,24 @@ export function TableConfigForm<Row>({
               draggable
               onDragStart={() => setDragIdx(i)}
               onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
-              title="Drag to reorder"
+              title="Drag to reorder (desktop)"
               style={{ cursor: 'move', userSelect: 'none', color: 'var(--color-text-3)', display: 'flex', flexShrink: 0 }}
             >
               <GripVertical size={15} />
             </span>
+            {/* Tap-to-reorder buttons — work on touch where native drag does not. */}
+            <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+              <button
+                type="button" aria-label="Move column up" title="Move up"
+                onClick={() => moveColumn(i, i - 1)} disabled={i === 0}
+                style={{ display: 'flex', border: 'none', background: 'transparent', padding: 0, lineHeight: 0, cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--color-border)' : 'var(--color-text-3)' }}
+              ><ChevronUp size={14} /></button>
+              <button
+                type="button" aria-label="Move column down" title="Move down"
+                onClick={() => moveColumn(i, i + 1)} disabled={i === columnItems.length - 1}
+                style={{ display: 'flex', border: 'none', background: 'transparent', padding: 0, lineHeight: 0, cursor: i === columnItems.length - 1 ? 'default' : 'pointer', color: i === columnItems.length - 1 ? 'var(--color-border)' : 'var(--color-text-3)' }}
+              ><ChevronDown size={14} /></button>
+            </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', cursor: 'pointer' }}>
               <input type="checkbox" checked={it.visible} onChange={() => toggleColumn(it.key)} />
               {it.label}

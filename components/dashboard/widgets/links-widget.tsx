@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { ExternalLink, Plus, Trash2, Search, GripVertical } from 'lucide-react'
+import { ExternalLink, Plus, Trash2, Search, GripVertical, ChevronUp, ChevronDown } from 'lucide-react'
 import type { WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 import { moveItem } from '@/lib/dashboard/array-move'
 
@@ -117,7 +117,14 @@ export function LinksConfigForm({ config, onSave, onCancel }: WidgetConfigProps)
           }}
         >
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span draggable onDragStart={() => setDragIdx(i)} onDragEnd={() => { setDragIdx(null); setOverIdx(null) }} title="Drag to reorder" style={{ cursor: 'move', userSelect: 'none', color: 'var(--color-text-3)', display: 'flex', flexShrink: 0, alignItems: 'center' }}><GripVertical size={15} /></span>
+            <span draggable onDragStart={() => setDragIdx(i)} onDragEnd={() => { setDragIdx(null); setOverIdx(null) }} title="Drag to reorder (desktop)" style={{ cursor: 'move', userSelect: 'none', color: 'var(--color-text-3)', display: 'flex', flexShrink: 0, alignItems: 'center' }}><GripVertical size={15} /></span>
+            {/* Tap-to-reorder — works on touch where native drag does not. */}
+            <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+              <button type="button" aria-label="Move link up" title="Move up" onClick={() => setRows(rs => moveItem(rs, i, i - 1))} disabled={i === 0}
+                style={{ display: 'flex', border: 'none', background: 'transparent', padding: 0, lineHeight: 0, cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? 'var(--color-border)' : 'var(--color-text-3)' }}><ChevronUp size={14} /></button>
+              <button type="button" aria-label="Move link down" title="Move down" onClick={() => setRows(rs => moveItem(rs, i, i + 1))} disabled={i === rows.length - 1}
+                style={{ display: 'flex', border: 'none', background: 'transparent', padding: 0, lineHeight: 0, cursor: i === rows.length - 1 ? 'default' : 'pointer', color: i === rows.length - 1 ? 'var(--color-border)' : 'var(--color-text-3)' }}><ChevronDown size={14} /></button>
+            </div>
             <input style={{ ...input, flex: '0 0 35%' }} placeholder="Label" value={r.label} onChange={e => setRow(i, { label: e.target.value })} />
             <input style={{ ...input, flex: 1 }} placeholder="https://…" value={r.url} onChange={e => setRow(i, { url: e.target.value })} />
             <button onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} aria-label="Remove link" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-3)', flexShrink: 0 }}>
