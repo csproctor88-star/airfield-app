@@ -285,6 +285,23 @@ describe('runInspectionScan', () => {
     expect(r['1098_all_documented'].findings.join(' ')).toContain('Recurring Prof Test #4')
   })
 
+  it('1098_catalog_fields: prior-year rows missing a field are not graded', () => {
+    // 2025 row missing score_or_hours (archived prior year); 2026 row complete.
+    // Real-world: Selfridge 2025 catalog has all 28 rows missing score_or_hours.
+    const r1098Catalog = [
+      { id: 'k25', task: 'Airfield Driving', type: 'CBT', frequency: 'Annual', year_label: '2025', score_or_hours: '' },
+      { id: 'k26', task: 'Airfield Driving', type: 'CBT', frequency: 'Annual', year_label: '2026', score_or_hours: '1 Hr' },
+    ]
+    expect(runInspectionScan(baseData({ r1098Catalog }))['1098_catalog_fields'].auto).toBe('yes')
+  })
+
+  it('1098_catalog_fields: a current-year row missing a field is still flagged', () => {
+    const r1098Catalog = [{ id: 'k26', task: 'Airfield Driving', type: 'CBT', frequency: 'Annual', year_label: '2026', score_or_hours: '' }]
+    const r = runInspectionScan(baseData({ r1098Catalog }))
+    expect(r['1098_catalog_fields'].auto).toBe('no')
+    expect(r['1098_catalog_fields'].findings.join(' ')).toContain('Airfield Driving')
+  })
+
   it('monthly_inspection_done: yes when a Monthly Training Records Inspection 623A entry exists', () => {
     expect(runInspectionScan(baseData()).monthly_inspection_done.auto).toBe('no')
     const e623a = [{ id: 'e1', entry_type: 'Monthly Training Records Inspection' }]

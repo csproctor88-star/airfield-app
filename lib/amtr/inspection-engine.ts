@@ -241,41 +241,42 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
       set('1098_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'completed 1098 item(s) missing signatures'))
     }
   }
-  // 6.3 — every elapsed 1098 catalog item *for the current year* has a progress
-  // row. The 1098 record is per-year: only the current calendar year is the
-  // active record (matching the 1098 tab's current-year view). Prior-year
-  // (archived/historical) catalogs and future years are NOT graded — otherwise
-  // a member working the current year is flagged for every prior-year row they
-  // never had. Within the graded year, items whose period hasn't fully elapsed
+  // The 1098 record is per-year; only the current calendar year is the active
+  // record (matching the 1098 tab's current-year view via getUTCFullYear()).
+  // Prior-year (archived/historical) catalogs and future years are NOT graded —
+  // otherwise a member working the current year is flagged for every prior-year
+  // row. Both 6.3 and 6.4 grade this same current-year slice; rows with no
+  // year_label (legacy/single-year catalogs) count as current. Falls back to the
+  // latest non-future year when the current year's catalog isn't open yet.
+  const r1098Year = (c: Row) => (String(c.year_label ?? '').slice(0, 4) || d.today.slice(0, 4))
+  const current1098Catalog = ((): Row[] => {
+    const all = live(d.r1098Catalog)
+    const cy = d.today.slice(0, 4)
+    const years = Array.from(new Set(all.map(r1098Year)))
+    const prior = years.filter((y) => y <= cy).sort()
+    const targetYear = years.includes(cy) ? cy : (prior.length ? prior[prior.length - 1] : null)
+    return targetYear == null ? [] : all.filter((c) => r1098Year(c) === targetYear)
+  })()
+
+  // 6.3 — every elapsed current-year 1098 catalog item has a progress row.
+  // Within the graded year, items whose period hasn't fully elapsed
   // (current/future months, an annual item mid-year) are not yet expected.
   {
-    const allCatalog = live(d.r1098Catalog)
-    const currentYear = d.today.slice(0, 4)
-    // A row with no year_label (legacy/single-year catalogs) is treated as the
-    // current year so it always grades.
-    const rowYear = (c: Row) => (String(c.year_label ?? '').slice(0, 4) || currentYear)
-    const years = Array.from(new Set(allCatalog.map(rowYear)))
-    // Grade the current year if its catalog exists; else fall back to the
-    // latest non-future year (some bases lag on opening the new year).
-    const prior = years.filter((y) => y <= currentYear).sort()
-    const targetYear = years.includes(currentYear) ? currentYear : (prior.length ? prior[prior.length - 1] : null)
-    const catalog = targetYear == null ? [] : allCatalog.filter((c) => rowYear(c) === targetYear)
-    if (catalog.length === 0) set('1098_all_documented', 'na')
+    if (current1098Catalog.length === 0) set('1098_all_documented', 'na')
     else {
       const documented = new Set(d.r1098Progress.map((p) => String(p.catalog_id)))
-      const missing = catalog
+      const missing = current1098Catalog
         .filter((c) => !documented.has(String(c.id)))
         .filter((c) => recurringPeriodElapsed(c as { task?: string | null; frequency?: string | null; year_label?: string | null }, d.today))
         .map((c) => String(c.task ?? c.id))
       set('1098_all_documented', missing.length ? 'no' : 'yes', summarize(missing, '1098 requirement(s) with no record'))
     }
   }
-  // 6.4 — 1098 catalog rows carry score/hours, type, frequency
+  // 6.4 — current-year 1098 catalog rows carry score/hours, type, frequency
   {
-    const catalog = live(d.r1098Catalog)
-    if (catalog.length === 0) set('1098_catalog_fields', 'na')
+    if (current1098Catalog.length === 0) set('1098_catalog_fields', 'na')
     else {
-      const missing = catalog.filter((c) => !(has(c.score_or_hours) && has(c.type) && has(c.frequency))).map((c) => String(c.task ?? c.id))
+      const missing = current1098Catalog.filter((c) => !(has(c.score_or_hours) && has(c.type) && has(c.frequency))).map((c) => String(c.task ?? c.id))
       set('1098_catalog_fields', missing.length ? 'no' : 'yes', summarize(missing, '1098 task(s) missing score/type/frequency'))
     }
   }
