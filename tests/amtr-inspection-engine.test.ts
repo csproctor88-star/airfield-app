@@ -308,6 +308,73 @@ describe('runInspectionScan', () => {
     expect(runInspectionScan(baseData({ e623a })).monthly_inspection_done.auto).toBe('yes')
   })
 
+  it('transcribe_reason: na when nothing transcribed', () => {
+    expect(runInspectionScan(baseData()).transcribe_reason.auto).toBe('na')
+  })
+  it('transcribe_reason: yes when a Records Transcribed 623A entry exists', () => {
+    const r = runInspectionScan(baseData({
+      transcribedRowIds: ['r1'],
+      e623a: [{ id: 'e1', entry_type: 'Records Transcribed' }],
+    }))
+    expect(r.transcribe_reason.auto).toBe('yes')
+  })
+  it('transcribe_reason: no when rows are transcribed but no entry documents it', () => {
+    const r = runInspectionScan(baseData({
+      transcribedRowIds: ['r1'],
+      e623a: [{ id: 'e1', entry_type: 'General Training Comment' }],
+    }))
+    expect(r.transcribe_reason.auto).toBe('no')
+  })
+
+  it('formal_pme_dates: na for non-military status (PME does not apply)', () => {
+    const formalCatalog = [{ id: 'f1', section: 'haf', course: 'BMT' }]
+    const formalProgress = [{ catalog_id: 'f1', start_date: '', complete_date: '' }]
+    for (const status of ['Contractor', 'Civilian', 'Separated']) {
+      const r = runInspectionScan(baseData({
+        member: { id: 'm1', user_id: 'u1', full_name: 'Doe', grade: 'CTR', duty_position: 'AMOPS', dafsc: '1C751', tsc: 'A', status },
+        formalCatalog, formalProgress,
+      }))
+      expect(r.formal_pme_dates.auto).toBe('na')
+    }
+  })
+  it('formal_pme_dates: still flags an Active member missing PME dates', () => {
+    const formalCatalog = [{ id: 'f1', section: 'haf', course: 'BMT' }]
+    const formalProgress = [{ catalog_id: 'f1', start_date: '2026-01-01', complete_date: '' }]
+    const r = runInspectionScan(baseData({ formalCatalog, formalProgress }))   // baseData status = Active
+    expect(r.formal_pme_dates.auto).toBe('no')
+  })
+
+  describe('skill_levels_attained', () => {
+    const skillCat = [
+      { id: 's3', category: 'skill_level', name: '1C731 Skill Level' },
+      { id: 's5', category: 'skill_level', name: '1C751 Skill Level' },
+      { id: 's7', category: 'skill_level', name: '1C771 Skill Level' },
+      { id: 'tr', category: 'skill_level', name: 'Trainer' },          // not a skill level
+    ]
+    const member = (dafsc: string) => ({ id: 'm1', user_id: 'u1', full_name: 'Doe', grade: 'SSgt', duty_position: 'AMOPS', dafsc, tsc: 'A', status: 'Active' })
+
+    it('yes when required levels (DAFSC and below) are attained', () => {
+      const qualProgress = [{ catalog_id: 's3', attained: true }, { catalog_id: 's5', attained: true }]
+      expect(runInspectionScan(baseData({ member: member('1C751'), qualCatalog: skillCat, qualProgress })).skill_levels_attained.auto).toBe('yes')
+    })
+    it('no when a required level is not attained', () => {
+      const qualProgress = [{ catalog_id: 's3', attained: true }]   // 1C751 missing
+      const r = runInspectionScan(baseData({ member: member('1C751'), qualCatalog: skillCat, qualProgress }))
+      expect(r.skill_levels_attained.auto).toBe('no')
+      expect(r.skill_levels_attained.findings.join(' ')).toContain('1C751 Skill Level')
+    })
+    it('levels above the DAFSC are not required', () => {
+      const qualProgress = [{ catalog_id: 's3', attained: true }, { catalog_id: 's5', attained: true }]
+      expect(runInspectionScan(baseData({ member: member('1C751'), qualCatalog: skillCat, qualProgress })).skill_levels_attained.auto).toBe('yes')
+    })
+    it('na for a civilian / unparseable DAFSC', () => {
+      expect(runInspectionScan(baseData({ member: member('2101'), qualCatalog: skillCat, qualProgress: [] })).skill_levels_attained.auto).toBe('na')
+    })
+    it('na when no skill-level quals match the AFSC', () => {
+      expect(runInspectionScan(baseData({ member: member('1C751'), qualCatalog: [{ id: 'tr', category: 'skill_level', name: 'Trainer' }], qualProgress: [] })).skill_levels_attained.auto).toBe('na')
+    })
+  })
+
   it('transcribed-completeness checks: na when nothing transcribed, else verify date + initials', () => {
     // Nothing transcribed → na on every form.
     const none = runInspectionScan(baseData({ items797: [{ id: 'r1', task: 'X', complete_date: '2026-01-01', trainee_initials: 'JD' }] }))

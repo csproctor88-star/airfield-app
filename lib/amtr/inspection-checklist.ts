@@ -34,6 +34,8 @@ export type InspectionAutoKey =
   | 'jqs_dates_signed'
   | 'rat_dates'
   | 'monthly_inspection_done'
+  | 'transcribe_reason'
+  | 'skill_levels_attained'
   | '797_transcribed'
   | '1098_transcribed'
   | '803_transcribed'
@@ -57,7 +59,7 @@ export const DEFAULT_INSPECTION_CHECKLIST: ChecklistSeedRow[] = [
   S('2', 'Qualifications'),
   I('2.1', "Is the individual's name, rank, Current Duty Position, DAFSC or Civilian Job series, and Training Status Code annotated correctly?", 'member_identity'),
   I('2.2', 'Are all qualifications completed by the individual identified and annotated with a completion date?'),
-  I('2.3', 'Has the individual attained their 3, 5, 7 or 9 skill-levels, if so, are all corresponding skill levels annotated?'),
+  I('2.3', 'Has the individual attained their 3, 5, 7 or 9 skill-levels, if so, are all corresponding skill levels annotated?', 'skill_levels_attained'),
   I('2.4', "Are all SEI's attained by the individual annotated?"),
   I('2.5', 'Is the individual trainer qualified, if so, is it annotated?', 'trainer_qualified'),
   I('2.6', 'Is the individual certifier qualified, if so, is it annotated?', 'certifier_qualified'),
@@ -69,7 +71,7 @@ export const DEFAULT_INSPECTION_CHECKLIST: ChecklistSeedRow[] = [
 
   S('4', 'DAF Form 623A'),
   I('4.1', 'Are all AF Form 623A (or electronic equivalent) entries signed/acknowledged (with or without comments) by the trainee, supervisor/trainer, NAMT and AFM, as required?', '623a_signed'),
-  I('4.2', 'If the records were transcribed, is the reason documented?'),
+  I('4.2', 'If the records were transcribed, is the reason documented?', 'transcribe_reason'),
   I('4.3', 'Is there an initial evaluation conducted and documented until the individual PCS or PCA?'),
   I('4.4', 'Has an evaluation of Apprentice Course Graduates been conducted and documented during the first 90 days following assignment?'),
   I('4.5', 'Are local training start and completions documented (e.g. short title and date)?'),

@@ -114,6 +114,28 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     set('member_identity', missing.length ? 'no' : 'yes', missing.length ? [`Missing: ${missing.join(', ')}`] : [])
   }
 
+  // 2.3 — member has attained the skill level(s) their DAFSC requires (the
+  // matching level and every level below). Reuses skillLevelFromName, which
+  // encodes the 1C7X1 family; a non-AFSC DAFSC parses to null → na. Applies to
+  // contractors too (they hold 3-/5-level quals).
+  {
+    const memberLevel = skillLevelFromName(m.dafsc)
+    if (memberLevel == null) set('skill_levels_attained', 'na')
+    else {
+      const attained = new Set(d.qualProgress.filter((p) => p.attained === true).map((p) => String(p.catalog_id)))
+      const required = live(d.qualCatalog).filter((c) => {
+        if (c.category !== 'skill_level') return false
+        const lvl = skillLevelFromName(c.name)
+        return lvl != null && lvl <= memberLevel
+      })
+      if (required.length === 0) set('skill_levels_attained', 'na')
+      else {
+        const missing = required.filter((c) => !attained.has(String(c.id))).map((c) => String(c.name ?? c.id))
+        set('skill_levels_attained', missing.length ? 'no' : 'yes', summarize(missing, 'required skill level(s) not attained'))
+      }
+    }
+  }
+
   // 2.5 / 2.6 — trainer / certifier qualified (annotated via role assignment)
   set('trainer_qualified', holdsRole('trainer') ? 'yes' : 'na')
   set('certifier_qualified', holdsRole('certifier') ? 'yes' : 'na')
@@ -130,7 +152,9 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
         .map((c) => String(catById.get(String(c.id))?.course ?? c.id))
       set(key, missing.length ? 'no' : 'yes', summarize(missing, 'course(s) missing a start or completion date'))
     }
-    evalSection('haf', 'formal_pme_dates')
+    // PME (BMT/NCOA/SNCOA/Airmanship) is military-only — N/A for non-military.
+    if (RAT_EXEMPT_STATUSES.has(String(m.status ?? ''))) set('formal_pme_dates', 'na')
+    else evalSection('haf', 'formal_pme_dates')
     evalSection('continuation', 'formal_continuation_dates')
   }
 
@@ -320,6 +344,15 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
   // 4.12 — a monthly training records inspection has been recorded (the
   // completed inspection drops a "Monthly Training Records Inspection" 623A entry).
   set('monthly_inspection_done', d.e623a.some((e) => String(e.entry_type ?? '').toLowerCase().includes('inspection')) ? 'yes' : 'no')
+
+  // 4.2 — if any rows were transcribed, the reason must be documented in a
+  // "Records Transcribed" 623A entry.
+  if (transcribed.size === 0) set('transcribe_reason', 'na')
+  else {
+    const documented = d.e623a.some((e) => String(e.entry_type ?? '').toLowerCase().includes('transcrib'))
+    set('transcribe_reason', documented ? 'yes' : 'no',
+      documented ? [] : ["records were transcribed but no 'Records Transcribed' 623A entry documents the reason"])
+  }
 
   // 5.2 / 6.2 / 7.2 / 9.1 — transcribed rows carry a completion date + initials.
   // Transcription stamps the completion date and the chosen non-certifier slot,
