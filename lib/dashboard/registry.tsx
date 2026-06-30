@@ -34,6 +34,7 @@ import { InspectionStatusWidget } from '@/components/dashboard/widgets/inspectio
 import { LastCheckWidget } from '@/components/dashboard/widgets/last-check-widget'
 import { ShiftChecklistWidget } from '@/components/dashboard/widgets/shift-checklist-widget'
 import { AfmTogglesWidget } from '@/components/dashboard/widgets/afm-toggles-widget'
+import { StatusBoardWidget, StatusBoardConfigForm } from '@/components/dashboard/widgets/status-board-widget'
 import { QuickActionsWidget, QuickActionsConfigForm } from '@/components/dashboard/widgets/quick-actions-widget'
 import { LinksWidget, LinksConfigForm } from '@/components/dashboard/widgets/links-widget'
 import { EmbedWidget, EmbedConfigForm } from '@/components/dashboard/widgets/embed-widget'
@@ -106,6 +107,14 @@ export const WIDGETS: Record<string, WidgetDef> = {
     permission: PERM.AIRFIELD_STATUS_WRITE,
     Component: () => <AfmTogglesWidget />,
     ConfigForm: TitleConfigForm,
+  },
+  'status-board': {
+    type: 'status-board', kind: 'native', title: 'Status Board',
+    description: 'A chosen airfield status board — a custom board, NAVAIDs, runways, or ARFF',
+    icon: ClipboardList, defaultSize: { w: 6, h: 6 }, minSize: { w: 4, h: 4 },
+    permission: PERM.AIRFIELD_STATUS_VIEW,
+    Component: (p) => <StatusBoardWidget {...p} />,
+    ConfigForm: StatusBoardConfigForm,
   },
   'quick-actions': {
     type: 'quick-actions', kind: 'native', title: 'Quick Actions',
