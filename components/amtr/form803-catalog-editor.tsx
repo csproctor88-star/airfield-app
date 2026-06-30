@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GripVertical, Trash2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
@@ -19,6 +19,20 @@ export function Form803CatalogEditor({ catalog, sections, installationId, onChan
 }) {
   const [dragId, setDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
+  const [isSysAdmin, setIsSysAdmin] = useState(false)
+
+  // The "seed to new bases" toggle is system-admin only.
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelled || !data.user) return
+      const { data: prof } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
+      if (!cancelled) setIsSysAdmin((prof as { role?: string } | null)?.role === 'sys_admin')
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const sectionList = resolveSections(sections)
   const flat = sectionList.flatMap((s) => catalog.filter((c) => c.section === s.key))
@@ -52,6 +66,12 @@ export function Form803CatalogEditor({ catalog, sections, installationId, onChan
     if (!window.confirm(`Delete the "${s.label}" section and its tasks? This can't be undone.`)) return
     for (const t of catalog.filter((c) => c.section === s.key)) await deleteAmtrRow('amtr_803_catalog', String(t.id))
     const { error } = await deleteAmtrRow('amtr_803_sections', s.id)
+    if (error) { toast.error(error); return }
+    onChange()
+  }
+  const toggleSeedDefault = async (s: Section803, value: boolean) => {
+    if (!s.id) return
+    const { error } = await updateAmtrRow('amtr_803_sections', s.id, { seed_default: value })
     if (error) { toast.error(error); return }
     onChange()
   }
@@ -108,7 +128,14 @@ export function Form803CatalogEditor({ catalog, sections, installationId, onChan
               />
               {s.builtin && <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>built-in</span>}
               <span style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>({items.length})</span>
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {!s.builtin && isSysAdmin && (
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    title="System admin: seed this section (and its tasks) into newly-created bases">
+                    <input type="checkbox" checked={!!s.seedDefault} onChange={(e) => toggleSeedDefault(s, e.target.checked)} />
+                    Seed to new bases
+                  </label>
+                )}
                 <Btn variant="secondary" onClick={() => add(s.key)}>+ Add</Btn>
                 {!s.builtin && (
                   <button style={{ ...iconBtn, color: 'var(--color-danger)' }} onClick={() => deleteSection(s)} title="Delete section"><Trash2 size={15} /></button>

@@ -302,6 +302,22 @@ export async function fetchAmtrByBase<T = Record<string, unknown>>(
   return (data ?? []) as T[]
 }
 
+/** Cross-base: the custom 803 sections flagged seed_default (by a sysadmin) plus
+ *  their catalog tasks, for seeding into a newly-created base. RLS limits the
+ *  rows to bases the caller can access (a sysadmin sees all). */
+export async function fetchAmtr803SeedDefaults(): Promise<{
+  sections: Record<string, unknown>[]; tasks: Record<string, unknown>[]
+}> {
+  const supabase = db()
+  if (!supabase) return { sections: [], tasks: [] }
+  const { data: sections } = await supabase.from('amtr_803_sections').select('*').eq('seed_default', true)
+  const secs = (sections ?? []) as Record<string, unknown>[]
+  const keys = Array.from(new Set(secs.map((s) => String(s.section_key))))
+  if (keys.length === 0) return { sections: secs, tasks: [] }
+  const { data: tasks } = await supabase.from('amtr_803_catalog').select('*').in('section', keys)
+  return { sections: secs, tasks: (tasks ?? []) as Record<string, unknown>[] }
+}
+
 export async function fetchAmtrByMember<T = Record<string, unknown>>(
   table: string, memberId: string, orderBy?: string,
 ): Promise<T[]> {

@@ -15,7 +15,9 @@ import { DEFAULT_623A_ENTRY_TYPES, bundled623aCommentTemplates, DAF803_SECTIONS 
 import std803 from './data/std-803.json'
 import {
   insertAmtrRows, countAmtrRows, fetchAmtrByBase, upsertAmtrRow, updateAmtrRow, setAmtrCatalogVersion,
+  fetchAmtr803SeedDefaults,
 } from '@/lib/supabase/amtr'
+import { dedupeSeed803 } from './form803-sections'
 
 // Bump when the bundled standard catalogs are updated to a new HAF release.
 export const CATALOG_VERSION = '2026.06 (1C7X1)'
@@ -107,6 +109,31 @@ export async function seedBaseCatalogs(baseId: string): Promise<SeedResult[]> {
       : job.rows
     const { inserted, error } = await insertAmtrRows(job.table, withBase(baseId, rows))
     results.push({ table: job.table, inserted, skipped: false, error })
+  }
+  // Seed sysadmin-flagged custom 803 sections (+ their tasks) into this base,
+  // skipping any already present (by section_key).
+  {
+    const { sections, tasks } = await fetchAmtr803SeedDefaults()
+    if (sections.length) {
+      const existing = (await fetchAmtrByBase('amtr_803_sections', baseId)) as Record<string, unknown>[]
+      const existingKeys = new Set(existing.map((s) => String(s.section_key)))
+      const maxOrder = existing.reduce((m, s) => Math.max(m, Number(s.sort_order ?? 0)), 0)
+      const picked = dedupeSeed803(sections, tasks, existingKeys)
+      let n = 0
+      if (picked.sections.length) {
+        const r = await insertAmtrRows('amtr_803_sections', picked.sections.map((s, i) => ({
+          base_id: baseId, section_key: s.section_key, label: s.label, builtin: false, seed_default: true, sort_order: maxOrder + 1 + i,
+        })))
+        n += r.inserted
+      }
+      if (picked.tasks.length) {
+        const r = await insertAmtrRows('amtr_803_catalog', picked.tasks.map((t) => ({
+          base_id: baseId, section: t.section, sts_item: t.sts_item, sort_order: t.sort_order ?? 0,
+        })))
+        n += r.inserted
+      }
+      if (n > 0) results.push({ table: 'amtr_803_sections (seed-default)', inserted: n, skipped: false, error: null })
+    }
   }
   // 1098 needs current/prior year rows for the progress UI.
   const yearCount = await countAmtrRows('amtr_1098_years', baseId)
