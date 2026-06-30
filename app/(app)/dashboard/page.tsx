@@ -291,6 +291,30 @@ export default function DashboardPage() {
     })
   }, [markDirty, widgets])
 
+  const onAddLightingArea = useCallback(async () => {
+    if (!installationId) return
+    const { fetchLightingSystems } = await import('@/lib/supabase/lighting-systems')
+    const { listAreas } = await import('@/lib/infrastructure/areas')
+    const systems = await fetchLightingSystems(installationId)
+    const areas = listAreas(systems)
+    if (!areas.length) { toast('No lighting systems found for this base.'); return }
+    const def = getWidgetDef('lighting')
+    const w = def?.defaultSize.w ?? 8
+    const h = def?.defaultSize.h ?? 8
+    setWidgets(prev => {
+      let bottomY = prev.reduce((m, x) => Math.max(m, x.y + x.h), 0)
+      const additions = areas.map(area => {
+        const widget: WidgetInstance = { i: uuid(), type: 'lighting', config: { scope: 'area', value: area }, x: 0, y: bottomY, w, h }
+        bottomY += h
+        return widget
+      })
+      return [...prev, ...additions]
+    })
+    markDirty()
+    setShowPalette(false)
+    toast.success(`Added ${areas.length} lighting widget${areas.length === 1 ? '' : 's'}`)
+  }, [installationId, markDirty])
+
   const isEmpty = useMemo(() => widgets.length === 0, [widgets])
 
   // The active board row.
@@ -554,7 +578,13 @@ export default function DashboardPage() {
         />
       )}
 
-      {showPalette && <WidgetPalette onAdd={onAdd} onClose={() => setShowPalette(false)} />}
+      {showPalette && (
+        <WidgetPalette
+          onAdd={onAdd}
+          onClose={() => setShowPalette(false)}
+          onAddLightingArea={has(PERM.INFRASTRUCTURE_VIEW) ? onAddLightingArea : undefined}
+        />
+      )}
 
       {/* Widget config modal */}
       {configuringWidget && (
