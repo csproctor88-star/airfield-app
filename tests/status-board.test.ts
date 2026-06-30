@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { statusBoardColor, statusBoardLabel } from '@/lib/dashboard/status-board'
+import { statusBoardColor, statusBoardLabel, statusBoardChip } from '@/lib/dashboard/status-board'
 
 describe('statusBoardColor', () => {
   it('custom + navaid use green/yellow/red', () => {
@@ -28,5 +28,20 @@ describe('statusBoardLabel', () => {
     expect(statusBoardLabel('runway', 'open')).toBe('Open')
     expect(statusBoardLabel('arff', 'inadequate')).toBe('Inadequate')
     expect(statusBoardLabel('custom', '')).toBe('—')
+  })
+})
+
+describe('statusBoardChip', () => {
+  it('maps green/yellow/red to G/Y/R (matches the status page chips)', () => {
+    expect(statusBoardChip('green')).toBe('G')
+    expect(statusBoardChip('yellow')).toBe('Y')
+    expect(statusBoardChip('red')).toBe('R')
+  })
+  it('is case-insensitive', () => {
+    expect(statusBoardChip('GREEN')).toBe('G')
+  })
+  it('unknown / empty → dash', () => {
+    expect(statusBoardChip('purple')).toBe('—')
+    expect(statusBoardChip('')).toBe('—')
   })
 })

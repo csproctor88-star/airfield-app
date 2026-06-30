@@ -34,3 +34,13 @@ export function statusBoardLabel(_kind: StatusBoardKind, value: string): string 
   const s = String(value ?? '')
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
 }
+
+/**
+ * Single-letter chip glyph for the green/yellow/red board kinds (navaid,
+ * custom) — mirrors the Airfield Status page's NAVAID/board chips (G/Y/R).
+ * Unknown values fall to a dash so they read muted (like statusBoardColor).
+ */
+export function statusBoardChip(value: string): string {
+  const v = String(value ?? '').toLowerCase()
+  return v === 'green' ? 'G' : v === 'yellow' ? 'Y' : v === 'red' ? 'R' : '—'
+}
