@@ -8,7 +8,7 @@
 // override. Items with no auto_key are answered manually.
 // ─────────────────────────────────────────────────────────────
 
-import { RAT_EXEMPT_STATUSES, dueStatus, parseDate, ratApplies } from './status'
+import { RAT_EXEMPT_STATUSES, dueStatus, parseDate, ratApplies, recurringPeriodElapsed } from './status'
 import type { InspectionAutoKey } from './inspection-checklist'
 
 type Row = Record<string, unknown>
@@ -241,13 +241,18 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
       set('1098_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'completed 1098 item(s) missing signatures'))
     }
   }
-  // 6.3 — every 1098 catalog item has a progress row
+  // 6.3 — every elapsed 1098 catalog item has a progress row. Items whose
+  // period hasn't fully elapsed yet (current/future months, the current year
+  // for annual items) are not yet expected, so they aren't flagged missing.
   {
     const catalog = live(d.r1098Catalog)
     if (catalog.length === 0) set('1098_all_documented', 'na')
     else {
       const documented = new Set(d.r1098Progress.map((p) => String(p.catalog_id)))
-      const missing = catalog.filter((c) => !documented.has(String(c.id))).map((c) => String(c.task ?? c.id))
+      const missing = catalog
+        .filter((c) => !documented.has(String(c.id)))
+        .filter((c) => recurringPeriodElapsed(c as { task?: string | null; frequency?: string | null; year_label?: string | null }, d.today))
+        .map((c) => String(c.task ?? c.id))
       set('1098_all_documented', missing.length ? 'no' : 'yes', summarize(missing, '1098 requirement(s) with no record'))
     }
   }

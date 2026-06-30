@@ -234,6 +234,35 @@ describe('runInspectionScan', () => {
     expect(runInspectionScan(baseData({ r1098Progress: due }))['1098_dates_signed'].auto).toBe('no')
   })
 
+  it('1098_all_documented: future and current months are not flagged as missing', () => {
+    // today defaults to 2026-06-02 in baseData. Catalog has Jan (past), June
+    // (current), Sep (future) monthly rows, none with a progress row.
+    const r1098Catalog = [
+      { id: 'k1', task: 'January Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' },
+      { id: 'k2', task: 'June Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' },
+      { id: 'k3', task: 'September Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' },
+    ]
+    const r = runInspectionScan(baseData({ r1098Catalog, r1098Progress: [] }))
+    expect(r['1098_all_documented'].auto).toBe('no')           // January is overdue
+    const text = r['1098_all_documented'].findings.join(' ')
+    expect(text).toContain('January')
+    expect(text).not.toContain('June')                          // current month
+    expect(text).not.toContain('September')                     // future month
+  })
+
+  it('1098_all_documented: yes when every elapsed item has a progress row', () => {
+    const r1098Catalog = [{ id: 'k1', task: 'January Monthly Proficiency Test', frequency: 'Monthly', year_label: '2026' }]
+    const r1098Progress = [{ id: 'p1', catalog_id: 'k1' }]
+    expect(runInspectionScan(baseData({ r1098Catalog, r1098Progress }))['1098_all_documented'].auto).toBe('yes')
+  })
+
+  it('1098_all_documented: a renamed monthly row with no record is still flagged (strict fallback)', () => {
+    const r1098Catalog = [{ id: 'k1', task: 'Recurring Prof Test #4', frequency: 'Monthly', year_label: '2026' }]
+    const r = runInspectionScan(baseData({ r1098Catalog, r1098Progress: [] }))
+    expect(r['1098_all_documented'].auto).toBe('no')
+    expect(r['1098_all_documented'].findings.join(' ')).toContain('Recurring Prof Test #4')
+  })
+
   it('monthly_inspection_done: yes when a Monthly Training Records Inspection 623A entry exists', () => {
     expect(runInspectionScan(baseData()).monthly_inspection_done.auto).toBe('no')
     const e623a = [{ id: 'e1', entry_type: 'Monthly Training Records Inspection' }]
