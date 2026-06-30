@@ -1,9 +1,13 @@
 'use client'
 import { useMemo, useState } from 'react'
+import { GripVertical } from 'lucide-react'
 import type { WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 import type { TableWidgetConfig, TableWidgetDescriptor, ColumnDef } from '@/lib/dashboard/table/types'
 import { normalizeTableConfig } from '@/lib/dashboard/table/config'
 import { resolveVisibleColumns } from '@/lib/dashboard/table/columns'
+import { moveItem } from '@/lib/dashboard/array-move'
+
+type ColumnItem = { key: string; label: string; visible: boolean }
 
 export function TableConfigForm<Row>({
   config, onSave, onCancel, descriptor,
@@ -12,9 +16,16 @@ export function TableConfigForm<Row>({
   const start = useMemo(() => normalizeTableConfig(config as TableWidgetConfig, descriptor, allColumns), [])
 
   const [title, setTitle] = useState(start.title ?? '')
-  const [visibleKeys, setVisibleKeys] = useState<string[]>(
-    resolveVisibleColumns(allColumns, start.columns).map(c => c.key),
-  )
+  // Ordered column list: visible columns first (in their saved order), then the
+  // hidden ones (descriptor order). Drag reorders; the checkbox toggles visibility.
+  const [columnItems, setColumnItems] = useState<ColumnItem[]>(() => {
+    const visible = resolveVisibleColumns(allColumns, start.columns)
+    const visibleSet = new Set(visible.map(c => c.key))
+    const hidden = allColumns.filter(c => !visibleSet.has(c.key))
+    return [...visible, ...hidden].map(c => ({ key: c.key, label: c.label, visible: visibleSet.has(c.key) }))
+  })
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
   const [filters, setFilters] = useState<Record<string, string[] | string>>(start.filters ?? {})
   const [extras, setExtras] = useState<Record<string, string>>(start.extras ?? {})
 
@@ -26,7 +37,7 @@ export function TableConfigForm<Row>({
   const section: React.CSSProperties = { fontSize: 'var(--fs-2xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-3)', marginTop: 6 }
 
   function toggleColumn(key: string) {
-    setVisibleKeys(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])
+    setColumnItems(prev => prev.map(it => it.key === key ? { ...it, visible: !it.visible } : it))
   }
   function toggleEnum(fk: string, val: string) {
     setFilters(prev => {
@@ -37,9 +48,11 @@ export function TableConfigForm<Row>({
   }
 
   function save() {
-    // Persist visibleKeys in descriptor order so the table column order is stable.
-    const ordered = allColumns.filter(c => visibleKeys.includes(c.key)).map(c => c.key)
+    // Persist visible columns in the user's chosen (drag) order.
+    const ordered = columnItems.filter(it => it.visible).map(it => it.key)
+    // Spread the existing config so unrelated keys (columnWidths, color) survive.
     onSave({
+      ...config,
       title: title.trim() || undefined,
       columns: ordered,
       filters,
@@ -51,13 +64,34 @@ export function TableConfigForm<Row>({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <input style={box} placeholder="Widget title (optional)" value={title} onChange={e => setTitle(e.target.value)} />
 
-      <div style={section}>Columns</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {allColumns.map(c => (
-          <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)' }}>
-            <input type="checkbox" checked={visibleKeys.includes(c.key)} onChange={() => toggleColumn(c.key)} />
-            {c.label}
-          </label>
+      <div style={section}>Columns <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--color-text-3)' }}>— drag to reorder, check to show</span></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {columnItems.map((it, i) => (
+          <div
+            key={it.key}
+            onDragOver={e => { e.preventDefault(); if (overIdx !== i) setOverIdx(i) }}
+            onDrop={() => { if (dragIdx !== null) setColumnItems(prev => moveItem(prev, dragIdx, i)); setDragIdx(null); setOverIdx(null) }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px',
+              borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface)',
+              borderTop: overIdx === i && dragIdx !== null && dragIdx !== i ? '2px solid var(--color-accent)' : '2px solid transparent',
+              opacity: dragIdx === i ? 0.4 : 1,
+            }}
+          >
+            <span
+              draggable
+              onDragStart={() => setDragIdx(i)}
+              onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
+              title="Drag to reorder"
+              style={{ cursor: 'move', userSelect: 'none', color: 'var(--color-text-3)', display: 'flex', flexShrink: 0 }}
+            >
+              <GripVertical size={15} />
+            </span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={it.visible} onChange={() => toggleColumn(it.key)} />
+              {it.label}
+            </label>
+          </div>
         ))}
       </div>
 
