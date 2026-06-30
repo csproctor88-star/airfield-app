@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { dueStatus, ratApplies, parseDate, daysBetween, type DueStatus } from './status'
-import type { MemberRollup, ComplianceCounts } from './rollup'
+import type { ComplianceCounts } from './rollup'
 
 export type AmtrMemberLite = { id: string; full_name: string; grade: string | null; status: string }
 export type Prog1098Row = { member_id: string; catalog_id: string; next_due: string | null; last_completed: string | null }
@@ -133,21 +133,39 @@ export type ProgressRow = {
   memberId: string
   memberName: string
   grade: string | null
+  fq: boolean
   jqsPct: number
+  p1098Pct: number | null
+  p797Pct: number | null
   formalPct: number
   overdue: number
 }
 
-/** One row per member rollup, preserving order, for the Training Progress report. */
-export function buildProgressRows(rollups: MemberRollup[]): ProgressRow[] {
-  return rollups.map(r => ({
-    id: r.memberId,
-    memberId: r.memberId,
-    memberName: r.name,
-    grade: r.grade,
-    jqsPct: r.jqsPct,
-    formalPct: r.formalPct,
-    overdue: r.overdueCount,
+export type ProgressInput = {
+  memberId: string
+  memberName: string
+  grade: string | null
+  jqsPct: number
+  formalPct: number
+  overdue: number
+  p1098Pct: number | null
+  p797Pct: number | null
+}
+
+/** One row per member, preserving order, for the Training Progress report.
+ *  Fully-qualified (FQ) means both JQS and Formal training are 100% complete. */
+export function buildProgressRows(items: ProgressInput[]): ProgressRow[] {
+  return items.map(i => ({
+    id: i.memberId,
+    memberId: i.memberId,
+    memberName: i.memberName,
+    grade: i.grade,
+    fq: i.jqsPct >= 100 && i.formalPct >= 100,
+    jqsPct: i.jqsPct,
+    p1098Pct: i.p1098Pct,
+    p797Pct: i.p797Pct,
+    formalPct: i.formalPct,
+    overdue: i.overdue,
   }))
 }
 

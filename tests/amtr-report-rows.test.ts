@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildDueItemRows, latestInspectionPerMember, buildProgressRows, buildTaskComplianceRows } from '@/lib/amtr/report-rows'
-import type { MemberRollup, ComplianceCounts } from '@/lib/amtr/rollup'
+import { buildDueItemRows, latestInspectionPerMember, buildProgressRows, buildTaskComplianceRows, type ProgressInput } from '@/lib/amtr/report-rows'
+import type { ComplianceCounts } from '@/lib/amtr/rollup'
 
 const TODAY = new Date('2026-06-29T00:00:00Z')
 const members = [
@@ -74,34 +74,56 @@ describe('latestInspectionPerMember', () => {
   })
 })
 
-const rollup = (over: Partial<MemberRollup>): MemberRollup => ({
-  memberId: 'm1', name: 'Alpha, A', grade: 'MSgt', status: 'Active',
-  jqsRequired: 10, jqsDone: 8, jqsPct: 80,
-  formalRequired: 4, formalDone: 4, formalPct: 100,
-  overdueCount: 0, dueSoonCount: 0, lastUpdated: '2026-06-01',
+const input = (over: Partial<ProgressInput>): ProgressInput => ({
+  memberId: 'm1', memberName: 'Alpha, A', grade: 'MSgt',
+  jqsPct: 80, formalPct: 100, overdue: 0,
+  p1098Pct: 75, p797Pct: 50,
   ...over,
 })
 
 describe('buildProgressRows', () => {
-  it('maps rollup fields and preserves member order', () => {
-    const rollups: MemberRollup[] = [
-      rollup({ memberId: 'm1', name: 'Alpha, A', grade: 'MSgt', jqsPct: 80, formalPct: 100, overdueCount: 2 }),
-      rollup({ memberId: 'm2', name: 'Bravo, B', grade: null, jqsPct: 0, formalPct: 50, overdueCount: 0 }),
-      rollup({ memberId: 'm3', name: 'Charlie, C', grade: 'SSgt', jqsPct: 45, formalPct: 0, overdueCount: 5 }),
-    ]
-    const rows = buildProgressRows(rollups)
-    expect(rows).toHaveLength(3)
+  it('flags fq only when both JQS and Formal are 100%', () => {
+    const rows = buildProgressRows([
+      input({ memberId: 'm1', jqsPct: 100, formalPct: 100 }), // both 100 → FQ
+      input({ memberId: 'm2', jqsPct: 80, formalPct: 100 }),  // JQS <100 → not FQ
+      input({ memberId: 'm3', jqsPct: 100, formalPct: 80 }),  // Formal <100 → not FQ
+    ])
+    expect(rows[0].fq).toBe(true)
+    expect(rows[1].fq).toBe(false)
+    expect(rows[2].fq).toBe(false)
+  })
+
+  it('passes p1098Pct/p797Pct through verbatim including null', () => {
+    const rows = buildProgressRows([
+      input({ memberId: 'm1', p1098Pct: 75, p797Pct: 50 }),
+      input({ memberId: 'm2', p1098Pct: null, p797Pct: null }),
+    ])
+    expect(rows[0].p1098Pct).toBe(75)
+    expect(rows[0].p797Pct).toBe(50)
+    expect(rows[1].p1098Pct).toBeNull()
+    expect(rows[1].p797Pct).toBeNull()
+  })
+
+  it('preserves member order and sets id/memberId to the input memberId', () => {
+    const rows = buildProgressRows([
+      input({ memberId: 'm1', memberName: 'Alpha, A' }),
+      input({ memberId: 'm2', memberName: 'Bravo, B' }),
+      input({ memberId: 'm3', memberName: 'Charlie, C' }),
+    ])
     expect(rows.map(r => r.memberId)).toEqual(['m1', 'm2', 'm3'])
+    expect(rows.map(r => r.id)).toEqual(['m1', 'm2', 'm3'])
+    expect(rows[0].id).toBe('m1')
+    expect(rows[0].memberId).toBe('m1')
+  })
+
+  it('maps the remaining fields', () => {
+    const rows = buildProgressRows([
+      input({ memberId: 'm1', memberName: 'Alpha, A', grade: 'MSgt', jqsPct: 80, formalPct: 100, overdue: 2 }),
+    ])
     expect(rows[0]).toEqual({
       id: 'm1', memberId: 'm1', memberName: 'Alpha, A', grade: 'MSgt',
-      jqsPct: 80, formalPct: 100, overdue: 2,
+      fq: false, jqsPct: 80, p1098Pct: 75, p797Pct: 50, formalPct: 100, overdue: 2,
     })
-    expect(rows[1]).toEqual({
-      id: 'm2', memberId: 'm2', memberName: 'Bravo, B', grade: null,
-      jqsPct: 0, formalPct: 50, overdue: 0,
-    })
-    expect(rows[2].memberName).toBe('Charlie, C')
-    expect(rows[2].overdue).toBe(5)
   })
 
   it('returns [] for empty input', () => {
