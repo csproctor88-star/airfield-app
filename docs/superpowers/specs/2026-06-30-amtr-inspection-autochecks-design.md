@@ -88,18 +88,18 @@ holds 3-/5-level quals — confirmed by Erik Greer's record).
   which carry no AFSC token and are ignored by this rule — they're covered by 2.5/2.6.)
 - `amtr_qual_progress.attained` (boolean).
 
-**AFSC parsing helpers (pure, unit-tested):**
-- `parseAfscLevel(s)`: match the first AFSC token `\d[A-Z]\d\d\d` in `s`; return
-  `{ family: chars[0..2] + char[4], level: Number(char[3]) }`, or `null` if no match.
-  - `"1C751"` → `{ family: "1C71", level: 5 }`
-  - `"1C731 Skill Level"` → `{ family: "1C71", level: 3 }`
-  - `"2101"` (civilian series), `""`, `"Trainer"` → `null`
+**Parsing helper — reuse the existing `skillLevelFromName(name)`** (already in
+`inspection-engine.ts`): it parses the `1C7X1` token to a level (e.g. `"1C751"` → 5,
+`"1C731 Skill Level"` → 3) and returns `null` for non-AFSC strings (civilian series
+`"2101"`, `"Trainer"`, blank). It already encodes the airfield-management `1C7` family,
+so no separate family check is needed (a non-`1C7` DAFSC simply parses to `null` → na).
+No new parser required.
 
 **Logic:**
-- `memberAfsc = parseAfscLevel(member.dafsc)`. If `null` → `na` (civilian job series,
-  no AFSC, or unparseable — skill-level requirement doesn't apply).
-- `required` = live `skill_level` quals whose `parseAfscLevel(name)` is non-null, shares
-  `memberAfsc.family`, and has `level <= memberAfsc.level`.
+- `memberLevel = skillLevelFromName(member.dafsc)`. If `null` → `na` (civilian job
+  series, no AFSC, or unparseable — skill-level requirement doesn't apply).
+- `required` = live `skill_level` quals whose `skillLevelFromName(name)` is non-null and
+  `<= memberLevel`.
 - If `required` is empty → `na` (this AFSC's levels aren't in the catalog).
 - `attained` = set of `catalog_id` where `amtr_qual_progress.attained === true`.
 - `missing` = required quals whose id is not in `attained`.
@@ -136,8 +136,7 @@ holds 3-/5-level quals — confirmed by Erik Greer's record).
 
 ## Testing
 
-Unit tests in `tests/amtr-inspection-engine.test.ts` (and AFSC helper tests):
-- `parseAfscLevel`: AFSC token, embedded-in-name, civilian series, blank, Trainer.
+Unit tests in `tests/amtr-inspection-engine.test.ts`:
 - `skill_levels_attained`: yes / missing-required / above-level-not-required / civilian
   → na / no-catalog → na.
 - `transcribe_reason`: na (nothing transcribed) / yes (entry present) / no (transcribed,
