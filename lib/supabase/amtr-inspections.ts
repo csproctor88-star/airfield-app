@@ -13,8 +13,19 @@ export type InspectionItemResponse = {
   item_number: string
   status: 'yes' | 'no' | 'na' | null
   auto: 'yes' | 'no' | 'na' | null
-  findings: string[]
-  note: string
+  findings: string[]            // raw auto findings — immutable audit source
+  detail?: string               // editable finding text (seeded from findings)
+  correctiveAction?: string     // inspector corrective action
+  note?: string                 // deprecated: read on load, migrated to correctiveAction
+}
+
+/** Fill detail/correctiveAction for back-compat with rows saved before these fields. */
+export function normalizeInspectionItem(it: InspectionItemResponse): InspectionItemResponse {
+  return {
+    ...it,
+    detail: it.detail ?? (it.findings ?? []).join(' · '),
+    correctiveAction: it.correctiveAction ?? it.note ?? '',
+  }
 }
 
 export type AmtrInspection = {

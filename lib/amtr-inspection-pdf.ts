@@ -51,7 +51,9 @@ export function generateAmtrInspectionPdf(
       rows.push({ isSection: true, cells: [`${r.item_number}. ${r.label}`, '', ''], gap: false })
     } else {
       const it = byNum.get(r.item_number)
-      const note = it?.note ? it.note : (it?.findings?.length ? it.findings.join('; ') : '')
+      const detail = it?.detail ?? (it?.findings?.length ? it.findings.join('; ') : '')
+      const ca = it?.correctiveAction ?? it?.note ?? ''
+      const note = [detail, ca ? `Corrective Action: ${ca}` : ''].filter(Boolean).join('\n')
       rows.push({
         isSection: false,
         cells: [`${r.item_number}  ${r.label}`, it?.status ? STATUS_LABEL[it.status] : '—', note],
