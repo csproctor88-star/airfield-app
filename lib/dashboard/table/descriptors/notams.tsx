@@ -54,7 +54,8 @@ export const notamsDescriptor: TableWidgetDescriptor<NotamRow> = {
       options: [{ value: 'yes', label: 'Expiring soon' }],
       predicate: r => expiresSoon(r.effective_end) },
   ],
-  row: { mode: 'deeplink', href: r => `/notams/${r.id}` },
+  // No row deep-link: the FAA feed ids don't resolve to a viewable /notams page.
+  row: { mode: 'none' },
   summary: rows => {
     const soon = rows.filter(n => expiresSoon(n.effective_end))
     return [{ count: rows.length, label: 'active' }, ...(soon.length ? [{ count: soon.length, label: 'expiring', tone: 'warning' as const }] : [])]

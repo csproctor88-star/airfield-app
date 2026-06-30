@@ -111,7 +111,7 @@ export const usersDescriptor: TableWidgetDescriptor<ProfileRow> = {
       predicate: (r, sel) => (sel as string[]).includes(r.status ?? ''),
     },
   ],
-  row: { mode: 'deeplink', href: () => '/users' },
+  row: { mode: 'deeplink', href: r => `/users?user=${r.id}` },
   summary: rows => {
     const pending = rows.filter(r => r.status === 'pending').length
     return [

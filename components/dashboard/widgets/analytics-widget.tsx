@@ -120,6 +120,22 @@ export function AnalyticsConfigForm({ config, onSave, onCancel }: WidgetConfigPr
 
   const currentDs = availableDatasets.find(d => d.key === dataset)
 
+  // availableDatasets is empty on the first render (permissions + enabled
+  // modules load async), so the once-only useState initializer leaves `dataset`
+  // = ''. The dataset <select> then shows its first option ("Discrepancies")
+  // while state is '' → currentDs is undefined → the Measure/Group-by controls
+  // never render and nothing is configurable until you toggle the dropdown.
+  // Once the list resolves, snap to the saved dataset (when editing) or the
+  // first available one. The measure effect below then fills the measure.
+  const datasetKeys = availableDatasets.map(d => d.key).join(',')
+  useEffect(() => {
+    if (availableDatasets.length === 0) return
+    if (availableDatasets.some(d => d.key === dataset)) return
+    const saved = initial.dataset ? availableDatasets.find(d => d.key === initial.dataset) : undefined
+    setDataset((saved ?? availableDatasets[0]).key)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datasetKeys])
+
   // When dataset changes, reset measure + filters (keep chart)
   const handleDatasetChange = (newDs: string) => {
     setDataset(newDs)

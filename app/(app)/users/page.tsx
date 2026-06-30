@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, LineChart } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -126,6 +126,19 @@ export default function UserManagementPage() {
   const [emailDialog, setEmailDialog] = useState<{ user: UserCardData; template: 'approved' | 'info_needed' | 'rejected' } | null>(null)
   const [emailMessage, setEmailMessage] = useState('')
   const [emailSending, setEmailSending] = useState(false)
+
+  // Deep-link: /users?user=<id> (from the dashboard User Management widget) opens
+  // that member's profile once the list loads. Read the URL directly to avoid a
+  // useSearchParams Suspense boundary on this already-client page; the ref keeps
+  // it from re-opening after the user closes the card.
+  const profileDeepLinked = useRef(false)
+  useEffect(() => {
+    if (profileDeepLinked.current || users.length === 0) return
+    const targetId = new URLSearchParams(window.location.search).get('user')
+    if (!targetId) return
+    const u = users.find((x) => x.id === targetId)
+    if (u) { setSelectedUser(u); profileDeepLinked.current = true }
+  }, [users])
 
   const isSysAdmin = callerRole === 'sys_admin'
   const isBaseAdmin = callerRole === 'base_admin' || callerRole === 'airfield_manager' || callerRole === 'namo'
