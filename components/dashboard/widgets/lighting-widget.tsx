@@ -7,7 +7,7 @@ import {
   fetchLightingSystems,
   fetchAllComponentsForBase,
 } from '@/lib/supabase/lighting-systems'
-import { fetchInfrastructureFeatures, formatFeatureType } from '@/lib/supabase/infrastructure-features'
+import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
 import {
   calculateSystemHealth,
   getAlertTier,
@@ -42,18 +42,14 @@ function TierDot({ tier }: { tier: AlertTier }) {
   )
 }
 
-/** Small colored badge for a component / system tier. */
-function TierBadge({ tier, label }: { tier: AlertTier; label: string }) {
-  const cfg = ALERT_TIER_CONFIG[tier]
-  return (
-    <span style={{
-      flexShrink: 0, fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 6px',
-      borderRadius: 999, color: cfg.color, background: cfg.bg,
-      fontFamily: 'var(--font-family-mono)', whiteSpace: 'nowrap',
-    }}>
-      {label}
-    </span>
-  )
+// Fixed column widths so the count + status dot line up uniformly down the
+// whole widget (no matter how wide each component label is).
+const COUNT_COL = 58
+const DOT_COL = 16
+
+/** Count text color by tier — muted when green, the tier color otherwise. */
+function countColor(tier: AlertTier): string {
+  return tier === 'green' ? 'var(--color-text-3)' : ALERT_TIER_CONFIG[tier].color
 }
 
 /** Tier for a single component row (red exceeded, yellow approaching, else green). */
@@ -152,64 +148,57 @@ export function LightingWidget(props: WidgetProps) {
     if (!value) return <div style={labelStyle}>Choose a scope in this widget&apos;s settings.</div>
     if (systemRows.length === 0) return <div style={labelStyle}>No lighting systems for this selection.</div>
 
-    const anyDirty = inopFeatures.length > 0 ||
-      systemRows.some(r => r.health.exceededComponents.length > 0 || r.health.approachingComponents.length > 0)
-
     return (
       <>
-        {!anyDirty && (
-          <div style={{
-            fontSize: 'var(--fs-sm)', fontWeight: 600, color: ALERT_TIER_CONFIG.green.color, padding: '2px 0 6px',
-          }}>
-            All operational
-          </div>
-        )}
-        {systemRows.map(({ system, health, tier }) => (
-          <div key={system.id} style={{ marginBottom: 8 }}>
+        {systemRows.map(({ system, tier, health }) => (
+          <div key={system.id} style={{ marginBottom: 10 }}>
+            {/* System header — name only; a dot appears only when not all-green */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0',
+              display: 'flex', alignItems: 'center', gap: 8, padding: '0 0 3px', marginBottom: 2,
               borderBottom: '1px solid var(--color-border)',
             }}>
               <span style={{
-                fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)',
+                flex: 1, fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.04em',
+                textTransform: 'uppercase', color: 'var(--color-text-3)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {system.name}
               </span>
-              <span style={{ marginLeft: 'auto' }}>
-                <TierBadge tier={tier} label={ALERT_TIER_CONFIG[tier].label} />
+              <span style={{ width: DOT_COL, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                {tier !== 'green' && <TierDot tier={tier} />}
               </span>
             </div>
             {health.components.map(c => {
               const cTier = componentTier(c)
-              const countText = c.totalBars && c.totalBars > 0
-                ? `${c.barsOut ?? 0}/${c.totalBars} bars`
-                : `${c.inoperativeCount}/${c.totalCount}`
+              const bars = !!(c.totalBars && c.totalBars > 0)
+              const countText = bars ? `${c.barsOut ?? 0}/${c.totalBars}` : `${c.inoperativeCount}/${c.totalCount}`
               const tags = c.isExceeded ? actionTags(c) : []
               return (
-                <div key={c.componentId} style={{ padding: '2px 0 3px' }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--fs-sm)',
-                    color: 'var(--color-text-2)',
-                  }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div key={c.componentId} style={{ padding: '2px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      flex: 1, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
                       {c.componentLabel}
                     </span>
-                    <span style={{
-                      marginLeft: 'auto', flexShrink: 0, fontFamily: 'var(--font-family-mono)',
-                      fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
+                    <span title={bars ? 'bars out / total bars' : 'lights out / total'} style={{
+                      width: COUNT_COL, flexShrink: 0, textAlign: 'right',
+                      fontFamily: 'var(--font-family-mono)', fontSize: 'var(--fs-2xs)',
+                      fontWeight: cTier === 'green' ? 400 : 700, color: countColor(cTier),
                     }}>
-                      {countText} · {c.outagePct}%
+                      {countText}
                     </span>
-                    <TierBadge tier={cTier} label={ALERT_TIER_CONFIG[cTier].label} />
+                    <span style={{ width: DOT_COL, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                      <TierDot tier={cTier} />
+                    </span>
                   </div>
                   {tags.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '2px 0 0' }}>
                       {tags.map(t => (
                         <span key={t} style={{
-                          fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '1px 6px', borderRadius: 999,
-                          color: ALERT_TIER_CONFIG.yellow.color, background: ALERT_TIER_CONFIG.yellow.bg,
-                          border: `1px solid ${ALERT_TIER_CONFIG.yellow.color}`,
+                          fontSize: 'var(--fs-2xs)', fontWeight: 700, padding: '0px 5px', borderRadius: 4,
+                          color: ALERT_TIER_CONFIG.red.color, background: ALERT_TIER_CONFIG.red.bg,
                         }}>
                           {t}
                         </span>
@@ -224,12 +213,6 @@ export function LightingWidget(props: WidgetProps) {
       </>
     )
   }
-
-  // Footer: list of inoperative feature ids (labels), truncated.
-  const footerIds = inopFeatures.slice(0, 12)
-    .map(f => f.label ?? f.block ?? formatFeatureType(f.feature_type))
-    .join(', ')
-  const moreCount = Math.max(0, inopFeatures.length - 12)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -251,16 +234,10 @@ export function LightingWidget(props: WidgetProps) {
       {/* Footer */}
       <div style={{
         marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--color-border)',
-        display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center',
+        display: 'flex', justifyContent: 'flex-end',
       }}>
-        <span style={{
-          fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-        }}>
-          {footerIds}{moreCount > 0 ? ` +${moreCount} more` : ''}
-        </span>
         <Link href="/infrastructure" style={{
-          flexShrink: 0, fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-cyan)', textDecoration: 'none',
+          fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-cyan)', textDecoration: 'none',
         }}>
           View infra →
         </Link>
