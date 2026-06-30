@@ -237,7 +237,10 @@ export function TableWidget<Row>({
                         zIndex: 2,
                         background: 'var(--color-bg-surface)',
                         textAlign: align,
-                        padding: '2px 16px 4px 0',
+                        // Left padding clears the previous column's divider line so the
+                        // title isn't crowded against it; right padding keeps the title
+                        // off this column's divider / resize handle.
+                        padding: '2px 14px 4px 10px',
                         fontSize: 'var(--fs-2xs)',
                         color: isActive ? 'var(--color-text-1)' : 'var(--color-text-3)',
                         textTransform: 'uppercase',
@@ -288,7 +291,9 @@ export function TableWidget<Row>({
                   const wrap = c.wrap === true
                   const baseStyle: React.CSSProperties = {
                     textAlign: align,
-                    padding: '4px 6px 4px 0',
+                    // Match the header's left/right padding so body cells stay aligned
+                    // under their column titles (incl. right-aligned numeric columns).
+                    padding: '4px 14px 4px 10px',
                     color: 'var(--color-text-1)',
                     borderBottom: '1px solid var(--color-border)',
                     fontFamily: c.mono ? 'var(--font-family-mono)' : undefined,
