@@ -300,6 +300,26 @@ function clone803Sheet(wb: ExcelJS.Workbook, src: WS, dstName: string): WS {
   return dst
 }
 
+// Slot the cloned custom-section 803 sheets directly after the built-in
+// "DAF Form 803 (AFM)" tab instead of at the end of the workbook. ExcelJS's
+// addWorksheet always appends (it assigns the next-highest orderNo), and the
+// template keeps ~11 sheets after AFM (Milestones, 623A, 1098s…), so a custom
+// section like CBRN would otherwise land dead last. Tab order is driven purely
+// by each worksheet's orderNo (Workbook.worksheets sorts on it), so we rebuild
+// the order: keep every existing sheet's relative order, insert the custom
+// sheets immediately after AFM, then renumber. No-op if AFM is absent.
+function placeCustom803SheetsAfterAfm(wb: ExcelJS.Workbook, customSheets: WS[]): void {
+  if (!customSheets.length) return
+  const customSet = new Set<WS>(customSheets)
+  const ordered = wb.worksheets.filter((w) => !customSet.has(w))
+  const afmIdx = ordered.findIndex((w) => w.name === SECTION_SHEET.afm)
+  if (afmIdx < 0) return
+  ordered.splice(afmIdx + 1, 0, ...customSheets)
+  // `orderNo` exists at runtime (Workbook.worksheets sorts on it) but isn't in
+  // ExcelJS's published types, hence the cast.
+  ordered.forEach((w, i) => { (w as WS & { orderNo: number }).orderNo = i })
+}
+
 /** Build a unique, Excel-legal sheet name for a custom 803 section. */
 function customSheetName(label: string, used: Set<string>): string {
   const safe = String(label || 'Custom').replace(/[[\]:*?/\\]/g, '').trim() || 'Custom'
@@ -363,6 +383,8 @@ export async function exportAmtrRecord(installationId: string, member: AmtrMembe
   for (const { key, ws } of customSheets) {
     fill803(ws, data.items803.filter((r) => String(r.section) === key))
   }
+  // Place the cloned custom 803 tabs directly after the built-in AFM 803 tab.
+  placeCustom803SheetsAfterAfm(wb, customSheets.map((c) => c.ws))
 
   const buf = await wb.xlsx.writeBuffer()
   const safe = (member.full_name || 'member').replace(/[^a-z0-9]+/gi, '_')
