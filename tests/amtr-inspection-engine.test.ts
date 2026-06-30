@@ -256,6 +256,28 @@ describe('runInspectionScan', () => {
     expect(runInspectionScan(baseData({ r1098Catalog, r1098Progress }))['1098_all_documented'].auto).toBe('yes')
   })
 
+  it('1098_all_documented: prior-year (non-current) catalog rows are not graded', () => {
+    // base has 2025 + 2026 catalog for the same annual task; member completed
+    // 2026. today defaults to 2026-06-02 → current year is 2026. The 2025 row
+    // (an archived prior year the member never worked) must NOT be flagged.
+    const r1098Catalog = [
+      { id: 'k25', task: 'January Monthly Proficiency Test', frequency: 'Annual', year_label: '2025' },
+      { id: 'k26', task: 'January Monthly Proficiency Test', frequency: 'Annual', year_label: '2026' },
+    ]
+    const r1098Progress = [{ id: 'p1', catalog_id: 'k26', year_label: '2026', last_completed: '2026-01-07' }]
+    const r = runInspectionScan(baseData({ r1098Catalog, r1098Progress }))
+    expect(r['1098_all_documented'].auto).toBe('yes')
+  })
+
+  it('1098_all_documented: with no current-year catalog, grades the latest prior year', () => {
+    // Base lagging on opening 2026; only 2025 exists and the member has no
+    // progress → the current requirements (2025) are graded.
+    const r1098Catalog = [{ id: 'k25', task: 'Airfield Driving', frequency: 'Annual', year_label: '2025' }]
+    const r = runInspectionScan(baseData({ r1098Catalog, r1098Progress: [] }))
+    expect(r['1098_all_documented'].auto).toBe('no')
+    expect(r['1098_all_documented'].findings.join(' ')).toContain('Airfield Driving')
+  })
+
   it('1098_all_documented: a renamed monthly row with no record is still flagged (strict fallback)', () => {
     const r1098Catalog = [{ id: 'k1', task: 'Recurring Prof Test #4', frequency: 'Monthly', year_label: '2026' }]
     const r = runInspectionScan(baseData({ r1098Catalog, r1098Progress: [] }))

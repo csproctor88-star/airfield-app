@@ -241,11 +241,25 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
       set('1098_dates_signed', missing.length ? 'no' : 'yes', summarize(missing, 'completed 1098 item(s) missing signatures'))
     }
   }
-  // 6.3 — every elapsed 1098 catalog item has a progress row. Items whose
-  // period hasn't fully elapsed yet (current/future months, the current year
-  // for annual items) are not yet expected, so they aren't flagged missing.
+  // 6.3 — every elapsed 1098 catalog item *for the current year* has a progress
+  // row. The 1098 record is per-year: only the current calendar year is the
+  // active record (matching the 1098 tab's current-year view). Prior-year
+  // (archived/historical) catalogs and future years are NOT graded — otherwise
+  // a member working the current year is flagged for every prior-year row they
+  // never had. Within the graded year, items whose period hasn't fully elapsed
+  // (current/future months, an annual item mid-year) are not yet expected.
   {
-    const catalog = live(d.r1098Catalog)
+    const allCatalog = live(d.r1098Catalog)
+    const currentYear = d.today.slice(0, 4)
+    // A row with no year_label (legacy/single-year catalogs) is treated as the
+    // current year so it always grades.
+    const rowYear = (c: Row) => (String(c.year_label ?? '').slice(0, 4) || currentYear)
+    const years = Array.from(new Set(allCatalog.map(rowYear)))
+    // Grade the current year if its catalog exists; else fall back to the
+    // latest non-future year (some bases lag on opening the new year).
+    const prior = years.filter((y) => y <= currentYear).sort()
+    const targetYear = years.includes(currentYear) ? currentYear : (prior.length ? prior[prior.length - 1] : null)
+    const catalog = targetYear == null ? [] : allCatalog.filter((c) => rowYear(c) === targetYear)
     if (catalog.length === 0) set('1098_all_documented', 'na')
     else {
       const documented = new Set(d.r1098Progress.map((p) => String(p.catalog_id)))
