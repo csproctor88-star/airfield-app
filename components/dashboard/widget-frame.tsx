@@ -1,11 +1,12 @@
 'use client'
-import { Settings2, X, Circle, Copy } from 'lucide-react'
+import { Settings2, X, Circle, Copy, ChevronDown, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { WIDGET_COLORS, widgetTint } from '@/lib/dashboard/widget-colors'
 
 export function WidgetFrame({
-  title, editing, onRemove, onConfigure, color, onSetColor, copyTargets, onCopyTo, children,
+  title, editing, onRemove, onConfigure, color, onSetColor, copyTargets, onCopyTo,
+  collapsed, onToggleCollapse, children,
 }: {
   title: string
   editing: boolean
@@ -15,6 +16,8 @@ export function WidgetFrame({
   onSetColor?: (color: string) => void
   copyTargets?: { id: string; name: string }[]
   onCopyTo?: (target: string) => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
   children: ReactNode
 }) {
   const [swatchOpen, setSwatchOpen] = useState(false)
@@ -87,6 +90,16 @@ export function WidgetFrame({
           textTransform: 'uppercase', color: 'var(--color-text-3)',
         }}>{title}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {onToggleCollapse && !editing && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleCollapse() }}
+              aria-label={collapsed ? `Expand ${title}` : `Minimize ${title}`}
+              title={collapsed ? 'Expand' : 'Minimize'}
+              style={{ display: 'flex', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-3)', padding: 2 }}
+            >
+              {collapsed ? <ChevronRight size={14} strokeWidth={2.5} /> : <ChevronDown size={14} strokeWidth={2.5} />}
+            </button>
+          )}
           {onCopyTo && copyTargets && (
             <>
               <button
@@ -224,9 +237,11 @@ export function WidgetFrame({
           )}
         </div>
       </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-        {children}
-      </div>
+      {!collapsed && (
+        <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
+          {children}
+        </div>
+      )}
     </div>
   )
 }

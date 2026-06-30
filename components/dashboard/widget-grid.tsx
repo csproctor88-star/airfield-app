@@ -37,6 +37,8 @@ const DashboardWidget = memo(function DashboardWidget(p: DashboardWidgetProps) {
       onSetColor={(c) => p.onWidgetConfigChange(p.id, { ...p.config, color: c })}
       copyTargets={p.copyBoards}
       onCopyTo={(target) => p.onCopyWidget(p.id, target)}
+      collapsed={!p.editing && (p.config?.minimized as boolean) === true}
+      onToggleCollapse={() => p.onWidgetConfigChange(p.id, { ...p.config, minimized: !(p.config?.minimized as boolean) })}
     >
       {def ? <def.Component config={p.config} editing={p.editing} onConfigChange={(c) => p.onWidgetConfigChange(p.id, c)} />
            : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>This widget is unavailable.</div>}
@@ -66,7 +68,17 @@ export function WidgetGrid({
 
   const toRgl = (ws: WidgetInstance[]): Layout[] => ws.map(w => {
     const def = getWidgetDef(w.type)
-    return { i: w.i, x: w.x, y: w.y, w: w.w, h: w.h, minW: def?.minSize.w ?? 1, minH: def?.minSize.h ?? 1 }
+    // Minimized (view mode only): collapse to a single header row. The stored h
+    // is left untouched so expanding restores the user's size. Vertical
+    // compaction reclaims the freed space. Ignored while editing so layout/
+    // resize work on the full widget and onLayoutChange never persists h=1.
+    const minimized = !editing && (w.config as { minimized?: boolean })?.minimized === true
+    return {
+      i: w.i, x: w.x, y: w.y, w: w.w,
+      h: minimized ? 1 : w.h,
+      minW: def?.minSize.w ?? 1,
+      minH: minimized ? 1 : (def?.minSize.h ?? 1),
+    }
   })
 
   const layouts: ReactGridLayout.Layouts = {
