@@ -1,79 +1,70 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useInstallation } from '@/lib/installation-context'
-import { fetchDiscrepancyTrendsData } from '@/lib/reports/discrepancy-trends-data'
+import { fetchDiscrepancyTrendsData, type DiscrepancyTrendsData, type TrendPeriod } from '@/lib/reports/discrepancy-trends-data'
+import { TrendsReportView } from '@/components/reports/trends-report-view'
+import type { WidgetProps, WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 
-interface Summary {
-  totalOpened: number
-  totalClosed: number
-  net: number
-  avgDaysToClose: number | null
-}
+const PERIODS: { value: TrendPeriod; label: string }[] = [
+  { value: '30d', label: 'Last 30 days' },
+  { value: '90d', label: 'Last 90 days' },
+  { value: '6m', label: 'Last 6 months' },
+  { value: '1y', label: 'Last year' },
+]
 
-export function ReportTrendsWidget() {
+export function ReportTrendsWidget({ config }: WidgetProps) {
   const { installationId } = useInstallation()
-  const [summary, setSummary] = useState<Summary | null>(null)
+  const period = (config?.period as TrendPeriod) || '30d'
+  const [data, setData] = useState<DiscrepancyTrendsData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!installationId) return
+    let cancelled = false
     setLoading(true)
-    fetchDiscrepancyTrendsData('30d', installationId).then((data) => {
-      setSummary({
-        totalOpened: data.summary.totalOpened,
-        totalClosed: data.summary.totalClosed,
-        net: data.summary.net,
-        avgDaysToClose: data.summary.avgDaysToClose,
-      })
-      setLoading(false)
+    fetchDiscrepancyTrendsData(period, installationId).then((d) => {
+      if (!cancelled) { setData(d); setLoading(false) }
     })
-  }, [installationId])
+    return () => { cancelled = true }
+  }, [installationId, period])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', gap: 20, marginBottom: 8, alignItems: 'flex-end', justifyContent: 'center' }}>
-        <div>
-          <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Opened</div>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
-            {loading ? '…' : (summary?.totalOpened ?? 0)}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Closed</div>
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--color-text-1)' }}>
-            {loading ? '…' : (summary?.totalClosed ?? 0)}
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 600, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Net</div>
-          <div style={{
-            fontSize: 'var(--fs-lg)', fontWeight: 800,
-            color: !loading && summary && summary.net > 0
-              ? 'var(--color-status-fail)'
-              : !loading && summary && summary.net < 0
-                ? 'var(--color-status-pass)'
-                : 'var(--color-text-1)',
-          }}>
-            {loading ? '…' : (summary ? (summary.net > 0 ? `+${summary.net}` : String(summary.net)) : '0')}
-          </div>
-        </div>
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        {loading ? <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>Loading…</div>
+          : data ? <TrendsReportView data={data} />
+          : <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)' }}>No data.</div>}
       </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-        {!loading && summary && summary.avgDaysToClose != null && (
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-            Avg close time: <span style={{ fontWeight: 700, color: 'var(--color-text-1)' }}>{summary.avgDaysToClose}d</span>
-          </div>
-        )}
-        {!loading && summary && summary.totalOpened === 0 && summary.totalClosed === 0 && (
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}>No activity in last 30 days.</div>
-        )}
-      </div>
-
       <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
         <Link href="/reports/trends" style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-cyan)', textDecoration: 'none' }}>View report →</Link>
+      </div>
+    </div>
+  )
+}
+
+export function ReportTrendsConfigForm({ config, onSave, onCancel }: WidgetConfigProps) {
+  const c = config as { title?: string; period?: TrendPeriod }
+  const [title, setTitle] = useState(c.title ?? '')
+  const [period, setPeriod] = useState<TrendPeriod>(c.period ?? '30d')
+
+  const input: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+    color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <input style={input} placeholder="Widget title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <select style={input} value={period} onChange={(e) => setPeriod(e.target.value as TrendPeriod)}>
+        {PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+      </select>
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <button onClick={() => onSave({ ...config, title: title.trim() || undefined, period })}
+          style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', background: 'var(--color-accent)', color: '#fff', fontWeight: 700, fontFamily: 'inherit' }}>Save</button>
+        <button onClick={onCancel}
+          style={{ flex: 1, padding: '9px 0', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontFamily: 'inherit' }}>Cancel</button>
       </div>
     </div>
   )

@@ -45,8 +45,8 @@ import { FieldConditionsWidget } from '@/components/dashboard/widgets/field-cond
 import { FeedbackWidget } from '@/components/dashboard/widgets/feedback-widget'
 import { NotesWidget, NotesConfigForm } from '@/components/dashboard/widgets/notes-widget'
 import { ClockWidget } from '@/components/dashboard/widgets/clock-widget'
-import { ReportDiscrepanciesWidget } from '@/components/dashboard/widgets/report-discrepancies-widget'
-import { ReportTrendsWidget } from '@/components/dashboard/widgets/report-trends-widget'
+import { ReportDiscrepanciesWidget, ReportDiscrepanciesConfigForm } from '@/components/dashboard/widgets/report-discrepancies-widget'
+import { ReportTrendsWidget, ReportTrendsConfigForm } from '@/components/dashboard/widgets/report-trends-widget'
 import { ReportAgingWidget } from '@/components/dashboard/widgets/report-aging-widget'
 import { ReportLightingWidget } from '@/components/dashboard/widgets/report-lighting-widget'
 import { ReportDailyWidget } from '@/components/dashboard/widgets/report-daily-widget'
@@ -274,26 +274,26 @@ export const WIDGETS: Record<string, WidgetDef> = {
   },
   'report-discrepancies': {
     type: 'report-discrepancies', kind: 'native', title: 'Discrepancy Report',
-    description: 'Open discrepancy count, aging, and top shop at a glance',
-    icon: AlertTriangle, defaultSize: { w: 6, h: 4 }, minSize: { w: 4, h: 4 },
+    description: 'Open discrepancy total + By Area / Type / Shop breakdown, filterable',
+    icon: AlertTriangle, defaultSize: { w: 10, h: 8 }, minSize: { w: 6, h: 6 },
     permission: PERM.DISCREPANCIES_VIEW,
     moduleHref: '/discrepancies',
-    Component: () => <ReportDiscrepanciesWidget />,
-    ConfigForm: TitleConfigForm,
+    Component: (p) => <ReportDiscrepanciesWidget {...p} />,
+    ConfigForm: ReportDiscrepanciesConfigForm,
   },
   'report-trends': {
     type: 'report-trends', kind: 'native', title: 'Discrepancy Trends',
-    description: 'Opened, closed, and net discrepancies over the last 30 days',
-    icon: TrendingUp, defaultSize: { w: 6, h: 4 }, minSize: { w: 4, h: 4 },
+    description: 'Opened vs closed discrepancies over time with top areas/types',
+    icon: TrendingUp, defaultSize: { w: 12, h: 8 }, minSize: { w: 8, h: 6 },
     permission: PERM.DISCREPANCIES_VIEW,
     moduleHref: '/discrepancies',
-    Component: () => <ReportTrendsWidget />,
-    ConfigForm: TitleConfigForm,
+    Component: (p) => <ReportTrendsWidget {...p} />,
+    ConfigForm: ReportTrendsConfigForm,
   },
   'report-aging': {
     type: 'report-aging', kind: 'native', title: 'Aging Discrepancies',
-    description: 'Oldest open discrepancies and 90+ day count',
-    icon: Clock, defaultSize: { w: 6, h: 4 }, minSize: { w: 4, h: 4 },
+    description: 'Interactive aging tiers, by-shop, and the oldest open discrepancies',
+    icon: Clock, defaultSize: { w: 12, h: 10 }, minSize: { w: 8, h: 6 },
     permission: PERM.DISCREPANCIES_VIEW,
     moduleHref: '/discrepancies',
     Component: () => <ReportAgingWidget />,

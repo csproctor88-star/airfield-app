@@ -98,6 +98,7 @@ export async function fetchOpenDiscrepanciesData(
   includeNotes = false,
   baseId?: string | null,
   filters?: DiscrepancyReportFilters,
+  skipMedia = false,
 ): Promise<OpenDiscrepanciesData> {
   const supabase = createClient()
   if (!supabase) {
@@ -229,9 +230,9 @@ export async function fetchOpenDiscrepanciesData(
     }
   }
 
-  // Fetch photos for all discrepancies
+  // Fetch photos for all discrepancies (skipped for live widgets — skipMedia).
   const photos: Record<string, PhotoForReport[]> = {}
-  if (discIds.length > 0) {
+  if (!skipMedia && discIds.length > 0) {
     const { data: photoRows } = await supabase
       .from('photos')
       .select('id, discrepancy_id, storage_path, file_name')
@@ -275,8 +276,9 @@ export async function fetchOpenDiscrepanciesData(
     }
   }
 
-  // Generate map images for each discrepancy (system map for NAVAID-linked, pin map for others)
-  for (const d of discrepancies) {
+  // Generate map images for each discrepancy (system map for NAVAID-linked, pin
+  // map for others). Skipped for live widgets — skipMedia.
+  if (!skipMedia) for (const d of discrepancies) {
     if (d.infrastructure_feature_id) {
       // NAVAID-linked: generate system overview map (replaces pin map)
       try {
