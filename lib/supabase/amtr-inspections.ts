@@ -2,7 +2,7 @@ import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { upsertAmtrRow } from './amtr'
-import { buildInspection623aComment } from '@/lib/amtr/inspection-623a'
+import { buildInspection623aComment, RECORDS_INSPECTION_ENTRY_TYPE } from '@/lib/amtr/inspection-623a'
 
 // amtr_inspections / amtr_inspection_checklist aren't in the generated
 // Database type — route through an untyped client (RLS gates writes).
@@ -122,15 +122,31 @@ export async function completeAmtrInspection(input: {
   const c = counts(input.items)
 
   // Auto-create the 623A entry documenting the inspection (checklist item 4.12).
+  // Records inspections are signed by the Trainee + NAMT only — no Trainer. The
+  // completing inspector IS the NAMT, so stamp their signature into the NAMT
+  // block now; the trainee is then the only remaining signer.
   let created623aId: string | null = null
   const summary = buildInspection623aComment({
     inspectionDate: input.inspection_date,
     inspectorName: input.completed_by_name,
     items: input.items,
   })
+  // Resolve the inspector's initials for the NAMT signature (operating_initials,
+  // falling back to first+last initial).
+  let namtInitials: string | null = null
+  if (input.completed_by) {
+    const { data: prof } = await supabase
+      .from('profiles').select('operating_initials, first_name, last_name').eq('id', input.completed_by).single()
+    const p = prof as { operating_initials?: string | null; first_name?: string | null; last_name?: string | null } | null
+    const derived = `${(p?.first_name ?? '').trim().charAt(0)}${(p?.last_name ?? '').trim().charAt(0)}`.toUpperCase()
+    namtInitials = (p?.operating_initials?.trim() || derived) || null
+  }
   const { data: e623a } = await upsertAmtrRow('amtr_623a', {
     base_id: input.base_id, member_id: input.member_id, form_date: input.inspection_date,
-    entry_type: 'Monthly Training Records Inspection', namt_comment: summary,
+    entry_type: RECORDS_INSPECTION_ENTRY_TYPE, namt_comment: summary,
+    ...(namtInitials
+      ? { namt_initials: namtInitials, namt_signed_by: input.completed_by ?? null, namt_signed_at: new Date().toISOString() }
+      : {}),
   })
   if (e623a?.id) created623aId = String(e623a.id)
 

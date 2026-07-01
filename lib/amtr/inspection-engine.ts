@@ -10,6 +10,7 @@
 
 import { RAT_EXEMPT_STATUSES, dueStatus, parseDate, ratApplies, recurringPeriodElapsed } from './status'
 import type { InspectionAutoKey } from './inspection-checklist'
+import { isRecordsInspectionEntry } from './inspection-623a'
 
 type Row = Record<string, unknown>
 export type AutoStatus = 'yes' | 'no' | 'na' | null
@@ -170,7 +171,11 @@ export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoK
     const manual = d.e623a.filter((e) => !has(e.source_table) && e.transcribed !== true)
     if (manual.length === 0) set('623a_signed', 'na')
     else {
-      const missing = manual.filter((e) => !(has(e.trainee_initials) && has(e.trainer_initials)))
+      const missing = manual.filter((e) =>
+        isRecordsInspectionEntry(e.entry_type)
+          // Records inspections are signed by the Trainee + NAMT, not the Trainer.
+          ? !(has(e.trainee_initials) && has(e.namt_initials))
+          : !(has(e.trainee_initials) && has(e.trainer_initials)))
         .map((e) => String(e.entry_type ?? e.form_date ?? e.id))
       set('623a_signed', missing.length ? 'no' : 'yes', summarize(missing, 'entry/entries missing required initials'))
     }
@@ -483,10 +488,13 @@ export function traineeSignatureGaps(d: InspectionScanData): TraineeSigGap[] {
     }
   }
 
-  // 623A — manual, non-transcribed entries the trainer signed.
+  // 623A — manual, non-transcribed entries the countersigner signed. For a
+  // records inspection the NAMT counter-signs (auto at completion), not the
+  // trainer — so the trainee owes once the NAMT block is signed.
   for (const e of d.e623a) {
     if (has(e.source_table) || e.transcribed === true) continue
-    if (has(e.trainer_initials) && !has(e.trainee_initials)) {
+    const counter = isRecordsInspectionEntry(e.entry_type) ? e.namt_initials : e.trainer_initials
+    if (has(counter) && !has(e.trainee_initials)) {
       out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id) })
     }
   }
@@ -543,9 +551,11 @@ export function trainerSignatureGaps(d: InspectionScanData): SupervisorSigGap[] 
     }
   }
 
-  // 623A — manual, non-transcribed, trainee signed, trainer hasn't.
+  // 623A — manual, non-transcribed, trainee signed, trainer hasn't. Records
+  // inspections are Trainee + NAMT only, so they never owe a trainer signature.
   for (const e of d.e623a) {
     if (has(e.source_table) || e.transcribed === true) continue
+    if (isRecordsInspectionEntry(e.entry_type)) continue
     if (has(e.trainee_initials) && !has(e.trainer_initials)) {
       out.push({ tab: '623a', itemId: String(e.id), itemName: String(e.entry_type ?? e.form_date ?? e.id), signer: 'trainer' })
     }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { runInspectionScan, highestSkillLevel, type InspectionScanData } from '@/lib/amtr/inspection-engine'
+import { runInspectionScan, highestSkillLevel, traineeSignatureGaps, trainerSignatureGaps, type InspectionScanData } from '@/lib/amtr/inspection-engine'
 
 function baseData(over: Partial<InspectionScanData> = {}): InspectionScanData {
   return {
@@ -399,5 +399,33 @@ describe('runInspectionScan', () => {
     // Historical alongside a complete manual entry → grade only the manual one.
     const mixed = [...historical, { id: 'e2', entry_type: 'Initial', trainee_initials: 'JD', trainer_initials: 'AB' }]
     expect(runInspectionScan(baseData({ e623a: mixed }))['623a_signed'].auto).toBe('yes')
+  })
+
+  it('623a_signed: a records-inspection entry needs Trainee + NAMT, not Trainer', () => {
+    // NAMT auto-signed at completion, trainee not yet → incomplete.
+    const namtOnly = [{ id: 'e1', entry_type: 'Monthly Training Records Inspection', trainee_initials: '', namt_initials: 'CC', trainer_initials: '' }]
+    expect(runInspectionScan(baseData({ e623a: namtOnly }))['623a_signed'].auto).toBe('no')
+    // Trainee + NAMT signed (no trainer) → complete.
+    const both = [{ id: 'e1', entry_type: 'Monthly Training Records Inspection', trainee_initials: 'JD', namt_initials: 'CC', trainer_initials: '' }]
+    expect(runInspectionScan(baseData({ e623a: both }))['623a_signed'].auto).toBe('yes')
+    // A trainer signature does NOT satisfy it — the NAMT is the required countersigner.
+    const trainerNotNamt = [{ id: 'e1', entry_type: 'Monthly Training Records Inspection', trainee_initials: 'JD', namt_initials: '', trainer_initials: 'AB' }]
+    expect(runInspectionScan(baseData({ e623a: trainerNotNamt }))['623a_signed'].auto).toBe('no')
+  })
+
+  it('623a gaps: a records inspection never asks for a Trainer signature (Trainee + NAMT only)', () => {
+    // NAMT auto-signed, trainee outstanding → trainee owes; trainer is NOT asked.
+    const pending = baseData({ e623a: [{ id: 'e1', entry_type: 'Monthly Training Records Inspection', trainee_initials: '', namt_initials: 'CC', trainer_initials: '' }] })
+    expect(trainerSignatureGaps(pending).some((g) => g.tab === '623a')).toBe(false)
+    expect(traineeSignatureGaps(pending).some((g) => g.tab === '623a')).toBe(true)
+    // Trainee + NAMT both signed → no outstanding gaps for the entry.
+    const done = baseData({ e623a: [{ id: 'e1', entry_type: 'Monthly Training Records Inspection', trainee_initials: 'JD', namt_initials: 'CC', trainer_initials: '' }] })
+    expect(trainerSignatureGaps(done).some((g) => g.tab === '623a')).toBe(false)
+    expect(traineeSignatureGaps(done).some((g) => g.tab === '623a')).toBe(false)
+  })
+
+  it('623a gaps: a normal manual entry still owes the Trainer (regression)', () => {
+    const d = baseData({ e623a: [{ id: 'e1', entry_type: 'Initial', trainee_initials: 'JD', trainer_initials: '' }] })
+    expect(trainerSignatureGaps(d).some((g) => g.tab === '623a' && g.signer === 'trainer')).toBe(true)
   })
 })

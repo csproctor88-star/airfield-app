@@ -32,3 +32,14 @@ export function buildInspection623aComment(input: {
   }
   return lines.join('\n')
 }
+
+/** The entry_type stamped on the 623A entry a completed records inspection
+ *  auto-generates. Records inspections are signed by the Trainee + NAMT only
+ *  (no Trainer), so the gap/completeness engine and the server-side
+ *  required-slots function special-case this exact type. */
+export const RECORDS_INSPECTION_ENTRY_TYPE = 'Monthly Training Records Inspection'
+
+/** True when a 623A entry is an auto-generated records-inspection entry. */
+export function isRecordsInspectionEntry(entryType: unknown): boolean {
+  return String(entryType ?? '').trim().toLowerCase() === RECORDS_INSPECTION_ENTRY_TYPE.toLowerCase()
+}
