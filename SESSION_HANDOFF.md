@@ -1,137 +1,100 @@
 # Session Handoff
 
-**Date:** 2026-06-30
+**Date:** 2026-07-01
 **Branch:** `main` — **pushed, in sync with origin**.
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **1087 pass / 118 files** (was 1068 / 114).
-**HEAD:** `71be68c1` — report pages consume the shared discrepancy report views.
+`npx vitest run` ✓ **1097 pass / 119 files**.
+**HEAD:** `dd337ed7` — records-inspection 623A signed by Trainee + NAMT, not Trainer.
 
-Long session: dashboard widget batches A/B/C → Status Board widget → the DAF 803
-manager-addable-sections trilogy (add/rename/delete → export fix → sysadmin seed
-toggle). Each feature went spec → (plan) → build. **Two DB migrations, both
-applied** (803 sections table + seed_default column). **Not live-smoke-tested** —
-verified via tsc/build/vitest only; smoke checklist at the bottom.
-
-The AMTR record-inspection + 1098 series from earlier today is now in git history
-(`ed3463c6` and below); its details live in that commit range if needed.
+Three-commit session, all pushed to `origin/main`: one Visual NAVAIDs feature and
+two user-reported production bug fixes. The feature added three new infrastructure
+feature types (AGM signs, Do Not Enter signs, reflectors) plus taxiway-light sizing
+and an inoperative ring. The fixes stopped the offline write queue from silently
+orphaning inspection starts (and hanging on complete), and corrected the AMTR
+records-inspection 623A entry so it no longer demands a trainer signature. Two
+migrations were applied to the linked DB this session (both expand-only / function
+replace — safe). Every change verified via tsc/build/vitest, and the two bug fixes
+carry regression tests.
 
 ---
 
 ## What shipped this session (end state — read first)
 
-### Dashboard batch A — quick fixes (`36183f25`)
-- Analytics config: resolve the dataset **once permissions/modules load**, so the
-  Measure / Group-by controls render on first open (previously needed a toggle).
-- Analytics labels: grouped dimension values render via the dataset's **filter
-  labels** (FOD Check, Open, …) with a humanize fallback — not raw lowercase enums.
-- NOTAM widget: dropped the broken row deep-link (FAA-feed ids don't resolve to a
-  local record).
-- User Management widget: deep-links to `/users?user=<id>`; the users page opens
-  that member's profile on load.
+### Visual NAVAIDs: AGM + Do Not Enter signs, reflectors, sizing, inop ring (`3c50be54`)
+Three new `infrastructure_features.feature_type`s ride the existing config-driven
+pipeline (`LAYERS` → icon/render dispatch → legend → add-feature picker):
 
-### Dashboard widget polish (`94fc9b78`, `a63249cb`, `3cbb22b5`)
-- **Clock** keeps the prominent Zulu+date+local block always visible; extra
-  timezones render as a compact strip beneath rather than demoting Zulu into an
-  equal-row grid.
-- **Notes** moved to a structured per-note model (back-compat migrates the legacy
-  text blob), with zebra rows, per-note Zulu timestamps, and per-note delete.
-- **Minimize/collapse** in view mode: a header chevron collapses a widget to its
-  title bar; `config.minimized` persists, grid forces a single header row and
-  vertical compaction reclaims the space. Edit mode ignores it so layout/resize
-  stay intact.
-- **Board persistence:** active board now lives in the URL via `replaceState`
-  (`?board=<id>`), so navigating into a module and pressing Back returns to the
-  same board instead of resetting to the user's default.
+- **Arresting Gear Marking (AGM) sign** — sign-sized **square**, black bg + centered
+  filled yellow disc, **rotatable**. Outage-tracked with no engine change: the outage
+  engine (`lib/outage-rules.ts`) is `feature_type`-agnostic (counts any feature by
+  `system_component_id` + `status`), so AGM is tracked once assigned to a lighting
+  system, exactly like a light.
+- **Do Not Enter sign** — red no-entry roundel (white ring + bar). A distinct type,
+  but added to the **Mandatory Signs** layer's `types` array so it shares that
+  layer's toggle + count (no new legend row) per the user's choice.
+- **Reflector** — meter-sized **blue square** (`google.maps.Rectangle`, 2.0 m, same
+  blue as taxiway lights). Introduced `renderType: 'square'` (the renderer's first
+  real use of `renderType`; dispatch is otherwise by `iconUrl` presence) and a
+  `rectangles` collection on the `GMapWrapper` (`clearAllObjects` clears it).
 
-### Dashboard data / analytics enrichment (`ef848096`, `708e757e`, `6765d051`, `53688f3f`, `3be6e9f1`)
-- **Airfield Lighting** gains a **Status** scope (airfield-wide category roll-up);
-  the standalone Lighting Status widget is **hidden from the palette** (existing
-  instances still render).
-- **Events Log widget**: color-coded **Action** column + Action/Details/Zulu/OI/
-  Type/Entity layout matching the main log (action-color helper extracted to
-  `lib/activity-format` — shared, no drift); Entity column **deep-links** to the
-  underlying record via `entityLink`, `stopPropagation`-guarded against the row's
-  `/activity` link. Inline edit stays on the main module.
-- **Wildlife analytics**: new **Species** (`species_common`) dimension — chart the
-  exact species sighted/struck, not just the group.
-- **Inspections analytics**: **Result** (pass/fail/in-progress), **Completed By**,
-  and **Discrepancies Found** (`failed_count>0` proxy) dimensions + filters via a
-  unit-tested `deriveInspectionFields`. No schema or inspection-flow change.
+Non-obvious how: AGM/DNE are **per-feature rotation-baked images** routed through the
+labeled-sign sizing path via a `graphic-<type>-<id>` `signIcon`, so they size like
+signs and rotate. Taxiway lights bumped **+33% (1.5 → 2.0 m)** via a per-layer
+`radiusMeters` (taxiway-scoped; other lights unchanged). Inoperative indicator: a red
+**ring overlay marker** on raster-marker features; meter primitives (light circles,
+reflector squares) fill red. `squareBoundsMeters` geometry helper (unit-tested). DB
+`CHECK` constraint extended by migration `2026063003`.
 
-### Discrepancy report widgets render full views (`e631b7cd`, spec #35)
-Upgraded the three discrepancy report widgets from summary tiles to the **full
-Reports & Analytics views**, via extracted presentational components
-(`TrendsReportView`, `AgingReportView`, `OpenReportView`) so the report pages and
-widgets share rendering:
-- **Trends:** opened-vs-closed bars + KPIs + top areas/types; period config.
-- **Aging:** interactive tier/shop cross-filter + per-tier list (`filterAging`
-  tested).
-- **Report:** total + By Area/Type/Shop breakdown; 5-filter config; **`skipMedia`
-  fast path** on `fetchOpenDiscrepanciesData` so the widget skips photo/map fetch.
-- Registry sizes bumped + config forms wired. **Report pages still embed the views
-  too but were not refactored to consume the shared components** — the views are
-  currently duplicated (see tech debt).
+### Inspection offline-queue orphaning + complete-hang fix (`0b7b6133`)
+Chase Eaton (Selfridge) started an airfield inspection that showed `in_progress` on
+his device but never reached the DB — no row, no "on the airfield" events-log entry —
+and Complete & File hung on "Completing…" then reverted to `in_progress`. Two
+compounding bugs, triggered when a start is enqueued during a wifi↔cellular blip:
 
-### Status Board widget (`b1ea87f3`, spec)
-Read-only widget that surfaces a chosen Airfield Status board: a user's **custom
-status board**, **NAVAIDs**, **runway status**, or **ARFF**. Config picks the kind
-(+ which custom board); rows show name · note · colored status via the unit-tested
-`statusBoardColor`/`statusBoardLabel` helper (mirrors the status page mappings).
-Reuses the existing data layer (`custom-status`, navaids, `useDashboard`) — **no
-status-page changes**.
+1. The start writes (`inspection_save_draft` + start `activity_log_insert`) were
+   enqueued with `userId: ''`. The user-scoped drainer's `ownsItem()` treats `''` as
+   neither absent (`== null`) nor a match, so it **skipped them forever** (orphaned;
+   also hidden from the header "N queued" badge, which is user-scoped). Fix: stamp the
+   real signed-in user id on both start writes, **and** make `ownsItem()` treat an
+   empty-string `userId` like an absent one (unowned → drained best-effort), which
+   also **recovers already-orphaned items** on the next online drain.
+2. `handleComplete` had no `try/catch/finally`. The `inspection_file` UPDATE targeted
+   the never-inserted draft row → 0 rows → `NonRetriableError` → escaped unhandled →
+   `setSaving(false)` never ran (stuck spinner), draft never cleared. Fix: `.catch`/
+   `.finally` at the call site.
 
-### Manager-addable DAF 803 sections (`a4f02d3c`, spec)
-803 sections are now **per-base data** (`amtr_803_sections`) instead of a hardcoded
-const. From the Admin page a NAMT can **add** a section (+ tasks under it),
-**rename** sections, and **delete** custom ones (blocked if a member has evals under
-it). New sections render as **chips** on member records like the built-ins.
-`form803-tab` + `form803-catalog-editor` read sections via `resolveSections`
-(tested; falls back to the 5 built-in defaults). `seed-data` seeds the 5 built-ins
-for new bases.
+Also added a **queued-start toast** (a start that queues instead of committing now
+tells the user it'll sync when the connection stabilizes) and refreshed the header
+**OFFLINE** chip tooltip (it predated the offline queue and still said "submissions
+will fail"). Regression test locks the empty-`userId` drain invariant.
 
-### Custom 803 sections export to their own sheet (`904e7a82`)
-The record export mapped only the 5 built-in 803 sections to template sheets, so
-manager-added custom sections were **silently dropped**. Now each custom section
-gets its own 803-format tab: `clone803Sheet` deep-copies a pristine built-in 803
-sheet skeleton (columns 1–14, row heights, cell values+styles, merges) into a new
-`DAF Form 803 (<label>)` sheet, then fills it with that section's evaluations.
-Sheet names are Excel-legal (31-char) + deduped via `customSheetName`. (Driven by
-the 797-style requirement the user showed — a custom section that needs to live as
-an 803.)
+### AMTR records-inspection 623A signed by Trainee + NAMT, not Trainer (`dd337ed7`)
+A completed records inspection auto-creates a `Monthly Training Records Inspection`
+623A entry, but it was graded like a standard manual entry (Trainee + Trainer) by the
+4.1 completeness check and both signature-gap functions — so it wrongly demanded a
+trainer signature. Records inspections are signed by the **Trainee + NAMT** only.
 
-### Report pages consume the shared discrepancy report views (`71be68c1`)
-Killed the duplication flagged below: the Trends/Aging/Discrepancy report *pages*
-each kept their own inline copy of the render extracted into `TrendsReportView`/
-`AgingReportView`/`OpenReportView` for the widgets. Pages now render the shared
-components (net −312 lines). `OpenReportView` gained an optional `filterLabel`
-prop (preserves the page's active-filter caption); `AgingReportView`'s tier/shop
-filter state is now **optionally controlled** (`active*`/`on*Change` props, falls
-back to internal state for the widget) so the aging page drives it controlled and
-reuses the shared `filterAging` helper for its filtered PDF export. tsc/build/
-vitest green.
-
-### Sysadmin "Seed to new bases" toggle for custom 803 sections (`71cc4c7b`)
-A **system-admin-only** checkbox on each custom 803 section in the catalog editor.
-When enabled, the section **and its tasks** are copied into any base seeded
-thereafter via `seedBaseCatalogs`. Only affects **future** seeds (not retroactive).
-- `fetchAmtr803SeedDefaults()` — cross-base fetch of flagged sections + their tasks.
-- `dedupeSeed803()` — drops keys already present in the target base, de-dupes
-  sections and tasks (by `section|sts_item`). Pure, tested.
-- Seed step in `seed-data.ts` inserts the picked sections (`builtin:false,
-  seed_default:true`) + tasks per new base.
-- Toggle gated on `profiles.role === 'sys_admin'`.
+`lib/amtr/inspection-engine.ts` now special-cases records-inspection entries in all
+three spots (require trainee + namt, never flag a trainer). `completeAmtrInspection`
+**auto-stamps the completing inspector's signature into the NAMT block** (they are the
+NAMT who ran it — resolves their `operating_initials`, falls back to name-derived
+initials), leaving the trainee as the only remaining signer. The server-side
+`amtr_required_slots` RPC (used by the fidelity audit) was aligned via migration
+`2026070100`. Shared `RECORDS_INSPECTION_ENTRY_TYPE` constant + `isRecordsInspectionEntry()`
+helper; regression tests lock the trainee+namt (not trainer) invariant. The user
+**declined a backfill** of pre-existing entries (only a handful had been done).
 
 ---
 
 ## Migrations status
 
-| File | Status | What it does |
+| File | State | What it does |
 |---|---|---|
-| `2026063001_amtr_803_sections.sql` | **Applied** | `amtr_803_sections` table + RLS; drops the `amtr_803.section` CHECK (the add-section blocker); backfills the 5 built-ins for all bases (245 sections / 49 bases verified). |
-| `2026063002_amtr_803_sections_seed_default.sql` | **Applied** | `ALTER TABLE … ADD COLUMN IF NOT EXISTS seed_default BOOLEAN NOT NULL DEFAULT false`. Verified `column_default: false`. |
+| `2026063003_add_agm_dne_reflector_feature_types.sql` | **Applied** | +3 `feature_type` CHECK values (`arresting_gear_marking_sign`, `do_not_enter_sign`, `reflector`). Expand-only. |
+| `2026070100_amtr_623a_records_inspection_slots.sql` | **Applied** | `amtr_required_slots` is now entry-type-aware: records-inspection 623A → `['trainee','namt']`. `CREATE OR REPLACE`, no data change. |
 
-Both applied to the linked prod DB via `db query --linked --file`. **No pending
-migrations.** (`2026063000` auto-key backfill was applied in the prior session.)
+Both applied to the linked DB via `npx supabase db query --linked --file` and
+verified. **No pending migrations.**
 
 ---
 
@@ -139,22 +102,29 @@ migrations.** (`2026063000` auto-key backfill was applied in the prior session.)
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Custom 803 sections vanished from the record export | Export mapped only the 5 built-in sections to fixed template sheets; custom sections had no sheet | `904e7a82` |
-| Analytics Measure/Group-by controls blank until you toggled the config | Dataset resolved before permissions/modules loaded | `36183f25` |
-| NOTAM widget rows linked to nothing | FAA-feed NOTAM ids don't resolve to a local record | `36183f25` |
+| Inspection started but never persisted (in_progress locally, nothing in DB, no events-log entry) | start queue writes stamped `userId: ''` → orphaned forever by the user-scoped drainer (`ownsItem` treats `''` as a foreign owner) | `0b7b6133` |
+| Complete & File hung on "Completing…", then reverted to in_progress | `handleComplete` had no try/catch/finally; the file UPDATE hit the never-inserted draft row → `NonRetriableError` escaped unhandled → `saving` stuck | `0b7b6133` |
+| Records-inspection 623A demanded a trainer signature | the auto-entry was graded like a manual trainee+trainer entry in the completeness + gap engine | `dd337ed7` |
 
 ---
 
 ## Lessons from this session
 
-- **`git add -A` here sweeps in a large pile of untracked docs** (`docs/Folder/*`,
-  logo sources, `.docx`/`.xlsx` exports). Stage feature files explicitly; don't
-  blanket-add.
-- **PowerShell here-strings are fragile for commit messages** with embedded
-  double-quotes — `git commit -F <file>` is the reliable path.
-- Export parity is a real requirement for any new "section/tab" abstraction: if a
-  thing renders on the record, confirm it also **exports** and **gets inspected**
-  before calling it done. (Inspection was already section-agnostic; export wasn't.)
+- **Offline-queue writes must carry the real `userId`.** An empty string is not
+  `null`, so it fails the user-scoped `ownsItem` equality and orphans the write
+  (invisible even in the pending-sync badge). `ownsItem` now tolerates `''` as a
+  rescue, but any new queued-write surface must still stamp the signed-in user id.
+- **Fire-and-forget queue writes (`void … .catch(() => {})`) hide failures.** The
+  start flow showed "started" + `in_progress` even though nothing persisted. Surface
+  queued/failed state (the start now toasts on queue).
+- **The outage engine is `feature_type`-agnostic** — it counts any feature assigned
+  to a lighting-system component by `status`. New feature types get outage tracking
+  for free via assignment; no engine changes needed.
+- **Visual NAVAIDs render dispatch is by `iconUrl` presence, not `renderType`**
+  (`renderType` is legend/metadata). Adding a type needs the union + labels + abbrev
+  (`lib/supabase/infrastructure-features.ts`) + a `LAYERS` row + `FEATURE_TYPE_OPTIONS`
+  + an icon (or per-feature `signIcon`) + a DB `CHECK`-constraint migration — miss the
+  migration and inserts fail at runtime.
 
 ---
 
@@ -162,47 +132,33 @@ migrations.** (`2026063000` auto-key backfill was applied in the prior session.)
 
 | Item | Severity | Notes |
 |---|---|---|
-| Whole session **not live-smoke-tested** | med | Verified via tsc/build/vitest only. Checklist below. |
-| Confirm **FQ definition** (carried over) | low | Training Progress FQ = JQS 100% AND Formal 100%; does 1098/797 factor in? |
-| Selfridge **1098 duplicate rows** (carried over) | low | Data cleanup in AMTR, not code. |
-| Inspection PDF layout | low | Shows detail + corrective action; not visually re-reviewed. |
+| New NAVAID types not live-smoke-tested | med | AGM/DNE/reflector appearance, rotation, inop ring, taxiway +33% sizing verified via tsc/build/vitest only. User to eyeball proportions (disc/roundel/ring weights, reflector size) on the promoted build — all one-line tweaks. |
+| Pre-fix records-inspection 623A entries | low | Existing entries have no NAMT auto-signature; they now show NAMT (not trainer) as the outstanding signer, with no auto-nudge for the NAMT on back-entries. User declined a backfill (only a handful exist). |
+| Orphaned inspection-queue items recover on next online load | low | A user with a stuck pre-fix start write gets it drained once they load the new build online; a hard PWA refresh may be needed to pick up the new service worker. |
+| Confirm FQ definition (carried) | low | Training Progress FQ = JQS 100% AND Formal 100%; does 1098/797 factor in? |
+| Selfridge 1098 duplicate rows (carried) | low | data cleanup in AMTR, not code. |
+| Inspection PDF layout (carried) | low | shows detail + corrective action; not visually re-reviewed. |
+| Current reference docs local-only (carried) | low | briefs/spec/terminology/primer live in gitignored `docs/references/` — not in the repo. |
 
 ---
 
 ## Next session tasks
 
-No required next step — pick up wherever the user wants. Candidate work if idle:
+No required next step — pick up wherever the user wants. Candidate if idle:
 
-- **Live smoke test** the 803-section trilogy and dashboard batches on the preview
-  (checklist below). Also exercise the three report pages (Trends/Aging/
-  Discrepancy) after the shared-view refactor — confirm aging's tier/shop
-  cross-filter still drives the filtered PDF export.
+- **Live smoke test** on the promoted build:
+  - NAVAIDs: place AGM / Do Not Enter / reflector; rotate an AGM/DNE; mark each
+    kind inop → red ring (signs) / red fill (reflector, light); confirm taxiway
+    lights read larger; assign an AGM to a lighting system + mark inop → outage
+    alert + auto-discrepancy.
+  - Inspections: start under a simulated wifi↔cellular blip → queued-start toast +
+    the start row/events-log entry drain when back online; complete → no hang.
+  - AMTR: complete a records inspection → NAMT block auto-signed, trainee nudged,
+    no trainer signature required or flagged.
 
 ### Long-running carryover (bandwidth-permitting)
 - FQ-definition confirmation; Selfridge 1098 duplicate-row cleanup; inspection PDF
-  visual review.
-
----
-
-## Live smoke test after promotion
-
-- **803 add/rename/delete:** Admin → DAF 803 → **+ Add Section**, name it, add a
-  task; rename a section inline; delete a custom one (blocked if a member has evals
-  under it). New section shows as a **chip** on a member record.
-- **803 export:** export a member record that has data under a custom section →
-  workbook has a `DAF Form 803 (<label>)` tab in 803 format, populated.
-- **803 inspect:** run the inspection engine against a record with a custom section
-  → its items are graded like the built-ins.
-- **Seed toggle (sysadmin):** as a sys_admin, check **Seed to new bases** on a
-  custom section → seed a *new* base → the section + its tasks appear in that base's
-  catalog. Non-sysadmins don't see the checkbox. Existing bases are unaffected.
-- **Status Board widget:** add it, pick each kind (custom board / NAVAIDs / runway /
-  ARFF) → rows show name · note · colored status matching the status page.
-- **Dashboard polish:** minimize a widget (persists); change boards, enter a module,
-  Back → same board; clock shows Zulu prominently with extra zones beneath; notes
-  show zebra rows + timestamps + per-note delete.
-- **Report widgets:** Trends/Aging/Report widgets render the full views; Aging
-  tier/shop cross-filter works; Report respects its filters.
+  visual review; local-only reference docs.
 
 ---
 
@@ -211,17 +167,17 @@ No required next step — pick up wherever the user wants. Candidate work if idl
 ```
 build: compiled successfully
 tsc:   no errors
-tests: 1087 pass / 118 files
+tests: 1097 pass / 119 files
 
 Notable First Load JS:
-  /dashboard                 188 kB  →  436 kB   (heaviest changed route)
-  /amtr/roles                34.9 kB →  210 kB   (803 catalog editor)
-  /amtr/[memberId]           16 kB   →  216 kB
-  /amtr/[memberId]/inspect   14.4 kB →  380 kB
-  /amtr/reports              11.2 kB →  336 kB
-  /wildlife                  459 kB  →  809 kB   (unchanged; still heaviest overall)
-  First Load JS shared        91.6 kB
-  Middleware                  74.6 kB
+  /infrastructure            37 kB  →  229 kB   (NAVAID feature types)
+  /inspections               23.1 kB → 241 kB   (offline-queue fix)
+  /amtr/[memberId]/inspect   14.4 kB → 380 kB   (records-inspection fix)
+  /amtr/[memberId]           16 kB  →  216 kB
+  /amtr                      6.52 kB → 168 kB
+  /wildlife                  459 kB →  809 kB   (unchanged; still heaviest overall)
+  First Load JS shared               91.6 kB
+  Middleware                         74.6 kB
 ```
 
 ---
@@ -230,10 +186,28 @@ Notable First Load JS:
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-06-30 | DAF 803 manager-addable sections (add/rename/delete) + own-sheet export + sysadmin seed-to-new-bases toggle; Status Board dashboard widget; dashboard batches A/B/C (analytics fixes, clock/notes/minimize/board-persistence, Events Log links, wildlife species + inspections analytics, full discrepancy report-view widgets); report pages refactored onto the shared `*ReportView` components (−312 lines). |
-| **Unreleased** | 2026-06-30 | AMTR record-inspection + 1098: scan rule 6.3/6.4 grade only the current-year catalog (fixes prior-year rows shown as missing) + period-aware months, editable discrepancy detail + corrective action, template-driven auto 623a entry, Cert Official sign auto-completes a 1098 item. |
-| **Unreleased** | 2026-06-29 | Airfield Lighting widget family; dashboard round 2 (finer 24/40 grid, per-user default boards, AMTR Training Progress redesign, touch reorder, NOTAM wrap, settle scroll-to-top). |
-| **Unreleased** | 2026-06-29 | Dashboard polish round 1: centered metric tiles; AMTR consolidated into one 9-report widget; Links drag/tap reorder. |
-| **Unreleased** | 2026-06-28 | Dashboard widget refinement run on Phase 4. |
-| **Unreleased** | 2026-06-27 | Phase 4 Configurable Native Widgets + customizable widget-grid dashboard. |
+| **Unreleased** | 2026-07-01 | Visual NAVAIDs: AGM + Do Not Enter signs, reflectors, taxiway-light sizing, inoperative ring. Inspection offline-queue orphaning + complete-hang fix (+ queued-start toast). AMTR records-inspection 623A signed by Trainee + NAMT (not Trainer). |
+| **v2.35.0** | 2026-06-30 | Customizable widget dashboard (grid, per-device layouts, analytics, Status Board, Airfield Lighting); FLIP Management + Read File modules; PPR calendar + `.ics` invites; AMTR manager-addable 803 sections + inspection/1098 completion; C2IMERA export; WWA server-side expiry; brand refresh. Cut this session; awaiting the user's promotion. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
+
+---
+
+## Key files touched this session
+
+### New files
+- `supabase/migrations/2026063003_add_agm_dne_reflector_feature_types.sql`
+- `supabase/migrations/2026070100_amtr_623a_records_inspection_slots.sql`
+
+### Modified files
+- `app/(app)/infrastructure/page.tsx` — 3 new feature types, `square` render branch,
+  inop ring, legend cases, per-layer `radiusMeters`.
+- `lib/google-map-adapter.ts` — `rectangles` collection on the wrapper.
+- `lib/calculations/geometry.ts` — `squareBoundsMeters`.
+- `lib/supabase/infrastructure-features.ts` — type union + labels + abbrevs.
+- `app/(app)/inspections/page.tsx` — start-write `userId` stamping, `handleComplete`
+  safety net, queued-start toast.
+- `lib/sync/write-queue.ts` — `ownsItem` empty-`userId` rescue.
+- `components/layout/header.tsx` — OFFLINE chip tooltip.
+- `lib/amtr/inspection-engine.ts` — records-inspection signature rules (3 spots).
+- `lib/supabase/amtr-inspections.ts` — NAMT auto-sign at completion.
+- `lib/amtr/inspection-623a.ts` — `RECORDS_INSPECTION_ENTRY_TYPE` + helper.
