@@ -1,0 +1,457 @@
+[
+  {
+    "id": "sub-pdf-email-flow",
+    "order": 1,
+    "track": "Subsystems",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "The jsPDF → Resend PDF & email flow",
+    "summary": "All 20 PDF generators run entirely in the browser using jsPDF, and optional email delivery routes through Supabase Storage as a staging area to avoid HTTP body-size limits.",
+    "concept": "<p>A <strong>Blob</strong> is a chunk of binary data living in the browser's memory — it has no URL and can't be fetched by a server. A <strong>base64</strong> string is the same data encoded as printable ASCII, which can be embedded in JSON. When jsPDF calls <code>doc.output('blob')</code> it hands you a Blob holding a valid PDF file, still entirely on the client.</p><h4>Why client-side?</h4><p>Glidepath's PDFs are generated completely in the browser. No PDF data is ever sent to a third-party renderer, stored on Vercel, or logged. This matters for two reasons: (1) operational data (discrepancy descriptions, NAVAID outage details) never leaves the user's session except at their explicit request; (2) there's no server cost or cold-start latency.</p><h4>The email delivery problem</h4><p>Email attachments can be several megabytes. A Next.js route handler on Vercel has a 4.5 MB body limit and a hard 60-second timeout. Sending a PDF directly in a POST body would hit both limits on large reports. The solution is an <em>upload-then-reference</em> pattern:</p><ol><li>Upload the Blob to Supabase Storage under <code>photos/email-temp/&lt;uuid&gt;-filename.pdf</code>.</li><li>POST only a <em>path reference</em> (a few bytes) to <code>/api/send-pdf-email</code>.</li><li>The route handler downloads the file from Storage, attaches it to a Resend API call, then deletes the temp file in a <code>finally</code> block — regardless of whether the email succeeded.</li></ol><h4>The y-coordinate convention</h4><p>jsPDF has two families of drawing APIs that treat y differently. Text APIs (<code>doc.text</code>) place the y argument at the <em>baseline</em> of the text — the invisible line letters sit on. Box APIs (<code>doc.rect</code>, <code>doc.roundedRect</code>) treat y as the <em>top edge</em> of the shape. Silently mixing these without adjustment causes elements to overlap. <code>lib/pdf-utils.ts</code> documents this once and exports named spacing constants so every generator uses the same gap values.</p><h4>The shared utility layer</h4><p><code>lib/pdf-utils.ts</code> consolidates setup boilerplate that was previously duplicated across all generators: <code>createPdf</code> (doc + margin math), <code>drawBaseHeader</code> (base name/ICAO), <code>drawReportTitle</code>, <code>drawStatBox</code>, <code>drawFooter</code>, and <code>tableStyles</code>. Every generator still owns its body content — the utility just lets a header fix happen once instead of 20 times.</p><h4>The generator contract</h4><p>Every PDF generator returns <code>{ doc, filename }</code>. The caller decides what to do: offer a browser download, call <code>sendPdfViaEmail</code>, or both. The generator is never responsible for delivery.</p>",
+    "code": [
+      {
+        "file": "lib/email-pdf.ts",
+        "caption": "sendPdfViaEmail — Blob upload to Storage → POST path reference → cleanup in finally",
+        "annotations": [
+          { "lines": "11", "note": "doc.output('blob') produces a PDF Blob in browser memory — no data hits a server yet." },
+          { "lines": "17-20", "note": "Upload to email-temp/ in the photos bucket. The path is a UUID slug so concurrent sends never collide." },
+          { "lines": "27-31", "note": "POST only the storage path to the route handler — avoids Vercel's 4.5 MB body limit." },
+          { "lines": "42-44", "note": "Storage cleanup runs in finally so the temp file is deleted even when Resend fails." }
+        ]
+      },
+      {
+        "file": "lib/pdf-utils.ts",
+        "caption": "Shared helpers: createPdf, drawBaseHeader, drawStatBox, drawFooter, spacing constants",
+        "from": "// ─────────────────────────────────────────────────────────────\n// Shared PDF utility",
+        "to": "export function todayIso(): string {",
+        "annotations": [
+          { "lines": "15-32", "note": "The y-coordinate convention comment is the authoritative explanation for why text uses baseline y and boxes use top y." },
+          { "lines": "35-41", "note": "STEP_ROW_GAP_MM and BLOCK_POST_SPACING_MM are the shared spacing constants all generators import instead of hardcoding numbers." },
+          { "lines": "85-100", "note": "drawBaseHeader returns the next y cursor — callers always use the return value to advance their running position." }
+        ]
+      },
+      {
+        "file": "lib/discrepancy-pdf.ts",
+        "caption": "Representative generator: function signature + info-box section + return { doc, filename }",
+        "from": "export async function generateDiscrepancyPdf(input: DiscrepancyPdfInput) {",
+        "to": "y += boxHeight + 6",
+        "annotations": [
+          { "lines": "29-37", "note": "Generator creates its own jsPDF doc directly (pre-dates pdf-utils.ts createPdf — bespoke generators are exempt from the migration)." },
+          { "lines": "86-136", "note": "Info box uses roundedRect for the background (top-y convention) then text positioned relative to the box top (manual baseline offsets)." }
+        ]
+      }
+    ],
+    "fits": "<p>The PDF subsystem sits at the <em>output</em> end of almost every operational module. Discrepancies, Checks, Inspections, QRC monthly reviews, PPR logs, Personnel (AF Form 483), Parking plans, ACSI, Waivers, and more all call a generator then either download locally or pipe through <code>sendPdfViaEmail</code>. The Supabase Storage bucket (<code>photos</code>) is shared between photo uploads and the email-temp staging area — the paths are kept separate by prefix (<code>email-temp/</code> vs entity-scoped paths). Resend is the sole external dependency in the delivery path; all other processing is client-local.</p>",
+    "quiz": [
+      {
+        "q": "Why does sendPdfViaEmail upload the PDF to Supabase Storage before POSTing to /api/send-pdf-email instead of sending the PDF bytes directly in the POST body?",
+        "choices": [
+          "a) To encrypt the PDF before it reaches Resend",
+          "b) To avoid Vercel's 4.5 MB route-handler body limit and 60-second timeout",
+          "c) Because jsPDF cannot produce a base64 string, only a Blob",
+          "d) To allow multiple recipients to download the same file concurrently"
+        ],
+        "answer": 1,
+        "explain": "Vercel serverless functions cap the request body at ~4.5 MB and time out at 60 s. Large PDFs (parking plans, inspection reports with embedded photos) exceed these limits if sent inline. Uploading to Storage first and POSTing only a path reference sidesteps both constraints. The route handler fetches the file from Storage server-side, where there is no body-size restriction."
+      },
+      {
+        "q": "A new generator draws a rounded rect at y=50 and then calls doc.text('Label', x, 50). What will the visual result be?",
+        "choices": [
+          "a) The text baseline sits at y=50, which is the top edge of the rect — the text appears inside the top border or overlapping it",
+          "b) The text is centered vertically within the rect automatically",
+          "c) jsPDF raises an error when text and rect share the same y value",
+          "d) The text appears 3mm below y=50 because jsPDF adjusts for cap-height"
+        ],
+        "answer": 0,
+        "explain": "doc.rect draws with y as the top edge of the shape, while doc.text draws with y as the text baseline. At y=50 both, the text baseline is at the very top of the rectangle — the ascenders of letters like 'L' will visually overlap or overlap the border. The convention in pdf-utils.ts is to add the cap-height offset (TEXT_CAP_HEIGHT_9PT_MM ≈ 3mm) to the text y, or draw text relative to the box top plus an inner padding value."
+      },
+      {
+        "q": "The finally block in sendPdfViaEmail calls supabase.storage.from('photos').remove([tempPath]) without awaiting it. What is the practical effect of this choice?",
+        "choices": [
+          "a) The cleanup is fire-and-forget — if it fails silently the temp file persists in Storage until manually purged",
+          "b) The finally block is synchronous so it always completes before the function returns",
+          "c) Supabase Storage automatically expires files in email-temp/ after 24 hours regardless",
+          "d) The remove call is awaited implicitly because it is inside an async finally block"
+        ],
+        "answer": 0,
+        "explain": "The remove call is not awaited — it is a fire-and-forget void expression. In practice this is intentional: waiting for cleanup would delay the success response to the caller. If the remove fails (network blip, RLS), the orphaned file sits in email-temp/ indefinitely because there is no automatic TTL on that prefix. This is an accepted trade-off documented by the comment 'Clean up temp file regardless of email outcome'."
+      }
+    ]
+  },
+  {
+    "id": "sub-state-data-fetching",
+    "order": 2,
+    "track": "Subsystems",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "State & data fetching",
+    "summary": "Glidepath uses a single React context for per-installation configuration, eliminates prop-drilling for shared data, and gates all Supabase calls on the demo-mode null guard.",
+    "concept": "<p><strong>React Context</strong> is a built-in mechanism for sharing data across a component tree without threading props through every intermediate layer. A <em>Provider</em> component wraps the tree and exposes a value; any descendant can call <code>useContext</code> to read it. Context is appropriate for data that many components need but that changes infrequently — installation config, user role, enabled modules.</p><h4>Why no Redux or Zustand?</h4><p>Glidepath's shared state is installation-scoped: when the user switches bases, almost everything resets. A single context whose re-load is triggered by changing <code>installationId</code> handles this cleanly. State that <em>changes frequently</em> (form inputs, local search filters) lives in local <code>useState</code> in the component that owns it. There is no global action dispatch, no selector boilerplate.</p><h4>The installationId re-fetch pattern</h4><p>Map components, data tables, and badge counts all depend on <code>[token, installationId]</code> in their <code>useEffect</code> dependency arrays. When <code>switchInstallation</code> is called, <code>installationId</code> changes, those effects fire, and the components destroy and recreate their data-dependent children. This is the idiomatic React pattern for cross-component refresh without a message bus.</p><h4>The loaded gate</h4><p>The <code>InstallationProvider</code> renders <code>null</code> while loading. This prevents any child from rendering with stale or missing config — there is no flash of empty tables or broken maps on first paint.</p><h4>The demo-mode null guard</h4><p>Every CRUD function in <code>lib/supabase/</code> begins with <code>if (!supabase) return []</code> (or <code>return null</code>, or an empty object). <code>createClient()</code> returns <code>null</code> when the environment variables are absent or contain placeholder values. This single check is the entire demo-mode short-circuit: no separate codepath, no feature flags, just static arrays returned instead of real queries.</p><h4>Parallel loading</h4><p><code>loadInstallationConfig</code> fires five Supabase fetches simultaneously with <code>Promise.all</code>: the installation row, runways, areas, ARFF aircraft, and facilities. None of these depend on each other, so sequential awaits would add unnecessary latency on every base switch.</p>",
+    "code": [
+      {
+        "file": "lib/installation-context.tsx",
+        "caption": "loadInstallationConfig — parallel Promise.all fetch on base switch",
+        "from": "  // Load a specific installation's configuration\n  const loadInstallationConfig",
+        "to": "  }, [loadInstallationConfig])",
+        "annotations": [
+          { "lines": "83-89", "note": "Five fetches fire in parallel — runways, areas, ARFF aircraft, and facilities do not depend on the installation row result." },
+          { "lines": "104-124", "note": "switchInstallation calls loadInstallationConfig then persists the choice to the user's profile so the next login lands on the same base." }
+        ]
+      },
+      {
+        "file": "lib/installation-context.tsx",
+        "caption": "Initial load useEffect and the loaded gate that prevents premature rendering",
+        "from": "  // Initial load\n  useEffect(() => {",
+        "to": "  if (!loaded) return null",
+        "annotations": [
+          { "lines": "269-311", "note": "The init function loads role, multi-install list, and primary installation ID in sequence (role must be known before deciding which installations to fetch)." },
+          { "lines": "319", "note": "Returning null here means no child sees an empty installationId — the entire app tree waits for the first complete load." }
+        ]
+      },
+      {
+        "file": "lib/supabase/discrepancies.ts",
+        "caption": "fetchDiscrepancies — the if (!supabase) return [] demo guard and the joined query shape",
+        "from": "export async function fetchDiscrepancies(baseId?: string | null): Promise<DiscrepancyRow[]> {",
+        "to": "  if (error) {\n    console.error('Failed to fetch discrepancies:'",
+        "annotations": [
+          { "lines": "62-63", "note": "createClient() returns null when NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are absent. The guard here is the entire demo-mode short-circuit." },
+          { "lines": "65-72", "note": "The reporter join (reported_by(name, rank, operating_initials)) is a PostgREST foreign-key join — avoids a second round-trip to show 'Created By' in the UI." }
+        ]
+      }
+    ],
+    "fits": "<p><code>useInstallation()</code> is the most-imported hook in the codebase — virtually every module reads <code>installationId</code> to scope its queries. The context also vends <code>userRole</code>, <code>enabledModules</code>, <code>ceShops</code>, <code>arffAircraft</code>, and <code>mapProvider</code>, which means feature components never need their own fetches for this shared config. The demo-mode null guard in every CRUD module ties back to <code>lib/supabase/client.ts</code> and <code>getSupabaseConfig()</code> in <code>lib/utils.ts</code>. The sidebar badge hook (<code>useSidebarBadgeCounts</code>) and offline write queue provider both also depend on <code>installationId</code> from this context.</p>",
+    "quiz": [
+      {
+        "q": "A developer adds a new fetchMyWidget(baseId) call inside a component's useEffect with dependency array [installationId]. When the user switches installations, what happens?",
+        "choices": [
+          "a) The effect does not re-run because installationId is a string and object identity hasn't changed",
+          "b) The effect re-runs because installationId changed, so fetchMyWidget fires with the new base ID",
+          "c) The effect re-runs but InstallationProvider has already returned null so the fetch sees an empty installationId",
+          "d) The component must manually call switchInstallation to trigger a re-fetch"
+        ],
+        "answer": 1,
+        "explain": "switchInstallation calls setInstallationId with the new base UUID. Because installationId is a new string value, React re-runs any useEffect that lists it as a dependency. The component fetches fresh data automatically. The 'loaded gate' only applies to the initial load (before the first config is ready), not to subsequent switches."
+      },
+      {
+        "q": "Why does loadInstallationConfig use Promise.all for the five fetches instead of five sequential awaits?",
+        "choices": [
+          "a) Promise.all is required because Supabase does not support multiple concurrent connections",
+          "b) The five fetches are independent so they can run in parallel, reducing total wait time to the slowest single fetch instead of the sum of all five",
+          "c) Sequential awaits would cause React to re-render five times instead of once",
+          "d) Promise.all is needed to catch errors from multiple fetches in a single try/catch"
+        ],
+        "answer": 1,
+        "explain": "None of the five data sets (installation row, runways, areas, ARFF aircraft, facilities) depends on the result of any other. Running them in parallel means the total round-trip time is max(t1, t2, t3, t4, t5) instead of t1+t2+t3+t4+t5 — a significant improvement on high-latency government networks."
+      },
+      {
+        "q": "What does the if (!supabase) return [] guard in fetchDiscrepancies actually check, and why is it sufficient for demo mode?",
+        "choices": [
+          "a) It checks whether the user is authenticated; unauthenticated users see demo data",
+          "b) It checks whether createClient() returned null, which happens when NEXT_PUBLIC_SUPABASE_URL contains a placeholder value or is absent",
+          "c) It checks whether the Supabase project is reachable via a network ping",
+          "d) It checks whether the 'discrepancies' table exists in the connected Supabase project"
+        ],
+        "answer": 1,
+        "explain": "createClient() calls getSupabaseConfig(), which returns null when NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY are absent, empty, or still contain the 'your-project' / 'your-anon-key' placeholder strings. Every CRUD module in lib/supabase/ starts with this guard and returns a static demo array when it triggers. No feature flag or separate code path is needed."
+      }
+    ]
+  },
+  {
+    "id": "sub-error-handling-friendly",
+    "order": 3,
+    "track": "Subsystems",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Error handling & friendly errors",
+    "summary": "Glidepath maps raw Postgres and RLS error strings to human-readable messages at the call site using friendlyError(), then surfaces them immediately with Sonner toasts — no global error boundary mediates data-layer failures.",
+    "concept": "<p>Postgres error messages are written for database administrators, not operational users. A violated RLS policy produces <code>new row violates row-level security policy for table \"discrepancies\"</code>. A duplicate record produces <code>duplicate key value violates unique constraint \"discrepancies_display_id_key\"</code>. Neither message is useful in a toast notification shown to an Airfield Manager on the flightline.</p><h4>The friendlyError function</h4><p><code>friendlyError(msg)</code> in <code>lib/utils.ts</code> is a simple regex-switch that pattern-matches known Postgres error shapes and returns a plain English string. It handles three families:</p><ul><li><strong>RLS / permission denied</strong> → &ldquo;You do not have permission to perform this action.&rdquo;</li><li><strong>Duplicate key / unique constraint</strong> → &ldquo;This record already exists.&rdquo;</li><li><strong>Foreign key violation</strong> → &ldquo;This action references data that no longer exists.&rdquo;</li><li><strong>Anything else</strong> → passed through unchanged (Supabase network errors, connection failures, etc.).</li></ul><h4>Call-site toasting pattern</h4><p>There is no global error boundary around the data layer. Instead, every CRUD call that mutates data calls <code>friendlyError(error)</code> and immediately fires a <code>toast.error()</code> from Sonner at the call site inside the component. This keeps error context local — the component that initiated the action also knows what to tell the user. Toasts are transient; they don't leave the user stuck on an error screen.</p><h4>getSupabaseConfig and the null guard</h4><p><code>getSupabaseConfig()</code> strips surrounding quotes (a common copy-paste artifact from <code>.env.local</code>) and checks for known placeholder strings before returning the URL/key pair. Returning <code>null</code> is the configured-but-broken signal that cascades into demo mode throughout the data layer.</p>",
+    "code": [
+      {
+        "file": "lib/utils.ts",
+        "caption": "friendlyError — regex mapping of Postgres/RLS error strings to human messages",
+        "from": "// Humanize Supabase/Postgres error messages for end users\nexport function friendlyError(msg: string): string {",
+        "to": "// Get cleaned Supabase URL and key (returns null if not configured)",
+        "annotations": [
+          { "lines": "148-151", "note": "RLS errors match 'row-level security', 'violates.*policy', or 'permission denied' — all three surfaces Supabase can produce for the same underlying denial." },
+          { "lines": "155-157", "note": "The passthrough case returns msg unchanged — network errors and unexpected Postgres errors surface as-is so developers see them in toasts during development." }
+        ]
+      },
+      {
+        "file": "lib/utils.ts",
+        "caption": "getSupabaseConfig — placeholder detection and quote stripping before returning the config pair",
+        "from": "export function getSupabaseConfig(): { url: string; key: string } | null {",
+        "to": "export function isMapboxConfigured(): boolean {",
+        "annotations": [
+          { "lines": "162-163", "note": "Strips leading/trailing quotes so a user who sets NEXT_PUBLIC_SUPABASE_URL=\"https://...\" (with quotes) doesn't end up in perpetual demo mode." },
+          { "lines": "164", "note": "Checks for the 'your-project' and 'your-anon-key' sentinel values that ship in the .env.local.example file." }
+        ]
+      },
+      {
+        "file": "lib/supabase/discrepancies.ts",
+        "caption": "fetchDiscrepancies error path — silent console.error, empty-array return (no toast at data layer)",
+        "from": "  if (error) {\n    console.error('Failed to fetch discrepancies:'",
+        "to": "  return []",
+        "annotations": [
+          { "lines": "75-79", "note": "Read errors log to console and return an empty array — no toast here. Toasts for reads would be noisy on every page load if the network blips. Writes are different: they always toast on error at the call site." }
+        ]
+      }
+    ],
+    "fits": "<p><code>friendlyError</code> is consumed by every write-path CRUD module and several route handlers. It is the single translation layer between the Supabase Postgres client and the Sonner toast system. The offline write queue (<code>lib/sync/handlers.ts</code>) also uses an error classification pattern — but for a different purpose: distinguishing <em>transient</em> (network) errors from <em>non-retriable</em> (RLS, schema) errors to decide whether to retry. The two classification layers are complementary: <code>friendlyError</code> translates for humans, the queue classifies for retry logic.</p>",
+    "quiz": [
+      {
+        "q": "A developer calls createDiscrepancy() and receives { error: 'new row violates row-level security policy' }. They pass this to friendlyError(). What string do they get back, and what should they do with it?",
+        "choices": [
+          "a) The original error string unchanged — friendlyError only handles network errors",
+          "b) 'You do not have permission to perform this action.' — they should show this in a toast.error() call",
+          "c) 'This record already exists.' — they should prompt the user to use a different display ID",
+          "d) An empty string — friendlyError swallows RLS errors silently"
+        ],
+        "answer": 1,
+        "explain": "The regex /row-level security/i matches the Postgres RLS violation message, so friendlyError returns 'You do not have permission to perform this action.' The convention is to immediately pass this to toast.error() at the call site inside the component — no global handler mediates it."
+      },
+      {
+        "q": "Why does getSupabaseConfig() strip surrounding quote characters from the env var values before checking for placeholder strings?",
+        "choices": [
+          "a) Because Next.js always adds quotes around env vars at build time",
+          "b) To handle a common copy-paste mistake where users wrap their .env.local values in quotes, producing a string like '\"https://abc.supabase.co\"' that would not match the 'your-project' check",
+          "c) Because Supabase's client library rejects URLs that contain quote characters",
+          "d) To convert the URL to lowercase for case-insensitive comparison"
+        ],
+        "answer": 1,
+        "explain": "Some text editors and documentation examples show env var values wrapped in quotes (e.g. NEXT_PUBLIC_SUPABASE_URL=\"https://...\"). Node reads the quotes as part of the value. The .replace(/^[\"']|[\"']$/g, '') call strips those leading/trailing quotes so the value is clean before the placeholder check and before being passed to createBrowserClient."
+      },
+      {
+        "q": "Read-path CRUD functions (fetchDiscrepancies, etc.) log errors and return [] without toasting. Write-path functions toast at the call site. Why the asymmetry?",
+        "choices": [
+          "a) Read errors are impossible in production because RLS always allows SELECT",
+          "b) Write-path failures represent user-initiated actions that deserve explicit feedback; read failures on page load would produce noisy toasts on every network blip",
+          "c) Sonner toasts cannot be triggered from inside async functions",
+          "d) The data layer is not allowed to import Sonner; only components can"
+        ],
+        "answer": 1,
+        "explain": "A read failure on mount (e.g., fetchDiscrepancies returning [] because of a transient network error) would produce a toast every time the component mounts or the user navigates — very noisy. Write failures are user-initiated point-in-time actions where the user is actively waiting for a result and needs to know it failed. Toasting at the call site also keeps context: the component knows whether it was trying to create, update, or close a record."
+      }
+    ]
+  },
+  {
+    "id": "sub-demo-mode",
+    "order": 4,
+    "track": "Subsystems",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Demo mode",
+    "summary": "When Supabase environment variables are absent or contain placeholders, createClient() returns null and every CRUD function short-circuits to static demo arrays — a second live 'Demo AFB' account provides a real authenticated experience for prospective users.",
+    "concept": "<p>Demo mode in Glidepath is not a feature flag, a build-time switch, or a separate codebase. It is a <em>null guard</em> that propagates naturally from a single function: <code>createClient()</code> in <code>lib/supabase/client.ts</code>.</p><h4>How it works</h4><p>Every data function in <code>lib/supabase/</code> begins with <code>const supabase = createClient()</code> followed by <code>if (!supabase) return []</code> (or the appropriate empty value). If <code>NEXT_PUBLIC_SUPABASE_URL</code> or <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> are missing or still contain the <code>your-project</code>/<code>your-anon-key</code> placeholder strings, <code>createClient()</code> returns <code>null</code>, and every data call returns the corresponding constant from <code>lib/demo-data.ts</code> instead of hitting the database.</p><h4>Two demo paths</h4><table class='kv'><tr><th>Path</th><th>Who uses it</th><th>Data</th></tr><tr><td>Unconfigured local dev (null client)</td><td>Developers before setting up Supabase</td><td>Static arrays in lib/demo-data.ts</td></tr><tr><td>?demo= auto-login (live Demo AFB)</td><td>Prospective customers visiting the public demo</td><td>Real Supabase data in an isolated Demo AFB base</td></tr></table><h4>The ?demo= auto-login</h4><p>Visiting <code>/login?demo=true</code> (or <code>?demo=safety</code>, <code>?demo=ppr</code>, etc.) triggers a <code>useEffect</code> that immediately signs in with a known credential for a role-specific demo account. The user lands on the airfield status page without filling in a form. Each role variant unlocks a different permission set so prospective users can explore the exact workflow for their function.</p><h4>Demo data shape</h4><p>The static arrays in <code>lib/demo-data.ts</code> match the TypeScript types of the real database rows. They are annotated with <code>as const</code> type assertions for union literals (e.g., <code>status: 'open' as const</code>) so TypeScript accepts them everywhere a real row would be valid.</p>",
+    "code": [
+      {
+        "file": "lib/supabase/client.ts",
+        "caption": "createClient — the single function whose null return drives all demo mode",
+        "annotations": [
+          { "lines": "5-9", "note": "getSupabaseConfig() returns null when env vars are absent or contain placeholders. Returning null here is the entire mechanism — no feature flag, no build switch." }
+        ]
+      },
+      {
+        "file": "lib/demo-data.ts",
+        "caption": "DEMO_DISCREPANCIES — static rows matching the DiscrepancyRow type shape",
+        "from": "export const DEMO_DISCREPANCIES = [",
+        "to": "export const DEMO_NOTAMS = [",
+        "annotations": [
+          { "lines": "6-7", "note": "status: 'open' as const and current_status: 'submitted_to_ces' as const satisfy TypeScript union literal checking — the same types used for real DB rows." },
+          { "lines": "11", "note": "created_at uses Date.now() arithmetic so demo items show relative ages ('9 days ago') that stay fresh on every page load." }
+        ]
+      },
+      {
+        "file": "app/login/page.tsx",
+        "caption": "?demo= auto-login block — immediate signInWithPassword on mount for role-specific demo accounts",
+        "from": "  // Auto-login for demo mode via ?demo=<role> link.",
+        "to": "        router.push('/')\n        router.refresh()",
+        "annotations": [
+          { "lines": "51-60", "note": "roleMap translates the ?demo= parameter to a real Supabase account email. Five roles are supported: default AFM, safety, PPR, MAJCOM RFM, and kiosk." },
+          { "lines": "68-73", "note": "signInWithPassword uses the known demo password. On success, last_seen_at is updated so the analytics page reflects demo usage, then the user is redirected to the dashboard." }
+        ]
+      }
+    ],
+    "fits": "<p>Demo mode interacts with almost every subsystem. The null guard in every CRUD module means the offline write queue, PDF generators, and the sidebar badge hook all silently no-op when <code>createClient()</code> returns null. The live Demo AFB path goes through the full auth/RLS stack — it is a real base with real data, not a bypass. The base setup wizard checks <code>getSupabaseConfig()</code> to decide whether to show a Supabase setup step. The <code>?demo=</code> parameter is the marketing entry point into the live Demo AFB; the null-client path is the local development convenience.</p>",
+    "quiz": [
+      {
+        "q": "A developer copies their .env.local.example to .env.local but forgets to fill in their Supabase credentials. The file still contains NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co. What happens when they load /discrepancies?",
+        "choices": [
+          "a) The page crashes with an uncaught exception because createBrowserClient receives an invalid URL",
+          "b) createClient() returns null; fetchDiscrepancies returns the DEMO_DISCREPANCIES array from lib/demo-data.ts",
+          "c) The page shows an empty table because the placeholder URL returns no rows",
+          "d) Next.js throws a build error because the URL contains 'your-project'"
+        ],
+        "answer": 1,
+        "explain": "getSupabaseConfig() checks whether the URL contains 'your-project' and returns null if so. createClient() then returns null. fetchDiscrepancies sees if (!supabase) return [] — but the page-level component falls back to DEMO_DISCREPANCIES when the fetch returns empty. The null guard in the actual CRUD function returns [] not DEMO_DISCREPANCIES directly; demo data is usually returned by the component or a wrapper, not the data function itself."
+      },
+      {
+        "q": "What is the difference between the null-client demo mode and the live Demo AFB accessed via ?demo=true?",
+        "choices": [
+          "a) There is no functional difference — both show the same static data from lib/demo-data.ts",
+          "b) The null-client mode serves static arrays from demo-data.ts with no Supabase connection; ?demo=true signs into a real Supabase account on an isolated Demo AFB base with live data and full RLS",
+          "c) The ?demo=true path bypasses RLS so the user sees all data across all bases",
+          "d) The null-client mode is only active in development builds; ?demo=true works only in production"
+        ],
+        "answer": 1,
+        "explain": "The null-client path requires no Supabase configuration at all and returns fixed arrays from lib/demo-data.ts. The ?demo=true path uses signInWithPassword with real credentials for a role-specific demo account on a live Supabase project. That account sees only the Demo AFB data (RLS scopes it), but all realtime, PDF, email, and storage features work normally."
+      },
+      {
+        "q": "Demo data entries use created_at: new Date(Date.now() - 9 * 86400000).toISOString() instead of a hardcoded date string. Why?",
+        "choices": [
+          "a) To pass TypeScript's Date type validation — string literals are not assignable to the created_at column",
+          "b) So the demo items always show '9 days ago' in relative-time UI components regardless of when the developer first cloned the repo",
+          "c) Because Supabase rejects ISO strings that are older than 30 days",
+          "d) To avoid conflicts with the real Demo AFB data that uses the same IDs"
+        ],
+        "answer": 1,
+        "explain": "Relative-time UI components (formatRelativeTime) compute the age of a record against the current time. A hardcoded date string from 2026-02-01 would show '120 days ago' by mid-year, making the demo feel stale. Computing created_at dynamically ensures the demo always shows plausible recent ages that match the operational context described in the item's title."
+      }
+    ]
+  },
+  {
+    "id": "sub-offline-write-queue",
+    "order": 5,
+    "track": "Subsystems",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Offline write queue (PWA)",
+    "summary": "A browser-side IndexedDB queue persists mutation payloads across network outages so flightline personnel can file checks, inspections, and discrepancies without connectivity, and the queue drains automatically on reconnect.",
+    "concept": "<p>An <strong>offline write queue</strong> is a persistent list of operations the app wants to perform on the server but cannot right now because the network is unavailable. When connectivity returns, the queue <em>drains</em> — executing each pending operation in order.</p><h4>Why flightline operations need it</h4><p>Airfield personnel conduct FOD Checks, inspections, and discrepancy filings in physically remote areas of the airfield where Wi-Fi and cellular coverage can be intermittent. A regular form submit that fails offline gives the user no feedback and loses the data. With a write queue, the submit succeeds locally immediately; the app notes the network error, persists the payload, and retries silently on reconnect.</p><h4>Storage layer: IndexedDB</h4><p>IndexedDB is a browser-native key-value store that persists across page reloads and browser restarts. Unlike <code>localStorage</code> (limited to ~5 MB of strings), IndexedDB can store binary Blobs (for photos) and large JSON payloads, and supports async access without blocking the main thread. The write queue uses IndexedDB through a thin <code>QueueStorage</code> abstraction so tests can swap in an in-memory store.</p><h4>Queue lifecycle</h4><table class='kv'><tr><th>State</th><th>Meaning</th></tr><tr><td>pending</td><td>Ready to attempt on next drain</td></tr><tr><td>pending (attempts &gt; 0)</td><td>Previously failed, waiting for backoff window</td></tr><tr><td>conflict</td><td>ConflictError thrown — needs user resolution before retry</td></tr><tr><td>failed</td><td>NonRetriableError or exhausted retries — user must Retry or Discard</td></tr></table><h4>Drain triggers</h4><p>The queue drains on four events: (1) the <code>online</code> browser event fires; (2) <code>visibilitychange</code> fires when the tab becomes visible; (3) <code>WriteQueueProvider</code> triggers an initial drain on mount; (4) the <code>QueueInspector</code> exposes a manual &ldquo;Retry now&rdquo; button.</p><h4>Single-flight guard</h4><p>The <code>draining</code> promise field ensures concurrent drain triggers share one drain pass rather than running in parallel. This prevents double-executing the same write if the <code>online</code> event fires simultaneously with a <code>visibilitychange</code>.</p><h4>Error classification in handlers</h4><p>Each handler in <code>lib/sync/handlers.ts</code> converts a structured <code>{ data, error }</code> Supabase response into the throw-on-failure shape the queue expects. Network-shaped error messages (matched by <code>NETWORK_ERROR_RE</code>) become plain <code>Error</code> (transient, retry); RLS/schema failures become <code>NonRetriableError</code> (terminal — retry won't help).</p>",
+    "code": [
+      {
+        "file": "lib/sync/write-queue.ts",
+        "caption": "WriteQueue class — enqueueOrExecute, drain, single-flight guard, and browser attach",
+        "from": "  /**\n   * If online and a handler is registered, run inline",
+        "to": "  attach(): () => void {",
+        "annotations": [
+          { "lines": "131-156", "note": "enqueueOrExecute tries the handler inline when online. Only transient errors fall through to enqueue — NonRetriableError and ConflictError bubble immediately to the caller." },
+          { "lines": "240-243", "note": "The draining single-flight guard: if a drain is already running, the new caller awaits the same Promise instead of starting a second pass." },
+          { "lines": "260-261", "note": "Items are sorted oldest-first before drain so writes execute in the order they were submitted — preserving causality (create before update)." }
+        ]
+      },
+      {
+        "file": "lib/sync/write-queue.ts",
+        "caption": "attach() — subscribes to online and visibilitychange to trigger drains",
+        "from": "  attach(): () => void {",
+        "to": "// Re-export the cap so UI surfaces",
+        "annotations": [
+          { "lines": "371-386", "note": "Both event listeners call this.drain() — which is single-flight, so simultaneous online + visibilitychange events produce exactly one drain pass." }
+        ]
+      },
+      {
+        "file": "components/sync/write-queue-provider.tsx",
+        "caption": "WriteQueueProvider — registers handlers, attaches browser events, drains on mount",
+        "annotations": [
+          { "lines": "19-25", "note": "registerAllHandlers wires every WriteType to its Supabase CRUD function. attach() subscribes browser events. The initial drain() handles writes queued in a prior browser session." }
+        ]
+      },
+      {
+        "file": "lib/sync/handlers.ts",
+        "caption": "inspectionFileHandler and error classification — NETWORK_ERROR_RE, NonRetriableError, throwForStructuredError",
+        "from": "const NETWORK_ERROR_RE =",
+        "to": "// ---------------------------------------------------------------------------\n// inspection_file",
+        "annotations": [
+          { "lines": "56-57", "note": "NETWORK_ERROR_RE covers browser-specific wording differences: Chrome says 'Failed to fetch', Safari says 'Load failed', Firefox says 'NetworkError'. All map to transient/retriable." },
+          { "lines": "64-65", "note": "navigator.onLine === false catches structured Supabase errors that don't match the regex but arrive while the browser reports offline — conservative retry." },
+          { "lines": "73-78", "note": "throwForStructuredError is the single translation point: network errors become plain Error (transient retry); everything else becomes NonRetriableError (terminal)." }
+        ]
+      }
+    ],
+    "fits": "<p>The write queue interacts with every write-capable module: Inspections, Checks, ACSI, Discrepancies, Daily Reviews, Airfield Status, Visual NAVAIDs, Waivers, NOTAMs, Events Log, and photo uploads. The <code>QueueInspector</code> component surfaces queue state in the sidebar header as QUEUED/NEEDS REVIEW/PHOTOS WAITING badges. The <code>WRITE_COMMITTED_EVENT</code> custom event bridges the queue back to feature pages so they re-fetch their lists when a queued write finally commits — without relying on Supabase Realtime (which fires INSERT events but not UPDATE events for status transitions). The <code>pending-photos</code> subsystem (<code>lib/sync/pending-photos.ts</code>) is a parallel IndexedDB store specifically for photo Blobs, handled separately in the inspector UI.</p>",
+    "quiz": [
+      {
+        "q": "An Airfield Manager files an inspection while offline. The payload is stored in IndexedDB. Two minutes later, the device reconnects. What sequence of events drains the queue?",
+        "choices": [
+          "a) Nothing happens until the user manually presses 'Retry now' in the QueueInspector",
+          "b) The browser fires the 'online' event; attach() calls this.drain(); the handler runs fileInspection(); on success the item is deleted from IndexedDB and WRITE_COMMITTED_EVENT fires",
+          "c) The next polling interval (60 seconds) triggers the drain via setInterval",
+          "d) The service worker intercepts the outgoing request and replays it automatically without involving the write queue"
+        ],
+        "answer": 1,
+        "explain": "attach() registers an 'online' event listener that calls this.drain(). Drain reads all pending items from IndexedDB, finds the inspection payload, calls the registered inspectionFileHandler (which calls fileInspection()), and on success deletes the item from IndexedDB and fires WRITE_COMMITTED_EVENT so the inspections list page can re-fetch without a manual reload."
+      },
+      {
+        "q": "The daily_review_sign handler throws a ConflictError instead of a plain Error when it detects the slot was already signed. Why does this matter for the queue?",
+        "choices": [
+          "a) ConflictError causes the item to be deleted from the queue immediately without retrying",
+          "b) ConflictError sets the item's status to 'conflict', which stops automatic retries and surfaces a NEEDS REVIEW badge until the user manually Retries or Discards from the inspector",
+          "c) ConflictError is treated the same as a transient network error and retried on the next drain",
+          "d) ConflictError causes the entire queue drain to abort so no subsequent writes are attempted"
+        ],
+        "answer": 1,
+        "explain": "recordFailure() checks if the error is a ConflictError and writes status: 'conflict' to the queue item. Conflict items are skipped by runDrain() on subsequent passes — they do not retry automatically. The QueueInspector surfaces them under a NEEDS REVIEW count and requires the user to either Retry (after resolving the conflict externally) or Discard. This prevents blindly overwriting a regulatory record that another user already signed."
+      },
+      {
+        "q": "Why does the queue sort items oldest-first before executing them during a drain pass?",
+        "choices": [
+          "a) To minimize IndexedDB read latency by scanning in insertion order",
+          "b) To preserve causality — a discrepancy must be created before it can be updated; older writes must execute before newer ones that depend on them",
+          "c) To match the display order in the QueueInspector UI",
+          "d) Because Supabase enforces write ordering and rejects out-of-order inserts"
+        ],
+        "answer": 1,
+        "explain": "If a user creates a discrepancy and then immediately updates its status while offline, the queue holds two items: discrepancy_create and discrepancy_update. Executing the update before the create would fail because the row doesn't exist yet. Sorting by createdAt ascending ensures the create runs first, then the update against the now-existing row."
+      }
+    ]
+  },
+  {
+    "id": "sub-sidebar-badge-hook",
+    "order": 6,
+    "track": "Subsystems",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "The sidebar badge hook",
+    "summary": "useSidebarBadgeCounts layers four freshness mechanisms — Supabase Realtime, a custom-event bridge, visibility/focus listeners, and a 60-second polling fallback — to keep per-module action counts accurate without hammering the auth server.",
+    "concept": "<p>Sidebar badge counts tell the user at a glance how many items need their attention in each module — pending PPR triage, active QRC executions, discrepancies awaiting verification, AMTR notifications. These counts must stay accurate as other users take actions in other tabs or on other devices.</p><h4>The four freshness layers</h4><ol><li><strong>Supabase Realtime</strong>: A channel subscription fires a <code>refresh()</code> callback on any INSERT/UPDATE/DELETE to <code>ppr_entries</code>, <code>ppr_coordination</code>, <code>qrc_executions</code>, <code>discrepancies</code>, and <code>amtr_notifications</code> for the current base. This is the primary mechanism — changes from other users arrive within a few seconds.</li><li><strong>Custom-event bridge</strong>: Mutation handlers on the PPR page dispatch <code>glidepath:badges-refresh</code> after they succeed. This fires the refresh immediately after the current user approves, denies, or coordinates a PPR — before the Realtime websocket would echo the change back. It's the safety net for the case where Realtime has silently failed.</li><li><strong>Pathname listener</strong>: A <code>useEffect([refresh, pathname])</code> re-fetches when the user navigates within the app. The sidebar persists across route changes, so neither focus nor visibilitychange fires on a sidebar link click — only pathname changes.</li><li><strong>Visibility + focus listeners</strong> and a <strong>60-second polling fallback</strong>: Cover browser tab switches, window focus changes, and the case where Realtime is silently dead for an extended period. The poll skips when the tab is hidden to avoid wasting quota on background tabs.</li></ol><h4>getSession() not getUser()</h4><p>The hook reads the current user via <code>supabase.auth.getSession()</code>, which reads from <code>localStorage</code> with no server round-trip. <code>getUser()</code> makes a network request to validate the token on every call. At 60-second polling + realtime + focus + nav listeners, multiple badge refreshes can stack quickly; using <code>getSession()</code> avoids an auth quota explosion. RLS on the count queries enforces actual authorization, so the local session read is safe here.</p><h4>Permission gating</h4><p>Each count is only fetched if the current user holds the relevant permission key. Users without <code>ppr:triage</code> never fetch the triage count — it's zero automatically. This keeps the database queries to only what the user can act on.</p>",
+    "code": [
+      {
+        "file": "hooks/use-sidebar-badge-counts.ts",
+        "caption": "Full hook — getSession() rationale, permission-gated parallel fetches, four freshness layers",
+        "annotations": [
+          { "lines": "52-59", "note": "getSession() reads from localStorage — no auth server round-trip. Comment explains why this is intentional: RLS on the count queries enforces real authorization." },
+          { "lines": "61-96", "note": "Each count is only fetched if the user has the corresponding permission key. Tasks array collects only the applicable promises and runs them in parallel." },
+          { "lines": "113-157", "note": "Realtime channel subscribes to five tables. CHANNEL_ERROR / TIMED_OUT are logged but not fatal — the polling fallback keeps counts current." },
+          { "lines": "165-169", "note": "Custom-event bridge: window.addEventListener('glidepath:badges-refresh') so PPR mutation handlers can trigger an immediate refresh without importing the hook." },
+          { "lines": "179-186", "note": "60-second polling with visibility gate: skips the tick when document.visibilityState is 'hidden' to avoid background tab quota burn." },
+          { "lines": "203-209", "note": "Returns named counts (ppr, qrc, discrepancies, amtr) plus a total that drives the Operations section-header dot." }
+        ]
+      }
+    ],
+    "fits": "<p>The sidebar badge hook consumes <code>useInstallation()</code> for <code>installationId</code> and <code>usePermissions()</code> for the per-key gates. Its output drives the sidebar component which renders the numeric dots on PPR, QRC, Discrepancies, and AMTR links. The <code>ppr</code> count aggregates three distinct permission-scoped buckets (triage, approval, coordination) — a single user may hold one, two, or all three permissions and the sum reflects their actionable queue. The custom-event pattern (<code>glidepath:badges-refresh</code>) is also used by the write queue's <code>WRITE_COMMITTED_EVENT</code> for a related but separate purpose: notifying feature pages to re-fetch their lists. Both patterns avoid prop-drilling or global state by using the browser's own event bus.</p>",
+    "quiz": [
+      {
+        "q": "Why does the hook use supabase.auth.getSession() instead of supabase.auth.getUser() to retrieve the current user on each refresh tick?",
+        "choices": [
+          "a) getUser() is only available on the server; getSession() works in the browser",
+          "b) getUser() makes a network request to validate the token on every call; getSession() reads from localStorage. With polling at 60s plus realtime, focus, and nav listeners, multiple calls stack quickly — getUser() would burn through Supabase auth quota",
+          "c) getSession() returns the user's permission keys which getUser() does not include",
+          "d) getUser() always returns null after the initial page load due to a Supabase SSR limitation"
+        ],
+        "answer": 1,
+        "explain": "getUser() makes a server-validated network request. getSession() reads the cached session from localStorage without a round-trip. Because useSidebarBadgeCounts can be triggered by up to five mechanisms (realtime, custom event, pathname, focus, visibilitychange, and the 60s poll), calling getUser() on every trigger would create significant auth API load. RLS on the Postgres count queries enforces actual authorization, so the local session is sufficient here."
+      },
+      {
+        "q": "The Realtime channel silently disconnects (CHANNEL_ERROR). How long at most before the badge counts go stale, and what mechanism prevents that?",
+        "choices": [
+          "a) Counts go stale indefinitely — only Realtime keeps them current",
+          "b) At most 60 seconds if the tab is visible — the polling fallback fires every 60s and calls refresh()",
+          "c) At most 5 seconds — the hook has a 5-second polling interval",
+          "d) Counts go stale until the user navigates to the PPR page, which has its own subscription"
+        ],
+        "answer": 1,
+        "explain": "The 60-second setInterval fallback calls refresh() every minute when the tab is visible. If the user also navigates within the app, the pathname useEffect fires an immediate refresh. If the user switches back to the tab from another window, the visibilitychange and focus listeners fire. In the absolute worst case (user is on a single page, tab is visible but no interaction) the staleness window is 60 seconds."
+      },
+      {
+        "q": "A PPR coordinator approves a request on the /ppr page. The page dispatches 'glidepath:badges-refresh'. Why is this needed in addition to the Realtime subscription?",
+        "choices": [
+          "a) Because the Realtime channel only subscribes to INSERT events, not UPDATE events",
+          "b) Because Realtime can silently fail on production, and the custom event provides an immediate refresh that doesn't depend on the websocket being alive",
+          "c) Because the Realtime subscription is scoped to ppr_entries but approval writes to a different table",
+          "d) Because the sidebar hook is mounted in a different React tree that doesn't share the Realtime connection"
+        ],
+        "answer": 1,
+        "explain": "The hook's comment explicitly states this: 'which has been observed to silently fail on prod'. The custom event gives mutation handlers a direct, synchronous way to trigger a badge refresh immediately after they succeed — without depending on the websocket round-trip (write → Postgres → Realtime → client refresh). Both mechanisms are complementary: Realtime handles changes from other users; the custom event handles the current user's own actions with zero added latency."
+      }
+    ]
+  }
+]

@@ -1,0 +1,368 @@
+[
+  {
+    "id": "module-amtr-records",
+    "order": 60,
+    "track": "Modules",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "AMTR — Records and Signature Chain",
+    "summary": "The Airfield Management Training Record (AMTR) subsystem tracks every required training form (JQS-CFETP, DAF 623A, 797, 803, 1098, RAT, milestones) for each airfield-management member with a declarative three-party signature chain enforced by the inspection engine.",
+    "concept": "<p>The <strong>Airfield Management Training Record (AMTR)</strong> is the digital equivalent of the paper training binder maintained for every member of the airfield-management workforce. It replaces static spreadsheets with a structured, auditable record that enforces signature requirements, tracks recurring training due dates, and supports in-system inspections.</p><h4>Roster population</h4><p><code>syncAmtrRosterFromBase()</code> in <code>lib/supabase/amtr.ts</code> runs on every page load (for users with write access). It reads the base's <code>base_members</code> table, filters to airfield-management-eligible roles via <code>isAmtrRosterRole()</code>, and auto-creates a member record for anyone not already on the roster and not explicitly excluded. This means the AMTR roster stays aligned with Glidepath user management with no manual sync step.</p><h4>Per-year 1098 catalog</h4><p>The DAF 1098 requirements (<code>amtr_1098_catalog</code>) are scoped per base and can carry a <code>score_or_hours</code>, <code>type</code>, and <code>frequency</code>. Progress rows in <code>amtr_1098_progress</code> track <code>start_date</code>, <code>last_completed</code>, and <code>next_due</code>. The cron and the inspection engine both evaluate whether <code>next_due</code> is in the future (item still current) vs. in the past (overdue).</p><h4>Forms tracked</h4><table class='kv'><tr><th>Form</th><th>Table(s)</th><th>Notes</th></tr><tr><td>DAF 623A</td><td>amtr_623a</td><td>Narrative entries; manual vs. auto-linked (source_table); trainee + trainer initials required</td></tr><tr><td>DAF 797</td><td>amtr_797</td><td>Unit/OJT tasks; trainee → trainer → optional certifier chain</td></tr><tr><td>DAF 803</td><td>amtr_803</td><td>Evaluation results; eval_date + evaluator initials; UNSAT rows require remarks</td></tr><tr><td>DAF 1098</td><td>amtr_1098_catalog / amtr_1098_progress</td><td>Recurring training; trainee then certifier; next_due drives overdue logic</td></tr><tr><td>JQS-CFETP</td><td>amtr_jqs_catalog / amtr_jqs_progress</td><td>Task-level; core_cert caret (^) gates certifier requirement; skill-level filter</td></tr><tr><td>RAT</td><td>amtr_rat_catalog / amtr_rat_progress</td><td>Recurring annual tasks; exempt for Civilian/Contractor/Separated members</td></tr></table><h4>Signature chain</h4><p>Every signable row passes through the same three-party order: <strong>trainee initials</strong> → <strong>trainer initials</strong> → <strong>certifier initials</strong> (only where required). JQS tasks with a caret (<code>^</code>) in <code>core_cert</code> require a certifier; plain tasks do not. The 1098 uses a trainee-then-certifier model (no separate trainer). Rows brought in via bulk transcription have the certifier column deliberately cleared — the engine waives the certifier requirement for those rows.</p><h4>AMTR roles</h4><p>The AMTR role layer is separate from the main Glidepath permission matrix. <code>amtr_role_assignments</code> assigns per-base roles: <strong>trainee</strong>, <strong>trainer</strong>, <strong>certifier</strong>, <strong>NAMT</strong>, or <strong>Airfield Manager</strong>. Users with the <code>amtr:manage</code> permission (AFM / NAMT / Base Admin) bypass the role layer and act with Airfield Manager authority on every record, subject to a self-certification guard on their own record.</p><h4>Inspection engine</h4><p><code>runInspectionScan()</code> in <code>lib/amtr/inspection-engine.ts</code> is a pure function that takes an <code>InspectionScanData</code> bundle and returns a <code>Record&lt;InspectionAutoKey, AutoResult&gt;</code> — one <code>{auto, findings}</code> entry per checklist item. Items with no <code>auto_key</code> must be answered manually by the inspector. The scan covers ~15 checks across identity fields, form dates, signatures, recurring currency, milestone assignment, and monthly inspection records.</p>",
+    "code": [
+      {
+        "file": "lib/supabase/amtr.ts",
+        "caption": "AmtrMember type, AmtrRole union, and AmtrNotificationKind — the core data model shapes",
+        "from": "export type AmtrMemberStatus =",
+        "to": "export type AmtrSignableTable ="
+      },
+      {
+        "file": "lib/supabase/amtr.ts",
+        "caption": "syncAmtrRosterFromBase — auto-populates the roster from base users with eligible Glidepath roles",
+        "from": "/** Create training-record members for every eligible base user not already on",
+        "to": "return { created: rows.length, error: null }",
+        "annotations": [
+          {
+            "lines": "203-215",
+            "note": "Reads base_members, then filters to airfield-management roles via isAmtrRosterRole()"
+          },
+          {
+            "lines": "218-235",
+            "note": "Skips existing members and explicitly excluded users before inserting"
+          }
+        ]
+      },
+      {
+        "file": "lib/amtr/inspection-engine.ts",
+        "caption": "runInspectionScan — pure gap engine that pre-fills each inspection checklist item",
+        "from": "export function runInspectionScan(d: InspectionScanData): Record<InspectionAutoKey, AutoResult> {",
+        "to": "  return out\n}",
+        "annotations": [
+          {
+            "lines": "110-115",
+            "note": "Member identity check (rule 2.1) — flags missing name/rank/duty position/DAFSC/TSC"
+          },
+          {
+            "lines": "155-177",
+            "note": "JQS core task check — caret logic, skill-level gate, transcribed-row waiver"
+          },
+          {
+            "lines": "227-252",
+            "note": "1098 currency and documentation checks (rules 6.1 / 6.3 / 6.4)"
+          }
+        ]
+      },
+      {
+        "file": "app/(app)/amtr/page.tsx",
+        "caption": "Roster page — KPI strip, compliance percentage, clickable filter cards, and roster table",
+        "from": "export default function AmtrRosterPage() {",
+        "to": "  return (",
+        "annotations": [
+          {
+            "lines": "41-47",
+            "note": "syncAmtrRosterFromBase fires on every load for writers — keeps roster current automatically"
+          },
+          {
+            "lines": "62-84",
+            "note": "Builds per-member overdue/due-soon counts from 1098 and RAT progress for roster badges"
+          }
+        ]
+      }
+    ],
+    "fits": "<p>AMTR is a USAF-only module (disabled on civilian Part 139 bases). It requires the <code>amtr:view</code> / <code>amtr:write</code> / <code>amtr:manage</code> permission keys from the permission matrix. New bases receive AMTR in their <code>enabled_modules</code> via the <code>2026062000</code> backfill migration — existing bases without a non-null <code>enabled_modules</code> entry were backfilled by the same migration.</p>",
+    "quiz": [
+      {
+        "q": "In the AMTR inspection engine, which condition makes a JQS core task require a certifier signature (in addition to trainee and trainer)?",
+        "choices": [
+          "The task's core_cert value is non-empty",
+          "The task's core_cert value contains the caret character '^'",
+          "The member's skill level is 7 or higher",
+          "The task was brought in via bulk transcription"
+        ],
+        "answer": 1,
+        "explain": "jqsNeedsCertifier() in inspection-engine.ts returns true only when String(cat?.core_cert ?? '').includes('^'). A plain core_cert such as '5' or 'C' is trainer-certified only. Transcribed rows actually waive the certifier requirement (not add it)."
+      },
+      {
+        "q": "What happens to a dismissed notification when the daily reconcile cron runs and the underlying item is still owed?",
+        "choices": [
+          "The dismissed notification is left unchanged — dismiss is permanent",
+          "A second notification is created for the same item",
+          "The dismissed row is revived (dismissed_at set back to null) via upsert-on-conflict",
+          "The item is removed from the checklist until manually re-added"
+        ],
+        "answer": 2,
+        "explain": "The cron upserts with dismissed_at:null and onConflict:'recipient_user_id,dedupe_key'. An earlier ignoreDuplicates approach left dismissed rows permanently blocking re-notify; the upsert-revive pattern was introduced specifically to fix that."
+      },
+      {
+        "q": "The roster auto-sync (syncAmtrRosterFromBase) skips certain Glidepath users. Which of the following would NOT be auto-added to the AMTR roster?",
+        "choices": [
+          "A user with the Airfield Manager role",
+          "A user with the NAMT role",
+          "A user with the CES (Civil Engineer Squadron) role",
+          "A user with the Base Admin role"
+        ],
+        "answer": 2,
+        "explain": "isAmtrRosterRole() in lib/amtr/roster-roles.ts limits auto-sync to airfield-management personnel. CES, read-only, PPR, safety, ATC, and kiosk roles are excluded — they can still be added to the roster manually."
+      }
+    ]
+  },
+  {
+    "id": "module-amtr-notifications",
+    "order": 61,
+    "track": "Modules",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "AMTR — Notification and Reconcile Engine",
+    "summary": "The AMTR notification system uses a declarative reconcile model — a daily cron and an on-sign hook both compute the full set of currently-owed notifications, upsert them (reviving dismissed rows), and delete anything stale, so the notification list always reflects real-time record state.",
+    "concept": "<p>Rather than firing one-shot notifications from mutation sites, the AMTR engine treats notifications as a <strong>derived, idempotent view of record state</strong>. Two triggers recompute the full set for a member:</p><ul><li><strong>Daily fleet cron</strong> — <code>app/api/amtr-due-reconcile/route.ts</code> runs at 12:00 UTC via Vercel cron. It loops over every base, bulk-fetches all member data with 1000-row pagination, and recomputes due/overdue + signature gap notifications for every member.</li><li><strong>On-sign hook</strong> — <code>app/api/amtr-reconcile-member/route.ts</code> fires immediately after each <code>amtrSign</code> or <code>amtrReopen</code> call, scoped to a single member, so the notification list is always current after a signature without waiting for the next cron run.</li></ul><p>Both routes call the same <code>buildMemberNotifs()</code> function from <code>lib/amtr/reconcile.ts</code>, which in turn calls <code>dueItemsForMember()</code>, <code>traineeSignatureGaps()</code>, and <code>trainerSignatureGaps()</code> from the inspection engine. This co-location guarantees the cron and the on-sign path can never drift.</p><h4>Three notification categories</h4><table class='kv'><tr><th>Kind</th><th>Recipient</th><th>Trigger</th></tr><tr><td>training_due</td><td>Training team (trainee + trainers + NAMT/AFM)</td><td>1098 or RAT item is due_soon or overdue</td></tr><tr><td>signature_required</td><td>Trainee only</td><td>A supervisor has signed an item but the trainee has not countersigned</td></tr><tr><td>trainer_signature_required</td><td>All trainers/certifiers/NAMT/AFM at the base</td><td>The trainee has signed but the supervising party has not countersigned</td></tr></table><h4>Upsert-revive + delete-stale pattern</h4><p>The reconcile writes notifications in two phases. First it upserts all currently-owed rows with <code>dismissed_at: null</code> on conflict key <code>(recipient_user_id, dedupe_key)</code> — this revives any row the user previously dismissed if the item is still owed. Second it reads all existing reconcile-kind rows for the base and deletes any whose <code>recipient::dedupe_key</code> composite is not in the live set. The result is that <code>amtr_notifications</code> for reconcile kinds always equals current reality.</p><h4>1000-row pagination requirement</h4><p>Supabase caps a single query at 1000 rows. A base's <code>amtr_jqs_progress</code> table routinely exceeds that (one row per member per JQS task). The cron uses a <code>fetchAll</code> helper that loops <code>range(from, from+999)</code> until a response returns fewer than 1000 rows. Without this, members past row 1000 appear entirely unsigned, generating false-positive gap notifications for every one of their tasks.</p><h4>dedupe_key anatomy</h4><p>Dedupe keys are constructed in <code>lib/amtr/notifications.ts</code> builders and follow the pattern <code>kind:tab:itemId</code> (e.g. <code>training_due:1098:catalog-uuid</code>). For fan-out notifications (training_due and trainer_signature_required, which go to multiple recipients), the cron appends <code>:userId</code> so each recipient gets an independent row — otherwise a single dismiss for one recipient would block re-notify for all others.</p>",
+    "code": [
+      {
+        "file": "lib/amtr/reconcile.ts",
+        "caption": "buildMemberNotifs — core of the declarative reconcile; produces the full notification + liveKeys set for one member",
+        "annotations": [
+          {
+            "lines": "33-66",
+            "note": "Returns both the notifs to upsert and the liveKeys set used to identify stale rows for deletion"
+          },
+          {
+            "lines": "57-64",
+            "note": "trainer_signature_required fans out to all signer UIDs, each with their own dedupe_key suffix"
+          }
+        ]
+      },
+      {
+        "file": "app/api/amtr-due-reconcile/route.ts",
+        "caption": "Daily fleet cron — pagination, bulk-fetch, upsert-revive, and delete-stale pattern",
+        "from": "  for (const [baseId, baseMembers] of Array.from(byBase.entries())) {",
+        "to": "      resolved += chunk.length\n      }\n    } catch (e) {",
+        "annotations": [
+          {
+            "lines": "62-70",
+            "note": "fetchAll loops in 1000-row pages — critical to avoid silent truncation on large bases"
+          },
+          {
+            "lines": "138-143",
+            "note": "Upsert with dismissed_at:null revives previously dismissed rows if the item is still owed"
+          },
+          {
+            "lines": "151-174",
+            "note": "Delete-stale pass: any existing reconcile notification not in liveKeys is removed"
+          }
+        ]
+      },
+      {
+        "file": "lib/amtr/notifications.ts",
+        "caption": "Message builders and fan-out firing helpers (fireToRecipient, fireToTrainingTeam, fireToAllTrainers)",
+        "from": "export function buildTrainingDue(",
+        "to": "export async function fireToAllTrainers("
+      },
+      {
+        "file": "lib/amtr/inspection-engine.ts",
+        "caption": "dueItemsForMember and traineeSignatureGaps — the pure functions feeding buildMemberNotifs",
+        "from": "/** Due-soon / overdue recurring items (1098 + RAT) for a member.",
+        "to": "  return out\n}\n\n/** The mirror of traineeSignatureGaps"
+      }
+    ],
+    "fits": "<p>The on-sign reconcile endpoint (<code>/api/amtr-reconcile-member</code>) uses the caller's RLS-scoped session to verify access to the member, then switches to a service-role client to fan notifications out to other recipients — trainers at the same base. This two-client pattern keeps access control intact while permitting cross-user notification writes.</p>",
+    "quiz": [
+      {
+        "q": "Why does the daily AMTR cron paginate its database queries in 1000-row increments?",
+        "choices": [
+          "To avoid hitting Vercel's 60-second function timeout on large bases",
+          "Because Supabase silently truncates a single response at 1000 rows, which would make members past that threshold appear entirely unsigned",
+          "To spread database load evenly across multiple connections",
+          "Because the Postgres RLS policy limits each query to 1000 rows per role"
+        ],
+        "answer": 1,
+        "explain": "Supabase's PostgREST layer caps a single .select() at 1000 rows by default. Without the range-loop fetchAll helper, a base with more than 1000 JQS progress rows would silently return only the first 1000 — all members past that point would appear as having no JQS signatures, generating thousands of false-positive gap notifications."
+      },
+      {
+        "q": "A trainee dismisses a 'training_due' notification for a 1098 item that is still overdue. What happens the next time the daily cron runs?",
+        "choices": [
+          "The dismissed notification stays dismissed permanently",
+          "A new notification is created with a different dedupe_key",
+          "The dismissed notification is revived (dismissed_at set to null) by the upsert-on-conflict",
+          "The item is removed from the overdue list until the trainee manually re-opens it"
+        ],
+        "answer": 2,
+        "explain": "The upsert includes dismissed_at:null and targets onConflict:'recipient_user_id,dedupe_key'. When the same dedupe_key already exists (even dismissed), the UPDATE sets dismissed_at back to null, effectively reviving the notification. The earlier ignoreDuplicates approach left dismissed rows permanently blocking re-notify — this was the bug it fixed."
+      },
+      {
+        "q": "The on-sign reconcile endpoint (/api/amtr-reconcile-member) uses two different Supabase clients. What is the purpose of the service-role client?",
+        "choices": [
+          "To bypass rate limiting on the amtr_notifications table",
+          "To read the member record without triggering RLS policies",
+          "To write notifications to other recipients (trainers) who are outside the caller's own RLS scope",
+          "To access the amtr_audit_log table, which is only readable by service role"
+        ],
+        "answer": 2,
+        "explain": "The trainer_signature_required notification fans out to every trainer at the base. Those trainer rows are not 'owned' by the signing user, so an RLS-scoped user client cannot write them. The route verifies the caller's access via the user client first, then switches to the service-role client only for the notification writes."
+      }
+    ]
+  },
+  {
+    "id": "module-wildlife-bash",
+    "order": 65,
+    "track": "Modules",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Wildlife / BASH",
+    "summary": "The Wildlife / Bird-wildlife Aircraft Strike Hazard (BASH) module records sightings and strike reports for 270+ species, maintains a Bird/Wildlife Condition (BWC) history, and renders a Mapbox heatmap — the only place in the app that uses Mapbox rather than Google Maps, due to government-network compatibility requirements.",
+    "concept": "<p>The <strong>Wildlife / BASH module</strong> implements DAFMAN 91-212 and FAA AC 150/5200-33C requirements for wildlife hazard tracking. It is organized into four tabs: <strong>Log</strong> (combined sighting + strike feed), <strong>Heatmap</strong>, <strong>Analytics</strong>, and <strong>Reports</strong>.</p><h4>Two record types</h4><p><strong>Sightings</strong> (<code>wildlife_sightings</code>) record observed wildlife: species, count, location, behavior, dispersal method, and whether the dispersal was effective. Each sighting can link to an originating airfield check, inspection, or discrepancy via FK columns. <strong>Strikes</strong> (<code>wildlife_strikes</code>) are full Aircraft/Engine strike reports including aircraft type, phase of flight, parts struck/damaged, damage level, engine ingestion, flight effect, repair cost, and whether remains were collected and sent to a lab for identification. Strikes optionally link to a prior sighting.</p><h4>BWC history</h4><p>The Bird/Wildlife Condition (<code>bwc_history</code>) table stores each change to the base's active BWC value with a source (e.g., <code>sighting</code> or <code>status_update</code>), a source entity ID, and the user who made the change. This provides a full audit trail of condition changes throughout the day, not just the current value.</p><h4>Why Mapbox (not Google Maps)</h4><p><code>WildlifeHeatmap</code> in <code>components/wildlife/wildlife-heatmap.tsx</code> is the only component in the codebase that uses Mapbox GL. Google Maps JS API does not have a native heatmap layer that performs acceptably on satellite imagery at airfield zoom levels. Mapbox was tested and accepted on the AF network for this specific use case (canvas-2D rendering). Mapbox's WebGL renderer did encounter government-network throttling in other contexts, but the heatmap tile loading worked. All other 13 maps in the application use Google Maps.</p><h4>Heatmap data model</h4><p><code>fetchHeatmapData()</code> in <code>lib/supabase/wildlife.ts</code> returns a flat array of <code>{lat, lng, weight, species, type}</code> points. Sightings use <code>count_observed</code> as weight; strikes use <code>number_struck * 3</code> — weighting strikes three times higher visually reflects their greater operational significance. The Mapbox layer transitions from a heatmap at low zoom to individual circle points (with click popups) at zoom ≥ 14.</p><h4>Species picker</h4><p><code>components/wildlife/species-picker.tsx</code> provides search-as-you-type over 270+ species with group categorization. The species list is embedded in the component rather than fetched from the database, so it works offline.</p><h4>WHMP (Part 139 only)</h4><p>The Wildlife Hazard Management Plan page (<code>/wildlife/whmp</code>) is gated to civilian Part 139 airports. It implements a one-per-year assessment model (mirroring the AEP/SMS plan pattern) with versioned supersedes via <code>replaced_by_id</code>. Each assessment carries hazardous-species entries with hazard level, attractants, and mitigations, plus finding rows that can be promoted to SMS hazards via a deep-link URL built by <code>buildSmsHazardPromoteUrl()</code>.</p>",
+    "code": [
+      {
+        "file": "lib/supabase/wildlife.ts",
+        "caption": "WildlifeSightingRow and WildlifeStrikeRow types — the full data shapes for both record types",
+        "from": "export type WildlifeSightingRow = {",
+        "to": "export type BwcHistoryRow = {"
+      },
+      {
+        "file": "lib/supabase/wildlife.ts",
+        "caption": "fetchHeatmapData — builds the GeoJSON point array powering the Mapbox heatmap layer",
+        "from": "export async function fetchHeatmapData(",
+        "to": "  return points\n}"
+      },
+      {
+        "file": "components/wildlife/wildlife-heatmap.tsx",
+        "caption": "WildlifeHeatmap component — Mapbox map initialization, heatmap + circle layers, and the Mapbox-only token guard",
+        "from": "export function WildlifeHeatmap({ baseId }: Props) {",
+        "to": "  return (",
+        "annotations": [
+          {
+            "lines": "50-69",
+            "note": "heatmap layer paint config uses hex literals — Mapbox paint props cannot resolve CSS variables"
+          },
+          {
+            "lines": "73-89",
+            "note": "Circle layer activates at zoom 14 with click popup — transitions from heatmap to individual points"
+          },
+          {
+            "lines": "115-134",
+            "note": "Map center defaults to first runway's midpoint, falls back to CONUS center lat/lng"
+          }
+        ]
+      }
+    ],
+    "fits": "<p>Both <code>WildlifeSightingRow</code> and <code>WildlifeStrikeRow</code> carry a <code>base_id</code> FK and are covered by base-scoped RLS. The <code>logActivity()</code> call in <code>createSighting</code> and <code>createStrike</code> writes to the Events Log so wildlife activity appears in the daily audit trail. Photos attach via the standard <code>photos</code> table using <code>discrepancy_id</code>/<code>check_id</code>/<code>inspection_id</code> FK columns.</p>",
+    "quiz": [
+      {
+        "q": "In fetchHeatmapData, why are strike points given a weight of number_struck * 3 rather than just number_struck?",
+        "choices": [
+          "To compensate for the heatmap-intensity interpolation at low zoom levels",
+          "Because the DAFMAN 91-212 weighting formula specifies a 3x multiplier for engine ingestion events",
+          "To visually reflect the greater operational significance of strikes versus sightings in the density map",
+          "To match the circle-radius interpolation formula used by the Mapbox circle layer"
+        ],
+        "answer": 2,
+        "explain": "The comment in fetchHeatmapData says 'weight strikes higher' — this is a deliberate UX decision so strike locations stand out relative to sighting clusters on the same heatmap, reflecting that a strike is a more significant hazard event than a sighting."
+      },
+      {
+        "q": "Why is the wildlife heatmap the only map in Glidepath that uses Mapbox GL instead of Google Maps?",
+        "choices": [
+          "Google Maps JS API does not support satellite imagery at the required zoom levels",
+          "Google Maps has a native heatmap layer but it requires a paid Maps Platform tier not available to the AF",
+          "Mapbox's canvas-2D rendering worked on the AF network for this use case; Mapbox WebGL had network-throttling issues in other contexts but heatmap tile loading was acceptable",
+          "Mapbox is required by DAFMAN 91-212 for wildlife hazard depictions on military airfields"
+        ],
+        "answer": 2,
+        "explain": "Per project memory (CLAUDE.md): Google Maps is used on all 13 other maps. Mapbox GL's WebGL renderer encounters government-network throttling in general, but the wildlife heatmap's canvas-2D tile loading worked acceptably. Google Maps lacks a suitable native heatmap layer for this visualization."
+      },
+      {
+        "q": "The Mapbox heatmap paint config uses hex literals (#10B981, #EF4444, etc.) instead of CSS variables. Why?",
+        "choices": [
+          "Mapbox GL does not resolve CSS custom properties (var(--...)) in paint expressions",
+          "CSS variables would not work in the heatmap-color interpolation because it uses a linear gradient",
+          "The hex literals match the Tailwind CSS palette exactly, so theme switching is not needed",
+          "CSS variables are only supported in the circle layer, not the heatmap layer type"
+        ],
+        "answer": 0,
+        "explain": "The code comment at line 214-218 explicitly states: 'The Mapbox heatmap-color paint config above (line 57-65) keeps its hex literals because Mapbox paint props don't resolve CSS vars — but the on-screen legend can.' The legend above the map uses CSS variables for theme adaptation while the Mapbox layer config must use static hex values."
+      }
+    ]
+  },
+  {
+    "id": "module-waivers",
+    "order": 66,
+    "track": "Modules",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Waivers",
+    "summary": "The Waivers module manages the full AF Form 505 lifecycle — six classifications, seven statuses, criteria and standards tracking, multi-office coordination, annual review chain, and a client-side PDF generator — for airfield siting deviations from UFC 3-260-01 and related standards.",
+    "concept": "<p>An <strong>airfield waiver</strong> is an approved deviation from a UFC or other airfield-design standard — typically a siting constraint (runway safety area, obstruction clearance, taxilane width) that cannot be corrected immediately or is deemed acceptable based on a risk assessment. Waivers are documented on AF Form 505 and must be reviewed annually when active.</p><h4>Six classifications</h4><table class='kv'><tr><th>Classification</th><th>Description</th></tr><tr><td>permanent</td><td>No expiration; stable deviation unlikely to change; no annual review required</td></tr><tr><td>temporary</td><td>Time-bounded; requires annual review and a corrective action plan</td></tr><tr><td>construction</td><td>Tied to a specific construction project</td></tr><tr><td>event</td><td>One-time event deviation</td></tr><tr><td>extension</td><td>Extends the validity of an existing waiver</td></tr><tr><td>amendment</td><td>Modifies the scope or conditions of an existing waiver</td></tr></table><h4>Seven statuses</h4><p><code>draft</code> → <code>pending</code> → <code>approved</code> → <code>active</code> → <code>completed</code> (closed) / <code>cancelled</code> / <code>expired</code>. Status transitions are managed by <code>updateWaiverStatus()</code> which also stamps <code>date_submitted</code> on the pending transition and <code>date_approved</code> on the approved transition.</p><h4>Waiver number auto-generation</h4><p>If no <code>waiver_number</code> is supplied, <code>createWaiver()</code> generates one in the format <code>{prefix}-{ICAO}-{YY}-{4-char-ts36}</code> where prefix is P/T/C/E/X/A by classification. This gives waivers a human-readable, sortable identifier that encodes classification and year.</p><h4>Criteria and standards</h4><p><code>waiver_criteria</code> rows reference the applicable design standard (<code>ufc_3_260_01</code>, <code>ufc_3_260_04</code>, <code>ufc_3_535_01</code>, or <code>other</code>) with a specific paragraph reference and description. Multiple criteria rows can be attached to one waiver, enabling complex multi-standard deviations.</p><h4>Multi-office coordination</h4><p><code>waiver_coordination</code> tracks sign-off from up to six offices: Civil Engineer (BCE), Airfield Manager, Airfield Ops/TERPS, Base Safety, Installation Commander, and Other. Each office row tracks coordinator name, coordinated date, status (<code>pending</code> / <code>concur</code> / <code>non_concur</code>), and comments.</p><h4>Annual review chain</h4><p>Each <code>waiver_reviews</code> row covers one calendar year. The reviewer captures a recommendation (<code>retain</code>, <code>modify</code>, <code>cancel</code>, <code>convert_to_temporary</code>, <code>convert_to_permanent</code>), confirms mitigation is verified, optionally records a facilities board presentation, and updates project status. Creating a review automatically sets the waiver's <code>next_review_due</code> to the following year's 1 February. The annual review page (<code>/waivers/annual-review/[year]</code>) shows all waivers with their review status for a given year, enabling batch annual sign-off.</p><h4>Expiration proximity coloring</h4><p>The waiver list page applies color to expiration dates based on proximity: red ≤ 30 days, amber ≤ 90 days, muted ≤ 365 days, dimmed beyond that — surfacing expiring waivers without requiring the user to read every date.</p><h4>PDF generator</h4><p><code>generateWaiverPdf()</code> in <code>lib/waiver-pdf.ts</code> builds a letter-format PDF with a blue header bar, field-pair layout, criteria and coordination autoTable sections, review history, photo grid, and attachment list. It follows the standard <code>{ doc, filename }</code> return convention used by all 20 PDF generators in the codebase.</p>",
+    "code": [
+      {
+        "file": "lib/supabase/waivers.ts",
+        "caption": "WaiverRow type and createWaiver with waiver_number auto-generation",
+        "from": "export type WaiverRow = {",
+        "to": "  return { data: created, error: null }\n}"
+      },
+      {
+        "file": "lib/supabase/waivers.ts",
+        "caption": "createWaiverReview — stamps next_review_due on the parent waiver after each annual review",
+        "from": "export async function createWaiverReview(input: {",
+        "to": "  return { data: data as WaiverReviewRow, error: null }\n}"
+      },
+      {
+        "file": "lib/waiver-pdf.ts",
+        "caption": "generateWaiverPdf — PDF structure with field-pair layout, criteria/coordination/review autoTables, and photo grid",
+        "from": "export function generateWaiverPdf(input: WaiverPdfInput) {",
+        "to": "  addPageNumber()\n\n  // Save\n  const filename",
+        "annotations": [
+          {
+            "lines": "51-92",
+            "note": "Helper functions: drawSectionHeader, drawFieldPair, drawWrappedField, checkPageBreak — all shared across this generator's sections"
+          },
+          {
+            "lines": "143-172",
+            "note": "Blue header bar rendered via doc.rect fill + white text — classification and status inline"
+          },
+          {
+            "lines": "207-229",
+            "note": "autoTable for criteria rows with CRITERIA_SOURCE_LABELS mapping UFC references to human labels"
+          }
+        ]
+      },
+      {
+        "file": "app/(app)/waivers/page.tsx",
+        "caption": "Waiver list page — expiration proximity coloring and status/classification filter chips",
+        "from": "function expirationColor(expirationDate: string | null, status: string): string {",
+        "to": "const FILTERS = ['all', 'draft', 'pending', 'approved', 'active', 'completed', 'expired', 'cancelled'] as const"
+      }
+    ],
+    "fits": "<p>Waivers use the standard base-scoped RLS pattern (<code>base_id</code> FK on every table) with <code>user_has_permission(uid, 'waivers:write')</code> gating mutations. The <code>waiver_attachments</code> bucket in Supabase Storage uses path-scoped policies under <code>waiver-attachments/{waiver_id}/</code>. The annual-review page at <code>/waivers/annual-review/[year]</code> is linked from the waiver list's calendar icon and from the sidebar. Civilian Part 139 airports see this module but with FAA terminology (criteria sources map to FAA ACs rather than UFCs in the dual-mode framework).</p>",
+    "quiz": [
+      {
+        "q": "After calling createWaiverReview() for a review in year 2025, what value does the engine write to the parent waiver's next_review_due field?",
+        "choices": [
+          "2025-12-31 (end of the review year)",
+          "2026-01-01 (start of the following year)",
+          "2026-02-01 (first of February in the following year)",
+          "null, because next_review_due is only set on annual review approval, not creation"
+        ],
+        "answer": 2,
+        "explain": "createWaiverReview() computes nextReviewDue as `${input.review_year + 1}-02-01` and writes it to the waiver immediately. So a 2025 review sets next_review_due to 2026-02-01."
+      },
+      {
+        "q": "A waiver with classification 'permanent' is created. What waiver_number prefix does the auto-generation logic assign?",
+        "choices": [
+          "P",
+          "M (for Military Permanent)",
+          "A (for Amendment — permanent waivers are amendments to the UFC standard)",
+          "null — permanent waivers require a manually assigned number"
+        ],
+        "answer": 0,
+        "explain": "In createWaiver(), the prefix switch maps 'permanent' → 'P', 'temporary' → 'T', 'construction' → 'C', 'event' → 'E', 'extension' → 'X', and defaults to 'A' for 'amendment' and any unrecognized value. A permanent waiver gets prefix 'P'."
+      },
+      {
+        "q": "The waiver PDF's Criteria & Standards section uses autoTable with a CRITERIA_SOURCE_LABELS mapping. Which criteria source key maps to 'UFC 3-260-01'?",
+        "choices": [
+          "ufc_3260_01",
+          "ufc_3_260_01",
+          "UFC_3_260_01",
+          "airfield_siting_ufc"
+        ],
+        "answer": 1,
+        "explain": "CRITERIA_SOURCE_LABELS in lib/waiver-pdf.ts maps ufc_3_260_01 → 'UFC 3-260-01'. This matches the WaiverCriteriaSource type in lib/supabase/types.ts. The underscore-separated form with lowercase is the stored enum value."
+      }
+    ]
+  }
+]

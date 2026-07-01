@@ -74,6 +74,12 @@ docs/*_1.png
 public/training/Screenshot *.png
 docs/references/
 
+# Sensitive — demo/kiosk credential cheat-sheet; keep local, never commit
+docs/DEMO_LOGINS.md
+# Local design-source masters + working binaries — not shipped app assets
+docs/_logo_src/
+docs/Training Record.xlsx
+
 # Interactive codebase guide — generated artifact embeds real source code.
 # Keep it LOCAL: regenerate with `node docs/build-glidepath-guide.mjs`.
 # (The generator script itself is safe to commit; the built HTML is not.)

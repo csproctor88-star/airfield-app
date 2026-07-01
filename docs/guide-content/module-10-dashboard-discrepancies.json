@@ -1,0 +1,191 @@
+[
+  {
+    "id": "module-dashboard",
+    "order": 10,
+    "track": "Modules",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Dashboard",
+    "summary": "The Dashboard is the operations hub for Airfield Managers — surfacing today's inspection status, last-completed check, module shortcut tiles, inline shift checklist, and the Out-of-Office / Close-Airfield toggles that broadcast a full-screen overlay to every connected user.",
+    "concept": "<p>The Dashboard (<code>/dashboard</code>) is a read-mostly KPI surface backed entirely by <code>lib/dashboard-context.tsx</code>, which holds the live <code>airfield_status</code> row in React state and keeps it current via a Supabase Realtime channel (<code>postgres_changes</code> on <code>UPDATE</code> events filtered to <code>base_id</code>). A 30-second visibility-gated polling fallback covers the rare case where Realtime is unavailable.</p><h4>Key surfaces</h4><ul><li><strong>Inspection status strip</strong> — two clickable tiles (Airfield / Lighting) that show today's inspection state (<em>Not Started / In Progress / Complete</em>) using a 0600 local-time reset scoped to the installation's timezone.</li><li><strong>Module shortcut tiles</strong> — an auto-fill grid linking to Checks, Discrepancies, Contractors, Shift Checklist, QRCs, SCN, PPR, and BASH. Each tile is gated by <code>isModuleEnabled()</code> so disabled modules never appear.</li><li><strong>Out-of-Office toggle</strong> — requires <code>airfield_status:write</code>. On activation, writes <code>afm_out_of_office: true</code> and <code>afm_ooo_message</code> to the <code>airfield_status</code> row, then logs a manual activity-log entry. The Airfield Status page shows a full-screen overlay to all users via Realtime.</li><li><strong>Close-Airfield toggle</strong> — also requires <code>airfield_status:write</code>. On activation it <em>also</em> clears all <code>runway_statuses</code>, RSC, RCR, and BWC so the next opening check starts from a blank slate. Clearing is an intentional design choice — historical Events Log rows are unaffected.</li><li><strong>Inline dialogs</strong> — Personnel on Airfield (calls <code>createContractor</code>), Shift Checklist (three-state toggle with progress bar, 0600 reset, per-item N/A support), and QRCs (template picker + active-exec list).</li></ul><h4>Key tables / columns</h4><table class='kv'><tr><th>Table</th><th>Relevant columns</th></tr><tr><td><code>airfield_status</code></td><td><code>afm_out_of_office</code>, <code>afm_ooo_message</code>, <code>afm_closed</code>, <code>afm_closed_message</code>, <code>runway_statuses</code> (JSONB), <code>rsc_condition</code>, <code>rcr_*</code>, <code>bwc_value</code></td></tr><tr><td><code>airfield_checks</code></td><td><code>check_type</code>, <code>completed_at</code> — queried for the last-check pill</td></tr><tr><td><code>inspections</code></td><td><code>inspection_type</code>, <code>inspection_date</code>, <code>status</code> — queried for the inspection strip</td></tr><tr><td><code>shift_checklist_items</code> / <code>shift_checklist_responses</code></td><td>inline checklist dialog</td></tr></table><p>The <strong>local-update guard</strong> in <code>DashboardProvider.refreshStatus</code> skips a polling refresh if a local mutation happened within the last 15 seconds (<code>lastLocalUpdate.current</code>), preventing optimistic-update races where the poll would overwrite what the user just typed.</p>",
+    "code": [
+      {
+        "file": "lib/dashboard-context.tsx",
+        "caption": "DashboardProvider — Realtime subscription and the setAfmClosed implementation",
+        "from": "// Realtime: subscribe to airfield_status UPDATE events for this base",
+        "to": "return () => { supabase.removeChannel(channel) }\n  }, [installationId])",
+        "note": "The channel filter `base_id=eq.${installationId}` ensures each base only receives its own status updates.",
+        "annotations": [
+          { "lines": "141-187", "note": "Supabase Realtime channel: listens for UPDATE events on airfield_status; unpacks every field (advisories, runways, ARFF, RSC/RCR/BWC, OOO, closed) into local state so all consumers re-render." }
+        ]
+      },
+      {
+        "file": "lib/dashboard-context.tsx",
+        "caption": "setAfmClosed — clears runway/RSC/RCR/BWC on close to ensure a clean opening check",
+        "from": "// Activate / deactivate \"closed for the day\". On activate, clear per-runway",
+        "to": "await updateAirfieldStatus(patch, installationId)\n  }, [installationId, runwayLabels, runwayStatuses])",
+        "note": "Only the close path clears runway/condition fields; the deactivate path leaves them blank so operators set fresh values during the opening check.",
+        "annotations": [
+          { "lines": "370-415", "note": "On `active=true` each runway in runwayLabels is reset to status='open' with null remarks, then all RSC/RCR/BWC fields are nulled in the DB patch." }
+        ]
+      },
+      {
+        "file": "app/(app)/dashboard/page.tsx",
+        "caption": "Inspection status strip and last-check pill — 0600L reset and Realtime refresh",
+        "from": "// --- Load Last Check Completed ---",
+        "to": "return () => { supabase.removeChannel(channel) }\n  }, [installationId, loadLastCheck])",
+        "note": "The 0600L reset works by computing the local date in the installation's timezone; if the local hour is before 6, the previous calendar day is used.",
+        "annotations": [
+          { "lines": "65-80", "note": "loadLastCheck: queries airfield_checks ordered by completed_at DESC limit 1, formats with CHECK_TYPE_CONFIG label." },
+          { "lines": "85-102", "note": "Today's inspection derivation: converts UTC now to installation timezone, rolls back one day when hour < 6, then matches inspections by inspection_date string." },
+          { "lines": "104-119", "note": "Realtime INSERT listener on airfield_checks: triggers loadLastCheck so the last-check pill updates the moment a new check is filed by any user." }
+        ]
+      },
+      {
+        "file": "app/(app)/dashboard/page.tsx",
+        "caption": "Out-of-Office activation — writes to airfield_status and logs an activity entry",
+        "from": "onClick={async () => {\n                  await setAfmOutOfOffice(true, oooMessage)",
+        "to": "toast.success('Out of Office activated')\n                }}",
+        "note": "The activity-log entry ('AMOPS out of office, Command Post notified') is a manual entry distinct from the status write — both happen inside the click handler.",
+        "annotations": [
+          { "lines": "447-449", "note": "setAfmOutOfOffice + logManualEntry are called sequentially; the Realtime channel propagates the status change to all tabs." }
+        ]
+      }
+    ],
+    "fits": "<p>The Dashboard does not write to the activity log automatically — all activity-log entries from Dashboard actions are <strong>manual</strong> entries written by <code>logManualEntry()</code> in <code>lib/supabase/activity.ts</code>, ensuring the Events Log records the operator's intent text rather than a raw field change.</p><p>The <code>DashboardProvider</code> is mounted above the entire authenticated layout in <code>app/(app)/layout.tsx</code>, so every authenticated page can call <code>useDashboard()</code> to read runway status, ARFF category, RSC, or OOO state — for example, the Airfield Status page (<code>/</code>) renders the OOO overlay using this context. The Airfield Checks module uses the <strong>last-check Realtime channel</strong> on the Dashboard to update the header pill without a full page reload. The Shift Checklist dialog reuses the same <code>shift_checklist_items</code> / responses tables as the dedicated <code>/shift-checklist</code> page, with a 0600L reset scoped to <code>currentInstallation.timezone</code>. Personnel on Airfield entries created from the Dashboard tile land in the same <code>contractors</code> table as <code>/contractors</code>.</p>",
+    "quiz": [
+      {
+        "q": "When `setAfmClosed(true, message)` is called, which fields are explicitly cleared in the DB update patch?",
+        "choices": [
+          "Only afm_closed and afm_closed_message",
+          "runway_statuses, runway_status, rsc_condition, rsc_updated_at, all rcr_* columns, bwc_value, bwc_updated_at — in addition to the closed flag/message",
+          "All fields in airfield_status are reset to null",
+          "Only RSC and BWC are cleared; runway statuses are preserved"
+        ],
+        "answer": 1,
+        "explain": "The setAfmClosed callback builds a patch that includes runway_statuses (each set to status='open' with null remarks), runway_status, rsc_condition, rsc_updated_at, rcr_touchdown, rcr_midpoint, rcr_rollout, rcr_condition, rcr_updated_at, bwc_value, and bwc_updated_at, plus the closed flag and message. This ensures a clean slate for the next opening check."
+      },
+      {
+        "q": "Why does `refreshStatus` in DashboardProvider skip the DB fetch when `Date.now() - lastLocalUpdate.current < 15000`?",
+        "choices": [
+          "To reduce Supabase read quota usage for cost savings",
+          "To prevent a polling refresh from overwriting optimistic state right after a local mutation",
+          "Because Realtime always fires within 15 seconds and polling is redundant",
+          "To throttle writes to the airfield_status table"
+        ],
+        "answer": 1,
+        "explain": "When an Airfield Manager changes runway status or RSC, the context immediately applies the new value optimistically. A polling refresh arriving within the next 15 seconds could overwrite that state with the pre-mutation DB value, creating a visible flicker. The guard short-circuits the poll during that window."
+      },
+      {
+        "q": "Which permission key gates both the Out-of-Office toggle and the Close-Airfield toggle on the Dashboard?",
+        "choices": [
+          "PERM.DASHBOARD_WRITE",
+          "PERM.AIRFIELD_STATUS_WRITE",
+          "PERM.BASE_SETUP_WRITE",
+          "PERM.REPORTS_READ"
+        ],
+        "answer": 1,
+        "explain": "Line 35 of dashboard/page.tsx: `const canToggleOoo = has(PERM.AIRFIELD_STATUS_WRITE)`. Both OOO and Close-Airfield buttons check this same flag, because both operations write the airfield_status row."
+      }
+    ]
+  },
+  {
+    "id": "module-discrepancy-tracking",
+    "order": 11,
+    "track": "Modules",
+    "mode": "both",
+    "kind": "lesson",
+    "title": "Discrepancy Tracking",
+    "summary": "The discrepancy module is the primary airfield defect-tracking workflow — covering creation with auto-assigned display IDs, a five-state workflow rail between AMOPS and CES, a column-scoped SECURITY DEFINER RPC that lets CES personnel write only their permitted fields, and a full audit trail in the status_updates table.",
+    "concept": "<p>Discrepancies (<code>/discrepancies</code>) implement the DAFMAN 13-204 defect-reporting workflow. When an Airfield Manager identifies a hazard, they open a new discrepancy at <code>/discrepancies/new</code>. The system assigns a <code>display_id</code> in the format <code>D-YYYY-XXXX</code> (where XXXX is a 4-char base-36 timestamp fragment) and sets <code>status = 'open'</code> with an initial <code>current_status</code> of <code>submitted_to_afm</code> or <code>submitted_to_ces</code> depending on the type-to-shop mapping.</p><h4>Two status dimensions</h4><ul><li><strong><code>status</code></strong> — the lifecycle status: <code>open</code>, <code>completed</code>, <code>cancelled</code>. Written only by Airfield Manager-role users via <code>updateDiscrepancyStatus()</code>.</li><li><strong><code>current_status</code></strong> — the workflow position within an open discrepancy. Five values in <code>CURRENT_STATUS_OPTIONS</code>: <code>submitted_to_afm</code>, <code>submitted_to_ces</code>, <code>awaiting_action_by_ces</code>, <code>waiting_for_project</code>, <code>work_completed_awaiting_verification</code>.</li></ul><h4>CES write path vs. full write path</h4><p>CES personnel have a restricted role that cannot satisfy the <code>discrepancies:write</code> RLS policy. They must use the <strong><code>ces_update_discrepancy</code> SECURITY DEFINER RPC</strong>, which is column-scoped: it only allows updating <code>current_status</code> (restricted to the three CES-side values), <code>resolution_notes</code>, and an optional note that lands in <code>status_updates</code>. Airfield Managers use the direct <code>updateDiscrepancy()</code> function, which goes through the normal RLS write path. The <code>cesUpdateDiscrepancy()</code> client wrapper in <code>lib/supabase/discrepancies.ts</code> calls this RPC.</p><h4>KPI counters and the list page</h4><p>The list page (<code>/discrepancies/page.tsx</code>) defines three KPI buckets: <em>AFM</em> (<code>submitted_to_afm</code>), <em>CES</em> (<code>submitted_to_ces | awaiting_action_by_ces | waiting_for_project</code>), and <em>AMOPS</em> (<code>work_completed_awaiting_verification</code>). Clicking a KPI chip sets a filter that narrows the list. The <code>fetchPendingVerificationCount()</code> function powers the sidebar badge count for work completed awaiting verification.</p><h4>No list-level Realtime</h4><p>The discrepancy list is <em>not</em> a Realtime subscription. It loads on mount and on manual refresh. Only the sidebar badge count uses a custom-event bridge from mutation sites to update without a full poll. The detail page (<code>/discrepancies/[id]</code>) also re-fetches on demand rather than subscribing.</p><h4>Key tables</h4><table class='kv'><tr><th>Table</th><th>Purpose</th></tr><tr><td><code>discrepancies</code></td><td>One row per defect; <code>display_id</code>, <code>status</code>, <code>current_status</code>, location, photos count, linked NAVAID FK</td></tr><tr><td><code>status_updates</code></td><td>Append-only audit log; <code>old_status</code>/<code>new_status</code> for lifecycle transitions, <code>notes</code> for current_status changes and manual notes</td></tr><tr><td><code>photos</code></td><td>Per-discrepancy photos keyed by <code>discrepancy_id</code> FK; storage at <code>discrepancy-photos/{id}/{ts}.ext</code> in the <code>photos</code> bucket</td></tr></table><h4>CES Work Orders (/ces)</h4><p>The <code>/ces</code> page is the Airfield Manager role's dedicated landing page for CES users. It filters <code>discrepancies</code> to only those with a CES-side <code>current_status</code> that are still <code>status='open'</code> and have an <code>assigned_shop</code>. Shop tabs are driven by the per-base <code>ceShops</code> list from <code>useInstallation()</code>. Status transitions from this page call <code>cesUpdateDiscrepancy()</code> through <code>StatusUpdateModal</code>.</p>",
+    "code": [
+      {
+        "file": "lib/supabase/discrepancies.ts",
+        "caption": "createDiscrepancy — display_id generation, default current_status, and photo_count init",
+        "from": "export async function createDiscrepancy(input: {",
+        "to": "return { data: created, error: null }\n}",
+        "note": "The display_id uses base-36 encoding of the last 4 characters of the epoch timestamp — not a sequential counter, so there are no gaps or collisions across concurrent inserts.",
+        "annotations": [
+          { "lines": "138-141", "note": "display_id: D-{year}-{ts}. `ts = now.getTime().toString(36).slice(-4).toUpperCase()` — base-36 last-4 of epoch ms." },
+          { "lines": "148-149", "note": "Default current_status is submitted_to_afm unless the caller overrides it (e.g. when the type-to-shop map resolves a CES shop, the new-discrepancy page sets submitted_to_ces)." },
+          { "lines": "154", "note": "work_order_number is initialized to 'Pending' — CES will update it when a real WO is assigned." }
+        ]
+      },
+      {
+        "file": "lib/supabase/discrepancies.ts",
+        "caption": "cesUpdateDiscrepancy — SECURITY DEFINER RPC for column-scoped CES writes",
+        "from": "/**\n * CES write path — calls the SECURITY DEFINER RPC so `ces` users",
+        "to": "return { data: data as DiscrepancyRow | null, error: null }\n}",
+        "note": "The RPC `ces_update_discrepancy` lives in the DB and enforces its own column-scope guard; the client never tries a direct UPDATE on discrepancies for the CES role.",
+        "annotations": [
+          { "lines": "259-268", "note": "Comment explains exactly which current_status values the RPC permits (awaiting_action_by_ces, waiting_for_project, work_completed_awaiting_verification) — this is enforced in the DB function, not here." },
+          { "lines": "281-288", "note": "The RPC call passes p_id, p_current_status, p_resolution_notes, p_note. The DB function writes status_updates atomically so the audit row and the discrepancy update are in the same transaction." }
+        ]
+      },
+      {
+        "file": "lib/supabase/discrepancies.ts",
+        "caption": "fetchPendingVerificationCount — sidebar badge for work awaiting AMOPS verification",
+        "from": "// Count of discrepancies that have been marked work-complete by CES and",
+        "to": "return count ?? 0\n}",
+        "note": "Filters both status='open' AND current_status='work_completed_awaiting_verification' — without the status guard, closed rows with a stale current_status would inflate the badge.",
+        "annotations": [
+          { "lines": "686-696", "note": "Uses head:true count query (no rows fetched) for minimal payload. Returns 0 on Supabase misconfiguration." }
+        ]
+      },
+      {
+        "file": "app/(app)/discrepancies/page.tsx",
+        "caption": "KPI bucket definitions and current_status color map on the list page",
+        "from": "type KpiKey = 'afm' | 'ces' | 'amops'",
+        "to": "const CURRENT_STATUS_SHORT: Record<string, string> = {",
+        "note": "KPI_DEFS defines which current_status enum values each bucket covers. The CES bucket spans three values because a discrepancy is 'with CES' whether it is newly submitted, actively being worked, or parked for a project.",
+        "annotations": [
+          { "lines": "41-45", "note": "KPI_DEFS: AFM=submitted_to_afm; CES=submitted_to_ces|awaiting_action_by_ces|waiting_for_project; AMOPS=work_completed_awaiting_verification." },
+          { "lines": "50-56", "note": "CURRENT_STATUS_COLORS: routes each of the five enum values to a theme token (inwork/orange/warning/purple/success) for consistent left-rail coloring." }
+        ]
+      },
+      {
+        "file": "lib/constants.ts",
+        "caption": "DISCREPANCY_TYPES and CURRENT_STATUS_OPTIONS — the canonical enum definitions",
+        "from": "// === Discrepancy Types (SRS Section 6.1) ===",
+        "to": "] as const",
+        "note": "DISCREPANCY_TYPES drives the type picker on new/edit forms, the color-coded icons in list and map views, and the defaultShop fuzzy-match on auto-assignment."
+      }
+    ],
+    "fits": "<p>The discrepancy module integrates deeply with several other modules:</p><ul><li><strong>Visual NAVAIDs</strong> (<code>/infrastructure</code>): Reporting a NAVAID outage at <code>/infrastructure</code> auto-creates a linked discrepancy and sets the feature's status to <code>inoperative</code>. Creating a discrepancy at <code>/discrepancies/new</code> with a linked feature goes the other direction — it calls <code>bulkUpdateStatus</code> and <code>createOutageEvent</code> to mark the feature inoperative and log the outage.</li><li><strong>Activity log</strong>: Status transitions (via <code>updateDiscrepancyStatus</code> and <code>cesUpdateDiscrepancy</code>) write to <code>status_updates</code>, not to <code>activity_log</code> directly. The Events Log page reads <code>status_updates</code> as part of its rollup.</li><li><strong>Photos</strong>: Photos are stored in the <code>photos</code> bucket under path <code>discrepancy-photos/{id}/{ts}.ext</code>. RLS on the bucket verifies the <code>discrepancy_id</code> UUID in the path plus <code>photos:write</code> permission.</li><li><strong>SMS Hazard promotion</strong> (civilian mode only): The detail page can promote a discrepancy to an SMS hazard via <code>createHazard()</code>, gated on <code>isCivilian(currentInstallation) &amp;&amp; has(PERM.SMS_WRITE)</code>.</li><li><strong>Sidebar badge</strong>: <code>fetchPendingVerificationCount</code> feeds the AMOPS badge. The badge refreshes via a custom-event bridge triggered by mutation sites and a 60-second polling fallback, not Realtime.</li><li><strong>PDF / Email export</strong>: Both the list and detail pages can generate a discrepancy PDF (via <code>lib/discrepancy-pdf.ts</code>) and email it through the <code>/api/send-pdf-email</code> route handler (Resend).</li></ul>",
+    "quiz": [
+      {
+        "q": "Why must CES personnel call `cesUpdateDiscrepancy()` (the SECURITY DEFINER RPC) rather than `updateDiscrepancy()` directly?",
+        "choices": [
+          "updateDiscrepancy() is too slow for CES use cases",
+          "CES users lack the discrepancies:write RLS permission that updateDiscrepancy() requires, so a direct UPDATE is blocked by RLS; the SECURITY DEFINER RPC runs with elevated privileges scoped to only the fields CES is allowed to touch",
+          "cesUpdateDiscrepancy() also sends a notification email to the Airfield Manager",
+          "updateDiscrepancy() does not write a status_updates audit row"
+        ],
+        "answer": 1,
+        "explain": "The comment in discrepancies.ts explains it directly: 'ces users (who are blocked by the RLS user_can_write gate) can update the narrow set of fields the CES workflow allows'. The SECURITY DEFINER function bypasses the RLS check but enforces its own column-scope guard in the DB function body, allowing only current_status, resolution_notes, and note."
+      },
+      {
+        "q": "A discrepancy is `status='completed'` but its `current_status` is still `work_completed_awaiting_verification`. Does `fetchPendingVerificationCount` count it in the sidebar badge?",
+        "choices": [
+          "Yes — current_status is the only filter",
+          "No — the query also filters status='open', so completed rows are excluded even if current_status was never reset",
+          "It depends on the base configuration",
+          "Yes, but only if assigned_shop is non-null"
+        ],
+        "answer": 1,
+        "explain": "fetchPendingVerificationCount explicitly adds `.eq('status', 'open')` before the `.eq('current_status', 'work_completed_awaiting_verification')` filter. The comment in the source says 'Filters status='open' so closed/cancelled rows whose current_status was never re-cleared don't pollute the badge.'"
+      },
+      {
+        "q": "When a new discrepancy is created and a Visual NAVAID feature is selected, what three side-effects happen after `createDiscrepancy()` succeeds?",
+        "choices": [
+          "An email is sent, a NOTAM is created, and the feature is marked inoperative",
+          "bulkUpdateStatus() marks selected features 'inoperative', createOutageEvent() logs an outage event per feature, and uploadDiscrepancyPhoto() uploads any attached photos",
+          "The feature is marked inoperative, a daily review record is created, and the activity log is updated",
+          "A discrepancy PDF is auto-generated, the feature status is updated, and a status_updates row is inserted"
+        ],
+        "answer": 1,
+        "explain": "After createDiscrepancy() succeeds, /discrepancies/new/page.tsx calls bulkUpdateStatus(selectedFeatureIds, 'inoperative') to mark each linked feature as inoperative, then loops over selectedFeatureIds calling createOutageEvent() for each one (with event_type='reported'). Finally it loops over photos calling uploadDiscrepancyPhoto(). All three happen client-side in sequence after the DB insert."
+      }
+    ]
+  }
+]
