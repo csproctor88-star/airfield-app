@@ -147,7 +147,12 @@ export class WriteQueue {
   private ownsItem(item: QueuedWrite, currentUserId: string | null): boolean {
     if (!this.userScoped) return true
     if (currentUserId == null) return false
-    return item.userId == null || item.userId === currentUserId
+    // An empty-string userId is treated the same as an absent one: unowned,
+    // drained best-effort under the current user. Inspection-start writes were
+    // briefly enqueued with userId '' — a non-null value that never equals the
+    // real id, so the strict check orphaned them forever (in_progress locally,
+    // nothing in the DB). Guard here so already-queued rows recover on drain.
+    return !item.userId || item.userId === currentUserId
   }
 
   // -------------------------------------------------------------------

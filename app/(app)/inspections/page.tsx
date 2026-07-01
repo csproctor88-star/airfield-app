@@ -987,6 +987,18 @@ export default function InspectionsPage() {
       }
     }
     const oiStr = oi ? `/${oi}` : ''
+    // Stamp the queued start writes with the real user id. Enqueuing with ''
+    // orphans them under the user-scoped drainer (ownsItem) — the inspection
+    // shows in_progress locally but the row never reaches the DB and the
+    // "on the airfield" events-log entry is never written.
+    let beginUserId = ''
+    try {
+      const sb = createClient()
+      if (sb) {
+        const { data: { user } } = await sb.auth.getUser()
+        beginUserId = user?.id || ''
+      }
+    } catch { /* best-effort; the ownsItem '' rescue still drains it */ }
     // Route the "on the airfield / started" entry through the offline queue
     // (like the completion entry) so an inspection begun offline still gets a
     // log when the queue drains — a direct insert would be silently lost,
@@ -1001,7 +1013,7 @@ export default function InspectionsPage() {
       createdAt: new Date().toISOString(),
     }
     void getWriteQueue()
-      .enqueueOrExecute('activity_log_insert', startActivity, { baseId: installationId || '', userId: '' })
+      .enqueueOrExecute('activity_log_insert', startActivity, { baseId: installationId || '', userId: beginUserId })
       .catch(() => {
         // Non-blocking: the inspection still proceeds locally.
       })
@@ -1036,12 +1048,27 @@ export default function InspectionsPage() {
       },
       {
         baseId: installationId || '',
-        userId: '',
+        userId: beginUserId,
         optimisticEntityId: draftId,
       },
-    ).catch(() => {
-      // NonRetriable / Conflict thrown — non-blocking: the user can
-      // still work locally. They'll see the failure in the inspector.
+    ).then((result) => {
+      // A blip between wifi and cellular (walking into / out of the building)
+      // makes the draft row queue instead of commit. Tell the user it's still
+      // saving so a start that "looks done" isn't mistaken for fully synced.
+      if (result.status === 'queued') {
+        toast.info(
+          `${label} started — it'll finish saving to the server automatically once your connection is stable. Check "Pending sync" in the header if it lingers.`,
+          { duration: 8000 },
+        )
+      }
+    }).catch((err) => {
+      // NonRetriable / Conflict (e.g. RLS) — the draft is safe locally but the
+      // server save won't retry on its own; surface it rather than swallow it.
+      const msg = err instanceof Error ? err.message : String(err)
+      toast.error(
+        `${label} started locally, but saving to the server failed (${msg}). Check "Pending sync" in the header.`,
+        { duration: 10000 },
+      )
     })
   }
 
@@ -2520,6 +2547,16 @@ export default function InspectionsPage() {
                   onClick={() => {
                     setShowCompleteConfirm(false)
                     handleComplete()
+                      .catch((err) => {
+                        // Never leave the button stuck on "Completing…". A thrown
+                        // write — e.g. the file UPDATE hitting a draft row that
+                        // hasn't finished syncing to the DB — would otherwise
+                        // escape unhandled and freeze `saving`, reverting to
+                        // in_progress with no error shown. Surface it instead.
+                        const msg = err instanceof Error ? err.message : String(err)
+                        toast.error(`Could not complete the inspection — ${msg}. Your draft is preserved; try again in a moment.`)
+                      })
+                      .finally(() => setSaving(false))
                   }}
                   style={{
                     flex: 1, padding: '10px 12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--fs-base)', fontWeight: 700,

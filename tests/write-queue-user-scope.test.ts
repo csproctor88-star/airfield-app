@@ -76,4 +76,33 @@ describe('write queue — user scoping', () => {
     expect(summary.committed).toBe(0)
     expect(seen).toHaveLength(0)
   })
+
+  // Regression guard for the 2026-07-01 inspection-start bug: the start writes
+  // (inspection_save_draft + start activity log) were enqueued with userId ''
+  // — a non-null value that never equals the real user id, so ownsItem() left
+  // them orphaned forever (in_progress locally, nothing in the DB). An empty
+  // userId must be treated like an absent one: unowned, drained best-effort
+  // under the signed-in user so already-queued rows recover.
+  it('drains empty-userId (orphaned) items under the signed-in user', async () => {
+    const { queue, current, seen, queueAs } = makeScoped()
+    await queueAs('', 'orphan1')
+    await queueAs('user-a', 'a1')
+
+    current.value = 'user-a'
+    const summary = await queue.drain()
+
+    expect(summary.committed).toBe(2)
+    expect(seen.sort()).toEqual(['a1', 'orphan1'])
+  })
+
+  it('does not drain empty-userId items when logged out', async () => {
+    const { queue, current, seen, queueAs } = makeScoped()
+    await queueAs('', 'orphan1')
+
+    current.value = null
+    const summary = await queue.drain()
+
+    expect(summary.committed).toBe(0)
+    expect(seen).toHaveLength(0)
+  })
 })

@@ -408,7 +408,7 @@ export function Header() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginBottom: 2 }}>
               {!isOnline && (
                 <span
-                  title="No network connection — submissions will fail. Your inspection drafts are still saved locally."
+                  title="No network connection — your work is saved locally and syncs automatically when you reconnect. See Pending sync in the header for anything still waiting."
                   style={{
                     fontSize: 'var(--fs-2xs)',
                     fontWeight: 700,
