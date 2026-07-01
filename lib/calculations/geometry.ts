@@ -34,6 +34,20 @@ export function offsetPoint(origin: LatLon, bearingDeg: number, distanceFt: numb
   return { lat: lat2 * RAD_TO_DEG, lon: lon2 * RAD_TO_DEG }
 }
 
+/** Axis-aligned bounds (degrees) for a square of half-side `halfSideMeters`
+ *  centered on (lat, lng). Flat-earth approximation — exact enough at the
+ *  few-meter scale used for reflector markers. Returns Google-Maps-style
+ *  {north, south, east, west}. */
+export function squareBoundsMeters(
+  lat: number,
+  lng: number,
+  halfSideMeters: number,
+): { north: number; south: number; east: number; west: number } {
+  const dLat = halfSideMeters / 111320
+  const dLng = halfSideMeters / (111320 * Math.cos((lat * Math.PI) / 180))
+  return { north: lat + dLat, south: lat - dLat, east: lng + dLng, west: lng - dLng }
+}
+
 /** Haversine distance between two points, returned in feet. */
 export function distanceFt(a: LatLon, b: LatLon): number {
   const lat1 = a.lat * DEG_TO_RAD

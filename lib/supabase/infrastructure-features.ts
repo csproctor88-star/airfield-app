@@ -25,6 +25,9 @@ export type InfrastructureFeatureType =
   | 'stadium_light'
   | 'rotating_beacon'
   | 'runway_end_light'
+  | 'arresting_gear_marking_sign'
+  | 'do_not_enter_sign'
+  | 'reflector'
 
 // ── Feature type label map ──
 
@@ -40,6 +43,8 @@ const FEATURE_TYPE_LABELS: Record<string, string> = {
   taxiway_end_light: 'Taxiway End Light', taxiway_light: 'Taxiway Light',
   terminating_bar_light: 'Terminating Bar Light', thousand_ft_bar_light: "1000' Bar Light",
   threshold_light: 'Threshold Light', windcone: 'Windcone',
+  arresting_gear_marking_sign: 'Arresting Gear Marking (AGM) Sign',
+  do_not_enter_sign: 'Do Not Enter Sign', reflector: 'Reflector',
 }
 
 export function formatFeatureType(type: string): string {
@@ -625,6 +630,7 @@ export const FEATURE_TYPE_ABBREV: Record<string, string> = {
   stadium_light: 'SL', taxiway_end_light: 'TEL', taxiway_light: 'TL',
   terminating_bar_light: 'TBL', thousand_ft_bar_light: 'KBL',
   threshold_light: 'THL', windcone: 'WC',
+  arresting_gear_marking_sign: 'AGM', do_not_enter_sign: 'DNE', reflector: 'RFL',
 }
 
 // ── Bulk update labels by ID ──

@@ -17,6 +17,7 @@ export interface GMapWrapper {
   polygons: Map<string, google.maps.Polygon>
   polylines: Map<string, google.maps.Polyline>
   circles: Map<string, google.maps.Circle>
+  rectangles: Map<string, google.maps.Rectangle>
   infoWindow: google.maps.InfoWindow
   /** Spatial index: feature ID → { lat, lng, type, props } */
   featureIndex: Map<string, { lat: number; lng: number; type: string; props: Record<string, any> }>
@@ -56,6 +57,7 @@ export function createGMapWrapper(gmap: google.maps.Map): GMapWrapper {
     polygons: new Map(),
     polylines: new Map(),
     circles: new Map(),
+    rectangles: new Map(),
     infoWindow: new google.maps.InfoWindow(),
     featureIndex: new Map(),
     iconCache: new Map(),
@@ -81,6 +83,8 @@ export function clearAllObjects(wrapper: GMapWrapper): void {
   wrapper.polylines.clear()
   wrapper.circles.forEach(c => c.setMap(null))
   wrapper.circles.clear()
+  wrapper.rectangles.forEach(r => r.setMap(null))
+  wrapper.rectangles.clear()
   wrapper.featureIndex.clear()
   wrapper.infoWindow.close()
 }

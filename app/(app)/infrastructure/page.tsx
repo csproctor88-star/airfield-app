@@ -53,7 +53,7 @@ import { calculateAllSystemHealth, calculateComponentOutage, getAlertTier, type 
 import { createClient } from '@/lib/supabase/client'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import AuditPanel from '@/components/infrastructure/audit-panel'
-import { offsetPoint, normalizeBearing } from '@/lib/calculations/geometry'
+import { offsetPoint, normalizeBearing, squareBoundsMeters } from '@/lib/calculations/geometry'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
 // ── Layer configuration ──
@@ -63,10 +63,11 @@ type LayerConfig = {
   label: string
   color: string
   types: string[]
-  renderType: 'circle' | 'symbol'
+  renderType: 'circle' | 'symbol' | 'square'
+  radiusMeters?: number
   group: string
   strokeColor?: string
-  legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle' | 'cone' | 'dot-cluster'
+  legendIcon?: 'circle' | 'rect' | 'rect-arrow' | 'split-circle' | 'triangle' | 'cone' | 'dot-cluster' | 'square' | 'agm'
   legendBorder?: string
   legendInner?: string
 }
@@ -78,10 +79,12 @@ const LAYERS: LayerConfig[] = [
   { key: 'location_signs',      label: 'Location Signs',      color: '#FBBF24',  types: ['location_sign'],       renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#000000', legendInner: '#FBBF24' },
   { key: 'directional_signs',   label: 'Directional Signs',   color: '#FBBF24',  types: ['directional_sign'],    renderType: 'symbol', group: 'Signs', legendIcon: 'rect-arrow', legendBorder: '#FBBF24', legendInner: '#000000' },
   { key: 'informational_signs', label: 'Informational Signs', color: '#FBBF24',  types: ['informational_sign'],  renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#FBBF24', legendInner: '#000000' },
-  { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign'],      renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  { key: 'mandatory_signs',     label: 'Mandatory Signs',     color: '#EF4444',  types: ['mandatory_sign', 'do_not_enter_sign'],      renderType: 'symbol', group: 'Signs', legendIcon: 'rect', legendBorder: '#EF4444', legendInner: '#FFFFFF' },
+  { key: 'agm_signs',           label: 'Arresting Gear Marking Signs', color: '#FBBF24',  types: ['arresting_gear_marking_sign'], renderType: 'symbol', group: 'Signs', legendIcon: 'agm' },
   // Taxiway Lights
-  { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
+  { key: 'taxiway_lights',      label: 'Taxiway Lights',      color: '#2563EB',  types: ['taxiway_light'],       renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle', radiusMeters: 2.0 },
   { key: 'taxiway_end_lights',  label: 'Taxiway End Lights',  color: '#F59E0B',  types: ['taxiway_end_light'],   renderType: 'circle', group: 'Taxiway Lights', legendIcon: 'circle' },
+  { key: 'reflectors',          label: 'Reflectors',          color: '#2563EB',  types: ['reflector'],           renderType: 'square', group: 'Taxiway Lights', legendIcon: 'square', radiusMeters: 2.0 },
   // Runway Lights
   { key: 'threshold_lights',    label: 'Threshold Lights',    color: '#22C55E',  types: ['threshold_light', 'runway_threshold'],     renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
   { key: 'runway_end_lights',   label: 'Runway End Lights',   color: '#EF4444',  types: ['runway_end_light'],    renderType: 'circle', group: 'Runway Lights', strokeColor: '#FFFFFF', legendIcon: 'circle', legendBorder: '#FFFFFF' },
@@ -104,8 +107,10 @@ const LAYERS: LayerConfig[] = [
 
 const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[] = [
   { value: 'approach_light', label: 'Approach Light' },
+  { value: 'arresting_gear_marking_sign', label: 'Arresting Gear Marking (AGM) Sign' },
   { value: 'centerline_bar_light', label: 'Centerline Bar Light' },
   { value: 'directional_sign', label: 'Directional Sign' },
+  { value: 'do_not_enter_sign', label: 'Do Not Enter Sign' },
   { value: 'informational_sign', label: 'Informational Sign' },
   { value: 'location_sign', label: 'Location Sign' },
   { value: 'mandatory_sign', label: 'Mandatory Sign' },
@@ -113,6 +118,7 @@ const FEATURE_TYPE_OPTIONS: { value: InfrastructureFeatureType; label: string }[
   { value: 'papi', label: 'PAPI' },
   { value: 'pre_threshold_light', label: 'Pre-Threshold Light' },
   { value: 'reil', label: 'REIL' },
+  { value: 'reflector', label: 'Reflector' },
   { value: 'rotating_beacon', label: 'Rotating Beacon' },
   { value: 'runway_distance_marker', label: 'Runway Distance Remaining Marker' },
   { value: 'runway_edge_light', label: 'Runway Edge Light' },
@@ -270,6 +276,56 @@ function createTriangleIcon(color: string, size: number = 24): ImageData {
   return ctx.getImageData(0, 0, size, size)
 }
 
+function createInopRingIcon(size = 48): ImageData {
+  const [, ctx] = createCanvasIcon(size)
+  ctx.strokeStyle = '#EF4444'
+  ctx.lineWidth = Math.max(2, size * 0.12)
+  ctx.beginPath()
+  ctx.arc(size / 2, size / 2, size * 0.42, 0, Math.PI * 2)
+  ctx.stroke()
+  return ctx.getImageData(0, 0, size, size)
+}
+
+// AGM sign — black square panel, centered filled yellow disc. Rotation baked
+// into the image (raster markers can't rotate); canvas is sized to the rotated
+// square's bounding box so the panel pivots about its centre.
+function createAgmSignIcon(rotation = 0, side = 56): ImageData {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+  const rad = ((rotation || 0) * Math.PI) / 180
+  const cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad))
+  const cw = Math.ceil(side * cos + side * sin)
+  const ch = Math.ceil(side * sin + side * cos)
+  canvas.width = cw; canvas.height = ch
+  ctx.translate(cw / 2, ch / 2); ctx.rotate(rad); ctx.translate(-side / 2, -side / 2)
+  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, side, side)
+  ctx.strokeStyle = '#333333'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, side - 2, side - 2)
+  ctx.fillStyle = '#FBBF24'
+  ctx.beginPath(); ctx.arc(side / 2, side / 2, side * 0.36, 0, Math.PI * 2); ctx.fill()
+  return ctx.getImageData(0, 0, cw, ch)
+}
+
+// Do Not Enter — red square panel, white ring (outline) + white horizontal bar
+// (no-entry roundel). Rotation baked in like the AGM sign.
+function createDoNotEnterIcon(rotation = 0, side = 56): ImageData {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')!
+  const rad = ((rotation || 0) * Math.PI) / 180
+  const cos = Math.abs(Math.cos(rad)), sin = Math.abs(Math.sin(rad))
+  const cw = Math.ceil(side * cos + side * sin)
+  const ch = Math.ceil(side * sin + side * cos)
+  canvas.width = cw; canvas.height = ch
+  ctx.translate(cw / 2, ch / 2); ctx.rotate(rad); ctx.translate(-side / 2, -side / 2)
+  const cx = side / 2, cy = side / 2, rOuter = side * 0.34
+  ctx.fillStyle = '#CC0000'; ctx.fillRect(0, 0, side, side)
+  ctx.strokeStyle = '#111111'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, side - 2, side - 2)
+  ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = side * 0.11
+  ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.stroke()
+  const barW = rOuter * 2 + side * 0.02, barH = side * 0.15
+  ctx.fillStyle = '#FFFFFF'; ctx.fillRect(cx - barW / 2, cy - barH / 2, barW, barH)
+  return ctx.getImageData(0, 0, cw, ch)
+}
+
 // Generate a labeled sign image that looks like a real airfield sign
 // Source canvas rendered at ~2x resolution so high-zoom display stays crisp.
 // Display size is then tuned via SIGN_DISPLAY_SCALE in the render paths.
@@ -341,6 +397,7 @@ const SIGN_DISPLAY_SCALE = 0.4
 // JS on zoom either way — pan/zoom stays smooth.
 const FEATURE_ICON_SCALE = 0.45 // base icon px = 24 * this
 const LIGHT_RADIUS_METERS = 1.5 // real-world radius of a light dot
+const INOP_RING_SCALE = 1.5 // inop ring size = this × the marker's larger side
 
 // Signs/PAPIs/beacons are raster markers (can't be meter-sized), so they scale
 // with zoom in JS instead — growing as you zoom in, capped, and never below
@@ -381,6 +438,10 @@ const SIGN_COLORS: Record<string, { bg: string; text: string; border: string }> 
   runway_distance_marker:  { bg: '#000000', text: '#FFFFFF', border: '#FFFFFF' },
 }
 
+// Graphic signs render a fixed symbol (not text) — per-feature images with
+// rotation baked in, sized via the labeled-sign path.
+const GRAPHIC_SIGN_TYPES = new Set(['arresting_gear_marking_sign', 'do_not_enter_sign'])
+
 // Register labeled sign images with the map, returns set of registered image names
 function registerLabeledSigns(wrapper: GMapWrapper, features: InfrastructureFeature[]): Set<string> {
   const registered = new Set<string>()
@@ -389,6 +450,15 @@ function registerLabeledSigns(wrapper: GMapWrapper, features: InfrastructureFeat
     const imgName = `sign-label-${f.id}`
     const colors = SIGN_COLORS[f.feature_type]
     const img = createLabeledSign(f.label, colors.bg, colors.text, colors.border, f.rotation || 0)
+    registerIcon(wrapper, imgName, img)
+    registered.add(imgName)
+  }
+  for (const f of features) {
+    if (!GRAPHIC_SIGN_TYPES.has(f.feature_type)) continue
+    const imgName = `graphic-${f.feature_type}-${f.id}`
+    const img = f.feature_type === 'arresting_gear_marking_sign'
+      ? createAgmSignIcon(f.rotation || 0)
+      : createDoNotEnterIcon(f.rotation || 0)
     registerIcon(wrapper, imgName, img)
     registered.add(imgName)
   }
@@ -410,6 +480,7 @@ function addMapIcons(wrapper: GMapWrapper) {
   registerIcon(wrapper, 'icon-windcone', createWindconeIcon(s))
   registerIcon(wrapper, 'icon-stadium-light', createStadiumLightIcon(s))
   registerIcon(wrapper, 'icon-rotating-beacon', createSplitCircleIcon('#22D3EE', '#22C55E', s))
+  registerIcon(wrapper, 'icon-inop-ring', createInopRingIcon(48))
 }
 
 const dirBtnStyle: React.CSSProperties = {
@@ -1003,7 +1074,7 @@ export default function InfrastructureMapPage() {
             rotation: f.rotation || 0,
             system_component_id: f.system_component_id || '',
             bar_group_id: f.bar_group_id || '',
-            signIcon: f.label && SIGN_COLORS[f.feature_type] ? `sign-label-${f.id}` : null,
+            signIcon: (f.label && SIGN_COLORS[f.feature_type]) ? `sign-label-${f.id}` : (GRAPHIC_SIGN_TYPES.has(f.feature_type) ? `graphic-${f.feature_type}-${f.id}` : null),
             systemHealthTier: tier,
             auditHighlight: auditHighlightSet.has(f.id) ? 1 : 0,
           },
@@ -2111,7 +2182,7 @@ export default function InfrastructureMapPage() {
   // ── Render all features as Google Maps markers ──
   // Per-marker metadata for the zoom rescale of sign/icon markers (signKey =>
   // a labeled sign; undefined => a plain icon). Lights are Circles, not here.
-  const markerMetaRef = useRef<Map<string, { signKey?: string }>>(new Map())
+  const markerMetaRef = useRef<Map<string, { signKey?: string; ring?: boolean; ringBaseSide?: number }>>(new Map())
   // Refs for selection / health circles
   const selectionCirclesRef = useRef<google.maps.Circle[]>([])
   const healthCirclesRef = useRef<google.maps.Circle[]>([])
@@ -2188,14 +2259,52 @@ export default function InfrastructureMapPage() {
         marker.addListener('click', () => showPopup(marker))
         wrapper.markers.set(featureId, marker)
         markerMetaRef.current.set(featureId, { signKey })
+        // Inoperative raster markers get a red ring overlay (meter-circle lights
+        // fill red instead — see below). Sized ~1.5× the marker; rescales on zoom
+        // and clears on re-render alongside the other markers.
+        if (isInop) {
+          const ringBaseSide = Math.round(Math.max(base.w, base.h) * INOP_RING_SCALE)
+          const rs = Math.round(ringBaseSide * markerFactor)
+          const ringUrl = wrapper.iconCache.get('icon-inop-ring')
+          if (ringUrl) {
+            const ring = new google.maps.Marker({
+              position: { lat, lng },
+              map: initialMap,
+              icon: { url: ringUrl, scaledSize: new google.maps.Size(rs, rs), anchor: new google.maps.Point(rs / 2, rs / 2) },
+              zIndex: 99,
+              clickable: false,
+            })
+            wrapper.markers.set(`${featureId}::inopring`, ring)
+            markerMetaRef.current.set(`${featureId}::inopring`, { ring: true, ringBaseSide })
+          }
+        }
+      } else if (layerCfg.renderType === 'square') {
+        // Reflectors — meter-based google.maps.Rectangle (square). Scales with
+        // the map exactly like the light Circles; the square shape differentiates
+        // them from the round taxiway lights. Fills red when inop.
+        const radius = layerCfg.radiusMeters ?? LIGHT_RADIUS_METERS
+        const rect = new google.maps.Rectangle({
+          map: initialMap,
+          bounds: squareBoundsMeters(lat, lng, radius),
+          fillColor: color,
+          fillOpacity: 0.85,
+          strokeColor: isInop ? '#FFFFFF' : '#000000',
+          strokeWeight: isInop ? 2 : 1,
+          clickable: true,
+          zIndex: isInop ? 100 : 10,
+        })
+        rect.addListener('click', () => showPopup(null))
+        wrapper.rectangles.set(featureId, rect)
       } else {
         // Airfield lights — meter-based google.maps.Circle. Scales with the map
         // (small zoomed out, larger zoomed in) and renders far lighter than a
-        // symbol marker, so zoom stays smooth across ~1,300 lights.
+        // symbol marker, so zoom stays smooth across ~1,300 lights. Per-layer
+        // radiusMeters lets taxiway lights run larger than runway lights.
+        const radius = layerCfg.radiusMeters ?? LIGHT_RADIUS_METERS
         const circle = new google.maps.Circle({
           map: initialMap,
           center: { lat, lng },
-          radius: LIGHT_RADIUS_METERS,
+          radius,
           fillColor: color,
           fillOpacity: 0.85,
           strokeColor: isInop ? '#FFFFFF' : '#000000',
@@ -2227,6 +2336,11 @@ export default function InfrastructureMapPage() {
         if (!meta) return
         const icon = marker.getIcon() as google.maps.Icon | undefined
         if (!icon?.url) return
+        if (meta.ring) {
+          const rs = Math.round((meta.ringBaseSide ?? 12) * factor)
+          marker.setIcon({ url: icon.url, scaledSize: new google.maps.Size(rs, rs), anchor: new google.maps.Point(rs / 2, rs / 2) })
+          return
+        }
         const base = markerBaseSize(meta.signKey ? w.iconSizes.get(meta.signKey) : undefined, !!meta.signKey)
         const ww = Math.round(base.w * factor)
         const hh = Math.round(base.h * factor)
@@ -3811,6 +3925,16 @@ export default function InfrastructureMapPage() {
                           <circle cx="8" cy="4" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
                           <circle cx="4" cy="8" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
                           <circle cx="8" cy="8" r="2.5" fill={layer.color} stroke="#FFF" strokeWidth="0.4" />
+                        </svg>
+                      ) : layer.legendIcon === 'square' ? (
+                        <span style={{
+                          width: 12, height: 12, background: layer.color,
+                          border: '1px solid rgba(0,0,0,0.4)', flexShrink: 0,
+                        }} />
+                      ) : layer.legendIcon === 'agm' ? (
+                        <svg width="12" height="12" viewBox="0 0 12 12" style={{ flexShrink: 0 }}>
+                          <rect x="0.5" y="0.5" width="11" height="11" fill="#000" stroke="#333" strokeWidth="0.5" />
+                          <circle cx="6" cy="6" r="3.6" fill="#FBBF24" />
                         </svg>
                       ) : layer.legendIcon === 'rect' ? (
                         <span style={{
