@@ -1,5 +1,4 @@
 import { createClient } from './client'
-import type { Json } from './types'
 
 // ── Types ──
 
@@ -82,23 +81,21 @@ export async function submitFeedback(input: {
   comments?: string | null
   responses?: Record<string, unknown>
 }): Promise<{ success: boolean; error?: string }> {
-  const supabase = createClient()
-  if (!supabase) return { success: false, error: 'Not configured' }
-
-  const { error } = await supabase
-    .from('customer_feedback')
-    .insert({
-      base_id: input.base_id,
-      name: input.name || null,
-      email: input.email || null,
-      organization: input.organization || null,
-      overall_rating: input.overall_rating || null,
-      comments: input.comments || null,
-      responses: (input.responses || {}) as Json,
+  // Submit through the server route so the request is IP + base rate-limited
+  // before the insert. The table's anon INSERT policy still backs it, but the
+  // browser previously had only a bypassable localStorage cooldown.
+  try {
+    const res = await fetch('/api/public/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
     })
-
-  if (error) return { success: false, error: error.message }
-  return { success: true }
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
+    if (!res.ok) return { success: false, error: json.error || 'Failed to submit' }
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to submit' }
+  }
 }
 
 // ── Delete feedback entry ──

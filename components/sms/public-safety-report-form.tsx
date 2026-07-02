@@ -92,28 +92,33 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
     if (!description.trim()) { setError('Please describe the safety concern.'); return }
     setSubmitting(true)
 
-    const supabase = createClient()
-    if (!supabase) { setError('Supabase not configured'); setSubmitting(false); return }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error: rpcErr } = await (supabase as any).rpc('submit_safety_report_public', {
-      p_base_id:          config.baseId,
-      p_category:         category,
-      p_description:      description.trim(),
-      p_occurred_at:      occurredAt || null,
-      p_location_text:    locationText.trim() || null,
-      p_immediate_action: immediateAction.trim() || null,
-      p_reporter_name:    includeContact ? (reporterName.trim() || null) : null,
-      p_reporter_email:   includeContact ? (reporterEmail.trim() || null) : null,
-      p_reporter_phone:   includeContact ? (reporterPhone.trim() || null) : null,
-      p_reporter_role:    includeContact ? (reporterRole.trim() || null) : null,
+    // Submit through the server route so the request is IP + base rate-limited
+    // before it reaches the submit_safety_report_public RPC (the browser has no
+    // server hop of its own to throttle at).
+    const res = await fetch('/api/public/safety-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base_id:          config.baseId,
+        category,
+        description:      description.trim(),
+        occurred_at:      occurredAt || null,
+        location_text:    locationText.trim() || null,
+        immediate_action: immediateAction.trim() || null,
+        reporter_name:    includeContact ? (reporterName.trim() || null) : null,
+        reporter_email:   includeContact ? (reporterEmail.trim() || null) : null,
+        reporter_phone:   includeContact ? (reporterPhone.trim() || null) : null,
+        reporter_role:    includeContact ? (reporterRole.trim() || null) : null,
+      }),
     })
+    const json = (await res.json().catch(() => ({}))) as { error?: string; report_code?: string | null }
     setSubmitting(false)
 
-    if (rpcErr) {
-      setError(rpcErr.message || 'Submission failed')
+    if (!res.ok) {
+      setError(json.error || 'Submission failed')
       return
     }
-    const code = (data as { report_code?: string } | null)?.report_code ?? '—'
+    const code = json.report_code ?? '—'
     setSubmitted({ code })
   }
 

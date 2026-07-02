@@ -175,31 +175,31 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
 
     setSubmitting(true)
 
-    const supabase = createClient()
-    if (!supabase) {
-      setError('Service unavailable')
-      setSubmitting(false)
-      return
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: rpcErr } = await (supabase as any).rpc('submit_public_ppr_request', {
-      p_base_id: resolvedBaseId,
-      p_requester_name: requesterName.trim(),
-      p_requester_email: requesterEmail.trim(),
-      p_requester_phone: requesterPhone.trim(),
-      p_arrival_date: arrivalDate,
-      // ETA is no longer collected on the public form. Bases that
-      // want a public arrival time add a custom time column themselves
-      // with the desired Zulu/Local display mode. Omitting the
-      // parameter relies on the default-NULL signature in
-      // 2026042905_ppr_per_surface_flags.sql.
-      p_column_values: values,
-      p_notes: notes.trim() || null,
+    // Submit through the server route so the request is IP + base rate-limited
+    // before it reaches the submit_public_ppr_request RPC (the browser has no
+    // server hop of its own to throttle at). A 429 surfaces as the friendly
+    // "too many requests" error below.
+    const res = await fetch('/api/public/ppr-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base_id: resolvedBaseId,
+        requester_name: requesterName.trim(),
+        requester_email: requesterEmail.trim(),
+        requester_phone: requesterPhone.trim(),
+        arrival_date: arrivalDate,
+        // ETA is no longer collected on the public form. Bases that want a
+        // public arrival time add a custom time column themselves with the
+        // desired Zulu/Local display mode; omitting it relies on the
+        // default-NULL signature in 2026042905_ppr_per_surface_flags.sql.
+        column_values: values,
+        notes: notes.trim() || null,
+      }),
     })
+    const json = (await res.json().catch(() => ({}))) as { error?: string }
 
-    if (rpcErr) {
-      setError(rpcErr.message || 'Submission failed')
+    if (!res.ok) {
+      setError(json.error || 'Submission failed')
       setSubmitting(false)
       return
     }
