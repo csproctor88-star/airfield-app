@@ -1,20 +1,31 @@
 # Session Handoff
 
-**Date:** 2026-07-01
-**Branch:** `main` — **pushed, in sync with origin**.
+**Date:** 2026-07-02
+**Branch:** `main` — **pushed, in sync with origin** (the `workflow`-scope push block is
+resolved; 11 backlogged commits are now on `origin/main`).
 **Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
-`npx vitest run` ✓ **1097 pass / 119 files**.
-**HEAD:** `dd337ed7` — records-inspection 623A signed by Trainee + NAMT, not Trainer.
+`npx vitest run` ✓ **1120 pass / 121 files**.
+**HEAD:** `3f5e4dbe` — rate-limit anonymous public-write forms (PPR / safety report / feedback).
 
-Three-commit session, all pushed to `origin/main`: one Visual NAVAIDs feature and
-two user-reported production bug fixes. The feature added three new infrastructure
-feature types (AGM signs, Do Not Enter signs, reflectors) plus taxiway-light sizing
-and an inoperative ring. The fixes stopped the offline write queue from silently
-orphaning inspection starts (and hanging on complete), and corrected the AMTR
-records-inspection 623A entry so it no longer demands a trainer signature. Two
-migrations were applied to the linked DB this session (both expand-only / function
-replace — safe). Every change verified via tsc/build/vitest, and the two bug fixes
-carry regression tests.
+**This session (2026-07-02):** shipped audit item #2 — server-side IP + base rate limiting
+on the three anonymous public-write forms (PPR request, safety report, feedback) — then
+cleared the `workflow`-scope push block and pushed all 11 backlogged commits (P0–P3
+hardening + the 2026-07-01 NAVAID/inspection/AMTR work + this) to `origin/main`.
+
+All three forms were **live-verified on the promoted build**: submissions land, and the
+server 429 trips correctly. Confirmed against the `rate_limit_hits` table — `ppr-public`,
+`feedback-public`, and `safety-public` buckets are all recording; the safety form's 6th
+rapid submit returned the inline "Too many requests" (the ip+base bucket = 5 per 10 min
+doing its job). No new migration was needed — the routes reuse the existing
+`check_rate_limit` RPC (`2026061505_rate_limit.sql`). Limits (ip 10/hr, base 60/hr,
+ip+base 5/10min) are shared across all three surfaces in `lib/public-rate-limit.ts` and
+were left as-is by user decision.
+
+Now starting **Plan B (Next 14→15 upgrade)** on a `next15` branch (plans dir:
+`~/.claude/plans/2026-07-02-nextjs-15-upgrade.md`). `main` is untouched by that work.
+
+The sections below (Visual NAVAIDs, inspection offline-queue, AMTR 623A) are the prior
+**2026-07-01** session's record, retained for continuity.
 
 ---
 
