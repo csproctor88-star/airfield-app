@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const sb = createServerClient(url, anonKey, {
       cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
     })

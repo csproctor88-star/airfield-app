@@ -18,7 +18,7 @@ function getResend() {
 }
 
 function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Resend rejects sends entirely on a malformed replyTo. Trim and
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     // Authenticate caller via cookie session.
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const sb = createServerClient(url, anonKey, {
       cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
     })

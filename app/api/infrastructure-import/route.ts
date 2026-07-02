@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'baseId is required' }, { status: 400 })
   }
 
-  const supabase = createClient()
+  const supabase = await createClient()
   if (!supabase) {
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 500 })
   }

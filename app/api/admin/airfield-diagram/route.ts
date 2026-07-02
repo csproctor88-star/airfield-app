@@ -38,7 +38,7 @@ async function authorize(baseId: string) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !key) return { error: 'Service not configured', status: 500 as const }
 
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(url, key, {
     cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
   })
@@ -176,7 +176,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Service not configured' }, { status: 500 })
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(envUrl, envKey, {
       cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
     })

@@ -17,7 +17,7 @@ async function requireAuth(): Promise<{ user: { id: string } } | NextResponse> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
   if (!url || !key) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(url, key, {
     cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
   })
@@ -39,7 +39,7 @@ export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '')
   if (!url || !key) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(url, key, {
     cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
   })

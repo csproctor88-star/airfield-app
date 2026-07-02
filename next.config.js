@@ -176,6 +176,15 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const nextConfig = {
   // I-4: don't advertise the framework.
   poweredByHeader: false,
+  // Lint is decoupled from the production build. Under CI (Vercel, GitHub
+  // Actions both set CI=1) `next build` escalates ESLint *warnings* to build
+  // failures — and this project intentionally keeps no-explicit-any /
+  // no-unused-vars at "warn". Linting still runs as its own ci.yml step
+  // (`npm run lint`), which fails on real errors but not warnings, preserving
+  // the pre-Next-15 effective behavior.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Enable image optimization for Supabase Storage
   images: {
     remotePatterns: [

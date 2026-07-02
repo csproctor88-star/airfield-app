@@ -16,7 +16,7 @@ function getResend() {
 }
 
 function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /** Same shape check used on the approval / denial / confirmation / coordination
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
     }
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const sb = createServerClient(url, anonKey, {
       cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
     })

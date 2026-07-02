@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/^["']|["']$/g, '')
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim().replace(/^["']|["']$/g, '')
 
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(url, anonKey, {
       cookies: {
         getAll: () => cookieStore.getAll(),

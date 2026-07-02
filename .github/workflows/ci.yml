@@ -50,6 +50,13 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      # Lint as its own step. `next build` no longer lints (eslint.ignore-
+      # DuringBuilds in next.config.js) because under CI it escalates warnings
+      # to failures; `next lint` follows ESLint exit semantics — fails on
+      # errors, passes on the project's intentional warn-level rules.
+      - name: Lint
+        run: npm run lint
+
       - name: Test (runs RLS suites when secrets are set)
         run: npm run test
 

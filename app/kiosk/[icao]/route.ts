@@ -42,10 +42,8 @@ function tokensMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(a, b)
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { icao: string } },
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ icao: string }> }) {
+  const params = await props.params;
   const icao = (params.icao || '').toUpperCase()
   if (!/^[A-Z0-9]{3,4}$/.test(icao)) {
     return redirectToLogin(request, 'kiosk_invalid_icao')
@@ -100,7 +98,7 @@ export async function GET(
   // Create the redirect response up front — Supabase cookies are written
   // into its cookie store, which is wired to set them on this response.
   const response = NextResponse.redirect(new URL('/', request.url))
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
 
   const supabase = createServerClient(config.url, config.key, {
     cookies: {

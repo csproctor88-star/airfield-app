@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing path' }, { status: 400 })
   }
 
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(url, key, {
     cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
   })

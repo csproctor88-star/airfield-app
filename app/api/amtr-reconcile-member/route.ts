@@ -19,7 +19,7 @@ type Row = Record<string, unknown>
 const SIGNABLE = new Set(['amtr_jqs_progress', 'amtr_1098_progress', 'amtr_rat_progress', 'amtr_623a', 'amtr_797'])
 
 export async function POST(request: Request) {
-  const userClient = createUserClient()
+  const userClient = await createUserClient()
   if (!userClient) return NextResponse.json({ error: 'Not configured' }, { status: 500 })
   const { data: { user } } = await userClient.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

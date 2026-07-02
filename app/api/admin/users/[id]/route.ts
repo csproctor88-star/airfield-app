@@ -10,10 +10,8 @@ import {
 } from '@/lib/admin/role-checks'
 
 /** PATCH — Update a user's profile */
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const admin = getAdminClient()
     if (!admin) {
@@ -23,7 +21,7 @@ export async function PATCH(
     // Authenticate caller
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/^["']|["']$/g, '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim().replace(/^["']|["']$/g, '')
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(url, key, {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -150,10 +148,8 @@ export async function PATCH(
 }
 
 /** DELETE — Permanently delete a user account */
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const admin = getAdminClient()
     if (!admin) {
@@ -163,7 +159,7 @@ export async function DELETE(
     // Authenticate caller
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/^["']|["']$/g, '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim().replace(/^["']|["']$/g, '')
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(url, key, {
       cookies: {
         getAll: () => cookieStore.getAll(),

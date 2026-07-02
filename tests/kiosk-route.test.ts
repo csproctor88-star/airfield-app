@@ -129,7 +129,7 @@ async function callKiosk(
 ): Promise<{ status: number; location: string | null; errorCode: string | null }> {
   const { GET } = await import('@/app/kiosk/[icao]/route')
   const req = new NextRequest(new URL(`https://app.test/kiosk/${icao}${search}`))
-  const res = await GET(req, { params: { icao } })
+  const res = await GET(req, { params: Promise.resolve({ icao }) })
   const location = res.headers.get('location')
   const errorCode = location ? new URL(location).searchParams.get('error') : null
   return { status: res.status, location, errorCode }

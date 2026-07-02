@@ -12,7 +12,7 @@ function getResend() {
 }
 
 function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export async function POST(request: Request) {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     if (!url || !key) {
       return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
     }
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(url, key, {
       cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} },
     })

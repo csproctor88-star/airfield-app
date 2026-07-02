@@ -12,7 +12,7 @@ import {
 import { toTitleCaseName } from '@/lib/utils'
 
 function escapeHtml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // SECURITY (H-3): each invite gets a UNIQUE, high-entropy temp password.
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim().replace(/^["']|["']$/g, '')
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim().replace(/^["']|["']$/g, '')
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createServerClient(url, key, {
       cookies: {
         getAll: () => cookieStore.getAll(),

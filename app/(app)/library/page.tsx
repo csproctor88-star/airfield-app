@@ -1,17 +1,15 @@
 export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
-import nextDynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/server'
-
-const PDFLibrary = nextDynamic(() => import('@/components/PDFLibrary'), { ssr: false })
+import PDFLibraryClient from './pdf-library-client'
 
 export default async function LibraryPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Demo mode — no Supabase configured
   if (!supabase) {
-    return <PDFLibrary />
+    return <PDFLibraryClient />
   }
 
   const {
@@ -37,5 +35,5 @@ export default async function LibraryPage() {
     redirect('/more')
   }
 
-  return <PDFLibrary />
+  return <PDFLibraryClient />
 }

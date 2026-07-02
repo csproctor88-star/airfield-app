@@ -3,11 +3,14 @@ import { cookies } from 'next/headers'
 import type { Database } from './types'
 import { getSupabaseConfig } from '@/lib/utils'
 
-export function createClient() {
+// Next 15: cookies() is async. Callers must `await createClient()`
+// (all 3 do). The UnsafeUnwrappedCookies escape hatch the codemod inserted
+// is deprecated and breaks in Next 16, so we take the proper async path.
+export async function createClient() {
   const config = getSupabaseConfig()
   if (!config) return null
 
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
 
   return createServerClient<Database>(
     config.url,
