@@ -9,7 +9,7 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchSpis,
   fetchLatestMeasurements,
-  fetchSpiMeasurements,
+  fetchSpiMeasurementsForSpis,
   recomputeSpisNow,
   type SmsSpi,
   type SmsSpiMeasurement,
@@ -47,11 +47,8 @@ export default function SmsSpisPage() {
     ])
     setSpis(s)
     setLatest(m)
-    const seriesMap = new Map<string, SmsSpiMeasurement[]>()
-    await Promise.all(s.map(async (spi) => {
-      const ser = await fetchSpiMeasurements(spi.id, { months: 12 })
-      seriesMap.set(spi.id, ser)
-    }))
+    const seriesMap = await fetchSpiMeasurementsForSpis(s.map((spi) => spi.id), { months: 12 })
+    for (const spi of s) if (!seriesMap.has(spi.id)) seriesMap.set(spi.id, [])
     setSeries(seriesMap)
     setLoaded(true)
   }, [installationId])

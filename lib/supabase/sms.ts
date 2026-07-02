@@ -553,6 +553,18 @@ export async function fetchAssessments(hazardId: string): Promise<SmsRiskAssessm
   return ((data || []) as unknown as SmsRiskAssessment[])
 }
 
+// Batch variant: one query across all hazards (avoids N+1 on the SMS manual export).
+export async function fetchAssessmentsForHazards(hazardIds: string[]): Promise<SmsRiskAssessment[]> {
+  const supabase = db()
+  if (!supabase || hazardIds.length === 0) return []
+  const { data } = await supabase
+    .from('sms_risk_assessments')
+    .select('*')
+    .in('hazard_id', hazardIds)
+    .order('assessed_at', { ascending: false })
+  return ((data || []) as unknown as SmsRiskAssessment[])
+}
+
 export async function createAssessment(input: {
   hazard_id: string
   base_id: string
@@ -612,6 +624,18 @@ export async function fetchMitigations(hazardId: string): Promise<SmsMitigation[
     .from('sms_mitigations')
     .select('*')
     .eq('hazard_id', hazardId)
+    .order('due_date', { ascending: true, nullsFirst: false })
+  return ((data || []) as unknown as SmsMitigation[])
+}
+
+// Batch variant: one query across all hazards (avoids N+1 on the SMS manual export).
+export async function fetchMitigationsForHazards(hazardIds: string[]): Promise<SmsMitigation[]> {
+  const supabase = db()
+  if (!supabase || hazardIds.length === 0) return []
+  const { data } = await supabase
+    .from('sms_mitigations')
+    .select('*')
+    .in('hazard_id', hazardIds)
     .order('due_date', { ascending: true, nullsFirst: false })
   return ((data || []) as unknown as SmsMitigation[])
 }
@@ -745,6 +769,31 @@ export async function fetchSpiMeasurements(
     .gte('period_start', cutoff.toISOString().slice(0, 10))
     .order('period_start', { ascending: true })
   return ((data || []) as unknown as SmsSpiMeasurement[])
+}
+
+// Batch variant: one query across many SPIs (avoids N+1 on the SPIs page load).
+export async function fetchSpiMeasurementsForSpis(
+  spiIds: string[],
+  opts?: { months?: number },
+): Promise<Map<string, SmsSpiMeasurement[]>> {
+  const map = new Map<string, SmsSpiMeasurement[]>()
+  const supabase = db()
+  if (!supabase || spiIds.length === 0) return map
+  const cutoff = new Date()
+  cutoff.setMonth(cutoff.getMonth() - (opts?.months ?? 12))
+  const { data } = await supabase
+    .from('sms_spi_measurements')
+    .select('*')
+    .in('spi_id', spiIds)
+    .gte('period_start', cutoff.toISOString().slice(0, 10))
+    .order('period_start', { ascending: true })
+  ;((data || []) as unknown as SmsSpiMeasurement[]).forEach((row) => {
+    const sid = (row as unknown as { spi_id: string }).spi_id
+    const arr = map.get(sid)
+    if (arr) arr.push(row)
+    else map.set(sid, [row])
+  })
+  return map
 }
 
 export async function fetchLatestMeasurements(baseId: string): Promise<Map<string, SmsSpiMeasurement>> {

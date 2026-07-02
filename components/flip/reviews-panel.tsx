@@ -12,7 +12,6 @@ import {
 import { DocumentReviewModal } from '@/components/flip/document-review-modal'
 import { ReviewSignoff } from '@/components/flip/review-signoff'
 import { nextSlot, type FlipRole } from '@/lib/flip/roles'
-import { generateFlipReviewPdf } from '@/lib/flip-pdf'
 
 export function ReviewsPanel({ baseId, canWrite }: { baseId: string; canWrite: boolean }) {
   const [reviews, setReviews] = useState<FlipReview[]>([])
@@ -55,6 +54,7 @@ export function ReviewsPanel({ baseId, canWrite }: { baseId: string; canWrite: b
 
   const exportPdf = async (rv: FlipReview) => {
     const items = itemsByReview[rv.id] ?? await fetchFlipReviewItems(rv.id)
+    const { generateFlipReviewPdf } = await import('@/lib/flip-pdf')
     const { doc, filename } = generateFlipReviewPdf({ review: rv, items, signoff: signoffFor(rv.id) })
     doc.save(filename)
     toast.success('PDF generated')

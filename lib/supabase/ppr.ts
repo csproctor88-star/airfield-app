@@ -917,6 +917,46 @@ export async function fetchPprRemarks(entryId: string): Promise<PprRemark[]> {
   return ((bare || []) as PprRemark[]).map((r) => ({ ...r, user_name: 'Unknown' }))
 }
 
+// Batch variant: one query for many entries (avoids N+1 on PPR export). Returns
+// a Record keyed by entry_id (entries with no remarks are simply absent).
+export async function fetchPprRemarksForEntries(entryIds: string[]): Promise<Record<string, PprRemark[]>> {
+  const out: Record<string, PprRemark[]> = {}
+  const supabase = db()
+  if (!supabase || entryIds.length === 0) return out
+
+  const push = (r: PprRemark) => {
+    const eid = (r as unknown as { entry_id?: string }).entry_id
+    if (!eid) return
+    if (!out[eid]) out[eid] = []
+    out[eid].push(r)
+  }
+
+  const { data, error } = await supabase
+    .from('ppr_remarks')
+    .select('*, profiles:created_by(name, rank)')
+    .in('entry_id', entryIds)
+    .order('created_at', { ascending: false })
+
+  if (!error && data) {
+    ;(data as Record<string, unknown>[]).forEach((row) => push({
+      ...(row as unknown as PprRemark),
+      user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
+      user_rank: (row.profiles as { rank?: string } | null)?.rank || undefined,
+    }))
+    return out
+  }
+
+  // Fallback mirrors fetchPprRemarks — bare rows if the implicit FK join fails.
+  console.warn('PPR remarks batch profile join failed, falling back:', error?.message)
+  const { data: bare } = await supabase
+    .from('ppr_remarks')
+    .select('*')
+    .in('entry_id', entryIds)
+    .order('created_at', { ascending: false })
+  ;((bare || []) as PprRemark[]).forEach((r) => push({ ...r, user_name: 'Unknown' }))
+  return out
+}
+
 export async function addPprRemark(input: {
   entryId: string
   baseId: string

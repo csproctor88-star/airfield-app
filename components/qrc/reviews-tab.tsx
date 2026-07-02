@@ -8,7 +8,6 @@ import type { useMonthlyReviews } from '@/lib/qrc/use-monthly-reviews'
 import { type MonthlyReviewState } from '@/lib/qrc/monthly-review-status'
 import { MonthlyReviewModal } from '@/components/qrc/monthly-review-modal'
 import { fetchAllReviewsForBase, fetchEligibleReviewers, type EligibleReviewer } from '@/lib/supabase/qrc-reviews'
-import { generateQrcMonthlyReviewPdf } from '@/lib/qrc-monthly-review-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -118,6 +117,7 @@ export function ReviewsTab({ templates, baseId, baseName, baseIcao, airportType,
     }
     const roster = [...eligibleUsers, ...extras].sort((a, b) => a.name.localeCompare(b.name))
 
+    const { generateQrcMonthlyReviewPdf } = await import('@/lib/qrc-monthly-review-pdf')
     return generateQrcMonthlyReviewPdf({
       baseName,
       baseIcao,

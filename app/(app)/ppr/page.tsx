@@ -25,6 +25,7 @@ import {
   fetchPendingApprovalCount,
   fetchPendingCoordinationCounts,
   fetchPprRemarks,
+  fetchPprRemarksForEntries,
   addPprRemark,
   cancelPprEntry,
   addPprCoordinationAgencies,
@@ -207,13 +208,10 @@ function PprContent() {
     // Fetch the remark threads for every exported PPR so the PDF
     // carries the same audit trail the staff page shows in the
     // detail card. Run in parallel — these are independent reads.
-    const remarksByEntry: Record<string, PprRemark[]> = {}
-    if (exportEntries.length > 0) {
-      const threads = await Promise.all(exportEntries.map((e) => fetchPprRemarks(e.id)))
-      exportEntries.forEach((e, i) => {
-        if (threads[i].length > 0) remarksByEntry[e.id] = threads[i]
-      })
-    }
+    const remarksByEntry: Record<string, PprRemark[]> =
+      exportEntries.length > 0
+        ? await fetchPprRemarksForEntries(exportEntries.map((e) => e.id))
+        : {}
 
     let subtitle: string | undefined
     let filename: string | undefined

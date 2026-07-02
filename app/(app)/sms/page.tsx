@@ -13,7 +13,7 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchAeSummary, fetchHazards, fetchSpis, fetchLatestMeasurements,
   fetchActivePolicy, fetchMocs, fetchSafetyReports, fetchAudits,
-  fetchAssessments, fetchMitigations,
+  fetchAssessmentsForHazards, fetchMitigationsForHazards,
   BAND_COLORS,
   type SmsAeSummary,
 } from '@/lib/supabase/sms'
@@ -61,8 +61,11 @@ export default function SmsDashboardPage() {
         fetchSafetyReports(installationId),
       ])
       // Latest assessment + open mitigations across all hazards
-      const assessments = (await Promise.all(hazards.map(h => fetchAssessments(h.id)))).flat()
-      const mitigations = (await Promise.all(hazards.map(h => fetchMitigations(h.id)))).flat()
+      const hazardIds = hazards.map(h => h.id)
+      const [assessments, mitigations] = await Promise.all([
+        fetchAssessmentsForHazards(hazardIds),
+        fetchMitigationsForHazards(hazardIds),
+      ])
 
       const { buildSmsManualPdf } = await import('@/lib/sms-pdf')
       const { doc, filename } = buildSmsManualPdf({

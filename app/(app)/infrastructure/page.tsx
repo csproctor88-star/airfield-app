@@ -2534,11 +2534,11 @@ export default function InfrastructureMapPage() {
     renderFeatures(map.current, featureGeoJson)
   }, [featureGeoJson, dbFeatures, mapLoaded, renderFeatures])
 
-  // Sync layer visibility — re-render features when toggling (markers are filtered in renderFeatures)
-  useEffect(() => {
-    if (!map.current || !mapLoaded) return
-    renderFeatures(map.current, featureGeoJson)
-  }, [visibleLayers, mapLoaded])
+  // NOTE: layer-visibility toggles are handled by the effect above. renderFeatures
+  // closes over visibleLayers (see its useCallback deps), so a toggle gives it a new
+  // identity and re-fires that effect exactly once. A separate visibleLayers effect
+  // here previously ran a SECOND full clear-and-rebuild over ~1,300 light circles on
+  // every toggle (visible stutter on gov hardware) — removed as pure duplication.
 
   // Sync health ring circles visibility
   useEffect(() => {
