@@ -381,6 +381,9 @@ at a reviewable state before the next begins.
 
 - The site is visually distinct from aerosimple.com and from generic
   AI-generated SaaS templates; dark operational identity carried consistently.
+- Fully responsive — one site, every page usable from phones (360 px wide and
+  up) through desktop: no horizontal scroll, mobile nav on small screens,
+  screenshots legible at phone width. Verified on a real phone each phase.
 - ≥36 module explainer pages live, each with real staged screenshots,
   accurate regulation mapping, and per-audience terminology.
 - Demo form delivers leads (row + email) and survives abuse (rate limited).
