@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation'
 import { useInstallation } from '@/lib/installation-context'
 import { fetchObstructionEvaluation, deleteObstructionEvaluation, parsePhotoPaths, type ObstructionRow } from '@/lib/supabase/obstructions'
 import { PhotoViewerModal } from '@/components/discrepancies/modals'
-import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
@@ -125,6 +124,7 @@ export default function ObstructionDetailPage() {
     if (eval_.latitude != null && eval_.longitude != null) {
       mapDataUrl = await fetchMapImageDataUrl(eval_.latitude, eval_.longitude)
     }
+    const { generateObstructionPdf } = await import('@/lib/obstruction-pdf')
     return generateObstructionPdf({
       evaluation: eval_,
       photoDataUrls,

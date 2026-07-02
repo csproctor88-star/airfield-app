@@ -59,10 +59,16 @@ export function formatReporter(r: DiscrepancyRow['reporter']): string {
   return r.rank ? `${r.rank} ${r.name}` : r.name
 }
 
-// `limit` is available to bound the fetch, but list callers should prefer a
-// filtered query (all-open + recent-closed) over a naive recency cap — a plain
-// limit here could hide old but still-open discrepancies. Default: all rows.
-export async function fetchDiscrepancies(baseId?: string | null, limit?: number): Promise<DiscrepancyRow[]> {
+// `limit` bounds the fetch; `openPlusRecentDays` is the preferred way to keep a
+// list query bounded on long-lived bases — it returns EVERY still-open
+// discrepancy plus those closed within the window, so it never hides an
+// old-but-open item the way a naive recency cap would. Both default off (all rows),
+// so existing callers (reports, exports) are unaffected.
+export async function fetchDiscrepancies(
+  baseId?: string | null,
+  limit?: number,
+  opts?: { openPlusRecentDays?: number },
+): Promise<DiscrepancyRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
@@ -73,6 +79,11 @@ export async function fetchDiscrepancies(baseId?: string | null, limit?: number)
 
   if (baseId) {
     query = query.eq('base_id', baseId)
+  }
+  if (opts?.openPlusRecentDays && opts.openPlusRecentDays > 0) {
+    // all non-terminal rows OR terminal rows touched within the window
+    const cutoff = new Date(Date.now() - opts.openPlusRecentDays * 86_400_000).toISOString()
+    query = query.or(`status.not.in.(completed,cancelled),updated_at.gte.${cutoff}`)
   }
   if (typeof limit === 'number') {
     query = query.limit(limit)

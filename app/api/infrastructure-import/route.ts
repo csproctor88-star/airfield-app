@@ -21,6 +21,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Explicit authorization (defense-in-depth alongside the insert's RLS): the
+  // caller must have infrastructure:write AND access to the target base. Returns
+  // a clean 403 instead of relying on a silent RLS denial mid-batch.
+  const [{ data: canWrite }, { data: hasBase }] = await Promise.all([
+    supabase.rpc('user_has_permission', { p_user_id: user.id, p_key: 'infrastructure:write' }),
+    supabase.rpc('user_has_base_access', { p_user_id: user.id, p_base_id: baseId }),
+  ])
+  if (canWrite !== true || hasBase !== true) {
+    return NextResponse.json({ error: 'You do not have permission to import infrastructure for this base.' }, { status: 403 })
+  }
+
   // Check if features already exist for this base
   const { count } = await supabase
     .from('infrastructure_features')

@@ -46,6 +46,12 @@ export async function POST(request: Request) {
   const m = member as { id: string; base_id: string; user_id: string | null; full_name: string; status: string }
   const baseId = m.base_id
 
+  // Explicit permission gate (defense-in-depth): reading the member above already
+  // required base access via RLS, but make the AMTR permission requirement explicit
+  // here rather than depending solely on RLS-policy correctness.
+  const { data: canViewAmtr } = await uc.rpc('user_has_permission', { p_user_id: user.id, p_key: 'amtr:view' })
+  if (canViewAmtr !== true) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '')
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, '')
   if (!url || !serviceKey) return NextResponse.json({ error: 'Not configured' }, { status: 500 })

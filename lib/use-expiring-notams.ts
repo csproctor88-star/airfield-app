@@ -12,6 +12,9 @@ export function useExpiringNotamCount() {
 
   const check = useCallback(async () => {
     if (!icao || !createClient()) return
+    // Visibility gate: don't hit the FAA feed from backgrounded tabs (the kind of
+    // round-the-clock polling that once pressured the Supabase/auth quota).
+    if (typeof document !== 'undefined' && document.hidden) return
     try {
       const res = await fetch(`/api/notams/sync?icao=${encodeURIComponent(icao)}`)
       if (!res.ok) return
@@ -35,8 +38,13 @@ export function useExpiringNotamCount() {
 
   useEffect(() => {
     check()
-    const interval = setInterval(check, 5 * 60 * 1000) // re-check every 5 min
-    return () => clearInterval(interval)
+    const interval = setInterval(check, 5 * 60 * 1000) // re-check every 5 min (visibility-gated)
+    const onVisible = () => { if (!document.hidden) check() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [check])
 
   return count

@@ -9,7 +9,6 @@ import {
   Plus, X, Info, Pencil, Trash2, ExternalLink, ChevronDown, ChevronRight,
   CheckCircle2, AlertTriangle, AlertCircle, Circle,
 } from 'lucide-react'
-import { generateTrainingTranscriptPdf } from '@/lib/training-part139-pdf'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions } from '@/lib/permissions'
 import { getRoleLabel } from '@/lib/airport-mode'
@@ -175,7 +174,8 @@ export default function TrainingUserDetailPage() {
         {member && !loading && (
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
+              const { generateTrainingTranscriptPdf } = await import('@/lib/training-part139-pdf')
               const { doc, filename } = generateTrainingTranscriptPdf({
                 base: { name: currentInstallation?.name ?? null, icao: currentInstallation?.icao ?? null },
                 user: {

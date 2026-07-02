@@ -10,6 +10,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'lat and lon required' }, { status: 400 })
   }
 
+  // Validate coordinates numerically before they reach the upstream URL (hygiene:
+  // the host/key are fixed so there's no SSRF, but reject junk params up front).
+  const latNum = Number(lat)
+  const lonNum = Number(lon)
+  if (!Number.isFinite(latNum) || !Number.isFinite(lonNum) ||
+      latNum < -90 || latNum > 90 || lonNum < -180 || lonNum > 180) {
+    return NextResponse.json({ error: 'lat and lon must be valid coordinates' }, { status: 400 })
+  }
+
   const apiKey = process.env.GOOGLE_ELEVATION_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: 'Elevation API not configured' }, { status: 503 })
@@ -27,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/elevation/json?locations=${lat},${lon}&key=${apiKey}`,
+      `https://maps.googleapis.com/maps/api/elevation/json?locations=${latNum},${lonNum}&key=${apiKey}`,
       { signal: AbortSignal.timeout(8000) },
     )
 

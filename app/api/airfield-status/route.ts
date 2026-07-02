@@ -79,25 +79,40 @@ export async function PATCH(request: Request) {
 
   const updates = await request.json()
 
-  // Get the current row ID
+  // Resolve the caller's base EXPLICITLY rather than selecting an arbitrary
+  // airfield_status row (M-3 correctness landmine): with one row per base,
+  // `.limit(1).single()` returned whichever row sorted first, so the caller could
+  // neither reliably target their own base nor be safely denied. Prefer an explicit
+  // base_id from the body; otherwise fall back to the caller's membership only when
+  // it is unambiguous (exactly one base). base_id is never written (see WRITABLE).
+  let targetBaseId: string | null =
+    typeof updates?.base_id === 'string' && updates.base_id ? updates.base_id : null
+  if (!targetBaseId) {
+    const { data: memberships } = await supabase
+      .from('base_members')
+      .select('base_id')
+      .eq('user_id', auth.user.id)
+    const ids = (memberships ?? []).map((m) => m.base_id as string).filter(Boolean)
+    if (ids.length === 1) targetBaseId = ids[0]
+    else return NextResponse.json({ error: 'base_id required to disambiguate the target base' }, { status: 400 })
+  }
+
+  // Confirm the caller has access to the resolved base.
+  const { data: hasBase } = await supabase.rpc('user_has_base_access', {
+    p_user_id: auth.user.id,
+    p_base_id: targetBaseId,
+  })
+  if (hasBase !== true) {
+    return NextResponse.json({ error: 'You do not have access to this base.' }, { status: 403 })
+  }
+
   const { data: existing } = await supabase
     .from('airfield_status')
-    .select('id, base_id, runway_status, active_runway, advisory_type, advisory_text, runway_statuses')
-    .limit(1)
-    .single()
+    .select('id')
+    .eq('base_id', targetBaseId)
+    .maybeSingle()
 
-  if (!existing) return NextResponse.json({ error: 'No airfield_status row' }, { status: 404 })
-
-  // Confirm the caller actually has access to the base this row belongs to.
-  if (existing.base_id) {
-    const { data: hasBase } = await supabase.rpc('user_has_base_access', {
-      p_user_id: auth.user.id,
-      p_base_id: existing.base_id,
-    })
-    if (hasBase !== true) {
-      return NextResponse.json({ error: 'You do not have access to this base.' }, { status: 403 })
-    }
-  }
+  if (!existing) return NextResponse.json({ error: 'No airfield_status row for this base' }, { status: 404 })
 
   // SECURITY (L-17): never spread the raw body into the UPDATE. Pick only
   // the columns this route is allowed to change, so a crafted request can't

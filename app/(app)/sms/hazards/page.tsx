@@ -12,7 +12,6 @@ import { BandChip } from '@/components/sms/risk-matrix'
 import { formatZuluDate } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
-import { hazardRegisterToCsv, downloadBlob } from '@/lib/sms-pdf'
 
 /**
  * /sms/hazards — Hazard Register
@@ -127,8 +126,9 @@ export default function SmsHazardsPage() {
     setDraft({ title: '', description: '' })
   }
 
-  function exportCsv() {
+  async function exportCsv() {
     if (rows.length === 0) { toast.info('Nothing to export'); return }
+    const { hazardRegisterToCsv, downloadBlob } = await import('@/lib/sms-pdf')
     const csv = hazardRegisterToCsv(rows)
     downloadBlob(csv, 'hazard-register.csv', 'text/csv;charset=utf-8')
   }

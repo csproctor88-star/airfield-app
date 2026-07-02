@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import Link from 'next/link'
 import { fetchDiscrepancies, deleteDiscrepancy, type DiscrepancyRow } from '@/lib/supabase/discrepancies'
 import { photoUrl } from '@/lib/supabase/photos'
@@ -76,6 +76,9 @@ export default function DiscrepanciesPage() {
   const [search, setSearch] = useState('')
   const [discrepancies, setDiscrepancies] = useState<DiscrepancyRow[]>([])
   const [loading, setLoading] = useState(true)
+  // Default load is windowed (open + recently-closed); flips true once the full
+  // history has been pulled for a closed/all view so we don't re-fetch it.
+  const [fullyLoaded, setFullyLoaded] = useState(false)
   const [usingDemo, setUsingDemo] = useState(false)
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map')
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
@@ -94,51 +97,57 @@ export default function DiscrepanciesPage() {
   // (or the same button again) closes.
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-      if (!supabase) {
-        setUsingDemo(true)
-        setLoading(false)
-        return
-      }
-
-      const data = await fetchDiscrepancies(installationId)
-      if (data.length === 0) {
-        // Could be empty table or fetch error — check if Supabase is reachable
-        setDiscrepancies([])
-      } else {
-        setDiscrepancies(data)
-      }
+  const loadDiscrepancies = useCallback(async (full = false) => {
+    const supabase = createClient()
+    if (!supabase) {
+      setUsingDemo(true)
       setLoading(false)
-
-      // Fetch first photo per discrepancy for map popups
-      if (data.length > 0 && supabase) {
-        try {
-          const ids = data.map(d => d.id)
-          const { data: photoRows } = await supabase
-            .from('photos')
-            .select('discrepancy_id, storage_path, thumbnail_path')
-            .in('discrepancy_id', ids)
-            .order('created_at', { ascending: true })
-          if (photoRows && photoRows.length > 0) {
-            const pMap: Record<string, string> = {}
-            for (const row of photoRows) {
-              const dId = row.discrepancy_id
-              if (!dId) continue
-              // Only keep the first photo per discrepancy
-              if (pMap[dId]) continue
-              // Prefer thumbnail for list views (much smaller). photoUrl()
-              // routes through the authenticated proxy and passes data: through.
-              pMap[dId] = photoUrl(row.thumbnail_path || row.storage_path)
-            }
-            setDiscrepancyPhotoMap(pMap)
-          }
-        } catch { /* photo fetch is best-effort */ }
-      }
+      return
     }
-    load()
+
+    // Bounded by default: every still-open discrepancy PLUS those closed in the
+    // last 180 days, so an old-but-open item is never hidden. A full history pull
+    // happens only when the user opens an all/closed view (see the effect below).
+    const data = await fetchDiscrepancies(installationId, undefined, full ? undefined : { openPlusRecentDays: 180 })
+    setDiscrepancies(data)
+    if (full) setFullyLoaded(true)
+    setLoading(false)
+
+    // Fetch first photo per discrepancy for map popups
+    if (data.length > 0) {
+      try {
+        const ids = data.map(d => d.id)
+        const { data: photoRows } = await supabase
+          .from('photos')
+          .select('discrepancy_id, storage_path, thumbnail_path')
+          .in('discrepancy_id', ids)
+          .order('created_at', { ascending: true })
+        if (photoRows && photoRows.length > 0) {
+          const pMap: Record<string, string> = {}
+          for (const row of photoRows) {
+            const dId = row.discrepancy_id
+            if (!dId) continue
+            // Only keep the first photo per discrepancy
+            if (pMap[dId]) continue
+            // Prefer thumbnail for list views (much smaller). photoUrl()
+            // routes through the authenticated proxy and passes data: through.
+            pMap[dId] = photoUrl(row.thumbnail_path || row.storage_path)
+          }
+          setDiscrepancyPhotoMap(pMap)
+        }
+      } catch { /* photo fetch is best-effort */ }
+    }
   }, [installationId])
+
+  useEffect(() => { loadDiscrepancies() }, [loadDiscrepancies])
+
+  // Historical-closed views ('all' / 'completed' / 'cancelled') can include items
+  // older than the default window — pull the full set once when first opened.
+  useEffect(() => {
+    if (!fullyLoaded && installationId && (filter === 'all' || filter === 'completed' || filter === 'cancelled')) {
+      loadDiscrepancies(true)
+    }
+  }, [filter, fullyLoaded, installationId, loadDiscrepancies])
 
   const handleDeleteDiscrepancy = async (id: string) => {
     if (!confirm('Delete this discrepancy?')) return

@@ -495,7 +495,12 @@ export default function HomePage() {
           baseId: installationId, createdAt: new Date().toISOString(),
         },
         { baseId: installationId ?? '', userId },
-      )
+      ).catch((e) => {
+        // The NAVAID status itself is persisted above; this is the Events Log
+        // side-record. Surface a failure rather than letting it unhandled-reject.
+        console.error('Events Log entry for NAVAID change failed:', e)
+        toast.error('Status saved, but the Events Log entry could not be recorded.')
+      })
       if (res.status === 'queued') {
         toast.warning('Saved offline — NAVAID status will sync when you reconnect.', { id: 'navaid-queued', duration: 5000 })
       } else {

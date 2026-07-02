@@ -508,16 +508,17 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     }
   }, [installationId])
 
-  // Polling fallback: re-fetch airfield_status every 30s in case realtime is
+  // Polling fallback: re-fetch airfield_status every 60s in case realtime is
   // unavailable. Gated on tab visibility so backgrounded tabs don't keep
   // querying around the clock (avoidable load that multiplies across tabs/users).
+  // 60s meets the project-wide polling floor (realtime is the primary path).
   useEffect(() => {
     if (!loaded) return
     const interval = setInterval(() => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') {
         refreshStatus()
       }
-    }, 30000)
+    }, 60000)
     return () => clearInterval(interval)
   }, [loaded, refreshStatus])
 

@@ -18,7 +18,6 @@ import {
   type SmsAeSummary,
 } from '@/lib/supabase/sms'
 import { LoadingState } from '@/components/ui/loading-state'
-import { buildSmsManualPdf } from '@/lib/sms-pdf'
 import { formatZuluDate } from '@/lib/utils'
 
 /**
@@ -65,6 +64,7 @@ export default function SmsDashboardPage() {
       const assessments = (await Promise.all(hazards.map(h => fetchAssessments(h.id)))).flat()
       const mitigations = (await Promise.all(hazards.map(h => fetchMitigations(h.id)))).flat()
 
+      const { buildSmsManualPdf } = await import('@/lib/sms-pdf')
       const { doc, filename } = buildSmsManualPdf({
         baseName: currentInstallation?.name,
         baseIcao: currentInstallation?.icao,

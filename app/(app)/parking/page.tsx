@@ -64,7 +64,6 @@ import {
 } from '@/lib/calculations/parking-clearance'
 import { offsetPoint } from '@/lib/calculations/geometry'
 import { DEMO_PARKING_PLAN, DEMO_PARKING_SPOTS, DEMO_PARKING_OBSTACLES } from '@/lib/demo-data'
-import { generateParkingPdf } from '@/lib/parking-pdf'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import {
@@ -2682,6 +2681,7 @@ export default function ParkingPage() {
   // (mode === 'email').
   const exportSections = async (sections: PendingApron[], mode: 'pdf' | 'email') => {
     if (!selectedPlan || sections.length === 0) return
+    const { generateParkingPdf } = await import('@/lib/parking-pdf')
     const result = await generateParkingPdf({
       plan: selectedPlan,
       apronContext,
