@@ -8,6 +8,8 @@ import { Resend } from 'resend'
 import { formatPprColumnValue, isSummaryColumn } from '@/lib/supabase/ppr'
 import { notifyCoordinatingAgencies, notifyInfoOnlyRecipients } from '@/lib/ppr-agency-notify'
 import { buildPprInvite } from '@/lib/ppr-ics'
+import { callerCanActOnPpr, PPR_EMAIL_PERMS } from '@/lib/ppr-authorize'
+import { checkRateLimits } from '@/lib/rate-limit'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -92,6 +94,23 @@ export async function POST(request: Request) {
     }
     if (entry.status !== 'approved') {
       return NextResponse.json({ error: `Entry status is ${entry.status}, not approved` }, { status: 400 })
+    }
+
+    // AUTHORIZATION (H-1): the entry was read with the service-role client
+    // (RLS bypass), so gate explicitly on the same permission + base access
+    // the in-app Approve action requires. Without this, any authenticated
+    // account (read-only, kiosk) could trigger this send for any entry id.
+    const authorized = await callerCanActOnPpr(reader, user.id, entry.base_id, PPR_EMAIL_PERMS.approval)
+    if (!authorized) {
+      return NextResponse.json({ error: 'You do not have permission to send this PPR notification.' }, { status: 403 })
+    }
+    // Defense-in-depth: cap how fast an authorized account can loop the send.
+    const withinLimits = await checkRateLimits(reader, [
+      { bucket: `ppr-email:user:${user.id}`, max: 60, windowSeconds: 300 },
+      { bucket: `ppr-email:entry:${entry.id}`, max: 12, windowSeconds: 3600 },
+    ])
+    if (!withinLimits) {
+      return NextResponse.json({ error: 'Too many PPR notifications sent — please wait a moment and try again.' }, { status: 429 })
     }
 
     const { data: base } = await reader

@@ -6,6 +6,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 import { notifyCoordinatingAgencies } from '@/lib/ppr-agency-notify'
+import { callerCanActOnPpr, PPR_EMAIL_PERMS } from '@/lib/ppr-authorize'
+import { checkRateLimits } from '@/lib/rate-limit'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -82,6 +84,21 @@ export async function POST(request: Request) {
     }
     if (entry.status !== 'denied') {
       return NextResponse.json({ error: `Entry status is ${entry.status}, not denied` }, { status: 400 })
+    }
+
+    // AUTHORIZATION (H-1): entry read via service role (RLS bypass) — gate on
+    // the permissions that reach a denial (triage-Deny or post-coord decide-Deny)
+    // plus base access, so a read-only / kiosk account can't fire this.
+    const authorized = await callerCanActOnPpr(reader, user.id, entry.base_id, PPR_EMAIL_PERMS.denial)
+    if (!authorized) {
+      return NextResponse.json({ error: 'You do not have permission to send this PPR notification.' }, { status: 403 })
+    }
+    const withinLimits = await checkRateLimits(reader, [
+      { bucket: `ppr-email:user:${user.id}`, max: 60, windowSeconds: 300 },
+      { bucket: `ppr-email:entry:${entry.id}`, max: 12, windowSeconds: 3600 },
+    ])
+    if (!withinLimits) {
+      return NextResponse.json({ error: 'Too many PPR notifications sent — please wait a moment and try again.' }, { status: 429 })
     }
 
     const { data: base } = await reader
