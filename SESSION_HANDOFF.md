@@ -1,141 +1,129 @@
 # Session Handoff
 
 **Date:** 2026-07-02
-**Branch:** `main` — **pushed, in sync with origin** (the `workflow`-scope push block is
-resolved; 11 backlogged commits are now on `origin/main`).
-**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (compiled successfully),
+**Branch:** `main` — **pushed, in sync with origin**. The `workflow`-scope push
+block is resolved; the `next15` branch was squash-merged and deleted.
+**Build:** Clean — `npx tsc --noEmit` ✓, `npm run build` ✓ (Next 15, compiled
+successfully; a green Vercel preview build confirmed it on Node 24 / Linux),
 `npx vitest run` ✓ **1120 pass / 121 files**.
-**HEAD:** `3f5e4dbe` — rate-limit anonymous public-write forms (PPR / safety report / feedback).
+**HEAD:** `ef7c22ee` — Upgrade to Next.js 15.3.9 + React 19.
 
-**This session (2026-07-02):** shipped audit item #2 — server-side IP + base rate limiting
-on the three anonymous public-write forms (PPR request, safety report, feedback) — then
-cleared the `workflow`-scope push block and pushed all 11 backlogged commits (P0–P3
-hardening + the 2026-07-01 NAVAID/inspection/AMTR work + this) to `origin/main`.
-
-All three forms were **live-verified on the promoted build**: submissions land, and the
-server 429 trips correctly. Confirmed against the `rate_limit_hits` table — `ppr-public`,
-`feedback-public`, and `safety-public` buckets are all recording; the safety form's 6th
-rapid submit returned the inline "Too many requests" (the ip+base bucket = 5 per 10 min
-doing its job). No new migration was needed — the routes reuse the existing
-`check_rate_limit` RPC (`2026061505_rate_limit.sql`). Limits (ip 10/hr, base 60/hr,
-ip+base 5/10min) are shared across all three surfaces in `lib/public-rate-limit.ts` and
-were left as-is by user decision.
-
-Now starting **Plan B (Next 14→15 upgrade)** on a `next15` branch (plans dir:
-`~/.claude/plans/2026-07-02-nextjs-15-upgrade.md`). `main` is untouched by that work.
-
-The sections below (Visual NAVAIDs, inspection offline-queue, AMTR 623A) are the prior
-**2026-07-01** session's record, retained for continuity.
+This session closed out the 2026-07-01 codebase audit and then moved the
+framework forward. Three arcs: (1) the audit-remediation follow-on batch landed
+and the whole P0–P4 body of work is now committed, pushed, and on `main`;
+(2) server-side rate limiting shipped on the three anonymous public forms and
+was **live-verified on the promoted build**; (3) the stack was upgraded to
+Next 15.3.9 + React 19 on a branch, verified through a green Vercel preview,
+and squash-merged. The audit HTML (`~/glidepath-audit-2026-07-01.html`) was
+re-scored to reflect all of it (overall **B → A-**).
 
 ---
 
 ## What shipped this session (end state — read first)
 
-### Visual NAVAIDs: AGM + Do Not Enter signs, reflectors, sizing, inop ring (`3c50be54`)
-Three new `infrastructure_features.feature_type`s ride the existing config-driven
-pipeline (`LAYERS` → icon/render dispatch → legend → add-feature picker):
+### Public-write rate limiting, live-verified (`3f5e4dbe`)
+The three anonymous QR/public forms (PPR request, safety report, feedback) POSTed
+straight from the browser to their submit paths with no server hop, so nothing
+throttled them. Each now goes through a thin API route
+(`app/api/public/{ppr-request,safety-report,feedback}/route.ts`) that applies an
+IP + base throttle via `lib/public-rate-limit.ts` — reusing the existing
+`getClientIp` + `checkRateLimits` + `check_rate_limit` RPC (service-role client
+for the limiter) — then calls the *same* SECURITY DEFINER RPC / anon insert as
+before, so submission behavior is unchanged. Buckets: ip 10/hr, base 60/hr,
+ip+base 5/10min; the limiter **fails open** if the service-role key is absent so
+a broken limiter can never take down a public path.
 
-- **Arresting Gear Marking (AGM) sign** — sign-sized **square**, black bg + centered
-  filled yellow disc, **rotatable**. Outage-tracked with no engine change: the outage
-  engine (`lib/outage-rules.ts`) is `feature_type`-agnostic (counts any feature by
-  `system_component_id` + `status`), so AGM is tracked once assigned to a lighting
-  system, exactly like a light.
-- **Do Not Enter sign** — red no-entry roundel (white ring + bar). A distinct type,
-  but added to the **Mandatory Signs** layer's `types` array so it shares that
-  layer's toggle + count (no new legend row) per the user's choice.
-- **Reflector** — meter-sized **blue square** (`google.maps.Rectangle`, 2.0 m, same
-  blue as taxiway lights). Introduced `renderType: 'square'` (the renderer's first
-  real use of `renderType`; dispatch is otherwise by `iconUrl` presence) and a
-  `rectangles` collection on the `GMapWrapper` (`clearAllObjects` clears it).
+Verified on prod against the `rate_limit_hits` table — `ppr-public`,
+`feedback-public`, and `safety-public` buckets all record, and the safety form
+(the only one with no client cooldown) returns the inline "Too many requests"
+429 on the 6th rapid submit. Limits are shared across the three surfaces and were
+left as-is by user decision. `tests/public-write-routes.test.ts` covers
+400 / happy / 429 / fail-open + payload mapping.
 
-Non-obvious how: AGM/DNE are **per-feature rotation-baked images** routed through the
-labeled-sign sizing path via a `graphic-<type>-<id>` `signIcon`, so they size like
-signs and rotate. Taxiway lights bumped **+33% (1.5 → 2.0 m)** via a per-layer
-`radiusMeters` (taxiway-scoped; other lights unchanged). Inoperative indicator: a red
-**ring overlay marker** on raster-marker features; meter primitives (light circles,
-reflector squares) fill red. `squareBoundsMeters` geometry helper (unit-tested). DB
-`CHECK` constraint extended by migration `2026063003`.
+### Next.js 14.2.35 → 15.3.9 + React 18 → 19 (`ef7c22ee`)
+Squash of the `next15` branch. The async-request-api codemod handled the
+mechanical parts (`await cookies()`/`headers()`, async `params` in the two
+dynamic route *handlers* — `kiosk/[icao]`, `admin/users/[id]`). The parts the
+codemod can't do were done by hand:
 
-### Inspection offline-queue orphaning + complete-hang fix (`0b7b6133`)
-Chase Eaton (Selfridge) started an airfield inspection that showed `in_progress` on
-his device but never reached the DB — no row, no "on the airfield" events-log entry —
-and Complete & File hung on "Completing…" then reverted to `in_progress`. Two
-compounding bugs, triggered when a start is enqueued during a wifi↔cellular blip:
+- `lib/supabase/server.ts` `createClient()` is now **async** (`await cookies()`)
+  with its 3 callers awaited — this replaces the codemod's deprecated
+  `UnsafeUnwrappedCookies` cast, which breaks in Next 16.
+- `middleware.ts` needed **no change**: it reads `request.cookies` (the sync
+  `NextRequest` API), not `next/headers`. The 14 dynamic `[param]` *pages* are
+  client components using `useParams()`, so they're unaffected by async params.
+- `app/(app)/library/page.tsx`: the `ssr:false` `next/dynamic` import of
+  `PDFLibrary` was moved into a `'use client'` wrapper
+  (`app/(app)/library/pdf-library-client.tsx`) — Next 15 forbids `ssr:false`
+  inside a Server Component.
+- `next.config.js`: `eslint.ignoreDuringBuilds = true`. Under CI (Vercel and
+  GitHub Actions both set `CI=1`) `next build` escalates ESLint *warnings* to
+  build failures, and this project keeps `no-explicit-any` / `no-unused-vars`
+  at `warn`. Lint is now its own `ci.yml` step (`npm run lint`), which fails on
+  errors but not warnings — restoring the pre-Next-15 effective behavior.
+- `eslint.config.mjs`: register `@typescript-eslint` directly (eslint-config-
+  next@15 dropped it from `next/core-web-vitals`), keeping the two warn rules
+  without adopting `next/typescript`'s strict recommended set.
 
-1. The start writes (`inspection_save_draft` + start `activity_log_insert`) were
-   enqueued with `userId: ''`. The user-scoped drainer's `ownsItem()` treats `''` as
-   neither absent (`== null`) nor a match, so it **skipped them forever** (orphaned;
-   also hidden from the header "N queued" badge, which is user-scoped). Fix: stamp the
-   real signed-in user id on both start writes, **and** make `ownsItem()` treat an
-   empty-string `userId` like an absent one (unowned → drained best-effort), which
-   also **recovers already-orphaned items** on the next online drain.
-2. `handleComplete` had no `try/catch/finally`. The `inspection_file` UPDATE targeted
-   the never-inserted draft row → 0 rows → `NonRetriableError` → escaped unhandled →
-   `setSaving(false)` never ran (stuck spinner), draft never cleared. Fix: `.catch`/
-   `.finally` at the call site.
+`next-pwa` 10.2.9 builds clean on 15 (service worker still generated);
+`react-pdf` 10.4.1 already supports React 19. **Runtime QA on the promoted build
+is still pending** (see Next session tasks).
 
-Also added a **queued-start toast** (a start that queues instead of committing now
-tells the user it'll sync when the connection stabilizes) and refreshed the header
-**OFFLINE** chip tooltip (it predated the offline queue and still said "submissions
-will fail"). Regression test locks the empty-`userId` drain invariant.
-
-### AMTR records-inspection 623A signed by Trainee + NAMT, not Trainer (`dd337ed7`)
-A completed records inspection auto-creates a `Monthly Training Records Inspection`
-623A entry, but it was graded like a standard manual entry (Trainee + Trainer) by the
-4.1 completeness check and both signature-gap functions — so it wrongly demanded a
-trainer signature. Records inspections are signed by the **Trainee + NAMT** only.
-
-`lib/amtr/inspection-engine.ts` now special-cases records-inspection entries in all
-three spots (require trainee + namt, never flag a trainer). `completeAmtrInspection`
-**auto-stamps the completing inspector's signature into the NAMT block** (they are the
-NAMT who ran it — resolves their `operating_initials`, falls back to name-derived
-initials), leaving the trainee as the only remaining signer. The server-side
-`amtr_required_slots` RPC (used by the fidelity audit) was aligned via migration
-`2026070100`. Shared `RECORDS_INSPECTION_ENTRY_TYPE` constant + `isRecordsInspectionEntry()`
-helper; regression tests lock the trainee+namt (not trainer) invariant. The user
-**declined a backfill** of pre-existing entries (only a handful had been done).
+### Audit remediation P0–P4 fully landed (`49cbdbe5`..`19075a53` + earlier P0–P3)
+The follow-on batch from the 2026-07-01 audit is committed and pushed:
+Events Log append-only + base-scoped delete, ppr-sequence permission half,
+photos obstruction/email-temp base-scoping, 15 base_id-leading indexes, ACSI
+per-fiscal-year unique, `/api/airfield-status` arbitrary-row fix, elevation
+lat/lon validation + explicit permission checks on the two RLS-only routes,
+discrepancies windowing, remaining PDF-route `await import()` splits, SMS/PPR
+N+1 collapse to `.in()` batches, infrastructure double clear-and-rebuild removal,
+polling back to ≥60s / visibility-gated, and the minority silent-return write
+paths finished. Detail per finding lives in the audit HTML roadmap (now with a
+P4 phase) and `project_release_history` memory.
 
 ---
 
 ## Migrations status
 
+All applied to the linked DB via `npx supabase db query --linked --file` and
+verified against `pg_policies` / `pg_indexes`. **No pending migrations.**
+
 | File | State | What it does |
 |---|---|---|
-| `2026063003_add_agm_dne_reflector_feature_types.sql` | **Applied** | +3 `feature_type` CHECK values (`arresting_gear_marking_sign`, `do_not_enter_sign`, `reflector`). Expand-only. |
-| `2026070100_amtr_623a_records_inspection_slots.sql` | **Applied** | `amtr_required_slots` is now entry-type-aware: records-inspection 623A → `['trainee','namt']`. `CREATE OR REPLACE`, no data change. |
+| `2026070101_drop_dead_update_airfield_status.sql` | Applied | DROP the dangling no-authz cross-tenant RPC (CRITICAL) |
+| `2026070102_base_scope_cross_tenant_write_policies.sql` | Applied | base-scope `base_members` / `bases` UPDATE / child-table writes |
+| `2026070103_pdf_text_pages_drop_stale_policies.sql` | Applied | drop the stale permissive `pdf_text_pages` policies by real names |
+| `2026070104_waiver_attachments_base_scoped_storage.sql` | Applied | migrate waiver-attachments storage to path→base scoping |
+| `2026070105_inspections_one_inprogress_per_day.sql` | Applied | scoped partial unique index (offline dup guard) |
+| `2026070200_activity_log_base_scope_mutations.sql` | Applied | Events Log append-only + base-scoped UPDATE/DELETE |
+| `2026070201_ppr_number_sequence_permission.sql` | Applied | permission half on the ppr-sequence write policy |
+| `2026070202_photos_storage_base_scope.sql` | Applied | base-scope obstruction-photos reads + email-temp CRUD |
+| `2026070203_base_id_leading_indexes.sql` | Applied | 15 base_id-leading indexes |
+| `2026070204_acsi_one_completed_per_fiscal_year.sql` | Applied | partial unique on `(base_id, fiscal_year)` for completed/staffed |
 
-Both applied to the linked DB via `npx supabase db query --linked --file` and
-verified. **No pending migrations.**
-
----
-
-## Bugs fixed during the session
-
-| Symptom | Root cause | Commit |
-|---|---|---|
-| Inspection started but never persisted (in_progress locally, nothing in DB, no events-log entry) | start queue writes stamped `userId: ''` → orphaned forever by the user-scoped drainer (`ownsItem` treats `''` as a foreign owner) | `0b7b6133` |
-| Complete & File hung on "Completing…", then reverted to in_progress | `handleComplete` had no try/catch/finally; the file UPDATE hit the never-inserted draft row → `NonRetriableError` escaped unhandled → `saving` stuck | `0b7b6133` |
-| Records-inspection 623A demanded a trainer signature | the auto-entry was graded like a manual trainee+trainer entry in the completeness + gap engine | `dd337ed7` |
+(The `2026070100` AMTR 623A slots migration is from the prior session.)
 
 ---
 
 ## Lessons from this session
 
-- **Offline-queue writes must carry the real `userId`.** An empty string is not
-  `null`, so it fails the user-scoped `ownsItem` equality and orphans the write
-  (invisible even in the pending-sync badge). `ownsItem` now tolerates `''` as a
-  rescue, but any new queued-write surface must still stamp the signed-in user id.
-- **Fire-and-forget queue writes (`void … .catch(() => {})`) hide failures.** The
-  start flow showed "started" + `in_progress` even though nothing persisted. Surface
-  queued/failed state (the start now toasts on queue).
-- **The outage engine is `feature_type`-agnostic** — it counts any feature assigned
-  to a lighting-system component by `status`. New feature types get outage tracking
-  for free via assignment; no engine changes needed.
-- **Visual NAVAIDs render dispatch is by `iconUrl` presence, not `renderType`**
-  (`renderType` is legend/metadata). Adding a type needs the union + labels + abbrev
-  (`lib/supabase/infrastructure-features.ts`) + a `LAYERS` row + `FEATURE_TYPE_OPTIONS`
-  + an icon (or per-feature `signIcon`) + a DB `CHECK`-constraint migration — miss the
-  migration and inserts fail at runtime.
+- **Next 15 `next build` fails on ESLint *warnings* under CI** (`CI=1`), while a
+  local build treats them as non-blocking. The fix is to decouple lint from the
+  build (`eslint.ignoreDuringBuilds`) and run `next lint` as its own CI step —
+  it follows ESLint exit semantics (errors fail, warnings don't).
+- **The codemod can't async-ify a wrapper.** `lib/supabase/server.ts` hides
+  `cookies()` behind our own `createClient()`, so the codemod fell back to the
+  deprecated `UnsafeUnwrappedCookies` cast. Making the wrapper async + awaiting
+  its callers is the durable fix (the cast breaks in Next 16).
+- **next-pwa 10.2.9 and react-pdf 10.4.1 are Next-15 / React-19 ready** — the two
+  pre-flight risks that could have blocked the upgrade both cleared.
+- **Vercel's git webhook fired intermittently for the `next15` branch** (2 of 3
+  pushes produced no deploy); an empty-commit re-push nudged it. `main` pushes
+  fired reliably every time — this was branch/one-off flakiness, not config.
+- **The safety-report form is the honest test of server rate limiting** — it has
+  no client localStorage cooldown, unlike PPR and feedback, so it's the only one
+  where the "wait a few minutes" screen means the *server* 429 (not the client
+  cooldown that also exists in the old build).
 
 ---
 
@@ -143,52 +131,53 @@ verified. **No pending migrations.**
 
 | Item | Severity | Notes |
 |---|---|---|
-| New NAVAID types not live-smoke-tested | med | AGM/DNE/reflector appearance, rotation, inop ring, taxiway +33% sizing verified via tsc/build/vitest only. User to eyeball proportions (disc/roundel/ring weights, reflector size) on the promoted build — all one-line tweaks. |
-| Pre-fix records-inspection 623A entries | low | Existing entries have no NAMT auto-signature; they now show NAMT (not trainer) as the outstanding signer, with no auto-nudge for the NAMT on back-entries. User declined a backfill (only a handful exist). |
-| Orphaned inspection-queue items recover on next online load | low | A user with a stuck pre-fix start write gets it drained once they load the new build online; a hard PWA refresh may be needed to pick up the new service worker. |
-| Confirm FQ definition (carried) | low | Training Progress FQ = JQS 100% AND Formal 100%; does 1098/797 factor in? |
+| Next 15 runtime QA not done on the promoted build | med | tsc/build/tests + a green Vercel *preview* pass; auth/session (async cookies), the 3 async `createClient` callers (/library, amtr-reconcile, infra-import), dynamic routes, PWA offline-queue, and the caching-defaults flip are only verifiable on a running deploy. |
+| Deferred audit items | low | 26 nullable `base_id` columns need `SET NOT NULL`; qrc natural-key uniques; AMTR controlled-input conversion (46 `defaultValue` inputs); shift-checklist queue-wire. All deferred by explicit choice. |
+| 9 npm advisories | low | 0 crit · 7 mod · 2 high. All transitive build-time (`next-pwa→workbox`, `tar`) or the no-safe-fix `exceljs→uuid`. None runtime-exploitable. |
 | Selfridge 1098 duplicate rows (carried) | low | data cleanup in AMTR, not code. |
-| Inspection PDF layout (carried) | low | shows detail + corrective action; not visually re-reviewed. |
-| Current reference docs local-only (carried) | low | briefs/spec/terminology/primer live in gitignored `docs/references/` — not in the repo. |
+| Current reference docs local-only (carried) | low | briefs/spec/terminology live in gitignored `docs/references/`. |
 
 ---
 
 ## Next session tasks
 
-No required next step — pick up wherever the user wants. Candidate if idle:
+**One required follow-up: runtime QA of the Next 15 build on the promoted deploy.**
+`main` (`ef7c22ee`) will build a Vercel preview on push; promote it, then verify
+on the promoted build:
 
-- **Live smoke test** on the promoted build:
-  - NAVAIDs: place AGM / Do Not Enter / reflector; rotate an AGM/DNE; mark each
-    kind inop → red ring (signs) / red fill (reflector, light); confirm taxiway
-    lights read larger; assign an AGM to a lighting system + mark inop → outage
-    alert + auto-discrepancy.
-  - Inspections: start under a simulated wifi↔cellular blip → queued-start toast +
-    the start row/events-log entry drain when back online; complete → no hang.
-  - AMTR: complete a records inspection → NAMT block auto-signed, trainee nudged,
-    no trainer signature required or flagged.
+- **Auth/session** (top priority — async `cookies()`): login → hard-refresh
+  (session persists) → logout → hit a protected route logged-out (→ `/login`).
+- The **3 async `createClient` callers**: `/library` (PDF viewer loads), an
+  **AMTR reconcile**, an **infrastructure import**.
+- **Dynamic routes**: a `[id]` page + a public `/<icao>/ppr-request`.
+- **PWA**: install → offline → queue a write → reconnect → it flushes.
+- A map page + one form submit, to eyeball React 19 rendering.
+
+If anything's off, fix on a branch (don't hand-edit `main` under a live promote).
 
 ### Long-running carryover (bandwidth-permitting)
-- FQ-definition confirmation; Selfridge 1098 duplicate-row cleanup; inspection PDF
-  visual review; local-only reference docs.
+- The deferred audit items above (nullable `base_id`, qrc uniques, AMTR
+  controlled inputs, shift-checklist queue-wire).
+- Optional: Next 16 as its own branch effort (15 was banked first; next-pwa is
+  even less proven on 16, so gate on that).
+- Selfridge 1098 dedup; local-only reference docs.
 
 ---
 
 ## Build snapshot
 
 ```
-build: compiled successfully
+build: compiled successfully (Next 15.3.9; green Vercel preview on Node 24/Linux)
 tsc:   no errors
-tests: 1097 pass / 119 files
+tests: 1120 pass / 121 files
 
-Notable First Load JS:
-  /infrastructure            37 kB  →  229 kB   (NAVAID feature types)
-  /inspections               23.1 kB → 241 kB   (offline-queue fix)
-  /amtr/[memberId]/inspect   14.4 kB → 380 kB   (records-inspection fix)
-  /amtr/[memberId]           16 kB  →  216 kB
-  /amtr                      6.52 kB → 168 kB
-  /wildlife                  459 kB →  809 kB   (unchanged; still heaviest overall)
-  First Load JS shared               91.6 kB
-  Middleware                         74.6 kB
+Notable First Load JS (Next 15):
+  First Load JS shared            106 kB
+  Middleware                      80.8 kB
+  /wildlife                       236 kB   (heaviest; was 809 kB pre-hardening)
+  /library                        ~92 kB   (ssr:false PDFLibrary now in a client wrapper)
+  /training/[userId]              198 kB
+  /waivers/[id]                   221 kB
 ```
 
 ---
@@ -197,8 +186,9 @@ Notable First Load JS:
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-01 | Visual NAVAIDs: AGM + Do Not Enter signs, reflectors, taxiway-light sizing, inoperative ring. Inspection offline-queue orphaning + complete-hang fix (+ queued-start toast). AMTR records-inspection 623A signed by Trainee + NAMT (not Trainer). |
-| **v2.35.0** | 2026-06-30 | Customizable widget dashboard (grid, per-device layouts, analytics, Status Board, Airfield Lighting); FLIP Management + Read File modules; PPR calendar + `.ics` invites; AMTR manager-addable 803 sections + inspection/1098 completion; C2IMERA export; WWA server-side expiry; brand refresh. Cut this session; awaiting the user's promotion. |
+| **Unreleased** | 2026-07-02 | Codebase-audit remediation P0–P4 (cross-tenant RLS, silent-save/return sweep, CI, bundle splits, base_id indexes). Public-write rate limiting on the 3 anon forms, live-verified. Next.js 15.3.9 + React 19 upgrade. |
+| **Unreleased** | 2026-07-01 | Visual NAVAIDs: AGM + Do Not Enter signs, reflectors, taxiway-light sizing, inoperative ring. Inspection offline-queue orphaning + complete-hang fix. AMTR records-inspection 623A signed by Trainee + NAMT (not Trainer). |
+| **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File modules; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
 ---
@@ -206,19 +196,16 @@ Notable First Load JS:
 ## Key files touched this session
 
 ### New files
-- `supabase/migrations/2026063003_add_agm_dne_reflector_feature_types.sql`
-- `supabase/migrations/2026070100_amtr_623a_records_inspection_slots.sql`
+- `lib/public-rate-limit.ts` · `app/api/public/{ppr-request,safety-report,feedback}/route.ts`
+- `app/(app)/library/pdf-library-client.tsx`
+- `tests/public-write-routes.test.ts`
+- 10 migrations `2026070101`–`2026070204` (see table)
 
 ### Modified files
-- `app/(app)/infrastructure/page.tsx` — 3 new feature types, `square` render branch,
-  inop ring, legend cases, per-layer `radiusMeters`.
-- `lib/google-map-adapter.ts` — `rectangles` collection on the wrapper.
-- `lib/calculations/geometry.ts` — `squareBoundsMeters`.
-- `lib/supabase/infrastructure-features.ts` — type union + labels + abbrevs.
-- `app/(app)/inspections/page.tsx` — start-write `userId` stamping, `handleComplete`
-  safety net, queued-start toast.
-- `lib/sync/write-queue.ts` — `ownsItem` empty-`userId` rescue.
-- `components/layout/header.tsx` — OFFLINE chip tooltip.
-- `lib/amtr/inspection-engine.ts` — records-inspection signature rules (3 spots).
-- `lib/supabase/amtr-inspections.ts` — NAMT auto-sign at completion.
-- `lib/amtr/inspection-623a.ts` — `RECORDS_INSPECTION_ENTRY_TYPE` + helper.
+- `lib/supabase/server.ts` (async `createClient`), `next.config.js`
+  (eslint decouple), `eslint.config.mjs`, `.github/workflows/ci.yml` (lint step),
+  `tsconfig.json` (Next auto target ES2017)
+- The public forms (`components/ppr/public-request-form.tsx`,
+  `components/sms/public-safety-report-form.tsx`, `lib/supabase/feedback.ts`)
+  repointed to the rate-limited routes
+- ~20 route handlers + `tests/kiosk-route.test.ts` (async request APIs)
