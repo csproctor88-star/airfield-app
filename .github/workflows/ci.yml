@@ -1,0 +1,57 @@
+name: CI
+
+# Runs the type-check, test suite, and production build on every push / PR to
+# main. This is the safety net the audit flagged as missing — in particular it
+# is where the env-gated RLS / pentest suites (tests/rls-*.test.ts,
+# tests/permission-rpcs.test.ts) actually EXECUTE instead of skipping silently.
+#
+# For those suites to run (not skip), add these repository secrets
+# (Settings → Secrets and variables → Actions). Point them at a NON-production
+# test project/base — the suites sign in and read/write across bases:
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   TEST_RLS_PASSWORD   (shared password for the seeded test users)
+#   TEST_RLS_BASE_A     (a base UUID the test user belongs to)
+#   TEST_RLS_BASE_B     (a base UUID the test user must NOT reach)
+# Without them the workflow still passes; the security suites skip exactly as
+# they do locally — so set them to get real coverage of the RLS boundary.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      TEST_RLS_PASSWORD: ${{ secrets.TEST_RLS_PASSWORD }}
+      TEST_RLS_BASE_A: ${{ secrets.TEST_RLS_BASE_A }}
+      TEST_RLS_BASE_B: ${{ secrets.TEST_RLS_BASE_B }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Test (runs RLS suites when secrets are set)
+        run: npm run test
+
+      - name: Build
+        run: npm run build
