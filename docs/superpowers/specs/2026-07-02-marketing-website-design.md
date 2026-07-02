@@ -99,7 +99,7 @@ Parking Plans · Obstructions · QRCs · Shift Checklist · Wildlife/BASH ·
 Waivers · NOTAMs · PPR · SCN · Daily Reviews · Personnel on Airfield · AMTR ·
 FLIP Management · Events Log & Reports
 
-**Civilian (~14):** Airfield Status · Dashboards · Self-Inspections ·
+**Civilian (~14):** Airport Status · Dashboards · Self-Inspections ·
 Discrepancies/Work Orders · SMS · AEP · §139.303 Training · Wildlife ·
 NOTAMs · PPR · Parking · Personnel · Reports · Records Export
 
@@ -297,10 +297,11 @@ which module pages draw traffic and demo conversions.
 Content pillars: data posture (no sensitive personal data on the platform),
 tenant isolation (row-level security, permission-matrix enforcement),
 DAFMAN 13-204 Vol 2 Para 2.5.2.10 web-based-program suitable-substitute
-authorization (with the T-3 waiver posture described accurately), client-side
-PDF generation (documents never transit third parties), and the Platform One
-IL4/IL5 migration path. Written for both audiences; no fabricated regulatory
-text.
+authorization, client-side PDF generation (documents never transit third
+parties), and the hosting & accreditation roadmap — commercial cloud today,
+Platform One migration path toward IL4/IL5 — presented explicitly as a
+roadmap in progress, with no dates and never implying current DoD
+accreditation. Written for both audiences; no fabricated regulatory text.
 
 ---
 
