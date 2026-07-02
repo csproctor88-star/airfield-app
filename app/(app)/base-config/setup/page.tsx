@@ -276,8 +276,9 @@ export default function BaseSetupPage() {
                 if (baseNameDraft.trim() && baseNameDraft.trim() !== currentInstallation?.name && installationId) {
                   const supabase = createClient()
                   if (supabase) {
-                    await supabase.from('bases').update({ name: baseNameDraft.trim() } as any).eq('id', installationId)
-                    toast.success('Installation name updated')
+                    const { error } = await supabase.from('bases').update({ name: baseNameDraft.trim() } as any).eq('id', installationId)
+                    if (error) toast.error(`Couldn't update name: ${error.message}`)
+                    else toast.success('Installation name updated')
                   }
                 }
                 setEditingBaseName(false)
@@ -700,7 +701,12 @@ function RunwayTab({
     setElevSaving(true)
     const supabase = createClient()
     if (!supabase) { setElevSaving(false); return }
-    await supabase.from('bases').update({ elevation_msl: val } as any).eq('id', installationId)
+    const { error } = await supabase.from('bases').update({ elevation_msl: val } as any).eq('id', installationId)
+    if (error) {
+      toast.error(`Couldn't save elevation: ${error.message}`)
+      setElevSaving(false)
+      return
+    }
     setBaseElevation(val)
     setElevSaving(false)
     toast.success('Airfield elevation saved')
@@ -1790,8 +1796,10 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
       return
     }
 
-    // Also create a navaid_statuses entry so it appears on the dashboard
-    await supabase
+    // Also create a navaid_statuses entry so it appears on the dashboard.
+    // Non-fatal if it fails (the NAVAID itself was added) but surface it —
+    // otherwise the NAVAID silently never shows on the status board.
+    const { error: statusErr } = await supabase
       .from('navaid_statuses')
       .insert({
         navaid_name: newItem.trim(),
@@ -1800,8 +1808,9 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
         notes: null,
         updated_by: null,
       })
+    if (statusErr) console.error('[base-setup] navaid_statuses insert failed:', statusErr.message)
 
-    toast.success(`Added "${newItem.trim()}"`)
+    toast.success(`Added "${newItem.trim()}"${statusErr ? ' (status-board sync pending)' : ''}`)
     markSaved?.('navaids')
     setNavaids(prev => [...prev, navaidRow as typeof prev[number]])
     setNewItem('')
@@ -1815,14 +1824,19 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
     if (!supabase) return
 
     // Delete from base_navaids
-    await supabase.from('base_navaids').delete().eq('id', navaid.id)
+    const { error: delErr } = await supabase.from('base_navaids').delete().eq('id', navaid.id)
+    if (delErr) {
+      toast.error(`Couldn't delete "${navaid.navaid_name}": ${delErr.message}`)
+      return
+    }
 
-    // Also delete from navaid_statuses
-    await supabase
+    // Also delete from navaid_statuses (non-fatal if it fails)
+    const { error: statusDelErr } = await supabase
       .from('navaid_statuses')
       .delete()
       .eq('base_id', installationId)
       .eq('navaid_name', navaid.navaid_name)
+    if (statusDelErr) console.error('[base-setup] navaid_statuses delete failed:', statusDelErr.message)
 
     toast.success(`Deleted "${navaid.navaid_name}"`)
     setNavaids(prev => prev.filter(n => n.id !== navaid.id))

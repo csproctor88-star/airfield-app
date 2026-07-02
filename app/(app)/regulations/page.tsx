@@ -7,6 +7,7 @@ import { ALL_REGULATIONS, type RegulationEntry } from '@/lib/regulations-data'
 import { REGULATION_CATEGORIES, REGULATION_PUB_TYPES, REGULATION_SOURCE_SECTIONS, USER_ROLES } from '@/lib/constants'
 import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { getRegSource } from '@/lib/airport-mode'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
@@ -402,20 +403,28 @@ function RegulationsTab({ onViewReg }: { onViewReg: (reg: RegulationEntry, page?
     try {
       const supabase = createClient()
       if (supabase) {
-        // Delete from Supabase regulations table
-        await supabase.from('regulations').delete().eq('reg_id', regId)
+        // Delete from Supabase regulations table. Supabase v2 returns the error
+        // rather than throwing, so check it explicitly — otherwise an RLS denial
+        // would drop the row from the UI while it survives in the DB.
+        const { error } = await supabase.from('regulations').delete().eq('reg_id', regId)
+        if (error) {
+          toast.error(`Couldn't delete reference: ${error.message}`)
+          setDeletingRegId(null)
+          return
+        }
         // Delete PDF from storage (best effort)
         const fileName = `${sanitizeFileName(regId)}.pdf`
         await supabase.storage.from(REG_BUCKET).remove([fileName])
         // Delete from IDB cache
         try { await idbDelete(STORE_BLOBS, fileName) } catch { /* ignore */ }
       }
-      // Remove from whichever list is active
+      // Remove from whichever list is active — only reached on a confirmed delete
       setDbRegs(prev => prev ? prev.filter(r => r.reg_id !== regId) : prev)
       setConfirmDeleteId(null)
       setExpandedId(null)
     } catch (err) {
       console.error('Failed to delete regulation:', err)
+      toast.error('Failed to delete regulation — please try again.')
     } finally {
       setDeletingRegId(null)
     }

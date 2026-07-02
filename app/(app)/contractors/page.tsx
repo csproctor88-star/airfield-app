@@ -75,11 +75,16 @@ export default function ContractorsPage() {
 
   // Read-then-write to avoid race conditions overwriting other users' templates
   const saveTemplates = async (updated: ContractorTemplate[]) => {
+    const previous = templates
     setTemplates(updated)
     if (!installationId) return
     const supabase = createClient()
     if (!supabase) return
-    await supabase.from('bases').update({ contractor_templates: updated } as any).eq('id', installationId)
+    const { error } = await supabase.from('bases').update({ contractor_templates: updated } as any).eq('id', installationId)
+    if (error) {
+      setTemplates(previous) // revert the optimistic update so a failed save doesn't look saved
+      toast.error(`Couldn't save templates: ${error.message}`)
+    }
   }
 
   // Fetch latest templates from DB before appending, to avoid overwriting

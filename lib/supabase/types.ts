@@ -169,6 +169,351 @@ export type Database = {
           },
         ]
       }
+      aep_comms_check_results: {
+        Row: {
+          agency_id: string | null
+          agency_name: string
+          agency_role: string | null
+          check_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          sort_order: number
+          status: string
+        }
+        Insert: {
+          agency_id?: string | null
+          agency_name: string
+          agency_role?: string | null
+          check_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sort_order?: number
+          status: string
+        }
+        Update: {
+          agency_id?: string | null
+          agency_name?: string
+          agency_role?: string | null
+          check_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aep_comms_check_results_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "aep_response_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_comms_check_results_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "aep_comms_checks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aep_comms_checks: {
+        Row: {
+          base_id: string
+          check_date: string
+          check_period: string
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_oi: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          started_at: string
+        }
+        Insert: {
+          base_id: string
+          check_date: string
+          check_period?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+        }
+        Update: {
+          base_id?: string
+          check_date?: string
+          check_period?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aep_comms_checks_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_comms_checks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aep_drills: {
+        Row: {
+          after_action_notes: string | null
+          base_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          drill_date: string
+          drill_type: string
+          evidence_url: string | null
+          findings: string | null
+          id: string
+          next_due_at_override: string | null
+          participants: Json
+          scenario: string
+          status: string
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          after_action_notes?: string | null
+          base_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          drill_date: string
+          drill_type: string
+          evidence_url?: string | null
+          findings?: string | null
+          id?: string
+          next_due_at_override?: string | null
+          participants?: Json
+          scenario: string
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          after_action_notes?: string | null
+          base_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          drill_date?: string
+          drill_type?: string
+          evidence_url?: string | null
+          findings?: string | null
+          id?: string
+          next_due_at_override?: string | null
+          participants?: Json
+          scenario?: string
+          status?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aep_drills_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_drills_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_drills_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aep_plans: {
+        Row: {
+          ae_signed_at: string | null
+          ae_user_id: string | null
+          approved_by_faa_at: string | null
+          base_id: string
+          created_at: string
+          created_by: string | null
+          document_url: string | null
+          effective_date: string
+          faa_acceptance_ref: string | null
+          id: string
+          last_reviewed_at: string | null
+          notes: string | null
+          replaced_by_id: string | null
+          review_notes: string | null
+          reviewed_by_user_id: string | null
+          storage_path: string | null
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          ae_signed_at?: string | null
+          ae_user_id?: string | null
+          approved_by_faa_at?: string | null
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          effective_date: string
+          faa_acceptance_ref?: string | null
+          id?: string
+          last_reviewed_at?: string | null
+          notes?: string | null
+          replaced_by_id?: string | null
+          review_notes?: string | null
+          reviewed_by_user_id?: string | null
+          storage_path?: string | null
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          ae_signed_at?: string | null
+          ae_user_id?: string | null
+          approved_by_faa_at?: string | null
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          effective_date?: string
+          faa_acceptance_ref?: string | null
+          id?: string
+          last_reviewed_at?: string | null
+          notes?: string | null
+          replaced_by_id?: string | null
+          review_notes?: string | null
+          reviewed_by_user_id?: string | null
+          storage_path?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aep_plans_ae_user_id_fkey"
+            columns: ["ae_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_plans_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_plans_replaced_by_id_fkey"
+            columns: ["replaced_by_id"]
+            isOneToOne: false
+            referencedRelation: "aep_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aep_plans_reviewed_by_user_id_fkey"
+            columns: ["reviewed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aep_response_agencies: {
+        Row: {
+          agency_name: string
+          agency_role: string
+          backup_contact_name: string | null
+          backup_contact_phone: string | null
+          base_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          primary_contact_name: string | null
+          primary_contact_phone: string | null
+          primary_contact_radio: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          agency_name: string
+          agency_role: string
+          backup_contact_name?: string | null
+          backup_contact_phone?: string | null
+          base_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          primary_contact_radio?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          agency_name?: string
+          agency_role?: string
+          backup_contact_name?: string | null
+          backup_contact_phone?: string | null
+          base_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          primary_contact_radio?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aep_response_agencies_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       airfield_checks: {
         Row: {
           areas: string[]
@@ -418,6 +763,1966 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_1098_catalog: {
+        Row: {
+          base_id: string
+          created_at: string
+          frequency: string
+          id: string
+          managed: boolean
+          retired: boolean
+          score_or_hours: string | null
+          sort_order: number
+          task: string
+          type: string | null
+          updated_at: string
+          year_label: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          managed?: boolean
+          retired?: boolean
+          score_or_hours?: string | null
+          sort_order?: number
+          task: string
+          type?: string | null
+          updated_at?: string
+          year_label: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          managed?: boolean
+          retired?: boolean
+          score_or_hours?: string | null
+          sort_order?: number
+          task?: string
+          type?: string | null
+          updated_at?: string
+          year_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_1098_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_1098_progress: {
+        Row: {
+          base_id: string
+          catalog_id: string
+          certifier_initials: string | null
+          certifier_signed_at: string | null
+          certifier_signed_by: string | null
+          id: string
+          last_completed: string | null
+          locked_at: string | null
+          locked_by: string | null
+          member_id: string
+          next_due: string | null
+          next_due_manual: boolean
+          score_or_hours: string | null
+          start_date: string | null
+          trainee_initials: string | null
+          trainee_signed_at: string | null
+          trainee_signed_by: string | null
+          year_label: string
+        }
+        Insert: {
+          base_id: string
+          catalog_id: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          id?: string
+          last_completed?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id: string
+          next_due?: string | null
+          next_due_manual?: boolean
+          score_or_hours?: string | null
+          start_date?: string | null
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          year_label: string
+        }
+        Update: {
+          base_id?: string
+          catalog_id?: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          id?: string
+          last_completed?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id?: string
+          next_due?: string | null
+          next_due_manual?: boolean
+          score_or_hours?: string | null
+          start_date?: string | null
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          year_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_1098_progress_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_1098_progress_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_1098_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_1098_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_1098_resources: {
+        Row: {
+          base_id: string
+          catalog_id: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          base_id: string
+          catalog_id: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          base_id?: string
+          catalog_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_1098_resources_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_1098_resources_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_1098_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_1098_years: {
+        Row: {
+          archived: boolean
+          archived_at: string | null
+          archived_by: string | null
+          base_id: string
+          created_at: string
+          id: string
+          is_current: boolean
+          year_label: string
+        }
+        Insert: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
+          base_id: string
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          year_label: string
+        }
+        Update: {
+          archived?: boolean
+          archived_at?: string | null
+          archived_by?: string | null
+          base_id?: string
+          created_at?: string
+          id?: string
+          is_current?: boolean
+          year_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_1098_years_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_623a: {
+        Row: {
+          afm_comment: string | null
+          afm_initials: string | null
+          afm_signed_at: string | null
+          afm_signed_by: string | null
+          base_id: string
+          created_at: string
+          created_by: string | null
+          entry_type: string | null
+          form_date: string | null
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          member_id: string
+          namt_comment: string | null
+          namt_initials: string | null
+          namt_signed_at: string | null
+          namt_signed_by: string | null
+          requires_certifier: boolean
+          source_row_id: string | null
+          source_table: string | null
+          trainee_comment: string | null
+          trainee_initials: string | null
+          trainee_signed_at: string | null
+          trainee_signed_by: string | null
+          trainer_comment: string | null
+          trainer_initials: string | null
+          trainer_signed_at: string | null
+          trainer_signed_by: string | null
+          transcribed: boolean
+          updated_at: string
+        }
+        Insert: {
+          afm_comment?: string | null
+          afm_initials?: string | null
+          afm_signed_at?: string | null
+          afm_signed_by?: string | null
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          entry_type?: string | null
+          form_date?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id: string
+          namt_comment?: string | null
+          namt_initials?: string | null
+          namt_signed_at?: string | null
+          namt_signed_by?: string | null
+          requires_certifier?: boolean
+          source_row_id?: string | null
+          source_table?: string | null
+          trainee_comment?: string | null
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          trainer_comment?: string | null
+          trainer_initials?: string | null
+          trainer_signed_at?: string | null
+          trainer_signed_by?: string | null
+          transcribed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          afm_comment?: string | null
+          afm_initials?: string | null
+          afm_signed_at?: string | null
+          afm_signed_by?: string | null
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          entry_type?: string | null
+          form_date?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id?: string
+          namt_comment?: string | null
+          namt_initials?: string | null
+          namt_signed_at?: string | null
+          namt_signed_by?: string | null
+          requires_certifier?: boolean
+          source_row_id?: string | null
+          source_table?: string | null
+          trainee_comment?: string | null
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          trainer_comment?: string | null
+          trainer_initials?: string | null
+          trainer_signed_at?: string | null
+          trainer_signed_by?: string | null
+          transcribed?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_623a_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_623a_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_623a_comment_templates: {
+        Row: {
+          base_id: string
+          body: string
+          cite: string
+          created_at: string
+          id: string
+          key: string
+          label: string
+          managed: boolean
+          retired: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          body?: string
+          cite?: string
+          created_at?: string
+          id?: string
+          key: string
+          label: string
+          managed?: boolean
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          body?: string
+          cite?: string
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string
+          managed?: boolean
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_623a_comment_templates_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_623a_entry_types: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          label: string
+          managed: boolean
+          retired: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          label: string
+          managed?: boolean
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          managed?: boolean
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_623a_entry_types_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_797: {
+        Row: {
+          added_by: string | null
+          base_id: string
+          certifier_initials: string | null
+          certifier_signed_at: string | null
+          certifier_signed_by: string | null
+          complete_date: string | null
+          created_at: string
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          member_id: string
+          milestone_window: string | null
+          requires_certifier: boolean
+          sort_order: number
+          start_date: string | null
+          task: string
+          trainee_initials: string | null
+          trainee_signed_at: string | null
+          trainee_signed_by: string | null
+          trainer_initials: string | null
+          trainer_signed_at: string | null
+          trainer_signed_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          base_id: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          complete_date?: string | null
+          created_at?: string
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id: string
+          milestone_window?: string | null
+          requires_certifier?: boolean
+          sort_order?: number
+          start_date?: string | null
+          task: string
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          trainer_initials?: string | null
+          trainer_signed_at?: string | null
+          trainer_signed_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          base_id?: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          complete_date?: string | null
+          created_at?: string
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id?: string
+          milestone_window?: string | null
+          requires_certifier?: boolean
+          sort_order?: number
+          start_date?: string | null
+          task?: string
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          trainer_initials?: string | null
+          trainer_signed_at?: string | null
+          trainer_signed_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_797_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_797_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_803: {
+        Row: {
+          base_id: string
+          eval_date: string | null
+          evaluator_initials: string | null
+          evaluator_signed_at: string | null
+          evaluator_signed_by: string | null
+          id: string
+          in_ugt: string | null
+          locked_at: string | null
+          locked_by: string | null
+          member_id: string
+          remarks: string | null
+          results: string | null
+          section: string
+          sort_order: number
+          sts_item: string | null
+          unsat_comment: string | null
+        }
+        Insert: {
+          base_id: string
+          eval_date?: string | null
+          evaluator_initials?: string | null
+          evaluator_signed_at?: string | null
+          evaluator_signed_by?: string | null
+          id?: string
+          in_ugt?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id: string
+          remarks?: string | null
+          results?: string | null
+          section: string
+          sort_order?: number
+          sts_item?: string | null
+          unsat_comment?: string | null
+        }
+        Update: {
+          base_id?: string
+          eval_date?: string | null
+          evaluator_initials?: string | null
+          evaluator_signed_at?: string | null
+          evaluator_signed_by?: string | null
+          id?: string
+          in_ugt?: string | null
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id?: string
+          remarks?: string | null
+          results?: string | null
+          section?: string
+          sort_order?: number
+          sts_item?: string | null
+          unsat_comment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_803_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_803_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_803_catalog: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          managed: boolean
+          retired: boolean
+          section: string
+          sort_order: number
+          sts_item: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          managed?: boolean
+          retired?: boolean
+          section: string
+          sort_order?: number
+          sts_item: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          managed?: boolean
+          retired?: boolean
+          section?: string
+          sort_order?: number
+          sts_item?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_803_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_803_sections: {
+        Row: {
+          base_id: string
+          builtin: boolean
+          created_at: string
+          id: string
+          label: string
+          section_key: string
+          seed_default: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          builtin?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          section_key: string
+          seed_default?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          builtin?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          section_key?: string
+          seed_default?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_803_sections_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          base_id: string
+          created_at: string
+          detail: string | null
+          id: string
+          member_id: string | null
+          row_id: string | null
+          table_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          base_id: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          member_id?: string | null
+          row_id?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          base_id?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          member_id?: string | null
+          row_id?: string | null
+          table_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_audit_log_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_audit_log_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_catalog_version: {
+        Row: {
+          base_id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          base_id: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          base_id?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_catalog_version_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: true
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_files: {
+        Row: {
+          base_id: string
+          created_at: string
+          document_date: string | null
+          document_title: string | null
+          id: string
+          member_id: string
+          mime_type: string | null
+          name: string
+          size: string | null
+          sort_order: number
+          status: string
+          storage_path: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          document_date?: string | null
+          document_title?: string | null
+          id?: string
+          member_id: string
+          mime_type?: string | null
+          name: string
+          size?: string | null
+          sort_order?: number
+          status?: string
+          storage_path?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          document_date?: string | null
+          document_title?: string | null
+          id?: string
+          member_id?: string
+          mime_type?: string | null
+          name?: string
+          size?: string | null
+          sort_order?: number
+          status?: string
+          storage_path?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_files_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_files_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_formal_catalog: {
+        Row: {
+          base_id: string
+          course: string
+          created_at: string
+          id: string
+          managed: boolean
+          retired: boolean
+          section: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          course: string
+          created_at?: string
+          id?: string
+          managed?: boolean
+          retired?: boolean
+          section: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          course?: string
+          created_at?: string
+          id?: string
+          managed?: boolean
+          retired?: boolean
+          section?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_formal_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_formal_progress: {
+        Row: {
+          base_id: string
+          catalog_id: string
+          complete_date: string | null
+          id: string
+          member_id: string
+          start_date: string | null
+        }
+        Insert: {
+          base_id: string
+          catalog_id: string
+          complete_date?: string | null
+          id?: string
+          member_id: string
+          start_date?: string | null
+        }
+        Update: {
+          base_id?: string
+          catalog_id?: string
+          complete_date?: string | null
+          id?: string
+          member_id?: string
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_formal_progress_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_formal_progress_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_formal_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_formal_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_inspection_checklist: {
+        Row: {
+          auto_key: string | null
+          base_id: string
+          created_at: string
+          id: string
+          item_number: string | null
+          kind: string
+          label: string
+          managed: boolean
+          retired: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          auto_key?: string | null
+          base_id: string
+          created_at?: string
+          id?: string
+          item_number?: string | null
+          kind: string
+          label: string
+          managed?: boolean
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_key?: string | null
+          base_id?: string
+          created_at?: string
+          id?: string
+          item_number?: string | null
+          kind?: string
+          label?: string
+          managed?: boolean
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_inspection_checklist_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_inspections: {
+        Row: {
+          base_id: string
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_name: string | null
+          created_623a_id: string | null
+          created_at: string
+          created_by: string | null
+          gap_count: number
+          id: string
+          inspection_date: string
+          items: Json
+          member_id: string
+          na_count: number
+          no_count: number
+          notes: string | null
+          status: string
+          updated_at: string
+          yes_count: number
+        }
+        Insert: {
+          base_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_name?: string | null
+          created_623a_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          gap_count?: number
+          id?: string
+          inspection_date?: string
+          items?: Json
+          member_id: string
+          na_count?: number
+          no_count?: number
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          yes_count?: number
+        }
+        Update: {
+          base_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_name?: string | null
+          created_623a_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          gap_count?: number
+          id?: string
+          inspection_date?: string
+          items?: Json
+          member_id?: string
+          na_count?: number
+          no_count?: number
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          yes_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_inspections_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_inspections_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_jqs_catalog: {
+        Row: {
+          base_id: string
+          core_cert: string | null
+          created_at: string
+          deploy_sei: string | null
+          depth: number
+          id: string
+          kind: string
+          managed: boolean
+          number: string | null
+          prof3: string | null
+          prof5: string | null
+          prof7: string | null
+          prof9: string | null
+          required: boolean
+          retired: boolean
+          sort_order: number
+          title: string
+          training_refs: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          core_cert?: string | null
+          created_at?: string
+          deploy_sei?: string | null
+          depth?: number
+          id?: string
+          kind: string
+          managed?: boolean
+          number?: string | null
+          prof3?: string | null
+          prof5?: string | null
+          prof7?: string | null
+          prof9?: string | null
+          required?: boolean
+          retired?: boolean
+          sort_order?: number
+          title: string
+          training_refs?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          core_cert?: string | null
+          created_at?: string
+          deploy_sei?: string | null
+          depth?: number
+          id?: string
+          kind?: string
+          managed?: boolean
+          number?: string | null
+          prof3?: string | null
+          prof5?: string | null
+          prof7?: string | null
+          prof9?: string | null
+          required?: boolean
+          retired?: boolean
+          sort_order?: number
+          title?: string
+          training_refs?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_jqs_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_jqs_progress: {
+        Row: {
+          base_id: string
+          catalog_id: string
+          certifier_initials: string | null
+          certifier_signed_at: string | null
+          certifier_signed_by: string | null
+          complete_date: string | null
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          member_id: string
+          start_date: string | null
+          trainee_initials: string | null
+          trainee_signed_at: string | null
+          trainee_signed_by: string | null
+          trainer_initials: string | null
+          trainer_signed_at: string | null
+          trainer_signed_by: string | null
+        }
+        Insert: {
+          base_id: string
+          catalog_id: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          complete_date?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id: string
+          start_date?: string | null
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          trainer_initials?: string | null
+          trainer_signed_at?: string | null
+          trainer_signed_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          catalog_id?: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          complete_date?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id?: string
+          start_date?: string | null
+          trainee_initials?: string | null
+          trainee_signed_at?: string | null
+          trainee_signed_by?: string | null
+          trainer_initials?: string | null
+          trainer_signed_at?: string | null
+          trainer_signed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_jqs_progress_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_jqs_progress_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_jqs_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_jqs_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_member_exclusions: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_member_exclusions_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_member_exclusions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_members: {
+        Row: {
+          base_id: string
+          commander: string | null
+          created_at: string
+          created_by: string | null
+          dafsc: string | null
+          date_assigned: string | null
+          duty_position: string | null
+          full_name: string
+          grade: string | null
+          id: string
+          installation: string | null
+          status: string
+          supervisor: string | null
+          tsc: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string | null
+          utm: string | null
+        }
+        Insert: {
+          base_id: string
+          commander?: string | null
+          created_at?: string
+          created_by?: string | null
+          dafsc?: string | null
+          date_assigned?: string | null
+          duty_position?: string | null
+          full_name: string
+          grade?: string | null
+          id?: string
+          installation?: string | null
+          status?: string
+          supervisor?: string | null
+          tsc?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string | null
+          utm?: string | null
+        }
+        Update: {
+          base_id?: string
+          commander?: string | null
+          created_at?: string
+          created_by?: string | null
+          dafsc?: string | null
+          date_assigned?: string | null
+          duty_position?: string | null
+          full_name?: string
+          grade?: string | null
+          id?: string
+          installation?: string | null
+          status?: string
+          supervisor?: string | null
+          tsc?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string | null
+          utm?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_members_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_milestone_catalog: {
+        Row: {
+          base_id: string
+          created_at: string
+          haf_milestone: string | null
+          id: string
+          managed: boolean
+          path: string
+          phase_label: string
+          retired: boolean
+          sort_order: number
+          sts_items: string | null
+          target_window: string | null
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          haf_milestone?: string | null
+          id?: string
+          managed?: boolean
+          path: string
+          phase_label: string
+          retired?: boolean
+          sort_order?: number
+          sts_items?: string | null
+          target_window?: string | null
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          haf_milestone?: string | null
+          id?: string
+          managed?: boolean
+          path?: string
+          phase_label?: string
+          retired?: boolean
+          sort_order?: number
+          sts_items?: string | null
+          target_window?: string | null
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_milestone_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_milestone_progress: {
+        Row: {
+          base_id: string
+          catalog_id: string
+          certifier_initials: string | null
+          certifier_signed_at: string | null
+          certifier_signed_by: string | null
+          completed: boolean
+          completed_date: string | null
+          id: string
+          locked_at: string | null
+          locked_by: string | null
+          member_id: string
+          target_window: string | null
+        }
+        Insert: {
+          base_id: string
+          catalog_id: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          completed?: boolean
+          completed_date?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id: string
+          target_window?: string | null
+        }
+        Update: {
+          base_id?: string
+          catalog_id?: string
+          certifier_initials?: string | null
+          certifier_signed_at?: string | null
+          certifier_signed_by?: string | null
+          completed?: boolean
+          completed_date?: string | null
+          id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          member_id?: string
+          target_window?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_milestone_progress_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_milestone_progress_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_milestone_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_milestone_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_notifications: {
+        Row: {
+          base_id: string
+          body: string
+          created_at: string
+          dedupe_key: string | null
+          dismissed_at: string | null
+          id: string
+          kind: string
+          member_id: string
+          recipient_user_id: string
+          target_item_id: string | null
+          target_tab: string | null
+        }
+        Insert: {
+          base_id: string
+          body: string
+          created_at?: string
+          dedupe_key?: string | null
+          dismissed_at?: string | null
+          id?: string
+          kind: string
+          member_id: string
+          recipient_user_id: string
+          target_item_id?: string | null
+          target_tab?: string | null
+        }
+        Update: {
+          base_id?: string
+          body?: string
+          created_at?: string
+          dedupe_key?: string | null
+          dismissed_at?: string | null
+          id?: string
+          kind?: string
+          member_id?: string
+          recipient_user_id?: string
+          target_item_id?: string | null
+          target_tab?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_notifications_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_notifications_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_notifications_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_qtp: {
+        Row: {
+          base_id: string
+          complete_date: string | null
+          created_at: string
+          ecd: string | null
+          id: string
+          member_id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          complete_date?: string | null
+          created_at?: string
+          ecd?: string | null
+          id?: string
+          member_id: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          complete_date?: string | null
+          created_at?: string
+          ecd?: string | null
+          id?: string
+          member_id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_qtp_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_qtp_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_qtp_lessons: {
+        Row: {
+          base_id: string
+          complete_date: string | null
+          id: string
+          name: string
+          qtp_id: string
+          sort_order: number
+          start_date: string | null
+        }
+        Insert: {
+          base_id: string
+          complete_date?: string | null
+          id?: string
+          name: string
+          qtp_id: string
+          sort_order?: number
+          start_date?: string | null
+        }
+        Update: {
+          base_id?: string
+          complete_date?: string | null
+          id?: string
+          name?: string
+          qtp_id?: string
+          sort_order?: number
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_qtp_lessons_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_qtp_lessons_qtp_id_fkey"
+            columns: ["qtp_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_qtp"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_qual_catalog: {
+        Row: {
+          base_id: string
+          category: string
+          created_at: string
+          id: string
+          managed: boolean
+          name: string
+          retired: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          category: string
+          created_at?: string
+          id?: string
+          managed?: boolean
+          name: string
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          category?: string
+          created_at?: string
+          id?: string
+          managed?: boolean
+          name?: string
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_qual_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_qual_progress: {
+        Row: {
+          attained: boolean
+          base_id: string
+          catalog_id: string
+          complete_date: string | null
+          created_at: string
+          id: string
+          member_id: string
+          updated_at: string
+        }
+        Insert: {
+          attained?: boolean
+          base_id: string
+          catalog_id: string
+          complete_date?: string | null
+          created_at?: string
+          id?: string
+          member_id: string
+          updated_at?: string
+        }
+        Update: {
+          attained?: boolean
+          base_id?: string
+          catalog_id?: string
+          complete_date?: string | null
+          created_at?: string
+          id?: string
+          member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_qual_progress_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_qual_progress_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_qual_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_qual_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_quals: {
+        Row: {
+          base_id: string
+          id: string
+          member_id: string
+          name: string
+          notes: string | null
+          sort_order: number
+          value: string | null
+        }
+        Insert: {
+          base_id: string
+          id?: string
+          member_id: string
+          name: string
+          notes?: string | null
+          sort_order?: number
+          value?: string | null
+        }
+        Update: {
+          base_id?: string
+          id?: string
+          member_id?: string
+          name?: string
+          notes?: string | null
+          sort_order?: number
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_quals_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_quals_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_rat_catalog: {
+        Row: {
+          base_id: string
+          category: string | null
+          course: string
+          created_at: string
+          frequency: string
+          id: string
+          managed: boolean
+          method: string | null
+          retired: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          category?: string | null
+          course: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          managed?: boolean
+          method?: string | null
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          category?: string | null
+          course?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          managed?: boolean
+          method?: string | null
+          retired?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_rat_catalog_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_rat_progress: {
+        Row: {
+          base_id: string
+          catalog_id: string
+          completed: string | null
+          due: string | null
+          id: string
+          member_id: string
+        }
+        Insert: {
+          base_id: string
+          catalog_id: string
+          completed?: string | null
+          due?: string | null
+          id?: string
+          member_id: string
+        }
+        Update: {
+          base_id?: string
+          catalog_id?: string
+          completed?: string | null
+          due?: string | null
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_rat_progress_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_rat_progress_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_rat_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_rat_progress_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "amtr_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_reference_index: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          link: string | null
+          publication: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          publication?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          publication?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_reference_index_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      amtr_role_assignments: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "amtr_role_assignments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amtr_role_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      annual_review_digest_log: {
+        Row: {
+          aep_due_date: string | null
+          base_id: string
+          id: string
+          reasons: string[]
+          recipient: string
+          send_date: string
+          sent_at: string
+          whmp_due_date: string | null
+        }
+        Insert: {
+          aep_due_date?: string | null
+          base_id: string
+          id?: string
+          reasons?: string[]
+          recipient: string
+          send_date: string
+          sent_at?: string
+          whmp_due_date?: string | null
+        }
+        Update: {
+          aep_due_date?: string | null
+          base_id?: string
+          id?: string
+          reasons?: string[]
+          recipient?: string
+          send_date?: string
+          sent_at?: string
+          whmp_due_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annual_review_digest_log_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
             referencedColumns: ["id"]
           },
         ]
@@ -678,6 +2983,32 @@ export type Database = {
             foreignKeyName: "base_inspection_templates_base_id_fkey"
             columns: ["base_id"]
             isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      base_kiosk_tokens: {
+        Row: {
+          base_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "base_kiosk_tokens_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: true
             referencedRelation: "bases"
             referencedColumns: ["id"]
           },
@@ -951,9 +3282,9 @@ export type Database = {
       bases: {
         Row: {
           activity_templates: Json | null
+          airport_type: 'usaf' | 'faa_part139'
           amops_email: string | null
           aoc_number: string | null
-          airport_type: 'usaf' | 'faa_part139'
           arff_config: Json
           c2imera_ppr_eta_column_id: string | null
           c2imera_unit: string
@@ -972,13 +3303,15 @@ export type Database = {
           id: string
           installation_code: string | null
           is_active: boolean
+          kiosk_enabled: boolean
           location: string | null
           majcom: string | null
-          map_provider: 'google' | 'bing' | 'esri'
+          map_provider: string
           name: string
           obstruction_surface_set: 'ufc_3_260_01' | 'faa_part77'
-          part139_class: 'I' | 'II' | 'III' | 'IV' | null
-          qrc_review_interval: 'monthly' | 'quarterly'
+          part139_class: string | null
+          qrc_review_interval: string
+          quick_setup_pending: Json
           setup_progress: Json
           shift_count: number
           status_labels: Json
@@ -988,9 +3321,9 @@ export type Database = {
         }
         Insert: {
           activity_templates?: Json | null
+          airport_type?: 'usaf' | 'faa_part139'
           amops_email?: string | null
           aoc_number?: string | null
-          airport_type?: 'usaf' | 'faa_part139'
           arff_config?: Json
           c2imera_ppr_eta_column_id?: string | null
           c2imera_unit?: string
@@ -1009,13 +3342,15 @@ export type Database = {
           id?: string
           installation_code?: string | null
           is_active?: boolean
+          kiosk_enabled?: boolean
           location?: string | null
           majcom?: string | null
-          map_provider?: 'google' | 'bing' | 'esri'
+          map_provider?: string
           name: string
           obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
-          part139_class?: 'I' | 'II' | 'III' | 'IV' | null
-          qrc_review_interval?: 'monthly' | 'quarterly'
+          part139_class?: string | null
+          qrc_review_interval?: string
+          quick_setup_pending?: Json
           setup_progress?: Json
           shift_count?: number
           status_labels?: Json
@@ -1025,9 +3360,9 @@ export type Database = {
         }
         Update: {
           activity_templates?: Json | null
+          airport_type?: 'usaf' | 'faa_part139'
           amops_email?: string | null
           aoc_number?: string | null
-          airport_type?: 'usaf' | 'faa_part139'
           arff_config?: Json
           c2imera_ppr_eta_column_id?: string | null
           c2imera_unit?: string
@@ -1046,13 +3381,15 @@ export type Database = {
           id?: string
           installation_code?: string | null
           is_active?: boolean
+          kiosk_enabled?: boolean
           location?: string | null
           majcom?: string | null
-          map_provider?: 'google' | 'bing' | 'esri'
+          map_provider?: string
           name?: string
           obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
-          part139_class?: 'I' | 'II' | 'III' | 'IV' | null
-          qrc_review_interval?: 'monthly' | 'quarterly'
+          part139_class?: string | null
+          qrc_review_interval?: string
+          quick_setup_pending?: Json
           setup_progress?: Json
           shift_count?: number
           status_labels?: Json
@@ -1301,6 +3638,47 @@ export type Database = {
           },
         ]
       }
+      daily_review_slots: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          label: string
+          permission_key: string | null
+          required: boolean
+          slot_key: string
+          sort_order: number
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          label: string
+          permission_key?: string | null
+          required?: boolean
+          slot_key: string
+          sort_order: number
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          permission_key?: string | null
+          required?: boolean
+          slot_key?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_review_slots_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_reviews: {
         Row: {
           afm_events_hash: string | null
@@ -1425,6 +3803,103 @@ export type Database = {
           {
             foreignKeyName: "daily_reviews_swing_amsl_signed_by_fkey"
             columns: ["swing_amsl_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_boards: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          layout: Json
+          name: string
+          owner_id: string | null
+          role_template: string | null
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name?: string
+          owner_id?: string | null
+          role_template?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name?: string
+          owner_id?: string | null
+          role_template?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_boards_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_boards_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_user_defaults: {
+        Row: {
+          base_id: string
+          board_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          board_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          board_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_user_defaults_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_user_defaults_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_user_defaults_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1577,6 +4052,705 @@ export type Database = {
           {
             foreignKeyName: "discrepancies_reported_by_fkey"
             columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discrepancy_statuses: {
+        Row: {
+          description: string | null
+          is_terminal: boolean
+          key: string
+          label_faa: string
+          label_usaf: string
+          sort_order: number
+        }
+        Insert: {
+          description?: string | null
+          is_terminal?: boolean
+          key: string
+          label_faa: string
+          label_usaf: string
+          sort_order: number
+        }
+        Update: {
+          description?: string | null
+          is_terminal?: boolean
+          key?: string
+          label_faa?: string
+          label_usaf?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      field_condition_reports: {
+        Row: {
+          base_id: string
+          conditions_unchanged_since: string | null
+          created_at: string
+          ficon_text: string
+          generated_at: string
+          generated_by: string | null
+          generated_by_oi: string | null
+          id: string
+          notes: string | null
+          runway_id: string
+          superseded_by_id: string | null
+          temperature_f: number | null
+          treatments: string[]
+          valid_until: string
+        }
+        Insert: {
+          base_id: string
+          conditions_unchanged_since?: string | null
+          created_at?: string
+          ficon_text: string
+          generated_at?: string
+          generated_by?: string | null
+          generated_by_oi?: string | null
+          id?: string
+          notes?: string | null
+          runway_id: string
+          superseded_by_id?: string | null
+          temperature_f?: number | null
+          treatments?: string[]
+          valid_until: string
+        }
+        Update: {
+          base_id?: string
+          conditions_unchanged_since?: string | null
+          created_at?: string
+          ficon_text?: string
+          generated_at?: string
+          generated_by?: string | null
+          generated_by_oi?: string | null
+          id?: string
+          notes?: string | null
+          runway_id?: string
+          superseded_by_id?: string | null
+          temperature_f?: number | null
+          treatments?: string[]
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_condition_reports_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_condition_reports_conditions_unchanged_since_fkey"
+            columns: ["conditions_unchanged_since"]
+            isOneToOne: false
+            referencedRelation: "field_condition_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_condition_reports_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_condition_reports_runway_id_fkey"
+            columns: ["runway_id"]
+            isOneToOne: false
+            referencedRelation: "base_runways"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_condition_reports_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "field_condition_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_condition_thirds: {
+        Row: {
+          contaminant: string
+          coverage_percent: number | null
+          depth_in: number | null
+          id: string
+          override_reason: string | null
+          report_id: string
+          rwycc: number
+          rwycc_derived: number
+          rwycc_manual_override: boolean
+          sort_order: number
+          third: string
+        }
+        Insert: {
+          contaminant: string
+          coverage_percent?: number | null
+          depth_in?: number | null
+          id?: string
+          override_reason?: string | null
+          report_id: string
+          rwycc: number
+          rwycc_derived: number
+          rwycc_manual_override?: boolean
+          sort_order: number
+          third: string
+        }
+        Update: {
+          contaminant?: string
+          coverage_percent?: number | null
+          depth_in?: number | null
+          id?: string
+          override_reason?: string | null
+          report_id?: string
+          rwycc?: number
+          rwycc_derived?: number
+          rwycc_manual_override?: boolean
+          sort_order?: number
+          third?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_condition_thirds_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "field_condition_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_appointment: {
+        Row: {
+          base_id: string
+          custodians: Json
+          file_name: string | null
+          file_path: string | null
+          id: string
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id: string
+          custodians?: Json
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          custodians?: Json
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_appointment_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: true
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_appointment_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_change_events: {
+        Row: {
+          actor_name: string | null
+          actor_user_id: string | null
+          base_id: string
+          change_id: string
+          created_at: string
+          event_type: string
+          id: string
+          remarks: string | null
+        }
+        Insert: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          base_id: string
+          change_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          remarks?: string | null
+        }
+        Update: {
+          actor_name?: string | null
+          actor_user_id?: string | null
+          base_id?: string
+          change_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          remarks?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_change_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_change_events_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_change_events_change_id_fkey"
+            columns: ["change_id"]
+            isOneToOne: false
+            referencedRelation: "flip_changes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_changes: {
+        Row: {
+          additions: string | null
+          afm_approved_at: string | null
+          afm_approved_by: string | null
+          base_id: string
+          coordinated_at: string
+          creation_date: string | null
+          deletions: string | null
+          details: string | null
+          flip_title: string
+          id: string
+          notam: string | null
+          pdf_filename: string | null
+          pdf_storage_path: string | null
+          posted_date: string | null
+          posted_initials: string | null
+          processed_date: string | null
+          published_date: string | null
+          reference_doc_page: string | null
+          rejected: boolean
+          revisions_from: string | null
+          revisions_to: string | null
+          stage: string
+          submitted_by_name: string
+          submitted_by_user: string | null
+          updated_at: string
+        }
+        Insert: {
+          additions?: string | null
+          afm_approved_at?: string | null
+          afm_approved_by?: string | null
+          base_id: string
+          coordinated_at?: string
+          creation_date?: string | null
+          deletions?: string | null
+          details?: string | null
+          flip_title: string
+          id?: string
+          notam?: string | null
+          pdf_filename?: string | null
+          pdf_storage_path?: string | null
+          posted_date?: string | null
+          posted_initials?: string | null
+          processed_date?: string | null
+          published_date?: string | null
+          reference_doc_page?: string | null
+          rejected?: boolean
+          revisions_from?: string | null
+          revisions_to?: string | null
+          stage?: string
+          submitted_by_name: string
+          submitted_by_user?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additions?: string | null
+          afm_approved_at?: string | null
+          afm_approved_by?: string | null
+          base_id?: string
+          coordinated_at?: string
+          creation_date?: string | null
+          deletions?: string | null
+          details?: string | null
+          flip_title?: string
+          id?: string
+          notam?: string | null
+          pdf_filename?: string | null
+          pdf_storage_path?: string | null
+          posted_date?: string | null
+          posted_initials?: string | null
+          processed_date?: string | null
+          published_date?: string | null
+          reference_doc_page?: string | null
+          rejected?: boolean
+          revisions_from?: string | null
+          revisions_to?: string | null
+          stage?: string
+          submitted_by_name?: string
+          submitted_by_user?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_changes_afm_approved_by_fkey"
+            columns: ["afm_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_changes_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_changes_submitted_by_user_fkey"
+            columns: ["submitted_by_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_list: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_list_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_references: {
+        Row: {
+          base_id: string
+          file_type: string
+          id: string
+          storage_path: string
+          title: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          base_id: string
+          file_type: string
+          id?: string
+          storage_path: string
+          title: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          file_type?: string
+          id?: string
+          storage_path?: string
+          title?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_references_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_references_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_review_items: {
+        Row: {
+          base_id: string
+          corrective_action: string | null
+          date_corrected: string | null
+          discrepancy: boolean
+          discrepancy_note: string | null
+          effective_date: string | null
+          flip_title: string
+          id: string
+          review_id: string
+          sort_order: number
+        }
+        Insert: {
+          base_id: string
+          corrective_action?: string | null
+          date_corrected?: string | null
+          discrepancy?: boolean
+          discrepancy_note?: string | null
+          effective_date?: string | null
+          flip_title: string
+          id?: string
+          review_id: string
+          sort_order?: number
+        }
+        Update: {
+          base_id?: string
+          corrective_action?: string | null
+          date_corrected?: string | null
+          discrepancy?: boolean
+          discrepancy_note?: string | null
+          effective_date?: string | null
+          flip_title?: string
+          id?: string
+          review_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_review_items_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_review_items_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "flip_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_review_signoffs: {
+        Row: {
+          afm_signed_at: string | null
+          afm_signed_by: string | null
+          base_id: string
+          custodian_signed_at: string | null
+          custodian_signed_by: string | null
+          id: string
+          namo_signed_at: string | null
+          namo_signed_by: string | null
+          review_id: string
+        }
+        Insert: {
+          afm_signed_at?: string | null
+          afm_signed_by?: string | null
+          base_id: string
+          custodian_signed_at?: string | null
+          custodian_signed_by?: string | null
+          id?: string
+          namo_signed_at?: string | null
+          namo_signed_by?: string | null
+          review_id: string
+        }
+        Update: {
+          afm_signed_at?: string | null
+          afm_signed_by?: string | null
+          base_id?: string
+          custodian_signed_at?: string | null
+          custodian_signed_by?: string | null
+          id?: string
+          namo_signed_at?: string | null
+          namo_signed_by?: string | null
+          review_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_review_signoffs_afm_signed_by_fkey"
+            columns: ["afm_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_review_signoffs_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_review_signoffs_custodian_signed_by_fkey"
+            columns: ["custodian_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_review_signoffs_namo_signed_by_fkey"
+            columns: ["namo_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_review_signoffs_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "flip_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_reviews: {
+        Row: {
+          base_id: string
+          created_at: string
+          created_by: string | null
+          cycle: string
+          id: string
+          review_date: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          cycle: string
+          id?: string
+          review_date: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          cycle?: string
+          id?: string
+          review_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_reviews_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_reviews_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_role_assignments: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_role_assignments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_role_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flip_text_sections: {
+        Row: {
+          base_id: string
+          content: string
+          id: string
+          section_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id: string
+          content?: string
+          id?: string
+          section_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          content?: string
+          id?: string
+          section_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flip_text_sections_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flip_text_sections_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2366,6 +5540,51 @@ export type Database = {
         }
         Relationships: []
       }
+      page_view_daily: {
+        Row: {
+          base_id: string
+          count: number
+          id: string
+          last_viewed_at: string
+          route: string
+          user_id: string
+          view_date: string
+        }
+        Insert: {
+          base_id: string
+          count?: number
+          id?: string
+          last_viewed_at?: string
+          route: string
+          user_id: string
+          view_date?: string
+        }
+        Update: {
+          base_id?: string
+          count?: number
+          id?: string
+          last_viewed_at?: string
+          route?: string
+          user_id?: string
+          view_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_view_daily_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "page_view_daily_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parking_apron_boundaries: {
         Row: {
           base_id: string
@@ -2761,18 +5980,21 @@ export type Database = {
       }
       permissions: {
         Row: {
+          applies_to: string[]
           category: string
           description: string | null
           key: string
           label: string
         }
         Insert: {
+          applies_to?: string[]
           category: string
           description?: string | null
           key: string
           label: string
         }
         Update: {
+          applies_to?: string[]
           category?: string
           description?: string | null
           key?: string
@@ -2916,6 +6138,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          notify_only: boolean
+          send_calendar_invite: boolean
           sort_order: number
         }
         Insert: {
@@ -2924,6 +6148,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          notify_only?: boolean
+          send_calendar_invite?: boolean
           sort_order?: number
         }
         Update: {
@@ -2932,11 +6158,52 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          notify_only?: boolean
+          send_calendar_invite?: boolean
           sort_order?: number
         }
         Relationships: [
           {
             foreignKeyName: "ppr_agencies_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppr_agency_emails: {
+        Row: {
+          agency_id: string
+          base_id: string
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          agency_id: string
+          base_id: string
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          agency_id?: string
+          base_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_agency_emails_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "ppr_agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_agency_emails_base_id_fkey"
             columns: ["base_id"]
             isOneToOne: false
             referencedRelation: "bases"
@@ -3079,13 +6346,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "ppr_coordination_entry_id_fkey"
-            columns: ["entry_id"]
-            isOneToOne: false
-            referencedRelation: "ppr_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "ppr_coordination_agency_id_fkey"
             columns: ["agency_id"]
             isOneToOne: false
@@ -3097,6 +6357,13 @@ export type Database = {
             columns: ["coordinated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_coordination_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "ppr_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -3113,6 +6380,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           denial_reason: string | null
+          departed_at: string | null
+          departed_by: string | null
           id: string
           notes: string | null
           ppr_number: string
@@ -3137,6 +6406,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           denial_reason?: string | null
+          departed_at?: string | null
+          departed_by?: string | null
           id?: string
           notes?: string | null
           ppr_number: string
@@ -3161,6 +6432,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           denial_reason?: string | null
+          departed_at?: string | null
+          departed_by?: string | null
           id?: string
           notes?: string | null
           ppr_number?: string
@@ -3176,6 +6449,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "ppr_entries_approval_user_id_fkey"
+            columns: ["approval_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ppr_entries_base_id_fkey"
             columns: ["base_id"]
             isOneToOne: false
@@ -3190,15 +6470,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ppr_entries_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ppr_entries_approval_user_id_fkey"
-            columns: ["approval_user_id"]
+            foreignKeyName: "ppr_entries_departed_by_fkey"
+            columns: ["departed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3208,6 +6481,42 @@ export type Database = {
             columns: ["triaged_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ppr_entries_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppr_number_sequence: {
+        Row: {
+          arrival_date: string
+          base_id: string
+          last_seq: number
+          updated_at: string
+        }
+        Insert: {
+          arrival_date: string
+          base_id: string
+          last_seq?: number
+          updated_at?: string
+        }
+        Update: {
+          arrival_date?: string
+          base_id?: string
+          last_seq?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppr_number_sequence_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
             referencedColumns: ["id"]
           },
         ]
@@ -3268,11 +6577,13 @@ export type Database = {
           edipi: string | null
           email: string
           first_name: string | null
+          has_completed_setup_tour: boolean
           id: string
           is_active: boolean
           last_name: string | null
           last_seen_at: string | null
           last_seen_release_version: string | null
+          must_change_password: boolean
           name: string
           office_symbol: string | null
           operating_initials: string | null
@@ -3284,6 +6595,7 @@ export type Database = {
           shop: string | null
           sidebar_config: Json | null
           status: string
+          tours_completed: Json
           unit: string | null
           updated_at: string
         }
@@ -3293,11 +6605,13 @@ export type Database = {
           edipi?: string | null
           email: string
           first_name?: string | null
+          has_completed_setup_tour?: boolean
           id: string
           is_active?: boolean
           last_name?: string | null
           last_seen_at?: string | null
           last_seen_release_version?: string | null
+          must_change_password?: boolean
           name: string
           office_symbol?: string | null
           operating_initials?: string | null
@@ -3309,6 +6623,7 @@ export type Database = {
           shop?: string | null
           sidebar_config?: Json | null
           status?: string
+          tours_completed?: Json
           unit?: string | null
           updated_at?: string
         }
@@ -3318,11 +6633,13 @@ export type Database = {
           edipi?: string | null
           email?: string
           first_name?: string | null
+          has_completed_setup_tour?: boolean
           id?: string
           is_active?: boolean
           last_name?: string | null
           last_seen_at?: string | null
           last_seen_release_version?: string | null
+          must_change_password?: boolean
           name?: string
           office_symbol?: string | null
           operating_initials?: string | null
@@ -3334,6 +6651,7 @@ export type Database = {
           shop?: string | null
           sidebar_config?: Json | null
           status?: string
+          tours_completed?: Json
           unit?: string | null
           updated_at?: string
         }
@@ -3346,36 +6664,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      page_view_daily: {
-        Row: {
-          base_id: string
-          count: number
-          id: string
-          last_viewed_at: string
-          route: string
-          user_id: string
-          view_date: string
-        }
-        Insert: {
-          base_id: string
-          count?: number
-          id?: string
-          last_viewed_at?: string
-          route: string
-          user_id: string
-          view_date?: string
-        }
-        Update: {
-          base_id?: string
-          count?: number
-          id?: string
-          last_viewed_at?: string
-          route?: string
-          user_id?: string
-          view_date?: string
-        }
-        Relationships: []
       }
       qrc_executions: {
         Row: {
@@ -3455,6 +6743,61 @@ export type Database = {
           },
         ]
       }
+      qrc_monthly_reviews: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          reviewed_at: string
+          template_id: string
+          template_updated_at_at_review: string | null
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewed_at?: string
+          template_id: string
+          template_updated_at_at_review?: string | null
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reviewed_at?: string
+          template_id?: string
+          template_updated_at_at_review?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qrc_monthly_reviews_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrc_monthly_reviews_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "qrc_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrc_monthly_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qrc_templates: {
         Row: {
           base_id: string
@@ -3520,6 +6863,139 @@ export type Database = {
           },
         ]
       }
+      rate_limit_hits: {
+        Row: {
+          bucket: string
+          hit_at: string
+          id: number
+        }
+        Insert: {
+          bucket: string
+          hit_at?: string
+          id?: never
+        }
+        Update: {
+          bucket?: string
+          hit_at?: string
+          id?: never
+        }
+        Relationships: []
+      }
+      read_file_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          acknowledged_version: number
+          base_id: string
+          id: string
+          initials_snapshot: string | null
+          read_file_id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          acknowledged_version: number
+          base_id: string
+          id?: string
+          initials_snapshot?: string | null
+          read_file_id: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          acknowledged_version?: number
+          base_id?: string
+          id?: string
+          initials_snapshot?: string | null
+          read_file_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "read_file_acknowledgments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "read_file_acknowledgments_read_file_id_fkey"
+            columns: ["read_file_id"]
+            isOneToOne: false
+            referencedRelation: "read_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "read_file_acknowledgments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      read_files: {
+        Row: {
+          base_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          file_size_bytes: number | null
+          id: string
+          is_archived: boolean
+          mime_type: string | null
+          storage_path: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          id?: string
+          is_archived?: boolean
+          mime_type?: string | null
+          storage_path: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          id?: string
+          is_archived?: boolean
+          mime_type?: string | null
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "read_files_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "read_files_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regulations: {
         Row: {
           category: string
@@ -3534,7 +7010,7 @@ export type Database = {
           pub_type: string
           publication_date: string | null
           reg_id: string
-          source: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
+          source: string
           source_section: string
           source_volume: string | null
           storage_path: string | null
@@ -3556,7 +7032,7 @@ export type Database = {
           pub_type: string
           publication_date?: string | null
           reg_id: string
-          source?: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
+          source?: string
           source_section: string
           source_volume?: string | null
           storage_path?: string | null
@@ -3578,7 +7054,7 @@ export type Database = {
           pub_type?: string
           publication_date?: string | null
           reg_id?: string
-          source?: 'usaf' | 'faa' | 'both' | 'icao' | 'ufc'
+          source?: string
           source_section?: string
           source_volume?: string | null
           storage_path?: string | null
@@ -3954,6 +7430,747 @@ export type Database = {
           },
         ]
       }
+      sms_audits: {
+        Row: {
+          audit_code: string
+          audit_type: string
+          base_id: string
+          created_at: string
+          created_by: string | null
+          findings: Json
+          findings_closed: number
+          findings_open: number
+          id: string
+          notes: string | null
+          performed_by: string | null
+          performed_date: string | null
+          report_url: string | null
+          scheduled_date: string | null
+          scope: string | null
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audit_code: string
+          audit_type?: string
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          findings?: Json
+          findings_closed?: number
+          findings_open?: number
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_date?: string | null
+          report_url?: string | null
+          scheduled_date?: string | null
+          scope?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          audit_code?: string
+          audit_type?: string
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          findings?: Json
+          findings_closed?: number
+          findings_open?: number
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_date?: string | null
+          report_url?: string | null
+          scheduled_date?: string | null
+          scope?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_audits_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_communications: {
+        Row: {
+          attachment_url: string | null
+          audience: string | null
+          base_id: string
+          body: string
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          published_at: string | null
+          related_hazard_id: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          attachment_url?: string | null
+          audience?: string | null
+          base_id: string
+          body: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string | null
+          related_hazard_id?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          attachment_url?: string | null
+          audience?: string | null
+          base_id?: string
+          body?: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string | null
+          related_hazard_id?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_communications_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_communications_related_hazard_id_fkey"
+            columns: ["related_hazard_id"]
+            isOneToOne: false
+            referencedRelation: "sms_hazards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_hazards: {
+        Row: {
+          base_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closure_rationale: string | null
+          created_at: string
+          created_by: string | null
+          current_band: string | null
+          description: string | null
+          hazard_code: string
+          id: string
+          identified_at: string
+          identified_by: string | null
+          latest_assessment_id: string | null
+          residual_band: string | null
+          risk_owner_user_id: string | null
+          source_ref_id: string | null
+          source_type: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_rationale?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_band?: string | null
+          description?: string | null
+          hazard_code: string
+          id?: string
+          identified_at?: string
+          identified_by?: string | null
+          latest_assessment_id?: string | null
+          residual_band?: string | null
+          risk_owner_user_id?: string | null
+          source_ref_id?: string | null
+          source_type?: string
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_rationale?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_band?: string | null
+          description?: string | null
+          hazard_code?: string
+          id?: string
+          identified_at?: string
+          identified_by?: string | null
+          latest_assessment_id?: string | null
+          residual_band?: string | null
+          risk_owner_user_id?: string | null
+          source_ref_id?: string | null
+          source_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_hazards_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_management_of_change: {
+        Row: {
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          base_id: string
+          change_category: string
+          change_description: string
+          created_at: string
+          created_by: string | null
+          effective_date: string | null
+          id: string
+          linked_hazard_id: string | null
+          moc_code: string
+          proposed_at: string
+          proposed_by: string | null
+          rejection_reason: string | null
+          risk_analysis_summary: string | null
+          status: string
+          title: string
+          triggered_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          base_id: string
+          change_category?: string
+          change_description: string
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          id?: string
+          linked_hazard_id?: string | null
+          moc_code: string
+          proposed_at?: string
+          proposed_by?: string | null
+          rejection_reason?: string | null
+          risk_analysis_summary?: string | null
+          status?: string
+          title: string
+          triggered_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          base_id?: string
+          change_category?: string
+          change_description?: string
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string | null
+          id?: string
+          linked_hazard_id?: string | null
+          moc_code?: string
+          proposed_at?: string
+          proposed_by?: string | null
+          rejection_reason?: string | null
+          risk_analysis_summary?: string | null
+          status?: string
+          title?: string
+          triggered_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_management_of_change_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_management_of_change_linked_hazard_id_fkey"
+            columns: ["linked_hazard_id"]
+            isOneToOne: false
+            referencedRelation: "sms_hazards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_mitigations: {
+        Row: {
+          base_id: string
+          completed_at: string | null
+          completed_by: string | null
+          control_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          evidence_url: string | null
+          hazard_id: string
+          id: string
+          notes: string | null
+          owner_user_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          control_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          evidence_url?: string | null
+          hazard_id: string
+          id?: string
+          notes?: string | null
+          owner_user_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          control_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          evidence_url?: string | null
+          hazard_id?: string
+          id?: string
+          notes?: string | null
+          owner_user_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_mitigations_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_mitigations_hazard_id_fkey"
+            columns: ["hazard_id"]
+            isOneToOne: false
+            referencedRelation: "sms_hazards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_policies: {
+        Row: {
+          accountable_executive_user_id: string | null
+          base_id: string
+          created_at: string
+          created_by: string | null
+          document_url: string | null
+          effective_date: string | null
+          employee_reporting_pledge: string | null
+          id: string
+          replaced_by_id: string | null
+          review_due_date: string | null
+          safety_objectives: Json
+          signature_image_url: string | null
+          signed_at: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          accountable_executive_user_id?: string | null
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          effective_date?: string | null
+          employee_reporting_pledge?: string | null
+          id?: string
+          replaced_by_id?: string | null
+          review_due_date?: string | null
+          safety_objectives?: Json
+          signature_image_url?: string | null
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          accountable_executive_user_id?: string | null
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          effective_date?: string | null
+          employee_reporting_pledge?: string | null
+          id?: string
+          replaced_by_id?: string | null
+          review_due_date?: string | null
+          safety_objectives?: Json
+          signature_image_url?: string | null
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_policies_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_policies_replaced_by_id_fkey"
+            columns: ["replaced_by_id"]
+            isOneToOne: false
+            referencedRelation: "sms_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_risk_assessments: {
+        Row: {
+          assessed_at: string
+          assessed_by: string | null
+          base_id: string
+          created_at: string
+          hazard_id: string
+          id: string
+          likelihood: number
+          likelihood_rationale: string | null
+          notes: string | null
+          residual_likelihood: number | null
+          residual_risk_band: string | null
+          residual_risk_index: number | null
+          residual_severity: number | null
+          risk_band: string | null
+          risk_index: number | null
+          severity: number
+          severity_rationale: string | null
+          updated_at: string
+        }
+        Insert: {
+          assessed_at?: string
+          assessed_by?: string | null
+          base_id: string
+          created_at?: string
+          hazard_id: string
+          id?: string
+          likelihood: number
+          likelihood_rationale?: string | null
+          notes?: string | null
+          residual_likelihood?: number | null
+          residual_risk_band?: string | null
+          residual_risk_index?: number | null
+          residual_severity?: number | null
+          risk_band?: string | null
+          risk_index?: number | null
+          severity: number
+          severity_rationale?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assessed_at?: string
+          assessed_by?: string | null
+          base_id?: string
+          created_at?: string
+          hazard_id?: string
+          id?: string
+          likelihood?: number
+          likelihood_rationale?: string | null
+          notes?: string | null
+          residual_likelihood?: number | null
+          residual_risk_band?: string | null
+          residual_risk_index?: number | null
+          residual_severity?: number | null
+          risk_band?: string | null
+          risk_index?: number | null
+          severity?: number
+          severity_rationale?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_risk_assessments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_risk_assessments_hazard_id_fkey"
+            columns: ["hazard_id"]
+            isOneToOne: false
+            referencedRelation: "sms_hazards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_safety_reports: {
+        Row: {
+          base_id: string
+          category: string
+          created_at: string
+          description: string
+          id: string
+          immediate_action: string | null
+          is_anonymous: boolean
+          location_text: string | null
+          occurred_at: string | null
+          promoted_hazard_id: string | null
+          report_code: string
+          reporter_email: string | null
+          reporter_name: string | null
+          reporter_phone: string | null
+          reporter_role: string | null
+          source: string
+          submitted_at: string
+          triage_notes: string | null
+          triage_status: string
+          triaged_at: string | null
+          triaged_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          immediate_action?: string | null
+          is_anonymous?: boolean
+          location_text?: string | null
+          occurred_at?: string | null
+          promoted_hazard_id?: string | null
+          report_code: string
+          reporter_email?: string | null
+          reporter_name?: string | null
+          reporter_phone?: string | null
+          reporter_role?: string | null
+          source?: string
+          submitted_at?: string
+          triage_notes?: string | null
+          triage_status?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          immediate_action?: string | null
+          is_anonymous?: boolean
+          location_text?: string | null
+          occurred_at?: string | null
+          promoted_hazard_id?: string | null
+          report_code?: string
+          reporter_email?: string | null
+          reporter_name?: string | null
+          reporter_phone?: string | null
+          reporter_role?: string | null
+          source?: string
+          submitted_at?: string
+          triage_notes?: string | null
+          triage_status?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_safety_reports_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_safety_reports_promoted_hazard_id_fkey"
+            columns: ["promoted_hazard_id"]
+            isOneToOne: false
+            referencedRelation: "sms_hazards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_spi_measurements: {
+        Row: {
+          base_id: string
+          computed_by: string
+          created_at: string
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          spi_id: string
+          status: string
+          value: number
+        }
+        Insert: {
+          base_id: string
+          computed_by?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          spi_id: string
+          status?: string
+          value: number
+        }
+        Update: {
+          base_id?: string
+          computed_by?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          spi_id?: string
+          status?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_spi_measurements_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_spi_measurements_spi_id_fkey"
+            columns: ["spi_id"]
+            isOneToOne: false
+            referencedRelation: "sms_spis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_spis: {
+        Row: {
+          active: boolean
+          alert_threshold: number | null
+          base_id: string
+          code: string
+          computation_key: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          measurement_frequency: string
+          target_direction: string
+          target_value: number | null
+          title: string
+          unit: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          alert_threshold?: number | null
+          base_id: string
+          code: string
+          computation_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          measurement_frequency?: string
+          target_direction?: string
+          target_value?: number | null
+          title: string
+          unit?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          alert_threshold?: number | null
+          base_id?: string
+          code?: string
+          computation_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          measurement_frequency?: string
+          target_direction?: string
+          target_value?: number | null
+          title?: string
+          unit?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_spis_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       status_updates: {
         Row: {
           base_id: string | null
@@ -4005,6 +8222,310 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_certificates: {
+        Row: {
+          base_id: string
+          certificate_url: string | null
+          created_at: string
+          created_by: string | null
+          credential: Database["public"]["Enums"]["training_credential"]
+          expires_at: string | null
+          id: string
+          issued_at: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          certificate_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          credential: Database["public"]["Enums"]["training_credential"]
+          expires_at?: string | null
+          id?: string
+          issued_at: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          certificate_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          credential?: Database["public"]["Enums"]["training_credential"]
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_certificates_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_certificates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_certificates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_digest_log: {
+        Row: {
+          base_id: string
+          id: string
+          recipient: string
+          send_date: string
+          sent_at: string
+          topic_codes: string[]
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          id?: string
+          recipient: string
+          send_date: string
+          sent_at?: string
+          topic_codes?: string[]
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          id?: string
+          recipient?: string
+          send_date?: string
+          sent_at?: string
+          topic_codes?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_digest_log_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_digest_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_records: {
+        Row: {
+          base_id: string
+          completed_at: string
+          created_at: string
+          created_by: string | null
+          evidence_url: string | null
+          expires_at: string | null
+          id: string
+          instructor_name_external: string | null
+          instructor_user_id: string | null
+          notes: string | null
+          topic_id: string
+          training_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_id: string
+          completed_at: string
+          created_at?: string
+          created_by?: string | null
+          evidence_url?: string | null
+          expires_at?: string | null
+          id?: string
+          instructor_name_external?: string | null
+          instructor_user_id?: string | null
+          notes?: string | null
+          topic_id: string
+          training_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_id?: string
+          completed_at?: string
+          created_at?: string
+          created_by?: string | null
+          evidence_url?: string | null
+          expires_at?: string | null
+          id?: string
+          instructor_name_external?: string | null
+          instructor_user_id?: string | null
+          notes?: string | null
+          topic_id?: string
+          training_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_records_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_records_instructor_user_id_fkey"
+            columns: ["instructor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_records_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "training_topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_renewals: {
+        Row: {
+          base_id: string
+          id: string
+          previous_record_id: string
+          renewed_at: string
+          renewed_record_id: string
+        }
+        Insert: {
+          base_id: string
+          id?: string
+          previous_record_id: string
+          renewed_at?: string
+          renewed_record_id: string
+        }
+        Update: {
+          base_id?: string
+          id?: string
+          previous_record_id?: string
+          renewed_at?: string
+          renewed_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_renewals_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_renewals_previous_record_id_fkey"
+            columns: ["previous_record_id"]
+            isOneToOne: false
+            referencedRelation: "training_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_renewals_renewed_record_id_fkey"
+            columns: ["renewed_record_id"]
+            isOneToOne: false
+            referencedRelation: "training_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_topics: {
+        Row: {
+          active: boolean
+          applies_to: string[]
+          base_id: string | null
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          initial_required: boolean
+          material_url: string | null
+          recurrent_frequency_months: number
+          retention_months: number
+          sort_order: number
+          source: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          applies_to?: string[]
+          base_id?: string | null
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          initial_required?: boolean
+          material_url?: string | null
+          recurrent_frequency_months?: number
+          retention_months?: number
+          sort_order?: number
+          source?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          applies_to?: string[]
+          base_id?: string | null
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          initial_required?: boolean
+          material_url?: string | null
+          recurrent_frequency_months?: number
+          retention_months?: number
+          sort_order?: number
+          source?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_topics_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
             referencedColumns: ["id"]
           },
         ]
@@ -4482,6 +9003,127 @@ export type Database = {
           },
         ]
       }
+      wildlife_hazard_assessments: {
+        Row: {
+          ae_signed_at: string | null
+          ae_user_id: string | null
+          assessment_year: number
+          base_id: string
+          created_at: string
+          created_by: string | null
+          faa_acceptance_ref: string | null
+          faa_accepted_at: string | null
+          findings: Json
+          hazardous_species: Json
+          id: string
+          last_reviewed_at: string | null
+          mitigation_summary: string | null
+          notes: string | null
+          performed_at: string
+          performed_by_external: string | null
+          performed_by_user_id: string | null
+          replaced_by_id: string | null
+          report_url: string | null
+          review_notes: string | null
+          reviewed_by_user_id: string | null
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          ae_signed_at?: string | null
+          ae_user_id?: string | null
+          assessment_year: number
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          faa_acceptance_ref?: string | null
+          faa_accepted_at?: string | null
+          findings?: Json
+          hazardous_species?: Json
+          id?: string
+          last_reviewed_at?: string | null
+          mitigation_summary?: string | null
+          notes?: string | null
+          performed_at: string
+          performed_by_external?: string | null
+          performed_by_user_id?: string | null
+          replaced_by_id?: string | null
+          report_url?: string | null
+          review_notes?: string | null
+          reviewed_by_user_id?: string | null
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ae_signed_at?: string | null
+          ae_user_id?: string | null
+          assessment_year?: number
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          faa_acceptance_ref?: string | null
+          faa_accepted_at?: string | null
+          findings?: Json
+          hazardous_species?: Json
+          id?: string
+          last_reviewed_at?: string | null
+          mitigation_summary?: string | null
+          notes?: string | null
+          performed_at?: string
+          performed_by_external?: string | null
+          performed_by_user_id?: string | null
+          replaced_by_id?: string | null
+          report_url?: string | null
+          review_notes?: string | null
+          reviewed_by_user_id?: string | null
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wildlife_hazard_assessments_ae_user_id_fkey"
+            columns: ["ae_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_hazard_assessments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_hazard_assessments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_hazard_assessments_performed_by_user_id_fkey"
+            columns: ["performed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_hazard_assessments_replaced_by_id_fkey"
+            columns: ["replaced_by_id"]
+            isOneToOne: false
+            referencedRelation: "wildlife_hazard_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_hazard_assessments_reviewed_by_user_id_fkey"
+            columns: ["reviewed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wildlife_sightings: {
         Row: {
           action_taken: string | null
@@ -4773,878 +9415,61 @@ export type Database = {
           },
         ]
       }
-      sms_policies: {
-        Row: {
-          id: string
-          base_id: string
-          version: number
-          status: string
-          effective_date: string | null
-          review_due_date: string | null
-          document_url: string | null
-          safety_objectives: Json
-          employee_reporting_pledge: string | null
-          accountable_executive_user_id: string | null
-          signed_at: string | null
-          signature_image_url: string | null
-          replaced_by_id: string | null
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          version?: number
-          status?: string
-          effective_date?: string | null
-          review_due_date?: string | null
-          document_url?: string | null
-          safety_objectives?: Json
-          employee_reporting_pledge?: string | null
-          accountable_executive_user_id?: string | null
-          signed_at?: string | null
-          signature_image_url?: string | null
-          replaced_by_id?: string | null
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_policies"]["Insert"]>
-        Relationships: []
-      }
-      sms_hazards: {
-        Row: {
-          id: string
-          base_id: string
-          hazard_code: string
-          title: string
-          description: string | null
-          source_type: string
-          source_ref_id: string | null
-          status: string
-          closed_at: string | null
-          closed_by: string | null
-          closure_rationale: string | null
-          risk_owner_user_id: string | null
-          identified_by: string | null
-          identified_at: string
-          latest_assessment_id: string | null
-          current_band: string | null
-          residual_band: string | null
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          hazard_code: string
-          title: string
-          description?: string | null
-          source_type?: string
-          source_ref_id?: string | null
-          status?: string
-          closed_at?: string | null
-          closed_by?: string | null
-          closure_rationale?: string | null
-          risk_owner_user_id?: string | null
-          identified_by?: string | null
-          identified_at?: string
-          latest_assessment_id?: string | null
-          current_band?: string | null
-          residual_band?: string | null
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_hazards"]["Insert"]>
-        Relationships: []
-      }
-      sms_risk_assessments: {
-        Row: {
-          id: string
-          hazard_id: string
-          base_id: string
-          assessed_at: string
-          assessed_by: string | null
-          likelihood: number
-          severity: number
-          risk_index: number
-          risk_band: string
-          residual_likelihood: number | null
-          residual_severity: number | null
-          residual_risk_index: number
-          residual_risk_band: string | null
-          likelihood_rationale: string | null
-          severity_rationale: string | null
-          notes: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          hazard_id: string
-          base_id: string
-          assessed_at?: string
-          assessed_by?: string | null
-          likelihood: number
-          severity: number
-          residual_likelihood?: number | null
-          residual_severity?: number | null
-          likelihood_rationale?: string | null
-          severity_rationale?: string | null
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_risk_assessments"]["Insert"]>
-        Relationships: []
-      }
-      sms_mitigations: {
-        Row: {
-          id: string
-          hazard_id: string
-          base_id: string
-          title: string
-          description: string | null
-          control_type: string
-          owner_user_id: string | null
-          due_date: string | null
-          status: string
-          completed_at: string | null
-          completed_by: string | null
-          evidence_url: string | null
-          notes: string | null
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          hazard_id: string
-          base_id: string
-          title: string
-          description?: string | null
-          control_type?: string
-          owner_user_id?: string | null
-          due_date?: string | null
-          status?: string
-          completed_at?: string | null
-          completed_by?: string | null
-          evidence_url?: string | null
-          notes?: string | null
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_mitigations"]["Insert"]>
-        Relationships: []
-      }
-      sms_spis: {
-        Row: {
-          id: string
-          base_id: string
-          code: string
-          title: string
-          description: string | null
-          unit: string
-          target_value: number | null
-          target_direction: string
-          alert_threshold: number | null
-          computation_key: string | null
-          measurement_frequency: string
-          active: boolean
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          code: string
-          title: string
-          description?: string | null
-          unit?: string
-          target_value?: number | null
-          target_direction?: string
-          alert_threshold?: number | null
-          computation_key?: string | null
-          measurement_frequency?: string
-          active?: boolean
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_spis"]["Insert"]>
-        Relationships: []
-      }
-      sms_spi_measurements: {
-        Row: {
-          id: string
-          spi_id: string
-          base_id: string
-          period_start: string
-          period_end: string
-          value: number
-          status: string
-          computed_by: string
-          notes: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          spi_id: string
-          base_id: string
-          period_start: string
-          period_end: string
-          value: number
-          status?: string
-          computed_by?: string
-          notes?: string | null
-          created_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_spi_measurements"]["Insert"]>
-        Relationships: []
-      }
-      sms_audits: {
-        Row: {
-          id: string
-          base_id: string
-          audit_code: string
-          title: string
-          audit_type: string
-          scope: string | null
-          scheduled_date: string | null
-          performed_date: string | null
-          performed_by: string | null
-          status: string
-          findings: Json
-          findings_open: number
-          findings_closed: number
-          report_url: string | null
-          notes: string | null
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          audit_code: string
-          title: string
-          audit_type?: string
-          scope?: string | null
-          scheduled_date?: string | null
-          performed_date?: string | null
-          performed_by?: string | null
-          status?: string
-          findings?: Json
-          findings_open?: number
-          findings_closed?: number
-          report_url?: string | null
-          notes?: string | null
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_audits"]["Insert"]>
-        Relationships: []
-      }
-      sms_management_of_change: {
-        Row: {
-          id: string
-          base_id: string
-          moc_code: string
-          title: string
-          change_description: string
-          change_category: string
-          triggered_by: string | null
-          proposed_by: string | null
-          proposed_at: string
-          effective_date: string | null
-          status: string
-          linked_hazard_id: string | null
-          risk_analysis_summary: string | null
-          approved_by: string | null
-          approved_at: string | null
-          approval_notes: string | null
-          rejection_reason: string | null
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          moc_code: string
-          title: string
-          change_description: string
-          change_category?: string
-          triggered_by?: string | null
-          proposed_by?: string | null
-          proposed_at?: string
-          effective_date?: string | null
-          status?: string
-          linked_hazard_id?: string | null
-          risk_analysis_summary?: string | null
-          approved_by?: string | null
-          approved_at?: string | null
-          approval_notes?: string | null
-          rejection_reason?: string | null
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_management_of_change"]["Insert"]>
-        Relationships: []
-      }
-      sms_safety_reports: {
-        Row: {
-          id: string
-          base_id: string
-          report_code: string
-          reporter_name: string | null
-          reporter_email: string | null
-          reporter_phone: string | null
-          reporter_role: string | null
-          is_anonymous: boolean
-          category: string
-          occurred_at: string | null
-          location_text: string | null
-          description: string
-          immediate_action: string | null
-          source: string
-          triage_status: string
-          triaged_by: string | null
-          triaged_at: string | null
-          promoted_hazard_id: string | null
-          triage_notes: string | null
-          submitted_at: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          report_code: string
-          reporter_name?: string | null
-          reporter_email?: string | null
-          reporter_phone?: string | null
-          reporter_role?: string | null
-          is_anonymous?: boolean
-          category: string
-          occurred_at?: string | null
-          location_text?: string | null
-          description: string
-          immediate_action?: string | null
-          source?: string
-          triage_status?: string
-          triaged_by?: string | null
-          triaged_at?: string | null
-          promoted_hazard_id?: string | null
-          triage_notes?: string | null
-          submitted_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_safety_reports"]["Insert"]>
-        Relationships: []
-      }
-      sms_communications: {
-        Row: {
-          id: string
-          base_id: string
-          title: string
-          body: string
-          channel: string
-          audience: string | null
-          published_at: string | null
-          attachment_url: string | null
-          related_hazard_id: string | null
-          created_by: string | null
-          updated_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          title: string
-          body: string
-          channel?: string
-          audience?: string | null
-          published_at?: string | null
-          attachment_url?: string | null
-          related_hazard_id?: string | null
-          created_by?: string | null
-          updated_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["sms_communications"]["Insert"]>
-        Relationships: []
-      }
-      training_topics: {
-        Row: {
-          id: string
-          base_id: string | null
-          code: string
-          title: string
-          description: string | null
-          source: string
-          applies_to: string[]
-          initial_required: boolean
-          recurrent_frequency_months: number
-          retention_months: number
-          material_url: string | null
-          active: boolean
-          sort_order: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id?: string | null
-          code: string
-          title: string
-          description?: string | null
-          source?: string
-          applies_to?: string[]
-          initial_required?: boolean
-          recurrent_frequency_months?: number
-          retention_months?: number
-          material_url?: string | null
-          active?: boolean
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["training_topics"]["Insert"]>
-        Relationships: []
-      }
-      training_records: {
-        Row: {
-          id: string
-          base_id: string
-          user_id: string
-          topic_id: string
-          completed_at: string
-          training_type: string
-          instructor_user_id: string | null
-          instructor_name_external: string | null
-          evidence_url: string | null
-          expires_at: string | null
-          notes: string | null
-          created_at: string
-          created_by: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          user_id: string
-          topic_id: string
-          completed_at: string
-          training_type: string
-          instructor_user_id?: string | null
-          instructor_name_external?: string | null
-          evidence_url?: string | null
-          expires_at?: string | null
-          notes?: string | null
-          created_at?: string
-          created_by?: string | null
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["training_records"]["Insert"]>
-        Relationships: []
-      }
-      training_renewals: {
-        Row: {
-          id: string
-          base_id: string
-          previous_record_id: string
-          renewed_record_id: string
-          renewed_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          previous_record_id: string
-          renewed_record_id: string
-          renewed_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["training_renewals"]["Insert"]>
-        Relationships: []
-      }
-      training_certificates: {
-        Row: {
-          id: string
-          base_id: string
-          user_id: string
-          credential: string
-          issued_at: string
-          expires_at: string | null
-          certificate_url: string | null
-          notes: string | null
-          created_at: string
-          created_by: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          user_id: string
-          credential: string
-          issued_at: string
-          expires_at?: string | null
-          certificate_url?: string | null
-          notes?: string | null
-          created_at?: string
-          created_by?: string | null
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["training_certificates"]["Insert"]>
-        Relationships: []
-      }
-      training_digest_log: {
-        Row: {
-          id: string
-          base_id: string
-          user_id: string
-          send_date: string
-          topic_codes: string[]
-          recipient: string
-          sent_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          user_id: string
-          send_date: string
-          topic_codes?: string[]
-          recipient: string
-          sent_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["training_digest_log"]["Insert"]>
-        Relationships: []
-      }
-      aep_plans: {
-        Row: {
-          id: string
-          base_id: string
-          version: string
-          effective_date: string
-          document_url: string | null
-          storage_path: string | null
-          approved_by_faa_at: string | null
-          faa_acceptance_ref: string | null
-          ae_user_id: string | null
-          ae_signed_at: string | null
-          last_reviewed_at: string | null
-          reviewed_by_user_id: string | null
-          review_notes: string | null
-          replaced_by_id: string | null
-          notes: string | null
-          created_at: string
-          created_by: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          version: string
-          effective_date: string
-          document_url?: string | null
-          storage_path?: string | null
-          approved_by_faa_at?: string | null
-          faa_acceptance_ref?: string | null
-          ae_user_id?: string | null
-          ae_signed_at?: string | null
-          last_reviewed_at?: string | null
-          reviewed_by_user_id?: string | null
-          review_notes?: string | null
-          replaced_by_id?: string | null
-          notes?: string | null
-          created_at?: string
-          created_by?: string | null
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["aep_plans"]["Insert"]>
-        Relationships: []
-      }
-      aep_response_agencies: {
-        Row: {
-          id: string
-          base_id: string
-          agency_name: string
-          agency_role: string
-          primary_contact_name: string | null
-          primary_contact_phone: string | null
-          primary_contact_radio: string | null
-          backup_contact_name: string | null
-          backup_contact_phone: string | null
-          notes: string | null
-          sort_order: number
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          agency_name: string
-          agency_role: string
-          primary_contact_name?: string | null
-          primary_contact_phone?: string | null
-          primary_contact_radio?: string | null
-          backup_contact_name?: string | null
-          backup_contact_phone?: string | null
-          notes?: string | null
-          sort_order?: number
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["aep_response_agencies"]["Insert"]>
-        Relationships: []
-      }
-      aep_drills: {
-        Row: {
-          id: string
-          base_id: string
-          drill_date: string
-          drill_type: string
-          scenario: string
-          status: string
-          participants: unknown
-          after_action_notes: string | null
-          findings: string | null
-          evidence_url: string | null
-          storage_path: string | null
-          next_due_at_override: string | null
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string
-          created_by: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          drill_date: string
-          drill_type: string
-          scenario: string
-          status?: string
-          participants?: unknown
-          after_action_notes?: string | null
-          findings?: string | null
-          evidence_url?: string | null
-          storage_path?: string | null
-          next_due_at_override?: string | null
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string
-          created_by?: string | null
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["aep_drills"]["Insert"]>
-        Relationships: []
-      }
-      aep_comms_checks: {
-        Row: {
-          id: string
-          base_id: string
-          check_date: string
-          check_period: string
-          started_at: string
-          completed_at: string | null
-          completed_by: string | null
-          completed_by_oi: string | null
-          notes: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          check_date: string
-          check_period?: string
-          started_at?: string
-          completed_at?: string | null
-          completed_by?: string | null
-          completed_by_oi?: string | null
-          notes?: string | null
-          created_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["aep_comms_checks"]["Insert"]>
-        Relationships: []
-      }
-      aep_comms_check_results: {
-        Row: {
-          id: string
-          check_id: string
-          agency_id: string | null
-          agency_name: string
-          agency_role: string | null
-          status: string
-          notes: string | null
-          sort_order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          check_id: string
-          agency_id?: string | null
-          agency_name: string
-          agency_role?: string | null
-          status: string
-          notes?: string | null
-          sort_order?: number
-          created_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["aep_comms_check_results"]["Insert"]>
-        Relationships: []
-      }
-      field_condition_reports: {
-        Row: {
-          id: string
-          base_id: string
-          runway_id: string
-          generated_at: string
-          generated_by: string | null
-          generated_by_oi: string | null
-          valid_until: string
-          temperature_f: number | null
-          treatments: string[]
-          conditions_unchanged_since: string | null
-          superseded_by_id: string | null
-          notes: string | null
-          ficon_text: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          runway_id: string
-          generated_at?: string
-          generated_by?: string | null
-          generated_by_oi?: string | null
-          valid_until: string
-          temperature_f?: number | null
-          treatments?: string[]
-          conditions_unchanged_since?: string | null
-          superseded_by_id?: string | null
-          notes?: string | null
-          ficon_text: string
-          created_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["field_condition_reports"]["Insert"]>
-        Relationships: []
-      }
-      field_condition_thirds: {
-        Row: {
-          id: string
-          report_id: string
-          third: string
-          contaminant: string
-          depth_in: number | null
-          coverage_percent: number | null
-          rwycc: number
-          rwycc_derived: number
-          rwycc_manual_override: boolean
-          override_reason: string | null
-          sort_order: number
-        }
-        Insert: {
-          id?: string
-          report_id: string
-          third: string
-          contaminant: string
-          depth_in?: number | null
-          coverage_percent?: number | null
-          rwycc: number
-          rwycc_derived: number
-          rwycc_manual_override?: boolean
-          override_reason?: string | null
-          sort_order: number
-        }
-        Update: Partial<Database["public"]["Tables"]["field_condition_thirds"]["Insert"]>
-        Relationships: []
-      }
-      wildlife_hazard_assessments: {
-        Row: {
-          id: string
-          base_id: string
-          assessment_year: number
-          performed_by_user_id: string | null
-          performed_by_external: string | null
-          performed_at: string
-          report_url: string | null
-          storage_path: string | null
-          faa_accepted_at: string | null
-          faa_acceptance_ref: string | null
-          ae_user_id: string | null
-          ae_signed_at: string | null
-          last_reviewed_at: string | null
-          reviewed_by_user_id: string | null
-          review_notes: string | null
-          hazardous_species: unknown
-          mitigation_summary: string | null
-          findings: unknown
-          notes: string | null
-          replaced_by_id: string | null
-          created_at: string
-          created_by: string | null
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          base_id: string
-          assessment_year: number
-          performed_by_user_id?: string | null
-          performed_by_external?: string | null
-          performed_at: string
-          report_url?: string | null
-          storage_path?: string | null
-          faa_accepted_at?: string | null
-          faa_acceptance_ref?: string | null
-          ae_user_id?: string | null
-          ae_signed_at?: string | null
-          last_reviewed_at?: string | null
-          reviewed_by_user_id?: string | null
-          review_notes?: string | null
-          hazardous_species?: unknown
-          mitigation_summary?: string | null
-          findings?: unknown
-          notes?: string | null
-          replaced_by_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          updated_at?: string
-        }
-        Update: Partial<Database["public"]["Tables"]["wildlife_hazard_assessments"]["Insert"]>
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      _expire_weather_advisories: { Args: never; Returns: number }
       _ppr_generate_number: {
-        Args: { p_base_id: string; p_arrival: string; p_oi: string }
+        Args: { p_arrival: string; p_base_id: string; p_oi: string }
         Returns: string
+      }
+      _sms_compute_spi_measurements: {
+        Args: { p_target_date?: string }
+        Returns: number
+      }
+      _sms_next_code: {
+        Args: { p_base_id: string; p_prefix: string; p_table: string }
+        Returns: string
+      }
+      _sms_risk_band: { Args: { p_index: number }; Returns: string }
+      _sms_seed_default_spis: {
+        Args: { p_base_id: string }
+        Returns: undefined
+      }
+      amtr_base_for_path: { Args: { p_name: string }; Returns: string }
+      amtr_reopen: {
+        Args: { p_row_id: string; p_slot: string; p_table: string }
+        Returns: undefined
+      }
+      amtr_required_slots: {
+        Args: { p_row_id: string; p_table: string }
+        Returns: string[]
+      }
+      amtr_sign: {
+        Args: {
+          p_initials: string
+          p_row_id: string
+          p_slot: string
+          p_table: string
+        }
+        Returns: undefined
+      }
+      amtr_slots_for_table: { Args: { p_table: string }; Returns: string[] }
+      amtr_transcribe: {
+        Args: {
+          p_complete_date: string
+          p_initials: string
+          p_row_id: string
+          p_slot: string
+          p_table: string
+        }
+        Returns: undefined
+      }
+      approve_sms_moc: {
+        Args: { p_approval_notes?: string; p_moc_id: string }
+        Returns: Json
       }
       base_exists: { Args: { p_base_id: string }; Returns: boolean }
       ces_update_discrepancy: {
@@ -5694,6 +9519,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_rate_limit: {
+        Args: { p_bucket: string; p_max: number; p_window_seconds: number }
+        Returns: boolean
+      }
+      flip_sign_review: {
+        Args: { p_review_id: string; p_slot: string }
+        Returns: {
+          afm_signed_at: string | null
+          afm_signed_by: string | null
+          base_id: string
+          custodian_signed_at: string | null
+          custodian_signed_by: string | null
+          id: string
+          namo_signed_at: string | null
+          namo_signed_by: string | null
+          review_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "flip_review_signoffs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_display_id: {
         Args: { prefix: string; seq_name: string }
         Returns: string
@@ -5705,6 +9554,55 @@ export type Database = {
           config: Json
           module_enabled: boolean
         }[]
+      }
+      get_public_ppr_config: {
+        Args: { p_base_id: string }
+        Returns: {
+          base_name: string
+          columns: Json
+          module_enabled: boolean
+          timezone: string
+        }[]
+      }
+      get_public_ppr_config_by_icao: {
+        Args: { p_icao: string }
+        Returns: {
+          base_id: string
+          base_name: string
+          columns: Json
+          module_enabled: boolean
+          timezone: string
+        }[]
+      }
+      get_public_safety_report_config_by_icao: {
+        Args: { p_icao: string }
+        Returns: {
+          airport_type: 'usaf' | 'faa_part139'
+          base_id: string
+          base_name: string
+          module_enabled: boolean
+        }[]
+      }
+      is_1098_year_archived: {
+        Args: { base_uuid: string; year_text: string }
+        Returns: boolean
+      }
+      promote_safety_report_to_hazard: {
+        Args: {
+          p_description?: string
+          p_report_id: string
+          p_title: string
+          p_triage_notes?: string
+        }
+        Returns: Json
+      }
+      record_page_view: {
+        Args: { p_base_id: string; p_route: string }
+        Returns: undefined
+      }
+      reject_sms_moc: {
+        Args: { p_moc_id: string; p_rejection_reason: string }
+        Returns: Json
       }
       safety_update_rsc_bwc: {
         Args: {
@@ -5780,15 +9678,98 @@ export type Database = {
           rank: number
         }[]
       }
-      update_airfield_status:
-        | {
-            Args: { p_updated_by?: string; p_updates: Json }
-            Returns: undefined
-          }
-        | {
-            Args: { p_base_id?: string; p_updated_by?: string; p_updates: Json }
-            Returns: undefined
-          }
+      sign_daily_review_slot: {
+        Args: {
+          p_base_id: string
+          p_date: string
+          p_events_hash: string
+          p_notes?: string
+          p_shift_count?: number
+          p_slot: string
+        }
+        Returns: {
+          afm_events_hash: string | null
+          afm_notes: string | null
+          afm_signed_at: string | null
+          afm_signed_by: string | null
+          base_id: string
+          created_at: string
+          day_amsl_events_hash: string | null
+          day_amsl_notes: string | null
+          day_amsl_signed_at: string | null
+          day_amsl_signed_by: string | null
+          fully_certified_at: string | null
+          id: string
+          mid_amsl_events_hash: string | null
+          mid_amsl_notes: string | null
+          mid_amsl_signed_at: string | null
+          mid_amsl_signed_by: string | null
+          namo_events_hash: string | null
+          namo_notes: string | null
+          namo_signed_at: string | null
+          namo_signed_by: string | null
+          review_date: string
+          swing_amsl_events_hash: string | null
+          swing_amsl_notes: string | null
+          swing_amsl_signed_at: string | null
+          swing_amsl_signed_by: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daily_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      sign_sms_policy: {
+        Args: {
+          p_effective_date: string
+          p_policy_id: string
+          p_signature_image_url?: string
+        }
+        Returns: Json
+      }
+      submit_public_ppr_request: {
+        Args: {
+          p_arrival_date: string
+          p_base_id: string
+          p_column_values?: Json
+          p_notes?: string
+          p_requester_email: string
+          p_requester_name: string
+          p_requester_phone: string
+        }
+        Returns: Json
+      }
+      submit_safety_report_public: {
+        Args: {
+          p_base_id: string
+          p_category: string
+          p_description: string
+          p_immediate_action?: string
+          p_location_text?: string
+          p_occurred_at?: string
+          p_reporter_email?: string
+          p_reporter_name?: string
+          p_reporter_phone?: string
+          p_reporter_role?: string
+        }
+        Returns: Json
+      }
+      supersede_aep_plan: {
+        Args: {
+          p_approved_by_faa_at?: string
+          p_document_url?: string
+          p_effective_date: string
+          p_faa_acceptance_ref?: string
+          p_notes?: string
+          p_prior_plan_id: string
+          p_storage_path?: string
+          p_version: string
+        }
+        Returns: Json
+      }
       user_has_base_access: {
         Args: { p_base_id: string; p_user_id: string }
         Returns: boolean
@@ -5798,9 +9779,19 @@ export type Database = {
         Returns: boolean
       }
       user_is_sys_admin: { Args: { p_user_id: string }; Returns: boolean }
+      user_shares_base: {
+        Args: { p_target: string; p_viewer: string }
+        Returns: boolean
+      }
+      waiver_base_for_path: { Args: { p_name: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      training_credential:
+        | "AAAE-CM"
+        | "ACE-Ops"
+        | "ACE-Comm"
+        | "ACE-Sec"
+        | "ACE-WHC"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5927,9 +9918,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      training_credential: [
+        "AAAE-CM",
+        "ACE-Ops",
+        "ACE-Comm",
+        "ACE-Sec",
+        "ACE-WHC",
+      ],
+    },
   },
 } as const
+
 // Convenience type aliases
 export type UserRole =
   | 'airfield_manager'

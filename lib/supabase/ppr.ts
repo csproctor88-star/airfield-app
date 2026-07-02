@@ -220,7 +220,10 @@ export async function createPprColumn(input: {
     .select()
     .single()
 
-  if (error || !data) return null
+  if (error || !data) {
+    if (error) console.error('[ppr] failed to create column:', error.message)
+    return null
+  }
   return data as PprColumn
 }
 
@@ -248,7 +251,10 @@ export async function updatePprColumn(
     .select()
     .single()
 
-  if (error || !data) return null
+  if (error || !data) {
+    if (error) console.error('[ppr] failed to update column:', error.message)
+    return null
+  }
   return data as PprColumn
 }
 

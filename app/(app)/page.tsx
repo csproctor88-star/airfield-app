@@ -282,13 +282,18 @@ export default function HomePage() {
   }, [installationId])
 
   const saveStatusLabel = async (key: string, value: string) => {
+    const previous = statusLabels
     const updated = { ...statusLabels, [key]: value }
     setStatusLabels(updated)
     setEditingLabel(null)
     if (!installationId) return
     const supabase = createClient()
     if (!supabase) return
-    await supabase.from('bases').update({ status_labels: updated } as any).eq('id', installationId)
+    const { error } = await supabase.from('bases').update({ status_labels: updated } as any).eq('id', installationId)
+    if (error) {
+      setStatusLabels(previous) // revert the optimistic update so the UI reflects reality
+      toast.error(`Couldn't save label: ${error.message}`)
+    }
   }
 
   // --- Load on-field (transient) PPRs ---

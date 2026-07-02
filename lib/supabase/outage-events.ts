@@ -61,7 +61,11 @@ export async function createOutageEvent(input: {
     .select('*')
     .single()
 
-  if (error) return null
+  if (error) {
+    // Secondary audit-trail write — don't throw, but don't fail silently either.
+    console.error('[outage-events] failed to log outage event:', error.message)
+    return null
+  }
   return data as OutageEvent
 }
 

@@ -1529,7 +1529,7 @@ export default function InfrastructureMapPage() {
           }
           const resolvedAt = formatZuluDateTime(new Date())
           for (const d of linkedDiscs) {
-            await supabase
+            const { error: closeErr } = await supabase
               .from('discrepancies')
               .update({
                 status: 'completed',
@@ -1538,8 +1538,14 @@ export default function InfrastructureMapPage() {
                 updated_at: new Date().toISOString(),
               } as any)
               .eq('id', d.id)
+            // Only count rows that actually closed — never report a compliance
+            // record as closed when the write failed (RLS / network).
+            if (!closeErr) closedDiscs++
           }
-          closedDiscs = linkedDiscs.length
+          const failed = linkedDiscs.length - closedDiscs
+          if (failed > 0) {
+            toast.error(`${failed} linked discrepanc${failed > 1 ? 'ies' : 'y'} could not be closed — please retry`)
+          }
         }
       }
     }

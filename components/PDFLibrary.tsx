@@ -607,9 +607,14 @@ export default function PDFLibrary() {
           await idbSet(STORE_TEXT, fileName, { pages, source: "client", cachedAt: Date.now() });
         }
 
-        // Upload to Supabase if online
+        // Upload to Supabase if online.
+        // Supabase v2 returns errors rather than throwing, so the surrounding
+        // try/catch never fires for them — check each write explicitly and
+        // throw on failure so we do NOT mark the file "complete" (which would
+        // permanently hide the un-uploaded pages from cross-PDF search).
         if (navigator.onLine && pages) {
-          await supabase.from("pdf_text_pages").delete().eq("file_name", fileName);
+          const { error: delErr } = await supabase.from("pdf_text_pages").delete().eq("file_name", fileName);
+          if (delErr) throw delErr;
 
           for (let j = 0; j < pages.length; j += 50) {
             const batch = pages.slice(j, j + 50).map((p) => ({
@@ -617,15 +622,17 @@ export default function PDFLibrary() {
               page_number: p.page,
               text_content: p.text,
             }));
-            await supabase.from("pdf_text_pages").insert(batch);
+            const { error: insErr } = await supabase.from("pdf_text_pages").insert(batch);
+            if (insErr) throw insErr;
           }
 
-          await supabase.from("pdf_extraction_status").upsert({
+          const { error: statusErr } = await supabase.from("pdf_extraction_status").upsert({
             file_name: fileName,
             total_pages: pages.length,
             status: "complete",
             extracted_at: new Date().toISOString(),
           }, { onConflict: "file_name" });
+          if (statusErr) throw statusErr;
         }
       } catch (e) {
         console.error("Extract failed:", fileName, e);

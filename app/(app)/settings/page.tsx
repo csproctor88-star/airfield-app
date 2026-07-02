@@ -324,19 +324,26 @@ function ProfileSectionContent() {
   const handleSaveUnit = async () => {
     setSavingUnit(true)
     const supabase = createClient()
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const val = unit.trim() || null
-        const { error } = await supabase.from('profiles').update({ unit: val } as any).eq('id', user.id)
-        if (error) {
-          toast.error(`Failed to save: ${error.message}`)
-          setSavingUnit(false)
-          return
-        }
-        setProfile((prev) => prev ? { ...prev, unit: val } : prev)
-      }
+    // No client or no session means nothing was written — never report success.
+    if (!supabase) {
+      toast.error('Not connected — try again when back online.')
+      setSavingUnit(false)
+      return
     }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error('Your session has expired — please sign in again.')
+      setSavingUnit(false)
+      return
+    }
+    const val = unit.trim() || null
+    const { error } = await supabase.from('profiles').update({ unit: val } as any).eq('id', user.id)
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`)
+      setSavingUnit(false)
+      return
+    }
+    setProfile((prev) => prev ? { ...prev, unit: val } : prev)
     toast.success('Unit saved')
     setSavingUnit(false)
   }
@@ -344,19 +351,25 @@ function ProfileSectionContent() {
   const handleSaveOfficeSymbol = async () => {
     setSavingOfficeSymbol(true)
     const supabase = createClient()
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const val = officeSymbol.trim() || null
-        const { error } = await supabase.from('profiles').update({ office_symbol: val } as any).eq('id', user.id)
-        if (error) {
-          toast.error(`Failed to save: ${error.message}`)
-          setSavingOfficeSymbol(false)
-          return
-        }
-        setProfile((prev) => prev ? { ...prev, officeSymbol: val } : prev)
-      }
+    if (!supabase) {
+      toast.error('Not connected — try again when back online.')
+      setSavingOfficeSymbol(false)
+      return
     }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error('Your session has expired — please sign in again.')
+      setSavingOfficeSymbol(false)
+      return
+    }
+    const val = officeSymbol.trim() || null
+    const { error } = await supabase.from('profiles').update({ office_symbol: val } as any).eq('id', user.id)
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`)
+      setSavingOfficeSymbol(false)
+      return
+    }
+    setProfile((prev) => prev ? { ...prev, officeSymbol: val } : prev)
     toast.success('Office symbol saved')
     setSavingOfficeSymbol(false)
   }
@@ -364,19 +377,25 @@ function ProfileSectionContent() {
   const handleSaveOi = async () => {
     setSavingOi(true)
     const supabase = createClient()
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const val = oi.trim().toUpperCase() || null
-        const { error } = await supabase.from('profiles').update({ operating_initials: val } as any).eq('id', user.id)
-        if (error) {
-          toast.error(`Failed to save: ${error.message}`)
-          setSavingOi(false)
-          return
-        }
-        setProfile((prev) => prev ? { ...prev, operatingInitials: val } : prev)
-      }
+    if (!supabase) {
+      toast.error('Not connected — try again when back online.')
+      setSavingOi(false)
+      return
     }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      toast.error('Your session has expired — please sign in again.')
+      setSavingOi(false)
+      return
+    }
+    const val = oi.trim().toUpperCase() || null
+    const { error } = await supabase.from('profiles').update({ operating_initials: val } as any).eq('id', user.id)
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`)
+      setSavingOi(false)
+      return
+    }
+    setProfile((prev) => prev ? { ...prev, operatingInitials: val } : prev)
     toast.success('Operating initials saved')
     setSavingOi(false)
   }
