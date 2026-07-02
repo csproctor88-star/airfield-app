@@ -46,7 +46,8 @@ export default function CheckHistoryPage() {
         setLoading(false)
         return
       }
-      const { data, error } = await fetchChecks(installationId)
+      // Cap the history list to the most recent 500 — this table grows daily.
+      const { data, error } = await fetchChecks(installationId, 500)
       if (error) {
         toast.error(`DB error: ${error}`)
         setUsingDemo(true)

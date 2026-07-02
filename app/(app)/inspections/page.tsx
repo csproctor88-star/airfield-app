@@ -486,7 +486,9 @@ export default function InspectionsPage() {
       setLoading(false)
       return
     }
-    const data = await fetchInspections(installationId)
+    // Cap the history list to the most recent 500 — this table grows daily and
+    // carries full draft payloads. In-progress drafts load separately, uncapped.
+    const data = await fetchInspections(installationId, undefined, 500)
     setLiveInspections(data)
     setLoading(false)
   }, [installationId])
@@ -932,7 +934,7 @@ export default function InspectionsPage() {
     let existingToday = type === 'airfield' ? todayAirfield : todayLighting
     if (!existingToday) {
       try {
-        const fresh = await fetchInspections(installationId)
+        const fresh = await fetchInspections(installationId, undefined, 500)
         if (fresh.length) setLiveInspections(fresh)
         existingToday = pickTodaysInspection(fresh, type, todayStr)
       } catch {

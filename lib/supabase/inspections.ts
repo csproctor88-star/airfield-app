@@ -46,7 +46,10 @@ export type InspectionRow = {
   updated_at: string
 }
 
-export async function fetchInspections(baseId?: string | null, status?: 'in_progress' | 'completed'): Promise<InspectionRow[]> {
+// `limit` bounds an otherwise unbounded fetch (every inspection ever, incl. full
+// draft payloads). Default undefined (all rows) keeps exports/analytics callers
+// unchanged; the list view passes a cap.
+export async function fetchInspections(baseId?: string | null, status?: 'in_progress' | 'completed', limit?: number): Promise<InspectionRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
@@ -60,6 +63,9 @@ export async function fetchInspections(baseId?: string | null, status?: 'in_prog
   }
   if (status) {
     query = query.eq('status', status)
+  }
+  if (typeof limit === 'number') {
+    query = query.limit(limit)
   }
 
   const { data, error } = await query

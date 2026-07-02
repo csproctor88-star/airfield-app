@@ -38,6 +38,7 @@ import { bulkUpdateStatus } from '@/lib/supabase/infrastructure-features'
 import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { logActivity } from '@/lib/supabase/activity'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
+import { createSighting } from '@/lib/supabase/wildlife'
 import {
   ConflictError,
   NonRetriableError,
@@ -222,6 +223,22 @@ const discrepancyCreateHandler: WriteHandler<
 }
 
 // ---------------------------------------------------------------------------
+// wildlife_sighting_create
+// ---------------------------------------------------------------------------
+
+export type WildlifeSightingCreatePayload = Parameters<typeof createSighting>[0]
+export type WildlifeSightingCreateResult = Awaited<ReturnType<typeof createSighting>>['data']
+
+const wildlifeSightingCreateHandler: WriteHandler<
+  WildlifeSightingCreatePayload,
+  WildlifeSightingCreateResult
+> = async (payload) => {
+  const { data, error } = await createSighting(payload)
+  if (error) throwForStructuredError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // airfield_status_update
 // ---------------------------------------------------------------------------
 
@@ -391,6 +408,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('discrepancy_create', discrepancyCreateHandler)
   queue.registerHandler('inspection_save_draft', inspectionSaveDraftHandler)
   queue.registerHandler('dashboard_board_update', dashboardBoardUpdateHandler)
+  queue.registerHandler('wildlife_sighting_create', wildlifeSightingCreateHandler)
 }
 
 /**
@@ -411,4 +429,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   discrepancy_create: discrepancyCreateHandler,
   inspection_save_draft: inspectionSaveDraftHandler,
   dashboard_board_update: dashboardBoardUpdateHandler,
+  wildlife_sighting_create: wildlifeSightingCreateHandler,
 }

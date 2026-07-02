@@ -168,7 +168,10 @@ export async function createCheck(input: {
   return { data: created, error: null }
 }
 
-export async function fetchChecks(baseId?: string | null): Promise<{ data: CheckRow[]; error: string | null }> {
+// `limit` bounds an otherwise unbounded fetch on a table that grows forever.
+// Default is undefined (all rows) so exports / analytics callers are unchanged;
+// list-view callers pass a cap to avoid transferring years of history on mount.
+export async function fetchChecks(baseId?: string | null, limit?: number): Promise<{ data: CheckRow[]; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: [], error: 'Supabase not configured' }
 
@@ -180,6 +183,9 @@ export async function fetchChecks(baseId?: string | null): Promise<{ data: Check
 
   if (baseId) {
     query = query.eq('base_id', baseId)
+  }
+  if (typeof limit === 'number') {
+    query = query.limit(limit)
   }
 
   const { data, error } = await query

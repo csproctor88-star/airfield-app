@@ -59,7 +59,10 @@ export function formatReporter(r: DiscrepancyRow['reporter']): string {
   return r.rank ? `${r.rank} ${r.name}` : r.name
 }
 
-export async function fetchDiscrepancies(baseId?: string | null): Promise<DiscrepancyRow[]> {
+// `limit` is available to bound the fetch, but list callers should prefer a
+// filtered query (all-open + recent-closed) over a naive recency cap — a plain
+// limit here could hide old but still-open discrepancies. Default: all rows.
+export async function fetchDiscrepancies(baseId?: string | null, limit?: number): Promise<DiscrepancyRow[]> {
   const supabase = createClient()
   if (!supabase) return []
 
@@ -70,6 +73,9 @@ export async function fetchDiscrepancies(baseId?: string | null): Promise<Discre
 
   if (baseId) {
     query = query.eq('base_id', baseId)
+  }
+  if (typeof limit === 'number') {
+    query = query.limit(limit)
   }
 
   const { data, error } = await query

@@ -8,6 +8,8 @@ import {
   Cloud, Megaphone, MessageSquare,
 } from 'lucide-react'
 import { createSighting, updateSighting, type WildlifeSightingRow } from '@/lib/supabase/wildlife'
+import { getWriteQueue } from '@/lib/sync/write-queue'
+import type { WildlifeSightingCreatePayload, WildlifeSightingCreateResult } from '@/lib/sync/handlers'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import {
   WILDLIFE_BEHAVIORS,
@@ -202,7 +204,7 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       return
     }
 
-    const { data: created, error } = await createSighting({
+    const sightingPayload: WildlifeSightingCreatePayload = {
       species_common: selectedSpecies.common_name,
       species_scientific: selectedSpecies.scientific_name,
       species_group: selectedSpecies.group,
@@ -226,12 +228,30 @@ export function SightingForm({ currentUser, baseId, onClose, onSaved, initialDat
       check_id: checkId ?? undefined,
       notes: notes || null,
       base_id: baseId,
-    })
+    }
 
-    setSaving(false)
-    if (error) { toast.error(error); return }
-    toast.success('Wildlife sighting logged')
-    onSaved(created?.display_id)
+    // Route through the offline write queue — a BASH sighting logged in a
+    // flightline dead zone must not be lost. Committed online, queued offline.
+    try {
+      const result = await getWriteQueue().enqueueOrExecute<
+        WildlifeSightingCreatePayload,
+        WildlifeSightingCreateResult
+      >('wildlife_sighting_create', sightingPayload, {
+        baseId: baseId || '',
+        userId: userId || '',
+      })
+      setSaving(false)
+      if (result.status === 'committed') {
+        toast.success('Wildlife sighting logged')
+        onSaved(result.data?.display_id)
+      } else {
+        toast.success('Sighting saved — it will sync when you reconnect')
+        onSaved(undefined)
+      }
+    } catch (err) {
+      setSaving(false)
+      toast.error(err instanceof Error ? err.message : 'Failed to log sighting')
+    }
   }
 
   const selectStyle: React.CSSProperties = {

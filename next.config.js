@@ -202,23 +202,35 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
-          // L-6: Content-Security-Policy in REPORT-ONLY mode. This is the
-          // primary compensating control for the @supabase/ssr JS-readable
-          // session cookie — it constrains where a hypothetical injected
-          // script could exfiltrate to. Report-only first so we can confirm
-          // the allowlist covers Google Maps / Mapbox / Supabase / the inline
-          // theme script with NO functional breakage, then promote to the
-          // enforcing `Content-Security-Policy` header. frame-ancestors 'none'
-          // duplicates X-Frame-Options: DENY for CSP-aware browsers.
+          // L-6: Content-Security-Policy — now ENFORCING (was report-only, which
+          // blocked nothing). This is the primary compensating control for the
+          // @supabase/ssr JS-readable session cookie: the tight connect-src +
+          // img-src allowlists mean an injected script cannot exfiltrate the
+          // token to an attacker-controlled origin (fetch/XHR/beacon AND the
+          // classic `new Image().src=…` vector are both constrained).
+          //
+          // 'unsafe-inline' and 'unsafe-eval' are RETAINED deliberately:
+          // mapbox-gl compiles style expressions with `new Function` (needs
+          // unsafe-eval), and Next.js + the inline theme script need
+          // unsafe-inline without a nonce pipeline. They don't weaken the
+          // exfiltration defense above — injected code still can't send data
+          // out. img-src/connect-src were completed from a scan of every
+          // browser-side external host: ESRI + Bing + Mapbox satellite tiles,
+          // the QR image service, Open-Meteo weather, and the FWS wildlife
+          // image CDN. FAA / OurAirports calls go through same-origin /api
+          // routes and need no allowlist entry. If a map/QR/weather feature
+          // breaks after promotion, check the console for a CSP violation and
+          // add the reported host here. frame-ancestors 'none' mirrors
+          // X-Frame-Options: DENY for CSP-aware browsers.
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://api.mapbox.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
-              "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://*.tiles.mapbox.com https://server.arcgisonline.com https://*.tiles.virtualearth.net https://api.qrserver.com https://digitalmedia.fws.gov",
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.mapbox.com https://*.tiles.mapbox.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.mapbox.com https://*.tiles.mapbox.com https://server.arcgisonline.com https://api.open-meteo.com",
               "worker-src 'self' blob:",
               "frame-src 'self' https:",
               "frame-ancestors 'none'",

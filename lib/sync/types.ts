@@ -35,6 +35,7 @@ export type WriteType =
   | 'activity_log_insert'
   | 'inspection_save_draft'
   | 'dashboard_board_update'
+  | 'wildlife_sighting_create'
 
 /**
  * Lifecycle state of a queued write.
