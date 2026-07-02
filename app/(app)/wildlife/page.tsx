@@ -31,11 +31,22 @@ function formatGroupDate(iso: string, todayIso: string): { primary: string; seco
 function formatTimeColon(iso: string): string {
   return `${new Date(iso).toISOString().slice(11, 16)}Z`
 }
+import dynamic from 'next/dynamic'
 import { SightingForm } from '@/components/wildlife/sighting-form'
 import { StrikeForm } from '@/components/wildlife/strike-form'
-import { WildlifeHeatmap } from '@/components/wildlife/wildlife-heatmap'
 import { WildlifeAnalytics } from '@/components/wildlife/wildlife-analytics'
-import { WildlifeReport } from '@/components/wildlife/wildlife-report'
+// Heatmap (mapbox-gl) and Report (jsPDF) are heavy and only render on their own
+// tab, so load them on demand — this keeps them out of the /wildlife first-load
+// bundle (the page's dominant weight). ssr:false: both are client-only (WebGL /
+// canvas). (audit PERF-H1)
+const WildlifeHeatmap = dynamic(
+  () => import('@/components/wildlife/wildlife-heatmap').then((m) => m.WildlifeHeatmap),
+  { ssr: false, loading: () => <div style={{ padding: 24, color: 'var(--color-text-3)' }}>Loading map…</div> },
+)
+const WildlifeReport = dynamic(
+  () => import('@/components/wildlife/wildlife-report').then((m) => m.WildlifeReport),
+  { ssr: false, loading: () => <div style={{ padding: 24, color: 'var(--color-text-3)' }}>Loading report…</div> },
+)
 import {
   WILDLIFE_ACTIONS,
   DAMAGE_LEVELS,

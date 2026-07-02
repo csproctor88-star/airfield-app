@@ -15,7 +15,6 @@ import {
 } from '@/lib/supabase/amtr-inspections'
 import { runInspectionScan, highestSkillLevel } from '@/lib/amtr/inspection-engine'
 import { DEFAULT_INSPECTION_CHECKLIST } from '@/lib/amtr/inspection-checklist'
-import { generateAmtrInspectionPdf } from '@/lib/amtr-inspection-pdf'
 import type { AmtrInspection } from '@/lib/supabase/amtr-inspections'
 import { Btn } from '@/components/amtr/ui'
 import { AMTR_BAR_HEIGHT } from '@/components/amtr/module-bar'
@@ -228,7 +227,7 @@ export default function AmtrInspectPage() {
     // Files tab so it can be reviewed later. Best-effort — a failed upload must
     // not undo the completion the user just made.
     try {
-      const { doc, filename } = buildInspectionPdf('completed')
+      const { doc, filename } = await buildInspectionPdf('completed')
       const blob = doc.output('blob')
       const file = new File([blob], filename, { type: 'application/pdf' })
       const no = items.filter((it) => it.status === 'no').length
@@ -262,14 +261,17 @@ export default function AmtrInspectPage() {
       created_by: myUserId, created_at: '', updated_at: '',
     }
   }
-  const buildInspectionPdf = (forStatus: 'draft' | 'completed') => {
+  // Dynamic-import the jsPDF generator so it stays out of this page's first-load
+  // bundle (it was ~half of the 380 kB). (audit PERF-H2)
+  const buildInspectionPdf = async (forStatus: 'draft' | 'completed') => {
     const ci = currentInstallation as { name?: string; icao?: string } | null
+    const { generateAmtrInspectionPdf } = await import('@/lib/amtr-inspection-pdf')
     return generateAmtrInspectionPdf(buildInsp(forStatus), member!, checklist, { baseName: ci?.name, baseIcao: ci?.icao })
   }
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (!member) return
-    const { doc, filename } = buildInspectionPdf(status)
+    const { doc, filename } = await buildInspectionPdf(status)
     doc.save(filename); toast.success('Inspection PDF exported')
   }
 

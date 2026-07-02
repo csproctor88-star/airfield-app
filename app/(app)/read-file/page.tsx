@@ -17,7 +17,6 @@ import {
   fetchAllAcks, fetchReadFileReviewers,
   type ReadFileRow, type ReadFileAckRow,
 } from '@/lib/supabase/read-files'
-import { generateReadFileReviewPdf } from '@/lib/read-file-review-pdf'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { Btn, Field } from '@/components/amtr/ui'
@@ -96,6 +95,7 @@ export default function ReadFilePage() {
       fetchReadFileReviewers(installationId),
       fetchAllAcks(installationId),
     ])
+    const { generateReadFileReviewPdf } = await import('@/lib/read-file-review-pdf')
     const { doc, filename } = await generateReadFileReviewPdf({
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,

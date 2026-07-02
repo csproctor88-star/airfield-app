@@ -8,7 +8,6 @@ import { fetchAmtrMembers, fetchAmtrByBase, type AmtrMember } from '@/lib/supaba
 import { fetchLatestInspectionPerMember, type AmtrInspection } from '@/lib/supabase/amtr-inspections'
 import { dueStatus, ratApplies, parseDate, daysBetween, type DueStatus } from '@/lib/amtr/status'
 import { buildMemberRollup, buildUnitKpis, complianceCounts, type MemberRollup, type UnitKpis } from '@/lib/amtr/rollup'
-import { generateAmtrRosterPdf, generateAmtrMemberPrintPdf } from '@/lib/amtr-pdf'
 import { StatusPill } from '@/components/amtr/status-pill'
 import { Btn, thStyle, tdStyle } from '@/components/amtr/ui'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -132,7 +131,8 @@ export default function AmtrReportsPage() {
     }
   }, [data, members])
 
-  const exportRosterPdf = () => {
+  const exportRosterPdf = async () => {
+    const { generateAmtrRosterPdf } = await import('@/lib/amtr-pdf')
     const { doc, filename } = generateAmtrRosterPdf(rollups, kpis, baseInfo)
     doc.save(filename); toast.success('Roster PDF exported')
   }
@@ -470,8 +470,9 @@ function MemberPrint({ members, rollups, dueItems, baseInfo, canExport }: {
   const member = members.find((m) => m.id === sel)
   const rollup = rollups.find((r) => r.memberId === sel)
   const outstanding = dueItems.filter((d) => d.memberId === sel).map((d) => ({ due: d.due, task: d.task, source: d.source, status: d.status }))
-  const print = () => {
+  const print = async () => {
     if (!member || !rollup) return
+    const { generateAmtrMemberPrintPdf } = await import('@/lib/amtr-pdf')
     const { doc, filename } = generateAmtrMemberPrintPdf(member, rollup, outstanding, baseInfo)
     doc.save(filename); toast.success('Member summary exported')
   }
