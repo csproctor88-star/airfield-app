@@ -41,7 +41,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 24 matches the Vercel build image the Next 15 upgrade was verified
+          # on and local dev; GitHub is also deprecating Node 20 runners.
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
