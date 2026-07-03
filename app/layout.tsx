@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/lib/theme-context'
+import { PwaUpdateToast } from '@/components/pwa-update-toast'
 import './globals.css'
 
 // App typography pairing — IBM Plex Sans (UI) + IBM Plex Mono (operational
@@ -75,6 +76,7 @@ export default function RootLayout({
       <body className="font-sans" style={{ minHeight: '100dvh', background: '#0A0E16' }}>
         <ThemeProvider>
           {children}
+          <PwaUpdateToast />
           <Toaster
             position="top-center"
             richColors
