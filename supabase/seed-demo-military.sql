@@ -81,7 +81,7 @@ BEGIN
     ce_shops, checklist_reset_time, activity_templates,
     discrepancy_type_shop_map, contractor_templates, status_labels,
     feedback_form_config, arff_config, shift_count,
-    enabled_modules, setup_progress, quick_setup_pending,
+    enabled_modules, setup_progress,
     qrc_review_interval, map_provider,
     airport_type, part139_class, faa_site_number, aoc_number,
     obstruction_surface_set
@@ -105,7 +105,6 @@ BEGIN
     src_base.shift_count,
     src_base.enabled_modules,    -- full module roster, not column default
     src_base.setup_progress,     -- wizard shows complete
-    FALSE,
     src_base.qrc_review_interval,
     src_base.map_provider,
     'usaf',
