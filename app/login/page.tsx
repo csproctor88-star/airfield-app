@@ -739,7 +739,7 @@ function LoginContent() {
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-4)' }}>
-            Glidepath v2.34.0
+            Glidepath v2.35.0
           </div>
           <div style={{ fontSize: 9, color: 'var(--color-text-4)', marginTop: 8, lineHeight: 1.4, maxWidth: 360, margin: '8px auto 0', opacity: 0.6 }}>
             This application is not endorsed by, affiliated with, or associated with the Department of Defense (DoD) or any branch of the U.S. Armed Forces. The views and content herein do not reflect the official policy or position of the DoD.
