@@ -1093,7 +1093,12 @@ export default function InspectionsPage() {
     const ids = [report.airfield?.id, report.lighting?.id].filter(Boolean) as string[]
     if (ids.length === 0) ids.push(report.id)
     for (const id of ids) {
-      await deleteInspection(id)
+      const { error } = await deleteInspection(id)
+      if (error) {
+        toast.error(`Failed to delete: ${error}`)
+        await loadHistory()
+        return
+      }
     }
     // Clear local draft if it matches
     if (airfieldDraft && ids.includes(airfieldDraft.half.dbRowId || '')) {

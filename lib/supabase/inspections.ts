@@ -807,6 +807,18 @@ export async function deleteInspection(id: string): Promise<{ error: string | nu
 
   const { data: existing } = await supabase.from('inspections').select('display_id, inspection_type, base_id').eq('id', id).single()
 
+  // Discrepancies born from this inspection outlive it as standalone
+  // records — detach them first or the NO ACTION FK blocks the delete.
+  const { error: detachError } = await supabase
+    .from('discrepancies')
+    .update({ inspection_id: null })
+    .eq('inspection_id', id)
+
+  if (detachError) {
+    console.error('Detach inspection discrepancies failed:', detachError.message)
+    return { error: friendlyError(detachError.message) }
+  }
+
   const { error } = await supabase
     .from('inspections')
     .delete()
