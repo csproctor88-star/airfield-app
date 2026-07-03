@@ -1657,7 +1657,7 @@ function RunwayTab({
 
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 12 }}>
         Runway coordinates are used for obstruction evaluations and map overlays.
-        Use "Adjust on Map" to drag threshold pins onto the satellite imagery for precise alignment.
+        Use &quot;Adjust on Map&quot; to drag threshold pins onto the satellite imagery for precise alignment.
       </p>
 
       {/* Map Adjustment Modal */}

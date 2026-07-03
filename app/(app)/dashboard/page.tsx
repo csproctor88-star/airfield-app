@@ -705,10 +705,10 @@ export default function DashboardPage() {
             <>
               <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '0 0 16px' }} />
               <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)', marginBottom: 8 }}>
-                Role template for "{activeBoard.name}"
+                Role template for &quot;{activeBoard.name}&quot;
               </div>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>
-                New users with this role will start from this board's layout.
+                New users with this role will start from this board&apos;s layout.
               </div>
               <select
                 value={shareTemplate}

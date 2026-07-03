@@ -202,7 +202,7 @@ function EditModal({
           <Info size={14} />
           <div>
             This is a system topic. Saving creates a base-specific override —
-            the system row stays unchanged. Future system updates won't overwrite
+            the system row stays unchanged. Future system updates won&apos;t overwrite
             your base values.
           </div>
         </div>

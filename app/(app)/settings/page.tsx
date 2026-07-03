@@ -587,7 +587,7 @@ function ProfileSectionContent() {
             )}
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4 }}>
-            You'll use this address to sign in. Changes take effect immediately.
+            You&apos;ll use this address to sign in. Changes take effect immediately.
           </div>
         </div>
 

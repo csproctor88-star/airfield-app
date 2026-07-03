@@ -344,7 +344,7 @@ export default function WildlifePage() {
                 <Bird size={36} color="var(--color-text-4)" strokeWidth={1.75} />
               </div>
               <div style={{ fontWeight: 700, marginBottom: 4 }}>No wildlife activity recorded</div>
-              <div style={{ fontSize: 'var(--fs-sm)' }}>Use "+ Sighting" or "+ Strike" to log wildlife observations</div>
+              <div style={{ fontSize: 'var(--fs-sm)' }}>Use &quot;+ Sighting&quot; or &quot;+ Strike&quot; to log wildlife observations</div>
             </div>
           ) : (() => {
             // Group timeline by Zulu date so the day-group headers

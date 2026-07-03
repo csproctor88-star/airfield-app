@@ -172,7 +172,7 @@ export default function ExportsPage() {
       <div className="page-container">
         <div style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800, marginBottom: 14 }}>Records Export</div>
         <p style={{ color: 'var(--color-text-3)' }}>
-          You don't have access to Records Export. Contact your system or base administrator.
+          You don&apos;t have access to Records Export. Contact your system or base administrator.
         </p>
       </div>
     )

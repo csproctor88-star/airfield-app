@@ -489,7 +489,7 @@ function HistoryTab({ activity }: { activity: ActivityRow[] }) {
   if (activity.length === 0) {
     return (
       <div style={emptyStateStyle}>
-        <Info size={16} /> No activity recorded yet for this user's training.
+        <Info size={16} /> No activity recorded yet for this user&apos;s training.
       </div>
     )
   }
