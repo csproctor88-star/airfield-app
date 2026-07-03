@@ -25,6 +25,14 @@ git status
 
 If the handoff's `**HEAD:**` SHA doesn't match the current `git log`, or there are uncommitted changes the handoff doesn't mention, flag it — work happened outside the handoff's view.
 
+Also sweep for orphaned local servers:
+
+```bash
+netstat -ano | grep LISTENING | grep -E ":300[0-9]"
+```
+
+Prior sessions have leaked `next start` processes that squat ports 3000–3006 and keep serving stale builds — a server that outlives a rebuild 404s rotated chunks and can 500 authenticated pages (the 2026-07-03 "ghost listeners"). Identify anything found (PowerShell: `Get-CimInstance Win32_Process -Filter "ProcessId=<pid>"`) and kill stale `next start` orphans from prior sessions before any local-server work.
+
 ### 3. Report back
 
 Tell the user, in 4-6 lines:
@@ -33,5 +41,6 @@ Tell the user, in 4-6 lines:
 - Build status as of the handoff (clean / known failures).
 - Anything pending: unapplied migrations, known issues, uncommitted work.
 - The "Next session tasks" entry — what the user planned to pick up, or "no required next step" if the backlog was empty.
+- Orphaned servers found on :300x, if any, and whether you killed them.
 
 Then stop. Wait for the user to tell you what they want to do. Don't pre-emptively start work, propose plans, or read further files. The point of this skill is orientation, not action.

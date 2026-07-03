@@ -33,13 +33,21 @@ If the user describes work that **isn't** in git yet (uncommitted edits, work-in
 
 ### 2. Run build verification
 
-Three checks, in this order. Run them in the foreground so you can read failures:
+Four checks, in this order. Run them in the foreground so you can read failures:
 
 ```bash
 npx tsc --noEmit
+npm run lint
 npm run build
 npx vitest run
 ```
+
+`npm run lint` must show **zero errors** (warnings are fine — the project
+keeps `no-explicit-any` / `no-unused-vars` at warn). Since the Next 15
+upgrade, `next build` no longer lints; CI runs lint as its own gating step,
+so a wrap that skips it can leave every subsequent push failing CI — exactly
+what happened 2026-07-02/03 (13 `react/no-unescaped-entities` errors, a day
+of failure emails).
 
 If any fail:
 - Stop and surface the failure to the user. Don't proceed to rewriting the handoff yet.
@@ -73,6 +81,7 @@ Run `git status` one more time. Surface to the user:
 - Whether `SESSION_HANDOFF.md` is the only new/modified file (expected) or if there's other uncommitted work.
 - Any migrations in `supabase/migrations/` not marked Applied in the handoff — call these out as pending.
 - Any failing checks from step 2 the user chose not to fix.
+- Any local servers still running from this session (`netstat -ano | grep -E ":300[0-9]" | grep LISTENING`) — kill the ones this session started. Orphaned `next start` processes serve stale builds and become the next session's ghost listeners (2026-07-03).
 
 End with a one-line summary: "Handoff written. Build clean. N migrations pending." or equivalent. Do not commit unless asked.
 
