@@ -1453,8 +1453,12 @@ export default function InfrastructureMapPage() {
         const compFeatures = refreshed.filter(f => f.system_component_id === feature.system_component_id)
         const outage = calculateComponentOutage(comp, refreshed)
 
-        // Also check the overall component for this system
-        const overallComp = fullComponentsRef.current.find((c: any) => c.system_id === comp.system_id && c.component_type === 'overall')
+        // Also check the overall component for this system — unless the
+        // feature's own component IS the overall one (single-component
+        // systems like RDR markers), which would compute and show the
+        // identical outage card twice in the alert.
+        const overallComp = fullComponentsRef.current.find((c: any) =>
+          c.system_id === comp.system_id && c.component_type === 'overall' && c.id !== comp.id)
         const systemCompIds = new Set(fullComponentsRef.current.filter((c: any) => c.system_id === comp.system_id).map((c: any) => c.id))
         const systemFeatures = refreshed.filter(f => f.system_component_id && systemCompIds.has(f.system_component_id))
         const overallOutage = overallComp ? calculateComponentOutage(overallComp, refreshed, systemFeatures) : null
