@@ -19,11 +19,41 @@ export function PwaUpdateToast() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
+    // A worker parked in `waiting` is NOT activated by a plain reload — the
+    // old worker keeps controlling every load and the toast re-prompts
+    // forever. Ask it to take over first; if it hasn't within the timeout
+    // (our generated sw.js has no SKIP_WAITING listener, and a wedged old
+    // worker can block promotion indefinitely), drop the registration and
+    // let the reload re-register the current sw.js from scratch. The offline
+    // write queue lives in IndexedDB/localStorage and is unaffected; Cache
+    // Storage repopulates on the next loads.
+    const applyUpdate = async () => {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (!reg?.waiting) {
+        window.location.reload()
+        return
+      }
+      const promoted = new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(false), 2500)
+        navigator.serviceWorker.addEventListener(
+          'controllerchange',
+          () => {
+            clearTimeout(timer)
+            resolve(true)
+          },
+          { once: true }
+        )
+      })
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' })
+      if (!(await promoted)) await reg.unregister().catch(() => {})
+      window.location.reload()
+    }
+
     const promptReload = () => {
       toast.info('A new version of Glidepath is available.', {
         id: TOAST_ID, // dedupes the controllerchange + updatefound double-fire
         duration: Number.POSITIVE_INFINITY,
-        action: { label: 'Refresh', onClick: () => window.location.reload() },
+        action: { label: 'Refresh', onClick: () => void applyUpdate() },
       })
     }
 
