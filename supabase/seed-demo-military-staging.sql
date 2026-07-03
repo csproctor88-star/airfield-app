@@ -96,3 +96,28 @@ BEGIN
 
   RAISE NOTICE 'KDMO staging pass applied';
 END $$;
+
+-- ── 4. Contractor contact names (added after the 2026-07-03 Task-4 review) ──
+-- The first pass fictionalized companies but kept full contact names
+-- ("Sarah Johnson" et al) — still name-shaped data in marketing frames.
+-- Same initial+surname pool convention as the PPR requester scrub.
+DO $$
+DECLARE
+  kdmo uuid;
+BEGIN
+  SELECT id INTO kdmo FROM bases WHERE icao = 'KDMO';
+  IF kdmo IS NULL THEN RAISE EXCEPTION 'KDMO not found'; END IF;
+
+  WITH numbered AS (
+    SELECT id, row_number() OVER (ORDER BY created_at) AS rn
+    FROM airfield_contractors
+    WHERE base_id = kdmo AND contact_name IS NOT NULL
+  )
+  UPDATE airfield_contractors c
+  SET contact_name = (ARRAY[
+      'M. Reyes','T. Callahan','J. Okonkwo','L. Hartman','D. Vasquez','K. Sorensen'
+    ])[(n.rn - 1) % 6 + 1]
+  FROM numbered n WHERE c.id = n.id;
+
+  RAISE NOTICE 'KDMO contractor contact names fictionalized';
+END $$;
