@@ -121,3 +121,69 @@ BEGIN
 
   RAISE NOTICE 'KDMO contractor contact names fictionalized';
 END $$;
+
+-- ── 5. AMTR roster names + daily-review signers (Task-5 review, 2026-07-03) ──
+-- The AMTR roster carried real full names ("Proctor, Christopher" et al)
+-- and the daily-review sign-offs resolve through the owner's real profile
+-- (surname + operating initials in frame). Roster names move to the
+-- fictional pool in the module's own "Last, F." style; review signatures
+-- re-point to the demo persona's profile.
+DO $$
+DECLARE
+  kdmo uuid;
+  demo_uid uuid;
+BEGIN
+  SELECT id INTO kdmo FROM bases WHERE icao = 'KDMO';
+  IF kdmo IS NULL THEN RAISE EXCEPTION 'KDMO not found'; END IF;
+  SELECT id INTO demo_uid FROM profiles WHERE email = 'demo@glidepathops.com';
+
+  WITH numbered AS (
+    SELECT id, row_number() OVER (ORDER BY created_at, id) AS rn
+    FROM amtr_members WHERE base_id = kdmo
+  )
+  UPDATE amtr_members m
+  SET full_name = (ARRAY[
+      'Hartman, L.','Reyes, M.','Callahan, T.','Okonkwo, J.','Sorensen, K.',
+      'Vasquez, D.','Lindqvist, H.','Whitfield, J.'
+    ])[(n.rn - 1) % 8 + 1]
+  FROM numbered n WHERE m.id = n.id;
+
+  UPDATE daily_reviews SET
+    day_amsl_signed_by   = CASE WHEN day_amsl_signed_by   IS NOT NULL THEN demo_uid ELSE NULL END,
+    swing_amsl_signed_by = CASE WHEN swing_amsl_signed_by IS NOT NULL THEN demo_uid ELSE NULL END,
+    mid_amsl_signed_by   = CASE WHEN mid_amsl_signed_by   IS NOT NULL THEN demo_uid ELSE NULL END,
+    namo_signed_by       = CASE WHEN namo_signed_by       IS NOT NULL THEN demo_uid ELSE NULL END,
+    afm_signed_by        = CASE WHEN afm_signed_by        IS NOT NULL THEN demo_uid ELSE NULL END
+  WHERE base_id = kdmo;
+
+  RAISE NOTICE 'KDMO AMTR roster + daily-review signers fictionalized';
+END $$;
+
+-- ── 6. Future-dated PPR entries (Task-6 capture, 2026-07-03) ──
+-- The PPR Log view defaults to today-forward; every staged entry was
+-- past-dated, so the marketing still framed an empty log. Clone three
+-- approved entries onto upcoming dates (idempotent via ppr_number).
+DO $$
+DECLARE
+  kdmo uuid;
+BEGIN
+  SELECT id INTO kdmo FROM bases WHERE icao = 'KDMO';
+  IF kdmo IS NULL THEN RAISE EXCEPTION 'KDMO not found'; END IF;
+
+  INSERT INTO ppr_entries
+    (base_id, ppr_number, arrival_date, column_values, notes, status,
+     requester_name, public_submission, created_at, updated_at)
+  SELECT kdmo, v.num, v.d, s.column_values, NULL, s.status,
+         v.who, s.public_submission, now(), now()
+  FROM (SELECT * FROM ppr_entries
+        WHERE base_id = kdmo AND status = 'approved'
+        ORDER BY created_at DESC LIMIT 1) s
+  CROSS JOIN (VALUES
+      ('186-001-TD', CURRENT_DATE + 1, 'K. Osborne'),
+      ('188-001-TD', CURRENT_DATE + 3, 'M. Tanaka'),
+      ('192-001-TD', CURRENT_DATE + 7, 'L. Moreau')
+    ) AS v(num, d, who)
+  WHERE NOT EXISTS (SELECT 1 FROM ppr_entries WHERE base_id = kdmo AND ppr_number = v.num);
+
+  RAISE NOTICE 'KDMO future-dated PPR entries staged';
+END $$;
