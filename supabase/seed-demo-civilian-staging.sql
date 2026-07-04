@@ -99,3 +99,106 @@ BEGIN
 
   RAISE NOTICE 'KDRA demo dashboard board staged';
 END $$;
+
+-- ── 4. KDRA PPR log entries (Task 8 capture) ──
+-- The PPR Log view defaults to today-forward and KDRA had zero entries.
+-- Three approved, future-dated, fully fictional requests (pooled names,
+-- 555-01xx phones, no emails). Guarded on the tenant having no PPRs at
+-- all, so a re-run never duplicates and never touches owner-added rows.
+DO $$
+DECLARE
+  kdra uuid;
+BEGIN
+  SELECT id INTO kdra FROM bases WHERE icao = 'KDRA';
+  IF kdra IS NULL THEN RAISE EXCEPTION 'KDRA not found'; END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM ppr_entries WHERE base_id = kdra) THEN
+    INSERT INTO ppr_entries
+      (base_id, ppr_number, arrival_date, column_values, status, approver_oi,
+       requester_name, requester_phone, public_submission, created_at, updated_at)
+    SELECT kdra, to_char(v.d, 'DDD') || '-001-TD', v.d, '{}'::jsonb, 'approved', 'TD',
+           v.who, v.phone, false, now(), now()
+    FROM (VALUES
+        (CURRENT_DATE + 1, 'K. Osborne', '(586) 555-0142'),
+        (CURRENT_DATE + 2, 'R. Alvarez', '(586) 555-0117'),
+        (CURRENT_DATE + 5, 'H. Lindqvist', '(586) 555-0163')
+      ) AS v(d, who, phone);
+    RAISE NOTICE 'KDRA PPR entries staged';
+  END IF;
+END $$;
+
+-- ── 5. KDRA Personnel on Airfield (Task 8 capture) ──
+-- Zero contractor rows on the tenant. Three fictional civilian-flavor
+-- work parties; AF Form 483 fields stay NULL (military-only). Guarded
+-- like block 4.
+DO $$
+DECLARE
+  kdra uuid;
+BEGIN
+  SELECT id INTO kdra FROM bases WHERE icao = 'KDRA';
+  IF kdra IS NULL THEN RAISE EXCEPTION 'KDRA not found'; END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM airfield_contractors WHERE base_id = kdra) THEN
+    INSERT INTO airfield_contractors
+      (base_id, company_name, contact_name, contact_phone, location,
+       work_description, status, start_date, end_date, callsign, created_at, updated_at)
+    VALUES
+      (kdra, 'Lakeview Paving Co.', 'M. Reyes', '(586) 555-0126', 'North apron',
+       'Crack sealing and transverse joint repair, tie-down rows', 'active',
+       CURRENT_DATE - 4, NULL, 'OPS 4', now(), now()),
+      (kdra, 'TruNorth Electric', 'K. Sorensen', '(586) 555-0158', 'TWY B',
+       'Taxiway edge light circuit troubleshooting and fixture replacement', 'active',
+       CURRENT_DATE - 1, NULL, NULL, now(), now()),
+      (kdra, 'Shoreline Grounds Services', 'J. Okonkwo', '(586) 555-0171', 'Infield — east',
+       'Seasonal mowing and drainage swale clearing', 'completed',
+       CURRENT_DATE - 21, CURRENT_DATE - 3, NULL, now(), now());
+    RAISE NOTICE 'KDRA contractors staged';
+  END IF;
+END $$;
+
+-- ── 6. KDRA §139.303 training completions for the demo persona ──
+-- The tenant had records on one topic only; the compliance matrix framed
+-- nearly empty. Completions for the demo user across eight of the global
+-- default curriculum topics (base_id IS NULL catalog), staggered so some
+-- currencies run toward their 12-month expiry. Idempotent per topic.
+DO $$
+DECLARE
+  kdra uuid;
+  demo_uid uuid;
+  r RECORD;
+BEGIN
+  SELECT id INTO kdra FROM bases WHERE icao = 'KDRA';
+  IF kdra IS NULL THEN RAISE EXCEPTION 'KDRA not found'; END IF;
+  SELECT id INTO demo_uid FROM profiles WHERE email = 'demo@glidepathops.com';
+  IF demo_uid IS NULL THEN RAISE EXCEPTION 'demo profile not found'; END IF;
+
+  FOR r IN
+    SELECT t.id AS topic_id, v.months_ago, v.ttype
+    FROM (VALUES
+        ('139.303(e)(2)',  2::int, 'recurrent'),
+        ('139.303(e)(3)',  9,      'recurrent'),
+        ('139.303(e)(5)',  1,      'initial'),
+        ('139.303(e)(6)',  4,      'recurrent'),
+        ('139.303(e)(8)',  3,      'initial'),
+        ('139.303(e)(9)',  7,      'recurrent'),
+        ('139.303(e)(10)', 5,      'recurrent'),
+        ('139.303(e)(12)', 10,     'recurrent')
+      ) AS v(code, months_ago, ttype)
+    JOIN training_topics t ON t.base_id IS NULL AND t.code = v.code
+  LOOP
+    IF NOT EXISTS (SELECT 1 FROM training_records
+                   WHERE base_id = kdra AND user_id = demo_uid AND topic_id = r.topic_id) THEN
+      INSERT INTO training_records
+        (base_id, user_id, topic_id, completed_at, training_type,
+         instructor_name_external, expires_at, created_at, updated_at)
+      VALUES
+        (kdra, demo_uid, r.topic_id,
+         now() - (r.months_ago || ' months')::interval, r.ttype,
+         'L. Hartman',
+         now() - (r.months_ago || ' months')::interval + interval '12 months',
+         now(), now());
+    END IF;
+  END LOOP;
+
+  RAISE NOTICE 'KDRA training completions staged';
+END $$;
