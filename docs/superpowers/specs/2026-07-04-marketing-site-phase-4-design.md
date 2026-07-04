@@ -34,9 +34,14 @@ screenshot captures (Phase 4 reuses the banked frames only).
   regulatory text — cite only what the product actually implements).
 - Dual-audience wording: military pages say airfield, civilian pages say
   airport, shared pages say both explicitly.
-- The entity is named **Glidepath Technologies, LLC** site-wide. The filing is
-  still pending and completes before the domain goes live (owner decision
-  2026-07-04).
+- **Naming (owner decision 2026-07-04):** the site says **Glidepath**
+  throughout. The legal name **Glidepath Technologies, LLC** appears only
+  where formality belongs: the `/about` company block, `/platform` where the
+  formal name helps, the legal pages (`/privacy`, `/terms`), the footer
+  copyright line, and the Organization JSON-LD `legalName` field. All other
+  copy (homepage, pillars, module pages, `/security`, `/faq`, `/demo`) says
+  Glidepath. The filing is still pending and completes before the domain goes
+  live.
 
 ## 3. `/platform`
 
@@ -219,14 +224,17 @@ New/extended tests, all in the existing vitest suites:
 
 1. **Em-dash guard (permanent):** no `—` (and no spaced `–`) in any string
    surfaced by `allCopy()`; new content files register there.
-2. **OG existence:** every sitemap route has its `public/og/*.png`; every
+2. **Legal-name scope guard:** "Glidepath Technologies" may appear only in
+   the about, platform, and legal content files (plus the footer copyright
+   and Organization JSON-LD); everywhere else the guard fails the string.
+3. **OG existence:** every sitemap route has its `public/og/*.png`; every
    page's metadata references an existing file.
-3. **FAQ page invariants:** exactly 12 entries, 3 per category; JSON-LD count
+4. **FAQ page invariants:** exactly 12 entries, 3 per category; JSON-LD count
    matches.
-4. **Lead route validation:** unit tests for the handler's validation module —
+5. **Lead route validation:** unit tests for the handler's validation module —
    missing fields rejected, bad email rejected, honeypot short-circuits, valid
    payload shape accepted (Supabase/Resend mocked).
-5. Existing guards (terminology, meta lengths, screenshot existence) apply to
+6. Existing guards (terminology, meta lengths, screenshot existence) apply to
    all new content automatically via `allCopy()` registration.
 
 Gates unchanged: `npx tsc --noEmit` + `npm run lint` + `npm run test` +
