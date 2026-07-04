@@ -1,85 +1,89 @@
 # Session Handoff
 
-**Date:** 2026-07-03
-**Branch:** `main` — pushed, in sync with origin. Working tree clean.
-**Build:** tsc ✓ · `npm run build` ✓ · vitest ✓ (all rerun at this wrap).
-**HEAD:** `33727e1f` — fix(infrastructure): dedupe the outage tier alert.
+**Date:** 2026-07-04
+**Branch:** `main` — **4 commits unpushed** (`bf1d2187..8bfdfab8`); push was
+blocked by the permission classifier at session end — needs the user to
+push or explicitly authorize. glidepath-site likewise holds **24 unpushed
+commits** (`4ede9ef..545d2c6`). Working trees clean except this file.
+**Build:** tsc ✓ · lint 0 errors · `npm run build` ✓ · vitest ✓ (all rerun
+at this wrap).
+**HEAD:** `8bfdfab8` — Stage KDRA PPR, contractors, and training records.
 
-This session executed the marketing site's **Phase 2 end-to-end**: the
-homepage demo player now runs real dark-mode app footage captured from the
-Demo AFB tenant, with real workflows on camera. Chasing capture quality
-drove four genuine app fixes back into this repo (demo seed rewrite,
-inspection-delete failures, a duplicated outage-alert card, and a jsonb
-type trap). Both repos are fully pushed; glidepath-site auto-deploys main,
-so the new footage is live.
+This session closed the two carryover items (CI failures, Next 15 runtime
+QA) and then executed the marketing site's **Phase 3 end-to-end via
+subagent-driven development**: all 36 module pages (22 military + 14
+civilian) authored, screenshot-backed, reviewed task-by-task with fix
+cycles, and cleared by a final whole-branch review as READY TO PUSH. This
+repo's role was the staging layer: four seed commits that made the demo
+tenants photogenic and claims-clean for every frame.
 
 ---
 
 ## What shipped this session
 
-### Cloud-branch merge + repo tidy (`68913db3`, `a6d72c74`, `cb1b672d`)
-The iPad session's `claude/phase-1-tasks-4-11-ey20xj` branch was merged
-(fast-forward, gated green) and deleted on both repos. It carried the
-military demo seed and a PWA update toast: installed PWAs rarely re-fetch
-`sw.js`, so field devices lag production by weeks (the Volk/Ebbing
-question-mark-marker report was a stale bundle) — `PwaUpdateToast` checks
-for a fresh worker every 30 min and on foreground, then shows a persistent
-Refresh prompt. Also committed the start/wrap session skills so cloud
-sessions inherit the same workflow.
+### CI failures root-caused and fixed (`9147c156`, `ec54e56f`)
+The "failed to run" emails were CI's lint step: since the Next 15 upgrade,
+`next build` no longer lints, so 13 `react/no-unescaped-entities` errors
+(raw `'`/`"` in JSX) sat invisible locally while failing every push. All
+escaped; CI also bumped to Node 24 to match Vercel. The wrap-session skill
+now carries `npm run lint` as a fourth gate so this class can't recur.
 
-### Military demo seed rewritten as a full clone (`24276a81`, `d4ca09c3`)
-The cloud session's seed was modeled on `seed-demo-civilian.sql`, whose
-Part 139 demo story never touched infrastructure — so Blue Mesa AFB came up
-with no Visual NAVAIDs map, no lighting systems, no inspection templates,
-and default `enabled_modules`. Remodeled on `seed-demo-base.sql` (the full
-clone) against the current schema (five tables gained columns since it was
-written), with marketing hardening: no operational rows, no free-text
-notes, no QRC templates (real call-tree text), contact fields NULL.
-`quick_setup_pending` is jsonb (wizard draft), not a boolean — dropped from
-the INSERT so the `'{}'` default applies. **Owner then decided captures use
-the existing, lived-in Demo AFB (KDMO) instead**; Blue Mesa stays seeded as
-a clean fallback tenant.
+### Next 15 runtime QA — resolved as environmental (no commit)
+The carried "local `next start` 500s" repro came down to server hygiene,
+not an app bug: a `next start` that outlives a rebuild serves rotated
+chunk names (404s) and middleware 500s; the :3000/:3001 "ghost listeners"
+were orphaned servers from prior sessions, killed this session. Rule now
+in the start-session skill (netstat sweep) and memory: restart `next
+start` after every build.
 
-### Inspection delete failures surfaced + FK trap defused (`96449684`)
-Field-reported: an in-progress inspection would not delete and hard refresh
-didn't help. `handleDeleteInProgress` ignored `deleteInspection`'s error
-and toasted success regardless, so any failure was invisible. Separately,
-`discrepancies.inspection_id` is a NO ACTION FK — an in-progress inspection
-that had spawned a discrepancy was undeletable at the DB. Now the handler
-surfaces the real error, and `deleteInspection` detaches spawned
-discrepancies first (they're real work and outlive a discarded draft).
-The stuck row (`AI-2026-GFG8`) was removed via SQL during the session.
+### PWA update toast activates parked workers (`bce9eba5`)
+The toast's Refresh reloaded the page but a waiting service worker stayed
+parked, so field devices could dismiss-loop forever. Refresh now posts
+SKIP_WAITING and reloads on `controllerchange`. Login footer bumped to
+v2.35.0 (`4af9a013`); session skills committed (`396a0ec7`).
 
-### Outage tier alert dedupe (`33727e1f`)
-Reporting an outage recalculates the feature's component outage AND the
-system's `overall` component for the alert dialog. On single-component
-systems (RDR markers) the feature's component IS the overall one, so the
-identical card rendered twice (owner screenshot). Skip the overall pass
-when it resolves to the same component. Verified on camera in the reshoot.
+### Demo-tenant staging for Phase 3 captures (`97c5e131`, `f15dad6f`, `bf1d2187`, `ff7a4625`, `8216c8c9`, `8bfdfab8`)
+Six seed commits, all applied to the linked project via
+`npx supabase db query --linked --file` (idempotent, guarded — safe to
+re-run). `seed-demo-military-staging.sql` fictionalizes everything the
+claims guardrail forbids in-frame on KDMO (waiver proponents, contractor
+companies + contacts, PPR requesters/phones/emails, AMTR roster names,
+daily-review signers → demo persona) and future-dates three PPR clones so
+the today-forward log frames content. `seed-demo-civilian-staging.sql`
+builds KDRA's story: three open discrepancies (with GPS pins — without
+coordinates the map renders a full-frame "No GPS Coordinates" overlay),
+the demo user's dashboard board written with a complete 7-widget layout,
+three future-dated PPRs, three fictional work parties, and eight §139.303
+training completions. Non-obvious: both KDRA dashboard boards were EMPTY —
+the widgets seen on screen were the app's runtime starter fallback, which
+any saved widget suppresses; the seed therefore resolves the demo user's
+default board via `dashboard_user_defaults` (never by name — the owner has
+a same-named board it must not touch).
 
-### glidepath-site: Phase 2 complete — real footage live (`9c42b5b`..`876c526`)
-Eleven commits in the site repo (its own history has details). Highlights:
-plan corrected where it was written against imagined app behavior (NOTAMs
-are a live FAA feed with no local entry — staging them is impossible;
-inspection marking is exception-based so "70% complete" isn't stageable);
-capture pipeline v2 — dark mode forced, field geolocation, Open-Meteo
-intercepted with staged weather (Open-Meteo had a real outage mid-session),
-per-scene scripted interactions with post-window undo and ffmpeg trims
-(re-encode: Playwright VP8 keyframes ~5s, stream-copy cuts snap); scenes
-now perform real workflows — NAVAID status change through the board dialog,
-zoom-to-RDR-fixture outage report with the tier alert + auto-discrepancy,
-BWC/RSC + discrepancy entry typed on the live inspection, sighting form +
-BASH heatmap. Set landed at `76db8cb` (+ `876c526` tail trim); the demo
-player renders captures with hand-built scenes as fallback. Demo AFB was
-verified restored after every run (29 INOP baseline, all three capture
-discrepancies completed, board green except its usual three).
+### glidepath-site: Phase 3 complete — 36 module pages (`4ede9ef..545d2c6`)
+24 commits (details in its git log). Content model + registry with
+invariant tests (meta lengths, FAQ counts, screenshot existence, roster
+1:1); template + routes; pillar pages with full module grids; five content
+batches, each authored by a fresh subagent and reviewed against its brief
+with the PNGs open (caption-vs-frame checks caught real defects in 4 of 5
+batches; the "never reuse military prose" rule was enforced down to
+8-consecutive-word overlap scans). Final whole-branch review (most capable
+model) verified cross-page voice, 36/36 unique metaTitles, zero cross-page
+prose reuse, all 20 reg cites against the plan tables, and applied two
+fixes itself: `text-faint` token 4.46:1 → 4.59:1 (clears the Lighthouse
+a11y-96 cap site-wide, includes every figcaption) and a QRC "all 25" claim
+that contradicted the 26 visible in its own frame. Lighthouse 96–100
+across 12 audits; phone pass at 360px clean; built sitemap exactly 42
+URLs; 48/48 tests.
 
 ---
 
 ## Migrations status
 
-**No new migrations this session.** Latest remains `2026070204` (all
-applied per the prior handoff).
+**No new migrations this session.** Latest remains `2026070204` (applied).
+The six staging seeds are NOT migrations — they live in `supabase/seed-*`
+and were applied ad hoc to the linked project (all verified by count
+queries this session).
 
 ---
 
@@ -87,33 +91,36 @@ applied per the prior handoff).
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| In-progress inspection won't delete; refresh doesn't help | Handler swallowed `deleteInspection` errors + NO ACTION FK from spawned discrepancies blocks the DB delete | `96449684` |
-| Outage alert shows the same card twice | Overall-component pass recomputes the feature's own component on single-component systems | `33727e1f` |
-| Military seed 42804 error | `quick_setup_pending` is jsonb (wizard draft), not boolean | `d4ca09c3` |
-| Demo tenant missing infrastructure/inspections/checklist | Seed authored from the slim civilian template instead of `seed-demo-base.sql` | `24276a81` |
+| Every push emails "failed to run" | CI lints separately since Next 15 — `next build` no longer lints, so 13 unescaped-entity errors were invisible locally | `9147c156` |
+| Local `next start` 500s all authenticated requests | Environmental: server outliving a rebuild serves rotated chunks; orphaned servers squatted :3000/:3001 | — (hygiene, no code) |
+| PWA update toast dismiss-loops on field devices | Refresh never activated the waiting worker (no SKIP_WAITING) | `bce9eba5` |
+| /discrepancies map full-frame "No GPS Coordinates" on KDRA | Staged discrepancies had no lat/lng | `8216c8c9` |
+| KDRA dashboard showed 4 widgets, then only 3 after staging | Boards were empty; on-screen widgets were the runtime starter fallback, suppressed by any saved widget | `8216c8c9` |
 
 ---
 
 ## Lessons from this session
 
-- **Demo seeds must start from `seed-demo-base.sql`** — the civilian seed
-  is a slim Part 139 variant; it clones 6 tables, the full clone is ~19.
-- **Verify module behavior in code before authoring plan steps.** Two
-  Phase 2 staging steps (add NOTAMs, 70%-complete inspection) were written
-  against features that don't exist / can't exist.
-- **Playwright VP8 records keyframes every ~5 s** — stream-copy `-ss/-t`
-  trims snap to the wrong frames; re-encode with libvpx for real cuts.
-- **Local `next start` 500s every authenticated request** (plain-text
-  middleware error; unauthenticated 307s fine; nothing logged). Dev server
-  works. Production on Vercel is unaffected. This is the first concrete
-  local repro signal for the outstanding Next 15 runtime QA item.
-- **Capture undo must outwait async writes** — Mark Operational closes the
-  linked discrepancy after its confirm; closing the browser 1.8 s later
-  lost the race on the dev server and left discrepancies open (SQL-fixed;
-  wait widened to 5 s).
-- **Claims guardrail = identifiability, not provenance** (owner ruling,
-  saved to memory): generic ops text cloned from a real base is fine
-  in-frame; names/emails/units/phones are not.
+- **Empty dashboard boards render a starter-fallback widget set** — saving
+  ANY widget suppresses all of it. Stage boards with the complete layout,
+  and target the demo user's board via `dashboard_user_defaults`, never by
+  board name.
+- **Marketing frames need coordinates**: list pages with map views
+  (discrepancies) render overlay errors when rows lack GPS.
+- **Prose-reuse across track siblings is invisible to every automated
+  guard** — three of four content batches shipped military sentence
+  echoes despite explicit instructions; only overlap-scanning reviews
+  (8-consecutive-word bar) caught them. Captions transcribing shared UI
+  are the one accepted overlap.
+- **Caption-vs-frame verification catches real defects** (wrong counts,
+  military reg strings leaking into civilian captions) — reviewers must
+  open the PNGs, not trust the diff.
+- **The claims guardrail beats a richer frame**: /training/compliance was
+  refused because KDRA's member list shows a real "System Admin" account;
+  the static hub shipped instead (owner can unblock a reshoot).
+- **Pushes to main now need explicit user authorization** in this
+  environment — batch them consciously; "wait to push" then push at wrap
+  gets classifier-blocked.
 
 ---
 
@@ -121,9 +128,13 @@ applied per the prior handoff).
 
 | Item | Severity | Notes |
 |---|---|---|
-| Next 15 runtime QA on the promoted build | med | Carried — auth/session, async `createClient` callers, dynamic routes, PWA offline queue, map+form render. **New signal:** local `next start` middleware-500s authenticated requests (see Lessons) — same-family suspect, repro is `npm run build && npm run start` + log in. |
-| Status-page weather effect races runway load | low | `app/(app)/page.tsx:194` — empty-dep effect runs before `runways` populate, so no-geolocation browsers query Open-Meteo at 0,0. Fix: re-run when runways land. Captures sidestep it (geolocation granted + mocked weather). |
-| Ghost listeners on :3000 / :3001 on this machine | low | Unidentified processes squat both ports (this session served on :3005/:3006 and cleaned up). Worth a `netstat`/kill sweep before the next local-server session. |
+| **Both repos unpushed** | high | App: 4 commits (`bf1d2187..8bfdfab8`). Site: 24 commits (`4ede9ef..545d2c6`, final review passed). First action next session (or user pushes now). After the site push: verify Vercel preview, run Google rich-results test on the preview URL (deferred from Task 9). |
+| App-side dual-mode terminology gaps | med | Civilian tenants render military strings: /discrepancies shows AFM/CES/AMOPS KPI chips; /inspections header shows "DAFMAN 13-204V2". `lib/airport-mode.ts` doesn't cover them. Marketing captions transcribe faithfully meanwhile. |
+| DAFI vs DAFMAN 91-212 designation split (owner) | low | App repo disagrees with itself: `regulations-data.ts` links `dafi91-212.pdf`, `airport-mode.ts` says DAFMAN; site copy says DAFMAN. E-pub URL favors DAFI. Owner to rule; then align both repos. |
+| Daily-reviews cite contradiction (owner) | low | Site page cites V2 Para 2.5.2.10 while its own frame header reads "DAFMAN 13-204v1 Para 2.5.2.10.3 & 10.4" — visible in-frame. Owner to rule which designation is right; fix copy or app header. |
+| KDRA /training richer frame blocked | low | Compliance/roster views show the owner's real account ("System Admin" row). Clean the membership display or approve a temporary profile retitle, then reshoot `/training/compliance`. |
+| ACSI module page frames an empty list | low | Honest but thin; owner rec from final review: seed one completed ACSI on KDMO + reshoot. |
+| Status-page weather effect races runway load | low | Carried — `app/(app)/page.tsx:194`. |
 | `gh` CLI absent on this machine | low | Carried — plain git; CI via Actions page. |
 | Deferred audit items / npm advisories / Selfridge 1098 / local-only reference docs | low | Carried unchanged. |
 
@@ -131,30 +142,21 @@ applied per the prior handoff).
 
 ## Next session tasks
 
-**Marketing site — the forward plan:**
+1. **Push both repos** (blocked at wrap by the permission classifier —
+   needs the user). Then: confirm app CI green (lint gate), open the site's
+   Vercel preview, spot-check 3–4 module pages, and run Google's
+   rich-results test against the preview URL.
+2. **Owner adjudications** (all detailed in Known issues): DAFI vs DAFMAN
+   91-212; daily-reviews V1-vs-V2; KDRA training reshoot unblock; optional
+   ACSI seed + reshoot. Site copy edits from these are one-line fixes.
+3. **Phase 4** (sequenced next in glidepath-site): OG/social images,
+   /security /about /faq content, /demo polish. Phase 5 (apex domain
+   cutover) remains owner-executed.
+4. **Owner owes** (carried): real adoption-stat values for the homepage
+   stats band (placeholder-hidden until provided).
 
-1. **Bank the civilian captures** (quick win, ~15 min): in the app, switch
-   the demo user's active base to Demo Regional Airport, then from
-   glidepath-site run the capture with `--tenant civilian` (5 stills:
-   status, self-inspections, SMS, AEP, wildlife — KDRA already carries the
-   phase-3 seed's SMS/AEP/WHMP data). These feed Phase 3's civilian pages.
-2. **Write the Phase 3 plan** (`docs/plan-phase-3.md` in glidepath-site):
-   the ~36 module pages (military ~22, civilian ~14). Needs a per-module
-   content model (copy in `lib/` data files, registered with the
-   terminology guards), a page template, per-module capture-manifest
-   entries reusing the Phase 2 pipeline, and internal linking/SEO
-   (sitemap already lists the five nav stubs). Verify module behavior in
-   the app code before writing any capture/staging steps — that's now a
-   proven failure mode.
-3. **Owner owes:** real adoption-stat values for the homepage stats band
-   (placeholder-hidden until provided); optionally a handful of clustered
-   wildlife sightings on Demo AFB if the heatmap should look hotter
-   (reshoot is one `--only wildlife` command).
-4. Phases 4 (OG/social images) and 5 (apex domain cutover, owner-executed)
-   remain sequenced after Phase 3.
-
-**App backlog (unchanged priority):** Next 15 runtime QA on the promoted
-build — now with the local `next start` repro as a starting point.
+**App backlog:** Next 15 runtime QA is CLOSED (environmental). No required
+app work pending beyond the dual-mode terminology gaps above.
 
 ### Long-running carryover
 Deferred audit items, optional Next 16, Selfridge 1098 dedup, local-only
@@ -165,13 +167,16 @@ reference docs — unchanged.
 ## Build snapshot
 
 ```
-airfield-app @ 33727e1f: tsc ✓ · npm run build ✓ (First Load JS shared
-106 kB; Middleware 80.8 kB) · vitest ✓ (suite green this wrap; no test
-files changed this session — 1120 tests / 121 files).
+airfield-app @ 8bfdfab8: tsc ✓ · lint 0 errors (warnings only) ·
+npm run build ✓ (Middleware 80.8 kB) · vitest 1104 passed / 16 skipped
+(1120, 121 files). No app code changed since bce9eba5 — seeds and skills
+only.
 
-glidepath-site @ 876c526: vitest 34/34 ✓ · build ✓ (gated at every push
-this session). Site auto-deploys main → production; demo player now
-serves public/screenshots/ captures.
+glidepath-site @ 545d2c6: tsc ✓ · lint ✓ · vitest 48/48 ✓ · build ✓
+(36 module SSG paths + 42-URL sitemap; gate rerun at wrap RC=0).
+Lighthouse (local prod build): 96–100 across /military,
+/military/visual-navaids, /civilian/sms — a11y cap fixed in 545d2c6.
+NOT yet deployed — push pending.
 ```
 
 ---
@@ -180,7 +185,7 @@ serves public/screenshots/ captures.
 
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-02..03 | Codebase-audit remediation P0–P4; public-write rate limiting; Next.js 15.3.9 + React 19; PWA update toast; demo-seed full clone; inspection-delete + outage-alert fixes. Marketing site: Phases 1–2 complete — homepage demo player runs real captured footage. |
+| **Unreleased** | 2026-07-02..04 | Codebase-audit remediation P0–P4; public-write rate limiting; Next.js 15.3.9 + React 19; PWA update toast + parked-worker fix; CI lint gate fixed; demo-seed full clone; inspection-delete + outage-alert fixes; demo-tenant staging seeds. Marketing site: Phases 1–3 complete — homepage demo player + all 36 module pages. |
 | **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File modules; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
@@ -189,13 +194,18 @@ serves public/screenshots/ captures.
 ## Key files touched this session
 
 ### This repo
-- `supabase/seed-demo-military.sql` — rewritten (full clone)
-- `app/(app)/inspections/page.tsx` + `lib/supabase/inspections.ts` — delete fixes
-- `app/(app)/infrastructure/page.tsx` — outage alert dedupe
-- `components/pwa-update-toast.tsx` + `app/layout.tsx` — PWA refresh prompt (cloud, merged)
-- `.claude/skills/{start,wrap}-session/SKILL.md` — now tracked
+- `supabase/seed-demo-military-staging.sql` — KDMO fictionalization (6 blocks)
+- `supabase/seed-demo-civilian-staging.sql` — KDRA staging (6 blocks)
+- `supabase/seed-demo-civilian-wildlife.sql`, `seed-demo-civilian-part139-polish.sql` — earlier civilian passes
+- `components/pwa-update-toast.tsx` — parked-worker activation
+- `.github/workflows/` — Node 24; 13 JSX entity escapes across components
+- `.claude/skills/{start,wrap}-session/SKILL.md` — lint gate + orphan sweep
 
 ### glidepath-site (see its git log for the full story)
-- `scripts/capture-manifest.mjs` + `scripts/capture-screenshots.mjs` — pipeline v2
-- `public/screenshots/` — 4 scene clips + 6 stills + manifest (landed)
-- `docs/plan-phase-2.md` — corrected against real app behavior
+- `lib/modules/` — types, registry, 36 content files (military/ + civilian/)
+- `components/modules/module-page.tsx` + `app/{military,civilian}/[slug]/page.tsx`
+- `app/{military,civilian}/page.tsx` — pillar pages + module grid
+- `scripts/capture-manifest.mjs` — 20+ new shot entries across batches
+- `public/screenshots/` — 21 new stills banked
+- `tests/module-content.test.ts` — invariants, then 1:1 completeness flip
+- `tailwind.config.ts` — `text-faint` AA bump (final review)
