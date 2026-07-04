@@ -492,7 +492,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
 
     doc.setFontSize(7)
     doc.setTextColor(120)
-    doc.text('IAW DAFI 91-212 — Wildlife hazard depiction showing concentration of activity for the report period.', margin, y)
+    doc.text('IAW DAFMAN 91-212 — Wildlife hazard depiction showing concentration of activity for the report period.', margin, y)
     doc.setTextColor(0)
     y += 18
   }
@@ -509,7 +509,7 @@ export async function generateWildlifeReportPdf(options: Options): Promise<{ doc
       { align: 'center' },
     )
     doc.text(
-      'IAW DAFI 91-212 / DAFMAN 13-204V2',
+      'IAW DAFMAN 91-212 / DAFMAN 13-204V2',
       pageWidth / 2, doc.internal.pageSize.getHeight() - 12,
       { align: 'center' },
     )

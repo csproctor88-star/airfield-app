@@ -572,7 +572,7 @@ const SECTION_VI_A: RegulationEntry[] = [
     tags: ['drop zone', 'landing zone', 'DZ', 'LZ', 'tactical airlift', 'airdrop', 'C-130', 'C-17', 'assault landing', 'combat offload', 'survey', 'contingency airfield'],
   },
   {
-    reg_id: 'DAFI 91-212',
+    reg_id: 'DAFMAN 91-212',
     title: 'Bird/Wildlife Aircraft Strike Hazard (BASH) Management Program',
     description: 'DAF-wide guidance for reducing bird and wildlife strike risks. Coordinates with 14 CFR 139.337.',
     publication_date: 'Current Ed.',

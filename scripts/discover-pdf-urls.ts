@@ -93,7 +93,7 @@ const EPUB_REGULATIONS: RegEntry[] = [
   { reg_id: 'AFPD 13-2', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/afpd13-2/afpd13-2.pdf', pub_id: 'afpd13-2' },
   { reg_id: 'DAFI 13-213', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafi13-213/dafi13-213.pdf', pub_id: 'dafi13-213' },
   { reg_id: 'DAFMAN 13-217', current_url: 'https://static.e-publishing.af.mil/production/1/af_a3/publication/dafman13-217/dafman13-217.pdf', pub_id: 'dafman13-217' },
-  { reg_id: 'DAFI 91-212', current_url: 'https://static.e-publishing.af.mil/production/1/af_se/publication/dafi91-212/dafi91-212.pdf', pub_id: 'dafi91-212' },
+  { reg_id: 'DAFMAN 91-212', current_url: 'https://static.e-publishing.af.mil/production/1/af_se/publication/dafi91-212/dafi91-212.pdf', pub_id: 'dafi91-212' },
   { reg_id: 'DAFI 91-202', current_url: 'https://static.e-publishing.af.mil/production/1/af_se/publication/dafi91-202/dafi91-202.pdf', pub_id: 'dafi91-202' },
   { reg_id: 'DAFI 91-204', current_url: 'https://static.e-publishing.af.mil/production/1/af_se/publication/dafi91-204/dafi91-204.pdf', pub_id: 'dafi91-204' },
   { reg_id: 'DAFMAN 91-203', current_url: 'https://static.e-publishing.af.mil/production/1/af_se/publication/dafman91-203/dafman91-203.pdf', pub_id: 'dafman91-203' },

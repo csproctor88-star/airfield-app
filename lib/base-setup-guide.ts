@@ -411,7 +411,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     required: 'conditional',
     examples: ['Mallard', 'Canada Goose', 'Red-tailed Hawk', 'White-tailed Deer', 'Coyote', 'Eastern Cottontail'],
     cite: {
-      reg: 'DAFI 91-212',
+      reg: 'DAFMAN 91-212',
       para: '2.3. and 1.3.9.16.',
       outcome:
         'Provides a robust outlook of wildlife and strike hazards throughout the airfield. Creates a more realistic migration ' +

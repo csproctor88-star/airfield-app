@@ -186,7 +186,7 @@ export const MODULES: ModuleDef[] = [
     key: 'wildlife',
     label: 'Wildlife / BASH',
     category: 'compliance',
-    description: 'Wildlife sightings and strikes with BASH heatmap and trend reporting per DAFI 91-212.',
+    description: 'Wildlife sightings and strikes with BASH heatmap and trend reporting per DAFMAN 91-212.',
     useCase: 'Bases with a BASH plan and wildlife strike reporting requirement (most do).',
     hrefs: ['/wildlife'],
     setupSteps: ['wildlife'],

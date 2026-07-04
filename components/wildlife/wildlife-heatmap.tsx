@@ -247,7 +247,7 @@ export function WildlifeHeatmap({ baseId }: Props) {
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <Info size={12} />
-        DAFI 91-212 Wildlife Hazard Depiction — concentrated activity areas shown via heatmap overlay
+        DAFMAN 91-212 Wildlife Hazard Depiction — concentrated activity areas shown via heatmap overlay
       </div>
     </div>
   )

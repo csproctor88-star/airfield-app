@@ -65,7 +65,7 @@ export function WildlifeReport({ baseId }: Props) {
         <div style={SECTION_HEADER}><FileText size={13} /> Monthly BASH Summary Report</div>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 16 }}>
           Generate a comprehensive PDF report of wildlife activity, strike data, BWC history,
-          and dispersal effectiveness for the selected month. Compliant with DAFI 91-212 monthly
+          and dispersal effectiveness for the selected month. Compliant with DAFMAN 91-212 monthly
           documentation requirements.
         </div>
 
@@ -135,7 +135,7 @@ export function WildlifeReport({ baseId }: Props) {
       }}>
         <div style={SECTION_HEADER}><MapIcon size={13} /> Hazard Depiction Map</div>
         <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginBottom: 12 }}>
-          Per DAFI 91-212, installations must maintain a depiction of local bird/wildlife hazards.
+          Per DAFMAN 91-212, installations must maintain a depiction of local bird/wildlife hazards.
           Use the Heatmap tab to view the current hazard depiction, which is also included in the
           monthly PDF report.
         </div>
@@ -148,7 +148,7 @@ export function WildlifeReport({ baseId }: Props) {
         }}>
           <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
           <div>
-            Tip: The heatmap visualization on the Heatmap tab serves as the DAFI 91-212 required
+            Tip: The heatmap visualization on the Heatmap tab serves as the DAFMAN 91-212 required
             wildlife hazard depiction for your installation.
           </div>
         </div>

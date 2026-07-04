@@ -423,7 +423,7 @@ export default function DailyReviewsPage() {
       </div>
 
       <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-        <span>DAFMAN 13-204v1 Para 2.5.2.10.3 &amp; 10.4 — shift turnover + daily review.</span>
+        <span>DAFMAN 13-204v2 Para 2.5.2.10.3 &amp; 10.4 — shift turnover + daily review.</span>
         {loaded && installationId && validRange && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: 'var(--color-text-4)' }}>·</span>
