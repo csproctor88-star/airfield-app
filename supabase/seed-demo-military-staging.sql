@@ -187,3 +187,55 @@ BEGIN
 
   RAISE NOTICE 'KDMO future-dated PPR entries staged';
 END $$;
+
+-- ── 7. Clone the owner-created ACSI onto KDMO (final-review rec, 2026-07-04) ──
+-- The Phase 3 final review recommended one completed ACSI on KDMO so the
+-- mil-acsi frame stops framing an empty list. The owner completed one via
+-- the app while their active base was KDRA, so the row sits on the civilian
+-- tenant with "Demo Regional Airport" and their real name as inspector.
+-- That row is theirs and is left untouched; this block INSERTs a
+-- fictionalized copy onto KDMO (Demo AFB, demo persona in every in-frame
+-- and *_by_name field, draft_data dropped since the wizard state embeds the
+-- original strings). Idempotent via the fixed display_id / one-completed-
+-- per-FY guard.
+DO $$
+DECLARE
+  kdmo uuid;
+  kdra uuid;
+  demo_uid uuid;
+  persona text;
+BEGIN
+  SELECT id INTO kdmo FROM bases WHERE icao = 'KDMO';
+  SELECT id INTO kdra FROM bases WHERE icao = 'KDRA';
+  IF kdmo IS NULL OR kdra IS NULL THEN RAISE EXCEPTION 'demo bases not found'; END IF;
+
+  SELECT id, trim(coalesce(rank, '') || ' ' || coalesce(name, ''))
+    INTO demo_uid, persona
+  FROM profiles WHERE email = 'demo@glidepathops.com';
+  IF demo_uid IS NULL THEN RAISE EXCEPTION 'demo persona not found'; END IF;
+
+  INSERT INTO acsi_inspections
+    (base_id, display_id, airfield_name, inspection_date, fiscal_year, status,
+     items, total_items, passed_count, failed_count, na_count,
+     inspection_team, risk_cert_signatures, notes, draft_data,
+     inspector_id, inspector_name,
+     completed_at, completed_by_name, completed_by_id,
+     saved_at, saved_by_name, saved_by_id)
+  SELECT kdmo, 'ACSI-2026-A4F7', 'Demo AFB', s.inspection_date, s.fiscal_year, s.status,
+         s.items, s.total_items, s.passed_count, s.failed_count, s.na_count,
+         s.inspection_team, s.risk_cert_signatures, s.notes, NULL,
+         demo_uid, persona,
+         coalesce(s.completed_at, now()), persona, demo_uid,
+         now(), persona, demo_uid
+  FROM (SELECT * FROM acsi_inspections
+        WHERE base_id = kdra AND status = 'completed'
+        ORDER BY completed_at DESC NULLS LAST, created_at DESC LIMIT 1) s
+  WHERE NOT EXISTS (
+    SELECT 1 FROM acsi_inspections k
+    WHERE k.base_id = kdmo
+      AND (k.display_id = 'ACSI-2026-A4F7'
+        OR (k.status = 'completed' AND k.fiscal_year = s.fiscal_year))
+  );
+
+  RAISE NOTICE 'fictionalized ACSI clone staged on KDMO';
+END $$;
