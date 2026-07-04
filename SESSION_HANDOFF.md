@@ -164,6 +164,41 @@ reference docs — unchanged.
 
 ---
 
+## Content-edit playbook (glidepath-site) — CARRY THIS SECTION FORWARD
+
+How to change site text or replace screenshots (owner prompts one
+sentence; the rest is this process):
+
+- **Text** — all copy lives in `lib/` data files, never components:
+  module pages `lib/modules/{military,civilian}/<slug>.ts` (metaTitle,
+  problem, how.steps, benefits, faq, screenshot captions); homepage
+  `lib/home-content.ts`; nav/footer `lib/site-config.ts`; grid card
+  names/taglines `lib/modules-data.ts`. `npm run test` enforces banned
+  terms, metaTitle ≤60, metaDescription ≤160, FAQ 3–5 — fix copy, never
+  tests. Full four-gate before commit; push → Vercel auto-deploys main.
+- **Screenshots** — `public/screenshots/<id>.png`, referenced by that
+  path in the module file; shot list in `scripts/capture-manifest.mjs`.
+  Reshoot: `CAPTURE_BASE_URL=https://app.glidepathops.com
+  CAPTURE_EMAIL=demo@glidepathops.com CAPTURE_PASSWORD=$(sed -n
+  's/^CAPTURE_PASSWORD=//p' ../airfield-app/.env.local | tr -d '\r')
+  node scripts/capture-screenshots.mjs --tenant <t> --only <id>` —
+  never print the password. The demo user's ACTIVE base must match the
+  tenant (KDMO for `mil-*`, KDRA for `civ-*`) — switch in-app first.
+  Owner-supplied PNGs: same filename drop-in; keep 1600×1000.
+- **Every new frame**: claims-guardrail review before commit (no real
+  names/emails/units/phones; approved fiction: "TSgt Demo", pooled
+  initial+surname names, "(586) 555-01xx", fictional companies) AND
+  update the caption to match the frame — caption accuracy has no
+  automated guard and was the most common review defect in Phase 3.
+- **If the frame needs data the tenant lacks**: stage fictional rows
+  first via the guarded seeds (`airfield-app/supabase/
+  seed-demo-{military,civilian}-staging.sql` are the patterns; apply
+  with `npx supabase db query --linked --file` from airfield-app).
+- **Pushes to main need explicit user authorization** in the same
+  conversational stretch — "push when green" in the request suffices.
+
+---
+
 ## Build snapshot
 
 ```
