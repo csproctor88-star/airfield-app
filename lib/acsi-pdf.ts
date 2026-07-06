@@ -11,6 +11,8 @@ interface AcsiPdfOptions {
   baseName?: string | null
   baseIcao?: string | null
   baseId?: string | null
+  /** Airport mode. 'faa_part139' renders Part 139 titles/cites; anything else (default) renders USAF ACSI. */
+  airportType?: string | null
   /**
    * Skip the per-discrepancy photo fetch + embed. Used by the Records Export,
    * which renders ACSI text-only (checklist + findings); embedded images are
@@ -182,10 +184,11 @@ export async function generateAcsiPdf(
   doc.text('AIRFIELD MANAGEMENT SECTION', margin, y)
   y += 8
 
+  const isFaa = opts.airportType === 'faa_part139'
   doc.setFontSize(16)
   doc.setTextColor(0)
   doc.setFont('helvetica', 'bold')
-  doc.text('AIRFIELD COMPLIANCE & SAFETY INSPECTION', margin, y)
+  doc.text(isFaa ? 'PART 139 ANNUAL INSPECTION' : 'AIRFIELD COMPLIANCE & SAFETY INSPECTION', margin, y)
   y += 7
 
   doc.setFontSize(11)
@@ -194,7 +197,7 @@ export async function generateAcsiPdf(
   doc.text(`${inspection.display_id}`, margin, y)
   y += 5
   doc.setFontSize(9)
-  doc.text('DAFMAN 13-204v2, Para 5.4.3', margin, y)
+  doc.text(isFaa ? '14 CFR Part 139' : 'DAFMAN 13-204v2, Para 5.4.3', margin, y)
   y += 8
 
   // ── Info box ──
@@ -583,7 +586,7 @@ export async function generateAcsiPdf(
     doc.setFontSize(8)
     doc.setTextColor(40)
     doc.setFont('helvetica', 'italic')
-    const certText = '"I have reviewed the results of the Airfield Compliance and Safety Inspection and have determined it to be accurate and the deficiencies noted have acceptable risk control measures and determined to be the minimum acceptable risk."'
+    const certText = `"I have reviewed the results of the ${isFaa ? 'Part 139 Annual Inspection' : 'Airfield Compliance and Safety Inspection'} and have determined it to be accurate and the deficiencies noted have acceptable risk control measures and determined to be the minimum acceptable risk."`
     const certLines = doc.splitTextToSize(certText, contentWidth)
     doc.text(certLines, margin, y)
     y += certLines.length * 3.5 + 6
@@ -662,6 +665,6 @@ export async function generateAcsiPdf(
     }
   }
 
-  const filename = `${inspection.display_id || 'ACSI'}_Report.pdf`
+  const filename = `${inspection.display_id || (isFaa ? 'Part139' : 'ACSI')}_Report.pdf`
   return { doc, filename }
 }

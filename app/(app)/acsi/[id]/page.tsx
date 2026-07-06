@@ -132,7 +132,7 @@ export default function AcsiDetailPage() {
     }
   }
 
-  const acsiPdfOpts = { baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao, baseId: installationId }
+  const acsiPdfOpts = { baseName: currentInstallation?.name, baseIcao: currentInstallation?.icao, baseId: installationId, airportType: getAirportType(currentInstallation) }
 
   const handleExportPdf = async () => {
     setExporting(true)

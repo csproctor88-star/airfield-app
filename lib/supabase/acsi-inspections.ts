@@ -122,10 +122,17 @@ export async function saveAcsiDraft(input: {
     return { data: updated, error: null }
   }
 
-  // Insert new row
+  // Insert new row. The display_id prefix is mode-aware: P139 for FAA Part 139
+  // airports, ACSI for USAF bases.
   const year = now.getFullYear()
   const ts = now.getTime().toString(36).slice(-4).toUpperCase()
-  const display_id = `ACSI-${year}-${ts}`
+  const resolvedBaseId = await resolveBaseId(supabase, input.base_id, userId)
+  let idPrefix = 'ACSI'
+  if (resolvedBaseId) {
+    const { data: baseRow } = await supabase.from('bases').select('airport_type').eq('id', resolvedBaseId).maybeSingle()
+    if ((baseRow as { airport_type?: string } | null)?.airport_type === 'faa_part139') idPrefix = 'P139'
+  }
+  const display_id = `${idPrefix}-${year}-${ts}`
 
   const row: Record<string, unknown> = {
     display_id,
@@ -148,7 +155,7 @@ export async function saveAcsiDraft(input: {
     saved_at: now.toISOString(),
   }
   if (userId) row.inspector_id = userId
-  row.base_id = await resolveBaseId(supabase, input.base_id, userId)
+  row.base_id = resolvedBaseId
 
   const { data, error } = await supabase
     .from('acsi_inspections')

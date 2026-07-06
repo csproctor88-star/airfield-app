@@ -138,6 +138,9 @@ export async function buildAcsiFiles(
         baseName: ctx.baseName,
         baseIcao: ctx.baseIcao,
         baseId: ctx.baseId,
+        // Mode inferred from the record's own display_id prefix (P139 = FAA
+        // Part 139, ACSI = USAF) so the export title matches the record.
+        airportType: (insp.display_id || '').startsWith('P139') ? 'faa_part139' : 'usaf',
         skipPhotos: !ctx.includePhotos,
       })
       out.push(pdfToExportFile(doc, `documents/${m.folder}/${slug(insp.display_id, insp.id)}.pdf`))
