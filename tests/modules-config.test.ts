@@ -50,14 +50,13 @@ describe('isModuleEnabled', () => {
   })
 
   it('honors airport_type to hide USAF-only modules on civilian bases', () => {
-    // SCN, AMTR, ACSI are USAF-only — hidden on civilian airports
-    // even when the module key is in enabledModules.
+    // SCN and AMTR are USAF-only — hidden on civilian airports even when the
+    // module key is in enabledModules. (ACSI is now dual-mode: it renders as
+    // the Part 139 Annual Inspection on civilian bases — see the next test.)
     expect(isModuleEnabled('/scn',  ['scn'],  'usaf')).toBe(true)
     expect(isModuleEnabled('/scn',  ['scn'],  'faa_part139')).toBe(false)
     expect(isModuleEnabled('/amtr', ['amtr'], 'usaf')).toBe(true)
     expect(isModuleEnabled('/amtr', ['amtr'], 'faa_part139')).toBe(false)
-    expect(isModuleEnabled('/acsi', ['acsi'], 'usaf')).toBe(true)
-    expect(isModuleEnabled('/acsi', ['acsi'], 'faa_part139')).toBe(false)
   })
 
   it('dual-applicable modules surface in both modes', () => {
@@ -65,6 +64,9 @@ describe('isModuleEnabled', () => {
     expect(isModuleEnabled('/checks',        ['checks'],        'faa_part139')).toBe(true)
     expect(isModuleEnabled('/discrepancies', ['discrepancies'], 'faa_part139')).toBe(true)
     expect(isModuleEnabled('/wildlife',      ['wildlife'],      'faa_part139')).toBe(true)
+    // ACSI opened to civilian mode (renders as the Part 139 Annual Inspection).
+    expect(isModuleEnabled('/acsi',          ['acsi'],          'usaf')).toBe(true)
+    expect(isModuleEnabled('/acsi',          ['acsi'],          'faa_part139')).toBe(true)
   })
 
   it('omitting airport_type preserves prior behavior (back-compat)', () => {
@@ -183,9 +185,9 @@ describe('TYPICAL_BASE_PRESET', () => {
 // USAF-only modules (hidden on civilian bases) and the Part 139-only
 // modules (hidden on USAF bases). These lists gate the Base Configuration
 // module selector — widening either silently re-clutters the other mode's UI.
-const USAF_ONLY: string[] = ['acsi', 'scn', 'amtr']
+const USAF_ONLY: string[] = ['scn', 'amtr']
 const PART139_ONLY: string[] = ['sms', 'training_part139', 'aep', 'field_conditions', 'whmp']
-const SHARED_SAMPLE: string[] = ['checks', 'discrepancies', 'qrc', 'wildlife']
+const SHARED_SAMPLE: string[] = ['acsi', 'checks', 'discrepancies', 'qrc', 'wildlife']
 
 describe('moduleAppliesToAirport', () => {
   it('USAF-only modules apply to usaf, not faa_part139', () => {
