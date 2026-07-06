@@ -95,6 +95,7 @@ export default function AcsiListPage() {
     ? 'Part 139 Annual Inspection'
     : 'Airfield Compliance and Safety Inspection'
   const inspectionCite = isFaaMode ? '14 CFR Part 139' : 'DAFMAN 13-204v2, Para 5.4.3'
+  const inspNoun = isFaaMode ? 'Part 139' : 'ACSI'
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
@@ -121,7 +122,7 @@ export default function AcsiListPage() {
           fontWeight: 700,
           fontSize: 'var(--fs-sm)',
         }}>
-          <Plus size={14} /> Start New ACSI
+          <Plus size={14} /> Start New {inspNoun} Inspection
         </Link>
       </div>
 
@@ -215,8 +216,8 @@ export default function AcsiListPage() {
           borderRadius: 'var(--radius-md)',
         }}>
           <ShieldCheck size={40} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 500 }}>No ACSI inspections found</div>
-          <div style={{ fontSize: 'var(--fs-sm)', marginTop: 4 }}>Click &ldquo;Start New ACSI&rdquo; to begin the annual inspection</div>
+          <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 500 }}>No {inspNoun} inspections found</div>
+          <div style={{ fontSize: 'var(--fs-sm)', marginTop: 4 }}>Click &ldquo;Start New {inspNoun} Inspection&rdquo; to begin the annual inspection</div>
         </div>
       )}
 
@@ -314,14 +315,14 @@ export default function AcsiListPage() {
                   {showReopen && (
                     <button
                       onClick={async () => {
-                        if (!confirm('Reopen this ACSI inspection for editing?')) return
+                        if (!confirm(`Reopen this ${inspNoun} inspection for editing?`)) return
                         setActionLoading(insp.id)
                         const { error } = await reopenAcsiInspection(insp.id)
                         setActionLoading(null)
                         if (error) {
                           toast.error(`Reopen failed: ${error}`)
                         } else {
-                          toast.success('ACSI inspection reopened')
+                          toast.success(`${inspNoun} inspection reopened`)
                           router.push(`/acsi/new?resume=${insp.id}`)
                         }
                       }}
@@ -341,14 +342,14 @@ export default function AcsiListPage() {
                   {showDelete && (
                     <button
                       onClick={async () => {
-                        if (!confirm('Delete this ACSI inspection? This cannot be undone.')) return
+                        if (!confirm(`Delete this ${inspNoun} inspection? This cannot be undone.`)) return
                         setActionLoading(insp.id)
                         const { error } = await deleteAcsiInspection(insp.id)
                         setActionLoading(null)
                         if (error) {
                           toast.error(`Delete failed: ${error}`)
                         } else {
-                          toast.success('ACSI inspection deleted')
+                          toast.success(`${inspNoun} inspection deleted`)
                           setInspections(prev => prev.filter(i => i.id !== insp.id))
                         }
                       }}

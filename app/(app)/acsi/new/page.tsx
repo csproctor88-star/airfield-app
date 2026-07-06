@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { ACSI_CHECKLIST_SECTIONS, ACSI_SUB_FIELD_LABELS } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
+import { getAirportType } from '@/lib/airport-mode'
 import { createClient } from '@/lib/supabase/client'
 import {
   saveAcsiDraft,
@@ -41,6 +42,7 @@ export default function AcsiFormPage() {
   const searchParams = useSearchParams()
   const resumeId = searchParams.get('resume')
   const { installationId, currentInstallation } = useInstallation()
+  const inspNoun = getAirportType(currentInstallation) === 'faa_part139' ? 'Part 139' : 'ACSI'
 
   // Draft state
   const [draft, setDraft] = useState<AcsiDraftData | null>(null)
@@ -436,12 +438,12 @@ export default function AcsiFormPage() {
       setFiling(false)
       if (result.status === 'committed' && result.data) {
         clearAcsiDraft(installationId)
-        toast.success('ACSI inspection filed successfully')
+        toast.success(`${inspNoun} inspection filed successfully`)
         router.push(`/acsi/${result.data.id}`)
       } else if (result.status === 'queued') {
         clearAcsiDraft(installationId)
         toast.success(
-          'ACSI inspection queued — will file automatically when the network returns.',
+          `${inspNoun} inspection queued — will file automatically when the network returns.`,
           { duration: 6000 },
         )
         router.push(`/acsi/${dbRowId}`)
@@ -494,11 +496,11 @@ export default function AcsiFormPage() {
         display: 'inline-flex', alignItems: 'center', gap: 6,
         color: 'var(--color-text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)', marginBottom: 16,
       }}>
-        <ArrowLeft size={14} /> Back to ACSI List
+        <ArrowLeft size={14} /> Back to {inspNoun} List
       </Link>
 
       <h1 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: '0 0 20px' }}>
-        {dbRowId ? 'Edit ACSI Inspection' : 'New ACSI Inspection'}
+        {dbRowId ? `Edit ${inspNoun} Inspection` : `New ${inspNoun} Inspection`}
       </h1>
 
       {/* Cover fields */}

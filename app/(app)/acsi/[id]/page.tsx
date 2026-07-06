@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspection, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
 import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import { useInstallation } from '@/lib/installation-context'
+import { getAirportType } from '@/lib/airport-mode'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus, AcsiItem } from '@/lib/supabase/types'
@@ -76,11 +77,13 @@ export default function AcsiDetailPage() {
     ? (DEMO_ACSI_INSPECTIONS.find(d => d.id === params.id) as AcsiInspection | undefined) || null
     : inspection
 
+  const inspTerm = getAirportType(currentInstallation) === 'faa_part139' ? 'Part 139' : 'ACSI'
+
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>Loading...</div>
   }
   if (!insp) {
-    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>ACSI inspection not found.</div>
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-3)' }}>{inspTerm} inspection not found.</div>
   }
 
   const statusCfg = ACSI_STATUS_CONFIG[insp.status as AcsiStatus] || ACSI_STATUS_CONFIG.draft
@@ -104,27 +107,27 @@ export default function AcsiDetailPage() {
   }
 
   const handleReopen = async () => {
-    if (!confirm('Reopen this ACSI inspection for editing? It will need to be re-filed after changes are made.')) return
+    if (!confirm(`Reopen this ${inspTerm} inspection for editing? It will need to be re-filed after changes are made.`)) return
     setActionLoading(true)
     const { error } = await reopenAcsiInspection(insp.id)
     setActionLoading(false)
     if (error) {
       toast.error(`Reopen failed: ${error}`)
     } else {
-      toast.success('ACSI inspection reopened for editing')
+      toast.success(`${inspTerm} inspection reopened for editing`)
       router.push(`/acsi/new?resume=${insp.id}`)
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm('Delete this ACSI inspection? This cannot be undone.')) return
+    if (!confirm(`Delete this ${inspTerm} inspection? This cannot be undone.`)) return
     setActionLoading(true)
     const { error } = await deleteAcsiInspection(insp.id)
     setActionLoading(false)
     if (error) {
       toast.error(`Delete failed: ${error}`)
     } else {
-      toast.success('ACSI inspection deleted')
+      toast.success(`${inspTerm} inspection deleted`)
       router.push('/acsi')
     }
   }
@@ -162,7 +165,7 @@ export default function AcsiDetailPage() {
   const handleSendEmail = async (email: string) => {
     if (!emailPdfData) return
     setSendingEmail(true)
-    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `ACSI Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
+    const result = await sendPdfViaEmail(emailPdfData.doc, emailPdfData.filename, email, `${inspTerm} Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`)
     if (result.success) {
       toast.success('Email sent successfully')
       setEmailModalOpen(false)
@@ -193,7 +196,7 @@ export default function AcsiDetailPage() {
         color: 'var(--color-text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)',
         marginBottom: 16,
       }}>
-        <ArrowLeft size={14} /> Back to ACSI List
+        <ArrowLeft size={14} /> Back to {inspTerm} List
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
