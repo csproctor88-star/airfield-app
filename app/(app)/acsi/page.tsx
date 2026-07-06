@@ -10,6 +10,7 @@ import { fetchAcsiInspections, deleteAcsiInspection, reopenAcsiInspection } from
 import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { useInstallation } from '@/lib/installation-context'
+import { getAirportType } from '@/lib/airport-mode'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { toast } from 'sonner'
 import type { AcsiInspection, AcsiStatus } from '@/lib/supabase/types'
@@ -26,7 +27,7 @@ const FILTER_LABELS: Record<string, string> = {
 
 export default function AcsiListPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const { has } = usePermissions()
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
@@ -87,16 +88,24 @@ export default function AcsiListPage() {
   const inProgressCount = allItems.filter(i => i.status === 'in_progress').length
   const draftCount = allItems.filter(i => i.status === 'draft').length
 
+  // Mode-aware header: FAA Part 139 airports run the annual certification
+  // inspection (14 CFR Part 139); USAF bases run the ACSI (DAFMAN 13-204v2).
+  const isFaaMode = getAirportType(currentInstallation) === 'faa_part139'
+  const inspectionTitle = isFaaMode
+    ? 'Part 139 Annual Inspection'
+    : 'Airfield Compliance and Safety Inspection'
+  const inspectionCite = isFaaMode ? '14 CFR Part 139' : 'DAFMAN 13-204v2, Para 5.4.3'
+
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: 'var(--color-text-1)', margin: 0 }}>
-            Airfield Compliance and Safety Inspection
+            {inspectionTitle}
           </h1>
           <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', margin: '4px 0 0' }}>
-            DAFMAN 13-204v2, Para 5.4.3
+            {inspectionCite}
           </p>
         </div>
         <Link href="/acsi/new" style={{

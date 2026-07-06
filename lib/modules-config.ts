@@ -98,7 +98,7 @@ export const MODULES: ModuleDef[] = [
     hrefs: ['/acsi'],
     setupSteps: [],
     defaultEnabled: true,
-    appliesTo: ['usaf'],
+    appliesTo: ['usaf', 'faa_part139'],
   },
   {
     key: 'discrepancies',
