@@ -1,126 +1,69 @@
 # Session Handoff
 
-**Date:** 2026-07-04
-**Branch:** `main` — **4 commits unpushed** (`bf1d2187..8bfdfab8`); push was
-blocked by the permission classifier at session end — needs the user to
-push or explicitly authorize. glidepath-site likewise holds **24 unpushed
-commits** (`4ede9ef..545d2c6`). Working trees clean except this file.
-**Build:** tsc ✓ · lint 0 errors · `npm run build` ✓ · vitest ✓ (all rerun
-at this wrap).
-**HEAD:** `8bfdfab8` — Stage KDRA PPR, contractors, and training records.
+**Date:** 2026-07-06
+**Branch:** `main`. Both repos **fully pushed and clean**. `airfield-app` is
+**2 commits ahead of the promoted build** (`7f9383bc`, `64e5796d` — the ACSI
+mode-aware form/PDF work) and needs a **re-promote** on Vercel to go live.
+`glidepath-site` is promoted and **live** (all 50 pages).
+**Build:** `airfield-app` tsc ✓ · lint 0 errors · `npm run build` ✓.
+`glidepath-site` tsc ✓ · lint ✓ · `npm run test` 74/74 · `npm run build` ✓.
+**HEAD:** `airfield-app` `64e5796d` · `glidepath-site` `3688a57`.
 
-This session closed the two carryover items (CI failures, Next 15 runtime
-QA) and then executed the marketing site's **Phase 3 end-to-end via
-subagent-driven development**: all 36 module pages (22 military + 14
-civilian) authored, screenshot-backed, reviewed task-by-task with fix
-cycles, and cleared by a final whole-branch review as READY TO PUSH. This
-repo's role was the staging layer: four seed commits that made the demo
-tenants photogenic and claims-clean for every frame.
+This session executed the **module roster expansion** end to end (glidepath-site
+36 → 50 module pages) via subagent-driven-development, plus the supporting
+airfield-app changes to open ACSI to civilian mode and make it fully mode-aware.
 
 ---
 
 ## What shipped this session
 
-### CI failures root-caused and fixed (`9147c156`, `ec54e56f`)
-The "failed to run" emails were CI's lint step: since the Next 15 upgrade,
-`next build` no longer lints, so 13 `react/no-unescaped-entities` errors
-(raw `'`/`"` in JSX) sat invisible locally while failing every push. All
-escaped; CI also bumped to Node 24 to match Vercel. The wrap-session skill
-now carries `npm run lint` as a fourth gate so this class can't recur.
+### Marketing-site roster expansion — complete (glidepath-site, 7 commits `df8e0b8`..`3688a57`)
+14 new module pages authored copy-first with real, guardrail-cleared captures,
+in 4 thematic batches (each: implementer subagent → controller/review → owner
+review-tool), plus a whole-branch review (Opus) that returned **READY TO PUSH**:
+- **Military (4):** Reports, Records Export, Customer Feedback, Read File (+ the
+  existing Events Log page refocused off the reports half).
+- **Civilian (10):** Airport Checks, Shift Checklist, Events Log, Emergency
+  Checklists, Field Conditions, Obstructions (Part 77 framing), FLIP Management
+  (FAA terms), Part 139 Certification Inspection (prepare-not-perform), Customer
+  Feedback, Read File.
+- **Gated (1, authored but wired NOWHERE):** civilian Modifications & Exemptions
+  (`lib/modules/civilian/modifications-exemptions.ts`) — held until the owner
+  ships the app feature.
+- Roster **36 → 50** (26 military / 24 civilian), OG **46 → 60**,
+  `SHIPPED_PAGE_COUNT` 50, "50 modules" prose. **Owner copy-reviewed all 50
+  pages: no changes required.**
 
-### Next 15 runtime QA — resolved as environmental (no commit)
-The carried "local `next start` 500s" repro came down to server hygiene,
-not an app bug: a `next start` that outlives a rebuild serves rotated
-chunk names (404s) and middleware 500s; the :3000/:3001 "ghost listeners"
-were orphaned servers from prior sessions, killed this session. Rule now
-in the start-session skill (netstat sweep) and memory: restart `next
-start` after every build.
+### App: ACSI opened to civilian + fully mode-aware (airfield-app `050374df`, `7f9383bc`, `64e5796d`)
+- `lib/modules-config.ts`: `acsi.appliesTo` → `['usaf','faa_part139']`.
+- `/acsi` reads **"Part 139 Annual Inspection" / "14 CFR Part 139"** on civilian
+  tenants and "ACSI" / "DAFMAN 13-204v2, Para 5.4.3" on military, everywhere:
+  the main-page header, the form/list labels (Start New, empty-state, per-row
+  Reopen/Delete confirms + toasts, new/edit heading, Back-to-List links,
+  not-found, emailed report subject), the **record display_id prefix**
+  (`P139-` vs `ACSI-`, from the base's `airport_type` at insert), and the
+  **generated PDF** (title, reg cite, risk-cert statement) via a new
+  `AcsiPdfOptions.airportType`. Mode is read from `getAirportType(currentInstallation)`.
 
-### PWA update toast activates parked workers (`bce9eba5`)
-The toast's Refresh reloaded the page but a waiting service worker stayed
-parked, so field devices could dismiss-loop forever. Refresh now posts
-SKIP_WAITING and reloads on `controllerchange`. Login footer bumped to
-v2.35.0 (`4af9a013`); session skills committed (`396a0ec7`).
+### Demo-data seeds (owner-authorized, additive/reversible)
+KDRA was under-seeded for several modules, so real capture frames required
+seeding. Seeded: KDRA `shift_checklist_items` ×7, `qrc_templates` ×8 (civilian
+emergency titles, title-only stubs), `customer_feedback` ×4, `read_files` ×3;
+KDMO `read_files` ×3. Owner ruled: **keep the seeds**.
 
-### Demo-tenant staging for Phase 3 captures (`97c5e131`, `f15dad6f`, `bf1d2187`, `ff7a4625`, `8216c8c9`, `8bfdfab8`)
-Six seed commits, all applied to the linked project via
-`npx supabase db query --linked --file` (idempotent, guarded — safe to
-re-run). `seed-demo-military-staging.sql` fictionalizes everything the
-claims guardrail forbids in-frame on KDMO (waiver proponents, contractor
-companies + contacts, PPR requesters/phones/emails, AMTR roster names,
-daily-review signers → demo persona) and future-dates three PPR clones so
-the today-forward log frames content. `seed-demo-civilian-staging.sql`
-builds KDRA's story: three open discrepancies (with GPS pins — without
-coordinates the map renders a full-frame "No GPS Coordinates" overlay),
-the demo user's dashboard board written with a complete 7-widget layout,
-three future-dated PPRs, three fictional work parties, and eight §139.303
-training completions. Non-obvious: both KDRA dashboard boards were EMPTY —
-the widgets seen on screen were the app's runtime starter fallback, which
-any saved widget suppresses; the seed therefore resolves the demo user's
-default board via `dashboard_user_defaults` (never by name — the owner has
-a same-named board it must not touch).
-
-### glidepath-site: Phase 3 complete — 36 module pages (`4ede9ef..545d2c6`)
-24 commits (details in its git log). Content model + registry with
-invariant tests (meta lengths, FAQ counts, screenshot existence, roster
-1:1); template + routes; pillar pages with full module grids; five content
-batches, each authored by a fresh subagent and reviewed against its brief
-with the PNGs open (caption-vs-frame checks caught real defects in 4 of 5
-batches; the "never reuse military prose" rule was enforced down to
-8-consecutive-word overlap scans). Final whole-branch review (most capable
-model) verified cross-page voice, 36/36 unique metaTitles, zero cross-page
-prose reuse, all 20 reg cites against the plan tables, and applied two
-fixes itself: `text-faint` token 4.46:1 → 4.59:1 (clears the Lighthouse
-a11y-96 cap site-wide, includes every figcaption) and a QRC "all 25" claim
-that contradicted the 26 visible in its own frame. Lighthouse 96–100
-across 12 audits; phone pass at 360px clean; built sitemap exactly 42
-URLs; 48/48 tests.
+### Guardrail scrubs
+- KDMO `customer_feedback` carried the owner's real submission (name/email/unit)
+  → scrubbed to an anonymous transient in the marketing frame (capture prep hook).
+- KDRA ACSI record `ACSI-2026-HN2K` held the owner's real name (`inspector_name`,
+  `filed_by_name`) → **cleaned on the actual DB record** to "Demo Inspector"
+  (verified no "Proctor" survives in any field). Both KDRA records' display_id
+  updated `ACSI-` → `P139-`.
 
 ---
 
 ## Migrations status
-
-**No new migrations this session.** Latest remains `2026070204` (applied).
-The six staging seeds are NOT migrations — they live in `supabase/seed-*`
-and were applied ad hoc to the linked project (all verified by count
-queries this session).
-
----
-
-## Bugs fixed during the session
-
-| Symptom | Root cause | Commit |
-|---|---|---|
-| Every push emails "failed to run" | CI lints separately since Next 15 — `next build` no longer lints, so 13 unescaped-entity errors were invisible locally | `9147c156` |
-| Local `next start` 500s all authenticated requests | Environmental: server outliving a rebuild serves rotated chunks; orphaned servers squatted :3000/:3001 | — (hygiene, no code) |
-| PWA update toast dismiss-loops on field devices | Refresh never activated the waiting worker (no SKIP_WAITING) | `bce9eba5` |
-| /discrepancies map full-frame "No GPS Coordinates" on KDRA | Staged discrepancies had no lat/lng | `8216c8c9` |
-| KDRA dashboard showed 4 widgets, then only 3 after staging | Boards were empty; on-screen widgets were the runtime starter fallback, suppressed by any saved widget | `8216c8c9` |
-
----
-
-## Lessons from this session
-
-- **Empty dashboard boards render a starter-fallback widget set** — saving
-  ANY widget suppresses all of it. Stage boards with the complete layout,
-  and target the demo user's board via `dashboard_user_defaults`, never by
-  board name.
-- **Marketing frames need coordinates**: list pages with map views
-  (discrepancies) render overlay errors when rows lack GPS.
-- **Prose-reuse across track siblings is invisible to every automated
-  guard** — three of four content batches shipped military sentence
-  echoes despite explicit instructions; only overlap-scanning reviews
-  (8-consecutive-word bar) caught them. Captions transcribing shared UI
-  are the one accepted overlap.
-- **Caption-vs-frame verification catches real defects** (wrong counts,
-  military reg strings leaking into civilian captions) — reviewers must
-  open the PNGs, not trust the diff.
-- **The claims guardrail beats a richer frame**: /training/compliance was
-  refused because KDRA's member list shows a real "System Admin" account;
-  the static hub shipped instead (owner can unblock a reshoot).
-- **Pushes to main now need explicit user authorization** in this
-  environment — batch them consciously; "wait to push" then push at wrap
-  gets classifier-blocked.
+No new migrations this session. All changes are content (glidepath-site), app
+code (airfield-app), and demo-data seeds/updates on the linked DB (not migrations).
 
 ---
 
@@ -128,119 +71,63 @@ queries this session).
 
 | Item | Severity | Notes |
 |---|---|---|
-| **Both repos unpushed** | high | App: 4 commits (`bf1d2187..8bfdfab8`). Site: 24 commits (`4ede9ef..545d2c6`, final review passed). First action next session (or user pushes now). After the site push: verify Vercel preview, run Google rich-results test on the preview URL (deferred from Task 9). |
-| App-side dual-mode terminology gaps | med | Civilian tenants render military strings: /discrepancies shows AFM/CES/AMOPS KPI chips; /inspections header shows "DAFMAN 13-204V2". `lib/airport-mode.ts` doesn't cover them. Marketing captions transcribe faithfully meanwhile. |
-| DAFI vs DAFMAN 91-212 designation split (owner) | low | App repo disagrees with itself: `regulations-data.ts` links `dafi91-212.pdf`, `airport-mode.ts` says DAFMAN; site copy says DAFMAN. E-pub URL favors DAFI. Owner to rule; then align both repos. |
-| Daily-reviews cite contradiction (owner) | low | Site page cites V2 Para 2.5.2.10 while its own frame header reads "DAFMAN 13-204v1 Para 2.5.2.10.3 & 10.4" — visible in-frame. Owner to rule which designation is right; fix copy or app header. |
-| KDRA /training richer frame blocked | low | Compliance/roster views show the owner's real account ("System Admin" row). Clean the membership display or approve a temporary profile retitle, then reshoot `/training/compliance`. |
-| ACSI module page frames an empty list | low | Honest but thin; owner rec from final review: seed one completed ACSI on KDMO + reshoot. |
-| Status-page weather effect races runway load | low | Carried — `app/(app)/page.tsx:194`. |
-| `gh` CLI absent on this machine | low | Carried — plain git; CI via Actions page. |
-| Deferred audit items / npm advisories / Selfridge 1098 / local-only reference docs | low | Carried unchanged. |
+| **airfield-app needs re-promote** | high (owner) | 2 commits (`7f9383bc`,`64e5796d`) live-ready but not promoted; the ACSI form/PDF mode-aware fixes won't show until then |
+| **App-side dual-mode terminology (other modules)** | med | ACSI is now fully mode-aware, but civilian tenants still leak military terms elsewhere: `/discrepancies` AFM/CES/AMOPS KPI chips, `/inspections` "DAFMAN 13-204V2", `/checks` header "AIRFIELD CHECK"/DAFI cite, `/qrc` "Quick Reaction Checklists", `/flip` "DAFMAN…Continuity Binder", `/obstructions` "UFC 3-260-01". `lib/airport-mode.ts` SoT doesn't cover them. The site captions worked around them |
+| Civilian QRC templates are title-only stubs | low | KDRA `qrc_templates` ×8 have "0 steps / Never reviewed"; enrich for a richer `/qrc` frame if desired |
+| Text-only capture strategy is not viable | low (reference) | `module-content.test.ts` requires ≥1 real screenshot per registered page; see memory `project_marketing_capture_pipeline` |
+| Carried low items | low | Status-page weather race (`app/(app)/page.tsx:194`); demo-form email-fail-after-insert silent; account-deactivation doesn't kill live sessions (`middleware.ts:50-58`); `gh` CLI absent; Selfridge 1098 dedup — all unchanged |
 
 ---
 
 ## Next session tasks
-
-1. **Push both repos** (blocked at wrap by the permission classifier —
-   needs the user). Then: confirm app CI green (lint gate), open the site's
-   Vercel preview, spot-check 3–4 module pages, and run Google's
-   rich-results test against the preview URL.
-2. **Owner adjudications** (all detailed in Known issues): DAFI vs DAFMAN
-   91-212; daily-reviews V1-vs-V2; KDRA training reshoot unblock; optional
-   ACSI seed + reshoot. Site copy edits from these are one-line fixes.
-3. **Phase 4** (sequenced next in glidepath-site): OG/social images,
-   /security /about /faq content, /demo polish. Phase 5 (apex domain
-   cutover) remains owner-executed.
-4. **Owner owes** (carried): real adoption-stat values for the homepage
-   stats band (placeholder-hidden until provided).
-
-**App backlog:** Next 15 runtime QA is CLOSED (environmental). No required
-app work pending beyond the dual-mode terminology gaps above.
+1. **Owner:** re-promote airfield-app so the ACSI form/PDF mode-aware fixes go live.
+2. **App-side dual-mode terminology sweep** — extend `lib/airport-mode.ts` +
+   the leaking modules (`/discrepancies`, `/inspections`, `/checks`, `/qrc`,
+   `/flip`, `/obstructions`) to render FAA terms on civilian tenants, mirroring
+   what was just done for ACSI. Would also make future civilian captures leak-free.
+3. **Optional owner follow-ups:** enrich the KDRA QRC stubs; the marketing
+   Modifications & Exemptions page is authored + staged, ready to wire when the
+   owner ships the app Waivers/Modifications feature.
 
 ### Long-running carryover
-Deferred audit items, optional Next 16, Selfridge 1098 dedup, local-only
-reference docs — unchanged.
-
----
-
-## Content-edit playbook (glidepath-site) — CARRY THIS SECTION FORWARD
-
-How to change site text or replace screenshots (owner prompts one
-sentence; the rest is this process):
-
-- **Text** — all copy lives in `lib/` data files, never components:
-  module pages `lib/modules/{military,civilian}/<slug>.ts` (metaTitle,
-  problem, how.steps, benefits, faq, screenshot captions); homepage
-  `lib/home-content.ts`; nav/footer `lib/site-config.ts`; grid card
-  names/taglines `lib/modules-data.ts`. `npm run test` enforces banned
-  terms, metaTitle ≤60, metaDescription ≤160, FAQ 3–5 — fix copy, never
-  tests. Full four-gate before commit; push → Vercel auto-deploys main.
-- **Screenshots** — `public/screenshots/<id>.png`, referenced by that
-  path in the module file; shot list in `scripts/capture-manifest.mjs`.
-  Reshoot: `CAPTURE_BASE_URL=https://app.glidepathops.com
-  CAPTURE_EMAIL=demo@glidepathops.com CAPTURE_PASSWORD=$(sed -n
-  's/^CAPTURE_PASSWORD=//p' ../airfield-app/.env.local | tr -d '\r')
-  node scripts/capture-screenshots.mjs --tenant <t> --only <id>` —
-  never print the password. The demo user's ACTIVE base must match the
-  tenant (KDMO for `mil-*`, KDRA for `civ-*`) — switch in-app first.
-  Owner-supplied PNGs: same filename drop-in; keep 1600×1000.
-- **Every new frame**: claims-guardrail review before commit (no real
-  names/emails/units/phones; approved fiction: "TSgt Demo", pooled
-  initial+surname names, "(586) 555-01xx", fictional companies) AND
-  update the caption to match the frame — caption accuracy has no
-  automated guard and was the most common review defect in Phase 3.
-- **If the frame needs data the tenant lacks**: stage fictional rows
-  first via the guarded seeds (`airfield-app/supabase/
-  seed-demo-{military,civilian}-staging.sql` are the patterns; apply
-  with `npx supabase db query --linked --file` from airfield-app).
-- **Pushes to main need explicit user authorization** in the same
-  conversational stretch — "push when green" in the request suffices.
+Phase 5 (app apex cutover to `app.glidepathops.com`) and the SEO/rich-results
+follow-ups remain owner-scheduled. Deferred audit items, Next 16 — unchanged.
 
 ---
 
 ## Build snapshot
-
 ```
-airfield-app @ 8bfdfab8: tsc ✓ · lint 0 errors (warnings only) ·
-npm run build ✓ (Middleware 80.8 kB) · vitest 1104 passed / 16 skipped
-(1120, 121 files). No app code changed since bce9eba5 — seeds and skills
-only.
+glidepath-site @ 3688a57: tsc ✓ · lint ✓ · vitest 74/74 · build ✓ (60 static
+  paths). 50 module pages (26 mil + 24 civ) + about/platform/security/faq/demo/
+  legal/404 + home + two pillars. 60 OG images. PROMOTED / live.
 
-glidepath-site @ 545d2c6: tsc ✓ · lint ✓ · vitest 48/48 ✓ · build ✓
-(36 module SSG paths + 42-URL sitemap; gate rerun at wrap RC=0).
-Lighthouse (local prod build): 96–100 across /military,
-/military/visual-navaids, /civilian/sms — a11y cap fixed in 545d2c6.
-NOT yet deployed — push pending.
+airfield-app @ 64e5796d: tsc ✓ · lint 0 errors · build ✓. ACSI mode-aware end to
+  end. 2 commits ahead of the promoted build — RE-PROMOTE pending.
 ```
 
 ---
 
 ## Recent releases
-
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-02..04 | Codebase-audit remediation P0–P4; public-write rate limiting; Next.js 15.3.9 + React 19; PWA update toast + parked-worker fix; CI lint gate fixed; demo-seed full clone; inspection-delete + outage-alert fixes; demo-tenant staging seeds. Marketing site: Phases 1–3 complete — homepage demo player + all 36 module pages. |
+| **Unreleased** | 2026-07-05..06 | Marketing-site roster expansion (36→50 module pages, 60 OG, whole-branch reviewed + owner copy-approved); ACSI opened to civilian mode and made fully mode-aware (header, form, record IDs, PDF). Demo-data seeds on KDRA/KDMO; KDRA ACSI real-name cleanup. |
 | **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File modules; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
 ---
 
-## Key files touched this session
+## Key docs / files touched this session
+### airfield-app
+- `lib/modules-config.ts` (acsi appliesTo), `app/(app)/acsi/{page,new,[id]}.tsx`
+  (mode-aware labels), `lib/supabase/acsi-inspections.ts` (display_id prefix),
+  `lib/acsi-pdf.ts` (mode-aware title/cite/cert + `airportType` option),
+  `lib/export/export-record-modules.ts` (export PDF mode inference).
+- `docs/superpowers/specs/2026-07-05-roster-expansion-design.md`,
+  `docs/superpowers/plans/2026-07-05-roster-expansion.md` (executed this session).
 
-### This repo
-- `supabase/seed-demo-military-staging.sql` — KDMO fictionalization (6 blocks)
-- `supabase/seed-demo-civilian-staging.sql` — KDRA staging (6 blocks)
-- `supabase/seed-demo-civilian-wildlife.sql`, `seed-demo-civilian-part139-polish.sql` — earlier civilian passes
-- `components/pwa-update-toast.tsx` — parked-worker activation
-- `.github/workflows/` — Node 24; 13 JSX entity escapes across components
-- `.claude/skills/{start,wrap}-session/SKILL.md` — lint gate + orphan sweep
-
-### glidepath-site (see its git log for the full story)
-- `lib/modules/` — types, registry, 36 content files (military/ + civilian/)
-- `components/modules/module-page.tsx` + `app/{military,civilian}/[slug]/page.tsx`
-- `app/{military,civilian}/page.tsx` — pillar pages + module grid
-- `scripts/capture-manifest.mjs` — 20+ new shot entries across batches
-- `public/screenshots/` — 21 new stills banked
-- `tests/module-content.test.ts` — invariants, then 1:1 completeness flip
-- `tailwind.config.ts` — `text-faint` AA bump (final review)
+### glidepath-site (the session's main story; fully pushed + live)
+- `lib/modules/{military,civilian}/**` (14 new content files + events-log refocus),
+  `lib/modules/index.ts`, `lib/modules-data.ts`, `lib/about-content.ts`,
+  `lib/og-routes.ts`, `scripts/capture-manifest.mjs` (new shot entries + prep
+  scrubs), `scripts/generate-og-images.ts` (`--only` flag), `public/screenshots/*`,
+  `public/og/*` (60), `tests/*` (count bumps).
