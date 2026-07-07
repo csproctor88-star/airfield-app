@@ -680,66 +680,162 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 16: Obstructions ──
+  // src: 5280.5D §4.24.1-4.24.5.3
   {
     id: 'p139-obstruct',
     number: 16,
     title: 'Obstructions',
     reference: '14 CFR §139.331',
     items: [
-      { id: 'obstruct.1', question: 'Objects Determined to be an Obstruction Removed, Marked, or Lighted', citation: '§139.331' },
+      {
+        id: 'obstruct.1',
+        question: 'Objects Determined to be an Obstruction Removed, Marked, or Lighted',
+        citation: '§139.331',
+        guidance: 'The certificate holder must ensure objects the FAA has determined to be obstructions are removed; if removal is not possible, each object within the airport’s authority must be marked and/or lighted unless an FAA aeronautical study finds this unnecessary (AC 70/7460-1, Obstruction Marking and Lighting, provides guidance). If an obstruction has not been subjected to an airspace study, the certificate holder should request one to determine whether marking/lighting, removal, or another Administrator-acceptable action is required; a study finding no hazard to air navigation and no marking/lighting requirement means no Part 139 violation. The ACSI confirms all obstructions defined by Part 77 within the certificate holder’s authority are marked/lighted if not removed (unless a study found this unnecessary); that the ACM includes a list of identified obstructions (including those found no-hazard), describes maintenance procedures and responsibilities for lighted obstructions, and specifies outage-reporting contacts and repair procedures; and, during the night inspection, verifies all lighted obstructions within the certificate holder’s authority are operational, also checking FAA-owned lighted obstructions and requesting the certificate holder notify local Tech Ops of any found out of service.',
+      },
     ],
   },
   // ── Section 17: Protection of NAVAIDs ──
+  // src: 5280.5D §4.25.1-4.25.4
   {
     id: 'p139-navaids',
     number: 17,
     title: 'Protection of NAVAIDs',
     reference: '14 CFR §139.333',
     items: [
-      { id: 'navaids.1', question: 'Prevent Construction that Would Derogate NAVAIDs/AT Facilities', citation: '§139.333(a)' },
-      { id: 'navaids.2', question: 'Protect from Vandalism and Theft', citation: '§139.333(b)' },
-      { id: 'navaids.3', question: 'Prevent Signal Interruption', citation: '§139.333(c)' },
+      {
+        id: 'navaids.1',
+        question: 'Prevent Construction that Would Derogate NAVAIDs/AT Facilities',
+        citation: '§139.333(a)',
+        guidance: 'The certificate holder must establish procedures to prevent construction of facilities on the airport that would interfere with the operation of electronic or visual NAVAIDs and the air traffic control facilities on the airport. The ACSI confirms these procedures have been established and are effective at guarding against construction that would interfere with or degrade NAVAID signals.',
+      },
+      {
+        id: 'navaids.2',
+        question: 'Protect from Vandalism and Theft',
+        citation: '§139.333(b)',
+        guidance: 'The certificate holder must implement effective measures to prevent vandalism and theft of NAVAIDs. The ACSI confirms these measures are in place and, where a NAVAID is owned by an entity other than the certificate holder, confirms the certificate holder still assists in protecting all NAVAIDs on its airport against vandalism and theft.',
+      },
+      {
+        id: 'navaids.3',
+        question: 'Prevent Signal Interruption',
+        citation: '§139.333(c)',
+        guidance: 'The certificate holder must establish and implement effective procedures to prevent interruption of visual and electronic NAVAID signals within the airport’s authority, including preventing construction and maintenance activities from shutting down, interrupting, or altering signals, and making personnel mindful of vehicle/equipment parking, material storage, and other activity near NAVAIDs. The ACSI confirms these procedures are established for construction and maintenance personnel and, where adjacent properties are owned by the same entity that owns the airport, ascertains that those properties also comply with the requirement to prevent interruption of or interference to NAVAIDs.',
+      },
     ],
   },
   // ── Section 18: Public Protection ──
+  // src: 5280.5D §4.26.1-4.26.3
   {
     id: 'p139-public',
     number: 18,
     title: 'Public Protection',
     reference: '14 CFR §139.335',
     items: [
-      { id: 'public.1', question: 'Prevent Inadvertent Entry to Movement Area by Unauthorized Persons/Vehicles', citation: '§139.335(a)(1)' },
-      { id: 'public.2', question: 'Reasonable Protection from ACFT Blast', citation: '§139.335(a)(2)' },
+      {
+        id: 'public.1',
+        question: 'Prevent Inadvertent Entry to Movement Area by Unauthorized Persons/Vehicles',
+        citation: '§139.335(a)(1)',
+        guidance: 'The certificate holder must provide effective safeguards — a combination of natural barriers, fencing, and warning signs — sufficient to deter inadvertent entry to the movement area by unauthorized persons or vehicles (prevention of intentional entry is the purview of the Transportation Security Administration). Fencing meeting applicable FAA and TSA security regulations is acceptable for meeting §139.335(a)(1). The ACSI determines whether these safeguards are effective and proper, and should readdress public protection whenever airport operations change, such as when aircraft or ramp areas are added or changed.',
+      },
+      {
+        id: 'public.2',
+        question: 'Reasonable Protection from ACFT Blast',
+        citation: '§139.335(a)(2)',
+        guidance: 'The certificate holder must provide reasonable protection of the public against aircraft blast. The ACSI determines whether reasonable protection against aircraft blast has been provided to both the public and to airport personnel who conduct activities in the movement area, readdressing this whenever airport operations change, such as when aircraft or ramp areas are added or changed.',
+      },
     ],
   },
   // ── Section 19: Wildlife Hazard Management ──
+  // src: 5280.5D §4.27.1-4.27.5.4 (largest subsection: WHA/WHMP process, ESA §7
+  // consultation, permits, training — pp.4-45 to 4-51)
   {
     id: 'p139-wildlife',
     number: 19,
     title: 'Wildlife Hazard Management',
     reference: '14 CFR §139.337',
     items: [
-      { id: 'wildlife.1', question: 'Immediate Measures when Detected', citation: '§139.337(a)' },
-      { id: 'wildlife.2', question: 'Provide for WHA when Required', citation: '§139.337(b)' },
-      { id: 'wildlife.3', question: 'WHA Conducted by Qualified Personnel', citation: '§139.337(c)' },
-      { id: 'wildlife.4', question: 'WHA Contents', citation: '§139.337(c)' },
-      { id: 'wildlife.5', question: 'WHA Submitted to FAA', citation: '§139.337(d)' },
-      { id: 'wildlife.6', question: 'WHMP Formulated and Implemented when Required', citation: '§139.337(e)' },
-      { id: 'wildlife.7', question: 'Plan Addresses Required Contents', citation: '§139.337(f)' },
-      { id: 'wildlife.8', question: 'Plan Addresses Permits — local/State/Federal', citation: '§139.337(f)(3)' },
-      { id: 'wildlife.9', question: 'Review/Evaluate Plan every 12 CCM', citation: '§139.337(f)(6)' },
-      { id: 'wildlife.10', question: 'Personnel Training Program by a Qualified Wildlife Biologist', citation: '§139.337(f)(7)' },
+      {
+        id: 'wildlife.1',
+        question: 'Immediate Measures when Detected',
+        citation: '§139.337(a)',
+        guidance: 'The certificate holder must take immediate measures to alleviate wildlife hazards whenever they are detected and must notify the Regional Airports Division when a wildlife hazard exists on the airport. The ACSI may confirm a wildlife hazard exists based on evidence of the presence of wildlife, even without an actual multiple bird strike, engine ingestion, or damaging collision.',
+      },
+      {
+        id: 'wildlife.2',
+        question: 'Provide for WHA when Required',
+        citation: '§139.337(b)',
+        guidance: 'The certificate holder must conduct a Wildlife Hazard Assessment (WHA) if an event occurs as defined in §139.337(b)(1) through (4), identified — in terms of location — in AC 150/5200-33, Hazardous Wildlife Attractants On or Near Airports. When the ACSI determines such an event has occurred (through its own research/observation or certificate-holder notification), it reviews the ACM to determine whether a WHA has ever been conducted and whether the results led to an FAA-approved WHMP; if no WHA has been conducted, the ACSI instructs the certificate holder to undertake one. If a WHA was conducted within the last 12 months but a WHMP was not required, the Regional Coordinator reviews that decision — in most cases instructing the certificate holder to develop and submit a WHMP based on the WHA. If the WHA is more than 12 months old and no WHMP was developed, the ACSI may instruct the certificate holder to begin a new WHA if warranted.',
+      },
+      {
+        id: 'wildlife.3',
+        question: 'WHA Conducted by Qualified Personnel',
+        citation: '§139.337(c)',
+        guidance: 'The WHA must be conducted by persons having the education, training, and experience necessary to adequately assess wildlife hazards, as referenced in AC 150/5200-36, Qualifications for Wildlife Biologist Conducting Wildlife Hazard Assessments and Training Curriculums for Airport Personnel Involved in Controlling Wildlife Hazards on Airports. The certificate holder is responsible for consultant selection and initial contact, following local procurement requirements to contract with a qualified wildlife biologist — which may be U.S. Department of Agriculture (USDA) Wildlife Services or a qualified private party — while taking immediate action to mitigate the hazard in the meantime.',
+      },
+      {
+        id: 'wildlife.4',
+        question: 'WHA Contents',
+        citation: '§139.337(c)',
+        guidance: 'A WHA must include the items listed in §139.337(c)(1) through (5). The ACSI uses AC 150/5200-38, Protocol for the Conduct and Review of Wildlife Hazard Site Visits, Wildlife Hazard Assessments, and Wildlife Hazard Management Plans, as a guide to determine whether the WHA meets the AC’s minimum requirements for conducting and preparing the report, requesting additional information or relaying comments to the certificate holder if the WHA is not adequate (and contacting the AAS-300 Wildlife Biologists with questions).',
+      },
+      {
+        id: 'wildlife.5',
+        question: 'WHA Submitted to FAA',
+        citation: '§139.337(d)',
+        guidance: 'The certificate holder must submit the completed WHA and its results to the FAA. The ACSI follows up to ensure the certificate holder has completed any recommended actions within the WHA and submitted the results, then reviews the WHA and recommendations to determine whether a WHMP is needed and conveys that determination to the certificate holder.',
+      },
+      {
+        id: 'wildlife.6',
+        question: 'WHMP Formulated and Implemented when Required',
+        citation: '§139.337(e)',
+        guidance: 'The FAA uses the WHA to determine if a WHMP is needed; when so indicated by the ACSI, the certificate holder must develop, update, and implement a WHMP as part of the approved ACM. Under §139.337(e), the FAA may also direct an airport operator to develop a WHMP or update an existing one; because this FAA action is a Federal action under the Endangered Species Act, it is subject to Section 7 consultation with the U.S. Fish and Wildlife Service, and the FAA (relying on AAS-300 Wildlife Biologists, FAA Environmental Protection Specialists, or the qualified airport wildlife biologist) must determine whether federally listed or proposed species or designated or proposed critical habitat occur on or near the airport; if so, the airport operator may need to prepare a Biological Assessment submitted to the FAA along with the draft WHMP.',
+      },
+      {
+        id: 'wildlife.7',
+        question: 'Plan Addresses Required Contents',
+        citation: '§139.337(f)',
+        guidance: 'The WHMP must contain all of the required information in §139.337(f)(1) through (7). The ACSI reviews the plan to confirm it meets all requirements of §139.337(f); if it does not, the ACSI instructs the certificate holder to bring the WHMP into compliance, which may require a new WHA.',
+      },
+      {
+        id: 'wildlife.8',
+        question: 'Plan Addresses Permits — local/State/Federal',
+        citation: '§139.337(f)(3)',
+        guidance: 'The ACSI verifies the airport has obtained current permits needed to effectively implement its WHMP. Local, state, and Federal depredation permits are not always applicable and are not mandatory, but state and/or Federal permits are required for lethal removal, capture/relocation of wildlife, and any type of harassment of most wildlife species; the airport operator determines what permits are required before implementing any harassment or removal mitigation method, and the FAA recommends airports maintain appropriate depredation permits when applicable.',
+      },
+      {
+        id: 'wildlife.9',
+        question: 'Review/Evaluate Plan every 12 CCM',
+        citation: '§139.337(f)(6)',
+        guidance: 'The Order’s Chapter 4 discussion does not restate the review interval as a separate numeric test beyond §139.337(f)(6) itself; it instead describes the practical review process — because a certificate holder operating under an approved WHMP may have several §139.337(b)(1)-(4) events within a short period, review of the WHMP is not required every time an event occurs. The ACSI and certificate holder should agree on a review schedule (once a month, for example) under which the certificate holder reviews the WHMP against recorded strikes and wildlife observed to determine whether revisions are needed, keeping detailed records of the events and of the WHMP review; any required revision must be approved by the ACSI and incorporated into the ACM.',
+      },
+      {
+        id: 'wildlife.10',
+        question: 'Personnel Training Program by a Qualified Wildlife Biologist',
+        citation: '§139.337(f)(7)',
+        guidance: 'Personnel with responsibilities in the WHMP must be adequately trained at least every 12 consecutive months, with training records kept current to reflect this. As with WHA preparer qualifications, personnel training curriculums are referenced in AC 150/5200-36, Qualifications for Wildlife Biologist Conducting Wildlife Hazard Assessments and Training Curriculums for Airport Personnel Involved in Controlling Wildlife Hazards on Airports — a qualified wildlife biologist is the source of this training, paralleling the qualified-biologist requirement for conducting the WHA itself.',
+      },
     ],
   },
   // ── Section 20: Identifying, Marking & Lighting Construction / Unserviceable Areas ──
+  // src: 5280.5D §4.29.1-4.29.7
   {
     id: 'p139-construction',
     number: 20,
     title: 'Identifying, Marking & Lighting Construction / Unserviceable Areas',
     reference: '14 CFR §139.341',
     items: [
-      { id: 'constr.1', question: 'Mark/Light Construction/Unserviceable Areas & Equipment', citation: '§139.341(a)(1)' },
-      { id: 'constr.2', question: 'Pre-Construction Review of Utilities', citation: '§139.341(a)(2)' },
+      {
+        id: 'constr.1',
+        question: 'Mark/Light Construction/Unserviceable Areas & Equipment',
+        citation: '§139.341(a)(1)',
+        guidance: 'The certificate holder must mark, and if appropriate light, construction areas, equipment, or certain areas adjacent to a NAVAID as set forth in §139.341(a)(1)(i) through (iii): each construction/unserviceable area on or adjacent to any movement area or other area used by air carrier aircraft; each item of construction equipment and each construction roadway that might affect the safe movement of aircraft; and any area adjacent to a NAVAID that, if traversed, could derogate the signal or cause NAVAID failure — all acceptable to the Administrator. The ACSI ensures temporary marking and lighting of areas servicing air carrier aircraft meet §139.311 standards, that adequate notice is given to users, ARFF, and ATO of conditions that may adversely affect safety (particularly during changes in construction phases), and that entrances to the AOA, construction areas, and haul routes are properly marked, signed, and protected from inadvertent entry.',
+      },
+      {
+        id: 'constr.2',
+        question: 'Pre-Construction Review of Utilities',
+        citation: '§139.341(a)(2)',
+        guidance: 'The certificate holder must establish procedures, such as plan review, to protect utilities, cables, wires, pipelines, and other underground facilities prior to construction activities, brief contractors, and — for a complex project — develop and implement a safety plan. A construction safety phasing plan (CSPP) is required for AIP- or PFC-funded projects (AC 150/5370-2 provides guidance; recommended but not required for non-AIP-funded projects). The ACSI ascertains, when necessary, that a safety plan has been developed and implemented and that the certificate holder is complying with the approved CSPP; for non-Federal-grant projects this includes coordination with all applicable parties and filing FAA Form 7460-1, Notice of Proposed Construction, when required by Part 77. The ACSI also confirms vehicle and pedestrian controls in the CSPP are being implemented, that construction activities and areas are adequately monitored, and that safety deficiencies are addressed immediately.',
+      },
     ],
   },
   // ── Section 21: Airport Condition Reporting ──
@@ -777,13 +873,19 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 22: Noncomplying Conditions ──
+  // src: 5280.5D §4.30.1-4.30.2
   {
     id: 'p139-noncomply',
     number: 22,
     title: 'Noncomplying Conditions',
     reference: '14 CFR §139.343',
     items: [
-      { id: 'noncomply.1', question: 'Limit ACR OPNS to Safe Areas when Uncorrected Unsafe Conditions Exist', citation: '§139.343' },
+      {
+        id: 'noncomply.1',
+        question: 'Limit ACR OPNS to Safe Areas when Uncorrected Unsafe Conditions Exist',
+        citation: '§139.343',
+        guidance: 'The certificate holder must limit air carrier activities to areas that are safe. Whenever the requirements of Subpart D cannot be met for any airport area, that area is considered unsafe for air carrier use unless the ACSI determines otherwise. The ACSI determines whether the certificate holder complies with this section and has accurately identified areas deemed unsafe for air carrier use; the approved ACM should discuss these areas.',
+      },
     ],
   },
 ]

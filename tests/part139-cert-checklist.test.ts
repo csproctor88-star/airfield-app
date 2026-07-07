@@ -136,3 +136,17 @@ describe('Part 139 programs guidance B (Phase 3.3b)', () => {
     expect(missing).toEqual([])
   })
 })
+
+describe('Part 139 obstructions/navaids/public/wildlife/construction guidance (Phase 3.4)', () => {
+  const items = PART139_CERT_SECTIONS.flatMap(s => s.items)
+  it('wildlife biologist item references a qualified wildlife biologist', () => {
+    const bio = items.find(i => i.citation === '§139.337(f)(7)')
+    expect(bio?.guidance ?? '').toMatch(/biologist/i)
+  })
+  it('every item in the 6 sections has non-empty guidance', () => {
+    const secs = ['p139-obstruct','p139-navaids','p139-public','p139-wildlife','p139-construction','p139-noncomply']
+    const missing = PART139_CERT_SECTIONS.filter(s => secs.includes(s.id))
+      .flatMap(s => s.items).filter(i => !(i.guidance && i.guidance.trim().length > 0)).map(i => i.id)
+    expect(missing).toEqual([])
+  })
+})
