@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { ACSI_SUB_FIELD_LABELS } from '@/lib/constants'
 import type { AcsiItemResponse } from '@/lib/supabase/types'
 
@@ -20,16 +21,26 @@ interface AcsiItemProps {
   renderSubFieldChildren?: (subId: string) => React.ReactNode
   /** Non-answerable heading row */
   isHeading?: boolean
+  /** Response button labels. Defaults to Y/N/N-A (USAF ACSI); the FAA Part 139 civilian audit passes S/U/N-A. */
+  responseLabels?: { pass: string; fail: string; na: string }
+  /** CFR sub-paragraph this item audits, shown as a subtle muted suffix next to the item label, e.g. '§139.305(a)(1)'. Civilian (Part 139) only. */
+  citation?: string
+  /** Inspector guidance, shown in a collapsed-by-default disclosure under the item label. Civilian (Part 139) only. */
+  guidance?: string
 }
+
+const DEFAULT_RESPONSE_LABELS = { pass: 'Y', fail: 'N', na: 'N/A' }
 
 function ResponseButtons({
   id,
   response,
   onSetResponse,
+  responseLabels,
 }: {
   id: string
   response: AcsiItemResponse
   onSetResponse: (id: string, value: AcsiItemResponse) => void
+  responseLabels: { pass: string; fail: string; na: string }
 }) {
   return (
     <div style={{ display: 'flex', gap: 4, flexShrink: 0, paddingTop: 2 }}>
@@ -41,7 +52,6 @@ function ResponseButtons({
           na:   { activeBg: 'var(--color-text-3)' },
         }
         const c = colors[val]
-        const labels: Record<string, string> = { pass: 'Y', fail: 'N', na: 'N/A' }
 
         return (
           <button
@@ -61,10 +71,58 @@ function ResponseButtons({
               transition: 'background 0.1s, color 0.1s',
             }}
           >
-            {labels[val]}
+            {responseLabels[val]}
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/** Subtle muted CFR-citation suffix rendered next to an item's label. Civilian (Part 139) only. */
+function ItemCitation({ citation }: { citation?: string }) {
+  if (!citation) return null
+  return (
+    <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}> · {citation}</span>
+  )
+}
+
+/** Collapsed-by-default inspector-guidance disclosure. Civilian (Part 139) only. */
+function GuidanceDisclosure({ guidance }: { guidance?: string }) {
+  const [open, setOpen] = useState(false)
+
+  if (!guidance) return null
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          color: 'var(--color-cyan)',
+          fontSize: 'var(--fs-xs)',
+          fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        {open ? '▾ Guidance' : '▸ Guidance'}
+      </button>
+      {open && (
+        <div style={{
+          fontSize: 'var(--fs-sm)',
+          color: 'var(--color-text-2)',
+          marginTop: 6,
+          padding: '10px 14px',
+          background: 'var(--color-bg-sunken)',
+          borderRadius: 6,
+          lineHeight: 1.5,
+        }}>
+          {guidance}
+        </div>
+      )}
     </div>
   )
 }
@@ -82,6 +140,9 @@ export function AcsiItem({
   subFieldResponses,
   renderSubFieldChildren,
   isHeading,
+  responseLabels = DEFAULT_RESPONSE_LABELS,
+  citation,
+  guidance,
 }: AcsiItemProps) {
   const isEven = index % 2 === 0
 
@@ -150,7 +211,9 @@ export function AcsiItem({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.5, marginBottom: 8 }}>
                 {question}
+                <ItemCitation citation={citation} />
               </div>
+              <GuidanceDisclosure guidance={guidance} />
               {/* A/B/C sub-fields */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginLeft: 28 }}>
                 {ACSI_SUB_FIELD_LABELS.map(sf => {
@@ -174,7 +237,7 @@ export function AcsiItem({
                         }}>
                           {sf.label}
                         </div>
-                        <ResponseButtons id={subId} response={subResp} onSetResponse={onSetResponse} />
+                        <ResponseButtons id={subId} response={subResp} onSetResponse={onSetResponse} responseLabels={responseLabels} />
                       </div>
                       {subResp === 'fail' && renderSubFieldChildren?.(subId)}
                     </div>
@@ -227,9 +290,11 @@ export function AcsiItem({
           )}
           <div style={{ fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
             {question}
+            <ItemCitation citation={citation} />
           </div>
+          <GuidanceDisclosure guidance={guidance} />
         </div>
-        <ResponseButtons id={id} response={response} onSetResponse={onSetResponse} />
+        <ResponseButtons id={id} response={response} onSetResponse={onSetResponse} responseLabels={responseLabels} />
       </div>
       {response === 'fail' && children}
     </div>
