@@ -1,0 +1,56 @@
+import { describe, it, expect } from 'vitest'
+import {
+  PART139_CERT_SECTIONS,
+  sectionsForAirportType,
+  sectionMetaById,
+} from '@/lib/part139-cert-checklist'
+import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
+
+describe('PART139_CERT_SECTIONS shape', () => {
+  it('has the 22 Form 5280-4 sections with p139- ids', () => {
+    expect(PART139_CERT_SECTIONS).toHaveLength(22)
+    for (const s of PART139_CERT_SECTIONS) {
+      expect(s.id).toMatch(/^p139-/)
+      expect(s.title.length).toBeGreaterThan(0)
+      expect(s.reference.length).toBeGreaterThan(0)
+      expect(s.items.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('every answerable item has a non-empty label and a CFR citation', () => {
+    for (const s of PART139_CERT_SECTIONS) {
+      for (const it of s.items) {
+        if (it.isHeading) continue
+        expect(it.question.length, `${it.id} label`).toBeGreaterThan(0)
+        expect(it.citation, `${it.id} citation`).toMatch(/§139\./)
+      }
+    }
+  })
+
+  it('has ~123 answerable items total', () => {
+    const n = PART139_CERT_SECTIONS
+      .flatMap(s => s.items).filter(i => !i.isHeading).length
+    expect(n).toBeGreaterThanOrEqual(118)
+    expect(n).toBeLessThanOrEqual(128)
+  })
+
+  it('uses no section_id that collides with the USAF array', () => {
+    const usaf = new Set(ACSI_CHECKLIST_SECTIONS.map(s => s.id))
+    for (const s of PART139_CERT_SECTIONS) expect(usaf.has(s.id)).toBe(false)
+  })
+})
+
+describe('sectionsForAirportType', () => {
+  it('returns the Part 139 array for faa_part139, USAF array otherwise', () => {
+    expect(sectionsForAirportType('faa_part139')).toBe(PART139_CERT_SECTIONS)
+    expect(sectionsForAirportType('usaf')).toBe(ACSI_CHECKLIST_SECTIONS)
+  })
+})
+
+describe('sectionMetaById', () => {
+  it('resolves ids from both namespaces and returns undefined for junk', () => {
+    expect(sectionMetaById('p139-paved')?.title).toBe('Paved Areas')
+    expect(sectionMetaById('acsi-1')?.number).toBe(1)
+    expect(sectionMetaById('nope')).toBeUndefined()
+  })
+})
