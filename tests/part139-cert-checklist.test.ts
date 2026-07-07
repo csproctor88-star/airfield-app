@@ -5,6 +5,7 @@ import {
   sectionMetaById,
 } from '@/lib/part139-cert-checklist'
 import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
+import { acsiDraftToItems, createNewAcsiDraft } from '@/lib/acsi-draft'
 
 describe('PART139_CERT_SECTIONS shape', () => {
   it('has the 22 Form 5280-4 sections with p139- ids', () => {
@@ -52,5 +53,30 @@ describe('sectionMetaById', () => {
     expect(sectionMetaById('p139-paved')?.title).toBe('Paved Areas')
     expect(sectionMetaById('acsi-1')?.number).toBe(1)
     expect(sectionMetaById('nope')).toBeUndefined()
+  })
+})
+
+describe('acsiDraftToItems with the civilian array', () => {
+  it('emits civilian items and counts S/U/N-A via pass/fail/na', () => {
+    const draft = createNewAcsiDraft('faa_part139')
+    draft.responses = { 'rec.1': 'pass', 'rec.2': 'fail' }
+    draft.discrepancies = { 'rec.2': [{ comment: 'x', work_order: '', project_number: '',
+      estimated_cost: '', estimated_completion: '', risk_control_measure: '',
+      photo_ids: [], areas: [], latitude: null, longitude: null, pins: [] }] }
+    const { items, passed, failed } = acsiDraftToItems(draft, PART139_CERT_SECTIONS)
+    expect(items.find(i => i.item_number === 'rec.1')?.response).toBe('pass')
+    expect(items.find(i => i.item_number === 'rec.2')?.discrepancies?.length).toBe(1)
+    expect(passed).toBe(1); expect(failed).toBe(1)
+  })
+})
+
+describe('createNewAcsiDraft', () => {
+  it('seeds civilian team + no signatures for faa_part139', () => {
+    const d = createNewAcsiDraft('faa_part139')
+    expect(d.team[0].role).toBe('ops')
+    expect(d.signatures).toHaveLength(0)
+  })
+  it('seeds the military team by default', () => {
+    expect(createNewAcsiDraft().team[0].role).toBe('afm')
   })
 })

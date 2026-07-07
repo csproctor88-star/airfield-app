@@ -2,7 +2,9 @@
 // Survives page refreshes until explicitly filed or cleared
 
 import { ACSI_CHECKLIST_SECTIONS, ACSI_SUB_FIELD_LABELS } from '@/lib/constants'
+import type { AcsiChecklistSection } from '@/lib/constants'
 import type { AcsiItem, AcsiItemResponse, AcsiDiscrepancyDetail, AcsiTeamMember, AcsiSignatureBlock, AcsiDraftData } from '@/lib/supabase/types'
+import type { AirportType } from '@/lib/airport-mode'
 
 const DRAFT_KEY_PREFIX = 'acsi_inspection_draft'
 
@@ -21,21 +23,28 @@ function getDraftKey(baseId?: string): string {
   return baseId ? `${DRAFT_KEY_PREFIX}_${baseId}` : DRAFT_KEY_PREFIX
 }
 
-export function createNewAcsiDraft(): AcsiDraftData {
+export function createNewAcsiDraft(mode?: AirportType): AcsiDraftData {
+  const isFaa = mode === 'faa_part139'
   return {
     responses: {},
     comments: {},
     discrepancies: {},
-    team: [
-      { id: crypto.randomUUID(), role: 'afm', name: '', rank: '', title: 'Airfield Manager', signature_required: true },
-      { id: crypto.randomUUID(), role: 'ce', name: '', rank: '', title: 'CE Representative', signature_required: true },
-      { id: crypto.randomUUID(), role: 'safety', name: '', rank: '', title: 'Safety', signature_required: true },
-    ],
-    signatures: [
-      { label: 'OG/CC', organization: '', name: '', rank: '', title: '' },
-      { label: 'MSG/CC', organization: '', name: '', rank: '', title: '' },
-      { label: 'WG/CC', organization: '', name: '', rank: '', title: '' },
-    ],
+    team: isFaa
+      ? [
+          { id: crypto.randomUUID(), role: 'ops', name: '', rank: '', title: 'Airport Operations', signature_required: true },
+        ]
+      : [
+          { id: crypto.randomUUID(), role: 'afm', name: '', rank: '', title: 'Airfield Manager', signature_required: true },
+          { id: crypto.randomUUID(), role: 'ce', name: '', rank: '', title: 'CE Representative', signature_required: true },
+          { id: crypto.randomUUID(), role: 'safety', name: '', rank: '', title: 'Safety', signature_required: true },
+        ],
+    signatures: isFaa
+      ? []
+      : [
+          { label: 'OG/CC', organization: '', name: '', rank: '', title: '' },
+          { label: 'MSG/CC', organization: '', name: '', rank: '', title: '' },
+          { label: 'WG/CC', organization: '', name: '', rank: '', title: '' },
+        ],
     notes: '',
     collapsedSections: {},
     localItems: [],
@@ -70,6 +79,7 @@ export function clearAcsiDraft(baseId?: string | null): void {
 /** Build AcsiItem[] from draft state. Returns items array + counts. */
 export function acsiDraftToItems(
   draft: AcsiDraftData,
+  sections: AcsiChecklistSection[] = ACSI_CHECKLIST_SECTIONS,
 ): { items: AcsiItem[]; passed: number; failed: number; na: number; total: number } {
   const items: AcsiItem[] = []
 
@@ -90,7 +100,7 @@ export function acsiDraftToItems(
     }
   }
 
-  for (const section of ACSI_CHECKLIST_SECTIONS) {
+  for (const section of sections) {
     for (const item of section.items) {
       // Skip non-answerable headings
       if (item.isHeading) continue
