@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { ACSI_STATUS_CONFIG, ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
-import { PART139_CERT_SECTIONS } from '@/lib/part139-cert-checklist'
+import { PART139_CERT_SECTIONS, acsiItemDisplayNumber } from '@/lib/part139-cert-checklist'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspection, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
@@ -393,7 +393,7 @@ export default function AcsiDetailPage() {
                             : 'color-mix(in srgb, var(--color-text-1) 6%, transparent)',
                       }}>
                         <div style={{ minWidth: 48, fontSize: 'var(--fs-base)', fontWeight: 700, color: 'var(--color-text-3)' }}>
-                          {item.item_number}
+                          {acsiItemDisplayNumber(section, item.item_number)}
                         </div>
                         <div style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
                           {item.question}

@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { ACSI_SUB_FIELD_LABELS, PART139_TEAM_ROLES, ACSI_TEAM_ROLES } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirportType } from '@/lib/airport-mode'
-import { sectionsForAirportType } from '@/lib/part139-cert-checklist'
+import { sectionsForAirportType, acsiItemDisplayNumber } from '@/lib/part139-cert-checklist'
 import { createClient } from '@/lib/supabase/client'
 import {
   saveAcsiDraft,
@@ -682,7 +682,7 @@ export default function AcsiFormPage() {
                   <AcsiItem
                     key={item.id}
                     id={item.id}
-                    itemNumber={item.id}
+                    itemNumber={acsiItemDisplayNumber(section, item.id)}
                     question={item.question}
                     subsection={showSubsection ? item.subsection : undefined}
                     response={draft.responses[item.id] ?? null}

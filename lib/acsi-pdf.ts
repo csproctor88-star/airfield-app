@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
-import { PART139_CERT_SECTIONS } from '@/lib/part139-cert-checklist'
+import { PART139_CERT_SECTIONS, acsiItemDisplayNumber } from '@/lib/part139-cert-checklist'
 import { formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
@@ -328,7 +328,7 @@ export async function generateAcsiPdf(
           if (disc.comment) remarkParts.push(disc.comment)
           if (disc.risk_control_measure) remarkParts.push(`Corrective action: ${disc.risk_control_measure}`)
         }
-        const condition = item.item_number ? `${item.item_number}.  ${item.question}` : item.question
+        const condition = item.item_number ? `${acsiItemDisplayNumber(section, item.item_number)}.  ${item.question}` : item.question
         return [
           condition,
           item.response === 'pass' ? 'X' : '',

@@ -3,6 +3,7 @@ import {
   PART139_CERT_SECTIONS,
   sectionsForAirportType,
   sectionMetaById,
+  acsiItemDisplayNumber,
 } from '@/lib/part139-cert-checklist'
 import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import { acsiDraftToItems, createNewAcsiDraft } from '@/lib/acsi-draft'
@@ -53,6 +54,27 @@ describe('sectionMetaById', () => {
     expect(sectionMetaById('p139-paved')?.title).toBe('Paved Areas')
     expect(sectionMetaById('acsi-1')?.number).toBe(1)
     expect(sectionMetaById('nope')).toBeUndefined()
+  })
+})
+
+describe('acsiItemDisplayNumber', () => {
+  const navaids = PART139_CERT_SECTIONS.find(s => s.id === 'p139-navaids')!
+  const usaf1 = ACSI_CHECKLIST_SECTIONS.find(s => s.id === 'acsi-1')!
+
+  it('section-qualifies a Part 139 item, dropping the section-key prefix', () => {
+    expect(navaids.number).toBe(17)
+    expect(acsiItemDisplayNumber(navaids, 'navaids.1')).toBe('17.1')
+    expect(acsiItemDisplayNumber(navaids, 'navaids.3')).toBe('17.3')
+  })
+
+  it('passes a USAF ACSI item number through unchanged', () => {
+    expect(acsiItemDisplayNumber(usaf1, '1.1')).toBe('1.1')
+    expect(acsiItemDisplayNumber(usaf1, '3.2.5')).toBe('3.2.5')
+  })
+
+  it('returns an empty string for a missing item number', () => {
+    expect(acsiItemDisplayNumber(navaids, null)).toBe('')
+    expect(acsiItemDisplayNumber(navaids, undefined)).toBe('')
   })
 })
 

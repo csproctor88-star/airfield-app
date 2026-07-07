@@ -978,3 +978,20 @@ export function sectionsForAirportType(t: AirportType): AcsiChecklistSection[] {
 export function sectionMetaById(sectionId: string): AcsiChecklistSection | undefined {
   return [...ACSI_CHECKLIST_SECTIONS, ...PART139_CERT_SECTIONS].find(s => s.id === sectionId)
 }
+
+/**
+ * Display label for an audit item's number.
+ *
+ * USAF ACSI item ids are already hierarchical numbers (e.g. '3.2.5') and show
+ * as-is. Part 139 item ids are `{sectionKey}.{n}` (e.g. 'navaids.1'), where the
+ * section key is a word that shouldn't surface in the UI — strip it and qualify
+ * the item with its section number so the label reads '17.1'.
+ *
+ * Keyed on the section id (`p139-*` vs `acsi-*`), not the base's live mode, so a
+ * historical USAF record stays correct even if its base later flips airport_type.
+ */
+export function acsiItemDisplayNumber(section: AcsiChecklistSection, itemId: string | null | undefined): string {
+  if (!itemId || !section.id.startsWith('p139-')) return itemId ?? ''
+  const suffix = itemId.split('.').pop() || itemId
+  return `${section.number}.${suffix}`
+}
