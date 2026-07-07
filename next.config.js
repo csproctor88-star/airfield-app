@@ -241,7 +241,11 @@ const nextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.mapbox.com https://*.tiles.mapbox.com https://server.arcgisonline.com https://api.open-meteo.com",
               "worker-src 'self' blob:",
-              "frame-src 'self' https:",
+              // blob: lets client-generated PDFs (jsPDF `doc.output('blob')` object
+              // URLs) preview inline in an <iframe> — the daily-review sign modal,
+              // the PDF Library, and the Regulation viewer. Without it the enforcing
+              // CSP blocks the frame ('self'/https: don't match the blob: scheme).
+              "frame-src 'self' https: blob:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "object-src 'none'",
