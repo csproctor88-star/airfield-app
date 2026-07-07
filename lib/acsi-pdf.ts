@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
+import { PART139_CERT_SECTIONS } from '@/lib/part139-cert-checklist'
 import { formatZuluDateTime, compressImageForPdf } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiPhotos } from '@/lib/supabase/acsi-inspections'
@@ -201,33 +202,66 @@ export async function generateAcsiPdf(
   y += 8
 
   // ── Info box ──
-  const infoBoxH = 26
-  doc.setDrawColor(200)
-  doc.setFillColor(248, 248, 248)
-  doc.roundedRect(margin, y, contentWidth, infoBoxH, 2, 2, 'FD')
-  const ic1 = margin + 4
-  const ic2 = margin + contentWidth / 3
-  const ic3 = margin + (contentWidth * 2) / 3
+  if (isFaa) {
+    // FAA Form 5280-4 cover-sheet fields — only those present on the record
+    // are shown (civilian drafts may leave ARFF index / class / inspector
+    // unset until the cover sheet is filled in).
+    const faaFields: { label: string; value: string }[] = []
+    if (inspection.airfield_name) faaFields.push({ label: 'Airport Name:', value: inspection.airfield_name })
+    if (inspection.inspection_date) faaFields.push({ label: 'Inspection Date(s):', value: inspection.inspection_date })
+    if (inspection.arff_index) faaFields.push({ label: 'Current ARFF Index:', value: inspection.arff_index })
+    if (inspection.airport_class) faaFields.push({ label: 'Airport Classification:', value: inspection.airport_class })
+    if (inspection.inspector) faaFields.push({ label: 'Inspector:', value: inspection.inspector })
 
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  doc.text('Airfield:', ic1, y + 5)
-  doc.text('Inspection Date:', ic2, y + 5)
-  doc.text('Year:', ic3, y + 5)
-  doc.setFontSize(9)
-  doc.setTextColor(0)
-  doc.text(inspection.airfield_name || '—', ic1, y + 11)
-  doc.text(inspection.inspection_date || '—', ic2, y + 11)
-  doc.text(String(inspection.fiscal_year || '—'), ic3, y + 11)
-  doc.setFontSize(7)
-  doc.setTextColor(120)
-  doc.text('Status:', ic1, y + 17)
-  doc.text('Inspector:', ic2, y + 17)
-  doc.setFontSize(9)
-  doc.setTextColor(0)
-  doc.text(inspection.status.toUpperCase(), ic1, y + 23)
-  doc.text(inspection.inspector_name || '—', ic2, y + 23)
-  y += infoBoxH + 6
+    if (faaFields.length > 0) {
+      const cols = 3
+      const rows = Math.ceil(faaFields.length / cols)
+      const boxH = 14 + 12 * (rows - 1)
+      doc.setDrawColor(200)
+      doc.setFillColor(248, 248, 248)
+      doc.roundedRect(margin, y, contentWidth, boxH, 2, 2, 'FD')
+      faaFields.forEach((f, i) => {
+        const col = i % cols
+        const row = Math.floor(i / cols)
+        const fx = margin + 4 + col * (contentWidth / cols)
+        doc.setFontSize(7)
+        doc.setTextColor(120)
+        doc.text(f.label, fx, y + 5 + row * 12)
+        doc.setFontSize(9)
+        doc.setTextColor(0)
+        doc.text(f.value, fx, y + 11 + row * 12)
+      })
+      y += boxH + 6
+    }
+  } else {
+    const infoBoxH = 26
+    doc.setDrawColor(200)
+    doc.setFillColor(248, 248, 248)
+    doc.roundedRect(margin, y, contentWidth, infoBoxH, 2, 2, 'FD')
+    const ic1 = margin + 4
+    const ic2 = margin + contentWidth / 3
+    const ic3 = margin + (contentWidth * 2) / 3
+
+    doc.setFontSize(7)
+    doc.setTextColor(120)
+    doc.text('Airfield:', ic1, y + 5)
+    doc.text('Inspection Date:', ic2, y + 5)
+    doc.text('Year:', ic3, y + 5)
+    doc.setFontSize(9)
+    doc.setTextColor(0)
+    doc.text(inspection.airfield_name || '—', ic1, y + 11)
+    doc.text(inspection.inspection_date || '—', ic2, y + 11)
+    doc.text(String(inspection.fiscal_year || '—'), ic3, y + 11)
+    doc.setFontSize(7)
+    doc.setTextColor(120)
+    doc.text('Status:', ic1, y + 17)
+    doc.text('Inspector:', ic2, y + 17)
+    doc.setFontSize(9)
+    doc.setTextColor(0)
+    doc.text(inspection.status.toUpperCase(), ic1, y + 23)
+    doc.text(inspection.inspector_name || '—', ic2, y + 23)
+    y += infoBoxH + 6
+  }
 
   // ── KPI Summary ──
   sectionHeader('SUMMARY')
@@ -259,6 +293,87 @@ export async function generateAcsiPdf(
     if (r === 'na') return 'N/A'
     return '—'
   }
+
+  if (isFaa) {
+    // ── FAA Form 5280-4 style: Facility/Condition · S · U · N/A · Remarks ──
+    const colS = 11
+    const colU = 11
+    const colNA = 13
+    const colCondition = Math.round(contentWidth * 0.4)
+    const colRemarks = contentWidth - colCondition - colS - colU - colNA
+
+    for (const section of PART139_CERT_SECTIONS) {
+      const sectionItems = itemsBySection[section.id] || []
+      if (sectionItems.length === 0) continue
+
+      sectionHeader(`SECTION ${section.number} — ${section.title.toUpperCase()}`)
+
+      doc.setFontSize(8)
+      doc.setTextColor(80)
+      doc.text(section.reference, margin, y)
+      y += 4
+
+      const satCount = sectionItems.filter(i => i.response === 'pass').length
+      const unsatCount = sectionItems.filter(i => i.response === 'fail').length
+      const naCount = sectionItems.filter(i => i.response === 'na').length
+      doc.setFontSize(8)
+      doc.setTextColor(0)
+      doc.text(`S: ${satCount}   U: ${unsatCount}   N/A: ${naCount}   Total: ${sectionItems.length}`, margin, y)
+      y += 5
+
+      const tableBody: string[][] = sectionItems.map((item) => {
+        const discs = item.discrepancies?.length ? item.discrepancies : item.discrepancy ? [item.discrepancy] : []
+        const remarkParts: string[] = []
+        for (const disc of discs) {
+          if (disc.comment) remarkParts.push(disc.comment)
+          if (disc.risk_control_measure) remarkParts.push(`Corrective action: ${disc.risk_control_measure}`)
+        }
+        const condition = item.item_number ? `${item.item_number}.  ${item.question}` : item.question
+        return [
+          condition,
+          item.response === 'pass' ? 'X' : '',
+          item.response === 'fail' ? 'X' : '',
+          item.response === 'na' ? 'X' : '',
+          remarkParts.join('\n'),
+        ]
+      })
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Facility/Condition', 'S', 'U', 'N/A', 'Remarks']],
+        body: tableBody,
+        margin: { left: margin, right: margin, bottom: 18 },
+        rowPageBreak: 'avoid',
+        showHead: 'everyPage',
+        columnStyles: {
+          0: { cellWidth: colCondition },
+          1: { cellWidth: colS, halign: 'center', fontStyle: 'bold' },
+          2: { cellWidth: colU, halign: 'center', fontStyle: 'bold' },
+          3: { cellWidth: colNA, halign: 'center', fontStyle: 'bold' },
+          4: { cellWidth: colRemarks },
+        },
+        styles: { fontSize: 8, cellPadding: 2.5, lineColor: [220, 220, 220], lineWidth: 0.2 },
+        headStyles: { fillColor: [40, 40, 40], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 248, 248] },
+
+        didParseCell: (data) => {
+          if (data.section !== 'body') return
+          const item = sectionItems[data.row.index]
+          if (!item) return
+
+          if (item.response === 'fail') {
+            data.cell.styles.fillColor = [255, 235, 235]
+          }
+          if (data.column.index === 1 && String(data.cell.raw) === 'X') data.cell.styles.textColor = [16, 185, 129]
+          if (data.column.index === 2 && String(data.cell.raw) === 'X') data.cell.styles.textColor = [239, 68, 68]
+          if (data.column.index === 3 && String(data.cell.raw) === 'X') data.cell.styles.textColor = [107, 114, 128]
+        },
+      })
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      y = (doc as any).lastAutoTable.finalY + 8
+    }
+  } else {
 
   for (const section of ACSI_CHECKLIST_SECTIONS) {
     const sectionItems = itemsBySection[section.id] || []
@@ -496,6 +611,7 @@ export async function generateAcsiPdf(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     y = (doc as any).lastAutoTable.finalY + 8
   }
+  }
 
   // ── Inspection Team ──
   if (inspection.inspection_team && inspection.inspection_team.length > 0) {
@@ -579,8 +695,9 @@ export async function generateAcsiPdf(
     y += 4
   }
 
-  // ── Risk Management Certification ──
-  if (inspection.risk_cert_signatures && inspection.risk_cert_signatures.length > 0) {
+  // ── Risk Management Certification ── (USAF ORM cert only; civilian Form
+  // 5280-4 has no equivalent block in this generator)
+  if (!isFaa && inspection.risk_cert_signatures && inspection.risk_cert_signatures.length > 0) {
     sectionHeader('RISK MANAGEMENT CERTIFICATION')
 
     doc.setFontSize(8)
