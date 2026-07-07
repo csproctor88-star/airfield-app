@@ -956,3 +956,12 @@ export const ACSI_TEAM_ROLES = [
   { value: 'terps', label: 'TERPS', required: false },
   { value: 'other', label: 'Other', required: false },
 ] as const
+
+export const PART139_TEAM_ROLES = [
+  { value: 'ops',         label: 'Airport Operations',   required: true  },
+  { value: 'maintenance', label: 'Airfield Maintenance', required: false },
+  { value: 'arff',        label: 'ARFF',                 required: false },
+  { value: 'safety',      label: 'Safety / SMS',         required: false },
+  { value: 'wildlife',    label: 'Wildlife',             required: false },
+  { value: 'other',       label: 'Other',                required: false },
+] as const
