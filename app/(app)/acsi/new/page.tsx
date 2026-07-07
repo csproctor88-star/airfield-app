@@ -664,6 +664,7 @@ export default function AcsiFormPage() {
                   return { ...prev, responses }
                 })
               }}
+              responseLabels={responseLabels}
             >
               {section.items.map((item, idx) => {
                 const showSubsection = item.subsection && item.subsection !== lastSubsection

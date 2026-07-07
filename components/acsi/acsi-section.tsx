@@ -15,6 +15,7 @@ interface AcsiSectionProps {
   expanded: boolean
   onToggle: () => void
   onMarkAllPass?: () => void
+  responseLabels?: { pass: string; fail: string; na: string }
   children: React.ReactNode
 }
 
@@ -30,6 +31,7 @@ export function AcsiSection({
   expanded,
   onToggle,
   onMarkAllPass,
+  responseLabels = { pass: 'Y', fail: 'N', na: 'N/A' },
   children,
 }: AcsiSectionProps) {
   const answered = itemIds.filter(id => responses[id] != null).length
@@ -78,9 +80,9 @@ export function AcsiSection({
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontWeight: 600 }}>{passCount} Y</span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-red)', fontWeight: 600 }}>{failCount} N</span>
-          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>{naCount} NA</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-green)', fontWeight: 600 }}>{passCount} {responseLabels.pass}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-red)', fontWeight: 600 }}>{failCount} {responseLabels.fail}</span>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 600 }}>{naCount} {responseLabels.na}</span>
           <span style={{
             fontSize: 'var(--fs-sm)',
             fontWeight: 600,
@@ -125,7 +127,7 @@ export function AcsiSection({
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                Mark All Y
+                Mark All {responseLabels.pass}
               </button>
             </div>
           )}
