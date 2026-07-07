@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { ACSI_STATUS_CONFIG, ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
+import { PART139_CERT_SECTIONS } from '@/lib/part139-cert-checklist'
 import { DEMO_ACSI_INSPECTIONS } from '@/lib/demo-data'
 import { createClient } from '@/lib/supabase/client'
 import { fetchAcsiInspection, deleteAcsiInspection, reopenAcsiInspection } from '@/lib/supabase/acsi-inspections'
@@ -31,6 +32,7 @@ export default function AcsiDetailPage() {
   const [usingDemo, setUsingDemo] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  const [expandedGuidance, setExpandedGuidance] = useState<Record<string, boolean>>({})
   const [actionLoading, setActionLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [emailModalOpen, setEmailModalOpen] = useState(false)
@@ -94,6 +96,12 @@ export default function AcsiDetailPage() {
   const computedTotal = computedPassed + computedFailed + computedNa
   const pct = insp.total_items > 0 ? Math.round((computedTotal / insp.total_items) * 100) : 0
 
+  // Derive mode from the RECORD itself (not just the current installation) so a
+  // filed record still renders correctly if the base's airport_type later changes.
+  const isFaa = (insp.items || []).some(i => (i.section_id || '').startsWith('p139-'))
+  const sections = isFaa ? PART139_CERT_SECTIONS : ACSI_CHECKLIST_SECTIONS
+  const responseLabels = isFaa ? { pass: 'S', fail: 'U', na: 'N/A' } : { pass: 'Y', fail: 'N', na: 'N/A' }
+
   // Group items by section
   const itemsBySection: Record<string, AcsiItem[]> = {}
   for (const item of (insp.items || [])) {
@@ -104,6 +112,10 @@ export default function AcsiDetailPage() {
 
   const toggleSection = (id: string) => {
     setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const toggleGuidance = (id: string) => {
+    setExpandedGuidance(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
   const handleReopen = async () => {
@@ -177,9 +189,9 @@ export default function AcsiDetailPage() {
   }
 
   const responseBadge = (response: string | null) => {
-    if (response === 'pass') return <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>Y</span>
-    if (response === 'fail') return <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>N</span>
-    if (response === 'na') return <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>N/A</span>
+    if (response === 'pass') return <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{responseLabels.pass}</span>
+    if (response === 'fail') return <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{responseLabels.fail}</span>
+    if (response === 'na') return <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{responseLabels.na}</span>
     return <span style={{ color: 'var(--color-text-3)' }}>—</span>
   }
 
@@ -210,6 +222,15 @@ export default function AcsiDetailPage() {
           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
             {insp.airfield_name} — {insp.fiscal_year} — {insp.inspection_date}
           </div>
+          {isFaa && (insp.arff_index || insp.airport_class || insp.inspector) && (
+            <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4 }}>
+              {[
+                insp.arff_index ? `ARFF Index: ${insp.arff_index}` : null,
+                insp.airport_class ? `Airport Class: ${insp.airport_class}` : null,
+                insp.inspector ? `Inspector: ${insp.inspector}` : null,
+              ].filter(Boolean).join(' — ')}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isFiled && (
@@ -309,7 +330,7 @@ export default function AcsiDetailPage() {
 
       {/* Checklist Sections */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-        {ACSI_CHECKLIST_SECTIONS.map(section => {
+        {sections.map(section => {
           const sectionItems = itemsBySection[section.id] || []
           const expanded = expandedSections[section.id] || false
           const passCount = sectionItems.filter(i => i.response === 'pass').length
@@ -346,16 +367,20 @@ export default function AcsiDetailPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, fontSize: 'var(--fs-xs)' }}>
-                  <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{passCount} Y</span>
-                  <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{failCount} N</span>
-                  <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{naCount} NA</span>
+                  <span style={{ color: 'var(--color-green)', fontWeight: 600 }}>{passCount} {responseLabels.pass}</span>
+                  <span style={{ color: 'var(--color-red)', fontWeight: 600 }}>{failCount} {responseLabels.fail}</span>
+                  <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>{naCount} {responseLabels.na}</span>
                   <span style={{ color: 'var(--color-text-3)', fontWeight: 600 }}>({answered}/{sectionItems.length})</span>
                 </div>
               </button>
 
               {expanded && sectionItems.length > 0 && (
                 <div style={{ padding: '8px 16px 12px' }}>
-                  {sectionItems.map((item, idx) => (
+                  {sectionItems.map((item, idx) => {
+                    const itemDef = section.items.find(ci => ci.id === item.item_number)
+                    const citation = itemDef?.citation
+                    const guidance = itemDef?.guidance
+                    return (
                     <div key={item.id}>
                       <div style={{
                         display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -372,6 +397,31 @@ export default function AcsiDetailPage() {
                         </div>
                         <div style={{ flex: 1, fontSize: 'var(--fs-md)', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
                           {item.question}
+                          {citation && (
+                            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)' }}> · {citation}</span>
+                          )}
+                          {guidance && (
+                            <div style={{ marginTop: 6 }}>
+                              <button
+                                type="button"
+                                onClick={() => toggleGuidance(item.id)}
+                                style={{
+                                  background: 'none', border: 'none', padding: 0,
+                                  color: 'var(--color-cyan)', fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer',
+                                }}
+                              >
+                                {expandedGuidance[item.id] ? '▾ Guidance' : '▸ Guidance'}
+                              </button>
+                              {expandedGuidance[item.id] && (
+                                <div style={{
+                                  fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 6,
+                                  padding: '10px 14px', background: 'var(--color-bg-sunken)', borderRadius: 6, lineHeight: 1.5,
+                                }}>
+                                  {guidance}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div style={{ minWidth: 36, textAlign: 'center' }}>
                           {responseBadge(item.response)}
@@ -425,7 +475,8 @@ export default function AcsiDetailPage() {
                         ))
                       })()}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
 
@@ -458,8 +509,9 @@ export default function AcsiDetailPage() {
         </div>
       )}
 
-      {/* Risk Management Certification */}
-      {insp.risk_cert_signatures && insp.risk_cert_signatures.length > 0 && (
+      {/* Risk Management Certification — USAF ACSI only; the civilian Part 139
+          cert-audit has no risk-cert step. */}
+      {!isFaa && insp.risk_cert_signatures && insp.risk_cert_signatures.length > 0 && (
         <div style={{
           marginBottom: 20, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)',
           padding: 16, background: 'var(--color-bg-surface)',
