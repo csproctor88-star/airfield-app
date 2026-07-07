@@ -108,3 +108,17 @@ describe('Part 139 records/personnel/manual guidance (Phase 3.2)', () => {
     expect(missing).toEqual([])
   })
 })
+
+describe('Part 139 programs guidance A (Phase 3.3a)', () => {
+  const items = PART139_CERT_SECTIONS.flatMap(s => s.items)
+  it('AEP full-scale-exercise item references the 36-month/triennial cycle', () => {
+    const ex = items.find(i => i.citation === '§139.325(h)')
+    expect(ex?.guidance ?? '').toMatch(/36|trienni/i)
+  })
+  it('every item in snow/hazmat/aep has non-empty guidance', () => {
+    const secs = ['p139-snow','p139-hazmat','p139-aep']
+    const missing = PART139_CERT_SECTIONS.filter(s => secs.includes(s.id))
+      .flatMap(s => s.items).filter(i => !(i.guidance && i.guidance.trim().length > 0)).map(i => i.id)
+    expect(missing).toEqual([])
+  })
+})

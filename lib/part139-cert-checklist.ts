@@ -330,18 +330,49 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 9: Snow and Ice Control ──
+  // src: 5280.5D §4.15
   {
     id: 'p139-snow',
     number: 9,
     title: 'Snow and Ice Control',
     reference: '14 CFR §139.313',
     items: [
-      { id: 'snow.1', question: 'Prepare/Maint./Execute Plan', citation: '§139.313(a)' },
-      { id: 'snow.2', question: 'Plan Addresses Prompt Removal or Control', citation: '§139.313(b)(1)' },
-      { id: 'snow.3', question: 'Positioning Snow for Clearance', citation: '§139.313(b)(2)' },
-      { id: 'snow.4', question: 'Use of Approved Materials', citation: '§139.313(b)(3)' },
-      { id: 'snow.5', question: 'Timely Commencement', citation: '§139.313(b)(4)' },
-      { id: 'snow.6', question: 'Prompt Notification to Users', citation: '§139.313(b)(5)' },
+      {
+        id: 'snow.1',
+        question: 'Prepare/Maint./Execute Plan',
+        citation: '§139.313(a)',
+        guidance: 'The certificate holder of an airport where snow and icing conditions occur is responsible for preparing, maintaining, and executing a Snow and Ice Control Plan (SICP) approved by the Administrator; the SICP is incorporated into the approved ACM, and compliance is contingent upon the prompt execution of the plan. The ACSI also considers the training and record-keeping procedures for the snow crew, and should take advantage of any opportunity to inspect during winter months, since the best way to evaluate an SICP is by observing actual snow and ice removal operations.',
+      },
+      {
+        id: 'snow.2',
+        question: 'Plan Addresses Prompt Removal or Control',
+        citation: '§139.313(b)(1)',
+        guidance: 'Specific requirements for the plan are detailed in §139.313(b)(1) through (5), with additional guidance in AC 150/5200-30, Airport Winter Safety and Operations. For prompt removal or control, the ACSI checks whether the airport is operating in accordance with the SICP, whether staffing is adequate to successfully support the SICP, and looks for adequate snow crew response to deteriorating conditions or braking action reports of POOR or NIL.',
+      },
+      {
+        id: 'snow.3',
+        question: 'Positioning Snow for Clearance',
+        citation: '§139.313(b)(2)',
+        guidance: "The ACSI checks whether the airport's clearing priorities are defined, whether the airport has sufficient equipment to meet those clearing priorities per the ACM, and whether the equipment is operational and properly maintained.",
+      },
+      {
+        id: 'snow.4',
+        question: 'Use of Approved Materials',
+        citation: '§139.313(b)(3)',
+        guidance: 'The ACSI checks whether the airport has a sufficient stock supply and the correct types of de-icing agents, whether they are stored properly, and whether the airport is appropriately applying the agents according to wind, precipitation, temperature, and weather forecasts.',
+      },
+      {
+        id: 'snow.5',
+        question: 'Timely Commencement',
+        citation: '§139.313(b)(4)',
+        guidance: "The Order gives no test specific to timely commencement distinct from (b)(1); compliance is contingent upon the prompt execution of the plan, and the ACSI's evidence remains adequate snow crew response to deteriorating conditions or braking action reports of POOR or NIL.",
+      },
+      {
+        id: 'snow.6',
+        question: 'Prompt Notification to Users',
+        citation: '§139.313(b)(5)',
+        guidance: 'The ACSI checks whether condition reporting is adequate, reviewing the reporting from the most recent snow event; the airport must also have provisions for a Snow Control Committee and Snow Control Desk, with good communication among the snow crews, the snow desk, and Air Traffic Control.',
+      },
     ],
   },
   // ── Section 10: ARFF Operations ──
@@ -370,21 +401,68 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 11: Hazardous Materials ──
+  // src: 5280.5D §4.19 (+ §4.7.5 Fuel Inspections procedure for (b)-(d) detail;
+  // Appendix F Inspection Confirmation Letter for (f)/(g) records)
   {
     id: 'p139-hazmat',
     number: 11,
     title: 'Hazardous Materials',
     reference: '14 CFR §139.321',
     items: [
-      { id: 'hazmat.1', question: 'Procedures for Hazardous Substances and Materials', citation: '§139.321(a)' },
-      { id: 'hazmat.2', question: 'Acceptable Fire Safety Standards Established', citation: '§139.321(b)' },
-      { id: 'hazmat.3', question: 'Compliance to Fire Safety Standards', citation: '§139.321(c)' },
-      { id: 'hazmat.4', question: 'Inspection of Fuel Facilities every 3 CCM', citation: '§139.321(d)' },
-      { id: 'hazmat.5', question: 'Record of Inspection for 12 CCM', citation: '§139.321(d)' },
-      { id: 'hazmat.6', question: 'Fueling Agent Supervisor Training Every 24 CCM', citation: '§139.321(e)(1)' },
-      { id: 'hazmat.7', question: 'Fueling Agent On-the-Job Training Every 24 CCM', citation: '§139.321(e)(2)' },
-      { id: 'hazmat.8', question: 'Written Confirmation Every 12 CCM that Training Accomplished', citation: '§139.321(f)' },
-      { id: 'hazmat.9', question: 'Require Immediate Corrective Action/Notify FAA of Noncompliance', citation: '§139.321(g)' },
+      {
+        id: 'hazmat.1',
+        question: 'Procedures for Hazardous Substances and Materials',
+        citation: '§139.321(a)',
+        guidance: 'Each certificate holder who acts as a cargo handling agent must establish and maintain procedures for the protection of persons and property on the airport during the handling and storing of any material regulated by the Hazardous Material Regulations (49 CFR parts 171 through 180) that is, or is intended to be, transported by air.',
+      },
+      {
+        id: 'hazmat.2',
+        question: 'Acceptable Fire Safety Standards Established',
+        citation: '§139.321(b)',
+        guidance: "The ACSI checks the certificate holder's standards for protecting against fire and explosions in storing, dispensing, and otherwise handling fuel on the airport (or its adopted fire code); these standards must address facilities, procedures, and personnel training according to the seven items listed in §139.321(b).",
+      },
+      {
+        id: 'hazmat.3',
+        question: 'Compliance to Fire Safety Standards',
+        citation: '§139.321(c)',
+        guidance: "Section 139.321(c) requires the certificate holder to exercise reasonable surveillance on all fueling activities on the airport, including GA self-fuelers such as corporate or large-aircraft operators and private small-aircraft owners who perform their own refueling. The ACSI checks agents who handle fuel and fuel storage material for compliance with the applicable fire code (NFPA 407 or other code as adopted), inspecting a random sampling — or, at the ACSI's discretion, all — vehicles and hydrant carts, plus the safety and operation of designated fuel storage areas; fuel storage facilities off airport property and outside the airport operating area are not inspected.",
+      },
+      {
+        id: 'hazmat.4',
+        question: 'Inspection of Fuel Facilities every 3 CCM',
+        citation: '§139.321(d)',
+        guidance: "The ACSI checks the certificate holder's inspection records of fueling agents for timeliness, accuracy, and completeness, confirming the inspections are completed at a minimum every 3 consecutive calendar months.",
+      },
+      {
+        id: 'hazmat.5',
+        question: 'Record of Inspection for 12 CCM',
+        citation: '§139.321(d)',
+        guidance: 'Fueling-truck and fuel-storage-area inspection records must be maintained for 12 consecutive calendar months (§139.301(b)); the ACSI reviews these records for timeliness, accuracy, and completeness as part of its fuel-facility oversight.',
+      },
+      {
+        id: 'hazmat.6',
+        question: 'Fueling Agent Supervisor Training Every 24 CCM',
+        citation: '§139.321(e)(1)',
+        guidance: 'The ACSI must ensure at least one supervisor with each fueling agent has completed an acceptable fire safety course within the previous 24 consecutive calendar months, conducted by the airport with the local fire facility or drawn from the nationally acceptable training courses reviewed by AAS-300 and listed in the Addendum to AC 150/5230-4 (a locally developed course must be reviewed by the ACSI for acceptability). Prior to assuming a supervisory position, an individual must have completed initial training or be enrolled in an authorized supervisory aviation fuel-training course to be completed within 90 days, with recurrent training required at a minimum of every 24 consecutive calendar months.',
+      },
+      {
+        id: 'hazmat.7',
+        question: 'Fueling Agent On-the-Job Training Every 24 CCM',
+        citation: '§139.321(e)(2)',
+        guidance: 'Training records must document that all other employees who fuel aircraft, accept fuel shipments, or otherwise handle fuel have received at least initial on-the-job training in safe handling and, thereafter, recurrent training every 24 consecutive calendar months from the supervisor responsible for their fire safety training.',
+      },
+      {
+        id: 'hazmat.8',
+        question: 'Written Confirmation Every 12 CCM that Training Accomplished',
+        citation: '§139.321(f)',
+        guidance: 'Among the records the ACSI reviews at inspection is written confirmation from each fueling agent not operated by the airport that the required fuel training has been accomplished, along with documentation from each fueling agent that at least one supervisor has completed an Aviation Fuel Training Course in Fire Safety, including hands-on fire extinguisher training.',
+      },
+      {
+        id: 'hazmat.9',
+        question: 'Require Immediate Corrective Action/Notify FAA of Noncompliance',
+        citation: '§139.321(g)',
+        guidance: "The Order's Chapter 4 discussion of §139.321 concentrates on the ACSI's fueling-agent surveillance, inspection, and training oversight rather than detailing this sub-paragraph separately; the underlying requirement is that the certificate holder require immediate corrective action and notify the FAA when a fueling agent is found out of compliance with the fire safety standards.",
+      },
     ],
   },
   // ── Section 12: Traffic/Wind Indicators ──
@@ -410,23 +488,79 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 13: Airport Emergency Plan ──
+  // src: 5280.5D §4.21 (+ Appendix F Inspection Confirmation Letter for (g)(4) annual-review record)
   {
     id: 'p139-aep',
     number: 13,
     title: 'Airport Emergency Plan',
     reference: '14 CFR §139.325',
     items: [
-      { id: 'aep.1', question: 'Develop/Maintain Plan for Prompt Response/Sufficient Detail', citation: '§139.325(a)' },
-      { id: 'aep.2', question: 'Response Instructions — Aircraft/Bomb/Structure/Fuel/Natural/HazMat/Sabotage-Hijack/Power/Water', citation: '§139.325(b)' },
-      { id: 'aep.3', question: 'Must Address Medical/Transport/Hospital/Ambulance/Inventory/Injured/Crowds/Disabled Aircraft', citation: '§139.325(c)' },
-      { id: 'aep.4', question: 'Provide for Marshaling/Emergency Alarm/ATCT Coordination', citation: '§139.325(d)' },
-      { id: 'aep.5', question: 'Procedures for Notifying Agencies of Accident Location', citation: '§139.325(e)' },
-      { id: 'aep.6', question: 'Water Rescue to the Extent Practical', citation: '§139.325(f)' },
-      { id: 'aep.7', question: 'Coordinate & Develop Plan with Participating Agencies', citation: '§139.325(g)(1),(2)' },
-      { id: 'aep.8', question: 'Airport Personnel Properly Trained', citation: '§139.325(g)(3)' },
-      { id: 'aep.9', question: 'Review Plan every 12 CCM', citation: '§139.325(g)(4)' },
-      { id: 'aep.10', question: 'Full-Scale Exercise every 36 CCM for Class I', citation: '§139.325(h)' },
-      { id: 'aep.11', question: 'Consistent with Approved Security Program', citation: '§139.325(i)' },
+      {
+        id: 'aep.1',
+        question: 'Develop/Maintain Plan for Prompt Response/Sufficient Detail',
+        citation: '§139.325(a)',
+        guidance: 'The certificate holder is responsible for developing and maintaining a written document entitled the Airport Emergency Plan (AEP), intended to minimize the possibility and extent of personal injury and property damage on the airport in an emergency. The AEP should address and describe procedures for prompt response to the emergencies listed in §139.325(b).',
+      },
+      {
+        id: 'aep.2',
+        question: 'Response Instructions — Aircraft/Bomb/Structure/Fuel/Natural/HazMat/Sabotage-Hijack/Power/Water',
+        citation: '§139.325(b)',
+        guidance: 'The ACSI is responsible for determining whether the AEP addresses each of the emergencies and associated actions listed in §139.325(b), through a careful and thorough review of the plan against the specifics of the section; this review can be conducted administratively before the on-site inspection, with any questions or concerns addressed with the certificate holder once on site.',
+      },
+      {
+        id: 'aep.3',
+        question: 'Must Address Medical/Transport/Hospital/Ambulance/Inventory/Injured/Crowds/Disabled Aircraft',
+        citation: '§139.325(c)',
+        guidance: "The same review standard applies to §139.325(c): the ACSI determines whether the AEP addresses each of the required medical-response elements, again through careful review of the plan against the section's specifics to identify deficiencies or areas needing greater detail.",
+      },
+      {
+        id: 'aep.4',
+        question: 'Provide for Marshaling/Emergency Alarm/ATCT Coordination',
+        citation: '§139.325(d)',
+        guidance: 'The same review standard applies to §139.325(d): the ACSI determines whether the AEP addresses the required marshaling, emergency alarm, and ATCT-coordination provisions, following up with airport personnel on site on any questions the review raises.',
+      },
+      {
+        id: 'aep.5',
+        question: 'Procedures for Notifying Agencies of Accident Location',
+        citation: '§139.325(e)',
+        guidance: "The same review standard applies to §139.325(e): the ACSI determines whether the AEP addresses the required procedures for notifying agencies of the accident location, comparing the plan against the section's specifics for completeness.",
+      },
+      {
+        id: 'aep.6',
+        question: 'Water Rescue to the Extent Practical',
+        citation: '§139.325(f)',
+        guidance: "When addressing water rescue, if applicable, the certificate holder must identify any significant bodies of water or marsh lands adjacent to the airport under the approach/departure flight paths, out to the final approach fix on runways with published approaches and out to 2 miles on runways with visual approaches; a river counts as significant if it is one-quarter-mile wide and cannot be traversed by conventional land rescue vehicles, and detention ponds on airport property are included. All such bodies of water must be documented in the AEP. A certificate holder who cannot obtain cooperation from other jurisdictions for water rescue operations 'to the extent practicable' must document a reasonable attempt to obtain that cooperation, with the statement included in the AEP.",
+      },
+      {
+        id: 'aep.7',
+        question: 'Coordinate & Develop Plan with Participating Agencies',
+        citation: '§139.325(g)(1),(2)',
+        guidance: 'ACSIs should consider reviewing any Letters of Agreement, Memorandums of Understanding, and Memorandums of Agreement associated with the AEP to confirm they are current and still in effect, as evidence the plan was coordinated and developed with the participating agencies.',
+      },
+      {
+        id: 'aep.8',
+        question: 'Airport Personnel Properly Trained',
+        citation: '§139.325(g)(3)',
+        guidance: "ACSIs are encouraged to speak with airport personnel who maintain duties and responsibilities within the AEP to confirm training has been accomplished on the plan's details; personnel with plan responsibilities must be properly trained, with the training documented, to ensure they understand their role during an airport emergency.",
+      },
+      {
+        id: 'aep.9',
+        question: 'Review Plan every 12 CCM',
+        citation: '§139.325(g)(4)',
+        guidance: "The Order's Chapter 4 discussion of §139.325 does not break out the review cadence separately from the general AEP-compliance review; the Inspection Confirmation Letter (Appendix F) lists documentation of the annual review of the AEP among the records the certificate holder must have available for the inspection.",
+      },
+      {
+        id: 'aep.10',
+        question: 'Full-Scale Exercise every 36 CCM for Class I',
+        citation: '§139.325(h)',
+        guidance: 'Class I AOC certificate holders must hold a full-scale airport emergency plan exercise at least triennially, conducted within the calendar month it is due — e.g., a triennial held August 4, 2015 is next due by August 31, 2018. Special circumstances might necessitate schedule adjustments, but the certificate holder must notify the Regional Airports Division of any need to vary the schedule, supported by an acceptable justification. As funding and schedules allow, ACSIs should consider observing the triennial exercise for a hands-on confirmation of how effectively the AEP is executed and that responsible parties respond according to their duties.',
+      },
+      {
+        id: 'aep.11',
+        question: 'Consistent with Approved Security Program',
+        citation: '§139.325(i)',
+        guidance: "The Order's Chapter 4 discussion of §139.325 does not provide a separate test for consistency with the approved Airport Security Program beyond the general ACSI duty to ensure the certificate holder complies with each requirement outlined in the section, which includes keeping the AEP consistent with the airport's approved security program under §139.325(i).",
+      },
     ],
   },
   // ── Section 14: Self-Inspection Program ──
