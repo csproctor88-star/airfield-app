@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/lib/theme-context'
-import { PwaUpdateToast } from '@/components/pwa-update-toast'
 import './globals.css'
 
 // App typography pairing — IBM Plex Sans (UI) + IBM Plex Mono (operational
@@ -76,7 +75,11 @@ export default function RootLayout({
       <body className="font-sans" style={{ minHeight: '100dvh', background: '#0A0E16' }}>
         <ThemeProvider>
           {children}
-          <PwaUpdateToast />
+          {/* PwaUpdateToast (components/pwa-update-toast.tsx) is intentionally NOT
+              mounted: the "new version available" prompt was firing constantly and
+              intrusively, and the stale-bundle theory it was built on does not
+              explain the Google Maps question-mark markers (still reproducing after
+              refresh). Kept dormant — re-mount if we revisit the PWA-refresh angle. */}
           <Toaster
             position="top-center"
             richColors
