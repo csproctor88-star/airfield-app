@@ -150,3 +150,16 @@ describe('Part 139 obstructions/navaids/public/wildlife/construction guidance (P
     expect(missing).toEqual([])
   })
 })
+
+describe('Part 139 ARFF guidance + completion (Phase 4)', () => {
+  const items = PART139_CERT_SECTIONS.flatMap(s => s.items)
+  it('ARFF response-drill item carries the 3-minute/midpoint standard', () => {
+    const drill = items.find(i => (i.citation || '').includes('319(h)'))
+    expect(drill?.guidance ?? '').toMatch(/3[- ]?min|midpoint/i)
+  })
+  it('EVERY item in the whole audit now has non-empty guidance', () => {
+    const missing = PART139_CERT_SECTIONS.flatMap(s => s.items)
+      .filter(i => !(i.guidance && i.guidance.trim().length > 0)).map(i => i.id)
+    expect(missing).toEqual([])
+  })
+})
