@@ -7,9 +7,18 @@ interface AcsiTeamEditorProps {
   team: AcsiTeamMember[]
   onChange: (team: AcsiTeamMember[]) => void
   readOnly?: boolean
+  roles?: readonly { value: string; label: string; required?: boolean }[]
 }
 
-export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps) {
+export function AcsiTeamEditor({ team, onChange, readOnly, roles }: AcsiTeamEditorProps) {
+  // Mode-aware required-role labeling. Defaults reproduce the fixed
+  // USAF military roster (AFM / CE / Safety, 3 required members) when
+  // no `roles` prop is supplied, so the sole existing caller is unaffected.
+  const roleMap: Record<string, string> = roles
+    ? Object.fromEntries(roles.filter((r) => r.required).map((r) => [r.value, `${r.label} (Required)`]))
+    : { afm: 'Airfield Manager (Required)', ce: 'CE Representative (Required)', safety: 'Safety (Required)' }
+  const requiredCount = roles ? roles.filter((r) => r.required).length : 3
+
   const updateMember = (index: number, field: keyof AcsiTeamMember, value: string) => {
     const updated = [...team]
     updated[index] = { ...updated[index], [field]: value }
@@ -33,8 +42,8 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
   }
 
   const removeMember = (index: number) => {
-    // Don't allow removing the 3 required roles
-    if (index < 3) return
+    // Don't allow removing the required roles
+    if (index < requiredCount) return
     const updated = team.filter((_, i) => i !== index)
     onChange(updated)
   }
@@ -75,14 +84,9 @@ export function AcsiTeamEditor({ team, onChange, readOnly }: AcsiTeamEditorProps
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {team.map((member, i) => {
-          const isRequired = i < 3
-          const isFirstAdditional = i === 3
-          const roleLabels: Record<string, string> = {
-            afm: 'Airfield Manager (Required)',
-            ce: 'CE Representative (Required)',
-            safety: 'Safety (Required)',
-          }
-          const roleLabel = roleLabels[member.role] || `Additional Member ${i - 2}`
+          const isRequired = i < requiredCount
+          const isFirstAdditional = i === requiredCount
+          const roleLabel = roleMap[member.role] || `Additional Member ${i - requiredCount + 1}`
 
           return (
             <div key={member.id} style={{ display: 'contents' }}>
