@@ -321,6 +321,9 @@ export async function reopenAcsiInspection(id: string): Promise<{ data: AcsiInsp
     notes: insp.notes || '',
     collapsedSections: {},
     localItems: [],
+    arff_index: insp.arff_index ?? undefined,
+    airport_class: insp.airport_class ?? undefined,
+    inspector: insp.inspector ?? undefined,
   }
 
   const { data, error } = await supabase
