@@ -1,125 +1,118 @@
 # Session Handoff
 
 **Date:** 2026-07-07
-**Branch:** `main`. `airfield-app` has **21 new unpushed commits** (HEAD `7214192a`)
-— the **Part 139 certification-inspection readiness audit** built end-to-end this
-session via subagent-driven-development. **NOT pushed / NOT promoted** — owner owns
-that + must visually verify first (see Next tasks). `glidepath-site` unchanged/live.
-**Build:** `airfield-app` @ `7214192a`: tsc ✓ · lint 0 errors (2 pre-existing
-warnings in `lib/waiver-pdf.ts`, not this work) · `npm run test` **1127 passed /
-16 skipped** ✓ · `npm run build` ✓.
-**HEAD:** `airfield-app` `7214192a` (unpushed) · `glidepath-site` `3688a57`.
-**DB:** migration `2026070700_add_part139_cover_fields` **applied to the linked DB**
-(3 nullable cover columns on `acsi_inspections`).
-**Full task-by-task detail:** `.superpowers/sdd/progress.md` (the SDD ledger).
-Design/plan: `docs/superpowers/specs|plans/2026-07-06-part139-cert-inspection-audit-*`.
-
-This session spanned two arcs: (1) the **module roster expansion** (glidepath-site
-36 → 50 module pages) plus the supporting airfield-app changes to open ACSI to
-civilian mode and make it fully mode-aware; and (2) diagnosing and fixing an
-**airfield-app CI regression** the ACSI work introduced — a stale test that had
-been failing CI red on every commit since `050374df`, surfaced by an owner
-failure-email screenshot.
+**Branch:** `main`, **fully pushed and clean** (HEAD `d2d414e5`, CI run #27 green).
+This session built the **Part 139 certification-inspection readiness audit** end
+to end via subagent-driven-development, then pushed. **Not promoted** — owner owns
+promotion, and should visually verify the form/detail/PDF on a civilian base first.
+`glidepath-site` unchanged/live (`3688a57`).
+**Build:** `airfield-app` @ `d2d414e5`: tsc ✓ · lint 0 errors (2 pre-existing
+warnings in `lib/waiver-pdf.ts`, not this work) · `npx vitest run` **1127 passed /
+16 skipped** ✓ · `npm run build` ✓. **CI:** run #27 `d2d414e5` ✅ success.
+**HEAD:** `airfield-app` `d2d414e5` · `glidepath-site` `3688a57`.
+**DB:** migration `2026070700_add_part139_cover_fields` applied to the linked DB.
+**Task-by-task detail:** `.superpowers/sdd/progress.md`. Design/plan:
+`docs/superpowers/specs|plans/2026-07-06-part139-cert-inspection-audit-*`.
 
 ---
 
 ## What shipped this session
 
-### airfield-app CI restored to green (`0bf6dfbd`)
-Opening ACSI to civilian mode (`acsi.appliesTo: ['usaf','faa_part139']`) made
-`acsi` a dual-applicable module, but `tests/modules-config.test.ts` still listed
-it in its `USAF_ONLY` fixture. Four airport-gating assertions — `isModuleEnabled`,
-`moduleAppliesToAirport`, `modulesForAirport`, `getModulesByCategory`, each of
-which expects USAF-only modules to be *hidden* on civilian bases — failed. The
-airfield-app CI `verify` job runs a **test step** (`npm run test`), and this
-session had verified airfield-app with tsc + lint + build but **never ran
-vitest**, so CI went red on `050374df`, `7f9383bc`, `64e5796d`, and the
-`889669bb` handoff commit — four commits — before an owner CI-failure email
-(commit `889669b`, job `CI / verify`, 6 annotations) surfaced it.
+The civilian (`airport_type = 'faa_part139'`) `/acsi` module was repurposed from
+the USAF ACSI into an **annual Part 139 certification-inspection *readiness
+audit*** — a self-audit that mirrors the FAA's own annual certification inspection
+("prepare, don't perform"), so an airport can walk the same checks the FAA Airport
+Safety Inspector does before the visit. It reproduces **FAA Form 5280-4** (the
+inspector's Airport Certification/Safety Inspection Checklist). This is distinct
+from the daily self-inspection (§139.327 / AC 150/5200-18C), which `/checks`
+already covers — that distinction is *why* the first "civilian ACSI checklist
+swap" spec was superseded mid-brainstorm. Built in 6 review-gated phases, ~21
+feature commits, every task implemented + reviewed by fresh subagents. The USAF
+ACSI path is **verified byte-for-byte unchanged** throughout — everything branches
+on `getAirportType`.
 
-Fix re-categorizes `acsi` as shared: dropped from `USAF_ONLY`, added to
-`SHARED_SAMPLE`, and its `isModuleEnabled` case moved into the "dual-applicable
-modules surface in both modes" test. `scn` and `amtr` stay in `USAF_ONLY`, so
-the gating tests still guard real USAF-only behavior. **No product-code change**
-— the module already applied to both modes; only the tests hadn't caught up to
-the owner-approved change. Verified against the exact CI job order: tsc ✓ ·
-lint ✓ · vitest 1104/16-skip ✓ · build ✓; CI confirmed `0bf6dfbd` green.
+### Phase 1 — data foundation (`fc1481d8`..`e1f9b4cc`)
+`lib/part139-cert-checklist.ts` (new): `PART139_CERT_SECTIONS` — 22 sections / 123
+items transcribed verbatim from Form 5280-4, each item carrying its exact 14 CFR
+sub-paragraph in `citation`. `AcsiChecklistItem` gained optional `citation?` /
+`guidance?` (USAF array unaffected). `sectionsForAirportType()` selects the array
+by mode; `sectionMetaById()` resolves a stored record's section by its namespaced
+`section_id` (`p139-*` vs `acsi-*`) so historical USAF records are immune to a base
+later flipping mode. `PART139_TEAM_ROLES` added.
 
-### Marketing-site roster expansion — complete (glidepath-site, `df8e0b8`..`3688a57`)
-14 new module pages authored copy-first with real, guardrail-cleared captures,
-in 4 thematic batches via subagent-driven-development, plus a whole-branch
-review that returned READY TO PUSH:
-- **Military (4):** Reports, Records Export, Customer Feedback, Read File
-  (+ the existing Events Log page refocused off the reports half).
-- **Civilian (10):** Airport Checks, Shift Checklist, Events Log, Emergency
-  Checklists, Field Conditions, Obstructions (Part 77 framing), FLIP Management
-  (FAA terms), Part 139 Certification Inspection (prepare-not-perform), Customer
-  Feedback, Read File.
-- **Gated (1, authored but wired NOWHERE):** civilian Modifications & Exemptions
-  (`lib/modules/civilian/modifications-exemptions.ts`) — held until the owner
-  ships the app feature.
-- Roster **36 → 50** (26 military / 24 civilian), OG **46 → 60**,
-  `SHIPPED_PAGE_COUNT` 50, "50 modules" prose. **Owner copy-reviewed all 50
-  pages: no changes required.**
+### Phase 2 — wiring + persistence (`997c968c`..`f4ca36e4`)
+Mode-selected the shared machinery: `acsiDraftToItems(draft, sections)` and
+`createNewAcsiDraft(mode)` (civilian team, no risk-cert signatures); `AcsiItem`
+gained `responseLabels` (S/U/N-A vs Y/N/N-A) + citation + a collapsible guidance
+disclosure; `AcsiTeamEditor` role labels + required-count made mode-aware (the plan
+mis-stated this as an `ACSI_TEAM_ROLES` import swap — it was actually a hardcoded
+`roleLabels`/`i<3` fix); discrepancy panel's "Risk Control Measure" → "Corrective
+Action"; `AcsiSection` tallies → S/U. `/acsi/new` and `/acsi/[id]` render the
+civilian audit (record-derived `isFaa`), hide risk-cert, show cover fields,
+calendar-year default. **Cover-field persistence** (`2.5c`/`2.5d`): a review caught
+that `arff_index`/`airport_class`/`inspector` lived only in `draft_data` (nulled on
+file) and were also dropped by `reopenAcsiInspection` — fixed with an additive
+migration + threading through save/file/fetch/reopen.
 
-### App: ACSI opened to civilian + fully mode-aware (airfield-app `050374df`, `7f9383bc`, `64e5796d`)
-- `lib/modules-config.ts`: `acsi.appliesTo` → `['usaf','faa_part139']`.
-- `/acsi` reads **"Part 139 Annual Inspection" / "14 CFR Part 139"** on civilian
-  tenants and "ACSI" / "DAFMAN 13-204v2, Para 5.4.3" on military, everywhere:
-  the main-page header, the form/list labels (Start New, empty-state, per-row
-  Reopen/Delete confirms + toasts, new/edit heading, Back-to-List links,
-  not-found, emailed report subject), the **record display_id prefix**
-  (`P139-` vs `ACSI-`, from the base's `airport_type` at insert), and the
-  **generated PDF** (title, reg cite, risk-cert statement) via a new
-  `AcsiPdfOptions.airportType`. Mode read from `getAirportType(currentInstallation)`.
+### Phases 3–4 — inspector guidance (`4303dd8e`..`a9499652`)
+All **123 items** carry "what the inspector looks for" guidance transcribed from
+**FAA Order 5280.5D** — Chapter 4 §§4.9–4.30 plus the Appendix H enhanced ARFF
+checklist. Delivered in 5 batches (physical airfield / records-personnel-manual /
+programs ×2 / obstructions-etc / ARFF), each **fidelity-reviewed against the source
+Order sentence-by-sentence — zero fabrication**. Sparse/ambiguous source passages
+were disclosed and handled faithfully (real general-duty text, never invented).
 
-### Demo-data seeds + guardrail scrubs (owner-authorized, additive/reversible)
-KDRA was under-seeded, so real capture frames required seeding: KDRA
-`shift_checklist_items` ×7, `qrc_templates` ×8 (title-only stubs),
-`customer_feedback` ×4, `read_files` ×3; KDMO `read_files` ×3. Owner ruled:
-**keep the seeds.** Guardrail: KDMO `customer_feedback` carried the owner's real
-submission → scrubbed to an anonymous transient in the marketing frame (capture
-prep hook); KDRA ACSI record `ACSI-2026-HN2K` held the owner's real name →
-**cleaned on the actual DB record** to "Demo Inspector" (verified no "Proctor"
-survives), and both KDRA records' display_id updated `ACSI-` → `P139-`.
+### Phase 5 — Form 5280-4 PDF (`0335479e`)
+`lib/acsi-pdf.ts` civilian branch: Form 5280-4 header (skip-if-null cover fields),
+a 5-column Facility/Condition · S · U · N/A · Remarks table, no risk-cert, no
+guidance printed. Review proved the USAF PDF path has **zero changed lines** in its
+~235-line table loop. Smoke test `tests/acsi-pdf.test.ts` (civilian + USAF).
+
+### Phase 6 — module copy + verify (`7214192a`)
+`lib/modules-config.ts` `acsi` description/useCase neutralized to dual-mode copy
+(`appliesTo` untouched — that broke CI a prior session). Final full gate green.
 
 ---
 
 ## Migrations status
-No new migrations this session. All changes are content (glidepath-site), app
-code (airfield-app), and demo-data seeds/updates on the linked DB (not
-migrations). Latest migrations on disk (`2026070204_acsi_one_completed_per_fiscal_year`,
-`2026070400_rename_dafi_91_212_to_dafman`, `2026070401_marketing_leads`) predate
-this session and are already applied.
+
+| File | Status | What it does |
+|---|---|---|
+| `2026070700_add_part139_cover_fields` | **Applied** (linked DB, verified) | additive nullable `arff_index`/`airport_class`/`inspector` on `acsi_inspections` for the Form 5280-4 header; RLS inherits the table's base-scoped policies |
+
+Prior migrations (`2026070204`, `2026070400`, `2026070401`) unchanged/applied.
 
 ---
 
-## Bugs fixed during the session
+## Bugs fixed / gaps caught in review
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| airfield-app CI red 4 commits; owner got a `CI / verify` failure email | ACSI opened to dual-mode, but `tests/modules-config.test.ts` still classified `acsi` as USAF-only; vitest was never run locally this session (only tsc/lint/build) | `0bf6dfbd` |
+| civilian cover fields would vanish from *filed* audits + PDF | stored only in `draft_data`, which `fileAcsiInspection` nulls on file — no real columns | `721aaa4a`+`a94d937a` |
+| reopen→refile would silently null the cover fields | `reopenAcsiInspection`'s `rebuiltDraft` omitted the 3 fields | `2f82a536` |
+| civilian team member showed "Additional Member -2", wrong required-count | team editor hardcoded `afm/ce/safety` labels + `i<3` required-by-index | `242463a5` |
 
 ---
 
 ## Lessons from this session
 
-- **airfield-app's commit gate is FOUR checks, and vitest is the one that
-  bites.** CI's `verify` job runs tsc → lint → **`npm run test`** → build.
-  tsc/lint/build green ≠ CI green. Saved as feedback memory
-  `feedback_airfield_app_run_vitest_gate`. When a product behavior changes
-  (a module's `appliesTo`, a count, a gate), grep tests for the old invariant —
-  count/gating tests encode it and won't be caught by type/build checks.
-- **`gh` is absent, but the GitHub REST API is reachable** via git's stored PAT
-  (`git credential fill`) — used it to read Actions run status / job steps /
-  annotations for both private repos. Saved as
-  `reference_github_api_via_git_credential`. This is how the CI diagnosis got
-  precise (exact failing step + 4 assertions) instead of guessing.
-- **When an owner reports a failing CI for a named repo, get the failure
-  screenshot/log before investigating.** This session burned a full pass
-  investigating glidepath-site (which was green) because that was the repo
-  named; the email screenshot showed it was airfield-app. Ask for the artifact
-  early.
+- **Delegate-transcribe + fidelity-review holds the no-fabrication line.** ~123
+  regulatory guidance strings were transcribed by subagents and each batch verified
+  by a reviewer that read the source Order and checked every string — zero
+  fabrication across the whole run. The pattern (strict source-only dispatch,
+  page-referenced, + a source-reading review) is reusable for any reg-text work.
+- **A transient `API Error: Overloaded` can kill a subagent *after* it commits.**
+  Task 3.2's implementer committed `c6590a36` then died on its report message.
+  Recovery = check `git log`/`git status` + re-verify (tsc/tests) rather than
+  re-dispatch; the commit was intact. Watch for this on long subagent runs.
+- **Two Part 139 "inspections" are different things.** The airport's daily
+  self-inspection (§139.327, AC 150/5200-18C) ≠ the FAA's annual certification
+  inspection (Form 5280-4, Order 5280.5D). The daily one is `/checks`; the annual
+  cert-readiness audit is civilian `/acsi`. Getting the source doc right (Form
+  5280-4, not AC 18C) is what made the module tailored to the real FAA visit.
+- **The SDD ledger (`.superpowers/sdd/progress.md`) is the durable spine** for a
+  20+-task build across one long session — commit SHAs + decisions + in-flight
+  notes survive even if context is summarized.
 
 ---
 
@@ -127,54 +120,46 @@ this session and are already applied.
 
 | Item | Severity | Notes |
 |---|---|---|
-| **App-side dual-mode terminology (other modules)** | med | ACSI is now fully mode-aware, but civilian tenants still leak military terms elsewhere: `/discrepancies` AFM/CES/AMOPS KPI chips, `/inspections` "DAFMAN 13-204V2", `/checks` header "AIRFIELD CHECK"/DAFI cite, `/qrc` "Quick Reaction Checklists", `/flip` "DAFMAN…Continuity Binder", `/obstructions` "UFC 3-260-01". `lib/airport-mode.ts` SoT doesn't cover them. The site captions worked around them |
-| Civilian QRC templates are title-only stubs | low | KDRA `qrc_templates` ×8 have "0 steps / Never reviewed"; enrich for a richer `/qrc` frame if desired |
-| Text-only capture strategy is not viable | low (reference) | `module-content.test.ts` requires ≥1 real screenshot per registered page; see memory `project_marketing_capture_pipeline` |
-| Carried low items | low | Status-page weather race (`app/(app)/page.tsx:194`); demo-form email-fail-after-insert silent; account-deactivation doesn't kill live sessions (`middleware.ts:50-58`); Selfridge 1098 dedup — all unchanged |
+| **Part 139 audit — visual density unverified** | med | no PDF/HTML render harness; owner must eyeball `/acsi/new`, `/acsi/[id]`, and the Form 5280-4 PDF column widths on a civilian base |
+| Guidance accuracy-pass nits | low | `aep.6` citation `§325(f)` vs the Order's prose `§325(b)(9)` (Form 5280-4 and the Order disagree — pre-existing from the item transcription); `wildlife.10` biologist gloss; `arff.7` "cannot be waived" synthesis; `msl.10` conditional tightening — all in-source, none fabricated, flagged in the ledger |
+| `inspTerm` uses installation not record mode | low | `app/(app)/acsi/[id]/page.tsx:82` — a base flipping `airport_type` after filing could show a mismatched breadcrumb term vs the record-derived body |
+| App-side dual-mode terminology (other modules) | med | `/discrepancies`, `/inspections`, `/checks`, `/qrc`, `/flip`, `/obstructions` still leak military terms on civilian tenants; `lib/airport-mode.ts` doesn't cover them |
+| Civilian QRC templates title-only stubs | low | KDRA `qrc_templates` ×8 have "0 steps"; enrich for a richer `/qrc` frame |
+| Carried low items | low | status-page weather race (`app/(app)/page.tsx:194`); demo-form email-fail-after-insert silent; account-deactivation doesn't kill live sessions (`middleware.ts:50-58`); Selfridge 1098 dedup — unchanged |
 
 ---
 
 ## Next session tasks
 
-**Part 139 cert-audit — owner actions before this ships (built this session, unpushed):**
-1. **Visually verify** on a civilian base (KDMO/KDRA): `/acsi/new` renders the 22-section
-   Form 5280-4 audit (S/U/N-A, civilian team, cover fields ARFF Index/Class/Inspector,
-   no risk-cert, per-item Guidance disclosures) → file it → `/acsi/[id]` displays it →
-   the generated **PDF** looks right (no render harness existed, so column density is unverified).
-2. **Push + promote** when satisfied (owner owns this).
-3. Optional guidance accuracy-pass minors (non-blocking, noted in the SDD ledger): `aep.6`
-   citation §325(f) vs Order prose §325(b)(9); `wildlife.10` biologist gloss; `arff.7`
-   "cannot be waived" synthesis; `msl.10` conditional; `[id]/page.tsx:82` inspTerm uses
-   installation not record mode.
+The Part 139 cert-audit is **pushed and CI-green**. Owner actions before it goes
+live:
 
-Then, older backlog (unchanged):
+1. **Visually verify** on a civilian base (KDMO/KDRA): `/acsi/new` renders the
+   22-section Form 5280-4 audit (S/U/N-A, civilian team, cover fields, no
+   risk-cert, per-item Guidance disclosures) → file it → `/acsi/[id]` displays →
+   the generated **PDF** looks right (column density is the one unverified thing).
+2. **Promote** when satisfied (owner owns Vercel promotion).
+3. Optional: the guidance accuracy-pass nits above; extend the civilian PDF with a
+   signature block if desired (not in scope this build).
 
-1. **App-side dual-mode terminology sweep** — extend `lib/airport-mode.ts` +
-   the leaking modules (`/discrepancies`, `/inspections`, `/checks`, `/qrc`,
-   `/flip`, `/obstructions`) to render FAA terms on civilian tenants, mirroring
-   what was done for ACSI. Would also make future civilian captures leak-free.
-   Remember to run **vitest** on any change here — the module-gating tests are
-   sensitive to `appliesTo` edits (this session's CI break).
-2. **Optional owner follow-ups:** enrich the KDRA QRC stubs; the marketing
-   Modifications & Exemptions page is authored + staged, ready to wire when the
-   owner ships the app Waivers/Modifications feature.
+Then, older backlog (unchanged): **app-side dual-mode terminology sweep** for the
+other leaking modules — mirror what ACSI/Part 139 now does.
 
 ### Long-running carryover
-Phase 5 (app apex cutover to `app.glidepathops.com`) and the SEO/rich-results
-follow-ups remain owner-scheduled. Deferred audit items, Next 16 — unchanged.
+Phase 5 apex cutover to `app.glidepathops.com`, SEO/rich-results, deferred audit
+items, Next 16 — all owner-scheduled, unchanged.
 
 ---
 
 ## Build snapshot
 ```
-airfield-app @ 0bf6dfbd: tsc ✓ · lint 0 errors · vitest 1104 passed / 16 skipped
-  (121 files) · build ✓. CI verify job green. ACSI mode-aware end to end and
-  live. Changed routes this session (ACSI): /acsi 3.13 kB / 215 kB · /acsi/[id]
-  5.61 kB / 218 kB · /acsi/new 19.8 kB / 219 kB. Shared 106 kB · Middleware 80.8 kB.
-
-glidepath-site @ 3688a57: tsc ✓ · lint ✓ · vitest 74/74 · build ✓ (60 static
-  paths). 50 module pages (26 mil + 24 civ) + about/platform/security/faq/demo/
-  legal/404 + home + two pillars. 60 OG images. PROMOTED / live.
+airfield-app @ d2d414e5: tsc ✓ · lint 0 errors (2 pre-existing warnings in
+  lib/waiver-pdf.ts) · npx vitest run 1127 passed / 16 skipped (122 files) ·
+  npm run build ✓. CI run #27 green. Part 139 cert-audit live-ready but UNPROMOTED.
+  Changed routes: /acsi/new (~24 kB, the civilian audit form) and /acsi/[id]
+  (mode-aware detail view). Middleware 80.8 kB. New civilian PDF path in
+  lib/acsi-pdf.ts (no route-size impact). New file lib/part139-cert-checklist.ts
+  (~123-item data + guidance).
 ```
 
 ---
@@ -182,25 +167,23 @@ glidepath-site @ 3688a57: tsc ✓ · lint ✓ · vitest 74/74 · build ✓ (60 s
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-05..06 | Marketing-site roster expansion (36→50 module pages, 60 OG, whole-branch reviewed + owner copy-approved); ACSI opened to civilian mode and made fully mode-aware (header, form, record IDs, PDF); airfield-app CI regression fixed (`modules-config` ACSI dual-mode test) and re-promoted live. Demo-data seeds on KDRA/KDMO; KDRA ACSI real-name cleanup. |
-| **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File modules; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
+| **Unreleased** | 2026-07-05..07 | Marketing roster 36→50; ACSI opened to civilian + mode-aware; **Part 139 certification-inspection readiness audit** — civilian `/acsi` reproduces FAA Form 5280-4 (22 sections / 123 items, all with CFR citations + inspector guidance from Order 5280.5D), S/U/N-A, cover-field persistence (migration), Form 5280-4 PDF. Pushed, CI-green, unpromoted. |
+| **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
 ---
 
 ## Key docs / files touched this session
-### airfield-app
-- `tests/modules-config.test.ts` (CI fix — acsi re-categorized USAF-only → shared).
-- `lib/modules-config.ts` (acsi appliesTo), `app/(app)/acsi/{page,new,[id]}.tsx`
-  (mode-aware labels), `lib/supabase/acsi-inspections.ts` (display_id prefix),
-  `lib/acsi-pdf.ts` (mode-aware title/cite/cert + `airportType` option),
-  `lib/export/export-record-modules.ts` (export PDF mode inference).
-- `docs/superpowers/specs/2026-07-05-roster-expansion-design.md`,
-  `docs/superpowers/plans/2026-07-05-roster-expansion.md` (executed this session).
+### New files
+- `lib/part139-cert-checklist.ts` — `PART139_CERT_SECTIONS` (22 sections / 123
+  items + citations + guidance), `sectionsForAirportType`, `sectionMetaById`.
+- `supabase/migrations/2026070700_add_part139_cover_fields.sql`.
+- `tests/part139-cert-checklist.test.ts`, `tests/acsi-pdf.test.ts`.
+- `docs/superpowers/specs/2026-07-06-part139-cert-inspection-audit-design.md`
+  (+ the superseded self-inspection spec), `docs/superpowers/plans/2026-07-06-part139-cert-inspection-audit.md`.
 
-### glidepath-site (fully pushed + live)
-- `lib/modules/{military,civilian}/**` (14 new content files + events-log refocus),
-  `lib/modules/index.ts`, `lib/modules-data.ts`, `lib/about-content.ts`,
-  `lib/og-routes.ts`, `scripts/capture-manifest.mjs` (new shot entries + prep
-  scrubs), `scripts/generate-og-images.ts` (`--only` flag), `public/screenshots/*`,
-  `public/og/*` (60), `tests/*` (count bumps).
+### Modified files
+- `lib/constants.ts` (item fields + team roles), `lib/acsi-draft.ts`,
+  `lib/acsi-pdf.ts` (civilian Form 5280-4 layout), `lib/modules-config.ts`,
+  `lib/supabase/{types,acsi-inspections}.ts`, `lib/sync/handlers.ts`.
+- `app/(app)/acsi/{new,[id]}/page.tsx`, `components/acsi/{acsi-item,acsi-team-editor,acsi-section,acsi-discrepancy-panel,acsi-discrepancy-panel-group}.tsx`.
