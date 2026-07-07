@@ -16,9 +16,10 @@ interface AcsiDiscrepancyPanelProps {
   index: number
   onChange: (itemId: string, index: number, detail: AcsiDiscrepancyDetail) => void
   inspectionId?: string | null
+  correctiveActionLabel?: string
 }
 
-export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspectionId }: AcsiDiscrepancyPanelProps) {
+export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspectionId, correctiveActionLabel = 'Risk Control Measure' }: AcsiDiscrepancyPanelProps) {
   const { areas: installationAreas, installationId } = useInstallation()
   const [uploading, setUploading] = useState(false)
   const [photoUrls, setPhotoUrls] = useState<{ url: string; name: string }[]>([])
@@ -219,10 +220,10 @@ export function AcsiDiscrepancyPanel({ itemId, detail, index, onChange, inspecti
         </div>
       </div>
 
-      {/* Risk Control Measure — required on N items */}
+      {/* Corrective action — required on unsatisfactory items */}
       <div style={{ marginBottom: 12 }}>
         <label style={labelStyle}>
-          Risk Control Measure <span style={{ color: 'var(--color-danger)' }}>*</span>
+          {correctiveActionLabel} <span style={{ color: 'var(--color-danger)' }}>*</span>
         </label>
         <textarea
           value={detail.risk_control_measure || ''}

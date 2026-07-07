@@ -18,6 +18,7 @@ interface AcsiDiscrepancyPanelGroupProps {
   onLinkExisting?: (itemId: string, detail: AcsiDiscrepancyDetail) => void
   alreadyLinkedIds?: Set<string>
   inspectionId?: string | null
+  correctiveActionLabel?: string
 }
 
 export function AcsiDiscrepancyPanelGroup({
@@ -29,6 +30,7 @@ export function AcsiDiscrepancyPanelGroup({
   onLinkExisting,
   alreadyLinkedIds,
   inspectionId,
+  correctiveActionLabel,
 }: AcsiDiscrepancyPanelGroupProps) {
   const [showPicker, setShowPicker] = useState(false)
   const pins = discrepancies.flatMap(d => d.pins || [])
@@ -120,6 +122,7 @@ export function AcsiDiscrepancyPanelGroup({
             index={i}
             onChange={onChange}
             inspectionId={inspectionId}
+            correctiveActionLabel={correctiveActionLabel}
           />
         </div>
       ))}
