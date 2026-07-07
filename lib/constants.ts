@@ -692,6 +692,10 @@ export interface AcsiChecklistItem {
   hasSubFields?: boolean
   /** Non-answerable heading text shown before items (no Y/N/NA) */
   isHeading?: boolean
+  /** CFR sub-paragraph this item audits, e.g. '§139.305(a)(1)'. Civilian (Part 139) only. */
+  citation?: string
+  /** Inspector guidance (FAA Order 5280.5D Ch.4 / App.H), shown in an expander. Civilian only. */
+  guidance?: string
 }
 
 export const ACSI_SUB_FIELD_LABELS = [
