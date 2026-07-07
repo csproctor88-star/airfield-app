@@ -121,12 +121,16 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
       updates.email = newEmail
     }
 
-    // Apply update
+    // Apply update.
+    // `bases!primary_base_id` names the FK explicitly: profiles has TWO
+    // relationships to bases — the direct primary_base_id FK and a many-to-many
+    // via the base_members junction — so an unqualified `bases(...)` embed fails
+    // with "more than one relationship was found for 'profiles' and 'bases'".
     const { data: updated, error: updateError } = await admin
       .from('profiles')
       .update(updates)
       .eq('id', targetId)
-      .select('*, bases(name, icao)')
+      .select('*, bases!primary_base_id(name, icao)')
       .single()
 
     if (updateError) {
