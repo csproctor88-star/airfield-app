@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { ACSI_CHECKLIST_SECTIONS, ACSI_SUB_FIELD_LABELS } from '@/lib/constants'
+import { ACSI_SUB_FIELD_LABELS, PART139_TEAM_ROLES, ACSI_TEAM_ROLES } from '@/lib/constants'
 import { useInstallation } from '@/lib/installation-context'
 import { getAirportType } from '@/lib/airport-mode'
+import { sectionsForAirportType } from '@/lib/part139-cert-checklist'
 import { createClient } from '@/lib/supabase/client'
 import {
   saveAcsiDraft,
@@ -42,7 +43,13 @@ export default function AcsiFormPage() {
   const searchParams = useSearchParams()
   const resumeId = searchParams.get('resume')
   const { installationId, currentInstallation } = useInstallation()
-  const inspNoun = getAirportType(currentInstallation) === 'faa_part139' ? 'Part 139' : 'ACSI'
+  const airportType = getAirportType(currentInstallation)
+  const isFaa = airportType === 'faa_part139'
+  const sections = sectionsForAirportType(airportType)
+  const teamRoles = isFaa ? PART139_TEAM_ROLES : ACSI_TEAM_ROLES
+  const responseLabels = isFaa ? { pass: 'S', fail: 'U', na: 'N/A' } : { pass: 'Y', fail: 'N', na: 'N/A' }
+  const correctiveActionLabel = isFaa ? 'Corrective Action' : 'Risk Control Measure'
+  const inspNoun = isFaa ? 'Part 139' : 'ACSI'
 
   // Draft state
   const [draft, setDraft] = useState<AcsiDraftData | null>(null)
@@ -51,7 +58,7 @@ export default function AcsiFormPage() {
   const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0])
   const [fiscalYear, setFiscalYear] = useState(() => {
     const now = new Date()
-    return now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear()
+    return isFaa ? now.getFullYear() : (now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear())
   })
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
@@ -62,7 +69,7 @@ export default function AcsiFormPage() {
 
   // Auto-save new draft to DB so photo uploads work immediately
   const autoSaveToDb = useCallback(async (draftData: AcsiDraftData, name: string, date: string, fy: number) => {
-    const { items, passed, failed, na, total } = acsiDraftToItems(draftData)
+    const { items, passed, failed, na, total } = acsiDraftToItems(draftData, sections)
     const { data, error } = await saveAcsiDraft({
       id: null,
       airfield_name: name,
@@ -82,7 +89,7 @@ export default function AcsiFormPage() {
     if (!error && data) {
       setDbRowId(data.id)
     }
-  }, [installationId])
+  }, [installationId, sections])
 
   // Load draft on mount — two-phase: localStorage first (instant), then check DB for newer draft
   useEffect(() => {
@@ -167,12 +174,12 @@ export default function AcsiFormPage() {
         }
       } else if (!localDraft) {
         // Nothing found anywhere — create new draft + auto-save to DB
-        const newDraft = createNewAcsiDraft()
+        const newDraft = createNewAcsiDraft(airportType)
         setDraft(newDraft)
         const name = currentInstallation?.name || ''
         const date = new Date().toISOString().split('T')[0]
         const now = new Date()
-        const fy = now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear()
+        const fy = isFaa ? now.getFullYear() : (now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear())
         autoSaveToDb(newDraft, name, date, fy)
       }
 
@@ -314,7 +321,7 @@ export default function AcsiFormPage() {
   const handleSaveDraft = async () => {
     if (!draft) return
     setSaving(true)
-    const { items, passed, failed, na, total } = acsiDraftToItems(draft)
+    const { items, passed, failed, na, total } = acsiDraftToItems(draft, sections)
     const { data, error } = await saveAcsiDraft({
       id: dbRowId,
       airfield_name: airfieldName,
@@ -350,13 +357,13 @@ export default function AcsiFormPage() {
       return
     }
 
-    const { items, passed, failed, na, total } = acsiDraftToItems(draft)
+    const { items, passed, failed, na, total } = acsiDraftToItems(draft, sections)
     const unanswered = total - passed - failed - na
     if (unanswered > 0) {
       if (!confirm(`${unanswered} items are unanswered. File anyway?`)) return
     }
 
-    // Risk Control Measure is required on every discrepancy under N items.
+    // Risk Control Measure (civilian: Corrective Action) is required on every discrepancy under N items.
     const missingRcmItems: string[] = []
     for (const it of items) {
       if (it.response !== 'fail') continue
@@ -372,9 +379,10 @@ export default function AcsiFormPage() {
       }
     }
     if (missingRcmItems.length > 0) {
-      toast.error(
-        `Risk Control Measure is required on N items: ${missingRcmItems.slice(0, 5).join(', ')}${missingRcmItems.length > 5 ? `, +${missingRcmItems.length - 5} more` : ''}`
-      )
+      const rcmMessage = isFaa
+        ? `Corrective Action required on unsatisfactory items: ${missingRcmItems.slice(0, 5).join(', ')}${missingRcmItems.length > 5 ? `, +${missingRcmItems.length - 5} more` : ''}`
+        : `Risk Control Measure is required on N items: ${missingRcmItems.slice(0, 5).join(', ')}${missingRcmItems.length > 5 ? `, +${missingRcmItems.length - 5} more` : ''}`
+      toast.error(rcmMessage)
       return
     }
 
@@ -476,7 +484,7 @@ export default function AcsiFormPage() {
   }
 
   // Calculate counts
-  const { passed, failed, na, total } = acsiDraftToItems(draft)
+  const { passed, failed, na, total } = acsiDraftToItems(draft, sections)
   const answered = passed + failed + na
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0
 
@@ -542,6 +550,50 @@ export default function AcsiFormPage() {
             style={{ ...inputStyle, width: '100%' }}
           />
         </div>
+        {isFaa && (
+          <>
+            <div>
+              <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', display: 'block', marginBottom: 6 }}>
+                ARFF Index
+              </label>
+              <input
+                type="text"
+                value={draft.arff_index || ''}
+                onChange={(e) => updateDraft(prev => ({ ...prev, arff_index: e.target.value }))}
+                placeholder="e.g. B"
+                style={{ ...inputStyle, width: '100%' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', display: 'block', marginBottom: 6 }}>
+                Airport Classification
+              </label>
+              <select
+                value={draft.airport_class || ''}
+                onChange={(e) => updateDraft(prev => ({ ...prev, airport_class: e.target.value }))}
+                style={{ ...inputStyle, width: '100%' }}
+              >
+                <option value="">Select classification</option>
+                <option value="I">Class I</option>
+                <option value="II">Class II</option>
+                <option value="III">Class III</option>
+                <option value="IV">Class IV</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', display: 'block', marginBottom: 6 }}>
+                Inspector
+              </label>
+              <input
+                type="text"
+                value={draft.inspector || ''}
+                onChange={(e) => updateDraft(prev => ({ ...prev, inspector: e.target.value }))}
+                placeholder="FAA inspector name"
+                style={{ ...inputStyle, width: '100%' }}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Progress bar */}
@@ -570,7 +622,7 @@ export default function AcsiFormPage() {
 
       {/* Checklist Sections */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
-        {ACSI_CHECKLIST_SECTIONS.map(section => {
+        {sections.map(section => {
           // Build all answerable item IDs (sub-fields expand to .a/.b/.c)
           const allItemIds: string[] = []
           for (const item of section.items) {
@@ -629,6 +681,9 @@ export default function AcsiFormPage() {
                     isHeading={item.isHeading}
                     hasSubFields={item.hasSubFields}
                     subFieldResponses={item.hasSubFields ? draft.responses : undefined}
+                    responseLabels={responseLabels}
+                    citation={item.citation}
+                    guidance={item.guidance}
                     renderSubFieldChildren={item.hasSubFields ? (subId: string) => (
                       draft.responses[subId] === 'fail' ? (
                         <AcsiDiscrepancyPanelGroup
@@ -640,6 +695,7 @@ export default function AcsiFormPage() {
                           onLinkExisting={handleLinkExisting}
                           alreadyLinkedIds={alreadyLinkedIds}
                           inspectionId={dbRowId}
+                          correctiveActionLabel={correctiveActionLabel}
                         />
                       ) : null
                     ) : undefined}
@@ -654,6 +710,7 @@ export default function AcsiFormPage() {
                         onLinkExisting={handleLinkExisting}
                         alreadyLinkedIds={alreadyLinkedIds}
                         inspectionId={dbRowId}
+                        correctiveActionLabel={correctiveActionLabel}
                       />
                     )}
                   </AcsiItem>
@@ -719,6 +776,7 @@ export default function AcsiFormPage() {
                           onLinkExisting={handleLinkExisting}
                           alreadyLinkedIds={alreadyLinkedIds}
                           inspectionId={dbRowId}
+                          correctiveActionLabel={correctiveActionLabel}
                         />
                       )}
                     </div>
@@ -743,13 +801,15 @@ export default function AcsiFormPage() {
 
       {/* Inspection Team */}
       <div style={{ marginTop: 12, marginBottom: 28 }}>
-        <AcsiTeamEditor team={draft.team} onChange={handleTeamChange} />
+        <AcsiTeamEditor team={draft.team} onChange={handleTeamChange} roles={teamRoles} />
       </div>
 
       {/* Risk Management Certification */}
-      <div style={{ marginBottom: 28 }}>
-        <AcsiRiskCert signatures={draft.signatures} onChange={handleSignaturesChange} />
-      </div>
+      {!isFaa && (
+        <div style={{ marginBottom: 28 }}>
+          <AcsiRiskCert signatures={draft.signatures} onChange={handleSignaturesChange} />
+        </div>
+      )}
 
       {/* General Notes */}
       <div style={{

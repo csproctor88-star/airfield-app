@@ -10155,6 +10155,10 @@ export type AcsiDraftData = {
   notes: string
   collapsedSections: Record<string, boolean>
   localItems: { id: string; question: string }[]
+  /** Civilian (Part 139 Form 5280-4) cover-sheet fields. Optional — USAF drafts never set these. */
+  arff_index?: string
+  airport_class?: string
+  inspector?: string
 }
 
 export type AcsiInspection = {
