@@ -564,37 +564,119 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 14: Self-Inspection Program ──
+  // src: 5280.5D §4.22.1-4.22.3; record-retention items cross-ref §4.9.2 (the Records section)
   {
     id: 'p139-selfinsp',
     number: 14,
     title: 'Self-Inspection Program',
     reference: '14 CFR §139.327',
     items: [
-      { id: 'selfinsp.1', question: 'Inspect Daily or As Required', citation: '§139.327(a)(1)' },
-      { id: 'selfinsp.2', question: 'Inspect when Required by Unusual Conditions/Accidents', citation: '§139.327(a)(2),(3)' },
-      { id: 'selfinsp.3', question: 'Equipment Provided', citation: '§139.327(b)(1)' },
-      { id: 'selfinsp.4', question: 'Procedures/Equipment for Dissemination of Information to Users', citation: '§139.327(b)(2)' },
-      { id: 'selfinsp.5', question: 'Inspections Conducted by Qualified Personnel', citation: '§139.327(b)(3)' },
-      { id: 'selfinsp.6', question: 'Personnel Properly Trained', citation: '§139.327(b)(3)' },
-      { id: 'selfinsp.7', question: 'Reporting System for Prompt Correction incl. Wildlife Strikes', citation: '§139.327(b)(4)' },
-      { id: 'selfinsp.8', question: '12 CCM of Records Showing Conditions Found + Corrective Actions', citation: '§139.327(c)(1)' },
-      { id: 'selfinsp.9', question: 'Record of Training for 24 CCM', citation: '§139.327(c)(2)' },
+      {
+        id: 'selfinsp.1',
+        question: 'Inspect Daily or As Required',
+        citation: '§139.327(a)(1)',
+        guidance: "The Order's Chapter 4 discussion of §139.327 does not restate the daily-or-other-interval inspection frequency itself; instead it frames the self-inspection program as 'the strategic element' of the airport's certification program, required by regulation. The certificate holder must establish, implement, and maintain an appropriate self-inspection system and inspection schedule, with the specifics described in the approved ACM; the ACSI verifies that schedule is actually being executed by observing an airport representative conduct a self-inspection to confirm procedures are being followed and are effective.",
+      },
+      {
+        id: 'selfinsp.2',
+        question: 'Inspect when Required by Unusual Conditions/Accidents',
+        citation: '§139.327(a)(2),(3)',
+        guidance: "As with the routine inspection frequency, Chapter 4 does not separately break out the immediate/supplemental-inspection triggers; the ACM-described self-inspection system the ACSI verifies must also address inspections following unusual conditions and accidents or incidents, and the ACSI's oversight approach is the same — confirming through observation that the certificate holder's procedures are being followed and are effective.",
+      },
+      {
+        id: 'selfinsp.3',
+        question: 'Equipment Provided',
+        citation: '§139.327(b)(1)',
+        guidance: "The Order's Chapter 4 discussion of §139.327 does not provide equipment-specific criteria; the underlying requirement is that the certificate holder provide the equipment necessary to carry out the self-inspection system it has established, implemented, and maintains under the approved ACM.",
+      },
+      {
+        id: 'selfinsp.4',
+        question: 'Procedures/Equipment for Dissemination of Information to Users',
+        citation: '§139.327(b)(2)',
+        guidance: 'Chapter 4 does not elaborate on dissemination-specific criteria beyond the general self-inspection system requirement; disseminating airport-condition information discovered during self-inspection to airport users overlaps with the airport condition reporting requirements of §139.339 (Section 21 of this checklist).',
+      },
+      {
+        id: 'selfinsp.5',
+        question: 'Inspections Conducted by Qualified Personnel',
+        citation: '§139.327(b)(3)',
+        guidance: 'The ACSI ascertains whether the self-inspection program is effective by observing an airport representative of the certificate holder conduct a self-inspection, to determine if procedures are being followed and are effective. Where the number and significance of problems found is notable, the ACSI may need to conduct a more detailed review of airport staff qualifications to determine the underlying causes of the deficiencies cited on self-inspection records.',
+      },
+      {
+        id: 'selfinsp.6',
+        question: 'Personnel Properly Trained',
+        citation: '§139.327(b)(3)',
+        guidance: "Chapter 4's self-inspection discussion does not add a training-content test beyond the ACSI's general effectiveness observation; training adequacy is verified largely through the record — airport personnel training required under §139.303 and §139.327 together must be maintained for 24 consecutive calendar months (Order §4.9.2, the Records section).",
+      },
+      {
+        id: 'selfinsp.7',
+        question: 'Reporting System for Prompt Correction incl. Wildlife Strikes',
+        citation: '§139.327(b)(4)',
+        guidance: "The Order lists indications that the reporting-and-correction system may not be working: a pattern of self-inspection reports/records showing zero discrepancies; indications of falsification of reports/records or incomplete inspection records; the number and significance of problems found (which might point to maintenance or equipment problems warranting a closer review of staff qualifications); the number and type of discrepancies found during the FAA certification inspection as compared to those the self-inspection program actually reported; reports received from ATCT, air carriers, or others about airport issues; and an excessive time lapse between when a discrepancy is identified and when it is corrected, which can indicate an issue with the airport's internal reporting (work-order) system or an indication of personnel who are insufficient in number or inadequately qualified. Chapter 4 does not separately address wildlife-strike reporting under this item; wildlife hazards are addressed under §139.337 (Section 19 of this checklist).",
+      },
+      {
+        id: 'selfinsp.8',
+        question: '12 CCM of Records Showing Conditions Found + Corrective Actions',
+        citation: '§139.327(c)(1)',
+        guidance: 'Records for self-inspections, as required under §139.327, must be maintained for 12 consecutive calendar months (Order §4.9.2, the Records section).',
+      },
+      {
+        id: 'selfinsp.9',
+        question: 'Record of Training for 24 CCM',
+        citation: '§139.327(c)(2)',
+        guidance: 'Records for airport personnel training, as required under §139.303 and §139.327 together, must be maintained for 24 consecutive calendar months (Order §4.9.2, the Records section).',
+      },
     ],
   },
   // ── Section 15: Pedestrians & Ground Vehicles ──
+  // src: 5280.5D §4.23.1-4.23.4.3; record-retention item cross-refs §4.9.2 (the Records section)
   {
     id: 'p139-vehicles',
     number: 15,
     title: 'Pedestrians & Ground Vehicles',
     reference: '14 CFR §139.329',
     items: [
-      { id: 'veh.1', question: 'Limit Access to Movement/Safety Areas', citation: '§139.329(a)' },
-      { id: 'veh.2', question: 'Establish/Implement Safe-Ops Procedures', citation: '§139.329(b)' },
-      { id: 'veh.3', question: 'Pedestrian/Vehicle Control with ATCT', citation: '§139.329(c)' },
-      { id: 'veh.4', question: 'Control — No ATCT', citation: '§139.329(d)' },
-      { id: 'veh.5', question: 'Operator Training on Procedures & Consequences', citation: '§139.329(e)' },
-      { id: 'veh.6', question: 'Record of Training for 24 CCM', citation: '§139.329(f)(1)' },
-      { id: 'veh.7', question: '12 CCM of Records for Accidents/Incidents', citation: '§139.329' },
+      {
+        id: 'veh.1',
+        question: 'Limit Access to Movement/Safety Areas',
+        citation: '§139.329(a)',
+        guidance: 'The certificate holder is responsible for limiting access to movement areas and safety areas to only those pedestrians and ground vehicles necessary for airport operations. The airport should have a process for periodic review of the vehicles and persons authorized to access these areas, to confirm continued need and authorization. Unauthorized entry by a pedestrian or ground vehicle onto the movement area may constitute a runway incursion — personnel or equipment found in the runway safety area without ATCT authorization are reported as incursions, though not every incursion is necessarily a Part 139 violation; an alleged incursion requires a Letter of Investigation and a fact-finding investigation, which may include interviewing those involved, taking witness statements, and examining the location.',
+      },
+      {
+        id: 'veh.2',
+        question: 'Establish/Implement Safe-Ops Procedures',
+        citation: '§139.329(b)',
+        guidance: 'Certificate holders must establish and implement procedures for the safe and orderly access to, and operation in, the movement and safety areas by pedestrians and ground vehicles. In assessing these procedures, the ACSI observes that the only ground vehicles operating on the airport are those necessary for airport operations — including rescue, maintenance, and inspection activities, airfield maintenance, ARFF equipment, snow-removal equipment, and mowers — with fuel trucks allowed in movement areas only where there is no alternative way to transport fuel across the airport (the ACSI may work with the certificate holder on mitigating measures, such as marking vehicle paths or constructing service/perimeter roads, where fuel trucks must access these areas). Other vehicles, including federal vehicles such as those used by FAA Tech Ops, are allowed as necessary and as the approved ACM permits, with the ACSI observing their operation for compliance with ACM procedures; construction vehicles are authorized per the construction safety phasing plan using authorized access routes, and construction/maintenance activity is not authorized in safety areas during aircraft operations.',
+      },
+      {
+        id: 'veh.3',
+        question: 'Pedestrian/Vehicle Control with ATCT',
+        citation: '§139.329(c)',
+        guidance: 'Procedures must be established for fuel vehicles to cross movement areas, including two-way communication with the ATCT (or with an escort, if no alternative route is available); the approved ACM should clearly address these crossing procedures, including training on them. As a best safety practice, all runway crossings should be conducted at the runway ends rather than at the middle of the runway.',
+      },
+      {
+        id: 'veh.4',
+        question: 'Control — No ATCT',
+        citation: '§139.329(d)',
+        guidance: 'At airports without an ATCT, or during periods when the ATCT is not operating, the ACSI observes the procedures used for pedestrian and vehicle control — for example, notification over the Common Traffic Advisory Frequency (CTAF) of intent to enter a movement area, or notification to an on-field Flight Service Station of position and intentions.',
+      },
+      {
+        id: 'veh.5',
+        question: 'Operator Training on Procedures & Consequences',
+        citation: '§139.329(e)',
+        guidance: 'The ACSI examines and evaluates the driver training program for comprehensiveness and effectiveness — which might include a permit system and testing — and which should include a schedule of consequences for pedestrians or ground-vehicle operators who violate the rules. At minimum, driver training programs should include: review of rules and regulations, including consequences of non-compliance; vehicle operating requirements (use of perimeter roads, parking on the airport, and accident reporting); airport familiarization; communication rules, including phraseology, frequencies, and procedures for contacting the ATCT; runway safety and incursion-prevention techniques; and review of records of accidents or incidents involving air carrier aircraft and/or ground vehicles or pedestrians.',
+      },
+      {
+        id: 'veh.6',
+        question: 'Record of Training for 24 CCM',
+        citation: '§139.329(f)(1)',
+        guidance: 'Records for training ground-vehicle operators and personnel with access to the movement area and safety areas, as required under §139.329, must be maintained for 24 consecutive calendar months, and the records must reflect that personnel were trained within the prior 12 consecutive calendar months (Order §4.9.2, the Records section).',
+      },
+      {
+        id: 'veh.7',
+        question: '12 CCM of Records for Accidents/Incidents',
+        citation: '§139.329',
+        guidance: '§139.329(f)(2) requires the certificate holder to provide a description and date of any accident or incident involving an air carrier aircraft, pedestrian, or ground vehicle in the movement or safety areas. Certificate holders are highly encouraged to critique each such air-carrier-involved accident to analyze their emergency response, and the FAA recommends completing this self-critique within 60 days after the accident with a written report. These accident/incident records must be maintained for 12 consecutive calendar months (Order §4.9.2, the Records section).',
+      },
     ],
   },
   // ── Section 16: Obstructions ──
@@ -661,16 +743,37 @@ export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
     ],
   },
   // ── Section 21: Airport Condition Reporting ──
+  // src: 5280.5D §4.28.1-4.28.5; record-retention item cross-refs §4.9.2 (the Records section)
   {
     id: 'p139-condrpt',
     number: 21,
     title: 'Airport Condition Reporting',
     reference: '14 CFR §139.339',
     items: [
-      { id: 'condrpt.1', question: 'Collection/Dissemination of Airport Conditions', citation: '§139.339(a)' },
-      { id: 'condrpt.2', question: 'Use of NOTAM/Other Systems', citation: '§139.339(b)' },
-      { id: 'condrpt.3', question: 'Provide Information on Required Conditions', citation: '§139.339(c)' },
-      { id: 'condrpt.4', question: '12 CCM of Records of Each Dissemination', citation: '§139.339(d)' },
+      {
+        id: 'condrpt.1',
+        question: 'Collection/Dissemination of Airport Conditions',
+        citation: '§139.339(a)',
+        guidance: 'The certificate holder is responsible for providing, in a manner authorized by the Administrator and as stated in the approved ACM, information about airport conditions, and for collecting and disseminating that information to air carriers.',
+      },
+      {
+        id: 'condrpt.2',
+        question: 'Use of NOTAM/Other Systems',
+        citation: '§139.339(b)',
+        guidance: "To comply with the condition-reporting requirement, the certificate holder must use the NOTAM system, as appropriate, along with other systems and authorized procedures. The ACSI checks current NOTAMs as part of inspection preparation and also checks the airport's NOTAM logs on site; ACSIs should consider comparing the NOTAM logs against the daily self-inspection reports to determine whether NOTAMs were issued appropriately and in a timely manner for identified discrepancies requiring one.",
+      },
+      {
+        id: 'condrpt.3',
+        question: 'Provide Information on Required Conditions',
+        citation: '§139.339(c)',
+        guidance: "There are nine airport conditions identified in §139.339(c) that must be reported, along with any other condition specified in the approved ACM or that might otherwise affect the safe operations of air carriers; AC 150/5200-28 and JO 7930.2 provide further guidance. The ACSI should also remain alert to conditions that may fall under the 'any other condition that may otherwise adversely affect the safe operation of air carriers' catch-all, addressing each such item directly with the airport operator to determine, as appropriate, a course of action, including whether it must be reported.",
+      },
+      {
+        id: 'condrpt.4',
+        question: '12 CCM of Records of Each Dissemination',
+        citation: '§139.339(d)',
+        guidance: 'The certificate holder must prepare and keep, for at least 12 consecutive calendar months, a record of every disseminated airport condition report; electronic storage is allowable provided the records remain readily available to the ACSI for review. Records of airport conditions required under §139.339 must be maintained for 12 consecutive calendar months (Order §4.9.2, the Records section), and the ACSI verifies that appropriate and timely NOTAMs were issued for any discrepancies requiring one by reviewing and comparing NOTAM logs against self-inspection records.',
+      },
     ],
   },
   // ── Section 22: Noncomplying Conditions ──

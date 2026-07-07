@@ -122,3 +122,17 @@ describe('Part 139 programs guidance A (Phase 3.3a)', () => {
     expect(missing).toEqual([])
   })
 })
+
+describe('Part 139 programs guidance B (Phase 3.3b)', () => {
+  const items = PART139_CERT_SECTIONS.flatMap(s => s.items)
+  it('self-inspection daily item references daily/as-required inspection', () => {
+    const daily = items.find(i => i.citation === '§139.327(a)(1)')
+    expect(daily?.guidance ?? '').toMatch(/dail|as required/i)
+  })
+  it('every item in selfinsp/vehicles/condrpt has non-empty guidance', () => {
+    const secs = ['p139-selfinsp','p139-vehicles','p139-condrpt']
+    const missing = PART139_CERT_SECTIONS.filter(s => secs.includes(s.id))
+      .flatMap(s => s.items).filter(i => !(i.guidance && i.guidance.trim().length > 0)).map(i => i.id)
+    expect(missing).toEqual([])
+  })
+})
