@@ -1,14 +1,18 @@
 # Session Handoff
 
-**Date:** 2026-07-06
-**Branch:** `main`. Both repos **fully pushed and clean**, both live.
-`airfield-app` was **re-promoted this session** — the ACSI mode-aware form/PDF
-work is now live. `glidepath-site` is promoted and **live** (all 50 pages).
-**Build:** `airfield-app` tsc ✓ · lint 0 errors · `npm run test` 1104 passed /
-16 skipped ✓ · `npm run build` ✓. `glidepath-site` tsc ✓ · lint ✓ ·
-`npm run test` 74/74 ✓ · `npm run build` ✓.
-**HEAD:** `airfield-app` `0bf6dfbd` · `glidepath-site` `3688a57`.
-**CI:** both green — `airfield-app` `0bf6dfbd` ✅, `glidepath-site` `3688a57` ✅.
+**Date:** 2026-07-07
+**Branch:** `main`. `airfield-app` has **21 new unpushed commits** (HEAD `7214192a`)
+— the **Part 139 certification-inspection readiness audit** built end-to-end this
+session via subagent-driven-development. **NOT pushed / NOT promoted** — owner owns
+that + must visually verify first (see Next tasks). `glidepath-site` unchanged/live.
+**Build:** `airfield-app` @ `7214192a`: tsc ✓ · lint 0 errors (2 pre-existing
+warnings in `lib/waiver-pdf.ts`, not this work) · `npm run test` **1127 passed /
+16 skipped** ✓ · `npm run build` ✓.
+**HEAD:** `airfield-app` `7214192a` (unpushed) · `glidepath-site` `3688a57`.
+**DB:** migration `2026070700_add_part139_cover_fields` **applied to the linked DB**
+(3 nullable cover columns on `acsi_inspections`).
+**Full task-by-task detail:** `.superpowers/sdd/progress.md` (the SDD ledger).
+Design/plan: `docs/superpowers/specs|plans/2026-07-06-part139-cert-inspection-audit-*`.
 
 This session spanned two arcs: (1) the **module roster expansion** (glidepath-site
 36 → 50 module pages) plus the supporting airfield-app changes to open ACSI to
@@ -132,9 +136,18 @@ this session and are already applied.
 
 ## Next session tasks
 
-Pick up wherever the user wants — there's no *required* next step. The
-re-promote is done and both repos are green and live. The one substantive item
-in the backlog:
+**Part 139 cert-audit — owner actions before this ships (built this session, unpushed):**
+1. **Visually verify** on a civilian base (KDMO/KDRA): `/acsi/new` renders the 22-section
+   Form 5280-4 audit (S/U/N-A, civilian team, cover fields ARFF Index/Class/Inspector,
+   no risk-cert, per-item Guidance disclosures) → file it → `/acsi/[id]` displays it →
+   the generated **PDF** looks right (no render harness existed, so column density is unverified).
+2. **Push + promote** when satisfied (owner owns this).
+3. Optional guidance accuracy-pass minors (non-blocking, noted in the SDD ledger): `aep.6`
+   citation §325(f) vs Order prose §325(b)(9); `wildlife.10` biologist gloss; `arff.7`
+   "cannot be waived" synthesis; `msl.10` conditional; `[id]/page.tsx:82` inspTerm uses
+   installation not record mode.
+
+Then, older backlog (unchanged):
 
 1. **App-side dual-mode terminology sweep** — extend `lib/airport-mode.ts` +
    the leaking modules (`/discrepancies`, `/inspections`, `/checks`, `/qrc`,
