@@ -62,6 +62,10 @@ export async function saveAcsiDraft(input: {
   notes: string | null
   draft_data: AcsiDraftData
   base_id?: string | null
+  /** Civilian (Part 139) cover-sheet fields. Undefined/omitted → stored as null (USAF). */
+  arff_index?: string | null
+  airport_class?: string | null
+  inspector?: string | null
 }): Promise<{ data: AcsiInspection | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -105,6 +109,9 @@ export async function saveAcsiDraft(input: {
         risk_cert_signatures: input.risk_cert_signatures,
         notes: input.notes,
         draft_data: input.draft_data,
+        arff_index: input.arff_index ?? null,
+        airport_class: input.airport_class ?? null,
+        inspector: input.inspector ?? null,
         saved_by_name: savedByName,
         saved_by_id: userId || null,
         saved_at: now.toISOString(),
@@ -149,6 +156,9 @@ export async function saveAcsiDraft(input: {
     risk_cert_signatures: input.risk_cert_signatures,
     notes: input.notes,
     draft_data: input.draft_data,
+    arff_index: input.arff_index ?? null,
+    airport_class: input.airport_class ?? null,
+    inspector: input.inspector ?? null,
     inspector_name: savedByName,
     saved_by_name: savedByName,
     saved_by_id: userId || null,
@@ -190,6 +200,10 @@ export async function fileAcsiInspection(input: {
   completed_by_name: string
   completed_by_id: string | null
   base_id?: string | null
+  /** Civilian (Part 139) cover-sheet fields. Undefined/omitted → stored as null (USAF). */
+  arff_index?: string | null
+  airport_class?: string | null
+  inspector?: string | null
 }): Promise<{ data: AcsiInspection | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
@@ -218,6 +232,9 @@ export async function fileAcsiInspection(input: {
       filed_at: now.toISOString(),
       filed_by_name: input.completed_by_name,
       filed_by_id: input.completed_by_id,
+      arff_index: input.arff_index ?? null,
+      airport_class: input.airport_class ?? null,
+      inspector: input.inspector ?? null,
       draft_data: null,
       saved_at: null,
       saved_by_name: null,

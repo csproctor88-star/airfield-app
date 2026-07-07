@@ -84,6 +84,9 @@ export default function AcsiFormPage() {
       risk_cert_signatures: draftData.signatures,
       notes: draftData.notes || null,
       draft_data: draftData,
+      arff_index: draftData.arff_index ?? null,
+      airport_class: draftData.airport_class ?? null,
+      inspector: draftData.inspector ?? null,
       base_id: installationId,
     })
     if (!error && data) {
@@ -336,6 +339,9 @@ export default function AcsiFormPage() {
       risk_cert_signatures: draft.signatures,
       notes: draft.notes || null,
       draft_data: draft,
+      arff_index: draft.arff_index ?? null,
+      airport_class: draft.airport_class ?? null,
+      inspector: draft.inspector ?? null,
       base_id: installationId,
     })
     setSaving(false)
@@ -432,6 +438,9 @@ export default function AcsiFormPage() {
       inspector_name: completedByName,
       completed_by_name: completedByName,
       completed_by_id: completedById,
+      arff_index: draft.arff_index ?? null,
+      airport_class: draft.airport_class ?? null,
+      inspector: draft.inspector ?? null,
       base_id: installationId,
     }
     try {

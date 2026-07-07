@@ -10179,6 +10179,10 @@ export type AcsiInspection = {
   notes: string | null
   inspector_id: string | null
   inspector_name: string | null
+  /** Civilian (Part 139 Form 5280-4) cover-sheet fields. Null for USAF ACSI. */
+  arff_index: string | null
+  airport_class: string | null
+  inspector: string | null
   draft_data: AcsiDraftData | null
   completed_at: string | null
   completed_by_name: string | null
