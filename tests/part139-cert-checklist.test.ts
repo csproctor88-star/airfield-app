@@ -80,3 +80,17 @@ describe('createNewAcsiDraft', () => {
     expect(createNewAcsiDraft().team[0].role).toBe('afm')
   })
 })
+
+describe('Part 139 physical-airfield guidance (Phase 3.1)', () => {
+  const items = PART139_CERT_SECTIONS.flatMap(s => s.items)
+  it('paved-area hole item carries the 5-inch/45-degree test guidance', () => {
+    const hole = items.find(i => i.citation === '§139.305(a)(2)')
+    expect(hole?.guidance ?? '').toMatch(/5[- ]?inch|45/)
+  })
+  it('every item in the 4 physical-airfield sections has non-empty guidance', () => {
+    const secs = ['p139-paved','p139-safety','p139-msl','p139-wind']
+    const missing = PART139_CERT_SECTIONS.filter(s => secs.includes(s.id))
+      .flatMap(s => s.items).filter(i => !(i.guidance && i.guidance.trim().length > 0)).map(i => i.id)
+    expect(missing).toEqual([])
+  })
+})
