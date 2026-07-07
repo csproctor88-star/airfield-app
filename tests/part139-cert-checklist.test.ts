@@ -94,3 +94,17 @@ describe('Part 139 physical-airfield guidance (Phase 3.1)', () => {
     expect(missing).toEqual([])
   })
 })
+
+describe('Part 139 records/personnel/manual guidance (Phase 3.2)', () => {
+  const items = PART139_CERT_SECTIONS.flatMap(s => s.items)
+  it('personnel training-records item cites the 24-month retention', () => {
+    const trainRec = items.find(i => i.citation === '§139.303(d)')
+    expect(trainRec?.guidance ?? '').toMatch(/24|month/i)
+  })
+  it('every item in mpc/exempt/acm/records/personnel has non-empty guidance', () => {
+    const secs = ['p139-mpc','p139-exempt','p139-acm','p139-records','p139-personnel']
+    const missing = PART139_CERT_SECTIONS.filter(s => secs.includes(s.id))
+      .flatMap(s => s.items).filter(i => !(i.guidance && i.guidance.trim().length > 0)).map(i => i.id)
+    expect(missing).toEqual([])
+  })
+})

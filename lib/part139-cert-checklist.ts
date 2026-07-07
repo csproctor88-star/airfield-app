@@ -1,7 +1,8 @@
 // Part 139 certification-inspection readiness audit checklist.
 // Faithful reproduction of FAA Form 5280-4 (FAA Order 5280.5D, Appendix G, pp.144-147).
 // Section references = 14 CFR Part 139 Subpart D; per-item `citation` = the exact
-// Form 5280-4 sub-paragraph. `guidance` (added in Phase 3-4) = Order 5280.5D Ch.4 / App.H.
+// Form 5280-4 sub-paragraph. `guidance` (added in Phase 3-4) = transcribed from FAA
+// Order 5280.5D — source chapter/paragraph noted in a `// src:` comment per section.
 // Do not edit item text without re-checking the source — no fabricated reg text.
 import { ACSI_CHECKLIST_SECTIONS } from '@/lib/constants'
 import type { AcsiChecklistSection } from '@/lib/constants'
@@ -9,61 +10,131 @@ import type { AirportType } from '@/lib/airport-mode'
 
 export const PART139_CERT_SECTIONS: AcsiChecklistSection[] = [
   // ── Section 1: Methods & Procedures for Compliance ──
+  // src: 5280.5D §2.6
   {
     id: 'p139-mpc',
     number: 1,
     title: 'Methods & Procedures for Compliance',
     reference: '14 CFR §139.7',
     items: [
-      { id: 'mpc.1', question: 'Compliance with Advisory Circulars', citation: '§139.7' },
+      {
+        id: 'mpc.1',
+        question: 'Compliance with Advisory Circulars',
+        citation: '§139.7',
+        guidance: 'Certificate holders must comply with the requirements of Part 139 Subparts C and D in a manner authorized by the Administrator. FAA Advisory Circulars contain acceptable methods and procedures for complying with Part 139; in some instances an AC is the only applicable guidance, and that level of guidance meets the intent of being acceptable to the Administrator. Each AC specifies its own applicability and intent, so ACSIs should consult the applicability section of the AC before relying on it.',
+      },
     ],
   },
   // ── Section 2: Exemptions ──
+  // src: 5280.5D §2.12
   {
     id: 'p139-exempt',
     number: 2,
     title: 'Exemptions',
     reference: '14 CFR §139.111',
     items: [
-      { id: 'exempt.1', question: 'Justification Still Valid — No. on record', citation: '§139.111' },
+      {
+        id: 'exempt.1',
+        question: 'Justification Still Valid — No. on record',
+        citation: '§139.111',
+        guidance: 'Under 14 CFR Part 11, a certificate holder may petition for an exemption from any Part 139 requirement; petitions must meet the criteria in §139.111(b) and Part 11. Exemptions are time-limited and may not exceed 3 years, and each must be reviewed annually for currency, extension, or renewal. An exemption is not a Modification of Standards. Exemptions for ARFF requirements under §139.111(b) must be coordinated with AAS-300. A current Exemptions List must be kept with the approved ACM.',
+      },
     ],
   },
   // ── Section 3: Airport Certification Manual ──
+  // src: 5280.5D §3.2 (§139.201), §3.3 (§139.203)
   {
     id: 'p139-acm',
     number: 3,
     title: 'Airport Certification Manual',
     reference: '14 CFR §139.201/.203',
     items: [
-      { id: 'acm.1', question: 'Compliance with ACM', citation: '§139.201(a)' },
-      { id: 'acm.2', question: 'Preparation', citation: '§139.201(a)' },
-      { id: 'acm.3', question: 'Content', citation: '§139.203' },
-      { id: 'acm.4', question: 'Maintenance', citation: '§139.201(b)' },
+      {
+        id: 'acm.1',
+        question: 'Compliance with ACM',
+        citation: '§139.201(a)',
+        guidance: 'Part 139 requires each certificated airport to be operated according to its ACM, which must contain only those items authorized by the Regional Airports Division or AAS-300.',
+      },
+      {
+        id: 'acm.2',
+        question: 'Preparation',
+        citation: '§139.201(a)',
+        guidance: 'The ACM must be approved by the Regional Airports Division Manager (or the Lead or assigned ACSI); submitted in print, in duplicate, with one complete approved copy kept at the airport and one at the Regional Airports Division (an electronic version is acceptable if it meets the same criteria); in a format easy to revise, with a revision log; signed by the certificate holder acknowledging its responsibility to operate in compliance with the approved ACM; and distributed, in full or by applicable section, to the personnel responsible for its implementation, with the most current version always provided regardless of distribution method.',
+      },
+      {
+        id: 'acm.3',
+        question: 'Content',
+        citation: '§139.203',
+        guidance: 'The ACM must address all parts of Part 139 that apply to the airport and be comprehensive, though it need not be an all-inclusive list of instructions — all text in an approved ACM is enforceable under the Federal Aviation Regulations. It must contain a description of operating procedures, facilities and equipment, and responsibility assignments; contain the required elements specified in §139.203(b) for the airport certificate class; reflect current conditions, operations, and procedures; display the date of initial approval or latest revision on each page; include a current revision log; and, where non-standard procedures or Modifications of Standards are in effect, include documentation supporting a level of safety comparable to that described in FAA ACs.',
+      },
+      {
+        id: 'acm.4',
+        question: 'Maintenance',
+        citation: '§139.201(b)',
+        guidance: 'The ACM must be kept current at all times and must include any modification-of-standards approval letters.',
+      },
     ],
   },
   // ── Section 4: Records ──
+  // src: 5280.5D §4.9.1, §4.9.2
   {
     id: 'p139-records',
     number: 4,
     title: 'Records',
     reference: '14 CFR §139.301',
     items: [
-      { id: 'rec.1', question: 'Furnished upon Request', citation: '§139.301(a)' },
-      { id: 'rec.2', question: 'Maintained for Specified Duration', citation: '§139.301(b)' },
+      {
+        id: 'rec.1',
+        question: 'Furnished upon Request',
+        citation: '§139.301(a)',
+        guidance: 'The certificate holder must furnish, upon request by the Administrator, all records required to be maintained under §139.301.',
+      },
+      {
+        id: 'rec.2',
+        question: 'Maintained for Specified Duration',
+        citation: '§139.301(b)',
+        guidance: 'Retention periods are record-specific: airport personnel training records (§139.303, §139.327) and emergency-personnel training records (ARFF/medical service, §139.319) — 24 consecutive calendar months; fueling agent training records — 24 consecutive calendar months; fueling-truck and fuel-storage-area inspection records — 12 consecutive calendar months; self-inspection records (§139.327) — 12 consecutive calendar months; ground-vehicle-operator and movement/safety-area-access training records (§139.329) — 24 consecutive calendar months, reflecting training within the prior 12 consecutive calendar months; movement- or safety-area accident/incident records (§139.329) — 12 consecutive calendar months; airport condition records (§139.339) — 12 consecutive calendar months, to be compared with NOTAMs issued; and any other records the Administrator determines necessary, such as work orders for self-inspection discrepancies.',
+      },
     ],
   },
   // ── Section 5: Personnel ──
+  // src: 5280.5D §4.10.1-4.10.4.5
   {
     id: 'p139-personnel',
     number: 5,
     title: 'Personnel',
     reference: '14 CFR §139.303',
     items: [
-      { id: 'pers.1', question: 'Sufficient Qualified Personnel', citation: '§139.303(a)' },
-      { id: 'pers.2', question: 'Properly Equipped', citation: '§139.303(b)' },
-      { id: 'pers.3', question: 'Trained', citation: '§139.303(c)' },
-      { id: 'pers.4', question: 'Record of Training for 24 CCM', citation: '§139.303(d)' },
-      { id: 'pers.5', question: 'Use of an Independent Organization or Designee', citation: '§139.303(f)' },
+      {
+        id: 'pers.1',
+        question: 'Sufficient Qualified Personnel',
+        citation: '§139.303(a)',
+        guidance: 'The certificate holder must provide sufficient and qualified personnel to comply with its approved ACM and the requirements of Part 139. Per FAA policy at least one qualified employee or designee must be onsite during air carrier operations; the number needed depends on the airport size and layout and the volume and complexity of its operations. The ACSI cannot specify an exact staffing number but determines sufficiency from inspection findings — e.g. a high rate of non-compliance, observation of employees performing their duties, and staffing rosters or position descriptions — and may administer oral or written tests or request practical demonstrations.',
+      },
+      {
+        id: 'pers.2',
+        question: 'Properly Equipped',
+        citation: '§139.303(b)',
+        guidance: 'The certificate holder must equip personnel with the resources needed to comply with the requirements of Part 139.',
+      },
+      {
+        id: 'pers.3',
+        question: 'Trained',
+        citation: '§139.303(c)',
+        guidance: 'The certificate holder must train all persons who access movement areas and safety areas and perform duties, in compliance with the ACM and Part 139, and must develop a training program covering the areas subject to Part 139. Work that is completed but performed improperly can indicate a training deficiency even where staffing numbers are sufficient.',
+      },
+      {
+        id: 'pers.4',
+        question: 'Record of Training for 24 CCM',
+        citation: '§139.303(d)',
+        guidance: 'The certificate holder must record all training completed under §139.303 by each individual, including at minimum a description and date of the training received; records must be maintained for 24 consecutive calendar months after completion of training.',
+      },
+      {
+        id: 'pers.5',
+        question: 'Use of an Independent Organization or Designee',
+        citation: '§139.303(f)',
+        guidance: 'The certificate holder may use an independent organization or designee to comply with its ACM and the requirements of Part 139 only if the arrangement is authorized by the Administrator.',
+      },
     ],
   },
   // ── Section 6: Paved Areas ──
