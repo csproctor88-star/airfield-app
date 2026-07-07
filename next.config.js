@@ -239,7 +239,19 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.mapbox.com",
               "img-src 'self' data: blob: https://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://*.tiles.mapbox.com https://server.arcgisonline.com https://*.tiles.virtualearth.net https://api.qrserver.com https://digitalmedia.fws.gov",
               "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://maps.googleapis.com https://*.mapbox.com https://*.tiles.mapbox.com https://server.arcgisonline.com https://api.open-meteo.com",
+              // connect-src MUST mirror img-src's external hosts. The PWA service
+              // worker (Workbox runtime caching) intercepts cross-origin <img>
+              // loads and re-fetches them to cache — and a fetch is governed by
+              // connect-src, NOT img-src. Any host img-src trusts for images but
+              // connect-src omits => the SW's cache-fetch is blocked => broken
+              // image. That's what broke Google Maps marker/handle sprites
+              // (maps.gstatic.com/mapfiles/transparent.png) on parking / Visual
+              // NAVAIDs. Every host below already appears in img-src, so mirroring
+              // them here adds no new exfiltration surface (they're static CDNs /
+              // tile servers, not data sinks). The csp-headers test enforces the
+              // superset. (mt*.google.com Google-satellite tiles are absent from
+              // BOTH directives — separate call if that obstruction map breaks.)
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.mapbox.com https://*.tiles.mapbox.com https://server.arcgisonline.com https://*.tiles.virtualearth.net https://api.qrserver.com https://digitalmedia.fws.gov https://api.open-meteo.com",
               "worker-src 'self' blob:",
               // blob: lets client-generated PDFs (jsPDF `doc.output('blob')` object
               // URLs) preview inline in an <iframe> — the daily-review sign modal,
