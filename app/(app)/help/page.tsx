@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Rocket, Search, X, Download, ExternalLink, Compass, Sparkles, CheckCircle2, Circle, FileText } from 'lucide-react'
+import { Rocket, Search, X, Download, ExternalLink, Compass, Sparkles, CheckCircle2, Circle } from 'lucide-react'
 import { toast } from 'sonner'
 import { MODULES, moduleRefAppliesToAirport, type TrainingRole } from '@/lib/training/modules'
 import { RoleChipFilter } from '@/components/training/role-chip-filter'
@@ -57,52 +57,7 @@ const QUICK_START_STEPS = [
   },
 ] as const
 
-// FLIP Management — written Guide section. Glidepath Help uses written
-// guidance (not live previews), so this mirrors the per-module Guide shape
-// (a titled section with bullet points). FLIP applies to both usaf and
-// faa_part139, so it is not airport-type gated. Reg citations are exactly
-// as supplied by DAFMAN 13-204V2 — no fabricated paragraphs.
-const FLIP_GUIDE_SECTIONS: { title: string; points: string[] }[] = [
-  {
-    title: 'What it is',
-    points: [
-      'The electronic FLIPs Continuity Binder required by DAFMAN 13-204V2 §2.5.2.18.1 — the system of record for tracking FLIP product accountability, edition reviews, and non-procedural change coordination.',
-    ],
-  },
-  {
-    title: 'Home',
-    points: [
-      'Account Information and the Current Appointment Letter — a primary AND alternate FLIPs manager must be appointed IAW DAFMAN 13-204V2 §2.5.2.18.',
-      'FLIP Ordering Process (IAW AFI 11-201) and FLIP Manager Responsibilities laid out for quick reference.',
-      'The Local FLIP List — the source list that drives edition reviews — alongside the Reference library.',
-    ],
-  },
-  {
-    title: 'FLIP Changes',
-    points: [
-      'Coordinate non-procedural FLIP changes through the three-stage pipeline: Coordination → Submitted → Completed.',
-      'The AFM is the approval authority for non-procedural FLIP change requests (DAFMAN 13-204V2 §2.5.2.18.2.2.2).',
-      'Annotate "NOTAM Manager Airfield" in the change text for airfield-diagram changes (§2.5.2.18.2.2.3).',
-      'Record operating initials and date posted when the change is published (§2.5.2.18.2.2.8).',
-    ],
-  },
-  {
-    title: 'FLIP Reviews',
-    points: [
-      'Review local airfield data in each new FLIP edition (DAFMAN 13-204V2 §2.5.2.18.2.2).',
-      'Each review log captures FLIP title, effective date, review completion date, discrepancies noted, corrective action, date corrected, and the reviewer\'s name/rank (§2.5.2.18.2.2.1).',
-      'The Custodian → NAMO → AFM sign-off chain is a local oversight enhancement above the reg minimum.',
-    ],
-  },
-  {
-    title: 'Roles',
-    points: [
-      'Assign Primary/Alternate FLIP Custodian, NAMO, and AFM from the Roles menu — a single user can hold multiple roles.',
-    ],
-  },
-] as const
-
-type Tab = 'modules' | 'quickstart' | 'basesetup' | 'flip'
+type Tab = 'modules' | 'quickstart' | 'basesetup'
 type ReviewedFilter = 'all' | 'unreviewed' | 'reviewed'
 
 export default function TrainingPage() {
@@ -213,9 +168,6 @@ export default function TrainingPage() {
         </TabButton>
         <TabButton active={activeTab === 'basesetup'} onClick={() => setActiveTab('basesetup')}>
           Base Setup
-        </TabButton>
-        <TabButton active={activeTab === 'flip'} onClick={() => setActiveTab('flip')}>
-          <FileText size={14} /> FLIP Management
         </TabButton>
       </div>
 
@@ -456,52 +408,6 @@ export default function TrainingPage() {
         </div>
       )}
 
-      {/* FLIP Management tab — written Guide (no live preview), per Glidepath Help convention */}
-      {activeTab === 'flip' && (
-        <div style={{
-          background: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          padding: '20px 24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <FileText size={18} color="var(--color-cyan)" />
-            <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)' }}>
-              FLIP Management
-            </div>
-          </div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 18, lineHeight: 1.55 }}>
-            Electronic FLIPs Continuity Binder — IAW DAFMAN 13-204V2 §2.5.2.18. Sidebar › Airfield Management › FLIP Management.
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {FLIP_GUIDE_SECTIONS.map(section => (
-              <div key={section.title}>
-                <div style={{
-                  fontSize: 'var(--fs-2xs)',
-                  fontWeight: 800,
-                  color: 'var(--color-cyan)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  marginBottom: 8,
-                }}>
-                  {section.title}
-                </div>
-                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {section.points.map((p, i) => (
-                    <li
-                      key={i}
-                      style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.6 }}
-                    >
-                      {p}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -3,7 +3,7 @@ import {
   Home, Zap, LayoutDashboard, Activity, History, ListChecks, ClipboardCheck,
   ClipboardList, ShieldCheck, ClipboardSignature, AlertTriangle, HardHat,
   PlaneLanding, Bird, Users, Radio, Plane, MapPin, Lightbulb, FileText,
-  Database, BookOpen, AlertCircle, BarChart3, Settings, UserCog,
+  Database, BookOpen, BookMarked, AlertCircle, BarChart3, Settings, UserCog,
   MessageSquare, GraduationCap, Download, ShieldAlert, Siren, Snowflake,
 } from 'lucide-react'
 import type { AirportType } from '@/lib/airport-mode'
@@ -490,6 +490,42 @@ export const MODULES: ModuleRef[] = [
     faq: [],
     relatedModules: ['inspections', 'discrepancies', 'daily-reviews'],
     readMinutes: 6,
+  },
+  {
+    id: 'part139-cert-audit',
+    name: 'Part 139 Certification Audit',
+    icon: ShieldCheck,
+    color: 'var(--color-purple)',
+    path: '/acsi',
+    tagline: 'Annual FAA Form 5280-4 certification-inspection readiness self-audit',
+    roles: OPS_CORE,
+    appliesTo: ['faa_part139'],
+    overview:
+      'A self-audit that mirrors the FAA\'s annual airport certification/safety inspection, so you can work the same checks the FAA Airport Safety Inspector does before the visit — "prepare, don\'t perform." It reproduces FAA Form 5280-4 (the inspector\'s Certification/Safety Inspection Checklist): 22 sections and 123 items transcribed from the form, each carrying its exact 14 CFR Part 139 citation.\n\n' +
+      'This is distinct from the daily self-inspection under §139.327 (AC 150/5200-18C), which the Airfield Checks module covers — this is the annual certification-inspection readiness audit. Every item also carries "what the inspector looks for" guidance drawn from FAA Order 5280.5D in a collapsible disclosure.',
+    keyFeatures: [
+      '22 sections / 123 items reproduced from FAA Form 5280-4, each with its 14 CFR Part 139 sub-paragraph citation',
+      'Per-item inspector guidance from FAA Order 5280.5D (Chapter 4 + the Appendix H enhanced ARFF checklist) in a collapsible disclosure',
+      'Satisfactory / Unsatisfactory / N-A per item, with a Corrective Action captured on each Unsatisfactory finding',
+      'Form 5280-4 cover fields — ARFF Index, Airport Class, and Inspector — persisted on the record and printed on the PDF header',
+      'Civilian audit team (no USAF risk-certification signatures); scoped to the current calendar year',
+      'Form 5280-4 PDF export in the 5-column Facility/Condition · S · U · N/A · Remarks layout',
+    ],
+    howToAccess:
+      'Sidebar › Operations › All Inspections — start or resume the certification-inspection audit from the launcher. Civilian FAA Part 139 bases only (the USAF ACSI guide covers the equivalent on military bases).',
+    workflow: {
+      title: 'Running the readiness audit',
+      steps: [
+        'From All Inspections, start (or Continue) the certification audit and fill the cover fields — ARFF Index, Airport Class, and Inspector.',
+        'Work through each of the 22 sections, marking Satisfactory / Unsatisfactory / N-A per item; open the Guidance disclosure to see what the inspector looks for.',
+        'On each Unsatisfactory item, record the Corrective Action.',
+        'Save and resume across days as needed — the draft persists.',
+        'When complete, export the Form 5280-4 PDF for your readiness record.',
+      ],
+    },
+    faq: [],
+    relatedModules: ['inspections', 'checks', 'discrepancies'],
+    readMinutes: 5,
   },
   {
     id: 'daily-reviews',
@@ -1481,6 +1517,72 @@ export const MODULES: ModuleRef[] = [
     faq: [],
     relatedModules: ['wildlife', 'sms'],
     readMinutes: 6,
+  },
+  {
+    id: 'flip',
+    name: 'FLIP Management',
+    icon: BookMarked,
+    color: 'var(--color-cyan)',
+    path: '/flip',
+    tagline: 'Electronic FLIPs Continuity Binder per DAFMAN 13-204V2 §2.5.2.18',
+    roles: OPS_CORE,
+    overview:
+      'The electronic FLIPs Continuity Binder required by DAFMAN 13-204V2 §2.5.2.18.1 — the system of record for tracking FLIP product accountability, edition reviews, and non-procedural change coordination. A primary and an alternate FLIPs manager must be appointed IAW DAFMAN 13-204V2 §2.5.2.18.\n\n' +
+      'Home holds Account Information, the current appointment letter, the FLIP ordering process (IAW AFI 11-201), FLIP manager responsibilities, the Local FLIP List that drives edition reviews, and the reference library. FLIP Changes and FLIP Reviews carry the coordination and review workflows; Roles assigns the custodian / NAMO / AFM chain.',
+    keyFeatures: [
+      'Home — Account Information, the current appointment letter, the FLIP ordering process (IAW AFI 11-201), manager responsibilities, the Local FLIP List, and the reference library',
+      'FLIP Changes — coordinate non-procedural changes through Coordination → Submitted → Completed; the AFM is the approval authority (DAFMAN 13-204V2 §2.5.2.18.2.2.2)',
+      'Annotate "NOTAM Manager Airfield" in the change text for airfield-diagram changes (§2.5.2.18.2.2.3); record operating initials and date posted when published (§2.5.2.18.2.2.8)',
+      'FLIP Reviews — review local airfield data in each new FLIP edition (§2.5.2.18.2.2); each log captures title, effective date, review completion date, discrepancies noted, corrective action, date corrected, and reviewer name/rank (§2.5.2.18.2.2.1)',
+      'Custodian → NAMO → AFM sign-off chain — a local oversight enhancement above the reg minimum',
+      'Roles — assign Primary/Alternate FLIP Custodian, NAMO, and AFM; a single user can hold multiple roles',
+    ],
+    howToAccess: 'Sidebar › Admin › FLIP Management.',
+    workflow: {
+      title: 'Coordinating a non-procedural FLIP change',
+      steps: [
+        'Open FLIP Changes and start a change — it moves through Coordination → Submitted → Completed.',
+        'For airfield-diagram changes, annotate "NOTAM Manager Airfield" in the change text (§2.5.2.18.2.2.3).',
+        'Route to the AFM, the approval authority for non-procedural FLIP changes (§2.5.2.18.2.2.2).',
+        'When the change is published, record the operating initials and date posted (§2.5.2.18.2.2.8).',
+      ],
+    },
+    faq: [],
+    relatedModules: ['regulations'],
+    readMinutes: 4,
+  },
+  {
+    id: 'read-file',
+    name: 'Read File',
+    icon: ClipboardCheck,
+    color: 'var(--color-success)',
+    path: '/read-file',
+    tagline: 'Read-and-initial continuity file with version-stamped acknowledgements',
+    roles: OPS_AND_SAFETY,
+    overview:
+      'A read-and-initial continuity file. Leadership uploads documents — OIs, policy letters, read-and-initial items — that airfield management personnel must read and acknowledge, and each acknowledgement is stamped to the document\'s version. Replacing a document bumps its version and re-triggers acknowledgement for everyone.\n\n' +
+      'Unreviewed items drive a sidebar badge so nothing is missed, and a compliance view shows who has reviewed each document with a per-version audit trail.',
+    keyFeatures: [
+      'Managers (read_file:manage) upload PDF / JPG / PNG / XLSX / DOCX files up to 25 MB; everyone with read_file:view acknowledges',
+      'Version-stamped acknowledgements — a Replace bumps the version and re-triggers acknowledgement for all users',
+      'Sidebar badge counts unreviewed items so pending reads surface at a glance',
+      'Compliance view of who has reviewed each document, with a per-version audit trail',
+      'Archive drops a document off the review list + badge but retains it in the report history',
+    ],
+    howToAccess: 'Sidebar › Airfield Management › Read File.',
+    workflow: {
+      title: 'Publishing a read-and-initial item',
+      steps: [
+        'A manager clicks Add, uploads the document (PDF / image / Office file up to 25 MB), and titles it.',
+        'The item appears on every user\'s review list with an unreviewed badge.',
+        'Each user opens the document and marks it Reviewed — the acknowledgement is stamped to that version.',
+        'To reissue, Replace the file; the version bumps and everyone must acknowledge again.',
+        'Archive superseded items — they leave the review list but stay in the compliance report history.',
+      ],
+    },
+    faq: [],
+    relatedModules: ['regulations', 'flip'],
+    readMinutes: 4,
   },
 ]
 
