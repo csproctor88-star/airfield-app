@@ -27,8 +27,8 @@ describe('getSiteUrl', () => {
     expect(getSiteUrl()).toBe('https://app.example.com')
   })
 
-  it('falls back to glidepathops.com when both are unset', () => {
-    expect(getSiteUrl()).toBe('https://glidepathops.com')
+  it('falls back to app.glidepathops.com when both are unset', () => {
+    expect(getSiteUrl()).toBe('https://app.glidepathops.com')
   })
 
   it('strips trailing slashes so `${getSiteUrl()}/setup-account` is predictable', () => {
@@ -46,6 +46,6 @@ describe('getSiteUrl', () => {
   it('never returns an empty string even when env is empty', () => {
     process.env.NEXT_PUBLIC_SITE_URL = ''
     process.env.NEXT_PUBLIC_APP_URL = ''
-    expect(getSiteUrl()).toBe('https://glidepathops.com')
+    expect(getSiteUrl()).toBe('https://app.glidepathops.com')
   })
 })

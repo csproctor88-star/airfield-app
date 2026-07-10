@@ -2,7 +2,7 @@
  * Resolve the public-facing base URL for server-built email / redirect links.
  *
  * Prefers NEXT_PUBLIC_SITE_URL, falls back to NEXT_PUBLIC_APP_URL (historical
- * name), and finally to the production glidepathops.com host. Callers that
+ * name), and finally to the production app.glidepathops.com host. Callers that
  * build links like `${getSiteUrl()}/setup-account` are guaranteed to produce
  * an absolute URL — which matters because email clients append `http://` to
  * bare relative paths, producing broken `http:///setup-account` links.
@@ -16,7 +16,7 @@ export function getSiteUrl(): string {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    'https://glidepathops.com'
+    'https://app.glidepathops.com'
   // Strip any quote characters a .env file round-trip might have left in,
   // plus trailing slashes so `${getSiteUrl()}/setup-account` is predictable.
   const clean = raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '')
