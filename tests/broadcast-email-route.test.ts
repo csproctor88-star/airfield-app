@@ -88,4 +88,16 @@ describe('POST /api/admin/broadcast-email', () => {
     const { status } = await callRoute({ mode: 'send', subject: 'Hi', body: 'Body' })
     expect(status).toBe(400)
   })
+
+  it('rejects an off-allowlist from with 400', async () => {
+    const { status } = await callRoute({ mode: 'send', subject: 'S', body: 'B', from: 'evil@attacker.com' })
+    expect(status).toBe(400)
+  })
+
+  it('sends from the chosen allowlisted sender with matching reply-to', async () => {
+    await callRoute({ mode: 'send', subject: 'S', body: 'B', from: 'chris@glidepathops.com' })
+    const firstEmail = h.batchSend.mock.calls[0][0][0]
+    expect(firstEmail.from).toBe('Chris Proctor <chris@glidepathops.com>')
+    expect(firstEmail.replyTo).toBe('chris@glidepathops.com')
+  })
 })

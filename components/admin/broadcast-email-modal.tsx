@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { USER_ROLES } from '@/lib/constants'
 import type { UserRole } from '@/lib/supabase/types'
 import { renderSafeMarkdown } from '@/lib/email/safe-markdown'
+import { BROADCAST_SENDERS, DEFAULT_SENDER } from '@/lib/email/broadcast-senders'
 
 interface Props {
   onClose: () => void
@@ -15,6 +16,7 @@ interface Props {
 const API = '/api/admin/broadcast-email'
 
 export function BroadcastEmailModal({ onClose, bases, callerName }: Props) {
+  const [from, setFrom] = useState(DEFAULT_SENDER.email)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [baseIds, setBaseIds] = useState<string[]>([])
@@ -89,7 +91,7 @@ export function BroadcastEmailModal({ onClose, bases, callerName }: Props) {
       const res = await fetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, filters, subject, body }),
+        body: JSON.stringify({ mode, filters, subject, body, from }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -118,6 +120,12 @@ export function BroadcastEmailModal({ onClose, bases, callerName }: Props) {
           {count === null ? 'Counting recipients…' : `This will email ${count} active user${count === 1 ? '' : 's'}.`}
         </div>
 
+        <label className="section-label" htmlFor="bc-from">From</label>
+        <select id="bc-from" className="input-dark" style={{ width: '100%', marginBottom: 12 }} value={from} onChange={(e) => setFrom(e.target.value)}>
+          {BROADCAST_SENDERS.map((s) => (
+            <option key={s.email} value={s.email}>{s.name} — {s.email}</option>
+          ))}
+        </select>
         <label className="section-label" htmlFor="bc-subject">Subject</label>
         <input id="bc-subject" className="input-dark" style={{ width: '100%', marginBottom: 12 }} value={subject} onChange={(e) => setSubject(e.target.value)} />
 

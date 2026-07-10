@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { Resend } from 'resend'
 import { buildBroadcastEmail } from '@/lib/email/broadcast-template'
 import { normalizeRecipients, chunk, type Recipient } from '@/lib/email/broadcast-recipients'
+import { findSender, DEFAULT_SENDER, formatFrom } from '@/lib/email/broadcast-senders'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -12,14 +13,13 @@ function getResend() {
 }
 
 const CHUNK_SIZE = 100
-const FROM = 'Glidepath <info@glidepathops.com>'
-const REPLY_TO = 'info@glidepathops.com'
 
 interface Body {
   mode: 'count' | 'test' | 'send'
   filters?: { baseIds?: string[]; roles?: string[] }
   subject?: string
   body?: string
+  from?: string
 }
 
 function clean(v: string | undefined) {
@@ -55,7 +55,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { mode, filters, subject, body } = (await request.json()) as Body
+    const { mode, filters, subject, body, from } = (await request.json()) as Body
+
+    const sender = from ? findSender(from) : DEFAULT_SENDER
+    if (from && !sender) {
+      return NextResponse.json({ error: 'Invalid sender address' }, { status: 400 })
+    }
+    const FROM = formatFrom(sender ?? DEFAULT_SENDER)
+    const REPLY_TO = (sender ?? DEFAULT_SENDER).email
 
     const resolveRecipients = async (): Promise<Recipient[]> => {
       let q = admin.from('profiles').select('email, name').eq('status', 'active')

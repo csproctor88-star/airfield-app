@@ -66,4 +66,17 @@ describe('BroadcastEmailModal', () => {
       expect(fetchMock.mock.calls.some((c) => bodyOf(c).mode === 'send')).toBe(true)
     })
   })
+
+  it('defaults From to info@ and includes it in the send payload', async () => {
+    setup()
+    expect((screen.getByLabelText(/from/i) as HTMLSelectElement).value).toBe('info@glidepathops.com')
+    fireEvent.change(screen.getByLabelText(/subject/i), { target: { value: 'S' } })
+    fireEvent.change(screen.getByLabelText(/message/i), { target: { value: 'B' } })
+    fireEvent.click(screen.getByRole('button', { name: /send test to myself/i }))
+    await waitFor(() => {
+      const testCall = fetchMock.mock.calls.find((c) => bodyOf(c).mode === 'test')
+      expect(testCall).toBeTruthy()
+      expect(bodyOf(testCall!).from).toBe('info@glidepathops.com')
+    })
+  })
 })
