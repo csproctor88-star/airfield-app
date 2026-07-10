@@ -5,6 +5,7 @@ import { SidebarNav } from '@/components/layout/sidebar-nav'
 import { KioskGuard } from '@/components/layout/kiosk-guard'
 import { ScrollToTop } from '@/components/scroll-to-top'
 import { RealtimeAlertBanner } from '@/components/realtime-alert-banner'
+import { MovedBanner } from '@/components/layout/moved-banner'
 import { WhatsNewGate } from '@/components/whats-new-gate'
 import { WelcomeGate } from '@/components/welcome-gate'
 import { TourLauncher } from '@/components/tour/tour-launcher'
@@ -34,6 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <DashboardProvider>
             <SidebarNav />
             <div className="app-main">
+              <MovedBanner />
               <Header />
               <ScrollToTop />
               <KioskGuard />
