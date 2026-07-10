@@ -740,7 +740,7 @@ function HistoryRow({ check, onEdit, onDelete }: { check: ScnCheckWithResults; o
           {label}
         </div>
         <div style={{ flex: 1, fontSize: 'var(--fs-sm)', color: allClear ? 'var(--color-success)' : 'var(--color-warning)' }}>
-          {allClear ? 'All loud & clear' : `${exceptions.length} agency${exceptions.length === 1 ? '' : 'ies'} not clear`}
+          {allClear ? 'All loud & clear' : `${exceptions.length} agenc${exceptions.length === 1 ? 'y' : 'ies'} not clear`}
         </div>
         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
           {check.completed_by_oi || '—'}

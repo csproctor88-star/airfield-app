@@ -1041,7 +1041,7 @@ function PprContent() {
       toast.info('All agencies have already responded.')
       return
     }
-    if (!window.confirm(`Send a coordination reminder to ${pendingAgencyIds.length} pending agency${pendingAgencyIds.length === 1 ? '' : 'ies'} for PPR ${entry.ppr_number}?`)) return
+    if (!window.confirm(`Send a coordination reminder to ${pendingAgencyIds.length} pending agenc${pendingAgencyIds.length === 1 ? 'y' : 'ies'} for PPR ${entry.ppr_number}?`)) return
     try {
       const res = await fetch('/api/send-ppr-coordination-request', {
         method: 'POST',
@@ -1058,7 +1058,7 @@ function PprContent() {
       if (sentCount === 0) {
         toast.warning('No reminders sent — pending agencies have no coordinators or emails configured.')
       } else {
-        toast.success(`Reminder sent to ${sentCount} agency${sentCount === 1 ? '' : 'ies'}${skippedCount ? ` (${skippedCount} skipped — no recipients)` : ''}`)
+        toast.success(`Reminder sent to ${sentCount} agenc${sentCount === 1 ? 'y' : 'ies'}${skippedCount ? ` (${skippedCount} skipped — no recipients)` : ''}`)
       }
     } catch {
       toast.error('Could not send reminder')
