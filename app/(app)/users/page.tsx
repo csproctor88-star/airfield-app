@@ -342,7 +342,31 @@ export default function UserManagementPage() {
   }
 
   const handleResetPassword = async (email: string, userId: string) => {
-    await resetUserPassword(email, userId)
+    const result = await resetUserPassword(email, userId) as {
+      tempPassword?: string
+      emailSent?: boolean
+      emailError?: string | null
+    }
+    const tempPw = result?.tempPassword
+    if (result?.emailSent === false) {
+      // Password was reset, but the credential email did NOT go out. Make this
+      // loud so the admin relays the temp password manually instead of
+      // assuming the user received it.
+      toast.warning(
+        `Password reset for ${email}, but the email did NOT send` +
+          `${result.emailError ? ` (${result.emailError})` : ''}. ` +
+          `Share the temporary password manually${tempPw ? `: ${tempPw}` : ''}. ` +
+          `They'll be prompted to change it on next sign-in.`,
+        { duration: 20000 },
+      )
+    } else if (tempPw) {
+      toast.success(
+        `Password reset for ${email}. Temp password: ${tempPw} (share if email is quarantined; they'll be prompted to change it on next sign-in).`,
+        { duration: 15000 },
+      )
+    } else {
+      toast.success(`Password reset email sent to ${email}`)
+    }
   }
 
   const handleDeactivate = async (userId: string) => {

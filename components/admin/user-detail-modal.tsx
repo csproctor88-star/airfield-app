@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { X, RotateCcw, UserX, UserCheck, Trash2, Send, ChevronDown, Eye, EyeOff, Plus, Building2, ListChecks } from 'lucide-react'
+import { X, RotateCcw, UserX, UserCheck, Trash2, ChevronDown, Eye, EyeOff, Plus, Building2, ListChecks } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { RANK_OPTIONS, USER_ROLES } from '@/lib/constants'
 import { RoleBadge } from './role-badge'
@@ -274,9 +274,12 @@ export function UserDetailModal({
     setResetting(true)
     try {
       await onResetPassword(user.email, user.id)
-      showMessage(`Password reset email sent to ${user.email}`)
+      // Success + the temp password are surfaced by the parent as a persistent
+      // toast — the temp password must stay on screen long enough for the admin
+      // to relay it on a .mil tenant. No inline message here: showMessage
+      // auto-dismisses in 3s and would duplicate the toast.
     } catch (err) {
-      showMessage(err instanceof Error ? err.message : 'Failed to send reset email', true)
+      showMessage(err instanceof Error ? err.message : 'Failed to reset password', true)
     } finally {
       setResetting(false)
     }
@@ -907,8 +910,8 @@ export function UserDetailModal({
               opacity: anyLoading ? 0.5 : 1,
             }}
           >
-            <Send size={14} />
-            {resetting ? 'Sending...' : 'Send Password Reset Email'}
+            <RotateCcw size={14} />
+            {resetting ? 'Resetting…' : 'Reset Password (email temp)'}
           </button>
 
           {/* Deactivate / Reactivate */}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
@@ -8,12 +9,30 @@ import {
   isSysAdmin,
   canBaseAdminManageUser,
 } from '@/lib/admin/role-checks'
-import { getSiteUrl } from '@/lib/site-url'
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Same per-account, high-entropy temp password the invite flow uses
+// (app/api/admin/invite/route.ts). ~16 chars, URL-safe, with a fixed suffix
+// so it always clears any min-length / character-class policy.
+function generateTempPassword(): string {
+  return randomBytes(12).toString('base64url') + 'A9!'
+}
+
+/**
+ * Admin-initiated password reset.
+ *
+ * Deliverability rewrite: this route used to email a branded dark card with a
+ * gradient "Reset Password" CTA button deep-linking to glidepathops.com.
+ * Defender for Office 365 quarantines styled deep-link emails on .mil tenants,
+ * so the reset link never reached the user. We now reset the password
+ * server-side to a per-account temp value and email it as plain text (no
+ * links, no styling) — identical to the invite flow. The user signs in with
+ * the temp password and must_change_password=true forces them through
+ * /setup-account to choose a new one.
+ */
 export async function POST(request: Request) {
   try {
     const admin = getAdminClient()
@@ -58,11 +77,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 
-    // Authorization is keyed on userId, and the address we send the reset link
-    // to is derived from that same user via the auth admin API — never taken
-    // from the request body. Trusting a client-supplied email would let a base
-    // admin authorize against a userId they manage while passing an arbitrary
-    // email, triggering a branded reset email to any address.
+    // Authorization is keyed on userId, and the address we email the temp
+    // password to is derived from that same user via the auth admin API —
+    // never taken from the request body. Trusting a client-supplied email
+    // would let a base admin authorize against a userId they manage while
+    // passing an arbitrary address, leaking a working credential offsite.
     const { data: targetAuth, error: targetAuthError } = await admin.auth.admin.getUserById(userId)
     const targetEmail = targetAuth?.user?.email
     if (targetAuthError || !targetEmail) {
@@ -86,87 +105,84 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate password reset link
-    const siteUrl = getSiteUrl()
-    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
-      type: 'recovery',
-      email: targetEmail,
-      options: { redirectTo: `${siteUrl}/auth/confirm?next=/reset-password` },
+    // Reset the password to a per-account temp value and force a change on
+    // next sign-in. No recovery link is minted — the temp password travels in
+    // a plain email that survives .mil mail filtering.
+    const tempPassword = generateTempPassword()
+    const { error: pwError } = await admin.auth.admin.updateUserById(userId, {
+      password: tempPassword,
     })
-
-    if (linkError) {
-      // Fallback to default Supabase email if generateLink fails
-      const { error: resetError } = await admin.auth.resetPasswordForEmail(targetEmail, {
-        redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
-      })
-      if (resetError) return NextResponse.json({ error: resetError.message }, { status: 400 })
-      return NextResponse.json({ success: true })
+    if (pwError) {
+      return NextResponse.json({ error: pwError.message }, { status: 400 })
     }
 
-    // Name for the email greeting (profile fetched above)
-    const userName = targetProfile?.name || targetEmail
-    // Build a direct verify-OTP URL pointing at our /auth/confirm route
-    // (NOT properties.action_link). The hosted Supabase verify URL fails
-    // for server-generated links under PKCE — see comment in
-    // app/api/admin/invite/route.ts.
-    const hashedToken = linkData?.properties?.hashed_token
-    const verificationType = linkData?.properties?.verification_type
-    const resetUrl = (hashedToken && verificationType)
-      ? `${siteUrl}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent('/reset-password')}`
-      : `${siteUrl}/reset-password`
+    const { error: profileUpdateError } = await admin
+      .from('profiles')
+      .update({ must_change_password: true })
+      .eq('id', userId)
+    if (profileUpdateError) {
+      // The password is already reset; the gate flag is best-effort. Log it
+      // but don't fail the reset — worst case the user isn't forced to
+      // /setup-account and just keeps the temp password until they change it
+      // in Settings.
+      console.error('[admin/reset-password] must_change_password update failed:', profileUpdateError)
+    }
 
-    // Send branded email via Resend
+    // Email the temp password. Plain HTML + text, no links, info@ sender —
+    // mirrors the invite email. Non-fatal: the password is already reset, so
+    // we report emailSent/emailError back and the admin UI relays the temp
+    // password manually if the send failed (or was quarantined).
+    const userName = targetProfile?.name || targetEmail
+    let emailSent = false
+    let emailError: string | null = null
     const resendKey = process.env.RESEND_API_KEY
-    if (resendKey) {
+    if (!resendKey) {
+      emailError = 'Email service is not configured (RESEND_API_KEY missing).'
+    } else {
+      const html = `
+        <p>Hello ${escapeHtml(userName)},</p>
+        <p>Your Glidepath password was reset by your installation's administrator. Use the temporary password below to sign in.</p>
+        <p><strong>Sign-in email:</strong> ${escapeHtml(targetEmail)}<br>
+        <strong>Temporary password:</strong> <code>${escapeHtml(tempPassword)}</code></p>
+        <p>On your next sign-in you'll be prompted to choose a new password. Sign in at the Glidepath URL provided by your administrator.</p>
+        <p>If you didn't expect this, contact your installation's Airfield Manager or <a href="mailto:info@glidepathops.com">info@glidepathops.com</a>.</p>
+      `
+      const text = [
+        `Hello ${userName},`,
+        '',
+        "Your Glidepath password was reset by your installation's administrator. Use the temporary password below to sign in.",
+        '',
+        `Sign-in email: ${targetEmail}`,
+        `Temporary password: ${tempPassword}`,
+        '',
+        "On your next sign-in you'll be prompted to choose a new password. Sign in at the Glidepath URL provided by your administrator.",
+        '',
+        "If you didn't expect this, contact your installation's Airfield Manager or info@glidepathops.com.",
+      ].join('\n')
+
       try {
         const resend = new Resend(resendKey)
-        await resend.emails.send({
-          from: 'Glidepath <noreply@glidepathops.com>',
+        const { error: sendError } = await resend.emails.send({
+          from: 'Glidepath <info@glidepathops.com>',
           replyTo: 'info@glidepathops.com',
           to: targetEmail,
           subject: 'Glidepath — Password Reset',
-          html: `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0B1120;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B1120;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:520px;background:#1E293B;border-radius:12px;border:1px solid #334155;overflow:hidden;">
-        <tr><td style="background:linear-gradient(135deg,#0369A1,#22D3EE);padding:24px 32px;text-align:center;">
-          <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:4px;">GLIDEPATH</div>
-          <div style="font-size:22px;font-weight:800;color:#FFFFFF;">Password Reset</div>
-        </td></tr>
-        <tr><td style="padding:28px 32px;color:#E2E8F0;font-size:15px;line-height:1.6;">
-          <p style="margin:0 0 16px;">Hello <strong>${escapeHtml(userName)}</strong>,</p>
-          <p style="margin:0 0 16px;">A password reset has been requested for your Glidepath account. Click the button below to set a new password:</p>
-          <div style="text-align:center;margin:0 0 20px;">
-            <a href="${escapeHtml(resetUrl)}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#0369A1,#22D3EE);color:#FFFFFF;font-weight:700;font-size:15px;text-decoration:none;border-radius:8px;">Reset Password</a>
-          </div>
-          <p style="margin:0 0 8px;font-size:13px;color:#94A3B8;">This link will expire in 24 hours. If you did not request this reset, you can safely ignore this email.</p>
-          <p style="margin:0;font-size:13px;color:#64748B;">Questions? Reply to this email or contact <a href="mailto:info@glidepathops.com" style="color:#22D3EE;text-decoration:none;">info@glidepathops.com</a></p>
-        </td></tr>
-        <tr><td style="padding:16px 32px;border-top:1px solid #334155;text-align:center;">
-          <div style="font-size:11px;color:#64748B;">Glidepath Airfield Operations Platform</div>
-          <div style="font-size:11px;color:#475569;margin-top:4px;">Guiding You to Mission Success</div>
-          <div style="font-size:9px;color:#334155;margin-top:8px;line-height:1.4;">This application is not endorsed by, affiliated with, or associated with the Department of Defense (DoD) or any branch of the U.S. Armed Forces. The views and content herein do not reflect the official policy or position of the DoD.</div>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
+          html,
+          text,
         })
-        return NextResponse.json({ success: true })
-      } catch (emailErr) {
-        console.warn('[admin/reset-password] Branded email failed:', emailErr)
+        if (sendError) {
+          emailError = sendError.message || 'The email service rejected the message.'
+          console.error('[admin/reset-password] Resend error:', sendError)
+        } else {
+          emailSent = true
+        }
+      } catch (e) {
+        emailError = e instanceof Error ? e.message : 'Email send failed.'
+        console.error('[admin/reset-password] Email send threw:', e)
       }
     }
 
-    // Fallback: use Supabase default email
-    await admin.auth.resetPasswordForEmail(targetEmail, {
-      redirectTo: `${siteUrl}/auth/confirm?next=/reset-password`,
-    })
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, tempPassword, emailSent, emailError })
   } catch (err) {
     console.error('[admin/reset-password] Error:', err)
     return NextResponse.json(

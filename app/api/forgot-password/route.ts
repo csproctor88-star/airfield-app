@@ -80,21 +80,24 @@ export async function POST(request: Request) {
 
     // Plain, deliverability-tested template (mirrors the invite / approval
     // emails): no gradient wrapper, no styled CTA button, no logo. A password
-    // reset must carry a link, so the reset URL is shown as a plain, copyable
-    // link — the most likely form to survive .mil Safe Links rewriting. info@
+    // reset must carry the reset URL, but it is rendered as plain text — NOT
+    // an <a href> anchor — so the message is free of https:// linked content
+    // that Defender for Office 365 / Safe Links quarantines or rewrites on
+    // .mil tenants. The user copies the URL into their browser. Only the
+    // mailto: contact is a live link (mailto passes those filters). info@
     // sender to match the other transactional emails.
     const resend = new Resend(resendKey)
     const html = `
       <p>Hello,</p>
-      <p>A password reset was requested for the Glidepath account associated with <strong>${escapeHtml(email)}</strong>. Use the link below to set a new password:</p>
-      <p><a href="${escapeHtml(resetUrl)}">${escapeHtml(resetUrl)}</a></p>
+      <p>A password reset was requested for the Glidepath account associated with <strong>${escapeHtml(email)}</strong>. Copy the address below into your browser to set a new password:</p>
+      <p>${escapeHtml(resetUrl)}</p>
       <p>This link expires in 24 hours. If you didn't request this, you can ignore this email — your password will not change.</p>
       <p>Questions? Contact <a href="mailto:info@glidepathops.com">info@glidepathops.com</a>.</p>
     `
     const text = [
       'Hello,',
       '',
-      `A password reset was requested for the Glidepath account associated with ${email}. Use the link below to set a new password:`,
+      `A password reset was requested for the Glidepath account associated with ${email}. Copy the address below into your browser to set a new password:`,
       '',
       resetUrl,
       '',
