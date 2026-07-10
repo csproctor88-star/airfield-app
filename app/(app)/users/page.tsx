@@ -12,6 +12,7 @@ import { UserStatsHeader } from '@/components/admin/user-stats-header'
 import { UserList } from '@/components/admin/user-list'
 import { UserDetailModal } from '@/components/admin/user-detail-modal'
 import { InviteUserModal } from '@/components/admin/invite-user-modal'
+import { BroadcastEmailModal } from '@/components/admin/broadcast-email-modal'
 import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog'
 import {
   inviteUser,
@@ -119,6 +120,8 @@ export default function UserManagementPage() {
   // Modals
   const [selectedUser, setSelectedUser] = useState<UserCardData | null>(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false)
+  const [callerName, setCallerName] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<UserCardData | null>(null)
   const [deleting, setDeleting] = useState(false)
 
@@ -161,7 +164,7 @@ export default function UserManagementPage() {
       // Fetch caller's profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, primary_base_id')
+        .select('role, primary_base_id, name')
         .eq('id', user.id)
         .single()
 
@@ -182,6 +185,7 @@ export default function UserManagementPage() {
 
       setCallerRole(role)
       setCallerBaseId(profile.primary_base_id)
+      setCallerName(((profile as { name?: string | null }).name) || '')
 
       // Load installations
       const { data: bases } = await supabase
@@ -433,6 +437,28 @@ export default function UserManagementPage() {
               Activity
             </button>
           )}
+          {isSysAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowBroadcastModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '8px 14px',
+                borderRadius: 8,
+                border: '1px solid var(--color-border-mid)',
+                background: 'transparent',
+                color: 'var(--color-text-1)',
+                fontSize: 'var(--fs-base)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Email all users
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setShowInviteModal(true)}
@@ -550,6 +576,15 @@ export default function UserManagementPage() {
           defaultInstallationId={selectedBaseId}
           onInvite={handleInvite}
           onClose={() => setShowInviteModal(false)}
+        />
+      )}
+
+      {/* Broadcast Email Modal (sys-admin) */}
+      {showBroadcastModal && (
+        <BroadcastEmailModal
+          callerName={callerName}
+          bases={installations.map((b) => ({ id: b.id, name: b.name }))}
+          onClose={() => setShowBroadcastModal(false)}
         />
       )}
 
