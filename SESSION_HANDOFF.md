@@ -1,124 +1,143 @@
 # Session Handoff
 
-**Date:** 2026-07-09
-**Branch:** `main`, **fully pushed and clean** (HEAD `248fc148`).
-Two arcs this session: (1) a **bug-fix sweep** driven by owner testing of the
-promoted build — a Part 139 form fix, then a cascade of map/PDF/user-management
-bugs that each traced to a deeper root cause; and (2) a complete **Help &
-Training (`/help`) overhaul** — PDF export verified, three missing guides added,
-all 34 existing guides made current against the live app, and every screenshot
-recaptured and wired.
-**Build:** `airfield-app` @ `248fc148`: tsc ✓ · lint 0 errors (2 pre-existing
-warnings in `lib/waiver-pdf.ts`) · `npx vitest run` **1138 passed / 16 skipped**
-(125 files) ✓ · `npm run build` ✓.
-**HEAD:** `airfield-app` `248fc148` · `glidepath-site` unchanged (`3688a57`).
-**DB:** no new migrations this session. `2026070700_add_part139_cover_fields`
-(prior session) remains applied.
+**Date:** 2026-07-10
+**Branch:** `main` (both repos). `airfield-app` **fully pushed and clean**
+(HEAD `c623c40b`). `glidepath-site` working tree clean but **3 commits
+unpushed** (HEAD `5e643fa`).
+Three arcs in `airfield-app`: (1) the **Phase 5 apex domain cutover** —
+executed and verified live this session; (2) a new sys-admin **broadcast-email**
+feature ("Email all users"); (3) an **email-deliverability fix** so the last two
+password emails survive `.mil` mail filtering. Plus a **marketing homepage +
+verbiage refresh** on `glidepath-site` (committed, unpushed).
+**Build:** `airfield-app` @ `c623c40b`: tsc ✓ · lint 0 errors · `npx vitest run`
+**1179 passed / 16 skipped** (132 files) ✓ · `npm run build` ✓.
+**HEAD:** `airfield-app` `c623c40b` (pushed) · `glidepath-site` `5e643fa`
+(**unpushed**: `503d1be`, `dae1497`, `5e643fa`).
+**Domain:** apex cutover is **live** — `glidepathops.com` now serves the
+marketing site; the app runs at `app.glidepathops.com`.
+**DB:** one new migration this session — `2026070900_email_broadcasts`
+(broadcast audit table + sys-admin RLS), **applied to the linked DB and pushed**.
+`2026070700_add_part139_cover_fields` (prior session) remains applied.
 **Not promoted** — owner owns Vercel promotion.
 
 ---
 
 ## What shipped this session
 
-### Owner-testing bug sweep
+Three feature arcs in `airfield-app` plus a marketing-site pass. The domain
+cutover is the headline: the apex now points at the marketing site and the app
+lives on its own subdomain, so every server-built auth link and in-flight
+bookmark had to be made to survive the move.
 
-The owner tested the promoted build and reported a string of issues; several
-looked cosmetic but traced to shared root causes worth remembering.
+### Phase 5 apex domain cutover — executed and live
 
-#### Part 139 audit item numbers (`e8fa3e29`)
-The civilian Part 139 audit form rendered item numbers as the raw record id
-(`navaids.1`), leaking the section key. Added `acsiItemDisplayNumber(section,
-itemId)` in `lib/part139-cert-checklist.ts`: Part 139 (`p139-*` sections) shows
-section-qualified `17.1`; USAF ACSI (`acsi-*`, ids already hierarchical like
-`3.2.5`) passes through unchanged. Keyed on the record's section namespace, not
-the base's live mode. Wired into the form, `/acsi/[id]`, and the Form 5280-4 PDF.
+The marketing site (`glidepath-site`) now serves `glidepathops.com`; the app
+serves `app.glidepathops.com`. On inspection the Vercel app-project move was
+already done, so this session only had to reassign the apex + `www` and make the
+code cutover-safe. Owner performed the Vercel domain reassignment; verified live
+via `curl` (apex → marketing `200`; `/login` → `307` → app subdomain).
 
-#### CSP `frame-src` — inline PDF previews (`c07333e0`)
-Daily-review PDF preview showed a broken-document placeholder. The enforcing CSP
-had `frame-src 'self' https:`, which matches neither the `blob:` scheme nor
-`'self'`, so Chrome blocked the client-generated blob-PDF `<iframe>`. Added
-`blob:` to frame-src. Same fix repaired `/library` and `/regulations`. Guarded
-by `tests/csp-headers.test.ts`.
+- **`getSiteUrl()` fallback repointed** (`b12bd621`) — the both-env-unset
+  fallback moved from `https://glidepathops.com` to `https://app.glidepathops.com`.
+  `getSiteUrl()` builds server-side auth links (`/auth/confirm`, `/setup-account`,
+  `/reset-password`); after cutover the apex belongs to marketing, so a stale
+  fallback would email links into the marketing site. The Vercel env var
+  `NEXT_PUBLIC_SITE_URL` is the primary fix; this makes the code correct-by-default.
+- **Transition redirects** (in `glidepath-site`, `9d0db1a`, already pushed) — the
+  marketing site now `307`s the in-flight app paths (`/login`, `/setup-account`,
+  `/reset-password`, `/forgot-password`, `/auth/*`, `/dashboard`, the PPR public
+  paths) from the apex to `app.glidepathops.com`, so old bookmarks and
+  already-sent email links don't 404 on the marketing host.
+- **"Sign in" link** (in `glidepath-site`, `89ed5b6`, already pushed) — the
+  marketing header now links to the app so returning users have an obvious way in.
+- **Show-once "we've moved" in-app banner** (`51a1b13f`) + **user announcement
+  draft** (`d4b3990f`) — per the owner's "draft and in-app banner" directive: a
+  dismiss-once banner in the app pointing at the new URL, and a drafted
+  announcement for the owner to send.
 
-#### CSP `connect-src` — Google Maps markers (`b4c9b523`)
-The real cause of the long-running "question-mark markers" saga. The Workbox
-service worker intercepts cross-origin `<img>` loads and re-`fetch()`es them to
-cache — and a fetch is governed by **connect-src, NOT img-src**. img-src trusted
-`*.gstatic.com` but connect-src didn't, so the SW's fetch of Google Maps sprite
-images (`maps.gstatic.com/mapfiles/transparent.png`) was blocked → broken
-editable-shape handles on parking / Visual NAVAIDs. Made connect-src a **superset
-of img-src's external hosts** (added gstatic, Bing, QR, FWS; widened googleapis).
-The csp-headers test now enforces the superset invariant. See
-`project_csp_connect_src_sw_fetch` memory.
+### Broadcast email — sys-admin "Email all users"
 
-#### PWA update toast removed (`b1c287b6`)
-The "A new version is available" toast fired constantly. It had been added on the
-theory that stale bundles caused the map markers — but the markers persisted
-after refresh (the connect-src bug above was the real cause), so the toast was
-both wrong and noise. Unmounted `PwaUpdateToast` from the root layout; component
-kept dormant.
+A new sys-admin-only feature on `/users`, built TDD across eight commits. Lets a
+system admin compose and send an announcement to the whole user base.
 
-#### Ambiguous `bases` embed — user profile Save (`1e94b086`)
-User-management **Save Changes** failed with PostgREST `PGRST201` "more than one
-relationship was found for 'profiles' and 'bases'". The `dashboard_user_defaults`
-table (added ~2026-06-29) has exactly `user_id→profiles` + `base_id→bases`, so
-PostgREST treats it as a profiles↔bases M2M junction — colliding with the direct
-`primary_base_id` FK. `app/api/admin/users/[id]/route.ts` re-selected with an
-unqualified `bases(...)` embed. Fixed by naming the FK: `bases!primary_base_id`.
-Verified against the live REST API (old → PGRST201/300, new → 200). See
-`project_postgrest_embed_ambiguity` memory.
+- **Recipients** (`63af9439`) — default **all active users**, with optional base
+  and role filters; normalize + chunk helpers (Resend batch limits).
+- **Composer** (`a37fbbad`) — modal with a formatting toolbar + a **safe-subset
+  Markdown** renderer (`4d548eab`) + live preview, so the admin can write
+  headers / bullets / paragraph breaks.
+- **From-address selector** (`9335dd2a`) — dropdown, default `info@`, `chris@` as
+  an alternate; the chosen `from` is validated **server-side against an allowlist**
+  (a crafted request can't send from an arbitrary address) with a matching reply-to.
+- **Email builder** (`82f9caf7`) — a branded HTML template, but **link-free**:
+  per the owner's `.mil` constraint no URL links are embedded (see deliverability
+  arc below — links are the bigger quarantine trigger).
+- **API route** (`5385f316`) — `count` / `test` / `send` modes, sys-admin-gated;
+  guarded by `tests/broadcast-email-route.test.ts` (403s non-sys-admin, batches
+  one email per recipient, writes an audit row, enforces the from-allowlist).
+- **Audit + RLS** (`5d63fe9c`, migration `2026070900`) — `email_broadcasts`
+  records each send (sender, subject, recipient count, tally); sys-admin-only RLS.
+  Applied to the linked DB and pushed.
+- **Entry point** (`447a30ef`) — the "Email all users" button on `/users`, visible
+  only to sys-admin.
 
-### Help & Training (`/help`) overhaul
+### Email deliverability — password emails made `.mil`-safe (`c623c40b`)
 
-The in-app module-reference guides (`lib/training/modules.ts`, `MODULES`) plus the
-Module Reference PDF export. Delivered in phases with owner review gates.
+Owner noticed the admin **Reset Password** action still emailed a branded dark
+card with a gradient CTA button deep-linking to `glidepathops.com`. Defender for
+Office 365 quarantines styled deep-link emails on `.mil` tenants, so the reset
+link never reached the user. A sweep classified all ~15 transactional send paths;
+only the two password routes were non-compliant.
 
-#### PDF export verified + smoke test (`51367577`)
-Added `tests/training-pdf.test.ts` (the generator had zero coverage): renders the
-full current guide set without throwing + a content-completeness guard. Confirmed
-every referenced screenshot exists on disk and the export reads live `MODULES`.
+- **`app/api/admin/reset-password/route.ts`** — rewritten from a recovery-link
+  email to a **temp-password reset, no link at all**. It now resets the password
+  server-side to a per-account temp value (mirrors `admin/invite`'s
+  `generateTempPassword()`), sets `must_change_password` so login routes the user
+  through `/setup-account`, and emails the temp password as **plain text**
+  (`info@` sender, no styling, `mailto:` only). Returns
+  `{ tempPassword, emailSent, emailError }` so the `/users` modal surfaces the
+  temp password via a **persistent toast** — the admin relays it manually if the
+  email is quarantined, exactly like the invite flow. **Behavior change:** the
+  reset is now immediate + destructive (the old password stops working at once),
+  where the old link was non-destructive. Button relabeled
+  **"Reset Password (email temp)"**, icon `RotateCcw`.
+- **`app/api/forgot-password/route.ts`** — **kept the recovery-link flow**, but the
+  reset URL now renders as **plain text** instead of an `<a href>` anchor, so the
+  message carries no `https://` linked content for Safe Links to rewrite or
+  quarantine. The user copies the URL into a browser; the token flow is unchanged.
+- **`tests/email-deliverability.test.ts`** — new guard on both routes: no clickable
+  `http(s)` anchor and no `linear-gradient` in either email; temp password present
+  + `must_change_password` set on the admin reset; reset URL present-but-plain on
+  forgot-password. This is the **second** `.mil` branding regression, so it's pinned.
 
-#### Coverage gaps closed (`c34c7e7c`)
-Three modules had no guide. Added `MODULES` entries for **Read File** (was
-missing), the **Part 139 audit** (the `acsi` guide is `appliesTo:['usaf']`, so
-civilian `/acsi` had none), and **FLIP** — migrated from an inline page-only
-section into a real entry (exact DAFMAN 13-204V2 citations preserved) so it now
-appears in the filtered grid + PDF. Corrected FLIP's stale `howToAccess` (it's
-under the Admin sidebar section, not Airfield Management).
+### Marketing homepage + verbiage refresh (`glidepath-site`, unpushed)
 
-#### 34-guide currency pass (`809d8e21`)
-Audited every guide against its live module + `sidebar-config.ts` via seven
-parallel read-only subagents, synthesized, then applied ~60 fixes via one
-implementation subagent (single file → no edit conflicts) with a full diff review
-after. Highlights: 20 `howToAccess` corrections (the pervasive "Sidebar ›
-Operations › X" is wrong — the section is "Daily Operations"; several were in the
-wrong section or off-nav); the `dashboard` guide rewritten for the widget-board
-system (was the retired fixed dashboard); `checks` real 8 types (was a stale 7);
-`obstructions` dropped a nonexistent multi-point mode, added the UFC/Part 77
-surface-set picker + NOTAM generator; `users` invite flow (active account + temp
-password, no deep link); false "realtime" claims removed (`ces`, `activity`);
-daily-reviews `v1→v2`. No fabricated reg text.
+Three commits, working tree clean, **not yet pushed** — owner pushes.
 
-#### Screenshots recaptured + wired (`c9d4fd46`)
-Owner supplied fresh captures. Read each image before captioning (caption-accuracy
-rule). dashboard ×3 (widget board / add-widget palette / a second board),
-daily-reviews reshot (sign modal now shows only Sign Review; list shows
-date-range + Outstanding), obstructions ×2 (surface-set picker + NOTAM), and
-first-time shots for Part 139 ×2 / FLIP ×3 / Read File ×2. Renamed the Part 139
-guide to **"Part 139 Annual Inspection"** to match the app's own page label.
-
-#### Test-timeout hardening (`248fc148`)
-The full suite flaked on a slow machine — the heaviest tests (`run-export`/ExcelJS,
-`amtr-transcribe` UI) finish in <1s normally but spike to ~15-20s under load and
-blew the 5s default. Raised `testTimeout`/`hookTimeout` to 30s in `vitest.config.ts`.
-Also dropped the now-unreferenced `public/training/obstructions_3.png`.
+- **`503d1be`** — hero reworked to a **full-width centered text hero** (the
+  OpsBoard mockup was removed; owner: the image "looks bad… just the main text
+  across the top"), and the header **wordmark enlarged** (`h-7` → `h-11`, after the
+  second half of "Glidepath" read too small).
+- **`dae1497`** — track headlines reworded to **"Military airfield management,
+  built with DAFMAN and UFC requirements in mind"** and **"Built for Civilian
+  Airport Operations, with FAA requirements in mind"**; the `GlidepathDivider`
+  ("blue line") removed site-wide (owner: "it looks dumb"); the **regulation-cite
+  chips removed** from the module cards on both tracks. Terminology guards + the
+  civilian `h1` / reg-chip route-stub tests updated to follow the intended change.
+- **`5e643fa`** — the ambient background `sky-glow` **animated** (three drifting,
+  breathing radial-gradient layers, `prefers-reduced-motion`-guarded). **Note:**
+  owner said "leave it for now — I have a different idea," so treat the homepage
+  background as an open design thread, not settled.
 
 ---
 
 ## Migrations status
 
-No new migrations this session. Prior migrations through
-`2026070700_add_part139_cover_fields` remain applied to the linked DB.
+| File | State | What it does |
+|---|---|---|
+| `2026070900_email_broadcasts.sql` | **Applied** (linked DB) + pushed | `email_broadcasts` audit table + sys-admin RLS for the broadcast feature |
+| `2026070700_add_part139_cover_fields.sql` | Applied (prior session) | Part 139 cover fields |
+
+No pending/unapplied migrations.
 
 ---
 
@@ -126,29 +145,31 @@ No new migrations this session. Prior migrations through
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Broken PDF preview in daily-review dialog (+ /library, /regulations) | enforcing CSP `frame-src 'self' https:` doesn't match the `blob:` scheme | `c07333e0` |
-| Google Maps editable-handle markers render as broken images | SW re-fetches img-src images to cache; that fetch is connect-src-governed, and gstatic was missing from connect-src | `b4c9b523` |
-| User-management Save Changes → PGRST201 | `dashboard_user_defaults` junction made `profiles`↔`bases` embed ambiguous; unqualified `bases(...)` embed in the PATCH route | `1e94b086` |
-| Part 139 form item numbers show `navaids.1` | form rendered the raw record id instead of a display number | `e8fa3e29` |
+| Admin "Reset Password" email never arrives on `.mil` | branded dark card + gradient CTA **deep-link** email → Defender for O365 quarantines styled deep links on `.mil` tenants | `c623c40b` |
+| (cutover) apex double-redirected during the Vercel flip | redirect direction set backwards (apex→`www`); fixed by making the apex primary (No Redirect) and pointing `www`→apex | Vercel dashboard (no code) |
 
 ---
 
 ## Lessons from this session
 
-- **CSP `connect-src` must mirror `img-src` for a PWA.** The service worker
-  re-fetches cross-origin images to cache them, and a fetch is governed by
-  connect-src, not img-src. Any host img-src trusts but connect-src omits →
-  broken images. Non-obvious; cost a multi-session "question-mark markers" chase.
-  Saved as `project_csp_connect_src_sw_fetch`.
-- **A new 2-FK junction table silently breaks existing PostgREST embeds** between
-  the two tables it joins (`PGRST201`). Hint the FK (`table!fk_column`). Saved as
-  `project_postgrest_embed_ambiguity`.
-- **Parallel-audit → single-writer-apply → full-diff-review** is a strong pattern
-  for a large content sweep in one file: fan out N read-only agents to find, then
-  one agent to apply (no edit conflicts), then review the whole diff yourself.
-- **Verify a fix against the live REST API when you can.** The ambiguous-embed fix
-  was confirmed end-to-end (old form → PGRST201, hinted → 200) before commit,
-  using the anon key — the hint is validated before RLS.
+- **`.mil` email = no links, no heavy styling.** Styled deep-link emails get
+  quarantined by Defender for O365; a **temp password (no link)** or a
+  **plain-text URL (no `<a href>`)** survives. `mailto:` links pass. This was the
+  second time email branding broke `.mil` delivery — now guarded by
+  `tests/email-deliverability.test.ts`. Reinforces the `.mil email deliverability`
+  memory.
+- **Temp-password reset is destructive; a recovery link is not.** Switching the
+  admin reset to a temp password immediately invalidates the user's current
+  password. That's the right call for `.mil` deliverability, but it's a real UX
+  change — the admin must relay the temp password (surfaced via a persistent
+  toast) if the email is quarantined.
+- **Vercel apex/`www`: make the canonical host primary (No Redirect), redirect the
+  other to it.** Getting the direction backwards double-redirects. Verify a
+  cutover end-to-end with `curl` (apex serves the right project; in-flight app
+  paths `307` to the app subdomain) before calling it done.
+- **Server-built email links must not fall back to the apex after a cutover.**
+  `getSiteUrl()`'s env-unset fallback had to move to the app subdomain, or reset /
+  invite / confirm links would resolve to the marketing site.
 
 ---
 
@@ -156,49 +177,54 @@ No new migrations this session. Prior migrations through
 
 | Item | Severity | Notes |
 |---|---|---|
-| App-side dual-mode terminology (other modules) | med | `/discrepancies`, `/inspections`, `/checks`, `/qrc`, `/flip`, `/obstructions` still leak military terms on civilian tenants; `lib/airport-mode.ts` doesn't cover them. The Help guides are now current, but the modules themselves aren't fully mode-aware. |
-| Part 139 audit P/F/N-A vs S/U/N-A inconsistency | low | list view + top progress bar read "Pass / Fail / N/A"; per-section tallies read "S / U / N-A". Cosmetic mismatch surfaced in the recaptured screenshots. |
-| Part 139 guide `howToAccess` unverified | low | says "Daily Operations › All Inspections — … from the launcher"; the screenshots show a dedicated "Part 139 Annual Inspection" page but not the exact civilian nav path. Confirm on a civilian base. |
-| Help screenshots are large PNGs | low | some source captures are 1–4 MB; they embed into the Module Reference PDF and the page. Consider downsizing `public/training/*.png` if PDF/page weight matters. |
-| New Help guides text-only where noted | low | Part 139 / FLIP / Read File now have shots; captions were written from the images. |
+| `glidepath-site` 3 commits unpushed | — | `503d1be` / `dae1497` / `5e643fa` (homepage + marketing + glow). Owner pushes. |
+| Homepage background direction unsettled | low | `sky-glow` animation is committed but owner wants "a different idea" — open design thread, don't treat as final. |
+| Broadcast email uses a branded template | low | link-free per owner constraint, but still styled; if `.mil` delivery of broadcasts proves flaky, stripping the card/gradient is the next lever (same failure mode as the reset email). |
+| Post-cutover verification | low | confirm the show-once "we've moved" banner renders for real users and the announcement draft is sent when the owner is ready. |
+| App-side dual-mode terminology (other modules) | med | `/discrepancies`, `/inspections`, `/checks`, `/qrc`, `/flip`, `/obstructions` still leak military terms on civilian tenants; `lib/airport-mode.ts` doesn't cover them. |
+| Part 139 audit P/F/N-A vs S/U/N-A inconsistency | low | list view + progress bar read "Pass/Fail/N/A"; per-section tallies read "S/U/N-A". Cosmetic. |
+| Part 139 guide `howToAccess` unverified | low | confirm the exact civilian `/acsi` nav path on a civilian base. |
+| Help screenshots are large PNGs | low | some `public/training/*.png` are 1–4 MB; consider downsizing if PDF/page weight matters. |
 | Civilian QRC templates title-only stubs | low | KDRA `qrc_templates` ×8 have "0 steps"; enrich for a richer `/qrc` frame. |
-| Guidance accuracy-pass nits (Part 139) | low | `aep.6` citation `§325(f)` vs Order prose `§325(b)(9)`; `wildlife.10`/`arff.7`/`msl.10` glosses — all in-source, none fabricated, flagged in the SDD ledger. |
 | Carried low items | low | status-page weather race (`app/(app)/page.tsx`); demo-form email-fail-after-insert silent; account-deactivation doesn't kill live sessions (`middleware.ts`); Selfridge 1098 dedup — unchanged. |
 
 ---
 
 ## Next session tasks
 
-No required next step — pick up wherever the owner wants. The two biggest open
-threads:
+No required next step — pick up wherever the owner wants. Open threads:
 
-1. **App-side dual-mode terminology sweep** (med) — the Help guides are current,
-   but the actual modules (`/discrepancies`, `/inspections`, `/checks`, `/qrc`,
-   `/flip`, `/obstructions`) still hardcode military terms on civilian tenants.
-   Mirror what ACSI/Part 139 and `lib/airport-mode.ts` already do.
-2. **Part 139 audit polish** — the P/F-vs-S/U label inconsistency, and confirm the
+1. **Homepage background redesign** — owner has "a different idea" for the hero /
+   ambient background; the current `sky-glow` animation is a placeholder, not the
+   destination.
+2. **App-side dual-mode terminology sweep** (med) — the actual modules
+   (`/discrepancies`, `/inspections`, `/checks`, `/qrc`, `/flip`, `/obstructions`)
+   still hardcode military terms on civilian tenants. Mirror what ACSI / Part 139
+   and `lib/airport-mode.ts` already do.
+3. **Part 139 audit polish** — the P/F-vs-S/U label inconsistency; confirm the
    civilian `/acsi` nav path so the guide's `howToAccess` is exact.
 
-Owner actions outstanding from the prior session: **promote** when satisfied
-(owner owns Vercel promotion).
+Owner-owned actions: **push `glidepath-site`** (3 commits). Vercel promotion of
+both projects is, as always, the owner's call.
 
 ### Long-running carryover
-Phase 5 apex cutover to `app.glidepathops.com`, SEO/rich-results, deferred audit
-items, Next 16 — all owner-scheduled, unchanged.
+SEO / rich-results, deferred audit items, Next 16 — owner-scheduled, unchanged.
 
 ---
 
 ## Build snapshot
 ```
-airfield-app @ 248fc148: tsc ✓ · lint 0 errors (2 pre-existing warnings in
-  lib/waiver-pdf.ts) · npx vitest run 1138 passed / 16 skipped (125 files) ·
-  npm run build ✓.
-  This session was data + fixes, not new routes: the main change is
-  lib/training/modules.ts (34 → 37 Help guides + currency edits) and the
-  public/training/*.png screenshots (static assets, no route-size impact).
-  Code fixes touched next.config.js (CSP), app/api/admin/users/[id]/route.ts,
-  lib/part139-cert-checklist.ts, app/(app)/acsi/*, app/layout.tsx, and
-  vitest.config.ts. No route First Load JS moved materially.
+airfield-app @ c623c40b: tsc ✓ · lint 0 errors (pre-existing warnings only) ·
+  npx vitest run 1179 passed / 16 skipped (132 files) · npm run build ✓.
+
+Changed routes this session (First Load JS):
+  /api/admin/broadcast-email     236 B / 107 kB   (new)
+  /api/admin/reset-password      236 B / 107 kB   (temp-password rewrite)
+  /api/forgot-password           236 B / 107 kB   (de-branded)
+  /reset-password              5.04 kB / 165 kB
+  /users                       21.4 kB / 207 kB   (+ broadcast modal + toast)
+  /users/analytics             4.91 kB / 171 kB
+Shared First Load JS: 106 kB   ·   Middleware: 80.8 kB
 ```
 
 ---
@@ -206,7 +232,7 @@ airfield-app @ 248fc148: tsc ✓ · lint 0 errors (2 pre-existing warnings in
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-05..09 | Marketing roster 36→50; **Part 139 certification-inspection readiness audit** (Form 5280-4, 22 sections/123 items); owner-testing **bug sweep** (CSP frame-src/connect-src, PostgREST embed, Part 139 item numbers, PWA toast); **Help & Training overhaul** — PDF export verified, Read File/Part 139/FLIP guides added, 34-guide currency pass, screenshots. Pushed, unpromoted. |
+| **Unreleased** | 2026-07-05..10 | Marketing roster 36→50 + **Part 139 certification-inspection readiness audit**; owner-testing **bug sweep** (CSP frame-src/connect-src, PostgREST embed); **Help & Training overhaul**; **Phase 5 apex domain cutover** (glidepathops.com→marketing, app→app.glidepathops.com); sys-admin **broadcast email**; **`.mil` email-deliverability fix** (link-free reset, de-branded forgot-password); marketing homepage/verbiage refresh. Pushed (airfield-app), unpromoted; glidepath-site homepage commits unpushed. |
 | **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
@@ -214,14 +240,17 @@ airfield-app @ 248fc148: tsc ✓ · lint 0 errors (2 pre-existing warnings in
 
 ## Key docs / files touched this session
 ### New files
-- `tests/csp-headers.test.ts` — CSP invariant guard (frame-src blob:, connect-src ⊇ img-src).
-- `tests/training-pdf.test.ts` — Module Reference PDF smoke + guide content-completeness guard.
-- `public/training/{dashboard_2,dashboard_3,part139-cert-audit_1,part139-cert-audit_2,flip_1,flip_2,flip_3,read-file_1,read-file_2}.png` — new Help screenshots.
+- `tests/email-deliverability.test.ts` — no-link / temp-password guard for both password-email routes.
+- `components/admin/broadcast-email-modal.tsx` + broadcast helpers (Markdown renderer, recipient normalize/chunk, email builder, senders) and `tests/broadcast-*.test.{ts,tsx}`.
+- `app/api/admin/broadcast-email/route.ts` — sys-admin count/test/send route.
+- `supabase/migrations/2026070900_email_broadcasts.sql` — audit table + RLS.
+- Phase 5: show-once "we've moved" banner + user announcement draft; `docs/superpowers/specs|plans/2026-07-09-phase5-domain-cutover-*.md`; broadcast design + plan docs.
+- `glidepath-site`: no new files (hero/header/copy edits in place).
 
 ### Modified files
-- `lib/training/modules.ts` — 3 new guides + 34-guide currency pass + screenshots.
-- `next.config.js` — CSP frame-src `blob:` + connect-src superset.
-- `app/api/admin/users/[id]/route.ts` — `bases!primary_base_id` FK hint.
-- `lib/part139-cert-checklist.ts` (+ `app/(app)/acsi/{new,[id]}/page.tsx`, `lib/acsi-pdf.ts`) — `acsiItemDisplayNumber`.
-- `app/layout.tsx` — unmount `PwaUpdateToast`.
-- `vitest.config.ts` — 30s test/hook timeout.
+- `app/api/admin/reset-password/route.ts` — temp-password rewrite (link-free).
+- `app/api/forgot-password/route.ts` — reset URL as plain text (de-branded).
+- `app/(app)/users/page.tsx` — broadcast entry + reset temp-password toast.
+- `components/admin/user-detail-modal.tsx` — reset button relabel + toast handoff.
+- `lib/site-url.ts` — `getSiteUrl()` fallback → `app.glidepathops.com`.
+- `glidepath-site`: `components/home/hero.tsx`, `components/layout/site-header.tsx`, `lib/track-content.ts`, `components/modules/module-grid.tsx`, `components/modules/module-page.tsx` + `app/{military,civilian}/page.tsx` (divider removal), `app/globals.css` + `app/layout.tsx` (sky-glow animation), `tests/route-stubs.test.tsx`.
