@@ -113,7 +113,9 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   sections: [
     {
       label: 'Daily Operations',
-      items: ['/qrc', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions', '/notams'],
+      // /scn (Secondary Crash Net) is USAF-only — the airport_type gate hides it
+      // on civilian bases, which surface the Airport Emergency Plan group instead.
+      items: ['/qrc', '/scn', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions', '/notams'],
     },
     {
       label: 'Airfield Management',

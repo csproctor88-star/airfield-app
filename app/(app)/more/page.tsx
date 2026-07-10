@@ -35,10 +35,11 @@ const pinnedItems: ModuleItem[] = [
 ]
 
 // Daily Operations
-// (Secondary Crash Net is intentionally off-nav — reached from the Dashboard
-// SCN quick-tile during daily checks.)
 const opsItems: ModuleItem[] = [
   { name: 'QRC', icon: Zap, color: 'var(--color-warning)', href: '/qrc' },
+  // Secondary Crash Net — USAF-only; isModuleEnabled hides it on civilian
+  // bases, which surface the Airport Emergency Plan group instead.
+  { name: 'Secondary Crash Net', icon: Radio, color: 'var(--color-accent)', href: '/scn' },
   { name: 'Shift Checklist', icon: CheckSquare, color: 'var(--color-accent)', href: '/shift-checklist' },
   { name: 'Airfield Checks', icon: ClipboardCheck, color: 'var(--color-cyan)', href: '/checks' },
   { name: 'All Inspections', icon: ClipboardList, color: 'var(--color-cyan)', href: '/inspections/all' },
