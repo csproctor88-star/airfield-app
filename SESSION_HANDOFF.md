@@ -1,179 +1,235 @@
 # Session Handoff
 
-**Date:** 2026-07-10
-**Branch:** `main` (both repos). `airfield-app` **fully pushed and clean**
-(HEAD `843a7ba3`). `glidepath-site` **fully pushed and clean** (HEAD `5e643fa`).
-A short, focused session on `airfield-app`: one user-reported **spelling bug**
-("agencyies") fixed across SCN + PPR, and **Secondary Crash Net added to the
-Daily Operations nav** (sidebar + `/more`). Both committed and pushed to `main`.
-Also **verified `glidepath-site` was already fully pushed** — the prior handoff's
-"3 unpushed commits" note was stale; a fetch + `rev-list` confirmed `origin/main`
-already has `503d1be` / `dae1497` / `5e643fa`.
-**Build:** `airfield-app` @ `843a7ba3`: tsc ✓ · lint 0 errors · `npx vitest run`
-**1179 passed / 16 skipped** (132 files) ✓ · `npm run build` ✓.
-**HEAD:** `airfield-app` `843a7ba3` (pushed) · `glidepath-site` `5e643fa` (pushed).
-**DB:** no new migrations this session — `2026070900_email_broadcasts` remains
-applied. No pending/unapplied migrations.
-**Not promoted** — owner owns Vercel promotion.
+**Date:** 2026-07-12
+**Branch:** `main` (both repos). `airfield-app` **untouched again** — no code
+commits, HEAD still `66b9e3ab` (its only local change is this handoff file,
+uncommitted by convention). `glidepath-site`: **24 commits**
+(`3446e4a..bb80daf`), all **pushed**, tree clean.
+**Build:** `glidepath-site` @ `bb80daf` (fresh gate at HEAD): tsc ✓ · lint 0
+errors 0 warnings · vitest **123 passed** (23 files) · `npm run build` ✓
+(67 routes; `/` 8.35 kB page / 118 kB First Load JS; `/military` &
+`/civilian` 180 kB First Load — the explorer client JS lives there now).
+**HEAD:** `glidepath-site` `bb80daf` (pushed) · `airfield-app` `66b9e3ab`.
+**DB:** no migrations. One linked-DB data write: demo user's
+`primary_base_id` flipped to Demo AFB (KDMO) for mil captures — still there.
+**Not promoted** — owner owns Vercel promotion. Preview builds from main.
 
 ---
 
 ## What shipped this session
 
-Two commits, both on `airfield-app`, both pushed. The first fixes a
-runtime-assembled plural that no source-grep could find; the second surfaces a
-module that had been reachable only from a dashboard tile.
+One repo again, one campaign: the owner audited the live site ("blank,
+disjointed, click-heavy, generic black"), picked a navy blue-hour palette,
+approved a six-phase **credibility & experience campaign** spec, and we
+executed phases 0–4. Phase 4 (the module browser) went through **six
+iterations in one session** — side panel → full takeover → radial mind map →
+progressive mind map + dialog → left-rail living tree → **product-window
+cards** (final, owner-picked from an options menu). Media work moved from
+subagent fleets to inline execution mid-session after a ~1M-token cost
+callout by the owner.
 
-### Fix agency plural rendering as "agencyies" on SCN and PPR (`bb7cdb32`)
+### Blue-hour navy palette (`033cf87`)
 
-Owner spotted "5 **agencyies** not clear" on the SCN *Past 30 Days* rows
-(screenshot, Selfridge / KMTC). The plural was being **assembled at runtime** as
-`agency` + `ies`, so no literal `agencies`/`agencyies` string ever existed in
-source — every text-grep for the misspelling came up empty, which is the whole
-reason it was hard to locate. Singular was correct (`agency` + `''` → "1 agency
-not clear"), matching what the screenshot showed for single-exception days.
+Owner chose variant B "as is": ground `#0A0E16`, panel/surface `#0F141D`,
+`surface2 #0C111A`, line `#1F2836`/`#2B3648`, plus a viewport-fixed
+`body::after` blue vignette (`rgba(56,120,200,0.07)` radial from top). All
+token-level in `tailwind.config.ts` + `globals.css`; kill-list untouched.
 
-The bad idiom is `` `agency${n === 1 ? '' : 'ies'}` `` — for words ending in
-`y`, appending `ies` doubles the stem. Fixed by stemming to `agenc` and letting
-the ternary supply `y` (one) or `ies` (many): `` `agenc${n === 1 ? 'y' : 'ies'}` ``.
-Three sites carried the identical defect: `app/(app)/scn/page.tsx` (the
-history-row summary) and `app/(app)/ppr/page.tsx` ×2 (the coordination-reminder
-`window.confirm` and the success toast). Swept the app for any other
-`` `word${… ? '' : 'ies'}` `` pattern — none remain. No test asserted the buggy
-text, and `tests/scn-summarize.test.ts` covers a *different* function
-(`summarizeCheck`, already correct), so nothing needed updating.
+### Campaign spec (`d1707cd`)
 
-### Add Secondary Crash Net to the Daily Operations nav (`843a7ba3`)
+`docs/superpowers/specs/2026-07-11-credibility-experience-campaign-design.md`
+— six phases: captures, day-spine copy sit-down, proof assets, spine
+cinematics, module explorer, subpage/photography/report-pack polish. Owner
+answered the proof-asset questions: AFM testimonials + named installations
+(content owed), founder story **anonymous** (About stays nameless — hard
+rule, spec amended).
 
-SCN (`/scn`) was a registered nav item (`Secondary Crash Net`, Radio icon) but
-was absent from every section of `DEFAULT_SIDEBAR_CONFIG`, so its only entry
-point was the Dashboard quick-actions tile. Added `/scn` to the **Daily
-Operations** section — in the sidebar (`lib/sidebar-config.ts`, positioned after
-`/qrc`) and in the `/more` menu (`app/(app)/more/page.tsx`, same slot) — and
-dropped the now-stale *"intentionally off-nav"* comment in `/more`.
+### Phase 0 — capture production (`56fd03d..cb472b0`, `1fec15b`)
 
-Gating is unchanged: SCN is USAF-only (the `airport_type` gate in
-`isModuleEnabled` hides it on civilian bases, which surface the AEP group
-instead), still behind `scn:view` and the per-base module-enable toggle. One
-behavior note for the next session: users who have **customized** their sidebar
-get SCN appended to the *bottom* of their Daily Operations group (the
-`loadSidebarConfig` new-item merge appends), not after QRC — only new/reset
-layouts get the after-QRC position. That's the established merge behavior, not a
-regression.
+Dedicated Log/Fix/Prove clips recorded for both tracks (previously reused
+frames). Three real PII-scrub failures found and fixed in the pipeline
+(TreeWalker text-node scrub; detail-anchor waits; post-accordion re-scrub;
+plus `958e165` scrubbing a real squadron designation out of a poster via
+`scrubReportingUnit` running before poster capture). `cb472b0` re-recorded
+all six original clips after the owner spotted the "Glidepath has moved"
+banner in frame — the runner now pre-seeds `glidepath-moved-notice-seen` and
+`glidepath_theme` in localStorage. **Read-only choreography law holds** (no
+form submits, no row creation).
 
----
+### Phase 1 — owner-verbatim day-spine copy (`b1e0d95`, `e38ff99`, `12c4430`)
+
+Full copy sit-down: every station now a timestamped log-entry header
+(`0600Z - begin the daily airfield inspection` …), headline
+`0700Z - aircraft are ready to taxi`, kicker deleted, button `▶ Run the day`.
+All strings owner-redlined verbatim into `lib/day-spine.ts`. Chips first
+baseline-pinned (`e38ff99`), then removed entirely on owner direction
+(`12c4430`).
+
+### Phase 2 — proof band (`f9a16dd`)
+
+`lib/proof-content.ts` + `components/home/proof-band.tsx`: testimonials and
+installations render **only when real content exists** (null-hides — both
+arrays still empty, owner owes quotes + installation-name permissions), plus
+an anonymous "Built by an Airfield Manager." strip linking `/about`. About
+added to main nav.
+
+### Phase 3 — spine rail, ambient self-play, in-depth clips
+(`6b6e04a..b6aa803`)
+
+Spine rebuilt as a lit timeline rail with ambient self-play (9s/station).
+`051c20c` fixed two user-caught defects: ambient froze on scroll
+(intersection ratio on a variable-height section → two-observer redesign:
+fixed-height header starts, whole-section threshold-0 pauses) and clip
+stalls (next-clip `<video preload="auto">` prefetch + legacy re-encodes).
+The first cinematic treatment (crop/zoom pans) was rejected twice by the
+owner ("choppy", "doesn't show what's going on") — root cause chased to
+animating filters over variable-frame-rate sources (`c882851`, fps-conform
+first) and then to the treatment concept itself: `b6aa803` **reshot all ten
+station clips full-frame and in depth** (18–19s choreographed takes using a
+rAF-eased `smoothScroll` primitive; `treat-clips.mjs` reduced to a
+finish-only grade: fps30, mild contrast/saturation, vignette, vp9 crf42,
+≤1.5 MB budget). Owner: clips acceptable for now, **video quality revisit
+parked** ("we can come back to this video").
+
+### Phase 4 — the module browser saga (`c6f984b..bb80daf`)
+
+Six forms in one session; each rejection sharpened the brief:
+
+- `c6f984b` in-place explorer with side detail panel — "not hitting the
+  mark, animation needs to be grander, show full details".
+- `b7d41e6` full takeover (grid-rows morph, module rail on top) — "tab with
+  a scroll bar is NOT the look".
+- `a096513` radial mind map (hub + 26 nodes) — owner proposed progressive
+  disclosure instead.
+- `31ab095` hub + 4 section nodes, bloom on click, **module dialog** that
+  zooms out of the clicked node (`--zoom-from` set from the node's screen
+  rect; CSS var inside keyframes), Esc/backdrop/✕, body scroll lock,
+  `?module=` deep links preserved.
+- `19803fd` left-rail tree (root → sections stacked left → modules spawn
+  right; ref: 50-jahre-hitparade.ch) with a **life layer**: ambient float +
+  cursor magnetism via one rAF spring loop writing to a dedicated wrapper
+  transform layer. Owner verdict: "eh… seems too basic, lacks the cards'
+  detail" — mind map concept dropped.
+- `bb80daf` **product-window cards** (owner picked from a 3-option
+  AskUserQuestion with previews): every card is the module's real capture +
+  name + tagline, grouped under the four section headers
+  (`MODULE_BRANCHES`); hover = 2.4s capture zoom + border ignite + cursor
+  tilt (perspective transform, direct style writes); seven cards play their
+  day-spine workflow clip inline on hover (`MODULE_CLIPS` in
+  `lib/module-map.ts` — only clips that unambiguously depict that module;
+  prove/log-civ stayed unmapped per caption-accuracy rule). Dialog kept,
+  now zooming from the card's rect **position and size** (reads as the card
+  expanding). `module-mind-map.tsx` deleted; map keyframes removed.
 
 ## Migrations status
 
-| File | State | What it does |
-|---|---|---|
-| `2026070900_email_broadcasts.sql` | **Applied** (linked DB) + pushed | `email_broadcasts` audit table + sys-admin RLS (prior session) |
-| `2026070700_add_part139_cover_fields.sql` | Applied (prior session) | Part 139 cover fields |
-
-No new migrations this session. No pending/unapplied migrations.
-
----
+No new migrations. `2026070900_email_broadcasts` remains the latest applied.
 
 ## Bugs fixed during the session
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| "N **agencyies** not clear" on SCN rows; same in PPR reminder confirm + toast | plural assembled at runtime as `agency` + `ies` — doubles the `y` stem; no literal string to grep, so it evaded every text search | `bb7cdb32` |
-
----
+| Real name survived scrub in report detail | leaf-element scrub missed nested "Filed By" text → TreeWalker; name-wait satisfied by list DOM → anchor on detail-only marker; accordion content mounted post-prep → re-scrub after expansion | `0ccda20`/`d5c9bb7` |
+| Real squadron in mil-prove poster | poster captured before clip `prep` ran → runner runs prep first | `958e165` |
+| Migration banner in every clip | fresh Playwright contexts lack the seen-key → pre-seed localStorage | `cb472b0` |
+| Ambient spine froze after user scroll | IO ratio on variable-height section | `051c20c` |
+| Cinematic clips choppy | animated filters over VFR sources; fixed with fps-conform, then treatment redesigned entirely | `c882851`, `b6aa803` |
+| Dialog zoom origin dead / stale | keyframe transform fill-mode overrides positioning + dim transforms → 3-layer node (position button > rAF wrapper > ignite span) | `19803fd` |
+| Card buttons unfindable by name | `img alt` + "▶ plays" chip precede the title in DOM → pollute the accessible name (`alt=""` + `aria-hidden`) | `bb80daf` |
+| Contract sweeps flaky in CI-size runs | 22–26 dialog cycles vs full-page DOM exceed vitest's 5s default → explicit 20–30s timeouts | `bb80daf` |
 
 ## Lessons from this session
 
-- **Runtime-assembled strings evade literal grep.** When the owner reports a
-  visible-text bug you cannot find in source, suspect a string built at runtime
-  — a pluralization ternary, a template concatenation, DB data. Search for the
-  *stem* and the *suffix* separately (here `agency` + `'ies'`), or grep the
-  pattern itself (`? '' : 'ies'`), not the rendered word.
-- **The `` `word${n===1?'':'ies'}` `` idiom is wrong for `y`-ending words.** It
-  yields `agencyies` / `categoryies`. Stem to the consonant and move the `y`
-  into the ternary. There were three copies of this exact bug — worth a quick
-  grep if similar phrasing shows up elsewhere.
-- **Verify handoff claims against live git before acting.** The prior handoff
-  said `glidepath-site` had 3 unpushed commits; a `git fetch` + `rev-list
-  --count origin/main...HEAD` showed 0 ahead / 0 behind, `HEAD == origin/main`.
-  The handoff was written before those commits were pushed and never updated.
-  Reinforces the start-session sanity-check: a stale `**HEAD:**` line means work
-  happened outside the handoff's view — in this case, a push did.
-
----
+- **Owner's design bar, sharpened:** structure without substance fails (mind
+  maps), substance without life fails (flat cards). The product's own
+  captures ARE the wow; canned CSS eases read "generic" — continuous/
+  physics-y motion (float, magnetism, tilt) reads alive. Reference he rates:
+  50-jahre-hitparade.ch.
+- **After repeated rejections, switch to an options menu.** The
+  AskUserQuestion with ASCII previews (cards vs strips vs tree+thumbnails)
+  ended a six-iteration loop in one exchange.
+- **CSS keyframe fill-mode overrides transitions on the same element.**
+  Any node needing entrance keyframes AND later transform transitions needs
+  separate transform layers (or drop the animation after it settles).
+- **Button accessible names concatenate img alt + every child span.**
+  Decorative captures inside labeled cards get `alt=""`; affordance chips
+  get `aria-hidden`.
+- **Media/capture tasks run inline, not SDD** — subagent ceremony burned
+  ~1M tokens for two tasks before the owner called it (saved to memory).
+- **PowerShell mangles `git commit -m` with embedded quotes** — write the
+  message to a file and `git commit -F`.
 
 ## Known issues / tech debt
 
 | Item | Severity | Notes |
 |---|---|---|
-| Homepage background direction unsettled | low | `glidepath-site` `sky-glow` animation is committed + pushed but owner wants "a different idea" — open design thread, not final. |
-| Broadcast email uses a branded template | low | link-free per owner constraint, but still styled; if `.mil` delivery of broadcasts proves flaky, stripping the card/gradient is the next lever (same failure mode as the reset email). |
-| Post-cutover verification | low | confirm the show-once "we've moved" banner renders for real users and the announcement draft is sent when the owner is ready. |
-| App-side dual-mode terminology (other modules) | med | `/discrepancies`, `/inspections`, `/checks`, `/qrc`, `/flip`, `/obstructions` still leak military terms on civilian tenants; `lib/airport-mode.ts` doesn't cover them. |
-| Part 139 audit P/F/N-A vs S/U/N-A inconsistency | low | list view + progress bar read "Pass/Fail/N/A"; per-section tallies read "S/U/N-A". Cosmetic. |
-| Part 139 guide `howToAccess` unverified | low | confirm the exact civilian `/acsi` nav path on a civilian base. |
-| Help screenshots are large PNGs | low | some `public/training/*.png` are 1–4 MB; consider downsizing if PDF/page weight matters. |
-| Civilian QRC templates title-only stubs | low | KDRA `qrc_templates` ×8 have "0 steps"; enrich for a richer `/qrc` frame. |
-| Carried low items | low | status-page weather race (`app/(app)/page.tsx`); demo-form email-fail-after-insert silent; account-deactivation doesn't kill live sessions (`middleware.ts`); Selfridge 1098 dedup — unchanged. |
-
-Resolved / dropped this session: the prior "glidepath-site 3 commits unpushed"
-item — confirmed already on `origin/main`, nothing pending.
-
----
+| Track-page lead copy stale | **high** | `/military` + `/civilian` intro still says "the modules with a full page … the rest ship next" — false (all 26 have pages) and it references the dead wall layout. Owner to supply the line or ask for drafts. |
+| Proof band empty | med | testimonials + installations null-hidden until owner delivers quotes (rank/role attribution) + installation-name permissions → `lib/proof-content.ts`. |
+| Notify-station citations unverified | med | carried: owner to confirm `DAFMAN 13-204` (mil) / `14 CFR §139.339` (civ), then render chips. |
+| Spine video quality revisit | med | owner parked it; per-take tuning = choreography tweaks + `treat-clips --only` re-records. |
+| Day-spine verbatim check | low | composed s1-mil line + `❚❚ Pause` label never explicitly owner-confirmed. |
+| OG images old palette | med | carried; even staler vs navy. Regen held by owner. |
+| App-side dual-mode miss | med | **airfield-app bug**: civilian tenant status chips read "TO CES / TO AFM / AWAIT CES" — visible in civ captures until fixed app-side. |
+| Facts bar + security copy rework | med | carried; `send-pdf-email` wording tightening still queued. |
+| Messaging buckets B/C | med | carried: deployment-proof claim, pricing facts, sample-report CTA. |
+| Prior app-side carryover | low | dual-mode terminology sweep; status-page weather race; account-deactivation live sessions; Selfridge 1098 dedup. |
+| Demo user on Demo AFB | low | `primary_base_id` still KDMO; flip to KDRA before any civilian capture work. |
 
 ## Next session tasks
 
-No required next step — pick up wherever the owner wants. Open threads:
-
-1. **Homepage background redesign** (`glidepath-site`) — owner has "a different
-   idea" for the hero / ambient background; the current `sky-glow` animation is
-   a placeholder, not the destination.
-2. **App-side dual-mode terminology sweep** (med) — the actual modules
-   (`/discrepancies`, `/inspections`, `/checks`, `/qrc`, `/flip`,
-   `/obstructions`) still hardcode military terms on civilian tenants. Mirror
-   what ACSI / Part 139 and `lib/airport-mode.ts` already do.
-3. **Part 139 audit polish** — the P/F-vs-S/U label inconsistency; confirm the
-   civilian `/acsi` nav path so the guide's `howToAccess` is exact.
-
-Owner-owned actions: both repos are pushed and clean — nothing outstanding.
-Vercel promotion of both projects is, as always, the owner's call.
+1. **Owner verdict on product-window cards** — feel the tilt/hover-clips on
+   the Vercel preview (Playwright recordings undersell motion). Dials
+   (tilt degrees, zoom scale, pull radius) are one-liners if he wants more
+   or less.
+2. **Replace the track-page lead copy** (the "rest ship next" line) —
+   blocked on owner wording or a request for drafts.
+3. **Campaign Phase 5** — Higgsfield photography (owner per-image approval)
+   + two-column subpage layouts (`/platform`, module pages).
+4. **Campaign Phase 6** — ungated sample report pack (demo-base PDFs),
+   60–90s video tour, OG regen (owner sign-off).
+5. **Owner content queue:** proof quotes + installation permissions ·
+   notify-citation confirmations · day-spine verbatim check.
 
 ### Long-running carryover
-SEO / rich-results, deferred audit items, Next 16 — owner-scheduled, unchanged.
+Spine video quality revisit · SEO / rich-results · deferred audit items ·
+Next 16 — owner-scheduled, unchanged.
 
 ---
 
 ## Build snapshot
 ```
-airfield-app @ 843a7ba3: tsc ✓ · lint 0 errors (pre-existing waiver-pdf.ts
-  warnings only) · npx vitest run 1179 passed / 16 skipped (132 files) ·
-  npm run build ✓ (compiled in 24.0s).
-
-Changed routes this session (First Load JS):
-  /scn                         10.4 kB / 194 kB   (agency plural fix)
-  /ppr                         24.7 kB / 209 kB   (agency plural fix)
-  /more                         8.63 kB / 226 kB  (+ SCN nav item)
-  (lib/sidebar-config.ts touches the shared nav registry — no route-size delta)
-Shared First Load JS: 106 kB   ·   Middleware: 80.8 kB
+glidepath-site @ bb80daf (fresh, at HEAD): tsc ✓ · lint 0 errors 0 warnings ·
+  npx vitest run 123 passed (23 files) · npm run build ✓ 67 routes.
+  / 8.35 kB page / 118 kB First Load JS · /military & /civilian 138 B page /
+  180 kB First Load (explorer + card grid client JS) · module pages 110 kB.
+  All routes static except /api/demo.
+airfield-app @ 66b9e3ab: UNTOUCHED this session (snapshot carried from
+  2026-07-10: lint 0 errors · 1179 passed / 16 skipped · build ✓).
 ```
-
----
 
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-05..10 | Marketing roster 36→50 + **Part 139 certification-inspection readiness audit**; owner-testing **bug sweep** (CSP frame-src/connect-src, PostgREST embed); **Help & Training overhaul**; **Phase 5 apex domain cutover** (glidepathops.com→marketing, app→app.glidepathops.com); sys-admin **broadcast email**; **`.mil` email-deliverability fix** (link-free reset, de-branded forgot-password); marketing homepage/verbiage refresh; **agency-plural "agencyies" fix** + **SCN added to Daily Operations nav**. Both repos pushed, airfield-app unpromoted. |
+| **Unreleased** | 2026-07-12 | glidepath-site credibility campaign phases 0–4: navy blue-hour palette · PII-hardened capture pipeline + 10 full-frame station clips · owner-verbatim day-spine timeline copy · proof band (null-hidden) · spine rail w/ ambient self-play · module browser rebuilt six times, landing on **product-window cards** (capture cards w/ hover clips + tilt, card-expanding dialog). |
+| **Unreleased** | 2026-07-11 | glidepath-site homepage rebuilt twice: cinematic **blue-hour hero + disciplined-dark foundation** (kill-list-guarded), then the **Operational Day spine** (five stations, dual-track toggle, play-the-day, episodic row) replacing demo player + capability sections. PR #1 merged. airfield-app untouched. |
+| **Unreleased** | 2026-07-05..10 | Marketing roster 36→50 + Part 139 cert-audit; owner-testing bug sweep; Help & Training overhaul; Phase 5 apex cutover; broadcast email; `.mil` deliverability fix; agency-plural fix + SCN nav. |
 | **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
----
+## Key docs / files touched this session (all glidepath-site)
 
-## Key docs / files touched this session
 ### New files
-- none.
+- `components/modules/module-card-grid.tsx` — product-window cards (final browser form).
+- `components/modules/module-explorer.tsx` — selection/URL/dialog owner (rewritten across iterations; dialog zooms from card rect).
+- `lib/module-map.ts` — `MODULE_BRANCHES` (4 sections/track, guard-tested), `HUB_LABELS`, `MODULE_CLIPS`.
+- `lib/proof-content.ts` + `components/home/proof-band.tsx` — null-hiding proof infrastructure.
+- `scripts/treat-clips.mjs` — finish-only clip grade; `--only` re-render flag.
+- `docs/superpowers/specs/2026-07-11-credibility-experience-campaign-design.md` — campaign spec of record.
+- `public/screenshots/cine/*` — 10 station clips + posters (full-frame takes).
 
 ### Modified files
-- `app/(app)/scn/page.tsx` — history-row summary plural (`agenc${…}`).
-- `app/(app)/ppr/page.tsx` — coordination-reminder confirm + toast plural.
-- `lib/sidebar-config.ts` — `/scn` added to the Daily Operations section.
-- `app/(app)/more/page.tsx` — SCN added to `opsItems`; stale off-nav comment removed.
+- `tailwind.config.ts` + `app/globals.css` — navy tokens, vignette, `card-in`/`dialog-zoom` keyframes (map keyframes added then removed).
+- `lib/day-spine.ts` + `components/home/day-spine.tsx` — owner-verbatim copy, rail treatment, ambient self-play, dedicated clip wiring.
+- `scripts/capture-manifest.mjs` + `scripts/capture-screenshots.mjs` — smoothScroll, TreeWalker PII scrubs, localStorage pre-seed, in-depth ACTIONS.
+- `components/home/hero.tsx`, `components/layout/site-header.tsx` — accent/nav follow-ups.
+- Deleted: `components/modules/module-grid.tsx`, `components/modules/module-mind-map.tsx`.
