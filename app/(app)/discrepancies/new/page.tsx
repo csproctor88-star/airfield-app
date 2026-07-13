@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { DISCREPANCY_TYPES } from '@/lib/constants'
+import { resolveShopForTypes } from '@/lib/discrepancy-shop'
 import { uploadDiscrepancyPhoto } from '@/lib/supabase/discrepancies'
 import { useInstallation } from '@/lib/installation-context'
 import { toast } from 'sonner'
@@ -86,33 +87,12 @@ export default function NewDiscrepancyPage() {
     longitude: null as number | null,
   })
 
-  // Auto-assign shop when types change — use per-base typeShopMap first, fall
-  // back to defaultShop. This only sets "Assigned to"; the status always starts
-  // at "Submitted to AFM" on creation — AFM triages before routing to CES.
+  // Auto-assign shop when types change — per-base typeShopMap first, then
+  // defaultShop (lib/discrepancy-shop.ts). This only sets "Assigned to"; the
+  // status always starts at "Submitted to AFM" — AFM triages before CES.
   useEffect(() => {
-    if (selectedTypes.length === 0) return
-    for (const typeVal of selectedTypes) {
-      // 1. Check per-base type→shop map (configured in Base Setup → CE Shops)
-      const mapped = typeShopMap[typeVal]
-      if (mapped && ceShops.includes(mapped)) {
-        setAssignedShop(mapped)
-        return
-      }
-      // 2. Fall back to hardcoded defaultShop with fuzzy matching
-      const typeDef = DISCREPANCY_TYPES.find(t => t.value === typeVal)
-      if (!typeDef?.defaultShop) continue
-      const defaultLower = typeDef.defaultShop.toLowerCase()
-      const exact = ceShops.find(s => s === typeDef.defaultShop)
-      if (exact) {
-        setAssignedShop(exact)
-        return
-      }
-      const partial = ceShops.find(s => s.toLowerCase().includes(defaultLower) || defaultLower.includes(s.toLowerCase()))
-      if (partial) {
-        setAssignedShop(partial)
-        return
-      }
-    }
+    const resolved = resolveShopForTypes(selectedTypes, ceShops, typeShopMap)
+    if (resolved) setAssignedShop(resolved)
   }, [selectedTypes, ceShops, typeShopMap])
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {

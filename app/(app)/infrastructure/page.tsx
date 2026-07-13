@@ -46,6 +46,7 @@ import {
 } from '@/lib/supabase/infrastructure-features'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { submitDiscrepancyFanout } from '@/lib/discrepancy-write'
+import { resolveShopForTypes } from '@/lib/discrepancy-shop'
 import { createOutageEvent, fetchOutageEventsForBase, type EnrichedOutageEvent } from '@/lib/supabase/outage-events'
 import { fetchLightingSystems, fetchAllComponentsForBase, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
 import { resolveArea, buildFullRunwaysSet, areaSortKey } from '@/lib/infrastructure/areas'
@@ -532,7 +533,7 @@ export default function InfrastructureMapPage() {
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
-  const { runways, installationId, facilities, mapProvider } = useInstallation()
+  const { runways, installationId, facilities, mapProvider, ceShops, typeShopMap } = useInstallation()
   const { has } = usePermissions()
 
   // Fullscreen
@@ -1313,6 +1314,10 @@ export default function InfrastructureMapPage() {
     const feature = dbFeatures.find(f => f.id === id)
     if (!feature) return
 
+    // Same type→shop resolution as the manual New Discrepancy form
+    // (per-base map, then defaultShop: lighting → CE Electrical).
+    const assignedShop = resolveShopForTypes(['lighting'], ceShops, typeShopMap) ?? undefined
+
     // Offline: optimistically mark the feature inoperative locally and queue
     // the full fan-out (status + auto-discrepancy + outage event) through the
     // write queue. The online path below — refetch + DAFMAN A3.1 threshold
@@ -1337,7 +1342,7 @@ export default function InfrastructureMapPage() {
             longitude: feature.longitude,
             base_id: installationId,
             infrastructure_feature_id: id,
-            assigned_shop: 'Airfield Management',
+            assigned_shop: assignedShop,
           },
           inopFeatureIds: [id],
           outageEvents: [{
@@ -1417,7 +1422,7 @@ export default function InfrastructureMapPage() {
       facility_number: facilityLabel,
       base_id: installationId,
       infrastructure_feature_id: id,
-      assigned_shop: 'Airfield Management',
+      assigned_shop: assignedShop,
     })
 
     // Create outage event
