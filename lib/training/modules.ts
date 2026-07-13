@@ -341,10 +341,10 @@ export const MODULES: ModuleRef[] = [
     tagline: 'Per-shift task tracking with three-state toggles',
     roles: OPS_CORE,
     overview:
-      'Per-shift task list with Day / Swing / Mid sections. Three-state toggle per task — unchecked, completed, or N/A — with a progress bar that includes both completed and N/A items. Resets at 0600L per the installation timezone.\n\n' +
-      'Items are configured per base in Base Setup › Shift Checklist with frequency tags (Daily / Weekly / Monthly). Items only show on days they apply (e.g., a weekly item skips days when not due). Filing the checklist locks all toggles and stamps filer name + time; reopening only unlocks it for edits — already-checked items remain.',
+      'Per-shift task list with a section for each of the base’s configured shifts (1–3, renameable in Base Setup). Three-state toggle per task — unchecked, completed, or N/A — with a progress bar that includes both completed and N/A items. Resets daily at the base’s configured reset time (0600L default).\n\n' +
+      'Shifts and items are configured per base in Base Setup › Shift Checklist with frequency tags (Daily / Weekly / Monthly). Items only show on days they apply (e.g., a weekly item skips days when not due). Filing the checklist locks all toggles and stamps filer name + time; reopening only unlocks it for edits — already-checked items remain.',
     keyFeatures: [
-      'Day / Swing / Mid sections within Today\'s Checklist, each filtering to that shift\'s items',
+      'One section per configured shift within Today\'s Checklist (1–3 shifts, custom names supported), each filtering to that shift\'s items',
       'Three-state toggle: unchecked › completed › N/A › unchecked (cycle)',
       'Progress bar: (completed + N/A) / total — N/A counts as resolved',
       'Frequency color-coding: Daily (cyan), Weekly (purple), Monthly (warning amber)',
@@ -544,10 +544,10 @@ export const MODULES: ModuleRef[] = [
     roles: OPS_AND_OVERSIGHT,
     overview:
       'DAFMAN 13-204v2 §2.5.2.10.3 / .10.4 shift turnover and daily review queue. Each shift signs off on the events from their shift; AFM finalizes the review. Pending and reviewed counters in the header give an at-a-glance read before scrolling.\n\n' +
-      'The colored left rail on each row communicates state: green when fully certified, amber when today is pending (your turn), quiet when a past day is still unsigned. Click any row to open the sign modal. Required slots adapt to your base — bases.shift_count (2 or 3) determines whether you have Day/Mid/Swing or just Day/Swing.',
+      'The colored left rail on each row communicates state: green when fully certified, amber when today is pending (your turn), quiet when a past day is still unsigned. Click any row to open the sign modal. Required slots adapt to your base — the Shifts per Day setting (1, 2, or 3) determines which shift sign-offs are required, and custom shift names from Base Setup appear on the slots.',
     keyFeatures: [
       'Per-day rows with colored left rail showing state at a glance',
-      'Required slots: Day AMSL / Swing AMSL / Mid AMSL + NAMO + AFM (slot count from bases.shift_count)',
+      'Required slots: one AMSL sign-off per configured shift (1–3) + NAMO + AFM, using the base\'s shift names',
       'Date-range filter — 7 / 14 / 30 / 90-day, MTD, or custom',
       'Outstanding section surfaces started-but-uncertified reviews for follow-up',
       'Events save and freeze the daily review on certification by the AFM',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -62,6 +62,7 @@ import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, Infra
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
 import { isWizardStepEnabled, isStepDone, type WizardStepKey } from '@/lib/modules-config'
+import { getActiveShifts, getShiftLabel, bucketItemsByShift, DEFAULT_SHIFT_LABELS, SHIFT_ORDER, type ShiftKey } from '@/lib/shifts'
 import { StepperRail } from '@/components/base-setup/StepperRail'
 import { GuidePanel } from '@/components/base-setup/GuidePanel'
 import { KioskUrlChip } from '@/components/base-setup/KioskUrlChip'
@@ -2974,12 +2975,8 @@ function TemplatesTab({ installationId, markSaved }: { installationId: string | 
 }
 
 // ===== Shift Checklist Configuration Tab =====
-
-const SHIFT_OPTIONS: { value: ShiftType; label: string }[] = [
-  { value: 'day', label: 'Day Shift' },
-  { value: 'swing', label: 'Swing Shift' },
-  { value: 'mid', label: 'Mid Shift' },
-]
+// Shift options derive from the base's shift config (lib/shifts.ts) —
+// never hardcode shift names or counts here.
 
 const FREQ_OPTIONS: { value: FrequencyType; label: string }[] = [
   { value: 'daily', label: 'Daily' },
@@ -2998,8 +2995,10 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
   const [saving, setSaving] = useState(false)
   const [resetTime, setResetTime] = useState('06:00')
   const [savingReset, setSavingReset] = useState(false)
-  const [shiftCount, setShiftCount] = useState<2 | 3>(2)
+  const [shiftCount, setShiftCount] = useState<1 | 2 | 3>(2)
   const [savingShiftCount, setSavingShiftCount] = useState(false)
+  const [shiftNames, setShiftNames] = useState<Record<ShiftKey, string>>({ day: '', swing: '', mid: '' })
+  const [savingShiftName, setSavingShiftName] = useState<ShiftKey | null>(null)
 
   const [formLabel, setFormLabel] = useState('')
   const [formShift, setFormShift] = useState<ShiftType>('day')
@@ -3009,32 +3008,94 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
   const [editShift, setEditShift] = useState<ShiftType>('day')
   const [editFreq, setEditFreq] = useState<FrequencyType>('daily')
 
+  const activeShifts = getActiveShifts(currentInstallation)
+  const activeShiftKeys = new Set<string>(activeShifts.map(s => s.key))
+
   useEffect(() => {
     if (currentInstallation?.checklist_reset_time) {
       setResetTime(currentInstallation.checklist_reset_time)
     }
-    const sc = (currentInstallation as { shift_count?: number } | null)?.shift_count
+    const inst = currentInstallation as {
+      shift_count?: number
+      shift_name_day?: string | null
+      shift_name_swing?: string | null
+      shift_name_mid?: string | null
+    } | null
+    const sc = inst?.shift_count
     if (sc === 3) setShiftCount(3)
+    else if (sc === 1) setShiftCount(1)
     else setShiftCount(2)
+    setShiftNames({
+      day: inst?.shift_name_day || '',
+      swing: inst?.shift_name_swing || '',
+      mid: inst?.shift_name_mid || '',
+    })
   }, [currentInstallation])
 
-  async function handleSaveShiftCount(next: 2 | 3) {
+  async function handleSaveShiftCount(next: 1 | 2 | 3) {
     if (!installationId) return
+    const prev = shiftCount
+    // Items assigned to shifts that stop existing move to the first
+    // shift — a compliance checklist must never silently lose items.
+    const removedKeys = SHIFT_ORDER.slice(next)
+    const affected = items.filter(i => removedKeys.includes(i.shift))
+    if (affected.length > 0) {
+      const firstLabel = getShiftLabel(currentInstallation, 'day')
+      const noun = affected.length === 1 ? 'item is' : 'items are'
+      if (!confirm(`${affected.length} checklist ${noun} assigned to shifts being removed and will move to ${firstLabel}. Continue?`)) return
+    }
     setSavingShiftCount(true)
     setShiftCount(next)
     const supabase = createClient()
     if (supabase) {
+      for (const it of affected) {
+        const { error } = await updateChecklistItem(it.id, { shift: 'day' })
+        if (error) {
+          toast.error(error)
+          setShiftCount(prev)
+          setSavingShiftCount(false)
+          await load()
+          return
+        }
+      }
       const { error } = await (supabase as any)
         .from('bases')
         .update({ shift_count: next, updated_at: new Date().toISOString() })
         .eq('id', installationId)
-      if (error) toast.error(error.message)
-      else {
+      if (error) {
+        toast.error(error.message)
+        setShiftCount(prev)
+      } else {
         toast.success(`Shift count set to ${next}`)
         await refreshCurrentInstallation()
       }
+      if (affected.length > 0) await load()
     }
     setSavingShiftCount(false)
+  }
+
+  async function handleSaveShiftName(key: ShiftKey) {
+    if (!installationId) return
+    const value = shiftNames[key].trim()
+    const column = `shift_name_${key}`
+    const stored = ((currentInstallation as Record<string, unknown> | null)?.[column] as string | null) || ''
+    if (value === stored.trim()) return
+    setSavingShiftName(key)
+    const supabase = createClient()
+    if (supabase) {
+      const { error } = await (supabase as any)
+        .from('bases')
+        .update({ [column]: value || null, updated_at: new Date().toISOString() })
+        .eq('id', installationId)
+      if (error) toast.error(error.message)
+      else {
+        toast.success(value
+          ? `Shift renamed to "${value}"`
+          : `Shift name reset to ${DEFAULT_SHIFT_LABELS[key]}`)
+        await refreshCurrentInstallation()
+      }
+    }
+    setSavingShiftName(null)
   }
 
   const load = useCallback(async () => {
@@ -3219,10 +3280,6 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
     setEditFreq(item.frequency)
   }
 
-  const dayItems = items.filter(i => i.shift === 'day')
-  const midItems = items.filter(i => i.shift === 'mid')
-  const swingItems = items.filter(i => i.shift === 'swing')
-
   const inputStyle: React.CSSProperties = {
     padding: '8px 10px',
     borderRadius: 'var(--radius-sm)',
@@ -3252,7 +3309,10 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8 }}>
                       <input value={editLabel} onChange={e => setEditLabel(e.target.value)} style={inputStyle} placeholder="Item label" />
                       <select value={editShift} onChange={e => setEditShift(e.target.value as ShiftType)} style={selectStyle}>
-                        {SHIFT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        {activeShifts.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                        {!activeShiftKeys.has(editShift) && (
+                          <option value={editShift}>{DEFAULT_SHIFT_LABELS[editShift]} (inactive)</option>
+                        )}
                       </select>
                       <select value={editFreq} onChange={e => setEditFreq(e.target.value as FrequencyType)} style={selectStyle}>
                         {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -3351,18 +3411,45 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shifts per Day</div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-            Determines AMSL signature slots on Daily Reviews (2 = Day + Swing; 3 = Day + Swing + Mid).
+            Determines checklist sections and shift sign-off slots on Daily Reviews.
           </div>
         </div>
         <select
           value={shiftCount}
-          onChange={(e) => handleSaveShiftCount(Number(e.target.value) as 2 | 3)}
+          onChange={(e) => handleSaveShiftCount(Number(e.target.value) as 1 | 2 | 3)}
           disabled={savingShiftCount}
           style={{ ...selectStyle, minWidth: 100 }}
         >
+          <option value={1}>1 shift</option>
           <option value={2}>2 shifts</option>
           <option value={3}>3 shifts</option>
         </select>
+      </div>
+
+      {/* Shift Names — blank uses the default label */}
+      <div style={{
+        background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-base)', padding: 14, marginBottom: 12,
+      }}>
+        <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Names</div>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2, marginBottom: 10 }}>
+          Rename shifts to match how your team works. Leave blank to use the default.
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {activeShifts.map(s => (
+            <input
+              key={s.key}
+              value={shiftNames[s.key]}
+              onChange={e => setShiftNames(prevNames => ({ ...prevNames, [s.key]: e.target.value }))}
+              onBlur={() => handleSaveShiftName(s.key)}
+              placeholder={DEFAULT_SHIFT_LABELS[s.key]}
+              maxLength={20}
+              disabled={savingShiftName === s.key}
+              aria-label={`Name for ${DEFAULT_SHIFT_LABELS[s.key]}`}
+              style={{ ...inputStyle, flex: 1, minWidth: 140 }}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Reset Time Configuration */}
@@ -3397,7 +3484,7 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)' }}>Shift Checklist Items <FieldHint stepKey="shiftchecklist" fieldId="task_name" /></div>
-          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure items for day and swing shift checklists.</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2 }}>Configure items for each shift&apos;s checklist.</div>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{
           background: 'var(--color-cyan)', color: '#fff', border: 'none', borderRadius: 'var(--radius-base)',
@@ -3411,7 +3498,7 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
             <input value={formLabel} onChange={e => setFormLabel(e.target.value)} placeholder="Checklist item label" style={inputStyle} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <select value={formShift} onChange={e => setFormShift(e.target.value as ShiftType)} style={selectStyle}>
-                {SHIFT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {activeShifts.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
               </select>
               <select value={formFreq} onChange={e => setFormFreq(e.target.value as FrequencyType)} style={selectStyle}>
                 {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -3431,9 +3518,9 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-3)' }}>Loading...</div>
       ) : (
         <>
-          {renderItemList('Day Shift', dayItems)}
-          {renderItemList('Swing Shift', swingItems)}
-          {midItems.length > 0 && renderItemList('Mid Shift', midItems)}
+          {bucketItemsByShift(items, currentInstallation).map(b => (
+            <Fragment key={b.key}>{renderItemList(b.label, b.items)}</Fragment>
+          ))}
         </>
       )}
     </div>

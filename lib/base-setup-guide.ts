@@ -279,13 +279,15 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
 
   shiftchecklist: {
     what:
-      'Defines the per-shift task list (Day, Swing, Mid) for the AMOPS personnel on duty. Each task has a frequency ' +
+      'Defines the per-shift task list for the AMOPS personnel on duty, grouped by the base’s configured shifts (1–3, ' +
+      'renameable). Each task has a frequency ' +
       '(daily, weekly, or monthly) and one or more shifts it appears on. Items appear on the Shift Checklist page and on the ' +
-      'Dashboard sidebar, with a 3-state toggle (not done, in progress, complete) and a 0600L reset (per installation timezone).',
+      'Dashboard sidebar, with a 3-state toggle (not done, in progress, complete) and a daily reset (0600L default, per installation timezone).',
     how:
-      'Add one row per task. Pick the shift(s) it appears on, the frequency, and the canonical task name. Common pattern: shift-' +
-      'specific tasks on the appropriate shift only; cross-shift tasks (FOD Check, Daily Airfield Check) marked all three. The ' +
-      'per-base shift count (2 or 3) is set in Modules / Base; this step renders the matching number of shift columns.',
+      'Set the shift count (1, 2, or 3) and optional custom shift names at the top of this step, then add one row per task. ' +
+      'Pick the shift(s) it appears on, the frequency, and the canonical task name. Common pattern: shift-' +
+      'specific tasks on the appropriate shift only; cross-shift tasks (FOD Check, Daily Airfield Check) marked on every shift. ' +
+      'The item lists below render one section per active shift.',
     why:
       'AFM tracks shift accountability through this checklist. Daily Reviews uses the completion state to auto-fill the daily ' +
       'rollup, and the dashboard sidebar surfaces incomplete tasks at a glance. Without the checklist, AMOPS personnel rely on ' +
@@ -308,7 +310,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     fields: {
       task_name: 'Canonical task name as it appears on the checklist (e.g. "FOD Check", "NAVAID Status Verify").',
       task_frequency: 'How often the task recurs (daily, weekly, monthly).',
-      task_shifts: 'Which shifts the task appears on (Day, Swing, Mid). Multi-shift tasks are duplicated per shift on the page.',
+      task_shifts: 'Which of your configured shifts the task appears on. Multi-shift tasks are duplicated per shift on the page.',
     },
   },
 

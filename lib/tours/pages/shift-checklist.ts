@@ -6,9 +6,10 @@ export const SHIFT_CHECKLIST_PAGE_TOUR: TourStep[] = [
     anchor: 'shift-checklist-header',
     title: 'Shift Checklist',
     body:
-      'Per-shift task list (Day / Swing / Mid). Three-state toggle ' +
-      'per task (not done / in progress / complete). Resets at ' +
-      '0600L per the installation timezone. Items configured in Base ' +
+      'Per-shift task list, grouped by your base’s configured shifts ' +
+      '(1–3, renameable). Three-state toggle per task (not done / ' +
+      'in progress / complete). Resets daily at the base’s reset time ' +
+      '(0600L default). Shifts and items configured in Base ' +
       'Setup → Shift Checklist.',
   },
 ]

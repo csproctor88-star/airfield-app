@@ -3314,6 +3314,9 @@ export type Database = {
           quick_setup_pending: Json
           setup_progress: Json
           shift_count: number
+          shift_name_day: string | null
+          shift_name_mid: string | null
+          shift_name_swing: string | null
           status_labels: Json
           timezone: string
           unit: string | null
@@ -3353,6 +3356,9 @@ export type Database = {
           quick_setup_pending?: Json
           setup_progress?: Json
           shift_count?: number
+          shift_name_day?: string | null
+          shift_name_mid?: string | null
+          shift_name_swing?: string | null
           status_labels?: Json
           timezone?: string
           unit?: string | null
@@ -3392,6 +3398,9 @@ export type Database = {
           quick_setup_pending?: Json
           setup_progress?: Json
           shift_count?: number
+          shift_name_day?: string | null
+          shift_name_mid?: string | null
+          shift_name_swing?: string | null
           status_labels?: Json
           timezone?: string
           unit?: string | null

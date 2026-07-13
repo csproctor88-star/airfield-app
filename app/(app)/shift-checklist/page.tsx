@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { Check, ChevronRight } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
@@ -19,12 +19,12 @@ import {
   type ShiftChecklistResponse,
 } from '@/lib/supabase/shift-checklist'
 import { formatZuluTime, formatZuluDate } from '@/lib/utils'
+import { bucketItemsByShift, getActiveShifts } from '@/lib/shifts'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingState } from '@/components/ui/loading-state'
 
 type ViewTab = 'today' | 'history'
 
-const SHIFT_LABELS: Record<string, string> = { day: 'Day Shift', mid: 'Mid Shift', swing: 'Swing Shift' }
 const FREQ_LABELS: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }
 const FREQ_COLORS: Record<string, string> = { daily: 'var(--color-cyan)', weekly: 'var(--color-purple)', monthly: 'var(--color-warning)' }
 
@@ -120,9 +120,9 @@ export default function ShiftChecklistPage() {
 
   const responseMap = new Map(responses.map(r => [r.item_id, r]))
 
-  const dayItems = items.filter(i => i.shift === 'day')
-  const midItems = items.filter(i => i.shift === 'mid')
-  const swingItems = items.filter(i => i.shift === 'swing')
+  const activeShifts = getActiveShifts(currentInstallation)
+  const lastShiftLabel = activeShifts[activeShifts.length - 1].label
+  const shiftBuckets = bucketItemsByShift(items, currentInstallation)
 
   const allItemIds = items.map(i => i.id)
   const doneCount = allItemIds.filter(id => {
@@ -166,7 +166,7 @@ export default function ShiftChecklistPage() {
 
   async function handleComplete() {
     if (!checklist || !allComplete) return
-    if (!confirm('File this checklist as complete for today? This marks the end of swing shift.')) return
+    if (!confirm(`File this checklist as complete for today? This marks the end of ${lastShiftLabel}.`)) return
     setCompleting(true)
     const { error } = await completeChecklist(checklist.id)
     if (error) {
@@ -380,9 +380,9 @@ export default function ShiftChecklistPage() {
             </div>
           ) : (
             <>
-              {renderShiftSection('Day Shift', dayItems)}
-              {renderShiftSection('Swing Shift', swingItems)}
-              {midItems.length > 0 && renderShiftSection('Mid Shift', midItems)}
+              {shiftBuckets.map(b => (
+                <Fragment key={b.key}>{renderShiftSection(b.label, b.items)}</Fragment>
+              ))}
 
               {/* Complete / Reopen button */}
               <div style={{ marginTop: 8 }}>
@@ -421,7 +421,7 @@ export default function ShiftChecklistPage() {
                       fontFamily: 'inherit',
                     }}
                   >
-                    {completing ? 'Filing...' : allComplete ? 'File Checklist (End of Swing Shift)' : `Complete all items to file (${totalCount - doneCount} remaining)`}
+                    {completing ? 'Filing...' : allComplete ? `File Checklist (End of ${lastShiftLabel})` : `Complete all items to file (${totalCount - doneCount} remaining)`}
                   </button>
                 )}
               </div>
@@ -495,9 +495,7 @@ export default function ShiftChecklistPage() {
         const hDate = new Date(viewingHistory.checklist_date + 'T00:00:00Z')
         const hDateStr = formatZuluDate(hDate)
         const hResponseMap = new Map(historyResponses.map(r => [r.item_id, r]))
-        const hDayItems = historyItems.filter(i => i.shift === 'day')
-        const hMidItems = historyItems.filter(i => i.shift === 'mid')
-        const hSwingItems = historyItems.filter(i => i.shift === 'swing')
+        const hBuckets = bucketItemsByShift(historyItems, currentInstallation)
         // Only show items that have a response for this checklist
         const hAllRespondedIds = new Set(historyResponses.map(r => r.item_id))
         const filterResponded = (list: ShiftChecklistItem[]) => list.filter(i => hAllRespondedIds.has(i.id))
@@ -594,9 +592,9 @@ export default function ShiftChecklistPage() {
               <LoadingState />
             ) : (
               <>
-                {renderHistorySection('Day Shift', hDayItems)}
-                {renderHistorySection('Swing Shift', hSwingItems)}
-                {hMidItems.length > 0 && renderHistorySection('Mid Shift', hMidItems)}
+                {hBuckets.map(b => (
+                  <Fragment key={b.key}>{renderHistorySection(b.label, b.items)}</Fragment>
+                ))}
               </>
             )}
           </>

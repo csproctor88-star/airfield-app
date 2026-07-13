@@ -1,6 +1,7 @@
 import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
 import { getTerm, type TermKey } from '@/lib/airport-mode'
+import { customShiftName, type ShiftKey, type ShiftConfigSource } from '@/lib/shifts'
 
 export type DailyReviewSlot = 'day_amsl' | 'swing_amsl' | 'mid_amsl' | 'namo' | 'afm'
 
@@ -13,12 +14,29 @@ const SLOT_TO_TERM: Record<DailyReviewSlot, TermKey> = {
   afm:        'shift_manager',
 }
 
+/** AMSL slots ↔ the base shift whose custom name they carry. */
+const SLOT_TO_SHIFT: Partial<Record<DailyReviewSlot, ShiftKey>> = {
+  day_amsl:   'day',
+  swing_amsl: 'swing',
+  mid_amsl:   'mid',
+}
+
+/** The bases-row subset slot labeling reads: airport mode + shift names. */
+export type SlotLabelSource = ShiftConfigSource & { airport_type?: 'usaf' | 'faa_part139' | null }
+
 /**
  * Returns the mode-appropriate label for a daily-review slot.
  * USAF: 'Day Shift AMSL' / 'Swing Shift AMSL' / 'Mid Shift AMSL' / 'NAMO' / 'Airfield Manager'.
  * Civilian: 'Day Shift Lead' / 'Swing Shift Lead' / 'Mid Shift Lead' / 'Ops Supervisor' / 'Operations Manager'.
+ * A base's custom shift name replaces the shift part: 'Alpha AMSL' / 'Alpha Lead'.
+ * NAMO/AFM slots never take custom names.
  */
-export function getSlotLabel(slot: DailyReviewSlot, base: { airport_type?: 'usaf' | 'faa_part139' | null } | null | undefined): string {
+export function getSlotLabel(slot: DailyReviewSlot, base: SlotLabelSource | null | undefined): string {
+  const shiftKey = SLOT_TO_SHIFT[slot]
+  if (shiftKey) {
+    const custom = customShiftName(base, shiftKey)
+    if (custom) return `${custom} ${getTerm('shift_signoff_suffix', base)}`
+  }
   return getTerm(SLOT_TO_TERM[slot], base)
 }
 
@@ -122,7 +140,9 @@ export function getReviewWindowUtc(
 export function requiredSlotsForShifts(shiftCount: number): DailyReviewSlot[] {
   const amsls: DailyReviewSlot[] = shiftCount === 3
     ? ['day_amsl', 'swing_amsl', 'mid_amsl']
-    : ['day_amsl', 'swing_amsl']
+    : shiftCount === 1
+      ? ['day_amsl']
+      : ['day_amsl', 'swing_amsl']
   return [...amsls, 'namo', 'afm']
 }
 
@@ -164,12 +184,14 @@ export function canUserSignSlot(
  * Which AMSL shift owns the given wall-clock hour in the base timezone.
  * - 3-shift bases: day 0600-1359, swing 1400-2159, mid 2200-0559
  * - 2-shift bases: day 0600-1759, swing 1800-0559
+ * - 1-shift bases: always day
  */
 export function currentAmslSlot(
   timezone: string | null | undefined,
   shiftCount: number,
   now: Date = new Date(),
 ): DailyReviewSlot {
+  if (shiftCount === 1) return 'day_amsl'
   const tz = timezone || 'UTC'
   const dtf = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' })
   const hour = Number(dtf.formatToParts(now).find((p) => p.type === 'hour')?.value ?? 0)

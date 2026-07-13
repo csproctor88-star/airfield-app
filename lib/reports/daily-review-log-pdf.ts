@@ -6,7 +6,7 @@ import {
 import { sanitizePdfText } from '@/lib/pdf-config'
 import {
   getSlotLabel, requiredSlotsForShifts,
-  type DailyReviewRow, type SignerInfo,
+  type DailyReviewRow, type SignerInfo, type SlotLabelSource,
 } from '@/lib/supabase/daily-reviews'
 import { buildReviewDateSpine, buildCertLogRows } from './daily-review-log-data'
 
@@ -19,7 +19,7 @@ export interface DailyReviewLogOptions {
   generatedBy: string
   rows: DailyReviewRow[]
   signers: Map<string, SignerInfo>
-  base: { airport_type?: 'usaf' | 'faa_part139' | null } | null
+  base: SlotLabelSource | null
 }
 
 export function generateDailyReviewLogPdf(opts: DailyReviewLogOptions): { doc: jsPDF; filename: string } {

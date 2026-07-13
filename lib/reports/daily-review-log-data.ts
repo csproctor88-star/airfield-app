@@ -1,7 +1,7 @@
 import { formatZuluDateTime } from '@/lib/utils'
 import {
   signerCompact, getSlotLabel,
-  type DailyReviewRow, type DailyReviewSlot, type SignerInfo,
+  type DailyReviewRow, type DailyReviewSlot, type SignerInfo, type SlotLabelSource,
 } from '@/lib/supabase/daily-reviews'
 
 export interface CertLogRow {
@@ -32,7 +32,7 @@ export function buildCertLogRows(
   rowByDate: Map<string, DailyReviewRow>,
   signers: Map<string, SignerInfo>,
   requiredSlots: DailyReviewSlot[],
-  base: { airport_type?: 'usaf' | 'faa_part139' | null } | null,
+  base: SlotLabelSource | null,
 ): CertLogRow[] {
   return spine.map((date) => {
     const row = rowByDate.get(date) ?? null

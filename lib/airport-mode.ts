@@ -123,6 +123,7 @@ export type TermKey =
   | 'shift_day'
   | 'shift_swing'
   | 'shift_mid'
+  | 'shift_signoff_suffix' // appended to custom shift names on Daily Reviews slots
   | 'shift_supervisor'
   | 'shift_manager'
   // Forms
@@ -157,6 +158,7 @@ const TERMS: Record<TermKey, { usaf: string; faa: string }> = {
   shift_day:             { usaf: 'Day Shift AMSL',                   faa: 'Day Shift Lead' },
   shift_swing:           { usaf: 'Swing Shift AMSL',                 faa: 'Swing Shift Lead' },
   shift_mid:             { usaf: 'Mid Shift AMSL',                   faa: 'Mid Shift Lead' },
+  shift_signoff_suffix:  { usaf: 'AMSL',                             faa: 'Lead' },
   shift_supervisor:      { usaf: 'NAMO',                             faa: 'Ops Supervisor' },
   shift_manager:         { usaf: 'Airfield Manager',                 faa: 'Operations Manager' },
 

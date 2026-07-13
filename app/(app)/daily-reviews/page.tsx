@@ -343,7 +343,7 @@ export default function DailyReviewsPage() {
         generatedBy: userName,
         rows,
         signers: signerMap,
-        base: currentInstallation as { airport_type?: 'usaf' | 'faa_part139' | null } | null,
+        base: currentInstallation,
       })
       doc.save(filename)
     } catch (e) {

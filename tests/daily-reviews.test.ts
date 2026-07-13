@@ -5,6 +5,7 @@ import {
   currentAmslSlot,
   getEffectiveReviewDate,
   getReviewWindowUtc,
+  getSlotLabel,
   isFullyCertified,
   requiredSlotsForShifts,
   type DailyReviewRow,
@@ -51,6 +52,10 @@ describe('requiredSlotsForShifts', () => {
       'namo',
       'afm',
     ])
+  })
+
+  it('drops swing and mid for a 1-shift base', () => {
+    expect(requiredSlotsForShifts(1)).toEqual(['day_amsl', 'namo', 'afm'])
   })
 })
 
@@ -127,6 +132,16 @@ describe('isFullyCertified', () => {
     expect(isFullyCertified(row, 3)).toBe(false)
     row = sign(row, 'mid_amsl')
     expect(isFullyCertified(row, 3)).toBe(true)
+  })
+
+  it('certifies a 1-shift base without swing or mid signatures', () => {
+    let row = emptyRow()
+    for (const s of ['day_amsl', 'namo', 'afm'] as DailyReviewSlot[]) {
+      row = sign(row, s)
+    }
+    expect(isFullyCertified(row, 1)).toBe(true)
+    // Guard: the same row must NOT certify on a 2-shift base.
+    expect(isFullyCertified(row, 2)).toBe(false)
   })
 })
 
@@ -216,6 +231,33 @@ describe('currentAmslSlot', () => {
     expect(currentAmslSlot('America/New_York', 3, sixAM)).toBe('day_amsl')
     const fiveFiftyNineAM = new Date('2026-04-15T09:59:00Z')
     expect(currentAmslSlot('America/New_York', 3, fiveFiftyNineAM)).toBe('mid_amsl')
+  })
+
+  it('always returns day_amsl on a 1-shift base, at any hour', () => {
+    // NY at 14:00 local and Tokyo at 03:00 local from the same instant
+    expect(currentAmslSlot('America/New_York', 1, ref)).toBe('day_amsl')
+    expect(currentAmslSlot('Asia/Tokyo', 1, ref)).toBe('day_amsl')
+  })
+})
+
+describe('getSlotLabel — custom shift names', () => {
+  it('composes a custom name with the military sign-off suffix', () => {
+    expect(getSlotLabel('day_amsl', { airport_type: 'usaf', shift_name_day: 'Alpha' })).toBe('Alpha AMSL')
+  })
+
+  it('composes a custom name with the civilian sign-off suffix', () => {
+    expect(getSlotLabel('swing_amsl', { airport_type: 'faa_part139', shift_name_swing: 'Evening' })).toBe('Evening Lead')
+  })
+
+  it('falls back to mode defaults when no custom name is set', () => {
+    expect(getSlotLabel('day_amsl', { airport_type: 'usaf' })).toBe('Day Shift AMSL')
+    expect(getSlotLabel('day_amsl', { airport_type: 'faa_part139' })).toBe('Day Shift Lead')
+  })
+
+  it('ignores whitespace-only names and never renames NAMO/AFM slots', () => {
+    expect(getSlotLabel('mid_amsl', { airport_type: 'usaf', shift_name_mid: '   ' })).toBe('Mid Shift AMSL')
+    expect(getSlotLabel('namo', { airport_type: 'usaf', shift_name_day: 'Alpha' })).toBe('NAMO')
+    expect(getSlotLabel('afm', { airport_type: 'usaf', shift_name_day: 'Alpha' })).toBe('Airfield Manager')
   })
 })
 
