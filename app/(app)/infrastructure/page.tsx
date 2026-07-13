@@ -55,6 +55,7 @@ import { createClient } from '@/lib/supabase/client'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import AuditPanel from '@/components/infrastructure/audit-panel'
 import { offsetPoint, normalizeBearing, squareBoundsMeters } from '@/lib/calculations/geometry'
+import { signPanelHeightPx, markerScaleFactor, showSignLabels, lightRadiusMeters, COMPACT_SIGN_SIDE_PX } from '@/lib/infrastructure/marker-scale'
 import type { InfrastructureFeature } from '@/lib/supabase/types'
 
 // ── Layer configuration ──
@@ -327,16 +328,18 @@ function createDoNotEnterIcon(rotation = 0, side = 56): ImageData {
   return ctx.getImageData(0, 0, cw, ch)
 }
 
-// Generate a labeled sign image that looks like a real airfield sign
+// Generate a labeled sign image that looks like a real airfield sign.
 // Source canvas rendered at ~2x resolution so high-zoom display stays crisp.
-// Display size is then tuned via SIGN_DISPLAY_SCALE in the render paths.
+// Returns the image plus the UNROTATED panel dims — display sizing normalizes
+// every sign to the same panel height (see signDisplaySize), so rotation only
+// tilts the box instead of changing the apparent size.
 function createLabeledSign(
   text: string,
   bgColor: string,
   textColor: string,
   borderColor: string,
   rotation = 0,
-): ImageData {
+): { img: ImageData; panelW: number; panelH: number } {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
 
@@ -381,53 +384,76 @@ function createLabeledSign(
   ctx.textBaseline = 'middle'
   ctx.fillText(text, w / 2, h / 2)
 
-  return ctx.getImageData(0, 0, cw, ch)
+  return { img: ctx.getImageData(0, 0, cw, ch), panelW: w, panelH: h }
 }
 
-// Sign display scale — reduces the on-map size of labeled signs.
-// Source canvas is rendered at ~2x; this scale maps that source down to the
-// final pixel size, keeping signs sharp at high zoom while shrinking screen
-// footprint. 0.4 means: source-pixel:displayed-pixel ratio is 2.5:1 at scale 1,
-// so even a fully zoomed-in sign upscales the source minimally.
-const SIGN_DISPLAY_SCALE = 0.4
-
-// Feature sizing. Signs / PAPIs / beacons are px-sized icon markers (constant,
-// so their labels stay readable). Airfield lights are google.maps.Circle sized
-// in METERS, so they scale with the map (small when zoomed out, larger zoomed
-// in) and render far lighter than 1,300+ symbol markers. Nothing is rescaled in
-// JS on zoom either way — pan/zoom stays smooth.
+// Feature sizing (spec 2026-07-13-navaid-marker-sizing-design.md; pure math
+// in lib/infrastructure/marker-scale.ts). Airfield lights are meter-based
+// google.maps.Circle — they scale with the map and render far lighter than
+// 1,300+ symbol markers; their radius is clamped to a readable on-screen
+// diameter once per zoom-settle. Signs render in three zoom stages: compact
+// type squares below SIGN_LABEL_MIN_ZOOM, then labeled panels normalized to
+// one shared panel height that tracks the ground between px clamps.
 const FEATURE_ICON_SCALE = 0.45 // base icon px = 24 * this
 const LIGHT_RADIUS_METERS = 1.5 // real-world radius of a light dot
 const INOP_RING_SCALE = 1.5 // inop ring size = this × the marker's larger side
 
-// Signs/PAPIs/beacons are raster markers (can't be meter-sized), so they scale
-// with zoom in JS instead — growing as you zoom in, capped, and never below
-// their base size so labels stay readable. Only the few hundred markers are
-// touched (on zoom-settle), so the native light Circles keep zoom smooth.
-const MARKER_REF_ZOOM = 16 // markers sit at base size at/below this zoom
-const MARKER_MAX_GROWTH = 4 // …and grow up to this multiple as you zoom in
-function markerZoomFactor(zoom: number): number {
-  return Math.min(MARKER_MAX_GROWTH, Math.max(1, 2 ** (zoom - MARKER_REF_ZOOM)))
+// Unrotated panel dims per registered sign image — display sizing normalizes
+// by panel height so a rotated sign's bounding box no longer changes its
+// apparent size (the old shorter-side floor made "L" taller than "1-19").
+const signPanelSizes = new Map<string, { w: number; h: number }>()
+
+interface MarkerMeta {
+  signKey?: string     // per-feature labeled/graphic sign image
+  compactKey?: string  // generic type icon used below SIGN_LABEL_MIN_ZOOM
+  ring?: boolean       // INOP ring overlay marker
+  parentId?: string    // ring → the marker it wraps
 }
-const SIGN_MIN_SIDE = 12 // base floor on a sign's shorter side (before zoom factor)
-function markerBaseSize(natural: { w: number; h: number } | undefined, isSign: boolean): { w: number; h: number } {
-  if (isSign) {
-    const n = natural || { w: 60, h: 24 }
-    let w = n.w * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE
-    let h = n.h * FEATURE_ICON_SCALE * SIGN_DISPLAY_SCALE
-    // Aspect-preserving floor: if the shorter side is below the minimum, scale
-    // BOTH sides up by the same factor (clamping each independently distorts
-    // the sign — short signs like "H" got stretched wide).
-    const shorter = Math.min(w, h)
-    if (shorter > 0 && shorter < SIGN_MIN_SIDE) {
-      const k = SIGN_MIN_SIDE / shorter
-      w *= k
-      h *= k
+
+interface MarkerScaleCtx {
+  labelStage: boolean // zoom >= SIGN_LABEL_MIN_ZOOM → labeled panels
+  panelH: number      // shared sign panel height at this zoom (px)
+  factor: number      // growth factor for non-sign icon markers
+}
+
+function markerScaleCtx(gmap: google.maps.Map): MarkerScaleCtx & { zoom: number; lat: number } {
+  const zoom = gmap.getZoom() ?? 16
+  const lat = gmap.getCenter()?.lat() ?? 0
+  return {
+    zoom,
+    lat,
+    labelStage: showSignLabels(zoom),
+    panelH: signPanelHeightPx(zoom, lat),
+    factor: markerScaleFactor(zoom, lat),
+  }
+}
+
+// Display size (and stage-appropriate icon url) for a sign/icon marker.
+// Shared by first paint and the idle rescale so the two can never disagree.
+function displaySizeForMeta(
+  wrapper: GMapWrapper,
+  meta: MarkerMeta,
+  ctx: MarkerScaleCtx,
+): { w: number; h: number; url?: string } {
+  if (meta.signKey) {
+    if (!ctx.labelStage) {
+      // Compact stage: generic type square; graphic signs (AGM, do-not-enter)
+      // have no generic icon and shrink their own square glyph instead.
+      const url = (meta.compactKey ? wrapper.iconCache.get(meta.compactKey) : undefined)
+        ?? wrapper.iconCache.get(meta.signKey)
+      return { w: COMPACT_SIGN_SIDE_PX, h: COMPACT_SIGN_SIDE_PX, url }
     }
-    return { w: Math.round(w), h: Math.round(h) }
+    const bb = wrapper.iconSizes.get(meta.signKey) || { w: 60, h: 24 }
+    const panelH = signPanelSizes.get(meta.signKey)?.h ?? bb.h
+    const scale = ctx.panelH / panelH
+    return {
+      w: Math.round(bb.w * scale),
+      h: Math.round(bb.h * scale),
+      url: wrapper.iconCache.get(meta.signKey),
+    }
   }
   const s = Math.max(Math.round(24 * FEATURE_ICON_SCALE), 10)
-  return { w: s, h: s }
+  return { w: Math.round(s * ctx.factor), h: Math.round(s * ctx.factor) }
 }
 
 // Sign type → colors for labeled signs
@@ -450,8 +476,9 @@ function registerLabeledSigns(wrapper: GMapWrapper, features: InfrastructureFeat
     if (!f.label || !SIGN_COLORS[f.feature_type]) continue
     const imgName = `sign-label-${f.id}`
     const colors = SIGN_COLORS[f.feature_type]
-    const img = createLabeledSign(f.label, colors.bg, colors.text, colors.border, f.rotation || 0)
+    const { img, panelW, panelH } = createLabeledSign(f.label, colors.bg, colors.text, colors.border, f.rotation || 0)
     registerIcon(wrapper, imgName, img)
+    signPanelSizes.set(imgName, { w: panelW, h: panelH })
     registered.add(imgName)
   }
   for (const f of features) {
@@ -461,6 +488,8 @@ function registerLabeledSigns(wrapper: GMapWrapper, features: InfrastructureFeat
       ? createAgmSignIcon(f.rotation || 0)
       : createDoNotEnterIcon(f.rotation || 0)
     registerIcon(wrapper, imgName, img)
+    // Square glyphs: the canvas is the panel.
+    signPanelSizes.set(imgName, { w: img.width, h: img.height })
     registered.add(imgName)
   }
   return registered
@@ -2196,8 +2225,10 @@ export default function InfrastructureMapPage() {
 
   // ── Render all features as Google Maps markers ──
   // Per-marker metadata for the zoom rescale of sign/icon markers (signKey =>
-  // a labeled sign; undefined => a plain icon). Lights are Circles, not here.
-  const markerMetaRef = useRef<Map<string, { signKey?: string; ring?: boolean; ringBaseSide?: number }>>(new Map())
+  // a labeled sign; undefined => a plain icon). Lights are Circles, not here —
+  // their per-layer base radius lives in circleBaseRadiiRef for the idle clamp.
+  const markerMetaRef = useRef<Map<string, MarkerMeta>>(new Map())
+  const circleBaseRadiiRef = useRef<Map<string, number>>(new Map())
   // Refs for selection / health circles
   const selectionCirclesRef = useRef<google.maps.Circle[]>([])
   const healthCirclesRef = useRef<google.maps.Circle[]>([])
@@ -2208,10 +2239,13 @@ export default function InfrastructureMapPage() {
     // Clear old markers (but keep non-feature markers like location, drag, freemove)
     clearAllObjects(wrapper)
     markerMetaRef.current.clear()
+    circleBaseRadiiRef.current.clear()
 
-    // Lights (Circles) are meter-based; markers (signs/icons) scale with zoom.
+    // Lights (Circles) are meter-based with a screen-diameter clamp; sign/icon
+    // markers size from the shared scale context so first paint matches
+    // whatever zoom the map is at (the idle handler keeps them in step after).
     const initialMap = wrapper.gmap
-    const markerFactor = markerZoomFactor(wrapper.gmap.getZoom() ?? MARKER_REF_ZOOM)
+    const scaleCtx = markerScaleCtx(wrapper.gmap)
 
     // All visible-layer features are rendered regardless of viewport position.
     // Since layers start hidden and users enable 1-2 at a time, the feature count
@@ -2257,29 +2291,27 @@ export default function InfrastructureMapPage() {
       }
 
       if (iconUrl) {
-        // Signs / PAPIs / beacons — raster icon markers. Sized at base × the
-        // current zoom factor (grow when zoomed in; see markerZoomFactor). Sign
-        // labels: source canvas is high-res; SIGN_DISPLAY_SCALE shrinks the
-        // footprint while keeping the source crisp at high zoom.
+        // Signs / PAPIs / beacons — raster icon markers, sized (and for signs,
+        // stage-switched between compact square and labeled panel) by the
+        // shared displaySizeForMeta so first paint and idle rescale agree.
         const signKey = props.signIcon ? (props.signIcon as string) : undefined
-        const base = markerBaseSize(signKey ? wrapper.iconSizes.get(signKey) : undefined, !!signKey)
-        const w = Math.round(base.w * markerFactor)
-        const h = Math.round(base.h * markerFactor)
+        const meta: MarkerMeta = { signKey, compactKey: signKey ? ICON_MAP[featureType] : undefined }
+        const d = displaySizeForMeta(wrapper, meta, scaleCtx)
+        const url = d.url ?? iconUrl
         const marker = new google.maps.Marker({
           position: { lat, lng },
           map: initialMap,
-          icon: { url: iconUrl, scaledSize: new google.maps.Size(w, h), anchor: new google.maps.Point(w / 2, h / 2) },
+          icon: { url, scaledSize: new google.maps.Size(d.w, d.h), anchor: new google.maps.Point(d.w / 2, d.h / 2) },
           zIndex: isInop ? 100 : 10,
         })
         marker.addListener('click', () => showPopup(marker))
         wrapper.markers.set(featureId, marker)
-        markerMetaRef.current.set(featureId, { signKey })
+        markerMetaRef.current.set(featureId, meta)
         // Inoperative raster markers get a red ring overlay (meter-circle lights
-        // fill red instead — see below). Sized ~1.5× the marker; rescales on zoom
-        // and clears on re-render alongside the other markers.
+        // fill red instead — see below). Sized ~1.5× the marker's displayed
+        // size; rescales on zoom and clears on re-render with the markers.
         if (isInop) {
-          const ringBaseSide = Math.round(Math.max(base.w, base.h) * INOP_RING_SCALE)
-          const rs = Math.round(ringBaseSide * markerFactor)
+          const rs = Math.round(Math.max(d.w, d.h) * INOP_RING_SCALE)
           const ringUrl = wrapper.iconCache.get('icon-inop-ring')
           if (ringUrl) {
             const ring = new google.maps.Marker({
@@ -2290,7 +2322,7 @@ export default function InfrastructureMapPage() {
               clickable: false,
             })
             wrapper.markers.set(`${featureId}::inopring`, ring)
-            markerMetaRef.current.set(`${featureId}::inopring`, { ring: true, ringBaseSide })
+            markerMetaRef.current.set(`${featureId}::inopring`, { ring: true, parentId: featureId })
           }
         }
       } else if (layerCfg.renderType === 'square') {
@@ -2312,14 +2344,16 @@ export default function InfrastructureMapPage() {
         wrapper.rectangles.set(featureId, rect)
       } else {
         // Airfield lights — meter-based google.maps.Circle. Scales with the map
-        // (small zoomed out, larger zoomed in) and renders far lighter than a
-        // symbol marker, so zoom stays smooth across ~1,300 lights. Per-layer
-        // radiusMeters lets taxiway lights run larger than runway lights.
-        const radius = layerCfg.radiusMeters ?? LIGHT_RADIUS_METERS
+        // and renders far lighter than a symbol marker, so zoom stays smooth
+        // across ~1,300 lights. Per-layer radiusMeters lets taxiway lights run
+        // larger than runway lights; the radius is clamped to a readable screen
+        // diameter here and on each zoom-settle (idle handler below).
+        const baseRadius = layerCfg.radiusMeters ?? LIGHT_RADIUS_METERS
+        circleBaseRadiiRef.current.set(featureId, baseRadius)
         const circle = new google.maps.Circle({
           map: initialMap,
           center: { lat, lng },
-          radius,
+          radius: lightRadiusMeters(scaleCtx.zoom, scaleCtx.lat, baseRadius),
           fillColor: color,
           fillOpacity: 0.85,
           strokeColor: isInop ? '#FFFFFF' : '#000000',
@@ -2333,33 +2367,44 @@ export default function InfrastructureMapPage() {
     }
   }, [visibleLayers, buildPopupHtml])
 
-  // Rescale sign/icon markers when the zoom factor changes. Fires on 'idle'
-  // (after the zoom/pan settles) and only walks wrapper.markers — the few
-  // hundred markers, not the ~1,300 native light Circles — so it's cheap and
-  // doesn't reintroduce zoom choppiness. The clamp in markerZoomFactor makes
-  // most small zoom changes a no-op (factor unchanged).
+  // Keep marker sizes and light radii in step with zoom. Fires on 'idle'
+  // (after the zoom/pan settles), never per-frame, so zoom stays smooth on
+  // gov hardware. Signs switch between compact squares and labeled panels at
+  // SIGN_LABEL_MIN_ZOOM; panels share one height; lights clamp their screen
+  // diameter (setRadius is skipped when the quantized radius is unchanged).
+  // This is the marker-REUSE path — every visual property that depends on
+  // zoom must be applied here, not just at creation (2026-06 fast-path lesson).
   useEffect(() => {
     const w = map.current
     if (!w || !mapLoaded) return
-    let lastFactor = -1
+    let lastKey = ''
     const onIdle = () => {
-      const factor = markerZoomFactor(w.gmap.getZoom() ?? MARKER_REF_ZOOM)
-      if (factor === lastFactor) return
-      lastFactor = factor
+      const ctx = markerScaleCtx(w.gmap)
+      const key = `${ctx.labelStage}|${ctx.panelH.toFixed(2)}|${ctx.factor.toFixed(3)}|${ctx.zoom.toFixed(2)}`
+      if (key === lastKey) return
+      lastKey = key
       w.markers.forEach((marker, id) => {
         const meta = markerMetaRef.current.get(id)
         if (!meta) return
         const icon = marker.getIcon() as google.maps.Icon | undefined
         if (!icon?.url) return
         if (meta.ring) {
-          const rs = Math.round((meta.ringBaseSide ?? 12) * factor)
+          // Ring wraps its parent's displayed size.
+          const parentMeta = meta.parentId ? markerMetaRef.current.get(meta.parentId) : undefined
+          const pd = displaySizeForMeta(w, parentMeta ?? {}, ctx)
+          const rs = Math.round(Math.max(pd.w, pd.h) * INOP_RING_SCALE)
           marker.setIcon({ url: icon.url, scaledSize: new google.maps.Size(rs, rs), anchor: new google.maps.Point(rs / 2, rs / 2) })
           return
         }
-        const base = markerBaseSize(meta.signKey ? w.iconSizes.get(meta.signKey) : undefined, !!meta.signKey)
-        const ww = Math.round(base.w * factor)
-        const hh = Math.round(base.h * factor)
-        marker.setIcon({ url: icon.url, scaledSize: new google.maps.Size(ww, hh), anchor: new google.maps.Point(ww / 2, hh / 2) })
+        const d = displaySizeForMeta(w, meta, ctx)
+        const url = d.url ?? icon.url
+        marker.setIcon({ url, scaledSize: new google.maps.Size(d.w, d.h), anchor: new google.maps.Point(d.w / 2, d.h / 2) })
+      })
+      w.circles.forEach((circle, id) => {
+        const baseRadius = circleBaseRadiiRef.current.get(id)
+        if (baseRadius === undefined) return // selection/health overlays etc.
+        const r = lightRadiusMeters(ctx.zoom, ctx.lat, baseRadius)
+        if (circle.getRadius() !== r) circle.setRadius(r)
       })
     }
     const listener = w.gmap.addListener('idle', onIdle)
