@@ -1,8 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { QrcStep, QrcStepType } from '@/lib/supabase/types'
+import {
+  loadQrcDraft, saveQrcDraft, clearQrcDraft, qrcDraftSignature,
+  type QrcEditorDraft,
+} from '@/lib/qrc-draft'
+import { formatZuluTime } from '@/lib/utils'
 
 // Single dialog used for both creating a QRC from scratch and editing an
 // existing one. Supports all 8 step types plus optional SCN form fields.
@@ -147,6 +152,55 @@ export default function QrcEditorDialog({
   const [saving, setSaving] = useState(false)
   const [scnExpanded, setScnExpanded] = useState(hasScnForm)
 
+  // ── Draft persistence (device-local; spec 2026-07-13-qrc-editor-drafts) ──
+  const draftTemplateId = isEdit ? template!.id : null
+  const [pendingDraft, setPendingDraft] = useState<QrcEditorDraft | null>(
+    () => loadQrcDraft(installationId, draftTemplateId),
+  )
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null)
+
+  const currentDraft: QrcEditorDraft = {
+    mode, templateId: draftTemplateId, qrcNumber, title, notes,
+    references: refs, hasScnForm, scnFields, steps, savedAt: '',
+  }
+  const currentSignature = qrcDraftSignature(currentDraft)
+  const currentDraftRef = useRef(currentDraft)
+  currentDraftRef.current = currentDraft
+  // First-render signature = the untouched form (blank, or the template as
+  // loaded). Auto-save only once the form diverges from it.
+  const initialSignatureRef = useRef<string | null>(null)
+  if (initialSignatureRef.current === null) initialSignatureRef.current = currentSignature
+  const lastSavedSignatureRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (currentSignature === initialSignatureRef.current) return
+    if (currentSignature === lastSavedSignatureRef.current) return
+    lastSavedSignatureRef.current = currentSignature
+    saveQrcDraft(currentDraftRef.current, installationId)
+    setDraftSavedAt(new Date().toISOString())
+    // Editing over an ignored resume banner overwrites the old draft.
+    setPendingDraft(p => (p ? null : p))
+  }, [currentSignature, installationId])
+
+  function resumeDraft() {
+    const d = pendingDraft
+    if (!d) return
+    if (!isEdit) setQrcNumber(d.qrcNumber)
+    setTitle(d.title)
+    setNotes(d.notes)
+    setRefs(d.references)
+    setHasScnForm(d.hasScnForm)
+    setScnFields(d.scnFields)
+    setSteps(d.steps)
+    setScnExpanded(d.hasScnForm)
+    setPendingDraft(null)
+  }
+
+  function discardDraft() {
+    clearQrcDraft(installationId, draftTemplateId)
+    setPendingDraft(null)
+  }
+
   const numberInUse = useMemo(() => {
     if (isEdit) return false
     if (!existingNumbers) return false
@@ -275,6 +329,7 @@ export default function QrcEditorDialog({
         steps: payload.steps as never,
       })
       if (result.error) { toast.error(result.error); setSaving(false); return }
+      clearQrcDraft(installationId, draftTemplateId)
       toast.success('QRC updated')
     } else {
       const { createQrcTemplate } = await import('@/lib/supabase/qrc')
@@ -289,6 +344,7 @@ export default function QrcEditorDialog({
         steps: payload.steps,
       })
       if (result.error) { toast.error(result.error); setSaving(false); return }
+      clearQrcDraft(installationId, draftTemplateId)
       toast.success(`QRC #${qrcNumber} created`)
     }
     await onSaved()
@@ -308,6 +364,30 @@ export default function QrcEditorDialog({
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
+          {/* Resume banner — an unfinished draft exists for this context */}
+          {pendingDraft && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-base)',
+              background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
+            }}>
+              <span style={{ flex: 1, minWidth: 180, fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 600 }}>
+                Unsaved draft from {formatZuluTime(pendingDraft.savedAt)}Z
+                {' '}({pendingDraft.steps.length} step{pendingDraft.steps.length === 1 ? '' : 's'})
+              </span>
+              <button onClick={resumeDraft} style={{
+                padding: '4px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-warning)',
+                background: 'var(--color-warning)', color: '#000', fontWeight: 700,
+                fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Resume draft</button>
+              <button onClick={discardDraft} style={{
+                padding: '4px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)',
+                background: 'transparent', color: 'var(--color-text-2)', fontWeight: 700,
+                fontSize: 'var(--fs-xs)', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Discard</button>
+            </div>
+          )}
+
           {/* QRC Number + Title */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <div style={{ width: 100 }}>
@@ -409,7 +489,12 @@ export default function QrcEditorDialog({
           </div>
         </div>
 
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--color-border)', flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center' }}>
+          {draftSavedAt && (
+            <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', whiteSpace: 'nowrap' }}>
+              Draft saved {formatZuluTime(draftSavedAt)}Z
+            </span>
+          )}
           <button onClick={handleSave} disabled={saving} style={{
             flex: 1, padding: '10px 0', borderRadius: 'var(--radius-base)', border: 'none',
             background: 'var(--color-cyan)', color: '#fff', fontWeight: 700,
