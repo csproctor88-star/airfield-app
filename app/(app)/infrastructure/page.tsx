@@ -585,6 +585,7 @@ export default function InfrastructureMapPage() {
     approaching: OutageStatus[]
     systemName: string
     discrepancyId: string | null
+    assignedShop: string | null
   } | null>(null)
 
   // Cached full component data for outage recalculation
@@ -1505,7 +1506,7 @@ export default function InfrastructureMapPage() {
         else if (overallOutage?.isApproaching) approaching.push(overallOutage)
 
         if (exceeded.length > 0 || approaching.length > 0) {
-          setOutageAlert({ exceeded, approaching, systemName, discrepancyId: disc?.display_id || null })
+          setOutageAlert({ exceeded, approaching, systemName, discrepancyId: disc?.display_id || null, assignedShop: assignedShop ?? null })
         }
       }
     }
@@ -4447,7 +4448,8 @@ export default function InfrastructureMapPage() {
             )}
             {outageAlert.discrepancyId && (
               <div style={{ marginTop: 8, fontSize: 13, color: 'var(--color-text-3, #94A3B8)' }}>
-                Discrepancy <strong style={{ color: 'var(--color-text-1, #E2E8F0)' }}>{outageAlert.discrepancyId}</strong> auto-created &mdash; assigned to Airfield Management
+                Discrepancy <strong style={{ color: 'var(--color-text-1, #E2E8F0)' }}>{outageAlert.discrepancyId}</strong> auto-created
+                {outageAlert.assignedShop ? <> &mdash; assigned to {outageAlert.assignedShop}</> : null}
               </div>
             )}
             <button
