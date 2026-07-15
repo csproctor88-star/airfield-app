@@ -80,6 +80,14 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/api/installations')
     || pathname.startsWith('/api/signup-email')
     || pathname.startsWith('/api/send-ppr-confirmation')
+    // Anonymous public-write server hops (PPR request, SMS safety report,
+    // customer feedback). 3f5e4dbe fronted the public RPCs with IP+base rate
+    // limits but never allowlisted the new paths, so the middleware
+    // 307-redirected the anonymous POSTs to /login and all three forms died
+    // with "Submission failed" for 12 days (the same failure M-6 fixed for
+    // forgot-password). Each route enforces its own rate limit, so this is
+    // not an open endpoint.
+    || pathname.startsWith('/api/public/')
     // Self-service password reset is called by anonymous users from the
     // login page. Without this it was 307-redirected to /login (405) and
     // silently failed — see M-6. The handler is per-email + per-IP
