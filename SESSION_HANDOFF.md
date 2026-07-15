@@ -140,7 +140,7 @@ the app-level TrackProvider and flipping with the toggle or `?track=`.
 | Item | Severity | Notes |
 |---|---|---|
 | Hero redline strings | med | Owner preview pass owed on: "See it happen ↓" CTA · coverage band title/line split · the three ↳ automation lines · the dialect ethos pair. All in `lib/home-content.ts` / `lib/cascades.ts`. |
-| visual-navaids MODULE clip stale frame | med | The module-page/dialog clip (~16 s) still shows pre-fix "assigned to Airfield Management". Re-record now unblocked (fixes are promoted — the homepage clip proves the corrected copy). Owner-paced. |
+| visual-navaids MODULE clip re-record | med | Owner committed 2026-07-15 to re-recording it: fixes the stale ~16 s "assigned to Airfield Management" frame AND applies the agreed clip style — straight-on full-bleed, no 3D tilt, no title card, keep zoom/highlight callouts (device frames only when the device is the story). Same style governs all future clips. |
 | Anonymous-submission gap 2026-07-02..14 | info | Failed submissions never reached the DB, so there is nothing to query — any lost pilot PPRs / feedback / safety reports are unknowable from our side. Owner decides if any outreach or a note to bases is warranted. |
 | NAVAID marker-sizing dials | low | Three-stage rendering live on prod (owner recorded with it, no complaints); dials in `lib/infrastructure/marker-scale.ts` if wanted. |
 | QRC draft flow not browser-driven | low | `lib/qrc-draft.ts` unit-tested; the create→close→resume dialog loop still deserves one hands-on pass. |
