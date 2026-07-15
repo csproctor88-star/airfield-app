@@ -4,13 +4,13 @@
 the session continued through the evening while the owner cut video)
 **Branch:** `main` (both repos). `airfield-app`: 1 commit since the prior
 handoff (`49da6526`), pushed, tree clean (this handoff is the only
-uncommitted file). `glidepath-site`: 10 commits (`4fd72f0..adbe04a`), all
+uncommitted file). `glidepath-site`: 11 commits (`4fd72f0..94efc85`), all
 **pushed**, tree clean.
 **Build:** `airfield-app` @ `49da6526` (gate fresh at HEAD, pipefail, cwd
 pinned): tsc ✓ · lint 0 errors · vitest **1229 passed | 16 skipped** ·
-`npm run build` ✓ (middleware 80.8 kB). `glidepath-site` @ `adbe04a`:
+`npm run build` ✓ (middleware 80.8 kB). `glidepath-site` @ `94efc85`:
 tsc ✓ · lint 0/0 · vitest **142 passed** (22 files) · build ✓.
-**HEAD:** `airfield-app` `49da6526` · `glidepath-site` `adbe04a`.
+**HEAD:** `airfield-app` `49da6526` · `glidepath-site` `94efc85`.
 **DB:** no new migrations; `2026071300_configurable_shifts` remains latest,
 applied. **Promotion:** owner promoted during the session — his footage
 shows the shop-routing fix, the alert copy fix, and the unbroken public
@@ -98,6 +98,12 @@ the app-level TrackProvider and flipping with the toggle or `?track=`.
 - `adbe04a` — `npm run og:images` full regen after the owner released the
   hold: 59 of 60 PNGs were already byte-identical; only `military-qrc.png`
   had drifted. Home + QRC cards visually verified on the navy palette.
+- `94efc85` — **photo-backed OG cards** for the three share targets
+  (owner call): home, `/military`, `/civilian` render over the blue-hour
+  hero photo with the homepage grade; the home card mirrors the rebuilt
+  hero ("Everything you do. One Platform." + mono inventory strip,
+  count derived). SEO metaTitles unchanged; inner pages keep the
+  typographic card. All three verified visually.
 
 ## Migrations status
 
@@ -134,7 +140,6 @@ the app-level TrackProvider and flipping with the toggle or `?track=`.
 | Item | Severity | Notes |
 |---|---|---|
 | Hero redline strings | med | Owner preview pass owed on: "See it happen ↓" CTA · coverage band title/line split · the three ↳ automation lines · the dialect ethos pair. All in `lib/home-content.ts` / `lib/cascades.ts`. |
-| OG home card copy | low | Social card still says "Glidepath: Airfield & Airport Operations Platform / motto". Consider aligning with the new hero statement — owner redline; deliberately not changed overnight. |
 | visual-navaids MODULE clip stale frame | med | The module-page/dialog clip (~16 s) still shows pre-fix "assigned to Airfield Management". Re-record now unblocked (fixes are promoted — the homepage clip proves the corrected copy). Owner-paced. |
 | Anonymous-submission gap 2026-07-02..14 | info | Failed submissions never reached the DB, so there is nothing to query — any lost pilot PPRs / feedback / safety reports are unknowable from our side. Owner decides if any outreach or a note to bases is warranted. |
 | NAVAID marker-sizing dials | low | Three-stage rendering live on prod (owner recorded with it, no complaints); dials in `lib/infrastructure/marker-scale.ts` if wanted. |
@@ -172,7 +177,7 @@ airfield-app @ 49da6526 (fresh, pipefail, cwd pinned): tsc ✓ · lint 0
   errors · vitest 1229 passed | 16 skipped (137 files) · build ✓.
   /api/public/ppr-request 107 kB First Load · /[icao]/ppr-request 168 kB ·
   shared 106 kB · middleware 80.8 kB.
-glidepath-site @ adbe04a: tsc ✓ · lint 0/0 · vitest 142 passed (22
+glidepath-site @ 94efc85: tsc ✓ · lint 0/0 · vitest 142 passed (22
   files) · build ✓. public/media/ now carries 4 clips + posters
   (visual-navaids 5.6MB · aircraft-parking 2.8MB · visual-navaids-hp
   4.7MB · ppr-request 1.2MB).
@@ -181,7 +186,7 @@ glidepath-site @ adbe04a: tsc ✓ · lint 0/0 · vitest 142 passed (22
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-14 (late) | Military homepage cascade complete (NAVAIDs/PPR/Parking clips, PPR with 6× fill time-lapse) · spall vignette → PPR cascade · hero rebuilt "facts are the hero" + track-aware "Built by an Airfield Manager" · module-row affordance · 960px media cap default · OG regen · **airfield-app: 12-day anonymous public-form outage fixed** (middleware allowlist). |
+| **Unreleased** | 2026-07-14 (late) | Military homepage cascade complete (NAVAIDs/PPR/Parking clips, PPR with 6× fill time-lapse) · spall vignette → PPR cascade · hero rebuilt "facts are the hero" + track-aware "Built by an Airfield Manager" · module-row affordance · 960px media cap default · OG regen + photo-backed share cards (home/tracks) · **airfield-app: 12-day anonymous public-form outage fixed** (middleware allowlist). |
 | **Unreleased** | 2026-07-14 | Report Outage type→shop routing (+ alert copy) · QRC editor localStorage drafts · NAVAID three-stage marker sizing + light clamps · site: owner redlines, NAVAID cascade line, first Phase 4 clip wired. |
 | **Unreleased** | 2026-07-13 | airfield-app configurable shifts: 1–3 per base, renameable; migration `2026071300` applied. |
 | **Unreleased** | 2026-07-12 (late) | glidepath-site cascade rebuild: homepage cascade vignettes; track-page module stack + zoom dialog; 50 module pages restructured. |
