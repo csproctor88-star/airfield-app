@@ -51,16 +51,6 @@ export function buildSignoff(
   }
 }
 
-export function buildEntry623a(entryType: string, itemId: string): NotificationDraft {
-  return {
-    kind: 'entry_623a',
-    body: `Signature required – ${entryType} – 623A`,
-    target_tab: '623a',
-    target_item_id: itemId,
-    dedupe_key: `entry_623a:${itemId}`,
-  }
-}
-
 export function build797Added(trainerName: string, taskName: string, itemId: string): NotificationDraft {
   return {
     kind: 'item_797_added',
@@ -112,19 +102,6 @@ export function buildTrainerSignatureRequired(
 }
 
 // ── Firing helpers (persist) ───────────────────────────────
-
-/** Send a notification to a single recipient (the trainee). */
-export async function fireToRecipient(
-  baseId: string, recipientUserId: string | null, memberId: string, draft: NotificationDraft,
-): Promise<void> {
-  if (!recipientUserId) return // unlinked member — nobody to notify
-  await createAmtrNotification({
-    base_id: baseId,
-    recipient_user_id: recipientUserId,
-    member_id: memberId,
-    ...draft,
-  })
-}
 
 /**
  * Fan a due/overdue alert out to the member's whole training team: the

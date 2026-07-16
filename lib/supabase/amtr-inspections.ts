@@ -68,14 +68,6 @@ export async function fetchAmtrInspectionsByMember(memberId: string): Promise<Am
   return (data ?? []) as AmtrInspection[]
 }
 
-export async function fetchAmtrInspection(id: string): Promise<AmtrInspection | null> {
-  const supabase = db()
-  if (!supabase) return null
-  const { data, error } = await supabase.from('amtr_inspections').select('*').eq('id', id).single()
-  if (error) { console.error('fetchAmtrInspection:', error.message); return null }
-  return data as AmtrInspection
-}
-
 /** The most recent inspection per member at a base (for the unit roster view). */
 export async function fetchLatestInspectionPerMember(baseId: string): Promise<Map<string, AmtrInspection>> {
   const rows = await fetchAmtrInspections(baseId) // already date-desc

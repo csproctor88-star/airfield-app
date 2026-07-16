@@ -212,17 +212,6 @@ export async function fetchExecutionHistory(baseId?: string | null, limit = 50):
   return (data || []) as QrcExecution[]
 }
 
-export async function fetchExecution(id: string): Promise<QrcExecution | null> {
-  const supabase = createClient()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('qrc_executions')
-    .select('*')
-    .eq('id', id)
-    .single()
-  return (data as QrcExecution) || null
-}
-
 export async function updateStepResponse(
   executionId: string,
   stepId: string,

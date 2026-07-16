@@ -1,10 +1,3 @@
-import { type ClassValue, clsx } from 'clsx'
-
-// Lightweight class name merger (no tailwind-merge needed for now)
-export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs)
-}
-
 // ── Zulu (UTC) time formatting ──────────────────────────────────────
 export function formatZuluTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
@@ -125,12 +118,6 @@ export function formatRelativeTime(date: string | Date): string {
   if (diffHr < 24) return `${diffHr}h ago`
   if (diffDay < 30) return `${diffDay}d ago`
   return d.toLocaleDateString()
-}
-
-// Generate display ID: prefix-YYYY-NNNN
-export function generateDisplayId(prefix: string, seq: number): string {
-  const year = new Date().getFullYear()
-  return `${prefix}-${year}-${String(seq).padStart(4, '0')}`
 }
 
 // Sanitize a regulation ID into a safe file name (e.g., "DAFMAN 13-204, Vol 1" → "dafman-13-204-vol-1")

@@ -108,11 +108,6 @@ export const EMERGENCY_ACTIONS = [
   'Completed post-incident airfield inspection',
 ] as const
 
-export const EMERGENCY_AGENCIES = [
-  'SOF', 'Fire Chief / ARFF', 'Wing Safety', 'MOC',
-  'Command Post', 'ATC / Tower', 'CE', 'Security Forces', 'Medical',
-] as const
-
 // === Inspection Types ===
 
 export type InspectionType = 'airfield' | 'lighting' | 'construction_meeting' | 'joint_monthly'
@@ -360,14 +355,6 @@ export const RCR_CONDITION_TYPES = [
 export const BASH_CONDITION_CODES = ['LOW', 'MODERATE', 'SEVERE', 'PROHIBITED'] as const
 
 // === Wildlife / BASH Module Constants ===
-
-export const SPECIES_GROUPS = ['bird', 'mammal', 'reptile', 'bat'] as const
-
-export const SIZE_CATEGORIES = [
-  { value: 'small', label: 'Small (<100g)', description: 'Sparrows, starlings, swallows' },
-  { value: 'medium', label: 'Medium (100g–1kg)', description: 'Pigeons, doves, gulls, crows' },
-  { value: 'large', label: 'Large (>1kg)', description: 'Geese, vultures, deer, raptors' },
-] as const
 
 export const WILDLIFE_BEHAVIORS = [
   'feeding', 'flying', 'roosting', 'nesting', 'transiting', 'loafing',

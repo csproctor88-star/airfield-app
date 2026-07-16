@@ -373,23 +373,6 @@ export async function createPlan(input: {
   return { ok: true, plan }
 }
 
-export async function updatePlan(
-  id: string,
-  baseId: string,
-  updates: Partial<Pick<AepPlan,
-    | 'version' | 'effective_date' | 'document_url' | 'storage_path'
-    | 'approved_by_faa_at' | 'faa_acceptance_ref' | 'notes'
-  >>,
-): Promise<{ ok: boolean; error?: string }> {
-  const supabase = db()
-  if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  const patch: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() }
-  const { error } = await supabase.from('aep_plans').update(patch as never).eq('id', id)
-  if (error) return { ok: false, error: friendlyError(error.message) }
-  logActivity('updated', 'aep_plan', id, 'AEP plan updated', undefined, baseId)
-  return { ok: true }
-}
-
 /**
  * Supersede the active plan with a new version. Calls the
  * supersede_aep_plan SECURITY DEFINER RPC so the INSERT (new row)
@@ -718,24 +701,6 @@ export async function createDrill(input: {
     `AEP drill scheduled — ${AEP_DRILL_TYPE_LABELS[drill.drill_type]} on ${drill.drill_date}`,
     undefined, input.base_id)
   return { ok: true, drill }
-}
-
-export async function updateDrill(
-  id: string,
-  baseId: string,
-  updates: Partial<Pick<AepDrill,
-    | 'drill_date' | 'drill_type' | 'scenario' | 'status' | 'participants'
-    | 'after_action_notes' | 'findings' | 'evidence_url' | 'storage_path'
-    | 'next_due_at_override'
-  >>,
-): Promise<{ ok: boolean; error?: string }> {
-  const supabase = db()
-  if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  const patch: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() }
-  const { error } = await supabase.from('aep_drills').update(patch as never).eq('id', id)
-  if (error) return { ok: false, error: friendlyError(error.message) }
-  logActivity('updated', 'aep_drill', id, 'AEP drill updated', undefined, baseId)
-  return { ok: true }
 }
 
 export async function completeDrill(

@@ -8,13 +8,13 @@ Glidepath — Progressive Web App for USAF Airfield Management. Replaces paper l
 
 | Layer | Technology | Version |
 |---|---|---|
-| Framework | Next.js (App Router) | 14.2.35 |
+| Framework | Next.js (App Router) | 15.3.9 |
 | Language | TypeScript (strict) | 5.9.3 |
-| UI | React | 18.3.1 |
+| UI | React | 19.2.7 |
 | DB / Auth | Supabase + Postgres + RLS | @supabase/supabase-js 2.95.3 · @supabase/ssr 0.8.0 |
 | Maps | Google Maps JS API (everywhere); Mapbox (wildlife heatmap only) | @googlemaps/js-api-loader 2.0.2 · mapbox-gl 3.18.1 |
-| PDF | jsPDF + jspdf-autotable (client-side only) | 4.1.0 · 5.0.7 |
-| Excel | SheetJS · ExcelJS | xlsx 0.18.5 · exceljs 4.4.0 |
+| PDF | jsPDF + jspdf-autotable (client-side only) | 4.2.0 · 5.0.7 |
+| Excel | ExcelJS | exceljs 4.4.0 |
 | Email | Resend (branded transactional) | 6.9.3 |
 | Styling | Tailwind CSS | 3.4.19 |
 | PWA | @ducanh2912/next-pwa | 10.2.9 |
@@ -54,7 +54,7 @@ Glidepath — Progressive Web App for USAF Airfield Management. Replaces paper l
 | `/field-conditions` · `/recent-activity` | ✅ | `app/(app)/field-conditions/page.tsx` · `app/(app)/recent-activity/page.tsx` |
 | `/users` · `/settings/users` | ✅ | `app/(app)/users/page.tsx` (top-level) · `app/(app)/settings/users/page.tsx` (settings nav entry) |
 | `/more` | ✅ | `app/(app)/more/page.tsx` — mobile module menu |
-| `/api/*` | ✅ | 23 route handlers: admin (invite, reset-password, users, kiosk-token), elevation, airport-lookup, notams/sync, send-pdf-email, signup-email, forgot-password, send-ppr-*, user-emails, infrastructure-import, installations, airfield-status, … |
+| `/api/*` | ✅ | 32 route handlers: admin (invite, reset-password, users, kiosk-token), elevation, airport-lookup, notams/sync, send-pdf-email, signup-email, forgot-password, send-ppr-*, user-emails, infrastructure-import, installations, airfield-status, … |
 
 Status: ✅ stable
 
@@ -66,19 +66,19 @@ airfield-app/
 │   ├── (app)/              # Authenticated routes (sidebar/tabs)
 │   ├── login/, reset-password/, setup-account/, auth/   # public auth routes (ungrouped, at app root — no (public) group)
 │   ├── feedback/[baseId]/, [icao]/, ppr-request/, kiosk/[icao]/   # public QR / kiosk routes
-│   └── api/                # 23 route handlers
+│   └── api/                # 32 route handlers
 ├── components/             # acsi/ admin/ amtr/ base-setup/ discrepancies/ infrastructure/ layout/ obstructions/ tour/ ui/ waivers/ wildlife/
 ├── lib/
-│   ├── supabase/           # ~44 entity CRUD modules + types.ts
+│   ├── supabase/           # ~50 entity CRUD modules + types.ts
 │   ├── reports/            # analytics-data.ts + report builders
 │   ├── calculations/       # geometry.ts, parking-clearance.ts, obstructions.ts
-│   ├── *-pdf.ts            # 20 generators: acsi, aep, amtr, amtr-inspection, check, discrepancy, email, events-log, feedback, obstruction, parking, personnel, ppr, qrc, qrc-monthly-review, scn, sms, training, training-part139, waiver
+│   ├── *-pdf.ts            # 23 generators: acsi, aep, amtr, amtr-inspection, check, discrepancy, email, events-log, feedback, obstruction, parking, personnel, ppr, qrc, qrc-monthly-review, scn, sms, training, training-part139, waiver, …
 │   └── installation-context.tsx, constants.ts, utils.ts, outage-rules.ts, rate-limit.ts, …
 ├── hooks/                  # use-google-map-ruler.ts, use-expiring-notams.ts, …
 ├── public/
 │   ├── wildlife_images/    # bird/ mammal/ reptile/ bat/ — local photo cache
 │   ├── training/, aircraft_silhouettes/, wildlife_image_manifest.json
-├── supabase/migrations/    # 254 migrations, YYYYMMDDXX_<name>.sql
+├── supabase/migrations/    # 316 migrations, YYYYMMDDXX_<name>.sql
 ├── scripts/                # scrape_wildlife_images.py, scrape_aircraft_images.py (Python)
 ├── docs/                   # Capabilities, Leadership Briefing, manual/ (23 files), session handoffs
 └── middleware.ts           # Supabase SSR auth gate
@@ -107,9 +107,9 @@ airfield-app/
 
 ## Key Dependencies
 
-- **Next.js 14.2.35** — App Router, route handlers, server components
+- **Next.js 15.3.9** — App Router, route handlers, server components
 - **Supabase 2.95.3** + SSR adapter — auth, DB, storage, realtime
-- **jsPDF 4.1 + autotable 5** — all 12 reports generated client-side; never sent to third parties
+- **jsPDF 4.2 + autotable 5** — all reports/PDFs generated client-side; never sent to third parties
 - **Google Maps JS API 2.0.2** — every interactive map
 - **Mapbox GL 3.18.1** — wildlife heatmap only (gov-network compatibility issues elsewhere)
 - **Resend 6.9.3** — branded transactional email (invite, approval, password reset, PDF distribution); reply-to `info@glidepathops.com`

@@ -671,28 +671,6 @@ export async function createWaiverReview(input: {
   return { data: data as WaiverReviewRow, error: null }
 }
 
-export async function updateWaiverReview(
-  id: string,
-  fields: Partial<Omit<WaiverReviewRow, 'id' | 'waiver_id' | 'created_at'>>
-): Promise<{ data: WaiverReviewRow | null; error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { data: null, error: 'Supabase not configured' }
-
-  const { data, error } = await supabase
-    .from('waiver_reviews')
-    .update(fields)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Failed to update waiver review:', error.message)
-    return { data: null, error: friendlyError(error.message) }
-  }
-
-  return { data: data as WaiverReviewRow, error: null }
-}
-
 export async function deleteWaiverReview(
   id: string,
   waiverId: string

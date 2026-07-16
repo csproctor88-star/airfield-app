@@ -37,16 +37,6 @@ export function resolveWildlifeImage(species: WildlifeSpecies): string | null {
   return `/wildlife_images/${species.group}/${safeName}.jpg`
 }
 
-/**
- * Return all species with image_url resolved to local paths when available.
- */
-export function getSpeciesWithLocalImages(): WildlifeSpecies[] {
-  return WILDLIFE_SPECIES.map(sp => ({
-    ...sp,
-    image_url: resolveWildlifeImage(sp),
-  }))
-}
-
 // USFWS NCTC Image Library — IIIF endpoint (800px wide thumbnails)
 const IIIF = 'https://digitalmedia.fws.gov/digital/iiif/natdiglib'
 // Generates URL: {IIIF}/{ID}/full/800,/0/default.jpg

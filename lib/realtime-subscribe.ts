@@ -17,15 +17,6 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Returns whether the Supabase Realtime connection is currently healthy.
- * Use this after user actions that rely on realtime to push updates to
- * other users — if unhealthy, show a one-time warning.
- */
-export function isRealtimeConnected(): boolean {
-  return connected
-}
-
-/**
  * Call after a user action that expects a realtime push (e.g., updating
  * airfield status, filing an inspection). If realtime is down, shows a
  * single non-blocking warning so the user knows the change was saved

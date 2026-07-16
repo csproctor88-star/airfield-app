@@ -307,57 +307,6 @@ export async function deleteCheck(id: string): Promise<{ error: string | null }>
   return { error: null }
 }
 
-export async function updateCheckNotes(id: string, notes: string | null): Promise<{ error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { error: 'Supabase not configured' }
-
-  const { data: existing } = await supabase.from('airfield_checks').select('display_id, data, base_id').eq('id', id).single()
-  const currentData = (existing?.data as Record<string, unknown>) || {}
-  const updatedData = { ...currentData, notes }
-
-  const { error } = await supabase
-    .from('airfield_checks')
-    .update({ data: updatedData })
-    .eq('id', id)
-
-  if (error) {
-    console.error('Update check notes failed:', error.message)
-    return { error: friendlyError(error.message) }
-  }
-
-  logActivity('updated', 'check', id, existing?.display_id, { details: 'AFLD CHECK UPDATED' }, existing?.base_id)
-
-  return { error: null }
-}
-
-/** Update a completed check's data, areas, or remarks without re-filing */
-export async function updateCheckData(
-  id: string,
-  updates: { data?: Record<string, unknown>; areas?: string[] }
-): Promise<{ error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { error: 'Supabase not configured' }
-
-  const payload: Record<string, unknown> = {}
-  if (updates.data !== undefined) payload.data = updates.data
-  if (updates.areas !== undefined) payload.areas = updates.areas
-
-  const { error } = await supabase
-    .from('airfield_checks')
-    .update(payload)
-    .eq('id', id)
-
-  if (error) {
-    console.error('Update check failed:', error.message)
-    return { error: friendlyError(error.message) }
-  }
-
-  const { data: existing } = await supabase.from('airfield_checks').select('display_id, base_id').eq('id', id).single()
-  logActivity('updated', 'check', id, existing?.display_id, { details: 'AFLD CHECK UPDATED' }, existing?.base_id)
-
-  return { error: null }
-}
-
 export async function uploadCheckPhoto(
   checkId: string,
   file: File,

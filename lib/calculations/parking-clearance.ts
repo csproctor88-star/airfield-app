@@ -134,46 +134,6 @@ export function getWingtipClearance(
   return getWingtipClearanceDetail(wingspanFt, context, aircraftName).clearance_ft
 }
 
-/** Item 7(C) — Distance from peripheral taxilane CL to apron boundary */
-export function getApronBoundaryClearance(wingspanFt: number): ClearanceDetail {
-  const large = wingspanFt >= 110
-  return {
-    clearance_ft: large ? 37.5 : 25,
-    ufc_item: 'Item 7(C)',
-    description: large
-      ? 'Peripheral taxilane CL to apron boundary, WS ≥ 110ft'
-      : 'Peripheral taxilane CL to apron boundary, WS < 110ft',
-  }
-}
-
-/** Item 8 — Clear distance around aircraft during fueling */
-export function getFuelingSafetyClearance(type: 'vent' | 'pressurized'): ClearanceDetail {
-  if (type === 'pressurized') {
-    return {
-      clearance_ft: 50,
-      ufc_item: 'Item 8',
-      description: 'Pressurized fuel servicing component (T.O. 00-25-172)',
-    }
-  }
-  return {
-    clearance_ft: 25,
-    ufc_item: 'Item 8',
-    description: 'Aircraft fuel vent outlets (T.O. 00-25-172)',
-  }
-}
-
-/** Item 15 — Clearance from apron boundary to fixed/mobile obstacles */
-export function getObstacleClearanceDescription(wingspanFt: number, context: ApronContext): ClearanceDetail {
-  // Per Item 15: 0.5 × wingspan + wingtip clearance (Item 5 or 6) - distance from CL to boundary (Item 7)
-  // Simplified: we use the same wingtip clearance as the selected context
-  const detail = getWingtipClearanceDetail(wingspanFt, context)
-  return {
-    clearance_ft: detail.clearance_ft,
-    ufc_item: detail.ufc_item,
-    description: detail.description,
-  }
-}
-
 /** UI labels for context selector */
 export const APRON_CONTEXT_LABELS: Record<ApronContext, string> = {
   parking: 'Item 4(P) — Parking Apron',
@@ -184,29 +144,8 @@ export const APRON_CONTEXT_LABELS: Record<ApronContext, string> = {
   peripheral_transient: 'Item 6(T) — Peripheral Taxilane (Transient)',
 }
 
-/** Short labels for compact display */
-export const APRON_CONTEXT_SHORT: Record<ApronContext, string> = {
-  parking: 'Parking (P)',
-  parking_transient: 'Transient (P)',
-  parking_kc_refuel: 'KC Refuel (P)',
-  interior_taxilane: 'Interior (I)',
-  peripheral_taxilane: 'Peripheral (T)',
-  peripheral_transient: 'Periph Trans (T)',
-}
-
 // Keep old function signature for compatibility
 export type ClearanceContext = 'taxiway' | 'apron' | 'reduced'
-
-export function getDefaultClearance(adg: ADGGroup, context: ClearanceContext = 'apron'): number {
-  const wsThreshold = ADG_RANGES.find(r => r.group === adg)?.maxWingspan ?? 100
-  const large = wsThreshold >= 110
-  switch (context) {
-    case 'taxiway': return large ? 50 : 30
-    case 'apron': return large ? 20 : 10
-    case 'reduced': return large ? 20 : 10
-    default: return large ? 20 : 10
-  }
-}
 
 // ── UFC 3-260-01 Table 6-1a — Complete Reference ──
 // All 16 items with descriptions and applicability notes
@@ -843,44 +782,6 @@ export function checkTaxilaneClearance(
     spot_b_id: taxilane.id,
     ufc_item: detail.ufc_item,
     ufc_desc: detail.description,
-  }
-}
-
-/** Check apron boundary distance from taxilane centerline (Item 7) */
-export function checkApronBoundaryClearance(
-  taxilane: TaxilaneForCheck,
-  boundaryCoords: [number, number][],
-  designWingspan: number,
-): ClearanceResult {
-  const requirement = getApronBoundaryClearance(designWingspan)
-
-  let minDistance = Infinity
-  for (const coord of taxilane.line_coords) {
-    const pt: LatLon = { lat: coord[1], lon: coord[0] }
-    for (let i = 0; i < boundaryCoords.length - 1; i++) {
-      const segStart: LatLon = { lat: boundaryCoords[i][1], lon: boundaryCoords[i][0] }
-      const segEnd: LatLon = { lat: boundaryCoords[i + 1][1], lon: boundaryCoords[i + 1][0] }
-      const dist = pointToSegmentDistanceFt(pt, segStart, segEnd)
-      if (dist < minDistance) minDistance = dist
-    }
-  }
-
-  let status: ClearanceResult['status'] = 'ok'
-  if (minDistance < requirement.clearance_ft) {
-    status = 'violation'
-  } else if (minDistance < requirement.clearance_ft * 1.1) {
-    status = 'warning'
-  }
-
-  return {
-    distance_ft: Math.round(minDistance * 10) / 10,
-    required_ft: requirement.clearance_ft,
-    status,
-    aircraft_a: taxilane.name || 'Taxilane',
-    aircraft_b: 'Apron Boundary',
-    spot_a_id: taxilane.id,
-    ufc_item: requirement.ufc_item,
-    ufc_desc: requirement.description,
   }
 }
 

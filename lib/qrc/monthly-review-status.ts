@@ -3,9 +3,6 @@ import type { QrcTemplate, QrcMonthlyReview } from '@/lib/supabase/types'
 export const INTERVAL_DAYS = { monthly: 30, quarterly: 90 } as const
 export type ReviewInterval = keyof typeof INTERVAL_DAYS
 
-/** @deprecated kept for any external import; prefer INTERVAL_DAYS[interval]. */
-export const MONTHLY_REVIEW_DAYS = INTERVAL_DAYS.monthly
-
 export type MonthlyReviewState = 'never' | 'overdue' | 'updated' | 'current'
 
 export interface MonthlyReviewStatus {
@@ -51,12 +48,4 @@ export function getMonthlyReviewStatus(
     return { state: 'overdue', reviewedAt, templateUpdatedSince: false, daysSinceReview }
   }
   return { state: 'current', reviewedAt, templateUpdatedSince: false, daysSinceReview }
-}
-
-/** Map state → on-screen label (matches PILL kinds in qrc/page.tsx). */
-export const STATE_LABEL: Record<MonthlyReviewState, string> = {
-  never: 'Never reviewed',
-  overdue: 'Overdue',
-  updated: 'Updated since review',
-  current: 'Current',
 }

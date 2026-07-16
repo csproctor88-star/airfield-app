@@ -260,11 +260,6 @@ export async function updateTopic(
   return { ok: true }
 }
 
-/** Soft delete — flip active = false, keeping historical records pointing at the topic. */
-export async function deleteTopic(id: string, baseId: string): Promise<{ ok: boolean; error?: string }> {
-  return updateTopic(id, baseId, { active: false })
-}
-
 // ────────────────────────────────────────────────────────────────
 // Record CRUD + renewals
 // ────────────────────────────────────────────────────────────────
@@ -281,24 +276,6 @@ export async function fetchTrainingRecords(opts: {
   if (opts.topic_id) q = q.eq('topic_id', opts.topic_id)
   const { data } = await q.order('completed_at', { ascending: false })
   return ((data || []) as unknown as TrainingRecord[])
-}
-
-/** Latest record (by completed_at) for one (user, topic). */
-export async function fetchLatestRecord(
-  baseId: string, userId: string, topicId: string,
-): Promise<TrainingRecord | null> {
-  const supabase = db()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('training_records')
-    .select('*')
-    .eq('base_id', baseId)
-    .eq('user_id', userId)
-    .eq('topic_id', topicId)
-    .order('completed_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return data ? (data as unknown as TrainingRecord) : null
 }
 
 /**

@@ -150,20 +150,6 @@ export function isFullyCertified(row: DailyReviewRow, shiftCount: number): boole
   return requiredSlotsForShifts(shiftCount).every((slot) => row[`${slot}_signed_at` as keyof DailyReviewRow])
 }
 
-/**
- * Static USAF-default slot labels — kept for back-compat with any
- * caller that hasn't been wired through getSlotLabel(slot, base) yet.
- * Prefer getSlotLabel for new code so civilian Part 139 bases render
- * "Day Shift Lead" / "Operations Manager" etc.
- */
-export const SLOT_LABELS: Record<DailyReviewSlot, string> = {
-  day_amsl: 'Day Shift AMSL',
-  swing_amsl: 'Swing Shift AMSL',
-  mid_amsl: 'Mid Shift AMSL',
-  namo: 'NAMO',
-  afm: 'Airfield Manager',
-}
-
 /** Maps each signing slot to the permission key that gates it. */
 export const SLOT_PERMISSION: Record<DailyReviewSlot, string> = {
   day_amsl: 'daily_reviews:sign:amsl',

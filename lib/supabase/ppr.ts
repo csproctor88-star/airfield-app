@@ -302,10 +302,6 @@ export async function fetchPprEntries(baseId: string, dateFrom?: string, dateTo?
   return (data || []) as PprEntry[]
 }
 
-export async function fetchPprEntriesForDate(baseId: string, date: string): Promise<PprEntry[]> {
-  return fetchPprEntries(baseId, date, date)
-}
-
 /**
  * Drives the Transient Aircraft board on the dashboard and the header
  * chip. A PPR is ADDED to the board on its arrival day (arrival_date <=
@@ -634,18 +630,6 @@ export async function addPprCoordinationAgencies(input: {
 }
 
 // ── Status flow ──
-
-/** Fetch coordination rows for a single entry (for the coord modal). */
-export async function fetchPprCoordination(entryId: string): Promise<PprCoordination[]> {
-  const supabase = db()
-  if (!supabase) return []
-  const { data } = await supabase
-    .from('ppr_coordination')
-    .select('*')
-    .eq('entry_id', entryId)
-    .order('agency_name', { ascending: true })
-  return (data || []) as PprCoordination[]
-}
 
 /** Fetch all coord rows for visible entries — used to drive per-agency badges + filters. */
 export async function fetchPprCoordinationForEntries(entryIds: string[]): Promise<PprCoordination[]> {

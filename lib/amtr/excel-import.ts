@@ -5,7 +5,6 @@
 // use (Excel serials, ISO, M/D/YY, D-MMM-YY). The live Excel import
 // path uses ExcelJS (lib/amtr-record-excel.ts); the old SheetJS-based
 // roster parser was removed along with the vulnerable `xlsx` dependency.
-// The JSON round-trip (exportAmtrJson / parseAmtrJson) is complete.
 // ─────────────────────────────────────────────────────────────
 
 const MONTHS: Record<string, number> = {
@@ -47,14 +46,4 @@ export function parseAmtrDate(value: unknown): string {
 function isoOf(year: number, monthIdx: number, day: number): string {
   const d = new Date(Date.UTC(year, monthIdx, day))
   return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
-}
-
-/** Serialize a full AMTR snapshot to a JSON blob string (export). */
-export function exportAmtrJson(snapshot: unknown): string {
-  return JSON.stringify(snapshot, null, 2)
-}
-
-/** Parse an exported AMTR JSON blob (import round-trip). */
-export function parseAmtrJson(text: string): unknown {
-  return JSON.parse(text)
 }

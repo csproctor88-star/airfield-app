@@ -1,7 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 import { resolveBaseId } from './resolve-base-id'
-import { photoUrl } from './photos'
 import { logActivity } from './activity'
 import type { ObstructionEvaluation } from './types'
 
@@ -126,52 +125,6 @@ export async function createObstructionEvaluation(input: {
   }
 
   return { data: created, error: null }
-}
-
-export async function uploadObstructionPhoto(
-  file: File,
-): Promise<{ url: string | null; error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { url: null, error: 'Supabase not configured' }
-
-  const { resizeImageForUpload } = await import('@/lib/utils')
-  file = await resizeImageForUpload(file)
-
-  const ext = file.name.split('.').pop() || 'jpg'
-  const storagePath = `obstruction-photos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-
-  let storageUrl: string | null = null
-  try {
-      const { error: uploadError } = await supabase.storage
-      .from('photos')
-      .upload(storagePath, file, { contentType: file.type || 'image/jpeg' })
-
-    if (!uploadError) {
-      storageUrl = photoUrl(storagePath)
-    } else {
-      console.warn('Storage upload failed, storing as data URL:', uploadError.message)
-    }
-  } catch {
-    console.warn('Storage not available, storing as data URL')
-  }
-
-  if (!storageUrl) {
-    try {
-      const buffer = await file.arrayBuffer()
-      const bytes = new Uint8Array(buffer)
-      let binary = ''
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i])
-      }
-      const base64 = btoa(binary)
-      storageUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
-    } catch (e) {
-      console.error('Failed to convert file to data URL:', e)
-      return { url: null, error: 'Failed to process photo' }
-    }
-  }
-
-  return { url: storageUrl, error: null }
 }
 
 export async function updateObstructionEvaluation(

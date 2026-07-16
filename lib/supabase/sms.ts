@@ -530,14 +530,6 @@ export async function updateHazard(
   return { ok: true }
 }
 
-export async function deleteHazard(id: string, hazardCode: string, baseId: string): Promise<boolean> {
-  const supabase = db()
-  if (!supabase) return false
-  const { error } = await supabase.from('sms_hazards').delete().eq('id', id)
-  if (!error) logActivity('deleted', 'sms_hazard', id, hazardCode, undefined, baseId)
-  return !error
-}
-
 // ────────────────────────────────────────────────────────────────
 // Risk assessments (the 5×5 matrix snapshots)
 // ────────────────────────────────────────────────────────────────
@@ -640,18 +632,6 @@ export async function fetchMitigationsForHazards(hazardIds: string[]): Promise<S
   return ((data || []) as unknown as SmsMitigation[])
 }
 
-export async function fetchOpenMitigations(baseId: string): Promise<SmsMitigation[]> {
-  const supabase = db()
-  if (!supabase) return []
-  const { data } = await supabase
-    .from('sms_mitigations')
-    .select('*')
-    .eq('base_id', baseId)
-    .in('status', ['planned', 'in_progress'])
-    .order('due_date', { ascending: true, nullsFirst: false })
-  return ((data || []) as unknown as SmsMitigation[])
-}
-
 /** All mitigations for a base (any status) — used by the records export. */
 export async function fetchAllMitigations(baseId: string): Promise<SmsMitigation[]> {
   const supabase = db()
@@ -727,14 +707,6 @@ export async function updateMitigation(
   return { ok: true }
 }
 
-export async function deleteMitigation(id: string, baseId: string): Promise<boolean> {
-  const supabase = db()
-  if (!supabase) return false
-  const { error } = await supabase.from('sms_mitigations').delete().eq('id', id)
-  if (!error) logActivity('deleted', 'sms_mitigation', id, 'Mitigation', undefined, baseId)
-  return !error
-}
-
 // ────────────────────────────────────────────────────────────────
 // SPIs + measurements
 // ────────────────────────────────────────────────────────────────
@@ -752,23 +724,6 @@ export async function fetchSpis(baseId: string): Promise<SmsSpi[]> {
     .eq('base_id', baseId)
     .order('code', { ascending: true })
   return ((data || []) as unknown as SmsSpi[])
-}
-
-export async function fetchSpiMeasurements(
-  spiId: string,
-  opts?: { months?: number },
-): Promise<SmsSpiMeasurement[]> {
-  const supabase = db()
-  if (!supabase) return []
-  const cutoff = new Date()
-  cutoff.setMonth(cutoff.getMonth() - (opts?.months ?? 12))
-  const { data } = await supabase
-    .from('sms_spi_measurements')
-    .select('*')
-    .eq('spi_id', spiId)
-    .gte('period_start', cutoff.toISOString().slice(0, 10))
-    .order('period_start', { ascending: true })
-  return ((data || []) as unknown as SmsSpiMeasurement[])
 }
 
 // Batch variant: one query across many SPIs (avoids N+1 on the SPIs page load).
@@ -1035,13 +990,6 @@ export async function fetchSafetyReports(
   return ((data || []) as unknown as SmsSafetyReport[])
 }
 
-export async function fetchSafetyReport(id: string): Promise<SmsSafetyReport | null> {
-  const supabase = db()
-  if (!supabase) return null
-  const { data } = await supabase.from('sms_safety_reports').select('*').eq('id', id).single()
-  return data ? (data as unknown as SmsSafetyReport) : null
-}
-
 export async function updateSafetyReportTriage(input: {
   reportId: string
   baseId: string
@@ -1086,56 +1034,6 @@ export async function promoteSafetyReportToHazard(input: {
   const hazardId = (data as { hazard_id?: string } | null)?.hazard_id
   logActivity('updated', 'sms_safety_report', input.reportId, 'Promoted to Hazard', { details: hazardId ? `Hazard ${hazardId}` : undefined }, input.baseId)
   return { ok: true, hazardId }
-}
-
-// ────────────────────────────────────────────────────────────────
-// Communications
-// ────────────────────────────────────────────────────────────────
-
-export async function fetchCommunications(baseId: string): Promise<SmsCommunication[]> {
-  const supabase = db()
-  if (!supabase) return []
-  const { data } = await supabase
-    .from('sms_communications')
-    .select('*')
-    .eq('base_id', baseId)
-    .order('published_at', { ascending: false, nullsFirst: true })
-  return ((data || []) as unknown as SmsCommunication[])
-}
-
-export async function createCommunication(input: {
-  base_id: string
-  title: string
-  body: string
-  channel?: SmsCommunication['channel']
-  audience?: string | null
-  published_at?: string | null
-  related_hazard_id?: string | null
-}): Promise<{ ok: boolean; communication?: SmsCommunication; error?: string }> {
-  const supabase = db()
-  if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Not authenticated' }
-
-  const { data, error } = await supabase
-    .from('sms_communications')
-    .insert({
-      base_id: input.base_id,
-      title: input.title,
-      body: input.body,
-      channel: input.channel ?? 'bulletin',
-      audience: input.audience ?? null,
-      published_at: input.published_at ?? null,
-      related_hazard_id: input.related_hazard_id ?? null,
-      created_by: user.id,
-      updated_by: user.id,
-    })
-    .select()
-    .single()
-  if (error || !data) return { ok: false, error: error ? friendlyError(error.message) : 'Insert failed' }
-  const c = data as unknown as SmsCommunication
-  logActivity('created', 'sms_communication', c.id, c.title, undefined, input.base_id)
-  return { ok: true, communication: c }
 }
 
 // ────────────────────────────────────────────────────────────────

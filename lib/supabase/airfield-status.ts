@@ -238,62 +238,6 @@ export async function logRunwayStatusChange(
   })
 }
 
-/** Fetch runway status changes within a date range */
-export async function fetchRunwayStatusLog(
-  startUTC: string,
-  endUTC: string,
-  baseId?: string | null
-): Promise<RunwayStatusLogRow[]> {
-  const supabase = createClient()
-  if (!supabase) return []
-
-  // Try with profile join
-  let query = supabase
-    .from('runway_status_log')
-    .select('*, profiles:changed_by(name, rank)')
-    .gte('created_at', startUTC)
-    .lte('created_at', endUTC)
-    .order('created_at', { ascending: true })
-
-  if (baseId) {
-    query = query.eq('base_id', baseId)
-  }
-
-  const { data, error } = await query
-
-  if (!error && data) {
-    return (data ?? []).map((row: Record<string, unknown>) => ({
-      ...row,
-      user_name: (row.profiles as { name?: string } | null)?.name || 'Unknown',
-      user_rank: (row.profiles as { rank?: string } | null)?.rank || undefined,
-    })) as RunwayStatusLogRow[]
-  }
-
-  // Fallback without join
-  let fallbackQuery = supabase
-    .from('runway_status_log')
-    .select('*')
-    .gte('created_at', startUTC)
-    .lte('created_at', endUTC)
-    .order('created_at', { ascending: true })
-
-  if (baseId) {
-    fallbackQuery = fallbackQuery.eq('base_id', baseId)
-  }
-
-  const { data: fallback, error: fbError } = await fallbackQuery
-
-  if (fbError) {
-    console.error('Failed to fetch runway status log:', fbError.message)
-    return []
-  }
-
-  return (fallback ?? []).map((row: Record<string, unknown>) => ({
-    ...row,
-    user_name: 'Unknown',
-  })) as RunwayStatusLogRow[]
-}
-
 // ── Safety-role narrow writer ──
 // Safety users don't have full `airfield_status:write`. They route
 // their RSC / RCR / BWC edits through the safety_update_rsc_bwc

@@ -24,11 +24,3 @@ export function registerTour(entry: TourRegistration): void {
 export function getTour(tourId: string): TourRegistration | null {
   return REGISTRY.find(t => t.tourId === tourId) ?? null
 }
-
-export function listTours(scope?: TourScope): TourRegistration[] {
-  return scope ? REGISTRY.filter(t => t.scope === scope) : [...REGISTRY]
-}
-
-export function listToursForPath(pathname: string): TourRegistration[] {
-  return REGISTRY.filter(t => !t.visibleWhen || t.visibleWhen(pathname))
-}

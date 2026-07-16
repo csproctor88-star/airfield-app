@@ -124,12 +124,6 @@ export function getEffectiveChecklistDate(timezone: string, resetTime: string): 
   return `${y}-${m}-${d}`
 }
 
-/** Get current local date in a timezone (ignoring reset time) */
-export function getLocalDate(timezone: string): Date {
-  const localStr = new Date().toLocaleString('en-US', { timeZone: timezone })
-  return new Date(localStr)
-}
-
 // --- Daily Checklists ---
 
 export async function fetchOrCreateTodayChecklist(
@@ -163,17 +157,6 @@ export async function fetchOrCreateTodayChecklist(
 
   if (error) return { checklist: null, error: friendlyError(error.message) }
   return { checklist: created as ShiftChecklist, error: null }
-}
-
-export async function fetchChecklist(checklistId: string): Promise<ShiftChecklist | null> {
-  const supabase = createClient()
-  if (!supabase) return null
-  const { data } = await supabase
-    .from('shift_checklists')
-    .select('*')
-    .eq('id', checklistId)
-    .single()
-  return (data as ShiftChecklist) || null
 }
 
 export async function fetchChecklistHistory(baseId: string, limit = 30): Promise<ShiftChecklist[]> {

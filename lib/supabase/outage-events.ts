@@ -69,35 +69,3 @@ export async function createOutageEvent(input: {
   return data as OutageEvent
 }
 
-// ── Fetch outage events for a feature ──
-
-export async function fetchOutageEventsForFeature(featureId: string): Promise<OutageEvent[]> {
-  const supabase = createClient()
-  if (!supabase) return []
-
-  const { data, error } = await supabase
-    .from('outage_events')
-    .select('*')
-    .eq('feature_id', featureId)
-    .order('created_at', { ascending: false })
-
-  if (error) return []
-  return data as OutageEvent[]
-}
-
-// ── Fetch recent outage events for a base ──
-
-export async function fetchRecentOutageEvents(baseId: string, limit = 50): Promise<OutageEvent[]> {
-  const supabase = createClient()
-  if (!supabase) return []
-
-  const { data, error } = await supabase
-    .from('outage_events')
-    .select('*')
-    .eq('base_id', baseId)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) return []
-  return data as OutageEvent[]
-}

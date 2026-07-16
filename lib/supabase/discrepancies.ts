@@ -713,30 +713,3 @@ export async function fetchPendingVerificationCount(baseId: string): Promise<num
   return count ?? 0
 }
 
-export async function fetchDiscrepancyKPIs(baseId?: string | null): Promise<{
-  open: number
-}> {
-  const supabase = createClient()
-  if (!supabase) return { open: 0 }
-
-  let query = supabase
-    .from('discrepancies')
-    .select('status')
-    .not('status', 'in', '("completed","cancelled")')
-
-  if (baseId) {
-    query = query.eq('base_id', baseId)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    console.error('Failed to fetch KPIs:', error.message)
-    return { open: 0 }
-  }
-
-  const rows = (data ?? []) as { status: string }[]
-  const open = rows.filter(r => !['completed', 'cancelled'].includes(r.status)).length
-
-  return { open }
-}
