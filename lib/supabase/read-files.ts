@@ -1,9 +1,6 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
 
-// New tables are not yet in the generated Database type — cast the client
-// to `any` for these calls (the lib/supabase/qrc-reviews.ts pattern).
-
 const READ_FILES_BUCKET = 'read-files'
 
 // Required-reader roles — identical to QRC's REVIEWER_ROLES so the two
@@ -89,9 +86,7 @@ export function humanFileSize(bytes: number): string {
 export async function fetchReadFiles(baseId: string): Promise<ReadFileRow[]> {
   const supabase = createClient()
   if (!supabase || !baseId) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('read_files')
     .select('*')
     .eq('base_id', baseId)
@@ -106,9 +101,7 @@ export async function fetchMyAcks(baseId: string): Promise<ReadFileAckRow[]> {
   if (!supabase || !baseId) return []
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('read_file_acknowledgments')
     .select('*')
     .eq('base_id', baseId)
@@ -121,9 +114,7 @@ export async function fetchMyAcks(baseId: string): Promise<ReadFileAckRow[]> {
 export async function fetchAllAcks(baseId: string): Promise<ReadFileAckRow[]> {
   const supabase = createClient()
   if (!supabase || !baseId) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('read_file_acknowledgments')
     .select('*')
     .eq('base_id', baseId)
@@ -144,9 +135,7 @@ export async function fetchAllAcks(baseId: string): Promise<ReadFileAckRow[]> {
 export async function fetchReadFileReviewers(baseId: string): Promise<ReadFileReviewer[]> {
   const supabase = createClient()
   if (!supabase || !baseId) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data: members, error } = await sb
+  const { data: members, error } = await supabase
     .from('base_members')
     .select('user_id')
     .eq('base_id', baseId)
@@ -220,9 +209,7 @@ export async function addReadFile(
     is_archived: false,
     created_by: user?.id ?? null,
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb.from('read_files').insert(row).select().single()
+  const { data, error } = await supabase.from('read_files').insert(row).select().single()
   if (error) {
     await supabase.storage.from(READ_FILES_BUCKET).remove([path])
     return { data: null, error: friendlyError(error.message) }
@@ -244,9 +231,7 @@ export async function replaceReadFile(
 
   // Optimistic-lock on the version we read: if another manager replaced the
   // same file first, 0 rows update and we bail without clobbering their write.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb.from('read_files').update({
+  const { data, error } = await supabase.from('read_files').update({
     storage_path: path,
     file_name: file.name,
     mime_type: file.type || null,
@@ -274,9 +259,7 @@ export async function setReadFileArchived(
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { error } = await sb.from('read_files')
+  const { error } = await supabase.from('read_files')
     .update({ is_archived: archived, updated_at: new Date().toISOString() })
     .eq('id', id)
   return { error: error ? friendlyError(error.message) : null }
@@ -292,9 +275,7 @@ export async function acknowledgeReadFile(
   if (!user) return { error: 'Not signed in' }
   const { data: profile } = await supabase
     .from('profiles').select('operating_initials').eq('id', user.id).single()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { error } = await sb.from('read_file_acknowledgments').insert({
+  const { error } = await supabase.from('read_file_acknowledgments').insert({
     base_id: baseId,
     read_file_id: readFileId,
     user_id: user.id,

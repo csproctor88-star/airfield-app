@@ -1,3 +1,10 @@
+// GENERATED + MANUAL — regen procedure:
+//   npx supabase gen types typescript --linked
+// replaces everything ABOVE the "// Convenience type aliases" marker. After
+// regenerating, re-apply the lines tagged "MANUAL after regen" (bases.airport_type
+// and bases.obstruction_surface_set are text columns in the DB, hand-narrowed to
+// the unions in lib/airport-mode.ts). Everything below the marker is hand-written.
+
 export type Json =
   | string
   | number
@@ -17,6 +24,8 @@ export type Database = {
       acsi_inspections: {
         Row: {
           airfield_name: string
+          airport_class: string | null
+          arff_index: string | null
           base_id: string | null
           completed_at: string | null
           completed_by_id: string | null
@@ -32,6 +41,7 @@ export type Database = {
           id: string
           inspection_date: string
           inspection_team: Json
+          inspector: string | null
           inspector_id: string | null
           inspector_name: string | null
           items: Json
@@ -48,6 +58,8 @@ export type Database = {
         }
         Insert: {
           airfield_name?: string
+          airport_class?: string | null
+          arff_index?: string | null
           base_id?: string | null
           completed_at?: string | null
           completed_by_id?: string | null
@@ -63,6 +75,7 @@ export type Database = {
           id?: string
           inspection_date?: string
           inspection_team?: Json
+          inspector?: string | null
           inspector_id?: string | null
           inspector_name?: string | null
           items?: Json
@@ -79,6 +92,8 @@ export type Database = {
         }
         Update: {
           airfield_name?: string
+          airport_class?: string | null
+          arff_index?: string | null
           base_id?: string | null
           completed_at?: string | null
           completed_by_id?: string | null
@@ -94,6 +109,7 @@ export type Database = {
           id?: string
           inspection_date?: string
           inspection_team?: Json
+          inspector?: string | null
           inspector_id?: string | null
           inspector_name?: string | null
           items?: Json
@@ -3282,6 +3298,7 @@ export type Database = {
       bases: {
         Row: {
           activity_templates: Json | null
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
           airport_type: 'usaf' | 'faa_part139'
           amops_email: string | null
           aoc_number: string | null
@@ -3308,6 +3325,7 @@ export type Database = {
           majcom: string | null
           map_provider: string
           name: string
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
           obstruction_surface_set: 'ufc_3_260_01' | 'faa_part77'
           part139_class: string | null
           qrc_review_interval: string
@@ -3324,6 +3342,7 @@ export type Database = {
         }
         Insert: {
           activity_templates?: Json | null
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
           airport_type?: 'usaf' | 'faa_part139'
           amops_email?: string | null
           aoc_number?: string | null
@@ -3350,6 +3369,7 @@ export type Database = {
           majcom?: string | null
           map_provider?: string
           name: string
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
           obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
           part139_class?: string | null
           qrc_review_interval?: string
@@ -3366,6 +3386,7 @@ export type Database = {
         }
         Update: {
           activity_templates?: Json | null
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
           airport_type?: 'usaf' | 'faa_part139'
           amops_email?: string | null
           aoc_number?: string | null
@@ -3392,6 +3413,7 @@ export type Database = {
           majcom?: string | null
           map_provider?: string
           name?: string
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
           obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
           part139_class?: string | null
           qrc_review_interval?: string
@@ -4093,6 +4115,50 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      email_broadcasts: {
+        Row: {
+          body: string
+          created_at: string
+          failed_count: number
+          filters: Json
+          id: string
+          recipient_count: number
+          sender_id: string | null
+          sent_count: number
+          subject: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          failed_count?: number
+          filters?: Json
+          id?: string
+          recipient_count?: number
+          sender_id?: string | null
+          sent_count?: number
+          subject: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          failed_count?: number
+          filters?: Json
+          id?: string
+          recipient_count?: number
+          sender_id?: string | null
+          sent_count?: number
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_broadcasts_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       field_condition_reports: {
         Row: {
@@ -5182,6 +5248,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketing_leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          name: string
+          organization_type: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          organization_type: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          organization_type?: string
+          role?: string | null
+        }
+        Relationships: []
       }
       navaid_statuses: {
         Row: {
@@ -9586,7 +9682,7 @@ export type Database = {
       get_public_safety_report_config_by_icao: {
         Args: { p_icao: string }
         Returns: {
-          airport_type: 'usaf' | 'faa_part139'
+          airport_type: string
           base_id: string
           base_name: string
           module_enabled: boolean

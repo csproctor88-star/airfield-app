@@ -146,18 +146,26 @@ export function EditDiscrepancyModal({
 
       // If we linked new features that weren't linked before, mark inoperative
       if (newFeatureId && newFeatureId !== oldFeatureId) {
-        await bulkUpdateStatus([newFeatureId], 'inoperative')
-        await createOutageEvent({
+        const linkedCount = await bulkUpdateStatus([newFeatureId], 'inoperative')
+        const evt = await createOutageEvent({
           base_id: installationId,
           feature_id: newFeatureId,
           event_type: 'reported',
           discrepancy_id: discrepancy.id,
           notes: `Linked to discrepancy ${discrepancy.display_id}`,
         })
+        if (linkedCount < 1 || !evt) {
+          const { toast } = await import('sonner')
+          toast.warning('Discrepancy saved, but updating the linked NAVAID status/outage log failed — check it on the Infrastructure page.')
+        }
       }
       // If we unlinked an old feature, mark it operational
       if (oldFeatureId && oldFeatureId !== newFeatureId) {
-        await bulkUpdateStatus([oldFeatureId], 'operational')
+        const unlinkedCount = await bulkUpdateStatus([oldFeatureId], 'operational')
+        if (unlinkedCount < 1) {
+          const { toast } = await import('sonner')
+          toast.warning('Discrepancy saved, but the unlinked NAVAID was not restored to operational — check it on the Infrastructure page.')
+        }
       }
     }
 
@@ -450,9 +458,11 @@ export function StatusUpdateModal({
     // Cancelled = delete from DB entirely
     if (newStatus === 'cancelled') {
       // Mark linked infrastructure feature operational before deleting
+      let featureRestoreFailed = false
       if (discrepancy.infrastructure_feature_id) {
         const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
-        await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+        const restored = await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+        if (!restored) featureRestoreFailed = true
       }
       const { deleteDiscrepancy } = await import('@/lib/supabase/discrepancies')
       const { error } = await deleteDiscrepancy(discrepancy.id)
@@ -463,6 +473,9 @@ export function StatusUpdateModal({
         return
       }
       const { toast } = await import('sonner')
+      if (featureRestoreFailed) {
+        toast.warning('Discrepancy removed, but the linked NAVAID was not restored to operational — check it on the Infrastructure page.')
+      }
       toast.success('Discrepancy cancelled and removed')
       onClose()
       if (onDeleted) onDeleted()
@@ -520,15 +533,41 @@ export function StatusUpdateModal({
       if (shopChanged) fields.assigned_shop = assignedShop || null
       if (currentStatusChanged || autoAdvanced) fields.current_status = effectiveCurrentStatus
       if (resolutionChanged) fields.resolution_notes = resolutionNotes || null
-      await updateDiscrepancy(discrepancy.id, fields)
+      const { error: fieldsError } = await updateDiscrepancy(discrepancy.id, fields)
+      if (fieldsError) {
+        setSaving(false)
+        const { toast } = await import('sonner')
+        toast.error(fieldsError)
+        return
+      }
     }
 
     // Only update status if one was selected
     if (newStatus) {
       // Mark linked infrastructure feature operational when completing
+      let featureRestoreFailed = false
+      let outageCloseFailed = false
       if (newStatus === 'completed' && discrepancy.infrastructure_feature_id) {
         const { updateFeatureStatus } = await import('@/lib/supabase/infrastructure-features')
-        await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+        const restored = await updateFeatureStatus(discrepancy.infrastructure_feature_id, 'operational')
+        if (!restored) {
+          featureRestoreFailed = true
+        } else if (discrepancy.base_id) {
+          // Close the outage timeline. The Infrastructure page writes this
+          // 'resolved' bookend when marking a feature operational; completing
+          // the linked discrepancy restores the feature the same way, and
+          // without the bookend the outage never resolves in the timeline.
+          const { createOutageEvent } = await import('@/lib/supabase/outage-events')
+          const evt = await createOutageEvent({
+            base_id: discrepancy.base_id,
+            feature_id: discrepancy.infrastructure_feature_id,
+            system_component_id: restored.system_component_id || undefined,
+            event_type: 'resolved',
+            discrepancy_id: discrepancy.id,
+            notes: `Restored to operational — discrepancy ${discrepancy.display_id} completed`,
+          })
+          if (!evt) outageCloseFailed = true
+        }
       }
       const combinedNotes = [notes, resolutionNotes && `RESOLUTION: ${resolutionNotes}`].filter(Boolean).join('. ')
       const { updateDiscrepancyStatus } = await import('@/lib/supabase/discrepancies')
@@ -544,6 +583,14 @@ export function StatusUpdateModal({
         const { toast } = await import('sonner')
         toast.error(error)
         return
+      }
+      if (featureRestoreFailed) {
+        const { toast } = await import('sonner')
+        toast.warning('Discrepancy completed, but the linked NAVAID was not restored to operational — check it on the Infrastructure page.')
+      }
+      if (outageCloseFailed) {
+        const { toast } = await import('sonner')
+        toast.warning('Discrepancy completed, but writing the resolved timeline event failed — the outage log may be incomplete.')
       }
       if (data) onSaved(data)
       onClose()

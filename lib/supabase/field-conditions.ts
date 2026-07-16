@@ -321,14 +321,22 @@ export async function createReport(input: CreateReportInput): Promise<{
     return { ok: false, error: friendlyError(thirdsErr.message) }
   }
 
-  // Back-fill superseded_by_id on the prior active report for this runway
-  await supabase
+  // Back-fill superseded_by_id on the prior active report for this runway.
+  // If this fails, two reports stay "active" for the runway and current-
+  // condition queries are ambiguous — roll back like the thirds failure above.
+  const { error: supersedeErr } = await supabase
     .from('field_condition_reports')
     .update({ superseded_by_id: report.id } as never)
     .eq('base_id', input.base_id)
     .eq('runway_id', input.runway_id)
     .is('superseded_by_id', null)
     .neq('id', report.id)
+  if (supersedeErr) {
+    console.error('createFieldConditionReport: superseding prior report failed:', supersedeErr.message)
+    await supabase.from('field_condition_thirds').delete().eq('report_id', report.id)
+    await supabase.from('field_condition_reports').delete().eq('id', report.id)
+    return { ok: false, error: friendlyError(supersedeErr.message) }
+  }
 
   // Activity log entry
   const tdSummary = enriched.find(t => t.third === 'touchdown')

@@ -76,8 +76,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export async function fetchAgencyExternalEmails(agencyId: string): Promise<string[]> {
   const supabase = db()
   if (!supabase) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('ppr_agency_emails')
     .select('email')
     .eq('agency_id', agencyId)
@@ -104,15 +103,13 @@ export async function setAgencyExternalEmails(
     ),
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { error: delErr } = await sb.from('ppr_agency_emails').delete().eq('agency_id', agencyId)
+  const { error: delErr } = await supabase.from('ppr_agency_emails').delete().eq('agency_id', agencyId)
   if (delErr) return { ok: false, error: friendlyError(delErr.message) }
 
   if (cleaned.length === 0) return { ok: true }
 
   const rows = cleaned.map((email) => ({ agency_id: agencyId, base_id: baseId, email }))
-  const { error: insErr } = await sb.from('ppr_agency_emails').insert(rows)
+  const { error: insErr } = await supabase.from('ppr_agency_emails').insert(rows)
   if (insErr) return { ok: false, error: friendlyError(insErr.message) }
   return { ok: true }
 }
@@ -199,8 +196,7 @@ export async function fetchAgencyCoordinatorCounts(
 
   // External emails also count as recipients — an agency with only
   // manually-added emails should NOT show the "no coordinators" warning.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: ext } = await (supabase as any)
+  const { data: ext } = await supabase
     .from('ppr_agency_emails')
     .select('agency_id')
     .eq('base_id', baseId)

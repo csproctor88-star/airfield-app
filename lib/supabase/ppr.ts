@@ -843,12 +843,16 @@ export async function coordinatePprEntry(input: {
     const decision = input.status === 'concur' ? 'CONCUR' : 'NON-CONCUR'
     const agency = coordRow?.agency_name || 'Coordination'
     const remarkText = `[${agency} — ${decision}] ${trimmedComment}`
-    await supabase.from('ppr_remarks').insert({
+    // The coordination row itself saved — a lost mirror only gaps the
+    // human-readable remarks timeline, so log it (matches the status-advance
+    // handling above) rather than failing the coordination.
+    const { error: remarkErr } = await supabase.from('ppr_remarks').insert({
       entry_id: input.entryId,
       base_id: input.baseId,
       remark: remarkText,
       created_by: user.id,
     })
+    if (remarkErr) console.error('coordinatePprEntry: remarks mirror failed:', remarkErr.message)
   }
 
   logActivity(
@@ -1236,12 +1240,18 @@ export async function reopenPprEntry(input: {
   const priorSummary = priorList.length > 0
     ? priorList.map((c) => `${c.agency_name}: ${c.status === 'concur' ? 'CONCUR' : c.status === 'non_concur' ? 'NON-CONCUR' : 'pending'}`).join(', ')
     : 'none'
-  await supabase.from('ppr_remarks').insert({
+  const { error: snapshotErr } = await supabase.from('ppr_remarks').insert({
     entry_id: input.entryId,
     base_id: input.baseId,
     remark: `[Re-opened from Denied] Prior denial reason: ${entry.denial_reason || '(none)'}. Prior coordination: ${priorSummary}.`,
     created_by: user.id,
   })
+  if (snapshotErr) {
+    // The whole point of the snapshot is to preserve the prior outcomes the
+    // reset below destroys. If it didn't save, abort BEFORE anything is reset.
+    console.error('reopenPprEntry: snapshot remark failed:', snapshotErr.message)
+    return { ok: false, error: friendlyError(snapshotErr.message) }
+  }
 
   // Split selected agencies into those already on the entry (reset to
   // pending) and brand-new ones (insert).

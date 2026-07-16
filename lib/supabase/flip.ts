@@ -144,11 +144,18 @@ export async function createFlipChange(input: {
     revisions_from: input.revisionsFrom || null, revisions_to: input.revisionsTo || null,
   } as never).select('id').single()
   if (error || !row) return { error: friendlyError(error?.message ?? 'Failed to coordinate change') }
-  // Seed the coordination history with the create event + its remark.
-  await supabase.from('flip_change_events').insert({
+  // Seed the coordination history with the create event + its remark. The
+  // timeline without its create entry (and the operator's remark) is silently
+  // wrong — roll the change back on failure so a retry starts clean.
+  const { error: seedError } = await supabase.from('flip_change_events').insert({
     change_id: (row as { id: string }).id, base_id: input.baseId, event_type: 'coordinated',
     actor_user_id: user?.id ?? null, actor_name: input.name, remarks: input.remarks?.trim() || null,
   } as never)
+  if (seedError) {
+    console.error('createFlipChange: seeding coordination history failed:', seedError.message)
+    await supabase.from('flip_changes').delete().eq('id', (row as { id: string }).id)
+    return { error: friendlyError(seedError.message) }
+  }
   return { error: null }
 }
 export async function updateFlipChange(id: string, patch: Partial<FlipChange>): Promise<{ error: string | null }> {

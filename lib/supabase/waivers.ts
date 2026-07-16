@@ -367,8 +367,13 @@ export async function upsertWaiverCriteria(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // Delete existing + re-insert (batch upsert)
-  await supabase.from('waiver_criteria').delete().eq('waiver_id', waiverId)
+  // Delete existing + re-insert (batch upsert). A silently failed delete
+  // followed by a successful insert would duplicate every row — stop here.
+  const { error: deleteError } = await supabase.from('waiver_criteria').delete().eq('waiver_id', waiverId)
+  if (deleteError) {
+    console.error('upsertWaiverCriteria: clearing existing criteria failed:', deleteError.message)
+    return { error: friendlyError(deleteError.message) }
+  }
 
   if (criteria.length === 0) return { error: null }
 
@@ -543,17 +548,31 @@ export async function uploadWaiverAttachment(input: {
     return { data: null, error: friendlyError(error.message) }
   }
 
-  // Update attachment_count
-  const { data: countData } = await supabase
-    .from('waiver_attachments')
-    .select('id', { count: 'exact', head: true })
-    .eq('waiver_id', input.waiver_id)
-
-  if (countData !== null) {
-      await supabase.from('waivers').update({ attachment_count: countData.length || 0 }).eq('id', input.waiver_id)
-  }
+  await recountWaiverAttachments(supabase, input.waiver_id)
 
   return { data: data as WaiverAttachmentRow, error: null }
+}
+
+/** Recompute the denormalized waivers.attachment_count from an exact count.
+ * The attachment write itself already succeeded/failed loudly — drift here is
+ * display-only, so failures log rather than failing the caller.
+ * (The old inline version read `data` from a head:true query — always null —
+ * so the counter was never updated at all; this also gives deletes the
+ * decrement they never had.) */
+async function recountWaiverAttachments(
+  supabase: NonNullable<ReturnType<typeof createClient>>,
+  waiverId: string,
+): Promise<void> {
+  const { count, error: countError } = await supabase
+    .from('waiver_attachments')
+    .select('id', { count: 'exact', head: true })
+    .eq('waiver_id', waiverId)
+  if (countError || count === null) {
+    console.error('recountWaiverAttachments: count query failed:', countError?.message)
+    return
+  }
+  const { error } = await supabase.from('waivers').update({ attachment_count: count }).eq('id', waiverId)
+  if (error) console.error('recountWaiverAttachments: attachment_count update failed:', error.message)
 }
 
 export async function deleteWaiverAttachment(id: string, waiverId: string): Promise<{ error: string | null }> {
@@ -573,6 +592,8 @@ export async function deleteWaiverAttachment(id: string, waiverId: string): Prom
     console.error('Failed to delete waiver attachment:', error.message)
     return { error: friendlyError(error.message) }
   }
+
+  await recountWaiverAttachments(supabase, waiverId)
 
   return { error: null }
 }
@@ -660,13 +681,21 @@ export async function createWaiverReview(input: {
     return { data: null, error: friendlyError(error.message) }
   }
 
-  // Update waiver's last_reviewed_date and next_review_due
+  // Update waiver's last_reviewed_date and next_review_due. These dates drive
+  // the review-overdue surfacing, so a silent failure here leaves the waiver
+  // flagged overdue despite the recorded review. Roll the review row back on
+  // failure so a retry can't create duplicates.
   const nextReviewDue = `${input.review_year + 1}-02-01`
-  await supabase.from('waivers').update({
+  const { error: stampError } = await supabase.from('waivers').update({
     last_reviewed_date: row.review_date as string | null,
     next_review_due: nextReviewDue,
     updated_at: new Date().toISOString(),
   }).eq('id', input.waiver_id)
+  if (stampError) {
+    console.error('createWaiverReview: waiver review-date update failed:', stampError.message)
+    await supabase.from('waiver_reviews').delete().eq('id', (data as WaiverReviewRow).id)
+    return { data: null, error: friendlyError(stampError.message) }
+  }
 
   return { data: data as WaiverReviewRow, error: null }
 }
@@ -688,11 +717,16 @@ export async function deleteWaiverReview(
     return { error: friendlyError(error.message) }
   }
 
-  // Clear last_reviewed_date and next_review_due on the waiver
-  await supabase
+  // Clear last_reviewed_date and next_review_due on the waiver. The review row
+  // is already gone (can't roll a delete back), so surface the stale dates.
+  const { error: clearError } = await supabase
     .from('waivers')
     .update({ last_reviewed_date: null, next_review_due: null })
     .eq('id', waiverId)
+  if (clearError) {
+    console.error('deleteWaiverReview: clearing waiver review dates failed:', clearError.message)
+    return { error: friendlyError(clearError.message) }
+  }
 
   return { error: null }
 }
@@ -731,8 +765,13 @@ export async function upsertWaiverCoordination(
   const supabase = createClient()
   if (!supabase) return { error: 'Supabase not configured' }
 
-  // Delete existing + re-insert
-  await supabase.from('waiver_coordination').delete().eq('waiver_id', waiverId)
+  // Delete existing + re-insert. Same duplicate-rows risk as
+  // upsertWaiverCriteria — a failed delete must stop the rebuild.
+  const { error: deleteError } = await supabase.from('waiver_coordination').delete().eq('waiver_id', waiverId)
+  if (deleteError) {
+    console.error('upsertWaiverCoordination: clearing existing coordination failed:', deleteError.message)
+    return { error: friendlyError(deleteError.message) }
+  }
 
   if (entries.length === 0) return { error: null }
 

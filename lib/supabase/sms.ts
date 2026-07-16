@@ -422,11 +422,10 @@ export async function signPolicy(input: {
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = db()
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).rpc('sign_sms_policy', {
+  const { error } = await supabase.rpc('sign_sms_policy', {
     p_policy_id: input.policyId,
     p_effective_date: input.effectiveDate,
-    p_signature_image_url: input.signatureImageUrl ?? null,
+    p_signature_image_url: input.signatureImageUrl ?? undefined,
   })
   if (error) return { ok: false, error: friendlyError(error.message) }
   logActivity('updated', 'sms_policy', input.policyId, 'Safety Policy ACTIVATED', { details: 'Signed by AE' }, input.baseId)
@@ -467,8 +466,7 @@ export async function createHazard(input: {
   if (!user) return { ok: false, error: 'Not authenticated' }
 
   // Mint hazard_code via RPC (serializes the COUNT-based numbering)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: codeData, error: codeErr } = await (supabase as any).rpc('_sms_next_code', {
+  const { data: codeData, error: codeErr } = await supabase.rpc('_sms_next_code', {
     p_base_id: input.base_id,
     p_prefix: 'HZ',
     p_table: 'sms_hazards',
@@ -495,8 +493,7 @@ export async function createHazard(input: {
 
   const hazard = data as unknown as SmsHazard
   // Ensure default SPIs exist (idempotent — first-hazard side effect)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).rpc('_sms_seed_default_spis', { p_base_id: input.base_id })
+  await supabase.rpc('_sms_seed_default_spis', { p_base_id: input.base_id })
 
   logActivity('created', 'sms_hazard', hazard.id, hazard.hazard_code, { details: hazard.title }, input.base_id)
   return { ok: true, hazard }
@@ -716,8 +713,7 @@ export async function fetchSpis(baseId: string): Promise<SmsSpi[]> {
   if (!supabase) return []
   // Seed defaults idempotently on first fetch so the dashboard always
   // has cards to render even if the base has zero hazards yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).rpc('_sms_seed_default_spis', { p_base_id: baseId })
+  await supabase.rpc('_sms_seed_default_spis', { p_base_id: baseId })
   const { data } = await supabase
     .from('sms_spis')
     .select('*')
@@ -772,8 +768,7 @@ export async function recomputeSpisNow(baseId: string): Promise<{ ok: boolean; c
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
   // The RPC iterates every active civilian base — caller intent is "refresh
   // mine" but the RPC is global; still cheap at small fleet scale.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc('_sms_compute_spi_measurements', {
+  const { data, error } = await supabase.rpc('_sms_compute_spi_measurements', {
     p_target_date: new Date().toISOString().slice(0, 10),
   })
   if (error) return { ok: false, error: friendlyError(error.message) }
@@ -808,8 +803,7 @@ export async function createAudit(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: codeData, error: codeErr } = await (supabase as any).rpc('_sms_next_code', {
+  const { data: codeData, error: codeErr } = await supabase.rpc('_sms_next_code', {
     p_base_id: input.base_id,
     p_prefix: 'AUDIT',
     p_table: 'sms_audits',
@@ -887,8 +881,7 @@ export async function createMoc(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: codeData, error: codeErr } = await (supabase as any).rpc('_sms_next_code', {
+  const { data: codeData, error: codeErr } = await supabase.rpc('_sms_next_code', {
     p_base_id: input.base_id,
     p_prefix: 'MOC',
     p_table: 'sms_management_of_change',
@@ -947,10 +940,9 @@ export async function approveMoc(input: {
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = db()
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).rpc('approve_sms_moc', {
+  const { error } = await supabase.rpc('approve_sms_moc', {
     p_moc_id: input.mocId,
-    p_approval_notes: input.notes ?? null,
+    p_approval_notes: input.notes ?? undefined,
   })
   if (error) return { ok: false, error: friendlyError(error.message) }
   logActivity('updated', 'sms_moc', input.mocId, 'MoC APPROVED', { details: 'AE approval' }, input.baseId)
@@ -964,8 +956,7 @@ export async function rejectMoc(input: {
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = db()
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).rpc('reject_sms_moc', {
+  const { error } = await supabase.rpc('reject_sms_moc', {
     p_moc_id: input.mocId,
     p_rejection_reason: input.reason,
   })
@@ -1023,12 +1014,13 @@ export async function promoteSafetyReportToHazard(input: {
 }): Promise<{ ok: boolean; hazardId?: string; error?: string }> {
   const supabase = db()
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc('promote_safety_report_to_hazard', {
+  const { data, error } = await supabase.rpc('promote_safety_report_to_hazard', {
     p_report_id: input.reportId,
-    p_title: input.title ?? null,
-    p_description: input.description ?? null,
-    p_triage_notes: input.triageNotes ?? null,
+    // '' behaves exactly like NULL here: the RPC does
+    // COALESCE(NULLIF(TRIM(p_title), ''), 'Hazard from <report_code>').
+    p_title: input.title ?? '',
+    p_description: input.description ?? undefined,
+    p_triage_notes: input.triageNotes ?? undefined,
   })
   if (error) return { ok: false, error: friendlyError(error.message) }
   const hazardId = (data as { hazard_id?: string } | null)?.hazard_id

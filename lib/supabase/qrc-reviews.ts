@@ -40,9 +40,7 @@ export async function fetchUserReviews(baseId: string | null | undefined): Promi
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('qrc_monthly_reviews')
     .select('*')
     .eq('base_id', baseId)
@@ -76,9 +74,7 @@ export async function fetchAllReviewsForBase(
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data: rows, error } = await sb
+  const { data: rows, error } = await supabase
     .from('qrc_monthly_reviews')
     .select('*')
     .eq('base_id', baseId)
@@ -132,14 +128,12 @@ export async function fetchEligibleReviewers(baseId: string): Promise<EligibleRe
   const supabase = createClient()
   if (!supabase) return []
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
   // base_members tells us WHO belongs to the base. The role itself comes from
   // profiles.role — the authoritative role the permission matrix
   // (user_has_permission) reads and that User Management edits. base_members.role
   // is a legacy per-base column that has drifted (often stale 'read_only'); using
   // it here silently dropped real reviewers from the report.
-  const { data: members, error } = await sb
+  const { data: members, error } = await supabase
     .from('base_members')
     .select('user_id')
     .eq('base_id', baseId)
@@ -192,9 +186,7 @@ export async function markReviewed(
     .eq('id', templateId)
     .single()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('qrc_monthly_reviews')
     .insert({
       base_id: baseId,

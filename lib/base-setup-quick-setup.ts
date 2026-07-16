@@ -297,8 +297,11 @@ export async function commitQuickSetupStep(
 
     if (stepKey === 'templates' && draft.templates) {
       const { createDefaultTemplate } = await import('@/lib/supabase/inspection-templates')
-      await createDefaultTemplate(installationId, 'airfield')
-      await createDefaultTemplate(installationId, 'lighting')
+      const af = await createDefaultTemplate(installationId, 'airfield')
+      const lt = await createDefaultTemplate(installationId, 'lighting')
+      if (!af || !lt) {
+        return { ok: false, error: 'Creating the default inspection templates failed — retry from the Templates step' }
+      }
       return { ok: true, count: 2 }
     }
 

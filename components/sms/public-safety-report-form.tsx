@@ -62,8 +62,7 @@ export function PublicSafetyReportForm({ icao }: { icao: string }) {
     const supabase = createClient()
     if (!supabase) { setBaseFound(false); setLoading(false); return }
     ;(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error: rpcErr } = await (supabase as any).rpc(
+      const { data, error: rpcErr } = await supabase.rpc(
         'get_public_safety_report_config_by_icao',
         { p_icao: icao },
       )

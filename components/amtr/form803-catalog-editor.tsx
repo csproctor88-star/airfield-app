@@ -5,7 +5,6 @@ import { GripVertical, Trash2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { upsertAmtrRow, updateAmtrRow, deleteAmtrRow, reorderAmtrRows } from '@/lib/supabase/amtr'
 import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveSections, type Section803 } from '@/lib/amtr/form803-sections'
 import { Btn } from '@/components/amtr/ui'
 
@@ -57,8 +56,7 @@ export function Form803CatalogEditor({ catalog, sections, installationId, onChan
   }
   const deleteSection = async (s: Section803) => {
     if (s.builtin || !s.id) return
-    // amtr_803 isn't in the generated Database type — use an untyped client.
-    const supabase = createClient() as unknown as SupabaseClient | null
+    const supabase = createClient()
     if (!supabase) return
     const { count } = await supabase.from('amtr_803').select('id', { count: 'exact', head: true })
       .eq('base_id', installationId).eq('section', s.key)

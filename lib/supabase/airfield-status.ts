@@ -158,11 +158,11 @@ export async function logArffStatusChange(
     reason?: string | null
   },
   baseId?: string | null,
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createClient()
-  if (!supabase) return
+  if (!supabase) return false
   const { data: { user } } = await supabase.auth.getUser()
-  await supabase.from('arff_status_log').insert({
+  const { error } = await supabase.from('arff_status_log').insert({
     base_id: await resolveBaseId(supabase, baseId, user?.id),
     old_cat: params.oldCat ?? null,
     new_cat: params.newCat ?? null,
@@ -172,6 +172,13 @@ export async function logArffStatusChange(
     changed_by: user?.id ?? null,
     reason: params.reason ?? null,
   })
+  if (error) {
+    // The status change itself already persisted — this row feeds the daily
+    // ops report, so a lost insert means a silent gap there. Surface it.
+    console.error('logArffStatusChange:', error.message)
+    return false
+  }
+  return true
 }
 
 /** Fetch ARFF status changes within a date range for the daily ops report. */
@@ -214,16 +221,16 @@ export async function logRunwayStatusChange(
     newAdvisoryText?: string | null
   },
   baseId?: string | null
-): Promise<void> {
+): Promise<boolean> {
   const supabase = createClient()
-  if (!supabase) return
+  if (!supabase) return false
 
   const { data: { user } } = await supabase.auth.getUser()
 
   // Never write an orphan (NULL base_id) audit row — those are hidden from every
   // base by RLS (migration 2026062011) and rejected once the helper's NULL escape
   // hatch is removed. Fall back to the actor's primary base when none was supplied.
-  await supabase.from('runway_status_log').insert({
+  const { error } = await supabase.from('runway_status_log').insert({
     base_id: await resolveBaseId(supabase, baseId, user?.id),
     old_runway_status: params.oldRunwayStatus ?? null,
     new_runway_status: params.newRunwayStatus ?? null,
@@ -236,6 +243,13 @@ export async function logRunwayStatusChange(
     changed_by: user?.id ?? null,
     reason: null,
   })
+  if (error) {
+    // Same as logArffStatusChange: a lost row is a silent gap in the daily
+    // ops report even though the status change itself saved.
+    console.error('logRunwayStatusChange:', error.message)
+    return false
+  }
+  return true
 }
 
 // ── Safety-role narrow writer ──

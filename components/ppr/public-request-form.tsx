@@ -94,8 +94,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
       const rpcName = lookup.kind === 'icao' ? 'get_public_ppr_config_by_icao' : 'get_public_ppr_config'
       const args = lookup.kind === 'icao' ? { p_icao: lookup.value } : { p_base_id: lookup.value }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error: rpcErr } = await (supabase as any).rpc(rpcName, args)
+      const { data, error: rpcErr } = await supabase.rpc(rpcName, args)
       if (rpcErr) {
         console.error(`${rpcName}:`, rpcErr.message)
         setBaseFound(false)

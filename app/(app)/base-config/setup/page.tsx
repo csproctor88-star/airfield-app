@@ -3072,7 +3072,7 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
           return
         }
       }
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('bases')
         .update({ shift_count: next, updated_at: new Date().toISOString() })
         .eq('id', installationId)
@@ -3097,7 +3097,7 @@ function ShiftChecklistTab({ installationId, currentInstallation, markSaved }: {
     setSavingShiftName(key)
     const supabase = createClient()
     if (supabase) {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('bases')
         .update({ [column]: value || null, updated_at: new Date().toISOString() })
         .eq('id', installationId)
@@ -3580,7 +3580,7 @@ function QrcTemplatesTab({ installationId, currentInstallation, markSaved }: { i
     setSavingInterval(true)
     const supabase = createClient()
     if (supabase) {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('bases')
         .update({ qrc_review_interval: next, updated_at: new Date().toISOString() })
         .eq('id', installationId)
@@ -5090,11 +5090,9 @@ function PprColumnsTab({ installationId, markSaved }: { installationId: string |
     const supabase = createClient()
     if (supabase && rows.length > 0) {
       const agencyIds = rows.map(r => r.id)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any
       const [{ data: memberRows }, { data: emailRows }] = await Promise.all([
-        sb.from('ppr_agency_members').select('agency_id').in('agency_id', agencyIds),
-        sb.from('ppr_agency_emails').select('agency_id').in('agency_id', agencyIds),
+        supabase.from('ppr_agency_members').select('agency_id').in('agency_id', agencyIds),
+        supabase.from('ppr_agency_emails').select('agency_id').in('agency_id', agencyIds),
       ])
       const counts: Record<string, number> = {}
       for (const m of (memberRows || []) as { agency_id: string }[]) {
@@ -6088,7 +6086,7 @@ function ArffTab({
       if (!supabase) return
       const existing = (currentInstallation as unknown as { arff_config?: Record<string, unknown> } | null)?.arff_config || {}
       const updated = { ...existing, show_cat_dropdown: next }
-      const { error } = await (supabase as any).from('bases').update({ arff_config: updated }).eq('id', installationId)
+      const { error } = await supabase.from('bases').update({ arff_config: updated }).eq('id', installationId)
       if (error) {
         toast.error('Failed to save ARFF setting')
         setShowCat(!next)
