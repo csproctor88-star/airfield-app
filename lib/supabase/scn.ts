@@ -204,8 +204,10 @@ export async function saveCheck(input: {
     checkId = existing.id
     const { error } = await supabase.from('scn_checks').update(checkPayload).eq('id', checkId)
     if (error) return { data: null, error: friendlyError(error.message) }
-    // Clear existing results so we can rewrite
-    await supabase.from('scn_check_results').delete().eq('check_id', checkId)
+    // Clear existing results so we can rewrite — a silent delete failure
+    // followed by the reinsert below would duplicate result rows.
+    const { error: clearError } = await supabase.from('scn_check_results').delete().eq('check_id', checkId)
+    if (clearError) return { data: null, error: friendlyError(clearError.message) }
   } else {
     const { data: inserted, error } = await supabase
       .from('scn_checks')

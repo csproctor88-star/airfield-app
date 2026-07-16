@@ -176,12 +176,18 @@ export async function setActivePlan(planId: string, baseId: string): Promise<boo
   const supabase = db()
   if (!supabase) return false
 
-  // Clear all active flags for this base
-  await supabase
+  // Clear all active flags for this base. If this fails, setting the target
+  // active anyway would leave TWO active plans — stop before breaking the
+  // single-active-plan invariant.
+  const { error: clearError } = await supabase
     .from('parking_plans')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('base_id', baseId)
     .eq('is_active', true)
+  if (clearError) {
+    console.error('setActivePlan: clearing active flags failed:', clearError.message)
+    return false
+  }
 
   // Set the target plan as active
   const { error } = await supabase

@@ -1455,8 +1455,9 @@ export default function InfrastructureMapPage() {
       assigned_shop: assignedShop,
     })
 
-    // Create outage event
-    await createOutageEvent({
+    // Create outage event — the timeline row driving outage-duration tracking.
+    // The feature is already INOP; if this row is lost the outage clock never starts.
+    const outageEvt = await createOutageEvent({
       base_id: installationId,
       feature_id: id,
       system_component_id: feature.system_component_id || undefined,
@@ -1464,6 +1465,9 @@ export default function InfrastructureMapPage() {
       discrepancy_id: disc?.id || undefined,
       notes: `INOP — ${featureDisplayName}`,
     })
+    if (!outageEvt) {
+      toast.warning('Outage reported, but writing its timeline event failed — the outage log may be incomplete.')
+    }
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
     setDbFeatures(refreshed)
@@ -1532,14 +1536,18 @@ export default function InfrastructureMapPage() {
       : null
     const featureDisplayName = buildFeatureDisplayName(feature, comp?.system_name, comp?.label)
 
-    // Create outage event
-    await createOutageEvent({
+    // Create outage event — the closing bookend; without it the outage never
+    // resolves in the timeline and duration math runs on.
+    const resolvedEvt = await createOutageEvent({
       base_id: installationId,
       feature_id: id,
       system_component_id: feature.system_component_id || undefined,
       event_type: 'resolved',
       notes: `${featureDisplayName} restored to operational`,
     })
+    if (!resolvedEvt) {
+      toast.warning('Marked operational, but writing the resolved timeline event failed — the outage log may be incomplete.')
+    }
 
     const refreshed = await fetchInfrastructureFeatures(installationId)
     setDbFeatures(refreshed)

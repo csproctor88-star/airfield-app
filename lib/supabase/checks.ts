@@ -401,10 +401,12 @@ export async function uploadCheckPhoto(
     .eq('id', checkId)
     .single()
   if (chk) {
-      await supabase
+    // The photo itself saved — counter drift is display-only, log it.
+    const { error: countError } = await supabase
       .from('airfield_checks')
       .update({ photo_count: (chk.photo_count || 0) + 1 })
       .eq('id', checkId)
+    if (countError) console.error('uploadCheckPhoto: photo_count update failed:', countError.message)
   }
 
   return { data: data as CheckPhotoRow, error: null }

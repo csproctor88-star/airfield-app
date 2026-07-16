@@ -147,8 +147,10 @@ export const userDocService = {
       totalPages = 1
     }
 
-    // 6. Update status to ready
-    await supabase
+    // 6. Update status to ready — if this fails the row stays 'processing'
+    // while we'd be returning an object claiming 'ready'; throw instead
+    // (matches how the earlier steps in this function fail).
+    const { error: readyError } = await supabase
       .from('user_documents')
       .update({
         status: 'ready',
@@ -156,6 +158,7 @@ export const userDocService = {
         extracted_at: new Date().toISOString(),
       })
       .eq('id', doc.id)
+    if (readyError) throw new Error(`Failed to finalize document: ${readyError.message}`)
 
     // 7. Cache blob + text to IndexedDB for offline
     onProgress?.('Caching for offline...')

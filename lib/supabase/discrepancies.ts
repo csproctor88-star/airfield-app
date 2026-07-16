@@ -505,10 +505,13 @@ export async function uploadDiscrepancyPhoto(
     .eq('id', discrepancyId)
     .single()
   if (disc) {
-      await supabase
+    // The photo itself saved — a failed counter update only drifts the
+    // denormalized badge, so log it rather than failing the upload.
+    const { error: countError } = await supabase
       .from('discrepancies')
       .update({ photo_count: (disc.photo_count || 0) + 1 })
       .eq('id', discrepancyId)
+    if (countError) console.error('uploadDiscrepancyPhoto: photo_count update failed:', countError.message)
   }
 
   return { data: data as PhotoRow, error: null }
@@ -543,10 +546,12 @@ export async function linkPhotosToDiscrepancy(
     .eq('id', discrepancyId)
     .single()
   if (disc) {
-    await supabase
+    // Photos linked fine — counter drift is display-only, log it.
+    const { error: countError } = await supabase
       .from('discrepancies')
       .update({ photo_count: (disc.photo_count || 0) + photoIds.length })
       .eq('id', discrepancyId)
+    if (countError) console.error('linkPhotosToDiscrepancy: photo_count update failed:', countError.message)
   }
 
   return { error: null }
@@ -609,10 +614,12 @@ export async function deleteDiscrepancyPhoto(
     .eq('id', discrepancyId)
     .single()
   if (disc && (disc.photo_count || 0) > 0) {
-    await supabase
+    // Photo row already deleted — counter drift is display-only, log it.
+    const { error: countError } = await supabase
       .from('discrepancies')
       .update({ photo_count: (disc.photo_count || 0) - 1 })
       .eq('id', discrepancyId)
+    if (countError) console.error('deleteDiscrepancyPhoto: photo_count update failed:', countError.message)
   }
 
   return { error: null }

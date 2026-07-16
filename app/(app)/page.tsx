@@ -28,6 +28,21 @@ import {
   Snowflake, HelpCircle, DoorOpen, AlertOctagon, Plus,
 } from 'lucide-react'
 
+// The status change itself persists through its own checked path — these
+// audit-log rows feed the daily ops report, and a silent insert failure
+// used to leave a gap there with no operator feedback. Still fire-and-forget
+// (never block the status flow on the log write), but surface failures.
+function logRunwayChangeChecked(...args: Parameters<typeof logRunwayStatusChange>) {
+  void logRunwayStatusChange(...args).then((ok) => {
+    if (!ok) toast.error('Status saved, but recording the change for the daily ops report failed.')
+  })
+}
+function logArffChangeChecked(...args: Parameters<typeof logArffStatusChange>) {
+  void logArffStatusChange(...args).then((ok) => {
+    if (!ok) toast.error('Status saved, but recording the change for the daily ops report failed.')
+  })
+}
+
 // Weather conditions → Lucide icon component. The hero / weather strip
 // renders these at varying sizes; pass `size` and `color` at the
 // callsite. Falls back to Sun when no rule matches.
@@ -1152,7 +1167,7 @@ export default function HomePage() {
                 <button
                   onClick={async () => {
                     const existing = advisories.find(a => a.id === editingAdvisoryId)
-                    logRunwayStatusChange({
+                    logRunwayChangeChecked({
                       oldAdvisoryType: existing?.type ?? null,
                       oldAdvisoryText: existing?.text ?? null,
                       newAdvisoryType: null,
@@ -1187,7 +1202,7 @@ export default function HomePage() {
                     const effSuffix = ` — EFF ${startLabel}–${endLabel}`
                     if (editingAdvisoryId) {
                       const existing = advisories.find(a => a.id === editingAdvisoryId)
-                      logRunwayStatusChange({
+                      logRunwayChangeChecked({
                         oldAdvisoryType: existing?.type ?? null,
                         oldAdvisoryText: existing?.text ?? null,
                         newAdvisoryType: advisoryDraftType,
@@ -1197,7 +1212,7 @@ export default function HomePage() {
                       if (installationId) logActivity('updated', 'weather_info', installationId, `WX-${advisoryDraftType.toUpperCase()}${wxNum}`, { details: `WEATHER ${advisoryDraftType.toUpperCase()}${wxNum} UPDATED — ${advisoryDraftText.trim().toUpperCase()}${effSuffix}` }, installationId)
                       await updateAdvisory(editingAdvisoryId, advisoryDraftType, advisoryDraftText.trim(), effStart, effEnd, advisoryDraftNumber.trim() || null)
                     } else {
-                      logRunwayStatusChange({
+                      logRunwayChangeChecked({
                         newAdvisoryType: advisoryDraftType,
                         newAdvisoryText: advisoryDraftText.trim(),
                       }, installationId)
@@ -1863,7 +1878,7 @@ export default function HomePage() {
                           if (runways.length > 0) {
                             setRunwayActiveEnd(rwy.label, newEnd)
                             if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${newEnd}`, { details: `ADVISES RWY ${newEnd} IN USE${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
-                            logRunwayStatusChange({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
+                            logRunwayChangeChecked({ oldActiveRunway: rwy.active_end, newActiveRunway: newEnd }, installationId)
                           } else {
                             const designators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
                             if (designators.length === 0) return
@@ -1871,7 +1886,7 @@ export default function HomePage() {
                             const next = designators[(idx + 1) % designators.length]
                             setActiveRunway(next)
                             if (installationId) logActivity('updated', 'airfield_status', installationId, `Active runway changed to ${next}`, { details: `ADVISES RWY ${next} IN USE${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
-                            logRunwayStatusChange({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
+                            logRunwayChangeChecked({ oldActiveRunway: activeRunway, newActiveRunway: next }, installationId)
                           }
                         },
                       })
@@ -1933,14 +1948,14 @@ export default function HomePage() {
                               const rwyStatusText = val === 'open' ? 'OPS RESUMED' : val.toUpperCase()
                               logActivity('status_updated', 'airfield_status', installationId, `RWY ${rwy.active_end} ${val.toUpperCase()}`, { details: `ADVISES RWY ${rwy.active_end} ${rwyStatusText}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
                             }
-                            logRunwayStatusChange({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
+                            logRunwayChangeChecked({ oldRunwayStatus: rwy.status, newRunwayStatus: val }, installationId)
                           } else {
                             setRunwayStatus(val)
                             if (installationId) {
                               const rwyStatusText2 = val === 'open' ? 'OPS RESUMED' : val.toUpperCase()
                               logActivity('status_updated', 'airfield_status', installationId, `RWY ${activeRunway} ${val.toUpperCase()}`, { details: `ADVISES RWY ${activeRunway} ${rwyStatusText2}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
                             }
-                            logRunwayStatusChange({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
+                            logRunwayChangeChecked({ oldRunwayStatus: runwayStatus, newRunwayStatus: val }, installationId)
                           }
                         },
                       })
@@ -2092,7 +2107,7 @@ export default function HomePage() {
                       setArffStatusForAircraft(aircraft, selectedStatus)
                       if (installationId) {
                         logActivity('updated', 'arff_status', installationId, `${aircraft} ${selectedStatus.toUpperCase()}`, { details: `REPORTS ${aircraft.toUpperCase()} ${selectedStatus.toUpperCase()}${notes.trim() ? `. ${notes.trim().toUpperCase()}` : ''}` }, installationId)
-                        logArffStatusChange({
+                        logArffChangeChecked({
                           aircraftName: aircraft,
                           oldReadiness: prev,
                           newReadiness: selectedStatus,
@@ -2261,7 +2276,7 @@ export default function HomePage() {
                     setArffCat(val)
                     if (installationId) {
                       logActivity('updated', 'arff_status', installationId, `ARFF CAT ${val ?? 'None'}`, { details: `REPORTS ARFF CAT CHANGED TO ${val ?? 'NONE'}${remarks ? `. ${remarks.toUpperCase()}` : ''}` }, installationId)
-                      logArffStatusChange({ oldCat: current, newCat: val, reason: remarks || null }, installationId)
+                      logArffChangeChecked({ oldCat: current, newCat: val, reason: remarks || null }, installationId)
                     }
                   },
                 })

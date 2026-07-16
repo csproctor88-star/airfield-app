@@ -893,7 +893,9 @@ export async function saveCommsCheck(input: {
     const { error } = await supabase
       .from('aep_comms_checks').update(checkPayload as never).eq('id', checkId)
     if (error) return { data: null, error: friendlyError(error.message) }
-    await supabase.from('aep_comms_check_results').delete().eq('check_id', checkId)
+    // Clear-then-rewrite: a silent delete failure would duplicate result rows.
+    const { error: clearError } = await supabase.from('aep_comms_check_results').delete().eq('check_id', checkId)
+    if (clearError) return { data: null, error: friendlyError(clearError.message) }
   } else {
     const { data: inserted, error } = await supabase
       .from('aep_comms_checks')

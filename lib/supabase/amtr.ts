@@ -425,7 +425,10 @@ export async function fetchAmtrCatalogVersion(baseId: string): Promise<string | 
 export async function setAmtrCatalogVersion(baseId: string, version: string): Promise<void> {
   const supabase = db()
   if (!supabase) return
-  await supabase.from('amtr_catalog_version').upsert({ base_id: baseId, version, updated_at: new Date().toISOString() } as never, { onConflict: 'base_id' })
+  const { error } = await supabase.from('amtr_catalog_version').upsert({ base_id: baseId, version, updated_at: new Date().toISOString() } as never, { onConflict: 'base_id' })
+  // A silently missing stamp makes the next seed/sync mis-detect the base's
+  // catalog state — at minimum make the failure visible in the console.
+  if (error) console.error('setAmtrCatalogVersion:', error.message)
 }
 
 // ── Supporting files (amtr-files bucket) ───────────────────

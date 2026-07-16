@@ -136,18 +136,32 @@ export async function createDefaultTemplate(
       .eq('template_type', templateType)
       .single()
     if (oldTmpl) {
-      // Cascade: delete items → sections → template
+      // Cascade: delete items → sections → template. This rebuild is not
+      // transactional, so stop at the first failure — continuing after a
+      // silent delete failure would strand rows or duplicate the template.
       const { data: oldSections } = await supabase
         .from('base_inspection_sections')
         .select('id')
         .eq('template_id', (oldTmpl as { id: string }).id)
       if (oldSections) {
         for (const sec of oldSections as { id: string }[]) {
-          await supabase.from('base_inspection_items').delete().eq('section_id', sec.id)
+          const { error: itemDelErr } = await supabase.from('base_inspection_items').delete().eq('section_id', sec.id)
+          if (itemDelErr) {
+            console.error('createDefaultTemplate: deleting old items failed:', itemDelErr.message)
+            return false
+          }
         }
-        await supabase.from('base_inspection_sections').delete().eq('template_id', (oldTmpl as { id: string }).id)
+        const { error: secDelErr } = await supabase.from('base_inspection_sections').delete().eq('template_id', (oldTmpl as { id: string }).id)
+        if (secDelErr) {
+          console.error('createDefaultTemplate: deleting old sections failed:', secDelErr.message)
+          return false
+        }
       }
-      await supabase.from('base_inspection_templates').delete().eq('id', (oldTmpl as { id: string }).id)
+      const { error: tmplDelErr } = await supabase.from('base_inspection_templates').delete().eq('id', (oldTmpl as { id: string }).id)
+      if (tmplDelErr) {
+        console.error('createDefaultTemplate: deleting old template failed:', tmplDelErr.message)
+        return false
+      }
     }
   }
 
@@ -179,7 +193,12 @@ export async function createDefaultTemplate(
         .select('id')
         .single()
 
-      if (secErr || !newSec) continue
+      if (secErr || !newSec) {
+        // The old template is already gone — a skipped section means a
+        // silently incomplete rebuild. Fail loudly; a retry rebuilds cleanly.
+        console.error('createDefaultTemplate: section insert failed:', secErr?.message)
+        return false
+      }
       const secId = (newSec as { id: string }).id
 
       if (section.items.length > 0) {
@@ -194,7 +213,11 @@ export async function createDefaultTemplate(
             sort_order: ii,
           }
         })
-        await supabase.from('base_inspection_items').insert(itemInserts)
+        const { error: itemsErr } = await supabase.from('base_inspection_items').insert(itemInserts)
+        if (itemsErr) {
+          console.error('createDefaultTemplate: item insert failed:', itemsErr.message)
+          return false
+        }
       }
     }
   } else {
@@ -213,7 +236,11 @@ export async function createDefaultTemplate(
         .select('id')
         .single()
 
-      if (secErr || !newSec) continue
+      if (secErr || !newSec) {
+        // Same as the hardcoded path: never report a partial clone as success.
+        console.error('createDefaultTemplate: section clone failed:', secErr?.message)
+        return false
+      }
       const secId = (newSec as { id: string }).id
 
       if (section.items.length > 0) {
@@ -225,7 +252,11 @@ export async function createDefaultTemplate(
           item_type: i.item_type,
           sort_order: i.sort_order,
         }))
-        await supabase.from('base_inspection_items').insert(itemInserts)
+        const { error: itemsErr } = await supabase.from('base_inspection_items').insert(itemInserts)
+        if (itemsErr) {
+          console.error('createDefaultTemplate: item clone failed:', itemsErr.message)
+          return false
+        }
       }
     }
   }

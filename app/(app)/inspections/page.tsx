@@ -1433,7 +1433,10 @@ export default function InspectionsPage() {
         // the bulk enqueue cover it (the bail block builds the same
         // list from completedHalf.discrepancies).
         if (hasLinkedFeatures && discResultStatus === 'committed') {
-          await updateFeatureStatus(d.linked_feature_ids![0], 'inoperative')
+          const statusRow = await updateFeatureStatus(d.linked_feature_ids![0], 'inoperative')
+          if (!statusRow) {
+            toast.warning('Discrepancy created, but marking the linked NAVAID inoperative failed — update its status from the Infrastructure page.')
+          }
         }
 
         // Photos: link existing uploaded photo rows to this disc id.
@@ -1742,16 +1745,24 @@ export default function InspectionsPage() {
       if (allLinkedFeatureIds.length > 0) {
         const uniqueIds = Array.from(new Set(allLinkedFeatureIds))
         const marked = await bulkUpdateStatus(uniqueIds, 'inoperative')
+        if (marked < uniqueIds.length) {
+          toast.warning(`${uniqueIds.length - marked} of ${uniqueIds.length} linked NAVAIDs could not be marked inoperative — update them from the Infrastructure page.`)
+        }
 
+        let failedOutageEvents = 0
         for (const fid of uniqueIds) {
           const info = featureDiscMap[fid]
-          await createOutageEvent({
+          const evt = await createOutageEvent({
             base_id: installationId,
             feature_id: fid,
             event_type: 'reported',
             discrepancy_id: info?.discrepancy_id || null,
             notes: info?.comment ? `INOP — ${info.comment.slice(0, 200)}` : 'INOP — Reported during lighting inspection',
           })
+          if (!evt) failedOutageEvents++
+        }
+        if (failedOutageEvents > 0) {
+          toast.warning(`${failedOutageEvents} outage timeline ${failedOutageEvents === 1 ? 'event' : 'events'} failed to save — the outage log may be incomplete.`)
         }
 
         if (marked > 0) {

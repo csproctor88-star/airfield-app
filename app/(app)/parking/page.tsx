@@ -2517,7 +2517,11 @@ export default function ParkingPage() {
 
   const handleSetActive = async () => {
     if (!selectedPlan || !installationId) return
-    await setActivePlan(selectedPlan.id, installationId)
+    const ok = await setActivePlan(selectedPlan.id, installationId)
+    if (!ok) {
+      toast.error('Could not set the active plan — please try again.')
+      return
+    }
     setPlans(prev => prev.map(p => ({ ...p, is_active: p.id === selectedPlan.id })))
     toast.success(`"${selectedPlan.plan_name}" set as active plan`)
   }

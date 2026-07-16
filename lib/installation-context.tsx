@@ -163,10 +163,16 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     if (!installationId) return
     const supabase = createClient()
     if (!supabase) return
-    await supabase
+    // Throw on failure (like updateEnabledModules) so caller try/catch +
+    // success toasts stay honest, and never mirror a failed write into state.
+    const { error } = await supabase
       .from('bases')
       .update({ default_ooo_message: message } as Record<string, unknown>)
       .eq('id', installationId)
+    if (error) {
+      console.error('[installation-context] failed to save default_ooo_message:', error.message)
+      throw new Error(error.message)
+    }
     setCurrentInstallation(prev =>
       prev ? ({ ...prev, default_ooo_message: message } as typeof prev) : prev
     )
@@ -179,10 +185,15 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
     if (!installationId) return
     const supabase = createClient()
     if (!supabase) return
-    await supabase
+    // Same contract as updateDefaultOooMessage: throw so callers can toast.
+    const { error } = await supabase
       .from('bases')
       .update({ default_closed_message: message } as Record<string, unknown>)
       .eq('id', installationId)
+    if (error) {
+      console.error('[installation-context] failed to save default_closed_message:', error.message)
+      throw new Error(error.message)
+    }
     setCurrentInstallation(prev =>
       prev ? ({ ...prev, default_closed_message: message } as typeof prev) : prev
     )
@@ -240,10 +251,16 @@ export function InstallationProvider({ children }: { children: ReactNode }) {
         ...(userId ? { completed_by: userId } : {}),
       },
     }
-    await supabase
+    // Throw on failure so the local state below never claims a step complete
+    // that a reload would revert. Wizard callers already .catch(() => {}).
+    const { error } = await supabase
       .from('bases')
       .update({ setup_progress: next } as Record<string, unknown>)
       .eq('id', installationId)
+    if (error) {
+      console.error('[installation-context] failed to save setup_progress:', error.message)
+      throw new Error(error.message)
+    }
     setCurrentInstallation(prev =>
       prev ? ({ ...prev, setup_progress: next } as typeof prev) : prev
     )
