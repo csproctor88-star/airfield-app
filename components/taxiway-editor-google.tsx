@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { initGoogleMaps, isGoogleMapsConfigured, GOOGLE_MAP_OPTIONS } from '@/lib/google-maps'
 import { applyMapProvider } from '@/lib/map-providers'
 import { toast } from 'sonner'
@@ -18,6 +18,7 @@ import {
   type RunwayClass,
   type ServiceBranch,
 } from '@/lib/calculations/taxiway-criteria'
+import { simplifyLine, TAXIWAY_SIMPLIFY_TOLERANCE_FT } from '@/lib/calculations/simplify'
 import type { BaseTaxiway } from '@/lib/supabase/types'
 
 const TDG_OPTIONS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -38,14 +39,25 @@ export default function TaxiwayEditorGoogle() {
   // Google Maps objects
   const polylinesRef = useRef<google.maps.Polyline[]>([])
   const polygonsRef = useRef<google.maps.Polygon[]>([])
-  const vertexMarkersRef = useRef<google.maps.Marker[]>([])
   const labelMarkersRef = useRef<google.maps.Marker[]>([])
   const drawingLineRef = useRef<google.maps.Polyline | null>(null)
   const drawingVerticesRef = useRef<google.maps.Marker[]>([])
+  // Bumped when the map instance is recreated so layer effects re-render onto it
+  const [mapGen, setMapGen] = useState(0)
 
   // Data
   const [taxiways, setTaxiways] = useState<BaseTaxiway[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Decimated copies for rendering only — stored centerline_coords are never
+  // modified. Survey-grade imports (Portland: ~11k vertices) froze the map.
+  const displayTaxiways = useMemo(
+    () => taxiways.map(tw => ({
+      tw,
+      coords: simplifyLine((tw.centerline_coords as [number, number][]) || [], TAXIWAY_SIMPLIFY_TOLERANCE_FT),
+    })),
+    [taxiways],
+  )
 
   // Drawing state
   const [drawing, setDrawing] = useState(false)
@@ -130,41 +142,45 @@ export default function TaxiwayEditorGoogle() {
     })
 
     mapRef.current = gmap
+    setMapGen(g => g + 1)
 
     return () => {
-      clearAllMapObjects()
+      clearSavedLayers()
+      clearDrawingLayers()
       mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiReady, installationId, mapProvider])
 
-  // ── Clear all Google Maps objects ──
-  const clearAllMapObjects = () => {
+  // ── Clear Google Maps objects ──
+  const clearSavedLayers = () => {
     polylinesRef.current.forEach(p => p.setMap(null))
     polylinesRef.current = []
     polygonsRef.current.forEach(p => p.setMap(null))
     polygonsRef.current = []
-    vertexMarkersRef.current.forEach(m => m.setMap(null))
-    vertexMarkersRef.current = []
     labelMarkersRef.current.forEach(m => m.setMap(null))
     labelMarkersRef.current = []
+  }
+
+  const clearDrawingLayers = () => {
     drawingLineRef.current?.setMap(null)
     drawingLineRef.current = null
     drawingVerticesRef.current.forEach(m => m.setMap(null))
     drawingVerticesRef.current = []
   }
 
-  // ── Render layers whenever data changes ──
+  // ── Render saved taxiways (centerlines, clearance buffers, labels) ──
+  // Kept separate from the drawing preview so each click while drawing doesn't
+  // tear down and rebuild every saved layer.
   useEffect(() => {
     const gmap = mapRef.current
     if (!gmap) return
 
-    clearAllMapObjects()
+    clearSavedLayers()
 
     // ── Clearance buffer polygons ──
     if (showOFA) {
-      for (const tw of taxiways) {
-        const coords = (tw.centerline_coords as [number, number][]) || []
+      for (const { tw, coords } of displayTaxiways) {
         if (coords.length < 2) continue
         const halfWidth = getHalfWidth(tw)
         const bufferCoords = buildBufferRing(coords, halfWidth)
@@ -185,8 +201,7 @@ export default function TaxiwayEditorGoogle() {
     }
 
     // ── Taxiway centerlines ──
-    for (const tw of taxiways) {
-      const coords = (tw.centerline_coords as [number, number][]) || []
+    for (const { tw, coords } of displayTaxiways) {
       if (coords.length < 2) continue
 
       const line = new google.maps.Polyline({
@@ -198,24 +213,6 @@ export default function TaxiwayEditorGoogle() {
         map: gmap,
       })
       polylinesRef.current.push(line)
-
-      // Vertex dots
-      for (const c of coords) {
-        const vm = new google.maps.Marker({
-          position: { lat: c[1], lng: c[0] },
-          map: gmap,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 4,
-            fillColor: '#22D3EE',
-            fillOpacity: 1,
-            strokeColor: '#000000',
-            strokeWeight: 1,
-          },
-          clickable: false,
-        })
-        vertexMarkersRef.current.push(vm)
-      }
 
       // Label at midpoint
       const midIdx = Math.floor(coords.length / 2)
@@ -237,8 +234,16 @@ export default function TaxiwayEditorGoogle() {
       })
       labelMarkersRef.current.push(lbl)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayTaxiways, showOFA, mapGen])
 
-    // ── Drawing preview ──
+  // ── Render drawing preview ──
+  useEffect(() => {
+    const gmap = mapRef.current
+    if (!gmap) return
+
+    clearDrawingLayers()
+
     if (drawingPoints.length >= 2) {
       drawingLineRef.current = new google.maps.Polyline({
         path: drawingPoints.map(([lng, lat]) => ({ lat, lng })),
@@ -267,7 +272,8 @@ export default function TaxiwayEditorGoogle() {
       })
       drawingVerticesRef.current.push(dm)
     }
-  }, [taxiways, drawingPoints, showOFA])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawingPoints, mapGen])
 
   // ── Change cursor in drawing mode ──
   useEffect(() => {
@@ -429,8 +435,14 @@ export default function TaxiwayEditorGoogle() {
         return
       }
 
+      // Survey-grade files carry a vertex every few feet; simplify before
+      // saving so the stored centerlines stay light everywhere they render.
+      const rawPts = lines.reduce((s, l) => s + l.length, 0)
+      const simplified = lines.map(l => simplifyLine(l, TAXIWAY_SIMPLIFY_TOLERANCE_FT))
+      const keptPts = simplified.reduce((s, l) => s + l.length, 0)
+
       let created = 0
-      for (let i = 0; i < lines.length; i++) {
+      for (let i = 0; i < simplified.length; i++) {
         const designator = `Import-${i + 1}`
         const result = await createTaxiway(installationId, {
           designator,
@@ -439,7 +451,7 @@ export default function TaxiwayEditorGoogle() {
           tdg: newStandard === 'faa' ? newTdg : null,
           runway_class: newStandard === 'ufc' ? newRunwayClass : null,
           service_branch: newStandard === 'ufc' ? newServiceBranch : null,
-          centerline_coords: lines[i],
+          centerline_coords: simplified[i],
         })
         if (result) {
           setTaxiways(prev => [...prev, result])
@@ -448,9 +460,10 @@ export default function TaxiwayEditorGoogle() {
       }
 
       if (created > 0) {
-        toast.success(`Imported ${created} taxiway centerline${created > 1 ? 's' : ''}`)
-        if (lines[0].length > 0) {
-          const mid = lines[0][Math.floor(lines[0].length / 2)]
+        const reduction = keptPts < rawPts ? ` (simplified ${rawPts.toLocaleString()} points to ${keptPts.toLocaleString()})` : ''
+        toast.success(`Imported ${created} taxiway centerline${created > 1 ? 's' : ''}${reduction}`)
+        if (simplified[0].length > 0) {
+          const mid = simplified[0][Math.floor(simplified[0].length / 2)]
           mapRef.current?.panTo({ lat: mid[1], lng: mid[0] })
           mapRef.current?.setZoom(15)
         }
