@@ -662,6 +662,11 @@ function RunwayTab({
   const { mapProvider, refreshCurrentInstallation, currentInstallation } = useInstallation()
   const civilian = isCivilian(currentInstallation)
   const [runways, setRunways] = useState(initialRunways)
+  // Re-seed whenever the installation context delivers a fresh list. The tab
+  // unmounts on step change and the context loads asynchronously, so a
+  // mount-time copy alone goes stale — imported runways vanished on remount
+  // until a full page reload.
+  useEffect(() => { setRunways(initialRunways) }, [initialRunways])
   const [adding, setAdding] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingRunwayId, setEditingRunwayId] = useState<string | null>(null)
@@ -779,7 +784,11 @@ function RunwayTab({
       toast.error(`Failed to import runway: ${friendlyError(error.message)}`)
     } else {
       toast.success(`Runway ${rwy.runway_id} imported`)
+      markSaved?.('runways')
       setRunways(prev => [...prev, data as typeof prev[number]])
+      // Write-through to the installation context — without it the import
+      // only lives in this tab's local state and disappears on remount.
+      await refreshCurrentInstallation()
     }
     setSaving(false)
   }
@@ -865,8 +874,18 @@ function RunwayTab({
       setBaseElevation(lookupResult.elevation_ft)
     }
 
-    // Ensure airfield_status row exists (best-effort — may already exist)
-    await supabase.from('airfield_status').insert({ base_id: installationId, runway_status: 'open' } as any)
+    // airfield_status seeding now lives in the DB (bases_seed_airfield_status
+    // trigger + backfill, migration 2026071600) — the best-effort insert that
+    // used to sit here was the only seeding path and silently failed for 37
+    // bases, breaking every status-board save on them.
+
+    if (imported > 0) {
+      markSaved?.('runways')
+      // Write-through to the installation context — runways/areas/NAVAIDs were
+      // inserted directly, so a remount from a stale context dropped them
+      // from view until a full page reload.
+      await refreshCurrentInstallation()
+    }
 
     // Report honestly: a total RLS/network failure previously surfaced as
     // "Imported 0 items" success. Surface any save failures.
@@ -918,12 +937,14 @@ function RunwayTab({
       toast.error(`Failed to update: ${friendlyError(error.message)}`)
     } else {
       toast.success(`Runway ${adjustingRunway.runway_id} coordinates updated`)
+      markSaved?.('runways')
       setRunways((prev: any) => prev.map((r: any) =>
         r.id === adjustingRunway.id
           ? { ...r, end1_latitude: adjustCoords.end1_lat, end1_longitude: adjustCoords.end1_lon, end2_latitude: adjustCoords.end2_lat, end2_longitude: adjustCoords.end2_lon }
           : r
       ))
       setAdjustingRunway(null)
+      await refreshCurrentInstallation()
     }
     setSaving(false)
   }
@@ -1081,6 +1102,7 @@ function RunwayTab({
       toast.success(`Runway ${newRunway.runway_id} added`)
       markSaved?.('runways')
       setRunways(prev => [...prev, data as typeof prev[number]])
+      await refreshCurrentInstallation()
       setAdding(false)
       setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', end1_designator: '', end1_latitude: '', end1_longitude: '', end1_elevation_msl: '', end2_designator: '', end2_latitude: '', end2_longitude: '', end2_elevation_msl: '' })
     }
@@ -1097,7 +1119,9 @@ function RunwayTab({
       toast.error(`Failed to delete: ${error.message}`)
     } else {
       toast.success(`Runway ${rwy.runway_id} deleted`)
+      markSaved?.('runways')
       setRunways(prev => prev.filter(r => r.id !== rwy.id))
+      await refreshCurrentInstallation()
     }
   }
 
@@ -1109,9 +1133,11 @@ function RunwayTab({
     if (error) {
       toast.error(`Failed to update: ${error.message}`)
     } else if (data) {
+      markSaved?.('runways')
       setRunways(prev => prev.map(r => r.id === rwy.id ? data as any : r))
       setEditingRunwayId(null)
       toast.success(`Runway ${rwy.runway_id} updated`)
+      await refreshCurrentInstallation()
     }
     setSaving(false)
   }
@@ -1984,7 +2010,11 @@ function SimpleListTab({
   stepKey: WizardStepKey
   markSaved?: (stepKey: WizardStepKey) => void
 }) {
+  const { refreshCurrentInstallation } = useInstallation()
   const [list, setList] = useState<string[]>(items)
+  // Re-seed from the context like RunwayTab — a mount-time copy goes stale
+  // once Import All (or a late context load) delivers a fresh list.
+  useEffect(() => { setList(items) }, [items])
   const [newItem, setNewItem] = useState('')
 
   // Names are unique per base in these tables — safe to use as the
@@ -2024,6 +2054,7 @@ function SimpleListTab({
       markSaved?.(stepKey)
       setList(prev => [...prev, newItem.trim()])
       setNewItem('')
+      await refreshCurrentInstallation()
     }
   }
 
@@ -2042,7 +2073,9 @@ function SimpleListTab({
       toast.error(`Failed to delete: ${error.message}`)
     } else {
       toast.success(`Deleted "${item}"`)
+      markSaved?.(stepKey)
       setList(prev => prev.filter(i => i !== item))
+      await refreshCurrentInstallation()
     }
   }
 

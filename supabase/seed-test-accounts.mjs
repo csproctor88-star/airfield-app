@@ -76,7 +76,12 @@ async function down() {
     const id = await baseIdByName(`${PREFIX} Base ${label}`)
     if (id) {
       await admin.from('discrepancies').delete().eq('base_id', id)
-      await admin.from('bases').delete().eq('id', id)
+      // airfield_status rows are auto-seeded per base (trigger
+      // bases_seed_airfield_status, migration 2026071600) and the FK is
+      // NO ACTION — delete them first or the bases delete silently fails.
+      await admin.from('airfield_status').delete().eq('base_id', id)
+      const { error } = await admin.from('bases').delete().eq('id', id)
+      if (error) throw new Error(`base ${label} delete: ${error.message}`)
       console.log(`deleted base ${label}`)
     }
   }
