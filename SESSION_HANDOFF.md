@@ -1,99 +1,124 @@
 # Session Handoff
 
-**Date:** 2026-07-16
-**Branch:** `main`. **2 commits** this session (`e075aa5b`, `9d7dd85e`),
-**pushed**; tree clean (this handoff is the only modified file).
-`glidepath-site`: **1 commit** (`2cefa19`), pushed.
-**Build:** re-verified at wrap: tsc ✓ · lint 0 errors · vitest **1254 passed |
-0 skipped** (138 files — the 16 RLS tests now execute locally, see below) ·
-`npm run build` ✓ (middleware 80.8 kB).
-**HEAD:** `9d7dd85e` (airfield-app); `glidepath-site` @ `2cefa19`.
+**Date:** 2026-07-16 (session 2 — same calendar day as the audit session)
+**Branch:** `main`. **3 commits** this session (`ebf0a062`, `d87a71ee`,
+`97240391`), all **pushed**; tree clean (this handoff is the only modified
+file). `glidepath-site`: **2 commits** (`8ed439e`, `9dd00ad`), pushed.
+**Build:** re-verified at wrap: tsc ✓ · lint 0 errors · vitest **1259 passed |
+0 skipped** (139 files) · `npm run build` ✓ (middleware 80.8 kB).
+**HEAD:** `97240391` (airfield-app); `glidepath-site` @ `9dd00ad`.
 **DB:** no new migrations; `2026071300_configurable_shifts` remains latest,
-applied. Live writes this session: re-ran `supabase/seed-test-accounts.mjs`
-(reset the password on the three `__TEST_RLS__` fixture users — additive, no
-real data touched).
+applied. No live writes this session (the Supabase type regen used
+`gen types --linked`, read-only).
 
 ---
 
 ## What shipped this session
 
-A thorough two-repo **code audit** (seven parallel read-only agents: dead
-code, slop, client correctness, API/security, tests, migrations across
-airfield-app; whole-repo on glidepath-site), then acted on the findings across
-three commits and wired up the dormant RLS security-test suite. Both repos
-were already unusually disciplined — the real findings were a handful of
-genuine correctness/security defects plus accumulated dead weight, not slop.
+Two threads. First, the two remaining **cleanup follow-ups** from the audit
+session's backlog: regenerating the stale Supabase `Database` type (which
+deleted the 43 `supabase as any` casts and surfaced real defects those casts
+were hiding), then sweeping the **fan-out silent-error** tail — 27 sites where
+a secondary write's failure was discarded while the flow reported success.
+Second, a **full review of the marketing site** (glidepathops.com +
+`glidepath-site`) — a four-pass grading brief (codebase, security, on-site SEO,
+SERP/keyword research), then execution of the brief's mechanical tier across two
+`glidepath-site` commits. The NIPR upload proxy was also closed out as
+**not-doing** — see below.
 
-### Security + correctness fixes (`e075aa5b`)
+### Supabase type regen + cast removal (`ebf0a062`)
 
-Findings verified against the code, then fixed:
+`lib/supabase/types.ts` was stale (missing `email_broadcasts`,
+`marketing_leads`, and three `bases` columns), and 43 `supabase as any` casts
+had accumulated to work around it — un-typing every insert/update payload they
+touched. Regenerated via `npx supabase gen types typescript --linked`,
+re-applied the two manual column narrowings the file carries (`bases.airport_type`
+and `obstruction_surface_set` are `text` in the DB, hand-narrowed to the
+`lib/airport-mode.ts` unions), and added a header documenting the regen
+procedure so the next regen doesn't clobber them.
 
-- **`send-pdf-email` was an unthrottled relay.** The `pdfBase64` branch let
-  any authenticated principal (incl. the shared kiosk / `read_only` account)
-  send an arbitrary attachment to an arbitrary recipient from the verified
-  `info@glidepathops.com` domain with no rate limit. The branch is the
-  legitimate path for client-generated report PDFs, so added per-user +
-  per-recipient `check_rate_limit` (service-role, fails open) rather than
-  removing it.
-- **A filed inspection could be silently lost.** On the no-draft filing path
-  (`inspections/page.tsx`), `createInspection`'s `error` was dropped; on
-  failure the flow cleared the draft and toasted "completed & filed" anyway.
-  Now checks the error, keeps the draft, and stops.
-- **False-success writes.** base-config Import All / Unlink All reported
-  success even on a total RLS denial; `duplicateParkingPlan` returned the plan
-  on a child-copy failure, producing a silently empty/partial duplicate of a
-  persistent record. Now surface failures (Import/Unlink) and roll the plan
-  back on copy failure (duplicate).
-- **Cross-tenant PPR notification leak.** `send-ppr-coordination-request` and
-  `ppr-agency-notify` resolved client-supplied `agencyIds` with no base scope,
-  so a triager at base A could pass base B's agency IDs and email B's
-  coordinators. Scoped every agency lookup to `entry.base_id`.
-- **Middleware allowlist too broad.** `startsWith('/feedback')` also exempted
-  the *authenticated* staff feedback page; anchored `/feedback` and
-  `/ppr-request` to their `<baseId>` children. Replaced the blanket
-  `/api/public/` prefix with explicit per-route entries (fail-safe: a future
-  route under that namespace is gated by default). Added a regression test
-  pinning the public-form-vs-staff-page split.
+Removing the casts surfaced genuine defects, all fixed: `dashboard-boards`
+passed the PostgrestError **object** (not `.message`) to `friendlyError`, so
+every failed board write toasted `[object Object]`; several RPC callers passed
+`?? null` to args typed `?: string` (switched to `?? undefined` — those SQL
+params all `DEFAULT NULL`, so omission is behavior-identical;
+`promote_safety_report_to_hazard`'s required `p_title` sends `''`, which its
+`NULLIF(TRIM(...),'')` treats as NULL). Also dropped the now-orphaned
+`eslint-disable` lines, two stale "not yet in generated types" comments, and two
+leftover casts (`welcome-gate` profiles update, `form803` amtr_803 client) the
+fresh types made unnecessary.
 
-### Dead-code cleanup (`9d7dd85e`)
+### Fan-out silent-error sweep (`d87a71ee`)
 
-Every symbol re-verified with word-boundary grep + caller tracing before
-removal — the audit over-reported ~14 symbols that were actually live via
-internal callers; those were kept.
+27 sites across 20 files, fixed by proportionality (an `Explore` agent
+enumerated them; each verified against the code before editing):
 
-- `lib/tours/pages/*` (28 files, ~900 LOC): the retired per-page app-tour step
-  library (tours retired for `/training`); plus dead `listTours` /
-  `listToursForPath`.
-- `components/ui/{card,stat,section-header}.tsx`: never-adopted UI-refresh-v2
-  primitives. `components/amtr/reports/date-range-bar.tsx`: unused component.
-- ~50 dead exports across `lib/supabase/*` and `lib/*`.
-- Orphaned deps removed: `zod`, `pdf-parse`, `clsx` (its only user was the
-  removed `utils.ts` `cn`); lockfile re-synced.
-- Two orphaned logo PNGs.
-- `CLAUDE.md` drift: Next 14→15, React 18→19, jsPDF 4.1→4.2, dropped the
-  phantom `xlsx`/SheetJS row, corrected route-handler / migration / CRUD /
-  PDF-generator counts.
+- **Abort/rollback where silence corrupts records:** PPR reopen now aborts
+  *before* the destructive coordination reset if its preserving snapshot remark
+  fails (it was destroying the very data the snapshot exists to protect); a new
+  field-condition report rolls back if superseding the prior active report fails
+  (else two "active" FCRs coexist); a new waiver review rolls back if stamping
+  the waiver's review dates fails; FLIP changes roll back if seeding the
+  coordination timeline fails; `setActivePlan` stops before creating two active
+  parking plans; clear-then-reinsert upserts (waiver criteria/coordination, SCN
+  + AEP comms check results) stop on a failed clear instead of duplicating rows;
+  the inspection-template rebuild fails loudly at every step instead of returning
+  hard-coded `true` over a partially-destroyed template.
+- **Toast where the operator can act:** outage-event timeline writes (mark
+  INOP/operational, lighting-inspection bulk INOP, discrepancy
+  link/cancel/complete NAVAID restores), ARFF/runway status-log rows feeding the
+  daily ops report, discrepancy shop/status edits in the status modal (a fully
+  unchecked *primary* write the scout under-called), quick-setup template step.
+- **Throw so existing caller try/catch works:** installation-context OOO /
+  closed-message / setup-step writers (mirrors `updateEnabledModules`) — the AFM
+  widget's `catch` + `toast.error` was already written but could never fire;
+  `userDocuments`' final status→ready flip now throws instead of returning an
+  object claiming `ready` over a `processing` row.
+- **Log where drift is display-only:** `photo_count` counters (checks +
+  discrepancies), AMTR catalog-version stamp, PPR remarks mirror.
 
-### glidepath-site cleanup (`2cefa19`)
+Bonus find: `waivers.attachment_count` was **never updated at all** — the old
+code read `data` from a `head:true` count query (always null), so the guard
+never passed. Replaced with an exact-count recount helper; deletes now decrement
+too. New `tests/fanout-error-guards.test.ts` locks the three invariants most at
+risk of regressing (single-active-plan, review-stamp rollback,
+clear-then-reinsert guard) — +5 tests, hence 1254→1259.
 
-- Terminology guard extended to copy hardcoded in `app/**` (the citation-guard
-  blind spot — page metadata was unscanned); +12 tests.
-- OG generator palette resynced to `tailwind.config.ts` tokens (font swap to
-  Barlow Condensed + Public Sans deferred — see tech debt).
-- Removed dead `SHIPPED_PAGE_COUNT` export and `.chip-amber` CSS; docs fixed.
+### Resolved outage event on discrepancy completion (`97240391`)
 
-### RLS security-test suite wired up (no code — infra)
+Completing a discrepancy linked to a NAVAID restores the feature to operational,
+but unlike the Infrastructure page's mark-operational path it never wrote the
+`resolved` outage event — so outages closed via discrepancy completion never got
+their closing bookend and the timeline/duration ran on. Now writes the same
+resolved event (tagged with the discrepancy id) after a successful restore, and
+warns if the bookend write fails. (The cancel/delete branch still restores
+without a bookend — left alone deliberately; deleting the discrepancy makes the
+event's provenance murky. Owner call if parity is wanted.)
 
-The audit's one real gap: the 16 cross-base isolation + pentest-remediation
-tests (plus 6 in `permission-rpcs` / `rls-smoke`) skipped **everywhere** —
-locally (no `TEST_RLS_*` in `.env.local`) and in CI (the 5 secrets in
-`ci.yml` were never set), so multi-tenant isolation was guarded by tests that
-ran nowhere while CI stayed green. The `__TEST_RLS__` fixtures already existed
-(seeded 2026-05-29) but the creds were gone from `.env.local`. Re-ran
-`seed-test-accounts.mjs` (idempotent — reused the existing bases/users, reset
-their password, rewrote the three `TEST_RLS_*` values); the suite now runs
-locally (**1254 passed, 0 skipped**). Owner added the 5 GitHub Actions secrets,
-so **CI now executes the RLS suite on every push**.
+### glidepath-site — marketing site review + tier-1/2 fixes
+
+A four-pass review (parallel agents: codebase quality, security, on-site SEO,
+SERP/keyword research) produced a grading brief — **Codebase B+ · Security B+ ·
+SEO C+ · Overall B**. Headline finding: the engineering is better than the
+distribution. Two `glidepath-site` commits executed the brief's mechanical tier:
+
+- **`8ed439e`** — the 50 module pages were internally **orphaned** (sitemap-only
+  discovery: the stack card's detail trigger was a dialog-opening `<button>`, no
+  crawlable link, and the homepage linked to zero of them). Now a real
+  `<a href="/[track]/[slug]">` with plain-click `preventDefault` keeping the
+  dialog UX. Plus canonicals on all 10 static pages (only `[slug]` pages had
+  them), brand de-dupe in 6 metaTitles + 2 over-60 trims (OG cards regenerated),
+  and a security `headers()` block in `next.config.ts` (tight CSP — nothing
+  leaves the origin — plus frame-ancestors, nosniff, Referrer-Policy,
+  Permissions-Policy).
+- **`9dd00ad`** — `SoftwareApplication` + `WebSite` JSON-LD site-wide,
+  `BreadcrumbList` on module pages, OG `type`/`siteName`/`url`, sitemap
+  `lastModified`.
+
+Both `glidepath-site` commits fully gated (tsc ✓ · lint 0/0 · vitest 155 ✓ ·
+build ✓). Two audit items were false positives: the header wordmark already
+carries `aria-label="Glidepath home"`, and `modifications-exemptions` is a
+deliberate gate (ships with the app feature), not an oversight.
 
 ## Migrations status
 
@@ -105,69 +130,85 @@ so **CI now executes the RLS suite on every push**.
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| A filed daily inspection silently lost; UI still says "completed & filed" | `createInspection` `error` dropped on the no-draft filing path; draft cleared + success toast regardless | `e075aa5b` |
-| Base-config Import All / parking duplicate report success on failure | Unchecked fan-out writes; final toast unconditional | `e075aa5b` |
-| Base A triager can email base B's PPR coordinators | client `agencyIds` resolved with no `base_id` scope | `e075aa5b` |
-| Staff `/feedback` page reachable unauthenticated | `startsWith('/feedback')` also matched the authenticated route | `e075aa5b` |
-| Any authed user can send arbitrary PDF to any recipient via `info@glidepathops.com` | `send-pdf-email` base64 branch had no rate limit / authz | `e075aa5b` |
+| Failed dashboard-board writes toast `[object Object]` | `friendlyError(error)` passed the PostgrestError object, not `error.message` | `ebf0a062` |
+| PPR reopen destroys prior denial reason + coordination outcomes | the preserving snapshot remark was unchecked, then the code reset the rows anyway | `d87a71ee` |
+| Two "active" records possible (parking plans; field-condition reports) | clear-active / supersede-prior secondary writes were fire-and-forget | `d87a71ee` |
+| `waivers.attachment_count` never updates | counter read `data` from a `head:true` query (always null) — guard never passed | `d87a71ee` |
+| AFM default-message widget toasts success on a failed save | installation-context writer swallowed the DB error; the widget's `catch` couldn't fire | `d87a71ee` |
+| Outage timeline never closes when a linked discrepancy is completed | completion restored the feature but wrote no `resolved` outage event | `97240391` |
 
 ## Lessons from this session
 
-- **grep-based dead-table detection is unreliable in this repo.** AMTR tables
-  are read via the dynamic registry helper `fetchAmtrByBase(cfg.table, baseId)`
-  where the table name is a variable, so live tables have zero literal
-  `.from('…')` refs. The audit mislabeled 5 live/seeded tables (`amtr_qtp`,
-  `amtr_qtp_lessons`, `amtr_quals`, `daily_review_slots`,
-  `discrepancy_statuses`) as droppable; owner caught it with app screenshots.
-  Never drop a table from a static grep. (saved as a project memory)
-- **"App doesn't read table X" ≠ "X is empty."** Legacy tables can still hold
-  pre-migration data (the live Qualifications UI reads `amtr_qual_catalog`, but
-  the old `amtr_quals` may hold original entries). Any DROP needs a read-only
-  `SELECT count(*)` + owner confirmation first.
-- **Audit subagents over-report dead code.** ~14 of ~65 flagged symbols were
-  live via internal callers. Always re-verify with caller tracing + tsc before
-  deleting; delegate the deletion to a subagent that gates on tsc.
-- **The dominant correctness smell here is checked-at-primary-write,
-  silent-on-fan-out** — primary records surface errors; the secondary writes
-  they trigger (status pushes, outage events, counters, audit logs, child-row
-  copies) are fire-and-forget. Fixed the worst; a tail remains (tech debt).
+- **Removing `as any` casts is a bug-finding technique, not just cleanup.** The
+  43 casts hid a `[object Object]` toast bug, several null-vs-undefined arg
+  mismatches, and dead code. Regenerate the type, delete the casts, and *read
+  the tsc fallout* — each error is a payload the compiler couldn't check.
+- **The dominant correctness smell in this repo is now fully swept:**
+  checked-at-primary-write, silent-on-fan-out. 27 sites remediated; the class is
+  closed except intentional best-effort writes (`logActivity`, documented draft
+  autosave). Fix future ones by proportionality — abort/rollback if silence
+  corrupts a record, toast if the operator can act, throw if a caller already
+  has try/catch, log if drift is display-only.
+- **`head:true` Supabase count queries return `{ count, error }`, not
+  `{ data }`.** The waiver attachment-count code read `.data` (always null) for
+  months and silently never ran. If you need the number, destructure `count`.
+- **NIPR uploads are a DISA CBII (browser-isolation) block, not a network
+  block** — see the field-test result under Known issues. The base64 proxy plan
+  can't fix it; owner is not pursuing an exception. Saved as project memory.
+- **glidepath-site's terminology guard scans `app/**` source text including
+  comments** — an em-dash in a code comment tripped it. Keep new comments
+  em-dash-free in that repo (`grep`-enforced).
 
 ## Known issues / tech debt
 
 | Item | Severity | Notes |
 |---|---|---|
-| ~25 remaining fan-out silent-error sites | med | Lower-severity tail of the "silent-on-fan-out" class: inspection-templates non-atomic rebuild, `markInop`/`markOperational` outage-event writes, ARFF/runway status logs, denormalized `photo_count` counters, installation-context OOO/closed-message writes, waiver review-date writes. Deferred as a focused follow-up. |
-| Stale generated Supabase `Database` type | med | 43 `supabase as any` casts un-type insert/update payloads on write paths; regenerate via `supabase gen types` (needs DB access) then delete the casts. |
-| OG font regen (glidepath-site) | low | Generator palette fixed, but still renders Archivo vs the site's Barlow Condensed + Public Sans. Needs `@fontsource/barlow-condensed` + `@fontsource/public-sans` added, then `npm run og:images` (rewrites 60 brand PNGs) — an owner visual call. |
-| The 5 "dead tables" are NOT dead | info | `amtr_qtp`/`_lessons`/`quals`, `daily_review_slots`, `discrepancy_statuses` back live features / hold seeded data. Do not drop. (project memory) |
-| 2 now-unused exported types | low | `SmsCommunication`, `ClearanceContext` left in place after their callers were removed; harmless. |
-| NIPR/AFNet uploads blocked | med | Carry: diagnosed; proxy plan at `~/.claude/plans/2026-07-15-nipr-upload-proxy.md`. Blocked on owner's airfield-diagram field test, then execution go. |
+| NIPR uploads blocked by DISA CBII | info (closed) | **Field test 2026-07-16:** clicking Upload raised a DISA "Uploads Disabled" (Menlo Security) dialog with no file picker — the block is the browser-isolation layer, before the page's JS. The base64 proxy plan **cannot fix this**; owner is **not** pursuing a CBII exception ("work it a different way" — non-AFNet devices). Downloads (PDF/Excel/exports) confirmed working on AFNet. Proxy plan parked at `~/.claude/plans/2026-07-15-nipr-upload-proxy.md`; project memory updated. Don't re-propose. |
+| Stale generated Supabase `Database` type | resolved | Regenerated this session (`ebf0a062`); all 43 casts removed. |
+| ~25 fan-out silent-error sites | resolved | Swept this session (`d87a71ee`, `97240391`) — 27 sites fixed + 5 guard tests. |
+| 2 now-unused exported types | low | `SmsCommunication`, `ClearanceContext` left in place; harmless. |
 | Hero redline strings | med | Carry: owner preview pass owed on the "See it happen ↓" CTA, coverage band title split, the three ↳ automation lines, the dialect ethos pair (`lib/home-content.ts` / `lib/cascades.ts`). |
 | Anonymous-submission gap 2026-07-02..14 | info | Carry: owner decides if outreach warranted. |
 | reports "hgjhj" resolution row | low | Carry: owner accepted; drop-in swap when the demo row is cleaned. |
 | Demo user on Demo AFB | med | Carry: civilian capture blocker; "prep KDRA" is step 0 (`docs/references/civilian-capture-plan.md`). |
-| Proof band empty | med | Carry: testimonials + permissions owed by owner; null-hidden. |
-| NAVAID marker-sizing dials · QRC draft flow · demo seeds `shift_name_*` · `modifications-exemptions` gated · track-page SEO · cosmetic (blank line in 51 site files) | low | Carry, unchanged. |
+| Proof band empty | med | Carry: testimonials + permissions owed by owner; null-hidden. Also the single largest outstanding glidepath-site conversion asset (see brief §05). |
+| NAVAID marker-sizing dials · QRC draft flow · demo seeds `shift_name_*` · track-page SEO · cosmetic (blank line in 51 site files) | low | Carry, unchanged. |
 | Prior app-side carryover | low | Civilian tenant status chips dual-mode · status-page weather race · account-deactivation live sessions · Selfridge 1098 dedup. |
+
+## glidepath-site — remaining review roadmap
+
+The grading brief (artifact:
+`https://claude.ai/code/artifact/70fb86a9-8aa6-48b6-b1f1-3dadb9c1e06b`) holds the
+full plan. Tier-1 (this-week) and most tier-2 structured-data items shipped this
+session. **Remaining:**
+
+- **This-month:** module H1 keyword pass (bare acronyms → keyworded; needs an
+  `h1` field on the module type — copy decisions, deferred); `/about` expansion
+  from 148 words (owner voice); product-clip compression (10 MB MP4s → ≤2-3 MB)
+  + embedding on matching module pages; scoped DB credential for the lead form
+  (currently a full service-role key — security MED-2); tests for the demo route
+  + rate limiter; decide render-or-delete on the `regulation.cites` fields
+  authored in all 50 module files but rendered by nothing.
+- **This-quarter (traffic engine):** DAFMAN 13-204 explainer hub (the SERP is
+  PDFs + paperback reprints + a Fandom wiki — zero vendors; Glidepath's exact
+  buyer); Part 139 self-inspection checklist lead magnet; operator-side glossary
+  cluster (FICON/RCR/NOTAM/PPR/BASH...); military category page.
+- **Owner actions:** www→apex is a **307** (should be 308) — Vercel dashboard;
+  **preview-check the CSP** before promoting `glidepath-site` (edge behavior can
+  differ from `next build`).
 
 ## Next session tasks
 
-1. **Confirm CI runs the RLS suite green.** The 5 GitHub secrets were added
-   this session; the next push to `main` will execute the RLS/pentest suites
-   in the CI "Test" step instead of skipping. Owner monitors CI.
-2. **NIPR upload proxy — field test, then execute.** Owner tests the
-   airfield-diagram upload from an AFNet machine, then execute
-   `~/.claude/plans/2026-07-15-nipr-upload-proxy.md` task-by-task. Design
-   proceeds regardless of test outcome.
-3. **Portland taxiway fix — owner spot-check on the promoted build**
-   (base-config taxiway step should open and zoom smoothly at Portland).
-4. **Civilian capture day** (owner-scheduled): owner says "prep KDRA" → run
-   the pre-flight in `docs/references/civilian-capture-plan.md`.
-5. **Hero + coverage redline pass** on the live homepage (carryover).
-6. **Optional cleanup follow-ups:** the ~25 fan-out silent-error tail; the OG
-   font regen (owner visual call); regenerate the Supabase `Database` type to
-   delete the 43 `as any` casts.
-7. **Part 139 cert-inspection audit build** — resume from
+1. **glidepath-site: verify CI green + preview-check the CSP**, then owner
+   promotes. The `headers()` CSP is the one change worth eyeballing on a preview
+   deploy before production.
+2. **Pick the next glidepath-site tier-2/3 item** from the roadmap above — the
+   highest-leverage is the DAFMAN 13-204 hub (traffic) or the module H1 pass
+   (quick, needs copy sign-off).
+3. **Civilian capture day** (owner-scheduled): owner says "prep KDRA" → run the
+   pre-flight in `docs/references/civilian-capture-plan.md`.
+4. **Hero + coverage redline pass** on the live homepage (carryover).
+5. **Part 139 cert-inspection audit build** — resume from
    `.superpowers/sdd/progress.md` when the owner wants it.
 
 ### Long-running carryover
@@ -176,33 +217,42 @@ unchanged.
 
 ## Build snapshot
 ```
-airfield-app @ 9d7dd85e (re-verified at wrap): tsc ✓ · lint 0 errors ·
-  vitest 1254 passed | 0 skipped (138 files — RLS creds now in .env.local, so
-  the previously-skipped 16 execute) · build ✓ · middleware 80.8 kB.
-glidepath-site @ 2cefa19: tsc ✓ · lint 0/0 · vitest 155 passed · build ✓.
+airfield-app @ 97240391 (re-verified at wrap): tsc ✓ · lint 0 errors ·
+  vitest 1259 passed | 0 skipped (139 files — +5 fan-out guard tests this
+  session) · build ✓ · shared First Load JS 106 kB · middleware 80.8 kB.
+glidepath-site @ 9dd00ad: tsc ✓ · lint 0/0 · vitest 155 passed · build ✓.
 ```
 
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-16 | Two-repo code audit (7 parallel agents) + remediation: `send-pdf-email` rate-limited, silent-lost-inspection + false-success write paths fixed, cross-tenant PPR notify scoped, middleware allowlist tightened · dead code removed (retired tour library, ~50 unused exports, `zod`/`pdf-parse`/`clsx`) · glidepath-site copy guard extended + OG palette resync · RLS security-test suite wired up (5 CI secrets, fixtures re-seeded; suite now runs, 0 skipped). |
-| **Unreleased** | 2026-07-15 (late) | Base-config taxiway step no longer freezes on survey-grade imports (Portland: ~11k vertex markers dropped, RDP render decimation) · NIPR upload block diagnosed + proxy plan on file. |
-| **Unreleased** | 2026-07-15 | glidepath-site military track media-complete · airfield-app: no code changes. |
-| **Unreleased** | 2026-07-14 (late) | Military homepage cascade complete · airfield-app: 12-day anonymous public-form outage fixed (middleware allowlist). |
+| **Unreleased** | 2026-07-16 (late) | Cleanup follow-ups + marketing-site review. airfield-app: Supabase type regen (43 `as any` casts removed, `[object Object]` toast bug fixed) · fan-out silent-error sweep (27 sites, +5 guard tests: PPR-reopen data loss, two-active-record bugs, dead attachment-count) · resolved-outage-event on discrepancy completion. glidepath-site: 4-pass grading brief + SEO/security tier-1/2 (un-orphaned 50 module pages, canonicals, CSP + security headers, SoftwareApplication/BreadcrumbList JSON-LD). NIPR uploads closed as DISA-CBII-blocked, not pursuing. |
+| **Unreleased** | 2026-07-16 | Two-repo code audit (7 parallel agents) + remediation: `send-pdf-email` rate-limited, silent-lost-inspection + false-success write paths fixed, cross-tenant PPR notify scoped, middleware allowlist tightened · dead code removed · glidepath-site copy guard extended · RLS security-test suite wired up (5 CI secrets; 0 skipped). |
+| **Unreleased** | 2026-07-15 (late) | Base-config taxiway step no longer freezes on survey-grade imports (Portland RDP decimation) · NIPR upload block diagnosed + proxy plan on file. |
 | **Unreleased** | 2026-07-13 | airfield-app configurable shifts; migration `2026071300` applied. |
 | **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
 | **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
 ## Key docs / files touched this session
 
-### Modified files
-- `app/api/send-pdf-email/route.ts`, `app/api/send-ppr-coordination-request/route.ts`,
-  `lib/ppr-agency-notify.ts`, `middleware.ts`, `tests/auth-gate.test.ts` —
-  security fixes.
-- `app/(app)/inspections/page.tsx`, `app/(app)/base-config/setup/page.tsx`,
-  `app/(app)/parking/page.tsx`, `lib/supabase/parking.ts` — correctness fixes.
-- `CLAUDE.md`, `package.json` + ~30 `lib/**` files — dead-code cleanup.
+### New files
+- `tests/fanout-error-guards.test.ts` — regression guards for the fan-out sweep.
 
-### Outside the repo
-- `~/.claude/.../memory/project_audit_dead_tables_false_positive.md` — **new**;
-  records that the 5 "dead tables" are live/seeded, never drop.
+### Modified files (airfield-app)
+- `lib/supabase/types.ts` (regen + manual narrowings), + ~14 files de-casted
+  (`sms`, `read-files`, `dashboard-boards`, `qrc-reviews`, `ppr-agency-members`,
+  `aep`, `daily-reviews`, base-config setup, library, welcome-gate,
+  form803-catalog-editor, …).
+- Fan-out fixes across `app/(app)/{page,infrastructure,inspections,parking}`,
+  `components/discrepancies/modals.tsx`, `lib/installation-context.tsx`, and
+  ~13 `lib/supabase/*` + `lib/{userDocuments,base-setup-quick-setup}.ts`.
+
+### Modified files (glidepath-site)
+- `components/modules/stack-section-card.tsx` (module anchors),
+  `app/**` metadata (10 canonicals), `lib/*-content.ts` + module files (titles),
+  `next.config.ts` (headers), `app/layout.tsx` + `lib/og.ts` + `app/sitemap.ts`
+  + `components/modules/module-page.tsx` (JSON-LD / OG / sitemap), 8 OG PNGs.
+
+### Outside the repos
+- `~/.claude/.../memory/project_nipr_upload_proxy.md` — updated: DISA CBII
+  field-test result + owner decision not to pursue.
