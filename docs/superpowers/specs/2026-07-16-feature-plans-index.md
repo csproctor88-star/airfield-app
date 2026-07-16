@@ -1,6 +1,6 @@
 # 2026-07-16 Feature Plans — Index
 
-Six implementation-ready design specs produced in one planning session. Each is
+Seven implementation-ready design specs produced in one planning session. Each is
 self-contained (an implementer needs no other context), grounded in the current
 codebase with `path:line` citations, and regulatory claims are split into
 verified citations vs. flagged assumptions (each spec's §13). All specs were
@@ -17,6 +17,7 @@ paths, symbols, table/column names, and house-rule compliance).
 | [local-regulations-review](2026-07-16-local-regulations-review-design.md) | Local Regs (References) | Base admins upload local regulation PDFs; per-doc monthly/quarterly recurring review with QRC-parity red-dot; leadership compliance view | `2026071630`–`33` (tables, permissions, storage, module key) |
 | [namo-namt-report-tool](2026-07-16-namo-namt-report-tool-design.md) | Reports & Analytics | Per-user activity matrix (wildlife/BASH, inspections, checks, discrepancies, QRCs, …) over a date range; PDF + Excel export; per-domain attribution coverage labeling | `2026071640`–`42` (permission + attribution FKs) |
 | [airfield-driving-spot-check](2026-07-16-airfield-driving-spot-check-design.md) | 43 Check Log (Airfield Management) | DAFI 13-213 airfield driving spot check: start-check form (AF Form 483 verification, vehicle, FOD, radio), history, AOB-ready PDF export | `2026071650`–`51` (`driving_check_*` tables + permissions) |
+| [airfield-surface-set-expansion](2026-07-16-airfield-surface-set-expansion-design.md) | Obstructions / Base Configuration | Selectable surface standards — AF Class A, AF Class B, Army Class B, ICAO Annex 14, FAA Part 77 — via a surface-set registry + per-runway classification in the base-config Runways step; builds on (and generalizes) the Part 77 polygons spec | `2026071660`–`62` (CHECK widening, ICAO runway columns, `runway_class` nullable) |
 
 Migration numbers are pre-assigned in non-overlapping ranges so the specs can
 be built in any order without collisions; bump each file's `YYYYMMDDXX` to the
@@ -29,6 +30,11 @@ actual implementation date when it lands.
 2. **Part 77 surface polygons** — zero migrations; completes the already-shipped
    Part 77 evaluation story (civilian/joint-use bases currently see wrong
    shapes, which reads as a defect).
+   1. **Surface-set expansion** follows directly after it (it generalizes that
+      spec's architecture), but its §13 item 2 — the audit of the currently
+      encoded Class B dimensions against UFC 3-260-01 Table 3-7 — is an
+      **owner decision needed before build**, since correcting Class B changes
+      all future evaluation results.
 3. **NAMO/NAMT attribution migrations only** (`2026071641`, `2026071642`) —
    land these early even though the report UI comes later: per-user attribution
    only accrues from the moment the columns exist, and the report's usefulness
@@ -45,6 +51,11 @@ actual implementation date when it lands.
 
 Each spec carries its own §13 *Assumptions & open questions* — the items that
 need an owner decision or a check against the current publication before or
-during implementation. The Part 77 spec's eCFR subsection-lettering questions
-and the report tool's per-domain coverage-start labeling are the two most
-consequential.
+during implementation. The most consequential: the surface-set expansion's
+finding that the currently encoded UFC Class B dimensions conflict with the
+verified Table 3-7 values (inner horizontal 13,120 ft vs 7,500 ft; ADCS model)
+— an owner decision, since correcting them changes future evaluation results —
+and the report tool's per-domain coverage-start labeling. The Part 77
+subsection-lettering question is now **resolved** against the owner-supplied
+eCFR PDF (§77.19: (a) Horizontal, (b) Conical, (c) Primary, (d) Approach,
+(e) Transitional).

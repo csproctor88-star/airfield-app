@@ -428,11 +428,14 @@ still returns UFC names (regression).
 
 ## Assumptions & open questions
 
-1. **§77.19 subsection lettering conflict.** The code's `ufcRef` strings cite approach as
-   (c) and conical as (d) (obstructions.ts:192, 208); the regulatory research verified
-   conical = (c) and approach = (d). Verify against the current eCFR publication before
-   changing any displayed citation string; this spec's new copy avoids subsection letters
-   for approach/conical.
+1. **§77.19 subsection lettering conflict — RESOLVED.** Verified from the owner's
+   authoritative PDF, 14 CFR Part 77 (eCFR current as of 2026-07-14), §77.19(a)–(e): the
+   lettering is **(a) Horizontal, (b) Conical, (c) Primary, (d) Approach, (e) Transitional**.
+   Both prior readings were wrong: the code's `ufcRef` strings (approach as (c), conical as
+   (d), obstructions.ts:192, 208) must become approach = §77.19(d) and conical = §77.19(b);
+   the Regulatory-basis section above, which labels primary as (a) and horizontal as (b), is
+   likewise superseded — primary is §77.19(c) and horizontal is §77.19(a). Displayed
+   citation strings may now carry subsection letters using this verified lettering.
 2a. **Approach outer width for non-utility non-precision, visibility minimums > ¾ mi.**
    The Regulatory basis above cites the research-verified §77.19(d) outer width of
    **3,500 ft** for this category (research-reg-part77-vs-ufc.json P77-APP-2, VERIFIED),
