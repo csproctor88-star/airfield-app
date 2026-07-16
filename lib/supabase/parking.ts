@@ -103,21 +103,6 @@ export async function fetchParkingPlans(baseId: string): Promise<ParkingPlan[]> 
   return (data || []) as ParkingPlan[]
 }
 
-export async function fetchActivePlan(baseId: string): Promise<ParkingPlan | null> {
-  const supabase = db()
-  if (!supabase) return null
-
-  const { data } = await supabase
-    .from('parking_plans')
-    .select('*')
-    .eq('base_id', baseId)
-    .eq('is_active', true)
-    .limit(1)
-    .maybeSingle()
-
-  return (data as ParkingPlan) || null
-}
-
 export async function createParkingPlan(input: {
   base_id: string
   plan_name: string
@@ -239,6 +224,14 @@ export async function duplicateParkingPlan(
   if (planErr || !planData) return null
   const newPlan = planData as ParkingPlan
 
+  // A child-copy failure must not leave a silently empty/partial duplicate of
+  // a persistent record. If any copy fails, roll the new plan back (deletes
+  // it and any partial children) and return null so the caller reports failure.
+  const rollback = async () => {
+    await deleteParkingPlan(newPlan.id, newPlan.plan_name, baseId)
+    return null
+  }
+
   // Copy spots
   const { data: srcSpots } = await supabase
     .from('parking_spots')
@@ -262,7 +255,11 @@ export async function duplicateParkingPlan(
       notes: s.notes,
       sort_order: s.sort_order,
     }))
-    await supabase.from('parking_spots').insert(spotInserts)
+    const { error } = await supabase.from('parking_spots').insert(spotInserts)
+    if (error) {
+      console.error('duplicateParkingPlan: failed to copy spots:', error.message)
+      return rollback()
+    }
   }
 
   // Copy taxilanes
@@ -284,7 +281,11 @@ export async function duplicateParkingPlan(
       notes: t.notes,
       created_by: user.id,
     }))
-    await supabase.from('parking_taxilanes').insert(taxiInserts)
+    const { error } = await supabase.from('parking_taxilanes').insert(taxiInserts)
+    if (error) {
+      console.error('duplicateParkingPlan: failed to copy taxilanes:', error.message)
+      return rollback()
+    }
   }
 
   // Copy apron boundaries
@@ -302,7 +303,11 @@ export async function duplicateParkingPlan(
       notes: b.notes,
       created_by: user.id,
     }))
-    await supabase.from('parking_apron_boundaries').insert(boundInserts)
+    const { error } = await supabase.from('parking_apron_boundaries').insert(boundInserts)
+    if (error) {
+      console.error('duplicateParkingPlan: failed to copy apron boundaries:', error.message)
+      return rollback()
+    }
   }
 
   logActivity('created', 'parking_plan', newPlan.id, newPlan.plan_name, { duplicated_from: sourcePlanId }, baseId)

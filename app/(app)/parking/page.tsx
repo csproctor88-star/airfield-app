@@ -2464,6 +2464,8 @@ export default function ParkingPage() {
       setDuplicateDesc('')
       setDuplicateAsTemplate(false)
       toast.success(`Duplicated "${selectedPlan.plan_name}" → "${newPlan.plan_name}"`)
+    } else {
+      toast.error('Failed to duplicate the parking plan — no changes were saved.')
     }
   }
 

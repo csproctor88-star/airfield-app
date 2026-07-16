@@ -86,8 +86,13 @@ function isPublicPath(pathname: string): boolean {
     // 307-redirected the anonymous POSTs to /login and all three forms died
     // with "Submission failed" for 12 days (the same failure M-6 fixed for
     // forgot-password). Each route enforces its own rate limit, so this is
-    // not an open endpoint.
-    || pathname.startsWith('/api/public/')
+    // not an open endpoint. Listed explicitly rather than as a blanket
+    // `/api/public/` prefix so a NEW route dropped under that namespace is
+    // gated by default (fail-safe) and made public only by a deliberate edit
+    // here.
+    || pathname.startsWith('/api/public/ppr-request')
+    || pathname.startsWith('/api/public/safety-report')
+    || pathname.startsWith('/api/public/feedback')
     // Self-service password reset is called by anonymous users from the
     // login page. Without this it was 307-redirected to /login (405) and
     // silently failed — see M-6. The handler is per-email + per-IP
@@ -100,8 +105,11 @@ function isPublicPath(pathname: string): boolean {
     || pathname.startsWith('/api/amtr-due-reconcile')
     || pathname.startsWith('/api/training-expiry-digest')
     || pathname.startsWith('/api/annual-review-digest')
-    || pathname.startsWith('/feedback')
-    || pathname.startsWith('/ppr-request')
+    // Public QR forms live at /feedback/<baseId> and /ppr-request/<baseId>.
+    // Anchor to the dynamic child so the bare authenticated staff page at
+    // /feedback (app/(app)/feedback) is NOT exempted from the auth gate.
+    || /^\/feedback\/[^/]+/.test(pathname)
+    || /^\/ppr-request\/[^/]+/.test(pathname)
     || pathname.startsWith('/kiosk')
     // Short public QR URLs: /<icao>/ppr-request and /<icao>/sms-report.
     // Both route handlers validate the ICAO and show a not-found state if

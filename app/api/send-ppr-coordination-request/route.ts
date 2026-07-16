@@ -140,13 +140,23 @@ export async function POST(request: Request) {
       ((columns ?? []) as { id: string; column_name: string; column_type: string }[]) || []
 
     // Agency labels for subject lines.
+    // SECURITY: scope to agencies owned by this entry's base. agencyIds comes
+    // straight from the request body, so without the base filter an authorized
+    // triager at base A could pass base B's agency IDs and blast B's
+    // coordinators (leaking A's requester data cross-tenant). Derive the
+    // working set from the base-scoped rows and use it for every lookup below.
     const { data: agencies } = await reader
       .from('ppr_agencies')
       .select('id, agency_name')
       .in('id', agencyIds)
+      .eq('base_id', entry.base_id)
     const agencyMap = new Map<string, string>(
       ((agencies ?? []) as { id: string; agency_name: string }[]).map((a) => [a.id, a.agency_name]),
     )
+    const scopedAgencyIds = ((agencies ?? []) as { id: string }[]).map((a) => a.id)
+    if (scopedAgencyIds.length === 0) {
+      return NextResponse.json({ error: 'No agencies found for this base' }, { status: 400 })
+    }
 
     // Members per agency. ppr_agency_members isn't in the generated
     // types — drop to any cast on the query builder.
@@ -154,7 +164,7 @@ export async function POST(request: Request) {
     const { data: members } = await (reader as any)
       .from('ppr_agency_members')
       .select('agency_id, profiles:user_id(email)')
-      .in('agency_id', agencyIds)
+      .in('agency_id', scopedAgencyIds)
 
     const recipientsByAgency = new Map<string, string[]>()
     for (const row of (members || []) as Record<string, unknown>[]) {
@@ -171,7 +181,7 @@ export async function POST(request: Request) {
     const { data: extEmails } = await (reader as any)
       .from('ppr_agency_emails')
       .select('agency_id, email')
-      .in('agency_id', agencyIds)
+      .in('agency_id', scopedAgencyIds)
     for (const row of (extEmails || []) as { agency_id: string; email: string | null }[]) {
       const email = (row.email || '').trim()
       if (!email) continue
@@ -208,7 +218,7 @@ export async function POST(request: Request) {
     const sent: { agency_id: string; recipient_count: number }[] = []
     const skipped: { agency_id: string; reason: string }[] = []
 
-    for (const aid of agencyIds) {
+    for (const aid of scopedAgencyIds) {
       const recipients = dedupeEmails(recipientsByAgency.get(aid) ?? [])
       const agencyName = agencyMap.get(aid) ?? 'Unknown agency'
       if (recipients.length === 0) {

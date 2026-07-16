@@ -1653,7 +1653,7 @@ export default function InspectionsPage() {
         return
       }
     } else {
-      const { data: created } = await createInspection({
+      const { data: created, error: createErr } = await createInspection({
         inspection_type: activeForm,
         inspector_name: completedHalf.inspectorName || 'Unknown',
         items,
@@ -1679,10 +1679,17 @@ export default function InspectionsPage() {
         base_id: installationId,
         inspection_date: todayStr,
       })
-      if (created) {
-        filedEntityId = created.id
-        filedDisplayId = created.display_id
+      // If the file write failed, STOP: keep the draft, surface the error, and
+      // don't run the cleanup/success path below. Previously the error was
+      // dropped and the flow cleared the draft and toasted "completed & filed"
+      // even though nothing was written — a silently lost inspection.
+      if (createErr || !created) {
+        setSaving(false)
+        toast.error(createErr || 'Failed to file inspection. Your draft has been kept — please try again.')
+        return
       }
+      filedEntityId = created.id
+      filedDisplayId = created.display_id
     }
 
     // Upload any photos not already uploaded during the inspection

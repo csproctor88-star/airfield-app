@@ -48,4 +48,21 @@ describe('middleware auth gate', () => {
     const res = await middleware(req)
     expect(res.status).toBe(307)
   })
+
+  // Guard: the public QR forms live at /feedback/<baseId> and
+  // /ppr-request/<baseId> and must stay anonymous, but the bare /feedback
+  // route is the AUTHENTICATED staff page (app/(app)/feedback) and must stay
+  // gated. A blanket `startsWith('/feedback')` allowlisted the staff page too;
+  // the matcher is anchored to the dynamic child to prevent that.
+  it('exempts public QR forms but gates the staff feedback page', async () => {
+    const { middleware } = await import('@/middleware')
+    for (const path of ['/feedback/some-base-id', '/ppr-request/some-base-id']) {
+      const req = new NextRequest(new URL(`https://app.test${path}`))
+      const res = await middleware(req)
+      expect(res.status, `${path} must be public`).toBe(200)
+    }
+    const staff = new NextRequest(new URL('https://app.test/feedback'))
+    const staffRes = await middleware(staff)
+    expect(staffRes.status, '/feedback staff page must be auth-gated').toBe(307)
+  })
 })

@@ -790,6 +790,8 @@ function RunwayTab({
     const supabase = createClient()
     if (!supabase) { setSaving(false); return }
     let imported = 0
+    let failed = 0
+    let firstErr = ''
 
     // Import runways
     for (const rwy of lookupResult.runways) {
@@ -813,6 +815,8 @@ function RunwayTab({
       if (!error && data) {
         setRunways((prev: any) => [...prev, data])
         imported++
+      } else if (error) {
+        failed++; firstErr = firstErr || error.message
       }
     }
 
@@ -821,6 +825,7 @@ function RunwayTab({
       for (const area of lookupResult.suggested_areas) {
         const { error: aErr } = await supabase.from('base_areas').insert({ base_id: installationId, area_name: area } as any)
         if (!aErr) imported++
+        else { failed++; firstErr = firstErr || aErr.message }
       }
     }
 
@@ -833,6 +838,7 @@ function RunwayTab({
                      `${nav.type} ${nav.name || nav.id}`
         const { error: nErr } = await supabase.from('base_navaids').insert({ base_id: installationId, navaid_name: name, sort_order: i + 1 } as any)
         if (!nErr) imported++
+        else { failed++; firstErr = firstErr || nErr.message }
       }
       // Also add approach lighting NAVAIDs from runways
       let navOrder = lookupResult.navaids.length + 1
@@ -859,10 +865,18 @@ function RunwayTab({
       setBaseElevation(lookupResult.elevation_ft)
     }
 
-    // Ensure airfield_status row exists
+    // Ensure airfield_status row exists (best-effort — may already exist)
     await supabase.from('airfield_status').insert({ base_id: installationId, runway_status: 'open' } as any)
 
-    toast.success(`Imported ${imported} items from ${lookupResult.icao}`)
+    // Report honestly: a total RLS/network failure previously surfaced as
+    // "Imported 0 items" success. Surface any save failures.
+    if (failed > 0 && imported === 0) {
+      toast.error(`Import failed — nothing was saved.${firstErr ? ` (${firstErr})` : ''}`)
+    } else if (failed > 0) {
+      toast.error(`Imported ${imported} of ${imported + failed} items from ${lookupResult.icao}; ${failed} failed to save.${firstErr ? ` (${firstErr})` : ''}`)
+    } else {
+      toast.success(`Imported ${imported} items from ${lookupResult.icao}`)
+    }
     setSaving(false)
     setLookupOpen(false)
   }
@@ -4011,14 +4025,20 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
         .eq('system_component_id', compId)
       if (linked && linked.length > 0) {
         const ids = linked.map((f: any) => f.id)
+        let unlinkErr = ''
         for (let i = 0; i < ids.length; i += 200) {
           const batch = ids.slice(i, i + 200)
-          await supabase
+          const { error } = await supabase
             .from('infrastructure_features')
             .update({ system_component_id: null, updated_at: new Date().toISOString() } as any)
             .in('id', batch)
+          if (error) unlinkErr = unlinkErr || error.message
         }
-        toast.success(`Unlinked ${linked.length} feature(s) from "${compLabel}"`)
+        if (unlinkErr) {
+          toast.error(`Unlink failed: ${unlinkErr}`)
+        } else {
+          toast.success(`Unlinked ${linked.length} feature(s) from "${compLabel}"`)
+        }
         await loadComps(systemId)
       } else {
         toast('No features linked to this component')

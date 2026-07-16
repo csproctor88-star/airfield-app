@@ -246,6 +246,18 @@ export async function notifyCoordinatingAgencies(args: {
     .from('ppr_agencies')
     .select('id, agency_name, send_calendar_invite')
     .in('id', agencyIds)
+    .eq('base_id', entry.base_id)
+
+  // SECURITY: scope to agencies actually owned by this entry's base. When
+  // agencyIds arrives from the client (the update dialog), an authorized
+  // triager at base A could otherwise pass base B's agency IDs and have this
+  // route email B's coordinators — leaking A's requester data cross-tenant.
+  // Re-derive the working set from the base-scoped rows so the member/email
+  // lookups below can only ever resolve base-owned agencies.
+  agencyIds = ((agencies ?? []) as { id: string }[]).map((a) => a.id)
+  if (agencyIds.length === 0) {
+    return { sent: 0, skipped: 0, reason: 'no_coordinating_agencies' }
+  }
 
   const agencyMap = new Map<string, { name: string; sendInvite: boolean }>(
     ((agencies ?? []) as { id: string; agency_name: string; send_calendar_invite: boolean }[])

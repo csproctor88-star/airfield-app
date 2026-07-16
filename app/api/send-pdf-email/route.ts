@@ -2,8 +2,10 @@ export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { Resend } from 'resend'
+import { checkRateLimits } from '@/lib/rate-limit'
 
 let _resend: Resend | null = null
 function getResend() {
@@ -65,6 +67,28 @@ export async function POST(request: Request) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(to)) {
       return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+    }
+
+    // ABUSE CONTROL: this route sends an arbitrary attachment to an arbitrary
+    // recipient from the verified info@glidepathops.com domain. Any
+    // authenticated principal (including the shared kiosk / read_only account)
+    // can reach it, and the base64 branch is the normal path for
+    // client-generated report PDFs, so we can't gate it on a single
+    // permission. Cap send rate per-user and per-recipient so it can't be
+    // driven as a spam/phishing relay. Uses the service-role client because
+    // check_rate_limit is not granted to anon; fails open if the key is absent
+    // (documented tradeoff in lib/rate-limit.ts).
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, '')
+    const limiter = serviceKey ? createServiceClient(url, serviceKey) : supabase
+    const withinLimits = await checkRateLimits(limiter, [
+      { bucket: `pdf-email:user:${user.id}`, max: 30, windowSeconds: 300 },
+      { bucket: `pdf-email:recipient:${to.toLowerCase()}`, max: 10, windowSeconds: 3600 },
+    ])
+    if (!withinLimits) {
+      return NextResponse.json(
+        { error: 'Too many report emails sent — please wait a moment and try again.' },
+        { status: 429 },
+      )
     }
 
     // Get PDF content — either from Supabase Storage or from base64 payload.
