@@ -54,8 +54,7 @@ export function WelcomeGate() {
         // SECURITY DEFINER RPC mirrors usePermissions() but works in
         // any client component without re-implementing role/override
         // resolution.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: hasWrite } = await (supabase as any).rpc('user_has_permission', {
+        const { data: hasWrite } = await supabase.rpc('user_has_permission', {
           p_user_id: user.id,
           p_key: 'base_setup:write',
         })
@@ -91,11 +90,10 @@ export function WelcomeGate() {
 
           await supabase
             .from('profiles')
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             .update({
               tours_completed: { ...current, welcome: true },
               ...(latestVersion ? { last_seen_release_version: latestVersion } : {}),
-            } as any)
+            })
             .eq('id', user.id)
         }
       } catch {

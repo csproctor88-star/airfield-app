@@ -1,9 +1,7 @@
 import { friendlyError } from '@/lib/utils'
 import { createClient } from './client'
+import type { Json } from './types'
 import { validateBoardLayout, GRID_SCALE, type BoardLayout } from '@/lib/dashboard/layout'
-
-// New tables are not yet in the generated Database type — cast the client
-// to `any` for these calls (the lib/supabase/read-files.ts pattern).
 
 export type DashboardBoardRow = {
   id: string
@@ -26,9 +24,7 @@ function hydrate(row: Record<string, any>): DashboardBoardRow {
 export async function fetchBoards(baseId: string): Promise<DashboardBoardRow[]> {
   const supabase = createClient()
   if (!supabase) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('dashboard_boards')
     .select('*')
     .eq('base_id', baseId)
@@ -47,9 +43,7 @@ export async function createBoard(input: {
 }): Promise<{ data: DashboardBoardRow | null; error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { data: null, error: 'Offline' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('dashboard_boards')
     .insert({
       base_id: input.base_id,
@@ -59,11 +53,11 @@ export async function createBoard(input: {
       is_default: input.is_default ?? false,
       // Stamp the current grid scale: callers build layouts from registry/template
       // defaults that are already on the current scale, so mark (don't re-scale).
-      layout: { ...(input.layout ?? { lg: [] }), gridScale: GRID_SCALE },
+      layout: { ...(input.layout ?? { lg: [] }), gridScale: GRID_SCALE } as unknown as Json,
     })
     .select('*')
     .single()
-  if (error) return { data: null, error: friendlyError(error) }
+  if (error) return { data: null, error: friendlyError(error.message) }
   return { data: hydrate(data), error: null }
 }
 
@@ -74,21 +68,19 @@ export async function updateBoardLayout(
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Offline' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
   // .select() so we can detect a 0-row update. RLS denies the write *silently*
   // (no error, 0 rows updated) when the board isn't writable by this user —
   // e.g. a shared board they lack `dashboard:publish-shared` for. Without this
   // check the layout change is lost with no feedback; surface it as a real error
   // so the caller shows a "couldn't save" toast instead of silent data loss.
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('dashboard_boards')
     // Stamp the current grid scale on every write: the in-memory layout has
     // already been normalized to the current scale by validateBoardLayout on read.
-    .update({ layout: { ...layout, gridScale: GRID_SCALE }, updated_at: new Date().toISOString() })
+    .update({ layout: { ...layout, gridScale: GRID_SCALE } as unknown as Json, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('id')
-  if (error) return { error: friendlyError(error) }
+  if (error) return { error: friendlyError(error.message) }
   if (!Array.isArray(data) || data.length === 0) {
     return { error: "Couldn't save — you don't have permission to edit this dashboard." }
   }
@@ -101,22 +93,18 @@ export async function updateBoard(
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Offline' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { error } = await sb
+  const { error } = await supabase
     .from('dashboard_boards')
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', id)
-  return { error: error ? friendlyError(error) : null }
+  return { error: error ? friendlyError(error.message) : null }
 }
 
 export async function deleteBoard(id: string): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Offline' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { error } = await sb.from('dashboard_boards').delete().eq('id', id)
-  return { error: error ? friendlyError(error) : null }
+  const { error } = await supabase.from('dashboard_boards').delete().eq('id', id)
+  return { error: error ? friendlyError(error.message) : null }
 }
 
 /** The board the user has chosen as their default at this base, or null. */
@@ -126,9 +114,7 @@ export async function getUserDefaultBoardId(
 ): Promise<string | null> {
   const supabase = createClient()
   if (!supabase) return null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('dashboard_user_defaults')
     .select('board_id')
     .eq('user_id', userId)
@@ -150,16 +136,14 @@ export async function setDefaultBoard(
 ): Promise<{ error: string | null }> {
   const supabase = createClient()
   if (!supabase) return { error: 'Offline' }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sb = supabase as any
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from('dashboard_user_defaults')
     .upsert(
       { user_id: userId, base_id: baseId, board_id: boardId, updated_at: new Date().toISOString() },
       { onConflict: 'user_id,base_id' },
     )
     .select('board_id')
-  if (error) return { error: friendlyError(error) }
+  if (error) return { error: friendlyError(error.message) }
   if (!Array.isArray(data) || data.length === 0) {
     return { error: "Couldn't set default — please try again." }
   }

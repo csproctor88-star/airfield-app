@@ -26,8 +26,7 @@ export default async function LibraryPage() {
   // from the `'use client'` permissions module (importing from there
   // into a server component produces client-reference stubs that throw
   // "is not a function" when invoked — see comment in lib/permissions.ts).
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: hasView, error } = await (supabase as any).rpc('user_has_permission', {
+  const { data: hasView, error } = await supabase.rpc('user_has_permission', {
     p_user_id: user!.id,
     p_key: 'library:view',
   })

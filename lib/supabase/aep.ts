@@ -400,16 +400,15 @@ export async function supersedePlan(
   const supabase = db()
   if (!supabase) return { ok: false, error: 'Supabase not configured' }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc('supersede_aep_plan', {
+  const { data, error } = await supabase.rpc('supersede_aep_plan', {
     p_prior_plan_id: priorPlanId,
     p_version: input.version,
     p_effective_date: input.effective_date,
-    p_document_url: input.document_url ?? null,
-    p_storage_path: input.storage_path ?? null,
-    p_approved_by_faa_at: input.approved_by_faa_at ?? null,
-    p_faa_acceptance_ref: input.faa_acceptance_ref ?? null,
-    p_notes: input.notes ?? null,
+    p_document_url: input.document_url ?? undefined,
+    p_storage_path: input.storage_path ?? undefined,
+    p_approved_by_faa_at: input.approved_by_faa_at ?? undefined,
+    p_faa_acceptance_ref: input.faa_acceptance_ref ?? undefined,
+    p_notes: input.notes ?? undefined,
   })
   if (error) return { ok: false, error: friendlyError(error.message) }
 

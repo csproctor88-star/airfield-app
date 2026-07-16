@@ -398,15 +398,12 @@ export async function signDailyReview(input: {
   // overwrite another user's signature, and recomputes fully_certified_at
   // server-side. input.userId is no longer trusted for attribution — kept
   // in the signature for call-site compatibility but unused.
-  // NOTE: sign_daily_review_slot isn't in the generated types.ts yet
-  // (regen deferred — see project memory), so the rpc call is cast as any,
-  // matching the route-handler convention for hand-maintained DB functions.
-  const { data, error } = await (supabase as any).rpc('sign_daily_review_slot', {
+  const { data, error } = await supabase.rpc('sign_daily_review_slot', {
     p_base_id: input.baseId,
     p_date: input.date,
     p_slot: input.slot,
     p_events_hash: input.eventsHash,
-    p_notes: input.notes || null,
+    p_notes: input.notes || undefined,
     p_shift_count: input.shiftCount,
   })
 
