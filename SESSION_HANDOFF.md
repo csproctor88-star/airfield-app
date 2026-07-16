@@ -1,109 +1,105 @@
 # Session Handoff
 
-**Date:** 2026-07-14 (late — supersedes the same-day handoff at `770bb22f`;
-the session continued through the evening while the owner cut video)
-**Branch:** `main` (both repos). `airfield-app`: 1 commit since the prior
-handoff (`49da6526`), pushed, tree clean (this handoff is the only
-uncommitted file). `glidepath-site`: 11 commits (`4fd72f0..94efc85`), all
-**pushed**, tree clean.
-**Build:** `airfield-app` @ `49da6526` (gate fresh at HEAD, pipefail, cwd
+**Date:** 2026-07-15
+**Branch:** `main` (both repos). `airfield-app`: **0 commits** this session
+(HEAD unchanged; media-day session — all code work was site-side), tree
+clean (this handoff is the only modified file). `glidepath-site`:
+**5 commits** (`388ea3f..1514702`), all **pushed**, tree clean.
+**Build:** `airfield-app` @ `1373a0b6` (re-verified at wrap, pipefail, cwd
 pinned): tsc ✓ · lint 0 errors · vitest **1229 passed | 16 skipped** ·
-`npm run build` ✓ (middleware 80.8 kB). `glidepath-site` @ `94efc85`:
-tsc ✓ · lint 0/0 · vitest **142 passed** (22 files) · build ✓.
-**HEAD:** `airfield-app` `49da6526` · `glidepath-site` `94efc85`.
+`npm run build` ✓ (middleware 80.8 kB). `glidepath-site` @ `1514702`:
+tsc ✓ · lint 0/0 · vitest **143 passed** (22 files, +1 media guard) ·
+build ✓.
+**HEAD:** `airfield-app` `1373a0b6` · `glidepath-site` `1514702`.
 **DB:** no new migrations; `2026071300_configurable_shifts` remains latest,
-applied. **Promotion:** owner promoted during the session — his footage
-shows the shop-routing fix, the alert copy fix, and the unbroken public
-PPR form live on prod.
+applied.
 
 ---
 
 ## What shipped this session
 
-Phase 4 sprinted to a milestone: **all three military homepage cascade
-slots play owner footage** (NAVAIDs, PPR, Parking), the spall vignette was
-replaced by a PPR cascade after the strengthened NAVAIDs lines absorbed
-its story, the hero was rebuilt around facts instead of narrative, module
-rows got a click affordance, and OG images were regenerated. Recording the
-pilot's-POV footage also flushed out a 12-day production bug: every
-anonymous public form had been dead since July 2.
+Media day, executed same-day end to end: the owner recorded six module
+walkthroughs and shot 21 stills; by end of session **every one of the 26
+military module pages carries owner media** (7 clips + 19 stills), the
+homepage PPR asset serves both surfaces, and the visual-NAVAIDs module
+clip is the true two-story re-record. All five commits are site-side;
+airfield-app saw no code changes (its gitignored `docs/references/`
+archive gained the full-quality sources + the civilian capture plan).
 
-### airfield-app: `/api/public/*` middleware allowlist (`49da6526`)
+### glidepath-site: five module clips (`388ea3f`)
 
-The owner hit "Submission failed" recording the public PPR form.
-Vercel edge logs showed every anonymous POST to `/api/public/ppr-request`
-answered **307 by the middleware** with zero route invocations: commit
-`3f5e4dbe` (2026-07-02) had fronted the three anonymous public-write forms
-(PPR request, SMS safety report, customer feedback) with rate-limited
-server routes but never allowlisted the new paths, so the cookie auth-gate
-redirected anonymous POSTs to `/login`. Signed-in testers carry a cookie
-and never saw it — only genuinely anonymous visitors failed, for 12 days.
-Fix is one allowlist entry (each route rate-limits itself; same precedent
-as the M-6 forgot-password fix), locked by regression tests: all three
-public paths must pass anonymously, non-public API routes must still gate.
+Batch 2 of owner walkthroughs, converted with the house recipe (1280w
+H.264 CRF24 muted+faststart, poster each): airfield-status (51s — runway
+swap, suspension w/ DAFMAN 6.2.2 resume time, glideslope to YELLOW,
+ending on the events log showing every action auto-written), discrepancies
+(124s source cut to 83s with the PPR-precedent 6× time-lapse over the
+form fill, 8s–58s; boundary/factor are one-line params), obstructions
+(43s — 125ft crane, violation with the verify-the-numbers math on
+screen), parking-plans (60s — taxilane drawing, 4× C-130, plan PDF),
+wildlife-bash (75s — sighting → heatmap → DAFMAN 91-212 monthly PDF).
+The cascade slots' file-existence invariant now covers module pages too
+(new guard in `tests/module-content.test.ts`). Two of the seven shared
+links were duds — a truncated file ID (32 chars; Drive IDs run 33) and a
+re-export of the *old* NAVAIDs clip, caught by md5 against the archive.
 
-### glidepath-site: cascade media completed (military side)
+### glidepath-site: NAVAIDs interim swap + PPR reuse (`8193aaf`)
 
-- `4fd72f0` — **parking clip** (28 s): taxilane envelopes, C-130 drag with
-  live wingtip ring and conflict envelope. The cascade action line said
-  "C-17" but the footage flies a C-130 — copy aligned to the recording per
-  the caption-accuracy rule (owner can re-record with a C-17 and flip it
-  back). The cascades guard test ("media slots explicitly null") expired
-  with the first real asset; its invariant is now *null, or a well-formed
-  asset whose files exist under `public/media/`*.
-- `7529059` — **homepage NAVAIDs clip** (31 s), recorded on the promoted
-  build: the threshold alert on camera reads "auto-created — assigned to
-  CE Electrical", so the footage backs the cascade's routing claim end to
-  end.
-- `d6f6bb9` / `237e88b` — **PPR clip**: the owner's 63.5 s natural-pace
-  recording (phone form → submit → Request Submitted → desktop log showing
-  `196-001-XX AWAITING REVIEW`) converted with a **6× time-lapse over the
-  form fill (0–37 s)** and real-time beats after; output 32.7 s / 1.2 MB.
-  `237e88b` is a drop-in re-render after the owner re-placed a mistimed
-  callout in his edit. Conversion boundary + factor are one-line params;
-  full-quality source archived in `docs/references/Screenshots/`.
+Interim step while the re-record was pending: the owner's titleless
+re-export of the old NAVAIDs recording replaced the live clip (binary
+swap, same filenames), and the PPR module page was wired to the same
+converted asset as the homepage cascade (`/media/ppr-request.mp4`) after
+the owner's "ppr-hp-module" upload proved byte-identical to the already
+archived 63.5s source — one recording, both surfaces, no duplicate binary.
 
-### glidepath-site: PPR vignette replaces the spall vignette (`c2d20e8`)
+### glidepath-site: 16 stills + the true NAVAIDs re-record (`2073695`)
 
-Owner call: the strengthened NAVAIDs lines absorbed the discrepancy-routing
-story, so the reel told it twice. The replacement is the one cascade where
-someone *else* does the one thing: a pilot submits the public form and the
-work arrives structured. Consequence lines fact-checked per the
-capability-truth rule (ppr_number mints at insert on the public path —
-`2026042803`; pending PPRs render on the calendar). Reel now covers three
-distinct shapes: incident / inbound work / planning math.
+The owner shot the entire still-tier of the module rundown in one pass.
+All 16 wired as `ownerMedia` image slots with in-frame-accurate alt text
+(alt strings ride into the terminology guards via `MODULE_PAGES`, so
+they're em-dash/banned-term checked). Curation calls: `acsi` took the
+graded-fail frame over the `acsi2` detail view; `reports` initially took
+the clean preview page because the rendered-PDF frame showed a
+keyboard-mash "RESOLUTION: hgjhj" row; `ces-work-orders` was **held** —
+its header read "Selfridge ANG Base (KMTC)" (real base, real queue).
+The visual-navaids module clip was replaced with the true re-record
+(73.5s vs the old 32.4s): both outage stories — zero-tolerance mandatory
+sign AND taxiway edge lights — each landing on the CE Electrical work
+order callout.
 
-### glidepath-site: the facts are the hero (`391f00a`, `881f98c`)
+### glidepath-site: final owner calls (`0c2e3f2`, `1514702`)
 
-Owner: the runway-close hero was "just words without any real substance"
-once the reel below carried footage. New hero: kicker · **"Everything you
-do. One Platform."** (promoted from the coverage band) · three ↳ automation
-facts (real-time status / auto events log / one-click reports) · the mono
-inventory strip · CTAs below the strip (owner layout call). Secondary CTA
-is now "See it happen ↓". The coverage band promoted its own line ("Every
-module speaks to the others.") to its title; a guard pins it against ever
-echoing the h1. `881f98c` makes the strip's ethos item **track-aware**:
-"Built by an Airfield Manager" (military default) / "Built by an Airport
-Operations Manager" (civilian, chosen as the US-standard title), reading
-the app-level TrackProvider and flipping with the toggle or `?track=`.
+Owner rulings on everything held or flagged: checks + dashboard stills
+wired (check-type picker over recent history; populated widget board);
+`reports` swapped to the rendered PDF frame he prefers ("hgjhj … isn't
+going to be that much of a focus"); and the CES still shipped with the
+header **cropped off** after he was shown the Selfridge line he'd missed
+("crop the header off") — the frame now opens on the shop chips, no base
+name anywhere. Push explicitly authorized; all five commits live on
+origin.
 
-### glidepath-site: polish + OG (`5bb7071`, `f872d97`, `adbe04a`)
+### Clip house style — settled
 
-- `5bb7071` — the 960px owner-media width cap became the component default
-  (owner: cascade clip too big on desktop); one dial, all surfaces, mobile
-  unaffected.
-- `f872d97` — module accordion rows now carry a sky mono `+` (rotates to ×
-  when open) plus row-hover tint: the rows read as clickable, including on
-  touch where hover doesn't exist (owner feedback: no affordance at all).
-- `adbe04a` — `npm run og:images` full regen after the owner released the
-  hold: 59 of 60 PNGs were already byte-identical; only `military-qrc.png`
-  had drifted. Home + QRC cards visually verified on the navy palette.
-- `94efc85` — **photo-backed OG cards** for the three share targets
-  (owner call): home, `/military`, `/civilian` render over the blue-hour
-  hero photo with the homepage grade; the home card mirrors the rebuilt
-  hero ("Everything you do. One Platform." + mono inventory strip,
-  count derived). SEO metaTitles unchanged; inner pages keep the
-  typographic card. All three verified visually.
+The 3D-tilt rule got its full arc this session: owner accepted tilt on
+the re-export, reversed ("they should all match"), re-recorded, then
+accepted the re-record's residual template tilt (opening beat + one
+section break; straight-on body). Calibrated rule, saved to memory:
+brief template tilt as intro/section punctuation is tolerated; tilt as
+the primary framing is not. Keep flagging tilt beats; owner decides per
+clip.
+
+### Civilian capture plan written
+
+`docs/references/civilian-capture-plan.md` (local-only, gitignored):
+6 recordings + 18 stills → 24 of 25 civilian pages plus all three
+homepage cascade slots in civilian dialect. Shot scripts quote the
+`lib/cascades.ts` part139 lines each clip must back (incl. the arrivals
+calendar beat the military PPR cut never showed). Files prefixed `civ-`
+to avoid `public/media/` slug collisions. Deliberately excluded:
+`part-139-inspection` (waits for the cert-audit build) and
+`modifications-exemptions` (gated). Trigger phrase on capture day:
+**"prep KDRA"** → run the pre-flight (demo-user flip KDMO→KDRA, seed
+density audit, `enabled_modules` check, verify the lights flow in
+civilian dialect, clean junk demo rows) before the owner records.
 
 ## Migrations status
 
@@ -113,59 +109,64 @@ the app-level TrackProvider and flipping with the toggle or `?track=`.
 
 ## Bugs fixed during the session
 
-| Symptom | Root cause | Commit |
-|---|---|---|
-| All three anonymous public forms (PPR, safety report, feedback) failed with "Submission failed" since 2026-07-02 | `3f5e4dbe` moved them behind `/api/public/*` server hops without allowlisting the paths in the auth middleware — anonymous POSTs 307'd to `/login`; signed-in testers never hit it | `49da6526` |
+None — no app code changed. (The site work surfaced no code bugs; the
+two bad uploads were data problems caught in screening.)
 
 ## Lessons from this session
 
-- **cwd resets when a `cd X && …` chain fails.** A failed site gate left
-  later "verification" runs silently executing against airfield-app —
-  nine false greens that mislabeled a deterministic failure as a flake.
-  Pin gates with `cd <repo> && pwd &&` and sanity-check test counts.
-  (Saved as a feedback memory.)
-- **"Null until the owner supplies assets" fixtures expire.** Two guard
-  tests (module-page, cascade-band) used live content as their "empty"
-  fixture and broke the day real assets landed — strip fixtures
-  explicitly so the guard outlives the milestone it was written before.
-- **Vercel edge logs settle middleware-vs-route questions instantly**:
-  307 at the edge with zero function invocations means the handler never
-  ran — no app debugging required.
-- **Anonymous-POV recording is production QA.** Signed-in testing can
-  never catch an auth-gate regression on public forms; the owner's
-  pilot's-eye recording did.
+- **md5 incoming "new" media against the archive before converting.**
+  Two of seven uploads weren't new: one was byte-identical to the
+  already-used PPR source (which settled what "ppr-hp-module" meant),
+  and one was a re-export of the old NAVAIDs recording (identical frames
+  at the same timestamps, same 32.400s duration). Seconds of hashing
+  saved two wasted conversions and a wrong wiring.
+- **A 32-char Drive file ID is a truncated paste, not a permissions
+  problem.** Drive IDs run 33 chars; count before diagnosing. The
+  folder-share flow (scrape `embeddedfolderview` for id/name pairs)
+  eliminates per-link transcription loss entirely — prefer it.
+- **Screening catches what filenames can't.** The CES still was captured
+  on the owner's real base with the base named in the header — and the
+  owner's initial approval explicitly rested on believing it wasn't
+  identifiable. Showing him the header crop (rather than wiring on his
+  mistaken premise) got the right call in one round trip.
+- **Alt text is guarded copy.** `MODULE_PAGES` flows into
+  `terminology.test.ts`'s `allCopy()`, so ownerMedia alt strings are
+  subject to the em-dash and banned-term rules like any site copy.
 
 ## Known issues / tech debt
 
 | Item | Severity | Notes |
 |---|---|---|
-| Hero redline strings | med | Owner preview pass owed on: "See it happen ↓" CTA · coverage band title/line split · the three ↳ automation lines · the dialect ethos pair. All in `lib/home-content.ts` / `lib/cascades.ts`. |
-| visual-navaids MODULE clip re-record | med | Owner committed 2026-07-15 to re-recording it: fixes the stale ~16 s "assigned to Airfield Management" frame AND applies the agreed clip style — straight-on full-bleed, no 3D tilt, no title card, keep zoom/highlight callouts (device frames only when the device is the story). Same style governs all future clips. |
-| Anonymous-submission gap 2026-07-02..14 | info | Failed submissions never reached the DB, so there is nothing to query — any lost pilot PPRs / feedback / safety reports are unknowable from our side. Owner decides if any outreach or a note to bases is warranted. |
-| NAVAID marker-sizing dials | low | Three-stage rendering live on prod (owner recorded with it, no complaints); dials in `lib/infrastructure/marker-scale.ts` if wanted. |
-| QRC draft flow not browser-driven | low | `lib/qrc-draft.ts` unit-tested; the create→close→resume dialog loop still deserves one hands-on pass. |
+| Hero redline strings | med | Carry: owner preview pass still owed on "See it happen ↓" CTA · coverage band title/line split · the three ↳ automation lines · the dialect ethos pair. `lib/home-content.ts` / `lib/cascades.ts`. |
+| Anonymous-submission gap 2026-07-02..14 | info | Carry: owner decides if outreach is warranted; nothing queryable from our side. |
+| reports still shows "hgjhj" resolution row | low | Owner accepted ("not a focus"). If the demo row gets cleaned and the PDF regenerated, the swap is drop-in. |
+| NAVAIDs module clip: template tilt on 2 beats | info | Owner accepted. Re-export swap is turnkey if he changes his mind. |
+| Dashboard still: light theme + ad overlay | low | Owner-supplied capture; flight-tracker widget shows adsbexchange ad junk and it's the one light-theme still on a dark site. Cosmetic; re-capture swaps in turnkey. |
+| Discrepancies clip: demo typo "RWY 16" vs 06R/24L | info | In the recorded demo data; flashes by at 6×. Also visible in `acsi2` (unused). |
+| Demo user on Demo AFB | med | Now the civilian blocker: "prep KDRA" pre-flight is step 0 of the capture plan (`docs/references/civilian-capture-plan.md`). |
+| Proof band empty | med | Carry: testimonials + permissions owed by owner; null-hidden. |
+| NAVAID marker-sizing dials | low | Carry; dials in `lib/infrastructure/marker-scale.ts`. |
+| QRC draft flow not browser-driven | low | Carry: create→close→resume dialog loop deserves one hands-on pass. |
 | Demo seeds don't copy `shift_name_*` | low | Carry. |
 | `modifications-exemptions` (civilian) | low | Stays gated (owner decision 2026-07-13) until the app feature ships. |
-| Track pages no longer link to `/[slug]` | low | Watch SEO; module pages remain SSG'd and now carry media. |
-| Proof band empty | med | Testimonials + permissions owed by owner; null-hidden. |
+| Track pages no longer link to `/[slug]` | low | Watch SEO; module pages remain SSG'd and now all carry media. |
 | Cosmetic | low | Stray blank line in 51 module content files; `modules-data` header em dashes (unrendered). |
 | Prior app-side carryover | low | Civilian tenant status chips dual-mode miss · status-page weather race · account-deactivation live sessions · Selfridge 1098 dedup. |
-| Demo user on Demo AFB | low | `primary_base_id` still KDMO; flip to KDRA before civilian capture work. |
 
 ## Next session tasks
 
-1. **Hero + coverage redline pass** on the live homepage (strings in the
-   tech-debt row). The track-aware ethos line is worth checking in both
-   dialects (toggle Civilian on the reel).
-2. **Civilian phase**: flip the demo user KDMO → KDRA, then record the
-   three civilian cascade clips (737 parking; NAVAIDs and PPR civilian
-   dialects) and any civilian module-page clips.
-3. **Module-page clips, batch 2** — Discrepancies, Parking,
-   Self-Inspections module pages; plus the visual-navaids module clip
-   re-record (stale-frame row). Pipeline is proven: drop a file or Drive
-   link, conversion/screening/wiring is turnkey.
-4. **Anonymous-submission gap decision** (tech-debt row) — owner's call.
-5. **QRC drafts hands-on pass** on the promoted build.
+1. **Civilian capture day** (owner-scheduled, "a different day"): owner
+   says **"prep KDRA"** → run the pre-flight in the capture plan
+   (`docs/references/civilian-capture-plan.md`), then he records
+   6 clips + 18 stills (`civ-` prefix, same Drive folder). Pipeline is
+   proven turnkey from there.
+2. **Hero + coverage redline pass** on the live homepage (carryover;
+   strings in the tech-debt row). Check the ethos line in both dialects.
+3. **Anonymous-submission gap decision** — owner's call.
+4. **QRC drafts hands-on pass** on the promoted build.
+5. **Part 139 cert-inspection audit build** — resume from
+   `.superpowers/sdd/progress.md` when the owner wants it; the
+   `part-139-inspection` module clip waits on it.
 
 ### Long-running carryover
 SEO / rich-results · deferred audit items · Next 16 — owner-scheduled,
@@ -173,19 +174,21 @@ unchanged.
 
 ## Build snapshot
 ```
-airfield-app @ 49da6526 (fresh, pipefail, cwd pinned): tsc ✓ · lint 0
-  errors · vitest 1229 passed | 16 skipped (137 files) · build ✓.
-  /api/public/ppr-request 107 kB First Load · /[icao]/ppr-request 168 kB ·
-  shared 106 kB · middleware 80.8 kB.
-glidepath-site @ 94efc85: tsc ✓ · lint 0/0 · vitest 142 passed (22
-  files) · build ✓. public/media/ now carries 4 clips + posters
-  (visual-navaids 5.6MB · aircraft-parking 2.8MB · visual-navaids-hp
-  4.7MB · ppr-request 1.2MB).
+airfield-app @ 1373a0b6 (re-verified at wrap; code unchanged since
+  49da6526): tsc ✓ · lint 0 errors · vitest 1229 passed | 16 skipped
+  (137 files) · build ✓ · middleware 80.8 kB.
+glidepath-site @ 1514702: tsc ✓ · lint 0/0 · vitest 143 passed (22
+  files; +1: module ownerMedia file-existence guard) · build ✓.
+  public/media/ now ~46MB: 9 mp4 (7 module clips, 2 of which shared
+  with cascade slots, + visual-navaids-hp + aircraft-parking cascade
+  clips) + 19 stills + posters. Largest asset: visual-navaids.mp4
+  10.0MB (73.5s).
 ```
 
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-07-15 | glidepath-site military track **media-complete**: 7 owner clips + 19 stills across all 26 military module pages · NAVAIDs two-story re-record · PPR asset shared cascade+module · CES still header-cropped (identifiability call) · module ownerMedia existence guard · civilian capture plan written. airfield-app: no code changes. |
 | **Unreleased** | 2026-07-14 (late) | Military homepage cascade complete (NAVAIDs/PPR/Parking clips, PPR with 6× fill time-lapse) · spall vignette → PPR cascade · hero rebuilt "facts are the hero" + track-aware "Built by an Airfield Manager" · module-row affordance · 960px media cap default · OG regen + photo-backed share cards (home/tracks) · **airfield-app: 12-day anonymous public-form outage fixed** (middleware allowlist). |
 | **Unreleased** | 2026-07-14 | Report Outage type→shop routing (+ alert copy) · QRC editor localStorage drafts · NAVAID three-stage marker sizing + light clamps · site: owner redlines, NAVAID cascade line, first Phase 4 clip wired. |
 | **Unreleased** | 2026-07-13 | airfield-app configurable shifts: 1–3 per base, renameable; migration `2026071300` applied. |
@@ -196,17 +199,17 @@ glidepath-site @ 94efc85: tsc ✓ · lint 0/0 · vitest 142 passed (22
 
 ## Key docs / files touched this session
 
-### airfield-app
-- `middleware.ts` — `/api/public/*` allowlist entry (the fix).
-
 ### glidepath-site
-- `lib/cascades.ts` — hero object removed · PPR cascade (replaces
-  discrepancies) · coverage retitle · navaids/parking/ppr media slots.
-- `lib/home-content.ts` — new hero content: title, automations, dialect
-  `builtBy` pair, reordered strip.
-- `components/home/hero.tsx` — facts-are-the-hero layout, track-aware strip.
-- `components/modules/stack-section-card.tsx` — row affordance glyph;
-  dialog media slot uses component-default cap.
-- `components/ui/owner-media.tsx` — 960px default cap + `className` prop.
-- `public/media/` — aircraft-parking, visual-navaids-hp, ppr-request
-  (+posters); sources archived in `airfield-app/docs/references/Screenshots/`.
+- `lib/modules/military/*.ts` — all 26 files now carry `ownerMedia`
+  (7 video slots, 19 image slots with alt text).
+- `tests/module-content.test.ts` — ownerMedia file-existence guard
+  (mirrors the cascade invariant).
+- `public/media/` — +5 module clips, +19 stills, +posters; NAVAIDs clip
+  and poster replaced twice (titleless re-export, then the re-record).
+
+### airfield-app (local-only, gitignored)
+- `docs/references/civilian-capture-plan.md` — **new**; the civilian
+  shot list + pre-flight.
+- `docs/references/Screenshots/` — full-quality sources archived for all
+  six recordings and 22 stills (incl. the unused `acsi2`, `checks2`,
+  `reports` PDF original, and the pre-crop CES capture).
