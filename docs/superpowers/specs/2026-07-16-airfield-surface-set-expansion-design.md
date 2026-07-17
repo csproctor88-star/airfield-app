@@ -251,26 +251,34 @@ feet in the criteria table, so the table stays diff-able against Table 4-1.
 
 - **New `A` entry** in `SURFACE_CRITERIA` using the verified Class A IFR column:
   primary halfWidth 500 / extension 200; ADCS slope 40, innerHalfWidth 500,
-  outerHalfWidth 3,500, length 20,000 — **sloped portion only; the verified
-  horizontal ADCS portion (widening 7,000 → 16,000 ft at 500 ft above established
-  airfield elevation, Table 3-7 items 9–11) is NOT modeled** because the current
-  ADCS shape (`slope/length/outerHalfWidth`) has no horizontal-portion fields —
-  same model gap as the Class B ADCS conflict, so it is folded into the §13 item 2
-  audit and marked `// PLACEHOLDER — ADCS horizontal portion unmodeled` in code;
-  Class A ADCS coverage silently would otherwise stop ~20,200 ft from threshold,
-  hence the explicit marker. Inner_horizontal height 150 / radius 7,500;
+  sloped-portion length 20,000 reaching 500 ft exactly, **then the horizontal
+  portion at 500 ft above established airfield elevation, widening 7,000 →
+  16,000 ft (Table 3-7 items 9–11), out to 50,000 ft total** — the end distance
+  is derived: the uniform flare (1,000 → 7,000 ft over 20,000 ft = 0.3 ft/ft)
+  reaches 16,000 ft at exactly 50,000 ft, matching the Class B footprint
+  (confirm against the glossary ADCS definition, §13 item 1 residual). The ADCS
+  shape gains horizontal-portion fields per resolved §13 item 2 (model:
+  min(slope, 500-ft horizontal) governs; Note 4 elevation-datum caveat).
+  Inner_horizontal height 150 / radius 7,500;
   transitional slope 7 / primaryHalfWidth 500; clear_zone halfWidth 1,500 / length
   3,000 (AF width row); apz_i 1,500 × 2,500 offset 3,000; apz_ii 1,500 × 2,500 offset
-  5,500 (offset derived: clear zone 3,000 + APZ I 2,500). Conical and outer_horizontal
-  carry **PLACEHOLDER values copied from Class B with a `// PLACEHOLDER — verify UFC
-  glossary` marker** and a blocking §13 item; the map draws them dashed until
-  verified. Class A **VFR** (no inner horizontal/conical/outer horizontal; 10,000-ft
-  ADCS) is deferred — §13 item 3.
+  5,500 (offset derived: clear zone 3,000 + APZ I 2,500). Conical and
+  outer_horizontal are **VERIFIED from the owner-supplied glossary (2026-07-16)**:
+  conical = 20:1 rising from the outer edge of the inner horizontal (150 ft) to
+  500 ft, horizontal extent 7,000 ft; outer horizontal = 500 ft elevation
+  extending 30,000 ft beyond the conical periphery; both class-invariant
+  (identical for Class A IFR and Class B), fixed-wing only — encode as real
+  values with normal (solid) map rendering, no placeholders. Glossary derivation
+  rule (owner-confirmed): no inner horizontal → no conical → no outer
+  horizontal. Class A **VFR** (no inner horizontal/conical/outer horizontal;
+  10,000-ft ADCS; only primary + sloped ADCS + transitionals) is deferred —
+  §13 item 3.
 - **`Army_B` corrections**: primary halfWidth 1000 → **500**, ADCS innerHalfWidth
   1000 → **500**, transitional primaryHalfWidth → **500**, clear_zone halfWidth
   1500 → **500**, apz halfWidths 1500 → **500** (all verified Army rows). ADCS
-  outerHalfWidth stays at the current value pending the Class B ADCS audit (§13
-  item 2) — marked PLACEHOLDER. Saved Army evaluations are unaffected (results JSONB
+  follows the resolved §13 item 2 geometry with the Army 1,000-ft start width
+  (half-widths 500 start → 4,500 at the horizontal portion → 8,000 at end) —
+  no placeholder remains. Saved Army evaluations are unaffected (results JSONB
   is pinned); new evaluations change, which is the point.
 - `getSurfaceCriteria` stays strict-with-warn but the page-level collapse is removed,
   so the fallback becomes truly exceptional.
@@ -363,7 +371,8 @@ export const SURFACE_SET_REGISTRY: Record<SurfaceSet, {
 ```
 
 **Changed: `lib/calculations/surface-criteria.ts`** — add `A` entry, correct `Army_B`
-(per §4), PLACEHOLDER markers on the two unverified Class A surfaces.
+(per §4); conical/outer-horizontal values are glossary-verified (§13 item 1
+resolved) — no PLACEHOLDER markers remain.
 
 **New: `lib/calculations/annex14-criteria.ts`** — Table 4-1/4-2 in metres:
 
@@ -502,11 +511,12 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
 
 - **`tests/surface-criteria.test.ts` (new)** — locks every verified Class A and
   corrected Army_B number against UFC Table 3-5/3-6/3-7 values (mirroring
-  `tests/part77-surfaces.test.ts`'s dimension-locking style); asserts the PLACEHOLDER
-  markers exist on Class A conical/outer horizontal **and on the Class A ADCS
-  horizontal-portion gap** (so removing a marker without a verified/modeled value
-  fails review); asserts the Class A ADCS entry is the sloped portion only (length
-  20,000, not the 50,000-ft-style total) per §13 item 2;
+  `tests/part77-surfaces.test.ts`'s dimension-locking style); locks the
+  glossary-verified conical (20:1 × 7,000 ft, 150 → 500 ft) and outer horizontal
+  (500 ft × 30,000 ft beyond the conical) values with provenance comments;
+  locks the modeled ADCS horizontal portion (Class A: sloped 40:1 × 20,000 then
+  500-ft horizontal to 50,000 ft total; Class B: 50:1 with the 500-ft crossing
+  nominally at 25,000 ft, footprint 50,000 ft, end width 16,000 ft);
   `getSurfaceCriteria('A')` no longer falls back.
 - **`tests/annex14-criteria.test.ts` (new)** — locks all Table 4-1 columns (conical
   slope/height, inner horizontal 45 m + radii 2 000/2 500/3 500/4 000 m, approach
@@ -548,12 +558,18 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
    also supplied the Table 3-7 NOTES (screenshot in docs/references/Screenshots/)
    and Figure 3-17 (p. 63) — the notes directly follow item 15, so **Table 3-7
    carries no conical / outer horizontal dimension rows**; those live only in
-   the glossary definitions (as originally researched). **STILL BLOCKING:** the
-   glossary definitions of "outer horizontal surface" (extent not derivable —
-   commonly quoted 30,000 ft must not be encoded unverified) and "conical
-   surface" (7,000-ft band *derivable* from verified 20:1 + 150→500-ft
-   elevations and structurally confirmed by Figure 3-17; sight the printed
-   definition before marking verified rather than derived).
+   the glossary definitions. **RESOLVED (owner-supplied glossary content,
+   2026-07-16):** conical surface "connects the inner horizontal surface with
+   the outer horizontal surface … applies to fixed-wing installations only" —
+   20:1 rising from the outer edge of the inner horizontal, 7,000 ft horizontal
+   extent, up to 500 ft above airfield elevation; outer horizontal surface —
+   500 ft elevation extending 30,000 ft beyond the conical periphery. Both are
+   class-invariant (why they're not tabulated per class) and derived surfaces:
+   no inner horizontal → no conical → no outer horizontal (hence Class A VFR
+   carries none of the three). **Sole residual (confirm, non-blocking):** the
+   Class A IFR ADCS total length of 50,000 ft is derived (uniform 0.3 ft/ft
+   flare reaches the printed 16,000-ft end width at exactly 50,000 ft, matching
+   Class B) — confirm against the glossary ADCS definition when convenient.
 2. **OWNER DECISION 2026-07-16: correct the encoded Class B criteria to the UFC
    values** (and offer **all five** standards in the per-evaluation what-if
    picker — decision (c) confirmed). Verified corrections (reference doc above):
