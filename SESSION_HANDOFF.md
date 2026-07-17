@@ -1,12 +1,13 @@
 # Session Handoff
 
 **Date:** 2026-07-17 (session 6 — overnight autonomous run, owner asleep)
-**Branch:** `main`. **33 commits** this session (`90360dff`..`7a01609c`), all
-**LOCAL — NOT PUSHED** (push authorization pending; see Next session tasks).
+**Branch:** `main`. **34 commits** this session (`90360dff`..`b3457a1b`),
+**all PUSHED** (owner-authorized; `82170800..b3457a1b` → origin/main); tree
+clean, level with origin. Owner monitors CI and owns the promote.
 **Build:** verified on the final tree: tsc ✓ · lint 0 errors · vitest
 **1731 passed | 0 skipped** (170 files — +363 tests / +26 test files this
 session) · `npm run build` ✓ (middleware 80.8 kB).
-**HEAD:** `7a01609c`. (The last two commits landed post-wrap: the owner
+**HEAD:** `b3457a1b`. (The last three commits landed post-wrap: the owner
 supplied the ICAO Annex 14 PDF, unblocking the arm the overnight run had
 skipped — see the ICAO subsection below. The owner also removed the
 superpowers plugin from `~/.claude/settings.json` mid-session; future
@@ -276,9 +277,11 @@ lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`).
 
 ## Next session tasks
 
-1. **REMAINING OWNER STEPS** (migrations ✅ applied · types ✅ regenerated)
-   1. Authorize/perform the push of the local commits. Migrations are
-      already in, so promote whenever ready after CI.
+1. **REMAINING OWNER STEPS** (migrations ✅ · types ✅ · push ✅)
+   1. Watch CI, then promote when ready. On the promoted build, the named
+      manual checks: 20-user NAMO/NAMT PDF render · one live report email ·
+      ICAO quick-pass (wizard → ICAO standard on a test base → code 4 /
+      CAT I runway → five a14 layers + caveat + PDF Surface Standard row).
    2. Post-apply follow-up: extend the live RLS suites for the fpr_*,
       driving_check_*, and local_reg* tables (ledgered); manual QA scripts
       live in each spec's §Testing (visual PDF render of a 20-user
@@ -328,7 +331,7 @@ glidepath-site @ 9dd00ad: untouched this session.
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-17 (session 6, overnight + post-wrap) | Seven features, review-gated: surface-set expansion (Class A + corrected Class B/Army B + base standard selector) · **ICAO Annex 14 fifth standard** (owner-supplied PDF, dual-extraction-verified values, 5-standard picker) · FPR Check module · Airfield Driving Spot Check module (renamed per owner) · Local Regulations Review (Base Regs) · NAMO/NAMT attribution + Report Tool. 33 commits, 14 staged migrations (none applied), +363 tests. NOT PUSHED. |
+| **Unreleased** | 2026-07-17 (session 6, overnight + post-wrap) | Seven features, review-gated: surface-set expansion (Class A + corrected Class B/Army B + base standard selector) · **ICAO Annex 14 fifth standard** (owner-supplied PDF, dual-extraction-verified values, 5-standard picker) · FPR Check module · Airfield Driving Spot Check module (renamed per owner) · Local Regulations Review (Base Regs) · NAMO/NAMT attribution + Report Tool. 34 commits, all 14 migrations applied + types regenerated, +363 tests. Pushed. |
 | **Unreleased** | 2026-07-17 (session 5) | Obstruction manual coordinate entry · FAA Part 77 surface polygons · three §77.19 criteria corrections · UFC Table 3-7 verified + owner rulings — surface-set expansion unblocked. 20 commits, zero migrations. |
 | **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: fleet-wide airfield_status backfill + seed trigger (migration `2026071600`, applied) · setup-wizard import staleness fixed · autosave pill registers deletes/updates. |
 | **Unreleased** | 2026-07-16 (spec planning) | Seven implementation specs · Part 77 §77.19 lettering resolved · Class B criteria mis-sourcing discovered. |
