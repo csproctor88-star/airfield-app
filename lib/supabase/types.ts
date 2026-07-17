@@ -3119,6 +3119,9 @@ export type Database = {
           end2_longitude: number | null
           faa_approach_category: string | null
           faa_approach_type: string | null
+          icao_approach_classification: string | null
+          icao_code_number: number | null
+          icao_strip_width_m: number | null
           id: string
           length_ft: number
           runway_class: string | null
@@ -3144,6 +3147,9 @@ export type Database = {
           end2_longitude?: number | null
           faa_approach_category?: string | null
           faa_approach_type?: string | null
+          icao_approach_classification?: string | null
+          icao_code_number?: number | null
+          icao_strip_width_m?: number | null
           id?: string
           length_ft: number
           runway_class?: string | null
@@ -3169,6 +3175,9 @@ export type Database = {
           end2_longitude?: number | null
           faa_approach_category?: string | null
           faa_approach_type?: string | null
+          icao_approach_classification?: string | null
+          icao_code_number?: number | null
+          icao_strip_width_m?: number | null
           id?: string
           length_ft?: number
           runway_class?: string | null
@@ -3326,7 +3335,7 @@ export type Database = {
           map_provider: string
           name: string
           // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
-          obstruction_surface_set: 'ufc_3_260_01' | 'faa_part77'
+          obstruction_surface_set: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14'
           part139_class: string | null
           qrc_review_interval: string
           quick_setup_pending: Json
@@ -3370,7 +3379,7 @@ export type Database = {
           map_provider?: string
           name: string
           // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
-          obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
+          obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14'
           part139_class?: string | null
           qrc_review_interval?: string
           quick_setup_pending?: Json
@@ -3414,7 +3423,7 @@ export type Database = {
           map_provider?: string
           name?: string
           // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
-          obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77'
+          obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14'
           part139_class?: string | null
           qrc_review_interval?: string
           quick_setup_pending?: Json
@@ -5431,7 +5440,7 @@ export type Database = {
           obstruction_top_msl: number | null
           photo_storage_path: string | null
           results: Json
-          runway_class: string
+          runway_class: string | null
           surface_set: string | null
           violated_surfaces: string[] | null
         }
@@ -5455,7 +5464,7 @@ export type Database = {
           obstruction_top_msl?: number | null
           photo_storage_path?: string | null
           results?: Json
-          runway_class: string
+          runway_class?: string | null
           surface_set?: string | null
           violated_surfaces?: string[] | null
         }
@@ -5479,7 +5488,7 @@ export type Database = {
           obstruction_top_msl?: number | null
           photo_storage_path?: string | null
           results?: Json
-          runway_class?: string
+          runway_class?: string | null
           surface_set?: string | null
           violated_surfaces?: string[] | null
         }

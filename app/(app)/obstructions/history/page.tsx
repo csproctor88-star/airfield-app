@@ -17,7 +17,7 @@ function matchesSearch(ev: ObstructionRow, query: string): boolean {
     ev.notes ?? '',
     ev.description ?? '',
     ev.controlling_surface ?? '',
-    ev.runway_class,
+    ev.runway_class ?? '',
     ev.has_violation ? 'violation' : 'clear',
     ev.object_height_agl != null ? `${ev.object_height_agl}` : '',
     ev.distance_from_centerline_ft != null ? `${ev.distance_from_centerline_ft}` : '',

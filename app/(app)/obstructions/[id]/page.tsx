@@ -735,7 +735,7 @@ function SurfaceSetLegend({
   base,
   pinnedSet,
 }: {
-  base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | null } | null
+  base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14' | null } | null
   pinnedSet?: 'ufc_3_260_01' | 'faa_part77' | null
 }) {
   const [open, setOpen] = useState(false)

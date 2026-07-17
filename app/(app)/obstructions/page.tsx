@@ -23,8 +23,9 @@ import {
   type TaxiwayGeometry,
   type TaxiwaySurfaceEvaluation,
   type FaaApproachType,
+  type SurfaceSet,
 } from '@/lib/calculations/obstructions'
-import { getSurfaceSet, isCivilian, type SurfaceSet } from '@/lib/airport-mode'
+import { getSurfaceSet, isCivilian } from '@/lib/airport-mode'
 import { fetchTaxiways } from '@/lib/supabase/taxiways'
 import { fetchElevation } from '@/lib/calculations/geometry'
 import {
