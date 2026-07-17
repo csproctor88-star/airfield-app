@@ -1198,7 +1198,7 @@ function RunwayTab({
         // never actually changed.
         setRunways(prevRunways)
         await supabase.from('bases').update({ obstruction_surface_set: prevSet } as any).eq('id', installationId)
-        toast.error(`Standard set, but failed to update runway classes: ${friendlyError(rwyError.message)}`)
+        toast.error(`Couldn't update runway classes — standard change reverted. ${friendlyError(rwyError.message)}`)
         await refreshCurrentInstallation()
         setStandardSaving(false)
         return

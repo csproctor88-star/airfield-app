@@ -50,8 +50,8 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
         'The runway designator pair, e.g. "06L/24R" or "13/31". Use the same format published on the IAP and on signage.',
       runway_class:
         'Class A serves smaller/lighter-aircraft runways (UFC 3-260-01 Table 3-1 classification) with narrower primary and ' +
-        'approach-departure surfaces. Class B is standard USAF (ARC III–IV) — the common heavy/mixed case. Army Class B is ' +
-        '5,000 ft. The class drives obstruction surface widths and parking clearance envelopes per UFC 3-260-01 Table 3-7. ' +
+        'approach-departure surfaces. Class B is standard USAF (ARC III–IV) — the common heavy/mixed case. Army Class B uses ' +
+        'a 1,000-ft-wide primary surface. The class drives obstruction surface widths and parking clearance envelopes per UFC 3-260-01 Table 3-7. ' +
         'Civilian Part 139 airports leave this blank — the FAA Approach Type field drives Part 77 surface dimensions instead.',
       obstruction_surface_set:
         'Sets the base-wide standard the Obstruction Evaluation Tool defaults to. Choosing Air Force Class A, Air Force Class B, ' +

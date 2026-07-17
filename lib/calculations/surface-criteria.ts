@@ -76,7 +76,12 @@ const CLASS_B: SurfaceCriteria = {
 // from the Army columns of Tables 3-7 / 3-5 / 3-6 (C3, 4 Feb 2026).
 const ARMY_CLASS_B: SurfaceCriteria = {
   clear_zone:         { halfWidth: 500, length: 3000, maxHeight: 0 },    // Table 3-5 Army width 1,000 ft → half 500
-  graded_area:        { halfWidth: 1500, length: 1000, maxHeight: 0 },   // unverified — no Army value to invent
+  // Clamped to the parent Army clear-zone half-width (Table 3-5 Army 1,000-ft
+  // width → 500-ft half) so the graded area — a portion OF the clear zone — can
+  // never be reported wider than the clear zone that contains it. This is a
+  // consistency bound, not an invented value; pending owner verification of the
+  // true Army graded-area width.
+  graded_area:        { halfWidth: 500, length: 1000, maxHeight: 0 },
   primary:            { halfWidth: 500, extension: 200, maxHeight: 0 },  // item 1: Army 1,000 ft → half 500
   // item 8: ADCS starts at the 1,000-ft Army primary width (half 500);
   // slope/end/length/level-off shared with AF Class B.

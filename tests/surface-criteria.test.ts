@@ -20,6 +20,20 @@ describe('SURFACE_CRITERIA registry', () => {
   })
 })
 
+// ── Fix 1 (SSE final review): the graded area is a portion OF the clear zone,
+// so it can never be reported wider than the clear zone that contains it. This
+// locks the consistency bound for every registered class.
+describe('graded-area ⊆ clear-zone invariant', () => {
+  it('graded_area.halfWidth <= clear_zone.halfWidth for every class', () => {
+    for (const [cls, c] of Object.entries(SURFACE_CRITERIA)) {
+      expect(
+        c.graded_area.halfWidth,
+        `${cls}: graded area (${c.graded_area.halfWidth}) exceeds clear zone (${c.clear_zone.halfWidth})`,
+      ).toBeLessThanOrEqual(c.clear_zone.halfWidth)
+    }
+  })
+})
+
 // ── Class B (Air Force) — Table 3-7 "Class B (VFR and IFR)" column ──
 describe('Class B (Air Force) — Table 3-7', () => {
   const B = getSurfaceCriteria('B')
@@ -103,8 +117,11 @@ describe('Army Class B — Table 3-7 Army rows', () => {
     expect(A.apz_ii).toEqual({ halfWidth: 500, length: 7000, startOffset: 8000 })
   })
 
-  it('graded area left unverified — do not invent an Army value', () => {
-    expect(A.graded_area).toEqual({ halfWidth: 1500, length: 1000, maxHeight: 0 })
+  it('graded area clamped to the Army clear-zone half-width (consistency bound, not an invented value)', () => {
+    // Fix 1 (SSE final review): 1,500 contradicted the 500-ft Army clear zone.
+    // The graded area is a portion OF the clear zone, so it can never be wider;
+    // clamped to 500 pending owner verification of the true Army graded-area width.
+    expect(A.graded_area).toEqual({ halfWidth: 500, length: 1000, maxHeight: 0 })
   })
 })
 

@@ -504,7 +504,10 @@ describe('UFC surface info is class-aware (SSE Task 3)', () => {
     const b = evaluateObstruction(P, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
     const approach = row(b, 'approach_departure')
     expect(approach.surfaceName).toBe('Approach-Departure Clearance Surface')
-    expect(approach.ufcReference).toBe('UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)')
+    // Fix 2 (SSE final review): the ADCS spans Table 3-7 items 5–11 (start /
+    // slope / widths / elevation). The old "Item 2" was a row the verified
+    // reference (docs/references/ufc-3-260-01-table3-7-verified.md) disproves.
+    expect(approach.ufcReference).toBe('UFC 3-260-01, Table 3-7, Items 5–11 (Approach-Departure Clearance Surface)')
     expect(approach.color).toBe('#F97316')
   })
 })

@@ -61,7 +61,11 @@ export type UfcSurfaceMeta = {
   name: string
   color: string
   ufcRef: string
-  description: string
+  /** Either a class-invariant string, or a templater (like `ufcCriteria`) for
+   *  descriptions that quote a class-varying dimension. The two horizontal
+   *  surfaces template their radius so the legend never renders a literal
+   *  "{radius}" placeholder. */
+  description: string | ((criteria: SurfaceCriteria) => string)
   /** Class-aware criteria text — pass the evaluated class's SurfaceCriteria. */
   ufcCriteria: (criteria: SurfaceCriteria) => string
 }
@@ -70,7 +74,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   clear_zone: {
     name: 'Runway Clear Zone',
     color: '#EC4899',
-    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13; DoD Instruction 4165.57, Table 1 (Runway Clear Zone)',
+    ufcRef: 'UFC 3-260-01, Table 3-5 (Runway Clear Zone)',
     description: 'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
     ufcCriteria: (c) =>
       `The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within ${withCommas(c.clear_zone.length)} ft x ${withCommas(c.clear_zone.halfWidth * 2)} ft from each runway end unless meeting B13 permissible deviation criteria.`,
@@ -78,7 +82,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   graded_area: {
     name: 'Graded Portion of Clear Zone',
     color: '#F43F5E',
-    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Graded Portion of Clear Zone)',
+    ufcRef: 'UFC 3-260-01, Table 3-5 (graded area of clear zone)',
     description: 'Rough-graded, obstruction-free portion of the clear zone extending 1,000 ft from each threshold, 3,000 ft wide.',
     ufcCriteria: (c) =>
       `The graded portion (${withCommas(c.graded_area.length)} ft from runway end, ${withCommas(c.graded_area.halfWidth * 2)} ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.`,
@@ -86,7 +90,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   primary: {
     name: 'Primary Surface',
     color: '#EF4444',
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 1 (Primary Surface)',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Items 1–3 (Primary Surface)',
     description: 'No objects permitted above runway elevation within the primary surface boundaries.',
     ufcCriteria: (c) =>
       `No object may protrude above the primary surface elevation (runway elevation) within ${c.primary.halfWidth} ft of centerline and ${c.primary.extension} ft beyond each runway end.`,
@@ -94,7 +98,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   approach_departure: {
     name: 'Approach-Departure Clearance Surface',
     color: '#F97316',
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Items 5–11 (Approach-Departure Clearance Surface)',
     description: '50:1 slope extending from each end of the primary surface.',
     // Slope (50:1 Class B / 40:1 Class A) and total length are class-specific —
     // numeric provenance is in surface-criteria.ts (Table 3-7 items 6–11).
@@ -104,15 +108,15 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   inner_horizontal: {
     name: 'Inner Horizontal Surface',
     color: '#22C55E',
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 4 (Inner Horizontal Surface)',
-    description: '150 ft above established airfield elevation within {radius} ft.',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Items 12–14 (Inner Horizontal Surface)',
+    description: (c) => `${c.inner_horizontal.height} ft above established airfield elevation within ${withCommas(c.inner_horizontal.radius)} ft.`,
     ufcCriteria: (c) =>
       `No object may protrude above ${c.inner_horizontal.height} ft above the established airfield elevation within a ${withCommas(c.inner_horizontal.radius)} ft radius of the runway ends.`,
   },
   conical: {
     name: 'Conical Surface',
     color: '#3B82F6',
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 5 (Conical Surface)',
+    ufcRef: 'UFC 3-260-01, Glossary (Imaginary Surfaces; not tabulated in Table 3-7)',
     description: '20:1 slope outward from inner horizontal to 500 ft AGL.',
     ufcCriteria: (c) =>
       `No object may penetrate the ${c.conical.slope}:1 conical surface extending ${withCommas(c.conical.horizontalExtent)} ft outward from the inner horizontal surface boundary.`,
@@ -120,15 +124,15 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   outer_horizontal: {
     name: 'Outer Horizontal Surface',
     color: '#8B5CF6',
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 6 (Outer Horizontal Surface)',
-    description: '500 ft above established airfield elevation within {radius} ft.',
+    ufcRef: 'UFC 3-260-01, Glossary (Imaginary Surfaces; not tabulated in Table 3-7)',
+    description: (c) => `${c.outer_horizontal.height} ft above established airfield elevation within ${withCommas(c.outer_horizontal.radius)} ft.`,
     ufcCriteria: (c) =>
       `No object may protrude above ${c.outer_horizontal.height} ft above the established airfield elevation within a ${withCommas(c.outer_horizontal.radius)} ft radius of the runway ends.`,
   },
   transitional: {
     name: 'Transitional Surface',
     color: '#EAB308',
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 3 (Transitional Surface)',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 15 (Transitional Surface)',
     description: '7:1 slope from primary/approach edges to inner horizontal height.',
     ufcCriteria: (c) =>
       `No object may penetrate the ${c.transitional.slope}:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (${c.inner_horizontal.height} ft).`,
@@ -136,7 +140,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   apz_i: {
     name: 'APZ I (Accident Potential Zone I)',
     color: '#D946EF',
-    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ I)',
+    ufcRef: 'UFC 3-260-01, Table 3-6 (APZ I)',
     description: 'High accident risk zone extending 5,000 ft beyond the clear zone, 3,000 ft wide.',
     ufcCriteria: () =>
       'APZ I — High accident risk zone. Only very low-density uses allowed: agriculture, grazing, open space, surface parking (no structures), roads with minimal traffic, and essential utility corridors. No residential, schools, hospitals, assembly uses, or high-occupancy facilities permitted.',
@@ -144,7 +148,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   apz_ii: {
     name: 'APZ II (Accident Potential Zone II)',
     color: '#A78BFA',
-    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ II)',
+    ufcRef: 'UFC 3-260-01, Table 3-6 (APZ II)',
     description: 'Moderate accident risk zone extending 7,000 ft beyond APZ I, 3,000 ft wide.',
     ufcCriteria: () =>
       'APZ II — Moderate accident risk zone. Low-density commercial/industrial allowed: warehouses with low personnel density, open storage yards, and some limited community facilities (case-by-case). Residential strongly discouraged. High-density or high-occupancy uses prohibited.',
@@ -161,7 +165,7 @@ function resolveUfcSurface<K extends UfcSurfaceKey>(key: K, criteria: SurfaceCri
     criteria: criteria[key],
     ufcRef: meta.ufcRef,
     ufcCriteria: meta.ufcCriteria(criteria),
-    description: meta.description,
+    description: typeof meta.description === 'function' ? meta.description(criteria) : meta.description,
     color: meta.color,
   }
 }

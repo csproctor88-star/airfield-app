@@ -35,7 +35,7 @@ import { DetailGrid } from '@/components/ui/detail-grid'
 import { toast } from 'sonner'
 import { ArrowLeft, AlertTriangle, FileDown, Mail, Pencil, Trash2, ChevronDown, ChevronRight, BookOpen } from 'lucide-react'
 import { getSurfaceSet } from '@/lib/airport-mode'
-import { IMAGINARY_SURFACES, getPart77Surfaces, type SurfaceSet } from '@/lib/calculations/obstructions'
+import { getUfcSurfaceInfo, getPart77Surfaces, type SurfaceSet } from '@/lib/calculations/obstructions'
 import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
 
 type SurfaceResult = {
@@ -419,6 +419,7 @@ export default function ObstructionDetailPage() {
       <SurfaceSetLegend
         base={currentInstallation}
         pinnedSet={pinnedSurfaceSet}
+        runwayClass={evaluation.runway_class}
       />
 
       {/* Surface-by-surface results */}
@@ -742,9 +743,11 @@ export default function ObstructionDetailPage() {
 function SurfaceSetLegend({
   base,
   pinnedSet,
+  runwayClass,
 }: {
   base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14' | null } | null
   pinnedSet?: 'ufc_3_260_01' | 'faa_part77' | null
+  runwayClass?: string | null
 }) {
   const [open, setOpen] = useState(false)
   // Pinned row value wins; fall back to the base default for legacy
@@ -752,10 +755,12 @@ function SurfaceSetLegend({
   const set = pinnedSet ?? getSurfaceSet(base)
   const isPart77 = set === 'faa_part77'
   // For Part 77 we show the default approach type's surfaces; per-runway types
-  // are documented in /base-config/setup. UFC iterates IMAGINARY_SURFACES.
+  // are documented in /base-config/setup. UFC resolves the pinned runway class
+  // so a Class A / Army-B row's legend matches its own result rows (legacy rows
+  // with no pinned class fall back to Class B).
   const surfaces = isPart77
     ? Object.values(getPart77Surfaces())
-    : Object.values(IMAGINARY_SURFACES)
+    : Object.values(getUfcSurfaceInfo(runwayClass ?? 'B'))
   const setLabel = isPart77 ? 'FAA Part 77' : 'UFC 3-260-01'
   const setSubtitle = isPart77
     ? '14 CFR §77.19 (default approach type — per-runway types in Base Setup)'
