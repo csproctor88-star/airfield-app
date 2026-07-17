@@ -37,6 +37,7 @@ export type CheckRow = {
   saved_by_name: string | null
   saved_by_id: string | null
   saved_at: string | null
+  completed_by_id: string | null
   created_at: string
   updated_at: string
 }
@@ -85,6 +86,7 @@ export async function createCheck(input: {
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,
     saved_by_id: completedById,
+    completed_by_id: completedById,
   }
   const resolvedBaseId = await resolveBaseId(supabase, input.base_id, completedById)
   row.base_id = resolvedBaseId

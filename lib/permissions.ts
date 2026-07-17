@@ -132,6 +132,7 @@ export const PERM = {
   DASHBOARD_MANAGE_TEMPLATES:           'dashboard:manage-templates',
   REPORTS_VIEW:                         'reports:view',
   REPORTS_EXPORT:                       'reports:export',
+  REPORTS_USER_ACTIVITY:                'reports:user_activity',
   ACTIVITY_LOG_VIEW:                    'activity_log:view',
   ACTIVITY_LOG_WRITE_MANUAL:            'activity_log:write_manual',
   ACTIVITY_LOG_DELETE:                  'activity_log:delete',

@@ -537,6 +537,7 @@ export type Database = {
           check_type: string
           completed_at: string | null
           completed_by: string | null
+          completed_by_id: string | null
           created_at: string
           data: Json
           display_id: string
@@ -558,6 +559,7 @@ export type Database = {
           check_type: string
           completed_at?: string | null
           completed_by?: string | null
+          completed_by_id?: string | null
           created_at?: string
           data?: Json
           display_id: string
@@ -579,6 +581,7 @@ export type Database = {
           check_type?: string
           completed_at?: string | null
           completed_by?: string | null
+          completed_by_id?: string | null
           created_at?: string
           data?: Json
           display_id?: string
@@ -600,6 +603,13 @@ export type Database = {
             columns: ["base_id"]
             isOneToOne: false
             referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "airfield_checks_completed_by_id_fkey"
+            columns: ["completed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
