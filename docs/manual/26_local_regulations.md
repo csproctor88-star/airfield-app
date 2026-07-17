@@ -110,8 +110,10 @@ Changing the interval never deletes or alters existing review records.
    **Outstanding** (name only) — covering the required-reviewer roster for that document.
 
 A reviewer who isn't on the required-reviewer roster (for example, someone granted access
-individually) but has reviewed the document still shows in the Reviewed list; they never count
-toward the Y denominator.
+individually) but has reviewed the document still shows in the Reviewed list, labeled as outside
+the required roster (and tagged with the edition they reviewed if it isn't the current one); they
+never count toward the Y denominator. The compliance report PDF folds these reviewers in the same
+way.
 
 ## How to archive or restore a document (managers)
 

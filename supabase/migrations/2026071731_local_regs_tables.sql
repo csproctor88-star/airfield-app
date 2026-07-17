@@ -33,6 +33,8 @@
 --   -- expect 4 policies on local_regulations (select/insert/update/delete)
 --   -- expect 2 policies on local_regulation_reviews (select/insert only —
 --   --   NO update/delete rows should appear)
+--   SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename LIKE 'local_regulation%';
+--   -- expect BOTH local_regulations and local_regulation_reviews present
 -- ============================================================
 
 CREATE TABLE local_regulations (
@@ -125,5 +127,42 @@ CREATE POLICY "local_regulation_reviews_insert" ON local_regulation_reviews
     AND user_id = auth.uid()
     AND user_has_permission(auth.uid(), 'local_regs:view')
     AND version_at_review = (SELECT version FROM local_regulations WHERE id = regulation_id)
+    -- Pin base_id to the parent document's base so a multi-base user can't
+    -- tag a review with the wrong base_id (which would otherwise pass the
+    -- base-access + view checks against a base they legitimately belong to
+    -- while pointing at a regulation_id owned by a different base).
+    AND base_id = (SELECT base_id FROM local_regulations WHERE id = regulation_id)
   );
 -- No UPDATE/DELETE policies — reviews are immutable (CASCADE on doc delete).
+
+-- ============================================================
+-- Realtime publication membership.
+--
+-- useSidebarBadgeCounts + the Base Regs tab subscribe to postgres_changes
+-- on both tables so the due-count dot / chip clears within seconds of a
+-- review or replace. Without publication membership those subscriptions
+-- fire never and the 60s polling fallback silently carries the module
+-- forever. Idempotent guard (pg_publication_tables) so a re-apply is a
+-- no-op — plain `ALTER PUBLICATION ... ADD TABLE` errors if already added.
+-- ============================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'local_regulations'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.local_regulations;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'local_regulation_reviews'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.local_regulation_reviews;
+  END IF;
+END $$;

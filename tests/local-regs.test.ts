@@ -151,7 +151,7 @@ describe('partitionCompliance', () => {
     ]
     const { reviewed, outstanding } = partitionCompliance(reg, roster, reviews, NOW)
     expect(Array.from(reviewed.keys())).toEqual(['u1'])
-    expect(reviewed.get('u1')).toEqual({ reviewed_at: reviews[0].reviewed_at, initials: 'AB' })
+    expect(reviewed.get('u1')).toEqual({ reviewed_at: reviews[0].reviewed_at, initials: 'AB', version_at_review: 1 })
     expect(outstanding.sort()).toEqual(['u2', 'u3'])
   })
 
@@ -172,11 +172,26 @@ describe('partitionCompliance', () => {
     ]
     const { reviewed, outstanding } = partitionCompliance(reg, roster, reviews, NOW)
     expect(reviewed.has('outsider')).toBe(true)
-    expect(reviewed.get('outsider')).toEqual({ reviewed_at: reviews[1].reviewed_at, initials: 'XY' })
+    expect(reviewed.get('outsider')).toEqual({ reviewed_at: reviews[1].reviewed_at, initials: 'XY', version_at_review: 1 })
     // The Y denominator stays the roster's size — 'outsider' never appears
     // in outstanding, and outstanding is still exactly roster minus u1.
     expect(outstanding.sort()).toEqual(['u2', 'u3'])
     expect(roster).toHaveLength(3) // roster itself is untouched
+  })
+
+  it('an out-of-roster fold-in carries version_at_review even when it lags the live edition', () => {
+    // Doc is now v3; the outsider reviewed v1. They still fold into `reviewed`
+    // (out-of-roster fold-ins ignore currency), and the partition preserves the
+    // stale version so both the panel and the PDF can tag it "(edition v1)".
+    const reviews = [
+      { user_id: 'outsider', reviewed_at: daysAgo(2), version_at_review: 1, initials_snapshot: 'XY' },
+    ]
+    const { reviewed, outstanding } = partitionCompliance(
+      { version: 3, review_interval: 'monthly' }, roster, reviews, NOW,
+    )
+    expect(reviewed.get('outsider')).toEqual({ reviewed_at: reviews[0].reviewed_at, initials: 'XY', version_at_review: 1 })
+    // Still never inflates the roster or the outstanding list.
+    expect(outstanding.sort()).toEqual(['u1', 'u2', 'u3'])
   })
 
   it('only the latest review per user is considered for one reg', () => {
@@ -235,6 +250,43 @@ describe('generateLocalRegsReviewPdf', () => {
     })
     expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1)
     expect(filename).toMatch(/\.pdf$/)
+  })
+
+  it('folds archived docs into an Archived (history) section without moving the active stat counts', async () => {
+    const { generateLocalRegsReviewPdf } = await import('@/lib/local-regs-review-pdf')
+    // 1 active reg, 2 reviewers, only u1 current → active stat box reads
+    // "Fully current 0/1". `doc.output()` is safe to substring-search because
+    // createPdf builds jsPDF with no compression (plain text operators).
+    const activeReg = {
+      id: 'reg-1', base_id: 'base-1', title: 'Local OI 13-204 Airfield Operations',
+      description: null, storage_path: 'x', file_name: 'oi.pdf', mime_type: 'application/pdf',
+      file_size_bytes: 1024, version: 2, review_interval: 'monthly' as const, is_archived: false,
+      created_by: null, created_at: daysAgo(60), updated_at: daysAgo(1),
+    }
+    const archivedReg = {
+      ...activeReg, id: 'reg-2', title: 'ArchivedDoc99', version: 1, is_archived: true,
+      storage_path: 'y', file_name: 'old.pdf',
+    }
+    const reviewers = [
+      { user_id: 'u1', name: 'Snuffy', rank: 'SSgt', operating_initials: 'JS', role: 'airfield_manager' },
+      { user_id: 'u2', name: 'Doe', rank: 'A1C', operating_initials: null, role: 'amops' },
+    ]
+    const reviews = [
+      { id: 'r1', base_id: 'base-1', regulation_id: 'reg-1', user_id: 'u1', reviewed_at: daysAgo(1), version_at_review: 2, initials_snapshot: 'JS', created_at: daysAgo(1) },
+    ]
+    const { doc } = await generateLocalRegsReviewPdf({
+      baseName: 'Example AFB', baseIcao: 'KXYZ',
+      regs: [activeReg], archivedRegs: [archivedReg], reviewers, reviews,
+      generatedAtIso: '2026-07-17T15:00:00Z',
+    })
+    const raw = doc.output()
+    // The archived doc renders (in its own history section) with the count note.
+    expect(raw).toContain('ArchivedDoc99')
+    expect(raw).toContain('Archived documents included for history: 1')
+    // Stat box denominator counts ACTIVE regs only (1), unmoved by the archived
+    // doc — a leak would make it "0/2". Per-doc lines only ever read "*/2"
+    // (2 reviewers), so "0/1" is unique to the active stat box.
+    expect(raw).toContain('0/1')
   })
 })
 
@@ -298,6 +350,21 @@ describe('local_regs RLS guard (static — migration SQL, not the live DB)', () 
     expect(insertPolicy).toMatch(
       /version_at_review\s*=\s*\(\s*SELECT\s+version\s+FROM\s+local_regulations\s+WHERE\s+id\s*=\s*regulation_id\s*\)/,
     )
+  })
+
+  it('the reviews insert policy pins base_id to the parent document (no cross-base tagging)', () => {
+    const insertPolicy = tablesSql.match(/CREATE POLICY "local_regulation_reviews_insert"[\s\S]*?;/)?.[0] ?? ''
+    expect(insertPolicy).toMatch(
+      /base_id\s*=\s*\(\s*SELECT\s+base_id\s+FROM\s+local_regulations\s+WHERE\s+id\s*=\s*regulation_id\s*\)/,
+    )
+  })
+
+  it('both local_regulations* tables are added to the supabase_realtime publication (idempotent guard)', () => {
+    // Post-apply realtime must fire, or the sidebar dot / chip rides polling
+    // forever. Guarded by pg_publication_tables so a re-apply is a no-op.
+    expect(tablesSql).toContain('pg_publication_tables')
+    expect(tablesSql).toMatch(/ALTER PUBLICATION supabase_realtime ADD TABLE public\.local_regulations\b/)
+    expect(tablesSql).toContain('ALTER PUBLICATION supabase_realtime ADD TABLE public.local_regulation_reviews')
   })
 
   it('storage policies gate read on local_regs:view, insert/delete on local_regs:manage, scoped by base access', () => {

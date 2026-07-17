@@ -164,12 +164,21 @@ export async function fetchDueLocalRegCount(baseId: string): Promise<number> {
   return computeDueRegIds(regs, reviews).length
 }
 
-/** Signed URL for viewing a stored PDF (bucket is private). */
-export async function getLocalRegUrl(storagePath: string): Promise<string | null> {
+/**
+ * Signed URL for viewing a stored PDF (bucket is private). Returns the error
+ * message alongside the URL so the caller can tell a superseded storage path
+ * (the object was removed by a replace — "Object not found") apart from a
+ * transient failure and message the user accordingly.
+ */
+export async function getLocalRegUrl(
+  storagePath: string,
+): Promise<{ url: string | null; error: string | null }> {
   const supabase = db()
-  if (!supabase) return null
-  const { data } = await supabase.storage.from(LOCAL_REGS_BUCKET).createSignedUrl(storagePath, 60 * 5)
-  return data?.signedUrl ?? null
+  if (!supabase) return { url: null, error: 'Supabase not configured' }
+  const { data, error } = await supabase.storage.from(LOCAL_REGS_BUCKET).createSignedUrl(storagePath, 60 * 5)
+  const url = data?.signedUrl ?? null
+  if (url) return { url, error: null }
+  return { url: null, error: error?.message ?? 'Could not generate a download link' }
 }
 
 // ── Writes ──────────────────────────────────────────────────

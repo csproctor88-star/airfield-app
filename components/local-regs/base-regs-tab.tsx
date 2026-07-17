@@ -21,7 +21,7 @@ import {
   type LocalRegulationRow, type LocalRegReviewRow, type LocalRegReviewer,
 } from '@/lib/supabase/local-regulations'
 import { getRegReviewStatus, partitionCompliance, type RegReviewState } from '@/lib/local-regs/review-status'
-import { getWriteQueue } from '@/lib/sync/write-queue'
+import { getWriteQueue, WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 import type { LocalRegReviewPayload, LocalRegReviewResult } from '@/lib/sync/handlers'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
@@ -46,6 +46,30 @@ function intervalLabel(i: ReviewInterval): string {
 function displayName(r: Pick<LocalRegReviewer, 'name' | 'rank'>): string {
   return r.rank ? `${r.rank} ${r.name}` : r.name
 }
+
+// Conservative check: does this CRUD/queue error message look like the doc
+// was superseded out from under the user? The version-equality WITH CHECK on
+// local_regulation_reviews_insert surfaces as an RLS violation, which
+// friendlyError() collapses to the generic "You do not have permission…"
+// text; a signed-URL failure on a replaced storage object reads "Object not
+// found". A viewer on the Base Regs tab already holds local_regs:view (they
+// can see the row), so a permission/RLS/not-found error there is almost
+// always a stale edition, not a real authorization gap. Anything else (e.g. a
+// network error) falls through to the generic message.
+function isLikelyStaleEditionError(message: string | null | undefined): boolean {
+  if (!message) return false
+  const m = message.toLowerCase()
+  return (
+    m.includes('permission') ||
+    m.includes('row-level security') ||
+    m.includes('violates') ||
+    m.includes('policy') ||
+    m.includes('not found')
+  )
+}
+
+const STALE_EDITION_MSG =
+  'This document was updated to a new edition — open and review the current version.'
 
 // Amber / danger metadata for the not-current review states.
 const STATE_META: Record<Exclude<RegReviewState, 'current'>, { label: string; danger: boolean }> = {
@@ -117,6 +141,19 @@ export function BaseRegsTab() {
   }, [installationId, canManage])
   useEffect(() => { load() }, [load])
 
+  // House pattern (see app/(app)/fpr/page.tsx): when a queued local_reg_review
+  // commits at drain, its optimistic UI can't reflect the server row — reload
+  // so the just-committed review flips the row to green. Filtered to our
+  // write type so unrelated commits don't churn this list.
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (detail?.type === 'local_reg_review') load()
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
+  }, [load])
+
   // Latest review per reg for the current user (drives the per-row status pill).
   const myLatestByReg = useMemo(() => {
     const m = new Map<string, LocalRegReviewRow>()
@@ -139,8 +176,20 @@ export function BaseRegsTab() {
   const archived = regs.filter(r => r.is_archived)
 
   const open = async (r: LocalRegulationRow) => {
-    const url = await getLocalRegUrl(r.storage_path)
-    if (!url) { toast.error('Could not generate a download link'); return }
+    const { url, error } = await getLocalRegUrl(r.storage_path)
+    if (!url) {
+      // A null URL for a doc the user can see most often means the stored
+      // object was superseded by a replace since this row loaded — refresh so
+      // the row picks up the new edition/path, and say so plainly instead of
+      // the generic "download link" failure.
+      if (isLikelyStaleEditionError(error)) {
+        toast.error(STALE_EDITION_MSG)
+        await load()
+      } else {
+        toast.error('Could not generate a download link')
+      }
+      return
+    }
     // Mark opened this session — enables the soft-gated "Mark reviewed" button.
     setOpenedDocs(prev => new Set(prev).add(r.id))
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -168,7 +217,17 @@ export function BaseRegsTab() {
       window.dispatchEvent(new Event('glidepath:badges-refresh'))
       await load()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not record your review')
+      const msg = e instanceof Error ? e.message : ''
+      // The version-equality RLS rejection (doc replaced since the user
+      // opened it) reaches here as a NonRetriableError whose message
+      // friendlyError already flattened to "You do not have permission…".
+      // Surface the honest cause and refresh so the row flips to Updated.
+      if (isLikelyStaleEditionError(msg)) {
+        toast.error(STALE_EDITION_MSG)
+        await load()
+      } else {
+        toast.error(msg || 'Could not record your review')
+      }
     } finally {
       setAttestingId(null)
     }
@@ -205,8 +264,15 @@ export function BaseRegsTab() {
   const complianceFor = useCallback((reg: LocalRegulationRow) => {
     const reviewsForReg = allReviews.filter(rev => rev.regulation_id === reg.id)
     const { reviewed, outstanding } = partitionCompliance(reg, reviewers, reviewsForReg)
+    const rosterIds = new Set(reviewers.map(rv => rv.user_id))
     const reviewedRoster = reviewers.filter(rv => reviewed.has(rv.user_id))
-    return { reviewed, outstanding, reviewedRoster, total: reviewers.length }
+    // Out-of-roster reviewers folded into `reviewed` (e.g. a per-user view
+    // grant) — the PDF renders these as extra rows; mirror them in the panel
+    // so the two surfaces agree. Never counted in X/Y.
+    const foldIns = Array.from(reviewed.entries())
+      .filter(([uid]) => !rosterIds.has(uid))
+      .map(([user_id, info]) => ({ user_id, ...info }))
+    return { reviewed, outstanding, reviewedRoster, foldIns, total: reviewers.length, version: reg.version }
   }, [allReviews, reviewers])
 
   // ── Compliance report (manager) — same reviewed/outstanding partition as
@@ -219,6 +285,7 @@ export function BaseRegsTab() {
         baseName: currentInstallation?.name,
         baseIcao: currentInstallation?.icao,
         regs: active,
+        archivedRegs: archived,
         reviewers,
         reviews: allReviews,
         generatedAtIso: new Date().toISOString(),
@@ -533,11 +600,18 @@ function ComplianceChip({ reviewed, total }: { reviewed: number; total: number }
   )
 }
 
+type ComplianceFoldIn = { user_id: string; reviewed_at: string; initials: string | null; version_at_review: number }
+
 type ComplianceData = {
-  reviewed: Map<string, { reviewed_at: string; initials: string | null }>
+  reviewed: Map<string, { reviewed_at: string; initials: string | null; version_at_review: number }>
   outstanding: string[]
   reviewedRoster: LocalRegReviewer[]
+  /** Reviewers who attested but aren't on the required roster — shown for
+   *  parity with the PDF, never counted toward X/Y. */
+  foldIns: ComplianceFoldIn[]
   total: number
+  /** Live document version — fold-ins whose edition lags it get a "(edition v{n})" tag. */
+  version: number
 }
 
 function CompliancePanel({ comp, reviewerById }: {
@@ -550,7 +624,7 @@ function CompliancePanel({ comp, reviewerById }: {
         <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-success)', marginBottom: 6 }}>
           Reviewed this cycle ({comp.reviewedRoster.length})
         </div>
-        {comp.reviewedRoster.length === 0 ? (
+        {comp.reviewedRoster.length === 0 && comp.foldIns.length === 0 ? (
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>None yet.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -560,6 +634,18 @@ function CompliancePanel({ comp, reviewerById }: {
               return (
                 <div key={rv.user_id} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)' }}>
                   {displayName(rv)}{initials ? ` (${initials})` : ''} · {info.reviewed_at.slice(0, 10)}
+                </div>
+              )
+            })}
+            {/* Out-of-roster fold-ins — same rows the PDF folds in. Labeled,
+                excluded from X/Y, and edition-tagged when the reviewed version
+                lags the live doc. */}
+            {comp.foldIns.map(f => {
+              const stale = f.version_at_review < comp.version
+              return (
+                <div key={f.user_id} style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontStyle: 'italic' }}>
+                  Reviewer outside required roster{f.initials ? ` (${f.initials})` : ''} · {f.reviewed_at.slice(0, 10)}
+                  {stale ? ` (edition v${f.version_at_review})` : ''}
                 </div>
               )
             })}

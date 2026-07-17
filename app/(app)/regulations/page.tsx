@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { BaseRegsTab } from '@/components/local-regs/base-regs-tab'
 import { fetchLocalRegs, fetchMyRegReviews } from '@/lib/supabase/local-regulations'
 import { computeDueRegIds } from '@/lib/local-regs/review-status'
+import { WRITE_COMMITTED_EVENT, type WriteCommittedDetail } from '@/lib/sync/write-queue'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -95,6 +96,17 @@ export default function RegulationsPage() {
     const handler = () => refreshDue()
     window.addEventListener('glidepath:badges-refresh', handler)
     return () => window.removeEventListener('glidepath:badges-refresh', handler)
+  }, [refreshDue])
+  // Same house pattern as BaseRegsTab: a queued local_reg_review that commits
+  // at drain decrements the chip via WRITE_COMMITTED_EVENT (badges-refresh only
+  // fires on the online path).
+  useEffect(() => {
+    const onCommit = (e: Event) => {
+      const detail = (e as CustomEvent<WriteCommittedDetail>).detail
+      if (detail?.type === 'local_reg_review') refreshDue()
+    }
+    window.addEventListener(WRITE_COMMITTED_EVENT, onCommit)
+    return () => window.removeEventListener(WRITE_COMMITTED_EVENT, onCommit)
   }, [refreshDue])
 
   // Deep link: honor ?tab=base-regs once, after gating resolves. Parse

@@ -24,8 +24,12 @@ export interface LocalRegsReviewPdfInput {
   baseName?: string | null
   baseIcao?: string | null
   /** Active (non-archived) regulations — caller filters, same convention as
-   *  ReadFileReviewPdfInput.files. */
+   *  ReadFileReviewPdfInput.files. Drives the summary stat box. */
   regs: LocalRegulationRow[]
+  /** Archived regulations, rendered in a separate "Archived (history)"
+   *  section after the active docs. Excluded from the stat box — archived
+   *  docs are history, not live compliance. Optional (defaults to none). */
+  archivedRegs?: LocalRegulationRow[]
   /** Required-reviewer roster — the compliance "Y" denominator. */
   reviewers: LocalRegReviewer[]
   /** All reviews at the base (every reg, every version, every user) — reduced
@@ -50,6 +54,7 @@ export async function generateLocalRegsReviewPdf(
   input: LocalRegsReviewPdfInput,
 ): Promise<{ doc: jsPDF; filename: string }> {
   const { baseName, baseIcao, regs, reviewers, reviews, generatedAtIso } = input
+  const archivedRegs = input.archivedRegs ?? []
   const ctx = createPdf({ orientation: 'portrait', format: 'letter' })
   const doc = ctx.doc
 
@@ -62,6 +67,8 @@ export async function generateLocalRegsReviewPdf(
   // Summary: active regulations, required reviewers, # with no outstanding
   // reviewer this cycle (the same "fully current" gate the Base Regs tab's
   // ComplianceChip uses per document, rolled up here across all documents).
+  // Archived docs are deliberately excluded — they're history, not live
+  // compliance — so they never move any of these three numbers.
   const fullyCurrent = regs.filter(reg => {
     const reviewsForReg = reviews.filter(rv => rv.regulation_id === reg.id)
     const { outstanding } = partitionCompliance(reg, reviewers, reviewsForReg)
@@ -73,15 +80,28 @@ export async function generateLocalRegsReviewPdf(
     { label: 'Fully current', value: `${fullyCurrent}/${regs.length}` },
   ])
 
+  // Make explicit that archived docs are appended below but sit outside the
+  // stats above — so a reader can't mistake the history section for a gap.
+  if (archivedRegs.length > 0) {
+    doc.setFontSize(8)
+    doc.setTextColor(120)
+    doc.text(s(`Archived documents included for history: ${archivedRegs.length}`), ctx.margin, y + 2)
+    y += 6
+  }
+
   if (regs.length === 0) {
     doc.setFontSize(10)
     doc.setTextColor(120)
     doc.text(s('No active local regulations at this base.'), ctx.margin, y + 4)
+    y += 10
   }
 
   const reviewerById = new Map(reviewers.map(r => [r.user_id, r]))
 
-  for (const reg of regs) {
+  // One document's roster table + per-doc summary line. Shared by the active
+  // loop and the archived (history) section so the two never drift in layout.
+  // Returns the advanced y cursor.
+  const renderRegTable = (reg: LocalRegulationRow, startY: number): number => {
     const reviewsForReg = reviews.filter(rv => rv.regulation_id === reg.id)
     const { reviewed, outstanding } = partitionCompliance(reg, reviewers, reviewsForReg)
 
@@ -94,9 +114,16 @@ export async function generateLocalRegsReviewPdf(
     const rows: string[][] = []
     for (const [userId, info] of Array.from(reviewed.entries())) {
       const rv = reviewerById.get(userId)
+      const isFoldIn = !rv
+      // Out-of-roster fold-ins may have attested an older edition (they're
+      // folded in regardless of currency). Annotate the edition when it lags
+      // the live version so the reader sees it isn't a current-edition review.
+      const editionSuffix = isFoldIn && info.version_at_review < reg.version
+        ? ` (edition v${info.version_at_review})`
+        : ''
       const name = rv ? reviewerLabel(rv) : 'Reviewer outside required roster'
       const dateLabel = formatZuluDate(info.reviewed_at)
-      rows.push([s(name), s(`Reviewed (${info.initials ?? '—'} · ${dateLabel})`)])
+      rows.push([s(name + editionSuffix), s(`Reviewed (${info.initials ?? '—'} · ${dateLabel})`)])
     }
     for (const userId of outstanding) {
       const rv = reviewerById.get(userId)
@@ -105,7 +132,7 @@ export async function generateLocalRegsReviewPdf(
 
     autoTable(doc, {
       ...tableStyles(ctx),
-      startY: y + 6,
+      startY: startY + 6,
       head: [[
         s(`${reg.title}  (v${reg.version})`),
         s(`${intervalLabel(reg.review_interval)} · Updated ${formatZuluDate(reg.updated_at)}`),
@@ -121,13 +148,38 @@ export async function generateLocalRegsReviewPdf(
       },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    y = (doc as any).lastAutoTable.finalY + 4
+    let ny = (doc as any).lastAutoTable.finalY + 4
 
     // Per-doc summary line — matches the tab's "Reviewed X/Y this cycle" chip.
     doc.setFontSize(8)
     doc.setTextColor(90)
-    doc.text(s(`Reviewed ${reviewedRosterCount}/${reviewers.length} this cycle`), ctx.margin, y + 3)
-    y += 9
+    doc.text(s(`Reviewed ${reviewedRosterCount}/${reviewers.length} this cycle`), ctx.margin, ny + 3)
+    ny += 9
+    return ny
+  }
+
+  for (const reg of regs) {
+    y = renderRegTable(reg, y)
+  }
+
+  // Archived (history) — same per-doc layout, clearly headed, kept out of the
+  // stat box above. The confirm dialog and the manual both promise archived
+  // docs stay in the compliance report's history, so the report must show them.
+  if (archivedRegs.length > 0) {
+    doc.setFontSize(12)
+    doc.setTextColor(60)
+    doc.text(s('Archived (history)'), ctx.margin, y + 8)
+    y += 11
+    doc.setFontSize(8)
+    doc.setTextColor(120)
+    doc.text(
+      s('Retained for history only — excluded from the active-compliance summary above.'),
+      ctx.margin, y + 2,
+    )
+    y += 5
+    for (const reg of archivedRegs) {
+      y = renderRegTable(reg, y)
+    }
   }
 
   drawFooter(ctx)

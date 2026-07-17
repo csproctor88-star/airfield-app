@@ -104,8 +104,14 @@ export function computeDueRegIds(
 }
 
 export interface CompliancePartition {
-  /** user_id -> { reviewed_at, initials } for the current cycle. */
-  reviewed: Map<string, { reviewed_at: string; initials: string | null }>
+  /**
+   * user_id -> { reviewed_at, initials, version_at_review } for the current
+   * cycle. `version_at_review` is the document edition the reviewer attested;
+   * for out-of-roster fold-ins it may lag the live version (they're folded in
+   * regardless of currency), which both the panel and the PDF annotate as
+   * "(edition v{n})".
+   */
+  reviewed: Map<string, { reviewed_at: string; initials: string | null; version_at_review: number }>
   /** user_ids from the roster with no current-cycle review. */
   outstanding: string[]
 }
@@ -133,14 +139,14 @@ export function partitionCompliance(
   const latestByUser = latestByKey(reviewsForReg, (r) => r.user_id)
   const rosterIds = new Set(roster.map((r) => r.user_id))
 
-  const reviewed = new Map<string, { reviewed_at: string; initials: string | null }>()
+  const reviewed = new Map<string, { reviewed_at: string; initials: string | null; version_at_review: number }>()
   const outstanding: string[] = []
 
   for (const userId of rosterIds) {
     const latest = latestByUser.get(userId) ?? null
     const { state } = getRegReviewStatus(reg, latest, now)
     if (state === 'current' && latest) {
-      reviewed.set(userId, { reviewed_at: latest.reviewed_at, initials: latest.initials_snapshot ?? null })
+      reviewed.set(userId, { reviewed_at: latest.reviewed_at, initials: latest.initials_snapshot ?? null, version_at_review: latest.version_at_review })
     } else {
       outstanding.push(userId)
     }
@@ -148,7 +154,7 @@ export function partitionCompliance(
 
   for (const [userId, latest] of Array.from(latestByUser.entries())) {
     if (rosterIds.has(userId)) continue
-    reviewed.set(userId, { reviewed_at: latest.reviewed_at, initials: latest.initials_snapshot ?? null })
+    reviewed.set(userId, { reviewed_at: latest.reviewed_at, initials: latest.initials_snapshot ?? null, version_at_review: latest.version_at_review })
   }
 
   return { reviewed, outstanding }

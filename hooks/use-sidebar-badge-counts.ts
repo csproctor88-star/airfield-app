@@ -55,6 +55,14 @@ export function useSidebarBadgeCounts() {
   // Derived as a boolean so the refresh callback's dep stays stable even if
   // the enabledModules array identity churns across renders.
   const localRegsEnabled = enabledModules.includes('local_regs')
+  // Same double gate the badge count uses, reused to decide whether the
+  // realtime channel attaches its two local_regs bindings. Between promote
+  // and migration-apply the local_regulations* tables don't exist yet;
+  // attaching a postgres_changes binding to a missing table errors the WHOLE
+  // shared sidebar-badges channel, degrading every module's badge realtime.
+  // Kept a primitive boolean so the realtime effect's dep only flips when the
+  // gate actually changes.
+  const localRegsRealtime = localRegsEnabled && has(PERM.LOCAL_REGS_VIEW)
 
   const [pprTriage, setPprTriage] = useState(0)
   const [pprApproval, setPprApproval] = useState(0)
@@ -202,27 +210,39 @@ export function useSidebarBadgeCounts() {
         { event: '*', schema: 'public', table: 'read_file_acknowledgments', filter: `base_id=eq.${installationId}` },
         () => refresh(),
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'local_regulations', filter: `base_id=eq.${installationId}` },
-        () => refresh(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'local_regulation_reviews', filter: `base_id=eq.${installationId}` },
-        () => refresh(),
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[sidebar-badge] realtime channel', status,
-            '— polling fallback will keep counts current')
-        }
-      })
+
+    // Local Regs bindings are gated on the same double gate as the count.
+    // The local_regulations* tables are staged-only migrations; before they
+    // exist a binding to them errors the entire channel above (dropping every
+    // other module's badge realtime), so only attach when the module is
+    // enabled AND the user can view it. `refresh` (and localRegsRealtime)
+    // change when the gate flips, so this effect tears down and rebuilds the
+    // channel with the bindings added/removed as appropriate.
+    if (localRegsRealtime) {
+      channel
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'local_regulations', filter: `base_id=eq.${installationId}` },
+          () => refresh(),
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'local_regulation_reviews', filter: `base_id=eq.${installationId}` },
+          () => refresh(),
+        )
+    }
+
+    channel.subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[sidebar-badge] realtime channel', status,
+          '— polling fallback will keep counts current')
+      }
+    })
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [installationId, refresh])
+  }, [installationId, refresh, localRegsRealtime])
 
   // Action bridge. Mutation handlers (approve/deny/triage/coordinate
   // on /ppr) dispatch `glidepath:badges-refresh` after they succeed,
