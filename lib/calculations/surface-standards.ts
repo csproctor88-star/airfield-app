@@ -71,18 +71,42 @@ export const SURFACE_SET_LABELS: Record<SurfaceSet, string> = {
   faa_part77: 'FAA Part 77 (14 CFR §77.19)',
 }
 
+/** Normalize a raw runway_class value to a valid UfcRunwayClass. NULL/
+ *  undefined and any unrecognized value fall back to Class B — matching the
+ *  engine's historical default. Single source of truth for that fallback;
+ *  `ufcStandardIdForClass` and `deriveRunwayClassFromRunways` both read
+ *  through this rather than duplicating the normalization. */
+function normalizeUfcRunwayClass(runwayClass: string | null | undefined): UfcRunwayClass {
+  return runwayClass === 'A' || runwayClass === 'Army_B' ? runwayClass : 'B'
+}
+
 /** Map a UFC runway class to its standard id, deriving from the options table
  *  (single source of truth). NULL/undefined and any unrecognized class fall
  *  back to Class B — matching the engine's historical default. */
 function ufcStandardIdForClass(runwayClass: string | null | undefined): SurfaceStandardId {
-  const normalized: UfcRunwayClass =
-    runwayClass === 'A' || runwayClass === 'Army_B' ? runwayClass : 'B'
+  const normalized = normalizeUfcRunwayClass(runwayClass)
   const found = SURFACE_STANDARD_IDS.find(
     (id) =>
       SURFACE_STANDARD_OPTIONS[id].set === 'ufc_3_260_01' &&
       SURFACE_STANDARD_OPTIONS[id].runwayClass === normalized,
   )
   return found ?? 'af_class_b'
+}
+
+/**
+ * Derive a single UFC runway class from a base's runway list — used where an
+ * evaluation needs exactly one class (the engine takes one class per call,
+ * not per-runway). Takes the FIRST runway's class when it's a recognized
+ * value ('A' | 'B' | 'Army_B'); NULL/unknown values — including an empty
+ * list — fall back to Class B. When runways disagree (mixed classes), the
+ * first runway's class wins: this is documented behavior, not a bug — a
+ * multi-runway base's "effective class" always follows its first configured
+ * runway unless the operator picks an explicit standard via the picker.
+ */
+export function deriveRunwayClassFromRunways(
+  classes: (string | null | undefined)[],
+): UfcRunwayClass {
+  return normalizeUfcRunwayClass(classes[0])
 }
 
 /**

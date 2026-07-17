@@ -147,6 +147,10 @@ export async function updateObstructionEvaluation(
     // When the user re-evaluates with a different surface set, persist
     // it so the detail page legend matches the new results.
     surface_set?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14' | null
+    // The evaluated UFC class (NULL under faa_part77). Written on every
+    // re-save so an edit never silently reclassifies a row under a
+    // different class than what actually produced its saved results.
+    runway_class?: 'A' | 'B' | 'Army_B' | null
   },
 ): Promise<{ data: ObstructionRow | null; error: string | null }> {
   const supabase = createClient()

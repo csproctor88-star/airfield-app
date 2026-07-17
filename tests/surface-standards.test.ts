@@ -6,6 +6,7 @@ import {
   SURFACE_SET_REGISTRY,
   resolveStandard,
   resolveStandardLabel,
+  deriveRunwayClassFromRunways,
   buildUfcSurfacePolygons,
 } from '@/lib/calculations/surface-standards'
 import {
@@ -118,6 +119,36 @@ describe('resolveStandardLabel', () => {
   it('Part 77 label', () => {
     expect(resolveStandardLabel('faa_part77', null)).toBe('FAA Part 77 (14 CFR §77.19)')
     expect(resolveStandardLabel('faa_part77', 'B')).toBe('FAA Part 77 (14 CFR §77.19)')
+  })
+})
+
+// ── 3b. deriveRunwayClassFromRunways ─────────────────────────────────────────
+// SSE Task 6 — the pure helper that replaces the :94 collapse bug (a stored
+// 'A' silently degrading to 'B'). First runway's class wins; NULL/unknown
+// and empty lists fall back to Class B.
+
+describe('deriveRunwayClassFromRunways', () => {
+  it('honors a stored Class A (the collapse-bug regression)', () => {
+    expect(deriveRunwayClassFromRunways(['A'])).toBe('A')
+    expect(deriveRunwayClassFromRunways(['A', 'A'])).toBe('A')
+  })
+  it('honors a stored Army_B', () => {
+    expect(deriveRunwayClassFromRunways(['Army_B'])).toBe('Army_B')
+  })
+  it('NULL/undefined → B', () => {
+    expect(deriveRunwayClassFromRunways([null])).toBe('B')
+    expect(deriveRunwayClassFromRunways([undefined])).toBe('B')
+  })
+  it('unrecognized value → B', () => {
+    expect(deriveRunwayClassFromRunways(['bogus'])).toBe('B')
+  })
+  it('mixed classes → first runway wins', () => {
+    expect(deriveRunwayClassFromRunways(['A', 'B'])).toBe('A')
+    expect(deriveRunwayClassFromRunways(['Army_B', 'A'])).toBe('Army_B')
+    expect(deriveRunwayClassFromRunways([null, 'A'])).toBe('B')
+  })
+  it('empty list → B', () => {
+    expect(deriveRunwayClassFromRunways([])).toBe('B')
   })
 })
 

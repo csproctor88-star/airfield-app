@@ -26,6 +26,14 @@ import {
   type SurfaceSet,
 } from '@/lib/calculations/obstructions'
 import { getSurfaceSet, isCivilian } from '@/lib/airport-mode'
+import {
+  SURFACE_STANDARD_IDS,
+  SURFACE_STANDARD_OPTIONS,
+  resolveStandard,
+  deriveRunwayClassFromRunways,
+  type SurfaceStandardId,
+  type UfcRunwayClass,
+} from '@/lib/calculations/surface-standards'
 import { fetchTaxiways } from '@/lib/supabase/taxiways'
 import { fetchElevation } from '@/lib/calculations/geometry'
 import {
@@ -90,11 +98,6 @@ function ObstructionsContent() {
   // Airfield elevation from base config
   const airfieldElevMSL = currentInstallation?.elevation_msl ?? 580
 
-  // Runway class from base runway config
-  const runwayClass: 'B' | 'Army_B' = runways.length > 0
-    ? ((runways[0].runway_class === 'Army_B' ? 'Army_B' : 'B') as 'B' | 'Army_B')
-    : 'B'
-
   // Edit mode
   const editId = searchParams.get('edit')
 
@@ -149,21 +152,56 @@ function ObstructionsContent() {
   // GPS location state
   const [flyToPoint, setFlyToPoint] = useState<LatLon | null>(null)
 
-  // Surface set selection — defaults per base mode (UFC for USAF,
-  // Part 77 for civilian). User can override per-evaluation.
-  // In edit mode the loaded row's pinned surface_set is authoritative
-  // (restored by the loadExisting effect below), so never reseed from
-  // the installation: on a cold deep-link load, currentInstallation
-  // resolves asynchronously — often AFTER loadExisting has pinned the
-  // row's set — and an unguarded re-fire would silently revert the
-  // state to the base default (desyncing header/map/picker from the
-  // computed analysis, and letting a later save overwrite the row's
-  // pinned surface_set). Reseeds as before once edit mode is left.
-  const [surfaceSet, setSurfaceSet] = useState<SurfaceSet>(() => getSurfaceSet(currentInstallation))
+  // Obstruction standard selection — four user-selectable standards (AF
+  // Class A/B, Army Class B, FAA Part 77) over the registry's two engine
+  // sets. `standardOverride` is the ONLY piece of state: null means "follow
+  // base config" (the base's configured surface set + the derived class
+  // from its runways); a picker click or the edit-load pin (below) sets an
+  // explicit id. surfaceSet/runwayClass are DERIVED from it below on every
+  // render — never separate state — so they can never drift out of sync
+  // with each other or with the picker's active card.
+  //
+  // In edit mode the loaded row's pinned (surface_set, runway_class) pair
+  // is authoritative (restored by the loadExisting effect below), so never
+  // reseed from the installation: on a cold deep-link load,
+  // currentInstallation resolves asynchronously — often AFTER loadExisting
+  // has pinned the row's standard — and an unguarded re-fire would silently
+  // revert the override to null (desyncing header/map/picker from the
+  // computed analysis, and letting a later save overwrite the row's pinned
+  // pair). Resets to null ("follow base") as before once edit mode is left
+  // or the installation changes.
+  const [standardOverride, setStandardOverride] = useState<SurfaceStandardId | null>(null)
   useEffect(() => {
     if (editId) return
-    setSurfaceSet(getSurfaceSet(currentInstallation))
+    setStandardOverride(null)
   }, [currentInstallation, editId])
+
+  // Resolve a standard id into its working (surfaceSet, runwayClass) pair.
+  // Part 77's option carries a null class (irrelevant to its evaluation —
+  // its dimensions come from each runway's faa_approach_type, not a UFC
+  // class), so it falls back to the base's derived class — the same value
+  // the engine signature has always been passed in that case.
+  const pairForStandard = useCallback((id: SurfaceStandardId): { surfaceSet: SurfaceSet; runwayClass: UfcRunwayClass } => {
+    const opt = SURFACE_STANDARD_OPTIONS[id]
+    return {
+      surfaceSet: opt.set,
+      runwayClass: opt.runwayClass ?? deriveRunwayClassFromRunways(runways.map((r) => r.runway_class)),
+    }
+  }, [runways])
+
+  // Effective standard: an explicit override always wins; otherwise resolve
+  // from the base's configured surface set + its runways' UFC classes.
+  // 'mixed' (a UFC base with runways of disagreeing classes and no
+  // override) has no single id to highlight in the picker, so it falls
+  // through to the base-set + first-runway-class pair below — the same
+  // "first runway wins" rule deriveRunwayClassFromRunways documents.
+  const baseSurfaceSet = getSurfaceSet(currentInstallation)
+  const resolvedBaseStandard = resolveStandard(baseSurfaceSet, runways.map((r) => r.runway_class))
+  const effectiveStandardId: SurfaceStandardId | null =
+    standardOverride ?? (resolvedBaseStandard === 'mixed' ? null : resolvedBaseStandard)
+  const { surfaceSet, runwayClass } = effectiveStandardId
+    ? pairForStandard(effectiveStandardId)
+    : { surfaceSet: baseSurfaceSet, runwayClass: deriveRunwayClassFromRunways(runways.map((r) => r.runway_class)) }
 
   // Evaluation result — supports multi-runway
   const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
@@ -224,20 +262,31 @@ function ObstructionsContent() {
       if (existingPhotos.length) {
         setPhotos(existingPhotos.map((url) => ({ url })))
       }
-      // Restore the surface set this row was evaluated under (pinned at
-      // save time) so the header, map overlay, and the re-run below all
-      // match the saved results — not the page's current default. Legacy
-      // rows (NULL surface_set) fall back to the base's current default,
-      // same as the detail page's SurfaceSetLegend. Use this derived
-      // value directly below rather than the `surfaceSet` state variable,
-      // which won't reflect the setSurfaceSet call until the next render.
+      // Restore the (surface_set, runway_class) PAIR this row was evaluated
+      // under (pinned at save time) so the header, map overlay, and the
+      // re-run below all match the saved results — not the page's current
+      // default, and not the live-runways-derived class (the :94 collapse
+      // bug this task fixes — a stored Class A row must re-evaluate as
+      // Class A, not silently degrade to B). Legacy rows (NULL
+      // surface_set) fall back to the base's current default, same as the
+      // detail page's SurfaceSetLegend. Pin via standardOverride so the
+      // picker (disabled in edit mode) can't drift the pair mid-edit, and
+      // the eventual re-save writes back this exact pair. Use rowSurfaceSet/
+      // rowRunwayClass directly below rather than the surfaceSet/runwayClass
+      // consts, which won't reflect the setStandardOverride call until the
+      // next render.
       const rowSurfaceSet: SurfaceSet =
         (existing.surface_set as SurfaceSet | null | undefined) ?? getSurfaceSet(currentInstallation)
-      setSurfaceSet(rowSurfaceSet)
+      const pinnedStandard = resolveStandard(rowSurfaceSet, [existing.runway_class])
+      const resolvedPinnedStandard = pinnedStandard === 'mixed' ? null : pinnedStandard
+      setStandardOverride(resolvedPinnedStandard)
+      const rowRunwayClass: UfcRunwayClass = resolvedPinnedStandard
+        ? pairForStandard(resolvedPinnedStandard).runwayClass
+        : deriveRunwayClassFromRunways(runways.map((r) => r.runway_class))
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
         const allRwys = getAllRunways()
-        const surfaceName = identifySurface(point, allRwys, airfieldElevMSL, runwayClass, rowSurfaceSet)
+        const surfaceName = identifySurface(point, allRwys, airfieldElevMSL, rowRunwayClass, rowSurfaceSet)
         const groundElev = existing.object_elevation_msl ?? airfieldElevMSL
         const closest = findClosestRunway(point)
         const relation = pointToRunwayRelation(point, closest.geometry)
@@ -247,7 +296,7 @@ function ObstructionsContent() {
         const withinAD = allRwys.some(({ geometry, approachType }) => {
           const a = rowSurfaceSet === 'faa_part77'
             ? evaluateObstructionPart77(point, 0, null, geometry, airfieldElevMSL, approachType ?? undefined)
-            : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+            : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, rowRunwayClass)
           return a.surfaces.some((s) => s.surfaceKey === approachDepartureKey && s.isWithinBounds)
         })
         setPointInfo({
@@ -264,7 +313,7 @@ function ObstructionsContent() {
         })
         // Auto-run evaluation against all runways
         if (h > 0) {
-          const result = evaluateObstructionAllRunways(point, h, groundElev, allRwys, airfieldElevMSL, runwayClass, rowSurfaceSet)
+          const result = evaluateObstructionAllRunways(point, h, groundElev, allRwys, airfieldElevMSL, rowRunwayClass, rowSurfaceSet)
           setMultiAnalysis(result)
           if (taxiwayGeometries.length > 0) {
             setTaxiwayResults(evaluateObstructionTaxiways(point, taxiwayGeometries))
@@ -495,6 +544,18 @@ function ObstructionsContent() {
       })),
     )
 
+    // Pin the (surface_set, runway_class) pair that produced these results
+    // so the detail-page legend and label stay in sync even if admin later
+    // flips bases.obstruction_surface_set or the base's runway classes
+    // change. runway_class is NULL under faa_part77 — its dimensions come
+    // from each runway's faa_approach_type, not a UFC class, so a stored
+    // class would misrepresent a Part 77 evaluation as UFC-evaluated. Both
+    // branches below write this same pair (edit included) so a re-save
+    // never silently reclassifies a row under a different class than what
+    // actually produced its saved results.
+    const evaluationRunwayClass: 'A' | 'B' | 'Army_B' | null =
+      surfaceSet === 'ufc_3_260_01' ? runwayClass : null
+
     const evaluationPayload = {
       object_height_agl: multiAnalysis.obstructionHeightAGL,
       object_distance_ft: pointInfo.distFromCenterline,
@@ -514,10 +575,8 @@ function ObstructionsContent() {
       ),
       has_violation: multiAnalysis.hasViolation,
       notes: description || null,
-      // Pin the surface set that produced these results so the
-      // detail-page legend stays in sync even if admin later flips
-      // bases.obstruction_surface_set.
       surface_set: surfaceSet,
+      runway_class: evaluationRunwayClass,
     }
 
     let data, error
@@ -525,7 +584,6 @@ function ObstructionsContent() {
       ({ data, error } = await updateObstructionEvaluation(editId, evaluationPayload))
     } else {
       ({ data, error } = await createObstructionEvaluation({
-        runway_class: runwayClass,
         ...evaluationPayload,
         base_id: installationId,
       }))
@@ -608,6 +666,7 @@ function ObstructionsContent() {
           selectedPoint={pointInfo?.point ?? null}
           surfaceAtPoint={surfaceAtPoint}
           surfaceSet={surfaceSet}
+          runwayClass={runwayClass}
           flyToPoint={flyToPoint}
           taxiways={taxiwayGeometries.map(tw => ({
             id: tw.id,
@@ -830,18 +889,16 @@ function ObstructionsContent() {
             Surface Set
           </label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {([
-              { key: 'ufc_3_260_01' as SurfaceSet, label: 'UFC 3-260-01', sub: 'USAF airfields' },
-              { key: 'faa_part77' as SurfaceSet,   label: 'FAA Part 77',  sub: '14 CFR §77.19 — civilian' },
-            ]).map(opt => {
-              const active = surfaceSet === opt.key
+            {SURFACE_STANDARD_IDS.map((id) => {
+              const opt = SURFACE_STANDARD_OPTIONS[id]
+              const active = effectiveStandardId === id
               return (
                 <button
-                  key={opt.key}
+                  key={id}
                   type="button"
-                  onClick={() => setSurfaceSet(opt.key)}
+                  onClick={() => setStandardOverride(id)}
                   disabled={!!editId}
-                  title={editId ? 'Cannot change surface set when editing a saved evaluation' : undefined}
+                  title={editId ? 'Cannot change surface standard when editing a saved evaluation' : undefined}
                   style={{
                     flex: '1 1 200px',
                     minWidth: 0,
@@ -867,7 +924,7 @@ function ObstructionsContent() {
                 >
                   <span>{active ? '◉' : '○'}  {opt.label}</span>
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400 }}>
-                    {opt.sub}
+                    {opt.citation}
                   </span>
                 </button>
               )

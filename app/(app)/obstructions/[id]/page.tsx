@@ -35,7 +35,8 @@ import { DetailGrid } from '@/components/ui/detail-grid'
 import { toast } from 'sonner'
 import { ArrowLeft, AlertTriangle, FileDown, Mail, Pencil, Trash2, ChevronDown, ChevronRight, BookOpen } from 'lucide-react'
 import { getSurfaceSet } from '@/lib/airport-mode'
-import { IMAGINARY_SURFACES, getPart77Surfaces } from '@/lib/calculations/obstructions'
+import { IMAGINARY_SURFACES, getPart77Surfaces, type SurfaceSet } from '@/lib/calculations/obstructions'
+import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -200,6 +201,13 @@ export default function ObstructionDetailPage() {
   const violatedResults = results.filter((r) => r.violated)
   const createdAt = new Date(evaluation.created_at)
   const photoPaths = parsePhotoPaths(evaluation.photo_storage_path)
+
+  // Surface set this evaluation was pinned under at save time (or the
+  // base's current default for legacy pre-surface_set rows) — the single
+  // resolution both the standard label below and the legend use, so they
+  // never disagree.
+  const pinnedSurfaceSet: SurfaceSet =
+    (evaluation.surface_set as SurfaceSet | null | undefined) ?? getSurfaceSet(currentInstallation)
 
   // Static map image URL for pinned location
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -380,7 +388,7 @@ export default function ObstructionDetailPage() {
           { label: 'Ground Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft</span> },
           { label: 'From Centerline', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft</span> },
           { label: 'Coordinates', value: <span style={{ fontFamily: 'monospace', fontSize: 'var(--fs-sm)' }}>{evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W</span> },
-          { label: 'Runway', value: evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}` },
+          { label: 'Standard', value: resolveStandardLabel(pinnedSurfaceSet, evaluation.runway_class) },
         ]} />
 
         {evaluation.notes && (
@@ -410,7 +418,7 @@ export default function ObstructionDetailPage() {
           the base's current default. */}
       <SurfaceSetLegend
         base={currentInstallation}
-        pinnedSet={(evaluation.surface_set as 'ufc_3_260_01' | 'faa_part77' | null | undefined) ?? null}
+        pinnedSet={pinnedSurfaceSet}
       />
 
       {/* Surface-by-surface results */}
