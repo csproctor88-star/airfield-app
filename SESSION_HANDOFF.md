@@ -1,326 +1,260 @@
 # Session Handoff
 
-**Date:** 2026-07-16 (sessions 2 + 3 + 4, merged — this handoff covers all three)
-**Branch:** `main`. Session 2 (local): **3 commits** (`ebf0a062`, `d87a71ee`,
-`97240391`) + `glidepath-site` `8ed439e`/`9dd00ad`. Session 3 (remote, spec
-planning): **3 commits** (`2f382ca`, `7314c88`, `41407bf`), merged at
-`f7004cbc`. Session 4 (local, KFAR bugfix): **1 commit** (`a18946ab`, rebased
-onto the spec merge). All **pushed**; tree clean.
-**Build:** re-verified at session-4 wrap on the merged tree: tsc ✓ · lint 0
-errors · vitest **1261 passed | 0 skipped** (140 files — +2 invariant tests
-this session) · `npm run build` ✓ (middleware 80.8 kB).
-**HEAD:** `a18946ab` (airfield-app); `glidepath-site` @ `9dd00ad` (in sync,
-tsc + lint re-verified session 4).
-**DB:** migration `2026071600_seed_airfield_status_rows` **applied
-2026-07-16** (backfill + trigger, verified: 64/64 bases covered). CI for
-`glidepath-site` @ `9dd00ad` verified **green** via the GitHub API.
+**Date:** 2026-07-17 (session 5 — started 2026-07-16 evening)
+**Branch:** `main`. **20 commits** this session (`dbdde930`..`c9c4f955`), all
+**pushed**; tree clean, level with origin.
+**Build:** verified at wrap on the final tree: tsc ✓ · lint 0 errors · vitest
+**1368 passed | 0 skipped** (144 files — +107 tests / +4 test files this
+session) · `npm run build` ✓ (middleware 80.8 kB).
+**HEAD:** `c9c4f955`.
+**DB:** no new migrations — both features shipped zero-migration; latest
+applied remains `2026071600_seed_airfield_status_rows`.
 
 ---
 
-## What shipped (all sessions)
+## What shipped this session
 
-Session 2 closed out the audit backlog on `main` (Supabase type regen,
-fan-out silent-error sweep, outage-event bookend) and ran a four-pass
-marketing-site review with tier-1/2 execution. Session 3 was a planning
-session on a side branch: **seven implementation-ready design specs**
-(~3,600 lines) under `docs/superpowers/specs/`, merged to `main`. Session 4
-ran down a live production bug reported from Hector ANG Base (KFAR) — the
-airfield status board would not save — and found it was fleet-wide: **37 of
-64 bases** had no `airfield_status` row.
+Two features built end-to-end via subagent-driven development (per-task
+implementer/reviewer subagents with per-task model selection, final
+whole-branch reviews), plus the complete regulatory verification that
+unblocks the surface-set expansion build. Every commit passed the four-gate
+check (tsc / lint / full vitest / build) before landing; both features'
+final review verdicts were "Ready to merge: Yes."
 
-### Session 4 — airfield_status seeding + wizard import staleness (`a18946ab`)
+### Obstruction manual coordinate entry (`dbdde930`, `d7c73f6e`, `8ffc4b11`, `6ee581cd`, `fce9abee`)
 
-KFAR reported "Could not save the airfield status change" on every status
-board write. Root cause: `airfield_status` began life as a single-row global
-table (2026022201); the multi-base conversion (2026022301) made it
-one-row-per-base but never added a creation hook. The only programmatic
-seeding path was a best-effort, error-swallowed client insert buried in the
-setup wizard's **Import All** flow — per-runway imports, and any base whose
-setup skipped that path, got nothing. `updateAirfieldStatus` bails when its
-row lookup comes back empty, so every save on a rowless base failed. 37
-bases were affected, including the whole 2026-07-08 ANG batch, Holloman, and
-KDRA (the civilian-capture demo airport).
+Users can now type coordinates into `/obstructions` instead of tapping the
+map. `lib/calculations/coordinates.ts` is a pure auto-detecting parser
+(DD / DDM / DMS / packed FAA-NOTAM / MGRS via the new zero-dep `mgrs@2.2.0`
+package) plus four formatters; `components/ui/coordinate-entry-input.tsx`
+is a generic smart-parse field (live format preview, specific validation
+errors, Place Pin / Enter commit) designed for later reuse by
+wildlife/discrepancy pickers. The page wiring reuses the existing
+flyTo→pin→elevation pipeline unchanged (typed point ≡ map tap), replaces
+the Selected Location coordinates cell with a DD/DMS/DDM/MGRS stack with
+per-line copy — killing the hardcoded `°N`/`°W` bug there and in the PDF —
+and adds a >30 NM advisory toast on typed entry. Review process caught the
+formatters' 60.0-carry defect class (seconds in `formatDMS`, then the final
+review caught the sibling minutes edge in `formatDDM` — a point ~9 m below
+an integer degree line rendered `60.00'` that the module's own parser
+rejected on copy-paste). Both fixed with carry logic + tests.
 
-Fix, DB side (migration `2026071600`, **applied + verified**): backfill a
-default row for every rowless base, plus an `AFTER INSERT ON bases` trigger
-(`bases_seed_airfield_status`, SECURITY DEFINER, `ON CONFLICT DO NOTHING`)
-so every future base is seeded regardless of creation path. The fix was live
-fleet-wide the moment it applied — no deploy needed. The wizard's redundant
-insert is removed; `seed-test-accounts.mjs` teardown now deletes the
-auto-seeded row before the base (plain NO ACTION FK) and surfaces
-base-delete errors instead of swallowing them.
+### UFC 3-260-01 verification + owner rulings (`974e95a7`, `4706f841`, `50fa4e71`, `fad18868`, `a3f4a384`, `b6d36b97` — doc-only)
 
-Fix, wizard side (rides the next deploy): the owner also hit imported
-runways not appearing until a hard refresh. `RunwayTab` and `SimpleListTab`
-froze their context prop into mount-time local state and mutations never
-refreshed the installation context — the tabs unmount on step change, so a
-remount re-seeded from the stale context and imports vanished. Now both tabs
-re-seed local state when the context updates, and every successful mutation
-(import one / import all / add / edit / delete / adjust-on-map, area
-add/delete) writes through `refreshCurrentInstallation()`. The autosave pill
-also registers deletes/updates/adjusts now — those handlers never called
-`markSaved`, so the pill claimed "No changes yet" after real (instant)
-saves, which read as a save failure. New env-gated invariant test asserts
-each RLS fixture base has exactly one `airfield_status` row — the fixtures
-are created via plain `bases` INSERT, so the test fails if the seed trigger
-is ever dropped.
+The owner supplied UFC 3-260-01 **Change 3 (4 Feb 2026)** pages (Figure
+3-17/3-19, Table 3-7 items 1–15, the table NOTES, glossary content) and
+ruled on every open question blocking the surface-set expansion build:
 
-### Session 2 — Supabase type regen + cast removal (`ebf0a062`)
+- **Correct the encoded Class B criteria to the UFC values** (inner
+  horizontal 13,120 → 7,500 ft — the encoded value is the ICAO 4,000 m;
+  ADCS half-width schedule 1,000 → 4,500 → 8,000 ft).
+- **ADCS geometry, final:** horizontal portion at **EAE + 500 ft** (item 11
+  as printed, both classes); slope (50:1 B / 40:1 A) runs **from the nearest
+  threshold's elevation** to EAE + 500, so its length varies per Note 4
+  (owner worked example: EAE 380 / threshold 378 → 25,100 ft); total ADCS
+  length **50,000 ft both classes** (Class A confirmed by the owner's
+  constant-splay derivation; two earlier readings were superseded en route —
+  see the reference doc's history). The evaluator already baselines the
+  slope on threshold elevation (`obstructions.ts` approach_departure
+  branch), so the expansion build only adds the EAE+500 horizontal cap +
+  the value corrections.
+- **Conical / outer horizontal (glossary, class-invariant, fixed-wing
+  only):** conical 20:1 from the inner horizontal's edge, 7,000-ft extent;
+  outer horizontal 500 ft × 30,000 ft beyond the conical. Derivation rule:
+  no inner horizontal → no conical → no outer horizontal (Class A VFR has
+  only primary + sloped ADCS + transitionals).
+- **What-if picker offers all five standards** — confirmed.
 
-`lib/supabase/types.ts` regenerated via `gen types --linked` (was missing
-`email_broadcasts`, `marketing_leads`, three `bases` columns); all 43
-`supabase as any` casts removed. The de-casting surfaced real defects, all
-fixed: `dashboard-boards` toasted `[object Object]` on failed writes
-(PostgrestError object passed to `friendlyError`), several `?? null` args to
-`?: string` RPC params, orphaned eslint-disables. The file's two manual
-narrowings (`bases.airport_type`, `obstruction_surface_set` → the
-`lib/airport-mode.ts` unions) are re-applied and documented in a header —
-preserve them on the next regen.
+Full transcription with provenance lives in
+`docs/references/ufc-3-260-01-table3-7-verified.md` — **untracked**
+(`docs/references/` is gitignored); the spec carries the resolution
+summaries. **The surface-set expansion build has zero open blockers.**
 
-### Session 2 — Fan-out silent-error sweep (`d87a71ee`, `97240391`)
+### FAA Part 77 surface polygons (`a2ab1eab`, `675f7f2c`, `99a78a16`, `2a1cfad2`, `18ec7535`, `9dc2a250`, `392cfdc4`, `436bf1ee`, `c9c4f955`)
 
-27 sites across 20 files, fixed by proportionality: abort/rollback where
-silence corrupts records (PPR reopen, field-condition supersede, waiver
-review stamps, FLIP timeline seed, `setActivePlan`, clear-then-reinsert
-upserts, inspection-template rebuild); toast where the operator can act
-(outage-event timeline writes, ARFF/runway status logs, discrepancy status
-modal); throw where callers already try/catch (installation-context writers,
-`userDocuments` ready-flip); log where drift is display-only
-(`photo_count`, AMTR catalog stamp). Bonus: `waivers.attachment_count` never
-updated (`head:true` query read `.data`, always null) — replaced with an
-exact-count recount. `97240391` adds the missing `resolved` outage event
-when completing a linked discrepancy (cancel/delete branch deliberately
-left without a bookend — owner call if parity wanted). +5 guard tests in
-`tests/fanout-error-guards.test.ts`.
-
-### Session 2 — glidepath-site review + tier-1/2 (`8ed439e`, `9dd00ad`)
-
-Four-pass grading brief — **Codebase B+ · Security B+ · SEO C+ · Overall B**
-(artifact: `https://claude.ai/code/artifact/70fb86a9-8aa6-48b6-b1f1-3dadb9c1e06b`).
-Executed the mechanical tier: un-orphaned the 50 module pages (real anchors
-under the dialog UX), canonicals on all 10 static pages, brand de-dupe +
-title trims, tight CSP + security headers in `next.config.ts`,
-`SoftwareApplication`/`WebSite`/`BreadcrumbList` JSON-LD, sitemap
-`lastModified`. NIPR upload proxy closed as **not-doing** — field test proved
-a DISA CBII (Menlo) browser-isolation block that no app-side proxy can fix;
-owner is not pursuing an exception. Don't re-propose.
-
-### Session 3 — six feature specs + index (`2f382ca`)
-
-From the owner's feature list: obstruction manual coordinate entry
-(DD/DMS/DDM/MGRS smart-parse → existing `flyToPoint`/`handlePointSelected`
-pipeline; zero migrations) · Part 77 surface polygons (rendering-layer gap —
-the engine already switches sets, the map doesn't) · Flight Planning Room
-Check (standalone module, SCN-patterned per owner) · local regulations
-recurring review (extends the read-files design with per-doc cadence +
-QRC-parity red dot) · NAMO/NAMT report tool (per-user activity matrix; the
-attribution audit found gaps, so it specs FK migrations and per-domain
-coverage-start labeling instead of silently-wrong counts) · 43 Check log
-(DAFI 13-213 airfield driving spot check, AOB PDF export).
-`2026-07-16-feature-plans-index.md` carries the build order; migration
-number ranges are pre-assigned per spec so build order can't collide.
-Verification: 128/129 codebase spot-checks passed; the one real find (a
-Part 77 approach-surface width contradicting
-`lib/calculations/obstructions.ts`) was fixed and re-verified.
-
-### Session 3 — surface-set expansion + Part 77 lettering (`7314c88`)
-
-Owner follow-up: make the obstruction standard selectable — AF Class A,
-AF Class B, Army Class B, ICAO Annex 14, FAA Part 77 — in the base-config
-Runways step. Modeled as *family + per-runway variant*
-(`obstruction_surface_set` gains only `icao_annex14`; UFC variants ride the
-dormant `runway_class` column, FAA rides `faa_approach_type`, ICAO adds
-code-number/approach-class/strip-width columns) → **zero data rewrites**,
-saved evaluations keep their meaning. Sources: owner-uploaded 14 CFR
-Part 77 + 139 PDFs, UFC 3-260-01 2019 C3 and ICAO Annex 14 Vol I Ed 7 via
-the owner's Google Drive connector. Where extraction failed (UFC glossary:
-Class A conical/outer horizontal), dimensions are dashed PLACEHOLDERs, never
-guessed. Resolved the Part 77 spec's §77.19 lettering question against the
-eCFR PDF and found two real product bugs doing it (see Known issues).
+Civilian/Part 77 bases previously saw §77.19 numbers next to a map drawing
+UFC-only surfaces at UFC dimensions. Now the obstruction map draws the
+active set: per-runway §77.19 surfaces (primary, approach trapezoids
+dimensioned by each runway's `faa_approach_type` with the precision
+50:1→40:1 break line, transitionals, per-runway horizontal/conical
+stadiums, shared runway outline) from the new pure builder module
+`lib/calculations/part77-geometry.ts`; per-set legend/toggles with live
+overlay swap on the picker; set-aware page header, `identifySurface`
+(defaulted 5th param — existing callers untouched), and
+`withinApproachDeparture` key; edit-load pins the row's `surface_set` into
+state (plus an `editId` guard on the installation-reseed effect — without
+it a cold edit-URL load could clobber the pinned set and *persist the
+wrong `surface_set` on save*); PDF prints a Surface Set row instead of a
+meaningless UFC runway class for Part 77 rows; the base-config FAA
+approach selectors unlock for USAF bases whose `obstruction_surface_set`
+is `faa_part77`. Prerequisite commits corrected three verified §77.19
+mis-encodings in the engine criteria (approach outer width 2,000 → 3,500 ft
+for non-precision >¾ mi; horizontal radius 10,000 → 5,000 ft for visual
+non-utility; primary 500 → 1,000 ft + approach/transitional mirrors for the
+≤¾-mi category — **the engine default for unconfigured runways**, so future
+evaluations there change; that is the point). Values verified against the
+live CFR (law.cornell.edu fetches, verbatim quotes in provenance comments);
+a new invariant test locks approach-inner = primary across all six types.
 
 ## Migrations status
 
 | File | Status | What it does |
 |---|---|---|
-| `2026071600_seed_airfield_status_rows.sql` | **Applied 2026-07-16** | Backfills `airfield_status` for the 37 rowless bases + `AFTER INSERT ON bases` seed trigger. Verified: 64/64 covered, 0 missing. |
-| `2026071300_configurable_shifts.sql` | Applied 2026-07-13 | Prior latest |
-| `20260716xx` ranges (20–29, 30–39, 40–49, 50–59, 60–62; 16–19 partially used) | Planned only | Pre-assigned in the seven specs; renumber to implementation date when built (note `2026071600` is now taken) |
+| `2026071600_seed_airfield_status_rows.sql` | Applied 2026-07-16 | Prior latest — airfield_status backfill + seed trigger |
+| (this session) | — | Both features zero-migration by design; spec-assigned ranges `20260716xx` still reserved for the remaining builds (renumber to implementation date) |
 
-## Bugs fixed during the sessions
+## Bugs fixed during the session
 
 | Symptom | Root cause | Commit |
 |---|---|---|
-| "Could not save the airfield status change" (KFAR — actually 37 bases) | No `airfield_status` row; only seeding path was a best-effort, error-swallowed wizard insert inside Import All | `a18946ab` |
-| Imported runways/areas vanish until a full page reload | Wizard tabs froze the context prop into mount-time state; mutations never refreshed the context, remounts re-seeded stale | `a18946ab` |
-| Autosave pill says "No changes yet" after deleting/editing runways | delete/update/adjust handlers never called `markSaved` (saves were instant and real) | `a18946ab` |
-| Failed dashboard-board writes toast `[object Object]` | `friendlyError(error)` passed the PostgrestError object, not `.message` | `ebf0a062` |
-| PPR reopen destroys prior denial reason + coordination outcomes | preserving snapshot remark unchecked, rows reset anyway | `d87a71ee` |
-| Two "active" records possible (parking plans; field-condition reports) | clear-active / supersede-prior secondary writes fire-and-forget | `d87a71ee` |
-| `waivers.attachment_count` never updates | counter read `data` from a `head:true` query (always null) | `d87a71ee` |
-| AFM default-message widget toasts success on failed save | installation-context writer swallowed the DB error | `d87a71ee` |
-| Outage timeline never closes when a linked discrepancy completes | completion restored the feature but wrote no `resolved` event | `97240391` |
+| Selected Location + PDF showed `°N/°W` for every hemisphere | hardcoded hemisphere strings, `Math.abs(lon)` | `6ee581cd` |
+| formatDMS/formatDDM could render `60.0"`/`60.00'` fields their own parser rejects | `toFixed` rounding with no carry into minutes/degrees | `d7c73f6e`, `fce9abee` |
+| Part 77 approach drawn/evaluated at 2,000-ft outer width (should be 3,500), visual non-utility horizontal at 10,000 ft (should be 5,000), ≤¾-mi primary at 500 ft (should be 1,000) | criteria table mis-encodings vs §77.19 — verified against live CFR text | `a2ab1eab`, `675f7f2c` |
+| Editing a saved Part 77 evaluation recomputed/rendered under UFC | page never passed `surfaceSet` on edit re-eval; no state pin existed; reseed effect could clobber a pin on cold loads (and persist the wrong `surface_set` on save) | `9dc2a250`, `392cfdc4` |
+| Runway pavement outline vanished under Part 77 overlays | Part 77 branch omitted the shared `runway` layer (spec listed it as shared) | `c9c4f955` |
 
-## Lessons from the sessions
+## Lessons from this session
 
-- **Per-base singleton tables need a DB-level creation hook.** A client-side
-  best-effort insert as the only seeding path fails silently and unevenly —
-  `airfield_status` ran ~5 months with 37/64 bases save-broken. When a table
-  is UPDATE-only from the app, ask: what guarantees the row exists?
-- **The wizard's `useState(prop)` mount-freeze pattern loses writes on
-  remount.** Tabs unmount on step change; if mutations don't write through
-  to the installation context, a remount re-seeds from stale data. Fixed in
-  RunwayTab/SimpleListTab; ShopsTab/ArffTab share the pattern (see debt).
-- **A trigger that auto-seeds child rows changes delete semantics** —
-  `seed-test-accounts.mjs` teardown broke silently until the child delete
-  was added (NO ACTION FK). Audit teardown paths when adding seed triggers.
-- **Removing `as any` casts is a bug-finding technique, not just cleanup.**
-  Regenerate the type, delete the casts, read the tsc fallout.
-- **The checked-at-primary-write / silent-on-fan-out smell is now fully
-  swept** (27 sites). Fix future ones by proportionality — abort/rollback if
-  silence corrupts a record, toast if the operator can act, throw if a caller
-  has try/catch, log if drift is display-only.
-- **`head:true` Supabase count queries return `{ count, error }`, not
-  `{ data }`.**
-- **NIPR uploads are a DISA CBII (browser-isolation) block, not a network
-  block.** No app-side fix possible; owner not pursuing an exception.
-  (project memory)
-- **glidepath-site's terminology guard scans `app/**` source including
-  comments** — keep new comments em-dash-free in that repo.
-- **Remote-session network policy blocks arbitrary hosts** (`wbdg.org`,
-  Drive download hosts → CONNECT 403) even though WebSearch works. Working
-  retrieval paths for owner documents: the authenticated Google Drive
-  connector's `read_file_content`, or chat-attached PDFs.
-- **The verified-vs-placeholder discipline pays for itself.** Reading UFC
-  Table 3-7 from the actual document exposed that the app's encoded Class B
-  inner-horizontal radius (13,120 ft ≈ 4,000 m) is almost certainly the
-  *ICAO* value, not the UFC 7,500 ft — no web-search pass had caught it.
+- **Owner's standing ruling: encode verified regulatory values.** When an
+  encoded criterion conflicts with the verified publication (UFC Table 3-7,
+  §77.19), correct it — changed evaluation results are the point, not a
+  risk to avoid. Verbatim source quotes go in provenance comments.
+- **The ADCS construction is the constant-splay method**: the sloped run's
+  widths set the splay; the horizontal portion continues at that splay to
+  the end width; totals are implicit, never printed. The horizontal
+  portion's elevation datum is EAE; the slope's datum is the nearest
+  threshold (already implemented in the evaluator).
+- **Table 3-7 has no conical/outer-horizontal rows** — they're
+  class-invariant and live in the glossary. Don't go hunting the table for
+  them again.
+- **Brief-authoring bugs are a real failure mode of SDD** — two briefs this
+  session asserted code state that didn't exist (a test point actually
+  inside the UFC clear zone; a `setSurfaceSet` call that was never there).
+  Implementer deviation reports + reviewer adjudication caught both; keep
+  briefs' claims about existing code verifiable and expect pushback.
+- **Per-task model selection worked**: opus for dense logic/integration and
+  their reviews, sonnet for well-specified components/wiring, fable for
+  final whole-branch reviews. The two review-loop Importants (edit-mode
+  clobber, runway outline) were both caught by reviewers one tier above
+  the "it compiles" bar. (saved as feedback memory)
+- **`docs/references/` is gitignored** — the UFC verified-values
+  transcription lives there untracked; the committed spec carries the
+  binding summaries. Don't `git add` that directory; do keep load-bearing
+  conclusions in the spec.
 
 ## Known issues / tech debt
 
-New (session 3 spec research; fixes specced, not applied):
+New (accepted debt from the two feature reviews — details in
+`.superpowers/sdd/progress-manual-coordinates.md` / `progress-part77.md`):
 
 | Item | Severity | Notes |
 |---|---|---|
-| Encoded UFC Class B criteria conflict with UFC 3-260-01 Table 3-7 | **high — owner decision** | Code: inner horizontal 13,120 ft (≈4,000 m, the ICAO value) vs verified 7,500 ft; ADCS model also conflicts (25,000 ft / 2,550 outer half-width vs verified 50,000 ft / 16,000-ft end width). Correcting changes all future evaluation results at every base. Surface-set expansion spec §13 item 2. |
-| `ufcRef` §77.19 lettering wrong in code | med | eCFR PDF confirms (a) Horizontal (b) Conical (c) Primary (d) Approach (e) Transitional; the code's citation strings disagree, on user-facing result cards. Fix specced in the expansion spec. |
-| Obstruction coords hardcoded °N/°W | low | `app/(app)/obstructions/page.tsx:593` + `lib/obstruction-pdf.ts:92-93` render every point as N/W regardless of hemisphere. Fix ships with the manual-coordinates spec. |
+| Picker flip re-initializes the whole map (pan/zoom lost, tile flash) | low | Brief-directed effect-deps design; split-effect refactor candidate. Check feel during in-browser QA. |
+| Picker-note fallback copy promises a base surface-set control that doesn't exist yet | low | Becomes true when the expansion build ships the standard selector (its natural home). Make the copy accurate there. |
+| Entry-input polish bundle (MGRS mid-typing red flicker on odd digit counts; `kind` discriminant on parser errors; literal MGRS-error test; aria-live on the status line) | low | Do together when the component is reused by wildlife/discrepancy pickers. |
+| `ufcRef` §77.19 lettering strings still wrong (incl. one "(non-utility)" label on the corrected visual radius; also sweep `part77-geometry.ts` section-header comments) | med | Fix is specced in the surface-set expansion build — verified lettering: (a) Horizontal (b) Conical (c) Primary (d) Approach (e) Transitional. |
+| Evaluator's transitional `approachCutoff` unclamped vs builder's clamped formula | low | Identical for all six real types; unify in the expansion registry refactor. |
 
-New (session 4):
+Carried forward (unchanged): encoded UFC Class B criteria conflict — **now
+owner-ruled, fix ships with the expansion build** · ShopsTab/ArffTab
+frozen-prop pattern · NIPR uploads (closed, don't re-propose) · hero
+redline strings · demo user on Demo AFB / KDRA prep · proof band empty ·
+NAVAID marker dials · QRC draft flow · demo seeds `shift_name_*` ·
+track-page SEO · civilian tenant status chips · status-page weather race ·
+account-deactivation live sessions · Selfridge 1098 dedup · 2 unused
+exported types · reports "hgjhj" row · anonymous-submission gap.
 
-| Item | Severity | Notes |
-|---|---|---|
-| ShopsTab / ArffTab still use the frozen-prop pattern | low | Same `useState(prop)` mount-freeze fixed in RunwayTab/SimpleListTab (`a18946ab`); context-fed but mutations don't write through. Not user-reported; fix opportunistically with the same recipe. |
+## glidepath-site — remaining roadmap
 
-Carried forward:
-
-| Item | Severity | Notes |
-|---|---|---|
-| NIPR uploads blocked by DISA CBII | info (closed) | Field-tested 2026-07-16; block is the Menlo isolation layer, pre-JS. Proxy plan parked; owner not pursuing. Downloads work on AFNet. Don't re-propose. |
-| 2 now-unused exported types | low | `SmsCommunication`, `ClearanceContext`; harmless. |
-| Hero redline strings | med | Owner preview pass owed (`lib/home-content.ts` / `lib/cascades.ts`). |
-| Anonymous-submission gap 2026-07-02..14 | info | Owner decides if outreach warranted. |
-| reports "hgjhj" resolution row | low | Drop-in swap when the demo row is cleaned. |
-| Demo user on Demo AFB | med | Civilian capture blocker; "prep KDRA" is step 0 (`docs/references/civilian-capture-plan.md`). KDRA's missing `airfield_status` row was fixed by the session-4 backfill. |
-| Proof band empty | med | Testimonials + permissions owed by owner; null-hidden. Largest outstanding glidepath-site conversion asset (brief §05). |
-| NAVAID marker-sizing dials · QRC draft flow · demo seeds `shift_name_*` · track-page SEO · cosmetic (blank line in 51 site files) | low | Carry, unchanged. |
-| Prior app-side carryover | low | Civilian tenant status chips dual-mode · status-page weather race · account-deactivation live sessions · Selfridge 1098 dedup. |
-
-## glidepath-site — remaining review roadmap
-
-The grading brief (artifact link above) holds the full plan. Tier-1 and most
-tier-2 structured-data items shipped in session 2. Remaining:
-
-- **This-month:** module H1 keyword pass (needs an `h1` field + copy
-  sign-off); `/about` expansion from 148 words (owner voice); product-clip
-  compression (10 MB MP4s → ≤2-3 MB) + embedding; scoped DB credential for
-  the lead form (currently full service-role — security MED-2); tests for
-  the demo route + rate limiter; render-or-delete the authored-but-unrendered
-  `regulation.cites` fields.
-- **This-quarter (traffic engine):** DAFMAN 13-204 explainer hub · Part 139
-  self-inspection checklist lead magnet · operator glossary cluster ·
-  military category page.
-- **Owner actions:** www→apex 307 → 308 (Vercel dashboard); preview-check
-  the new CSP before promoting. (CI for `9dd00ad` verified green in
-  session 4 — the preview CSP check is the remaining gate.)
+Unchanged from the prior handoff (no site work this session): owner
+preview-checks the CSP then promotes (CI green at `9dd00ad`); this-month
+tier-2 items (module H1 pass, /about expansion, clip compression, scoped
+DB credential, demo-route tests, `regulation.cites`); this-quarter traffic
+engine; www→apex 308.
 
 ## Next session tasks
 
-1. **Owner decisions blocking the surface-set build** (expansion spec §13):
-   (a) the Class B criteria audit — correct to UFC Table 3-7 values or keep
-   deliberately; (b) supply the UFC appendix/glossary pages for Class A
-   conical + outer horizontal (replace PLACEHOLDERs); (c) confirm the
-   per-evaluation what-if picker should offer all 5 standards.
-2. **Implement per the index build order**
-   (`docs/superpowers/specs/2026-07-16-feature-plans-index.md`): manual
-   coordinates first (small, zero-migration), then Part 77 polygons →
-   surface-set expansion (after item 1), landing the NAMO/NAMT attribution
-   migrations early so per-user data accrues. Note `2026071600` is now taken
-   by the airfield_status migration — shift spec-assigned numbers as needed.
-3. **glidepath-site: owner preview-checks the CSP**, then promotes (CI
-   already verified green for `9dd00ad`).
-4. **Pick the next glidepath-site tier-2/3 item** — highest-leverage: the
-   DAFMAN 13-204 hub (traffic) or module H1 pass (quick, needs copy
-   sign-off).
-5. **Civilian capture day** (owner-scheduled): owner says "prep KDRA" → run
+1. **Owner in-browser QA + promote** — both features are pushed but not
+   deployed. Manual QA scripts live in the two specs' §Testing sections
+   (manual coordinates: typed ≡ tap equivalence, mobile keyboard, edit
+   mode, packed-NOTAM round-trip; Part 77: overlay swap, per-type
+   trapezoids, amber note, edit-mode parity, USAF-flip selectors, both
+   PDFs). Known feel item: picker flip re-centers the map.
+2. **Build the surface-set expansion**
+   (`docs/superpowers/specs/2026-07-16-airfield-surface-set-expansion-design.md`)
+   — **fully unblocked**; every dimension verified or owner-ruled (§13
+   items resolved in place; full derivations in the untracked
+   `docs/references/ufc-3-260-01-table3-7-verified.md`). Includes: Class B
+   corrections + ADCS horizontal-portion model (changes future evaluation
+   results fleet-wide — owner-approved), Class A entry, ICAO Annex 14 set,
+   5-standard picker, §77.19 lettering fix, base-level standard selector
+   (also fixes the picker-note copy), migrations `20260716xx` →
+   renumber.
+3. **Then per the specs index build order**: NAMO/NAMT attribution
+   migrations early (`2026071641`–`42` equivalents) · FPR Check · 43 Check
+   log · local regs review · NAMO/NAMT report UI.
+4. **glidepath-site**: owner CSP preview-check + promote; then next tier-2/3
+   item (DAFMAN 13-204 hub or module H1 pass).
+5. **Civilian capture day** (owner-scheduled): "prep KDRA" → run
    `docs/references/civilian-capture-plan.md`.
-6. **Hero + coverage redline pass** on the live homepage (carryover).
-7. **Part 139 cert-inspection audit build** — resume from
-   `.superpowers/sdd/progress.md` when the owner wants it.
 
 ### Long-running carryover
-SEO / rich-results · deferred audit items · Next 16 — owner-scheduled,
-unchanged.
+Hero + coverage redline pass · Part 139 cert-inspection audit build (resume
+from `.superpowers/sdd/progress.md`) · SEO / rich-results · deferred audit
+items · Next 16 — owner-scheduled, unchanged.
 
 ## Build snapshot
 ```
-airfield-app @ a18946ab (re-verified at session-4 wrap, local): tsc ✓ ·
-  lint 0 errors · vitest 1261 passed | 0 skipped (140 files — +2
-  airfield_status invariant tests) · build ✓ · shared First Load JS 106 kB ·
-  middleware 80.8 kB. No route-size changes (session 4 touched one page +
-  a migration).
-glidepath-site @ 9dd00ad: tsc ✓ · lint 0/0 · vitest 155 passed · build ✓
-  (session 2 wrap); tsc + lint re-verified session 4; CI green (GitHub API).
+airfield-app @ c9c4f955 (verified at wrap, local): tsc ✓ · lint 0 errors ·
+  vitest 1368 passed | 0 skipped (144 files — +107 tests: coordinates,
+  coordinate-entry-input, part77-geometry, obstruction-pdf new; part77-
+  surfaces, obstruction-evaluation, pdf-generators-smoke extended) ·
+  build ✓ · shared First Load JS 106 kB · middleware 80.8 kB.
+  /obstructions 20.2 kB · 211 kB First Load (grew this session: entry
+  input + four-format display + set-aware map branch; mgrs adds ~6 kB to
+  the obstruction chunks only).
+glidepath-site @ 9dd00ad: unchanged this session (tsc/lint/CI green as of
+  session 4).
 ```
 
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: 37/64 bases had no `airfield_status` row — fleet-wide backfill + `AFTER INSERT ON bases` seed trigger (migration `2026071600`, applied, live immediately) · setup-wizard import staleness fixed (context write-through + prop re-seed in RunwayTab/SimpleListTab) · autosave pill now registers deletes/updates · seed-script teardown FK fix · +2 invariant tests. |
-| **Unreleased** | 2026-07-16 (spec planning, merged) | Seven implementation specs in `docs/superpowers/specs/` (manual coordinates, Part 77 polygons, FPR Check, local regs review, NAMO/NAMT report, 43 Check log, multi-standard surface sets) · Part 77 §77.19 lettering resolved from eCFR PDF · Class B criteria mis-sourcing discovered. No product code. |
-| **Unreleased** | 2026-07-16 (late) | Cleanup follow-ups + marketing-site review. airfield-app: Supabase type regen (43 `as any` casts removed, `[object Object]` toast bug fixed) · fan-out silent-error sweep (27 sites, +5 guard tests: PPR-reopen data loss, two-active-record bugs, dead attachment-count) · resolved-outage-event on discrepancy completion. glidepath-site: 4-pass grading brief + SEO/security tier-1/2 (un-orphaned 50 module pages, canonicals, CSP + security headers, SoftwareApplication/BreadcrumbList JSON-LD). NIPR uploads closed as DISA-CBII-blocked, not pursuing. |
-| **Unreleased** | 2026-07-16 | Two-repo code audit (7 parallel agents) + remediation: `send-pdf-email` rate-limited, silent-lost-inspection + false-success write paths fixed, cross-tenant PPR notify scoped, middleware allowlist tightened · dead code removed · glidepath-site copy guard extended · RLS security-test suite wired up (5 CI secrets; 0 skipped). |
-| **Unreleased** | 2026-07-15 (late) | Base-config taxiway step no longer freezes on survey-grade imports (Portland RDP decimation) · NIPR upload block diagnosed + proxy plan on file. |
-| **Unreleased** | 2026-07-13 | airfield-app configurable shifts; migration `2026071300` applied. |
-| **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP Management + Read File; PPR calendar + `.ics`; AMTR 803/1098; C2IMERA export; WWA server-side expiry; brand refresh. |
-| **v2.34.0** | 2026-06-01 | Help & Training all modules; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
+| **Unreleased** | 2026-07-17 (session 5) | Obstruction manual coordinate entry (DD/DDM/DMS/NOTAM/MGRS smart-parse field, four-format display + copy, hemisphere fixes) · FAA Part 77 surface polygons (set-aware map/legend/header/PDF, per-runway §77.19 dimensioning, base-config gate) · three verified §77.19 criteria corrections · UFC Table 3-7 fully verified + owner rulings recorded — surface-set expansion unblocked. 20 commits, zero migrations. |
+| **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: 37/64 bases had no `airfield_status` row — fleet-wide backfill + seed trigger (migration `2026071600`, applied) · setup-wizard import staleness fixed · autosave pill registers deletes/updates · +2 invariant tests. |
+| **Unreleased** | 2026-07-16 (spec planning) | Seven implementation specs in `docs/superpowers/specs/` · Part 77 §77.19 lettering resolved · Class B criteria mis-sourcing discovered. |
+| **Unreleased** | 2026-07-16 (late) | Supabase type regen (43 casts removed) · fan-out silent-error sweep (27 sites) · glidepath-site 4-pass review + SEO/security tier-1/2 · NIPR uploads closed as DISA-CBII-blocked. |
+| **Unreleased** | 2026-07-16 | Two-repo code audit + remediation · RLS security-test suite wired (0 skipped). |
+| **Unreleased** | 2026-07-15 (late) | Taxiway-step freeze fix (RDP decimation) · NIPR proxy plan (superseded). |
+| **Unreleased** | 2026-07-13 | Configurable shifts; migration `2026071300` applied. |
+| **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP; PPR calendar; AMTR 803/1098; C2IMERA; WWA expiry; brand refresh. |
+| **v2.34.0** | 2026-06-01 | Help & Training; AMTR fleet-wide; FAA Part 139 civilian mode; PPR coordination; Records Export. |
 
-## Key docs / files touched (all sessions)
+## Key docs / files touched this session
 
 ### New files
-- `supabase/migrations/2026071600_seed_airfield_status_rows.sql` — backfill +
-  seed trigger (applied).
-- `docs/superpowers/specs/2026-07-16-feature-plans-index.md` — start here:
-  build order + blockers — plus the seven `2026-07-16-*-design.md` specs.
-- `tests/fanout-error-guards.test.ts` — regression guards for the fan-out
-  sweep.
+- `lib/calculations/coordinates.ts` — coordinate parser + four formatters.
+- `components/ui/coordinate-entry-input.tsx` — generic smart-parse entry field.
+- `lib/calculations/part77-geometry.ts` — §77.19 plan-view polygon builders.
+- `docs/references/ufc-3-260-01-table3-7-verified.md` — **untracked**
+  (gitignored dir): verified Table 3-7 transcription + ADCS derivation +
+  glossary values.
+- `.superpowers/sdd/progress-manual-coordinates.md` / `progress-part77.md` —
+  SDD ledgers (untracked), accepted-debt lists live here.
 
-### Modified files (airfield-app)
-- `app/(app)/base-config/setup/page.tsx` — wizard state sync + markSaved
-  wiring + redundant insert removal (session 4).
-- `supabase/seed-test-accounts.mjs` — teardown deletes the auto-seeded
-  `airfield_status` row first (session 4).
-- `lib/supabase/types.ts` (regen + manual narrowings) + ~14 de-casted files
-  (session 2).
-- Fan-out fixes across `app/(app)/{page,infrastructure,inspections,parking}`,
-  `components/discrepancies/modals.tsx`, `lib/installation-context.tsx`,
-  ~13 `lib/supabase/*`, `lib/{userDocuments,base-setup-quick-setup}.ts`
-  (session 2).
-
-### Modified files (glidepath-site, session 2)
-- `components/modules/stack-section-card.tsx`, `app/**` metadata,
-  `next.config.ts` (headers), `app/layout.tsx` + `lib/og.ts` +
-  `app/sitemap.ts` + `components/modules/module-page.tsx`, 8 OG PNGs.
-
-### Outside the repos
-- `~/.claude/.../memory/project_nipr_upload_proxy.md` — DISA CBII field-test
-  result + owner decision not to pursue.
+### Modified files
+- `app/(app)/obstructions/page.tsx` — entry field wiring, four-format
+  display, distance toast, set-aware header/calls/keys, edit-load pin +
+  reseed guard, conditional picker note.
+- `components/obstructions/airfield-map-google.tsx` — surface-set renderer
+  branch, per-set legends/toggles, runway outline in both sets.
+- `lib/calculations/obstructions.ts` — three §77.19 criteria corrections +
+  set-aware `identifySurface`.
+- `lib/obstruction-pdf.ts` — hemisphere fix + set-aware Surface Set row.
+- `app/(app)/base-config/setup/page.tsx` — FAA approach-selector gate
+  widening only.
+- `docs/manual/10_obstructions.md` — typed-coordinates + set-aware overlay
+  sections.
+- `docs/superpowers/specs/2026-07-16-airfield-surface-set-expansion-design.md`
+  — all §13 blockers resolved in place (owner rulings + verified values).
+- `package.json` — `mgrs@2.2.0`.
