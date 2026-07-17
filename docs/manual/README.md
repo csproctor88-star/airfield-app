@@ -35,6 +35,7 @@ This manual covers every module, tool, and workflow in Glidepath. Each file is s
 | 22 | User Management | [22_user_management.md](22_user_management.md) |
 | 23 | Read File | [23_read_file.md](23_read_file.md) |
 | 24 | Flight Planning Room Check | [24_flight_planning_room.md](24_flight_planning_room.md) |
+| 25 | Airfield Driving Spot Check | [25_driving_spot_check.md](25_driving_spot_check.md) |
 
 ---
 
