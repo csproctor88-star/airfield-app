@@ -52,6 +52,25 @@ export const DRIVING_RESULT_COLORS: Record<DrivingCheckResult, string> = {
   violation: 'var(--color-danger)',
 }
 
+export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
+  government: 'Government',
+  contractor: 'Contractor',
+  pov: 'POV',
+  other: 'Other',
+}
+
+export const DRIVING_ITEM_STATUS_LABELS: Record<DrivingItemStatus, string> = {
+  pass: 'Pass',
+  discrepancy: 'Discrepancy',
+  na: 'N/A',
+}
+
+export const DRIVING_ITEM_STATUS_COLORS: Record<DrivingItemStatus, string> = {
+  pass: 'var(--color-success)',
+  discrepancy: 'var(--color-warning)',
+  na: 'var(--color-text-3)',
+}
+
 export type DrivingCheckItemRow = {
   id: string
   base_id: string
@@ -241,6 +260,130 @@ export function computeAobStats(checks: DrivingCheckWithResults[]): AobStats {
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 
   return { total, passRate, discrepancyCount, violationCount, commonDiscrepancies, byChecker }
+}
+
+/**
+ * The check modal's per-item draft row. Mirrors FprResultDraft: a mutable
+ * shape the form edits, distinct from the persisted DrivingCheckResultRow.
+ */
+export type DrivingCheckDraft = {
+  item_id: string | null
+  item_label: string
+  status: DrivingItemStatus
+  notes: string
+  sort_order: number
+}
+
+/**
+ * Build the check modal's draft rows from the active item list, carrying
+ * forward prior results when editing an existing check. Pure — mirrors
+ * fpr.ts:buildFprResultDrafts.
+ *
+ * New drafts default to 'pass'. Prior results are matched by item_id first
+ * (survives renames), then by label (covers rows whose item_id was nulled
+ * by a template delete).
+ *
+ * Snapshot preservation (EDIT mode): a saved check is a point-in-time
+ * record. If the item list changed since it was logged — an item was
+ * deactivated or hard-deleted — that item's prior result row no longer maps
+ * to any active item. Because the save path delete-and-rewrites all child
+ * rows from this draft, such rows would be silently dropped. To keep the
+ * snapshot intact, any prior result NOT consumed by an active item is
+ * appended after the active items, carrying its own label / status / notes /
+ * sort_order. (New checks pass no `existing`, so there are no orphans.)
+ */
+export function buildDrivingCheckDrafts(
+  items: DrivingCheckItemRow[],
+  existing?: DrivingCheckResultRow[] | null,
+): DrivingCheckDraft[] {
+  const existingRows = existing ?? []
+  const byItemId = new Map<string, DrivingCheckResultRow>()
+  const byLabel = new Map<string, DrivingCheckResultRow>()
+  for (const r of existingRows) {
+    if (r.item_id) byItemId.set(r.item_id, r)
+    if (!byLabel.has(r.item_label)) byLabel.set(r.item_label, r)
+  }
+
+  const consumed = new Set<DrivingCheckResultRow>()
+  const activeDrafts: DrivingCheckDraft[] = items
+    .filter((i) => i.is_active)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((i, idx) => {
+      const prior = byItemId.get(i.id) ?? byLabel.get(i.label)
+      if (prior) consumed.add(prior)
+      return {
+        item_id: i.id,
+        item_label: i.label,
+        status: prior?.status ?? 'pass',
+        notes: prior?.notes ?? '',
+        sort_order: i.sort_order ?? idx,
+      }
+    })
+
+  const orphanDrafts: DrivingCheckDraft[] = existingRows
+    .filter((r) => !consumed.has(r))
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((r) => ({
+      item_id: r.item_id,
+      item_label: r.item_label,
+      status: r.status,
+      notes: r.notes ?? '',
+      sort_order: r.sort_order,
+    }))
+
+  return [...activeDrafts, ...orphanDrafts]
+}
+
+// ─────────────────────────────────────────────────────────────
+// History filtering (pure; feeds the page's list + checker dropdown)
+// ─────────────────────────────────────────────────────────────
+
+export type CheckerOption = { key: string; label: string }
+
+/**
+ * Stable identity for grouping/filtering a check by its checker — operating
+ * initials when present (survives a name-snapshot change, e.g. a promotion),
+ * else the name snapshot. Matches computeAobStats' by-checker grouping key.
+ */
+export function checkerKey(
+  check: Pick<DrivingCheckRow, 'completed_by_oi' | 'completed_by_name'>,
+): string {
+  return check.completed_by_oi || `name:${check.completed_by_name || 'Unknown'}`
+}
+
+/**
+ * Distinct checkers in a fetched range, for the history filter dropdown.
+ * Sorted by display label. Pure.
+ */
+export function distinctCheckers(checks: DrivingCheckWithResults[]): CheckerOption[] {
+  const map = new Map<string, string>()
+  for (const c of checks) {
+    const key = checkerKey(c)
+    const label = c.completed_by_oi
+      ? c.completed_by_name
+        ? `${c.completed_by_name} (${c.completed_by_oi})`
+        : c.completed_by_oi
+      : c.completed_by_name || 'Unknown'
+    if (!map.has(key)) map.set(key, label)
+  }
+  return Array.from(map.entries())
+    .map(([key, label]) => ({ key, label }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
+/**
+ * Apply the history list's result + checker filters. Pure; the caller
+ * handles date-range fetching (server-side) and newest-first sorting.
+ */
+export function filterDrivingChecks(
+  checks: DrivingCheckWithResults[],
+  filters: { result: DrivingCheckResult | 'all'; checker: string | 'all' },
+): DrivingCheckWithResults[] {
+  return checks.filter((c) => {
+    if (filters.result !== 'all' && c.overall_result !== filters.result) return false
+    if (filters.checker !== 'all' && checkerKey(c) !== filters.checker) return false
+    return true
+  })
 }
 
 // ─────────────────────────────────────────────────────────────
